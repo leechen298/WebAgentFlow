@@ -1,0 +1,33 @@
+{
+  "name": "web-agent-flow",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.12.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n console,api,worker -c cyan,yellow,green \"pnpm run dev:console\" \"pnpm run dev:api\" \"pnpm run dev:worker\"",
+    "dev:console": "pnpm --filter @web-agent-flow/console dev",
+    "dev:api": "cd apps/api && ../../.venv/bin/python -m uvicorn app.main:app --reload --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8000}",
+    "dev:worker": "cd apps/worker && ../../.venv/bin/python -m app.main",
+    "build": "pnpm run build:packages && pnpm run build:console && pnpm run build:extension",
+    "build:packages": "pnpm --filter @web-agent-flow/shared-types build && pnpm --filter @web-agent-flow/skill-schema build && pnpm --filter @web-agent-flow/sdk-js build",
+    "build:console": "pnpm --filter @web-agent-flow/console build",
+    "build:extension": "pnpm --filter @web-agent-flow/extension build",
+    "lint": "pnpm run lint:js && pnpm run lint:api && pnpm run lint:worker",
+    "lint:js": "pnpm --filter @web-agent-flow/shared-types lint && pnpm --filter @web-agent-flow/skill-schema lint && pnpm --filter @web-agent-flow/sdk-js lint && pnpm --filter @web-agent-flow/console lint && pnpm --filter @web-agent-flow/extension lint",
+    "lint:api": "cd apps/api && ../../.venv/bin/python -m ruff check .",
+    "lint:worker": "cd apps/worker && ../../.venv/bin/python -m ruff check .",
+    "format": "pnpm run format:js && pnpm run format:api && pnpm run format:worker",
+    "format:js": "pnpm exec prettier --write .",
+    "format:api": "cd apps/api && ../../.venv/bin/python -m ruff format .",
+    "format:worker": "cd apps/worker && ../../.venv/bin/python -m ruff format .",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "prettier": "^3.6.2"
+  }
+}

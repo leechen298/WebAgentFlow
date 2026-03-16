@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'codex/**'
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build console
+        run: pnpm run build:console
+
+      - name: Build extension
+        run: pnpm run build:extension
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install API and worker dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./apps/api -e ./apps/worker
+
+      - name: Lint API
+        run: python -m ruff check apps/api
+
+      - name: Lint worker
+        run: python -m ruff check apps/worker
