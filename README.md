@@ -1,6 +1,6 @@
 # WebAgentFlow
 
-WebAgentFlow is a monorepo for building a web automation platform with a Vue console, FastAPI backend, Python worker, and Chrome extension recorder.
+WebAgentFlow is a monorepo for an agent-driven web workflow engine with a Vue console, FastAPI backend, Python worker, and Chrome extension recorder.
 
 ## Scope
 

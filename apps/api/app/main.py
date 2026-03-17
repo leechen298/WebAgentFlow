@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.exceptions import AppError
 from app.core.logging import configure_logging
-from app.routers.health import router as health_router
+from app.routers import api_router
 
 configure_logging(settings.log_level)
 
@@ -12,7 +14,12 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
-app.include_router(health_router)
+app.include_router(api_router)
+
+
+@app.exception_handler(AppError)
+async def handle_app_error(_: Request, exc: AppError) -> JSONResponse:
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
 def run() -> None:

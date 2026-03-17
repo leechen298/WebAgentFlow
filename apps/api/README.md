@@ -1,20 +1,28 @@
 # WebAgentFlow API
 
-Minimal FastAPI application skeleton for Task Pack 1.
+FastAPI backend for the first CRUD/data layer of WebAgentFlow.
 
 ## Run
 
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install -e ".[dev]"
+alembic upgrade head
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## Check
+## Endpoints
 
-Visit `http://localhost:8000/health` and expect:
+- `GET /health`
+- `GET /docs`
+- `GET|POST|PATCH|DELETE /recordings`
+- `GET|POST|PATCH|DELETE /skills`
+- `GET|POST|PATCH|DELETE /runs`
 
-```json
-{ "status": "ok" }
+## Test
+
+```bash
+pytest
+ruff check .
 ```
