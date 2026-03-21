@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -17,31 +18,39 @@ def get_service(db: Session) -> SkillService:
     return SkillService(SkillRepository(db), RecordingRepository(db))
 
 
-@router.get("", response_model=list[SkillRead])
+@router.get("/list", response_model=list[SkillRead])
 def list_skills(db: DbSession) -> list[SkillRead]:
     return get_service(db).list_skills()
 
 
-@router.post("", response_model=SkillRead, status_code=status.HTTP_201_CREATED)
+@router.post("/create", response_model=SkillRead, status_code=status.HTTP_201_CREATED)
 def create_skill(payload: SkillCreate, db: DbSession) -> SkillRead:
     return get_service(db).create_skill(payload)
 
 
-@router.get("/{skill_id}", response_model=SkillRead)
-def get_skill(skill_id: str, db: DbSession) -> SkillRead:
+@router.get("/get", response_model=SkillRead)
+def get_skill(skill_id: Annotated[str, Query(...)], db: DbSession) -> SkillRead:
     return get_service(db).get_skill(skill_id)
 
 
-@router.patch("/{skill_id}", response_model=SkillRead)
+class SkillUpdatePayload(BaseModel):
+    skill_id: str
+    update_data: SkillUpdate
+
+
+@router.post("/update", response_model=SkillRead)
 def update_skill(
-    skill_id: str,
-    payload: SkillUpdate,
+    payload: SkillUpdatePayload,
     db: DbSession,
 ) -> SkillRead:
-    return get_service(db).update_skill(skill_id, payload)
+    return get_service(db).update_skill(payload.skill_id, payload.update_data)
 
 
-@router.delete("/{skill_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_skill(skill_id: str, db: DbSession) -> Response:
-    get_service(db).delete_skill(skill_id)
+class SkillDeletePayload(BaseModel):
+    skill_id: str
+
+
+@router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
+def delete_skill(payload: SkillDeletePayload, db: DbSession) -> Response:
+    get_service(db).delete_skill(payload.skill_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
