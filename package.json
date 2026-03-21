@@ -9,9 +9,11 @@
   "scripts": {
     "dev": "concurrently -k -n console,api,worker -c cyan,yellow,green \"pnpm run dev:console\" \"pnpm run dev:api\" \"pnpm run dev:worker\"",
     "dev:console": "pnpm --filter @web-agent-flow/console dev",
-    "dev:lan": "pnpm --filter @web-agent-flow/console dev:lan",
+    "dev:console:lan": "pnpm --filter @web-agent-flow/console dev:lan",
     "dev:api": "cd apps/api && ../../.venv/bin/python -m uvicorn app.main:app --reload --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8001}",
+    "dev:api:lan": "cd apps/api && ../../.venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port ${API_PORT:-8001}",
     "dev:worker": "cd apps/worker && ../../.venv/bin/python -m app.main",
+    "dev:lan": "concurrently -k -n console,api,worker -c cyan,yellow,green \"pnpm run dev:console:lan\" \"pnpm run dev:api:lan\" \"pnpm run dev:worker\"",
     "build": "pnpm run build:packages && pnpm run build:console && pnpm run build:extension",
     "build:packages": "pnpm --filter @web-agent-flow/shared-types build && pnpm --filter @web-agent-flow/skill-schema build && pnpm --filter @web-agent-flow/sdk-js build",
     "build:console": "pnpm --filter @web-agent-flow/console build",
