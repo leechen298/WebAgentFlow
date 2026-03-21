@@ -10,7 +10,7 @@ def test_skill_crud(client: TestClient) -> None:
             "events": [{"type": "input", "selector": "#search"}],
         },
     )
-    recording_id = recording_response.json()["id"]
+    recording_id = recording_response.json()["data"]["id"]
 
     create_response = client.post(
         "/skills/create",
@@ -21,10 +21,14 @@ def test_skill_crud(client: TestClient) -> None:
             "description": "Searches the target site",
         },
     )
-    assert create_response.status_code == 201
-    skill = create_response.json()
+    assert create_response.status_code == 200
+    skill = create_response.json()["data"]
     skill_id = skill["id"]
     assert skill["recording_id"] == recording_id
+
+    list_response = client.get("/skills/list")
+    assert list_response.status_code == 200
+    assert len(list_response.json()["data"]) == 1
 
     update_response = client.post(
         "/skills/update",
@@ -34,19 +38,32 @@ def test_skill_crud(client: TestClient) -> None:
         },
     )
     assert update_response.status_code == 200
-    updated = update_response.json()
+    updated = update_response.json()["data"]
     assert updated["status"] == "published"
     assert updated["version"] == "1.1.0"
 
     get_response = client.get(f"/skills/get?skill_id={skill_id}")
     assert get_response.status_code == 200
-    assert get_response.json()["name"] == "Search skill"
+    assert get_response.json()["data"]["name"] == "Search skill"
 
     delete_response = client.post(
         "/skills/delete",
         json={"skill_id": skill_id},
     )
-    assert delete_response.status_code == 204
+    assert delete_response.status_code == 200
+    assert delete_response.json() == {
+        "code": 0,
+        "data": {"skill_id": skill_id},
+        "msg": "ok",
+    }
+
+    missing_response = client.get(f"/skills/get?skill_id={skill_id}")
+    assert missing_response.status_code == 404
+    assert missing_response.json() == {
+        "code": 404,
+        "msg": f"Skill '{skill_id}' was not found.",
+        "data": None,
+    }
 
 
 def test_skill_requires_existing_recording(client: TestClient) -> None:
@@ -60,4 +77,8 @@ def test_skill_requires_existing_recording(client: TestClient) -> None:
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Recording 'missing-recording' was not found."
+    assert response.json() == {
+        "code": 404,
+        "msg": "Recording 'missing-recording' was not found.",
+        "data": None,
+    }

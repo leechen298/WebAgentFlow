@@ -1,12 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.repos.recording_repo import RecordingRepository
 from app.repos.skill_repo import SkillRepository
+from app.schemas.common import ApiResponse
 from app.schemas.skill import SkillCreate, SkillRead, SkillUpdate
 from app.services.skill_service import SkillService
 
@@ -18,19 +19,19 @@ def get_service(db: Session) -> SkillService:
     return SkillService(SkillRepository(db), RecordingRepository(db))
 
 
-@router.get("/list", response_model=list[SkillRead])
-def list_skills(db: DbSession) -> list[SkillRead]:
-    return get_service(db).list_skills()
+@router.get("/list", response_model=ApiResponse[list[SkillRead]])
+def list_skills(db: DbSession) -> ApiResponse[list[SkillRead]]:
+    return ApiResponse(data=get_service(db).list_skills())
 
 
-@router.post("/create", response_model=SkillRead, status_code=status.HTTP_201_CREATED)
-def create_skill(payload: SkillCreate, db: DbSession) -> SkillRead:
-    return get_service(db).create_skill(payload)
+@router.post("/create", response_model=ApiResponse[SkillRead])
+def create_skill(payload: SkillCreate, db: DbSession) -> ApiResponse[SkillRead]:
+    return ApiResponse(data=get_service(db).create_skill(payload))
 
 
-@router.get("/get", response_model=SkillRead)
-def get_skill(skill_id: Annotated[str, Query(...)], db: DbSession) -> SkillRead:
-    return get_service(db).get_skill(skill_id)
+@router.get("/get", response_model=ApiResponse[SkillRead])
+def get_skill(skill_id: Annotated[str, Query(...)], db: DbSession) -> ApiResponse[SkillRead]:
+    return ApiResponse(data=get_service(db).get_skill(skill_id))
 
 
 class SkillUpdatePayload(BaseModel):
@@ -38,19 +39,19 @@ class SkillUpdatePayload(BaseModel):
     update_data: SkillUpdate
 
 
-@router.post("/update", response_model=SkillRead)
+@router.post("/update", response_model=ApiResponse[SkillRead])
 def update_skill(
     payload: SkillUpdatePayload,
     db: DbSession,
-) -> SkillRead:
-    return get_service(db).update_skill(payload.skill_id, payload.update_data)
+) -> ApiResponse[SkillRead]:
+    return ApiResponse(data=get_service(db).update_skill(payload.skill_id, payload.update_data))
 
 
 class SkillDeletePayload(BaseModel):
     skill_id: str
 
 
-@router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
-def delete_skill(payload: SkillDeletePayload, db: DbSession) -> Response:
+@router.post("/delete", response_model=ApiResponse[dict[str, str]])
+def delete_skill(payload: SkillDeletePayload, db: DbSession) -> ApiResponse[dict[str, str]]:
     get_service(db).delete_skill(payload.skill_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return ApiResponse(data={"skill_id": payload.skill_id})

@@ -4,7 +4,7 @@ WebAgentFlow is a monorepo for an agent-driven web workflow engine with a Vue co
 
 ## Scope
 
-This repository currently contains Task Pack 1: engineering initialization. It focuses on a clean, runnable foundation and intentionally excludes business features such as recording workflows, skill execution, and run orchestration.
+This repository currently contains Task Pack 2 backend CRUD foundation on top of the initial engineering setup. The API exposes action-based CRUD routes for `recordings`, `skills`, and `runs`, while larger workflow features such as extension recording, recording-to-skill compilation, and worker execution remain out of scope.
 
 ## Tech Choices
 
@@ -70,6 +70,12 @@ web-agent-flow/
    docker compose -f infra/docker/docker-compose.yml up -d
    ```
 
+5. Apply API migrations:
+
+   ```bash
+   pnpm run db:migrate:api
+   ```
+
 ## Run Apps
 
 - Console:
@@ -82,6 +88,19 @@ web-agent-flow/
 
   ```bash
   pnpm run dev:api
+  ```
+
+  `GET /health` should return:
+
+  ```json
+  {
+    "code": 0,
+    "data": {
+      "status": "ok",
+      "database": "ok"
+    },
+    "msg": "ok"
+  }
   ```
 
 - Worker:

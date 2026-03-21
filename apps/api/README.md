@@ -8,8 +8,32 @@ FastAPI backend for the first CRUD/data layer of WebAgentFlow.
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-alembic upgrade head
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+cd /path/to/web-agent-flow
+docker compose -f infra/docker/docker-compose.yml up -d postgres
+.venv/bin/alembic -c apps/api/alembic.ini upgrade head
+pnpm run dev:api
+```
+
+`/health` verifies database connectivity. If PostgreSQL is not running or migrations have not been applied, it returns `503` instead of a misleading `200`.
+
+All successful responses use the unified envelope:
+
+```json
+{
+  "code": 0,
+  "data": {},
+  "msg": "ok"
+}
+```
+
+Errors use the unified envelope:
+
+```json
+{
+  "code": 404,
+  "msg": "Recording 'xxx' was not found.",
+  "data": null
+}
 ```
 
 ## Endpoints
