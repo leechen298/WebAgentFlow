@@ -1,0 +1,29 @@
+import apiClient from './client';
+import type { Recording, RecordingCreate, RecordingUpdate, DeleteResponse } from '@web-agent-flow/shared-types';
+
+export async function getRecordingsList(): Promise<Recording[]> {
+  return await apiClient.get('/recordings/list') as unknown as Recording[];
+}
+
+export async function getRecordingById(recordingId: string): Promise<Recording> {
+  return await apiClient.get('/recordings/get', {
+    params: { recording_id: recordingId }
+  }) as unknown as Recording;
+}
+
+export async function createRecording(payload: RecordingCreate): Promise<Recording> {
+  return await apiClient.post('/recordings/create', payload) as unknown as Recording;
+}
+
+export async function updateRecording(recordingId: string, updateData: RecordingUpdate): Promise<Recording> {
+  return await apiClient.post('/recordings/update', {
+    recording_id: recordingId,
+    update_data: updateData
+  }) as unknown as Recording;
+}
+
+export async function deleteRecording(recordingId: string): Promise<DeleteResponse> {
+  return await apiClient.post('/recordings/delete', {
+    recording_id: recordingId
+  }) as unknown as DeleteResponse;
+}

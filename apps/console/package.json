@@ -11,8 +11,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/icons-vue": "^7.0.0",
     "@web-agent-flow/shared-types": "workspace:*",
-    "naive-ui": "^2.42.0",
+    "ant-design-vue": "^4.2.0",
+    "axios": "^1.7.0",
+    "dayjs": "^1.11.0",
     "pinia": "^3.0.3",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"

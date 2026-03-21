@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '@/layouts/MainLayout.vue';
 import HomePage from '@/pages/HomePage.vue';
 import RecordingsPage from '@/pages/RecordingsPage.vue';
+import RecordingDetailPage from '@/pages/RecordingDetailPage.vue';
 import RunDetailPage from '@/pages/RunDetailPage.vue';
 import RunsPage from '@/pages/RunsPage.vue';
 import SkillDetailPage from '@/pages/SkillDetailPage.vue';
@@ -25,6 +26,12 @@ const router = createRouter({
           name: 'recordings',
           component: RecordingsPage,
           meta: { title: 'Recordings', menuKey: '/recordings' },
+        },
+        {
+          path: 'recordings/:id',
+          name: 'recording-detail',
+          component: RecordingDetailPage,
+          meta: { title: 'Recording Detail', menuKey: '/recordings' },
         },
         {
           path: 'skills',
