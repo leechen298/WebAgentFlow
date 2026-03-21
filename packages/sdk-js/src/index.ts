@@ -8,6 +8,6 @@ export interface WebAgentFlowClient {
 
 export function createClient(options: ClientOptions = {}): WebAgentFlowClient {
   return {
-    baseUrl: options.baseUrl ?? 'http://localhost:8000',
+    baseUrl: options.baseUrl ?? 'http://localhost:8001',
   };
 }
