@@ -13,7 +13,7 @@ export const useAppStore = defineStore('app', () => {
     error.value = null;
     try {
       const health = await getHealth();
-      apiConnected.value = health.status === 'healthy';
+      apiConnected.value = health.status === 'ok';
     } catch {
       apiConnected.value = false;
     } finally {
