@@ -12,15 +12,6 @@
       </template>
 
       <a-spin :spinning="loadingList">
-        <a-alert
-          v-if="error"
-          message="Error loading runs"
-          :description="error"
-          type="error"
-          show-icon
-          style="margin-bottom: 16px"
-        />
-
         <a-table
           :columns="columns"
           :data-source="runs"
