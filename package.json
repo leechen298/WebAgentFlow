@@ -31,7 +31,8 @@
     "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
     "test": "pnpm --filter @web-agent-flow/console vitest run",
     "test:dev": "pnpm --filter @web-agent-flow/console vitest",
-    "test:coverage": "pnpm --filter @web-agent-flow/console vitest run -- --coverage"
+    "test:coverage": "pnpm --filter @web-agent-flow/console vitest run -- --coverage",
+    "test:single": "pnpm --filter @web-agent-flow/console vitest run"
   },
   "devDependencies": {
     "concurrently": "^9.2.0",

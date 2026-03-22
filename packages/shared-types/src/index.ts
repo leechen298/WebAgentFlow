@@ -1,5 +1,35 @@
 // Recording types
-export type RecordingStatus = 'draft' | 'active' | 'archived';
+export type RecordingStatus = 'draft' | 'completed' | 'archived';
+
+// Recording Event Types
+export type RecordingEventType = 'navigate' | 'click' | 'input' | 'change';
+
+export interface RecordingEventTarget {
+  tag: string;
+  text?: string;
+  selector?: string;
+  label?: string;
+  name?: string;
+  id?: string;
+}
+
+export interface RecordingEvent {
+  type: RecordingEventType;
+  timestamp: number;
+  url: string;
+  title?: string;
+  target?: RecordingEventTarget;
+  value?: string | null;
+}
+
+// Recording Meta
+export interface RecordingMeta {
+  initialUrl: string;
+  initialTitle?: string;
+  startTime: number;
+  endTime?: number;
+  eventCount: number;
+}
 
 export interface Recording {
   id: string;

@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:dev": "vitest",
-    "test:coverage": "vitest run -- --coverage"
+    "test:coverage": "vitest run -- --coverage",
+    "test:single": "vitest run"
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.0",
