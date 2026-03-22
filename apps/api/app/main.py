@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
@@ -16,6 +17,33 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# CORS middleware
+def get_cors_allowed_origins() -> list[str]:
+    """Parse CORS allowed origins from settings."""
+    if not settings.cors_allowed_origins:
+        # Default: allow localhost and common dev origins in development
+        if settings.env == "development":
+            return [
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://127.0.0.1:5173",
+                "http://127.0.0.1:5174",
+            ]
+        return []
+    # Parse comma-separated list
+    origins = [origin.strip() for origin in settings.cors_allowed_origins.split(",")]
+    return [origin for origin in origins if origin]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_cors_allowed_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(api_router)
 
 

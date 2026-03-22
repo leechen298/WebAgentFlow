@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-// Default API base URL - can be overridden via env
-const DEFAULT_BASE_URL = 'http://localhost:8000';
+// Default API base URL - use Vite proxy in development
+const DEFAULT_BASE_URL = import.meta.env.DEV ? '/api' : 'http://localhost:8000';
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL;
 
 // Create axios instance

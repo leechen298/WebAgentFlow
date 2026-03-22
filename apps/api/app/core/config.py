@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 
+    # CORS allowed origins - comma-separated list
+    cors_allowed_origins: str = ""
+
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_db: str = "web_agent_flow"
