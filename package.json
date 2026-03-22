@@ -28,7 +28,10 @@
     "format:api": "cd apps/api && ../../.venv/bin/python -m ruff format .",
     "format:worker": "cd apps/worker && ../../.venv/bin/python -m ruff format .",
     "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
-    "docker:down": "docker compose -f infra/docker/docker-compose.yml down"
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "test": "pnpm --filter @web-agent-flow/console vitest run",
+    "test:dev": "pnpm --filter @web-agent-flow/console vitest",
+    "test:coverage": "pnpm --filter @web-agent-flow/console vitest run -- --coverage"
   },
   "devDependencies": {
     "concurrently": "^9.2.0",
