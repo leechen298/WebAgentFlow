@@ -1,8 +1,25 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-// Default API base URL - use Vite proxy in development
-const DEFAULT_BASE_URL = import.meta.env.DEV ? '/api' : 'http://localhost:8000';
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL;
+// Get API base URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const USE_DEV_PROXY = import.meta.env.VITE_USE_DEV_PROXY === 'true';
+
+// Determine the base URL to use
+let BASE_URL: string;
+if (USE_DEV_PROXY) {
+  // Optional dev proxy mode - use /api prefix
+  BASE_URL = '/api';
+} else if (API_BASE_URL) {
+  // Default mode - use explicit API base URL
+  BASE_URL = API_BASE_URL;
+} else {
+  // No configuration - throw clear error
+  throw new Error(
+    'VITE_API_BASE_URL environment variable is required.\n' +
+    'Please set it in your .env file, e.g.:\n' +
+    'VITE_API_BASE_URL=http://192.168.31.109:8001'
+  );
+}
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({

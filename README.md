@@ -76,6 +76,34 @@ web-agent-flow/
    pnpm run db:migrate:api
    ```
 
+## Configuration
+
+### Frontend-Backend Communication
+
+WebAgentFlow is designed to support separate frontend/backend deployment by default:
+
+- **Frontend** sends requests directly to the backend via `VITE_API_BASE_URL`
+- **Backend** allows frontend origins via `CORS_ALLOWED_ORIGINS`
+
+**Required environment variables (in `.env`):**
+
+```bash
+# Frontend: Where to send API requests
+VITE_API_BASE_URL=http://192.168.31.109:8001
+
+# Backend: Which frontend origins to allow
+CORS_ALLOWED_ORIGINS=http://192.168.31.109:5174,http://localhost:5174
+```
+
+**Optional: Vite Dev Proxy**
+
+For local development convenience, you can use the Vite proxy instead of direct CORS requests:
+
+```bash
+VITE_USE_DEV_PROXY=true
+VITE_API_BASE_URL=/api  # This will be ignored when using proxy
+```
+
 ## Run Apps
 
 - Console:
@@ -107,6 +135,12 @@ web-agent-flow/
 
   ```bash
   pnpm run dev:worker
+  ```
+
+- All services together (LAN accessible):
+
+  ```bash
+  pnpm run dev:lan
   ```
 
 - Extension development build:
