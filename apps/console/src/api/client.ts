@@ -4,21 +4,56 @@ import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig, AxiosResp
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const USE_DEV_PROXY = import.meta.env.VITE_USE_DEV_PROXY === 'true';
 
-// Determine the base URL to use
-let BASE_URL: string;
-if (USE_DEV_PROXY) {
-  // Optional dev proxy mode - use /api prefix
-  BASE_URL = '/api';
-} else if (API_BASE_URL) {
-  // Default mode - use explicit API base URL
-  BASE_URL = API_BASE_URL;
-} else {
-  // No configuration - throw clear error
-  throw new Error(
-    'VITE_API_BASE_URL environment variable is required.\n' +
-    'Please set it in your .env file, e.g.:\n' +
-    'VITE_API_BASE_URL=http://192.168.31.109:8001'
+// Resolve API configuration with clear determination
+export interface ApiConfig {
+  mode: 'direct' | 'proxy';
+  baseURL: string;
+  useDevProxy: boolean;
+  configuredApiBaseUrl?: string;
+}
+
+export function resolveApiConfig(): ApiConfig {
+  if (USE_DEV_PROXY) {
+    return {
+      mode: 'proxy',
+      baseURL: '/api',
+      useDevProxy: true,
+      configuredApiBaseUrl: API_BASE_URL,
+    };
+  } else if (API_BASE_URL) {
+    return {
+      mode: 'direct',
+      baseURL: API_BASE_URL,
+      useDevProxy: false,
+      configuredApiBaseUrl: API_BASE_URL,
+    };
+  } else {
+    throw new Error(
+      'VITE_API_BASE_URL environment variable is required.\n' +
+      'Please set it in your .env file, e.g.:\n' +
+      'VITE_API_BASE_URL=http://192.168.31.109:8001'
+    );
+  }
+}
+
+const apiConfig = resolveApiConfig();
+const BASE_URL = apiConfig.baseURL;
+
+// Log API configuration in development for debugging
+if (import.meta.env.DEV) {
+  // eslint-disable-next-line no-console
+  console.log(
+    `%c[API Config] mode=${apiConfig.mode}, baseURL=%c${apiConfig.baseURL}`,
+    'color: #1890ff; font-weight: bold;',
+    'color: #52c41a; font-weight: bold;'
   );
+  if (apiConfig.mode === 'proxy' && apiConfig.configuredApiBaseUrl) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `%c[API Config] Note: VITE_API_BASE_URL=${apiConfig.configuredApiBaseUrl} is ignored when VITE_USE_DEV_PROXY=true`,
+      'color: #faad14; font-weight: bold;'
+    );
+  }
 }
 
 // Create axios instance

@@ -55,6 +55,40 @@
       </a-col>
     </a-row>
 
+    <!-- API Configuration Debug Panel - Dev Only -->
+    <a-row v-if="isDev" :gutter="16" style="margin-top: 16px">
+      <a-col :span="24">
+        <a-card title="API Configuration (Dev Only)" :bordered="false">
+          <a-descriptions :column="2" bordered size="small">
+            <a-descriptions-item label="Mode">
+              <a-tag :color="apiConfig.mode === 'direct' ? 'blue' : 'orange'">
+                {{ apiConfig.mode === 'direct' ? 'Direct (CORS)' : 'Vite Proxy' }}
+              </a-tag>
+            </a-descriptions-item>
+            <a-descriptions-item label="Use Dev Proxy">
+              <a-tag :color="apiConfig.useDevProxy ? 'green' : 'default'">
+                {{ apiConfig.useDevProxy ? 'ON' : 'OFF' }}
+              </a-tag>
+            </a-descriptions-item>
+            <a-descriptions-item label="Base URL" :span="2">
+              <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 4px;">{{ apiConfig.baseURL }}</code>
+            </a-descriptions-item>
+            <a-descriptions-item v-if="apiConfig.configuredApiBaseUrl" label="Configured VITE_API_BASE_URL" :span="2">
+              <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 4px;">{{ apiConfig.configuredApiBaseUrl }}</code>
+            </a-descriptions-item>
+          </a-descriptions>
+          <div style="margin-top: 12px; color: #666; font-size: 12px;">
+            <div v-if="apiConfig.mode === 'direct'">
+              <info-circle-outlined /> All API requests are sent directly to <code>{{ apiConfig.baseURL }}</code>
+            </div>
+            <div v-else>
+              <info-circle-outlined /> All API requests are sent to <code>/api</code> and proxied by Vite to backend
+            </div>
+          </div>
+        </a-card>
+      </a-col>
+    </a-row>
+
     <a-row :gutter="16" style="margin-top: 16px">
       <a-col :span="12">
         <a-card title="Quick Actions" :bordered="false">
@@ -100,9 +134,11 @@ import {
   ToolOutlined,
   PlayCircleOutlined,
   SyncOutlined,
-  PlusOutlined
+  PlusOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons-vue';
 import { useAppStore, useRecordingsStore, useSkillsStore, useRunsStore } from '@/stores';
+import { resolveApiConfig, type ApiConfig } from '@/api/client';
 
 const router = useRouter();
 const appStore = useAppStore();
@@ -111,6 +147,8 @@ const skillsStore = useSkillsStore();
 const runsStore = useRunsStore();
 
 const loading = ref(false);
+const isDev = import.meta.env.DEV;
+const apiConfig: ApiConfig = resolveApiConfig();
 
 const apiStatusMessage = computed(() => {
   if (appStore.loading) return 'Checking API connectivity...';
