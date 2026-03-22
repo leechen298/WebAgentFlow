@@ -1,8 +1,14 @@
 /**
  * Safely parse JSON string
  */
-export function safeParseJson<T = unknown>(jsonString: string): { success: true; data: T } | { success: false; error: string } {
+export function safeParseJson<T = unknown>(
+  jsonString: string,
+  defaultValue?: T
+): { success: true; data: T } | { success: false; error: string } {
   if (!jsonString.trim()) {
+    if (defaultValue !== undefined) {
+      return { success: true, data: defaultValue };
+    }
     return { success: true, data: {} as T };
   }
   try {

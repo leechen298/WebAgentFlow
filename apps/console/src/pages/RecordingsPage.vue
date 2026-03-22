@@ -240,8 +240,8 @@ async function handleSave(): Promise<void> {
       return;
     }
 
-    const eventsResult = safeParseJson(formData.eventsStr);
-    const metaResult = safeParseJson(formData.metaStr);
+    const eventsResult = safeParseJson(formData.eventsStr, []);
+    const metaResult = safeParseJson(formData.metaStr, null);
 
     if (isEditing.value && editingId.value) {
       const updateData: RecordingUpdate = {

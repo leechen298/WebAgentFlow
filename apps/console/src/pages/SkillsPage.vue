@@ -249,7 +249,7 @@ async function handleSave(): Promise<void> {
       return;
     }
 
-    const definitionResult = safeParseJson(formData.definitionStr);
+    const definitionResult = safeParseJson(formData.definitionStr, {});
 
     if (isEditing.value && editingId.value) {
       const updateData: SkillUpdate = {

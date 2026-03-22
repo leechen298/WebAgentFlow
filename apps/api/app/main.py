@@ -65,11 +65,36 @@ async def handle_http_exception(_: Request, exc: HTTPException) -> JSONResponse:
     )
 
 
+def format_validation_error_message(errors: list[dict]) -> str:
+    """
+    Format validation errors into a human-readable message.
+    Takes the first error or combines multiple errors for clarity.
+    """
+    if not errors:
+        return "Validation error."
+
+    # Use the first error for the main message
+    first_error = errors[0]
+    loc = first_error.get("loc", [])
+    msg = first_error.get("msg", "Invalid value")
+
+    # Format location: ["body", "skill_id"] -> "body.skill_id"
+    loc_str = ".".join(str(x) for x in loc if x != "body") if loc else "field"
+
+    # Build user-friendly message
+    if len(errors) == 1:
+        return f"{loc_str}: {msg}"
+    else:
+        return f"{loc_str}: {msg} (and {len(errors) - 1} more errors)"
+
+
 @app.exception_handler(RequestValidationError)
 async def handle_validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+    errors = exc.errors()
+    message = format_validation_error_message(errors)
     return JSONResponse(
         status_code=422,
-        content=ApiErrorResponse(code=422, msg="Validation error.", data=exc.errors()).model_dump(),
+        content=ApiErrorResponse(code=422, msg=message, data=errors).model_dump(),
     )
 
 

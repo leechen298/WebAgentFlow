@@ -303,9 +303,9 @@ async function handleSave(): Promise<void> {
       return;
     }
 
-    const inputResult = safeParseJson(formData.inputPayloadStr);
-    const resultResult = safeParseJson(formData.resultPayloadStr);
-    const logsResult = safeParseJson(formData.logsStr);
+    const inputResult = safeParseJson(formData.inputPayloadStr, {});
+    const resultResult = safeParseJson(formData.resultPayloadStr, null);
+    const logsResult = safeParseJson(formData.logsStr, []);
 
     if (isEditing.value && editingId.value) {
       const updateData: RunUpdate = {
