@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   DashboardOutlined,
@@ -67,6 +67,8 @@ const appStore = useAppStore();
 
 const collapsed = ref(false);
 const selectedKeys = ref<string[]>([String(route.meta.menuKey ?? route.path)]);
+
+const BREAKPOINT = 768;
 
 const pageTitle = computed(() => String(route.meta.title ?? 'WebAgentFlow Console'));
 
@@ -84,8 +86,18 @@ function handleMenuClick({ key }: { key: string }) {
   void router.push(key);
 }
 
+function handleResize() {
+  collapsed.value = window.innerWidth < BREAKPOINT;
+}
+
 onMounted(() => {
+  handleResize();
+  window.addEventListener('resize', handleResize);
   void appStore.checkApiHealth();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
 });
 </script>
 

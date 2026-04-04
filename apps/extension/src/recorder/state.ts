@@ -8,7 +8,7 @@ export interface RecorderState {
   initialTitle: string | null;
 }
 
-const STORAGE_KEY = 'webagentflow:recorder:state';
+const STORAGE_KEY = 'local:webagentflow:recorder:state';
 
 /**
  * Create initial recorder state

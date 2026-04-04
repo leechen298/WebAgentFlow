@@ -85,23 +85,32 @@ WebAgentFlow is designed to support separate frontend/backend deployment by defa
 - **Frontend** sends requests directly to the backend via `VITE_API_BASE_URL`
 - **Backend** allows frontend origins via `CORS_ALLOWED_ORIGINS`
 
-**Required environment variables (in `.env`):**
+**Recommended local development variables (in `.env`):**
 
 ```bash
-# Frontend: Where to send API requests
-VITE_API_BASE_URL=http://192.168.31.109:8001
+# Frontend: Keep API on localhost and let Vite proxy requests
+VITE_API_BASE_URL=http://localhost:8001
+VITE_USE_DEV_PROXY=true
 
-# Backend: Which frontend origins to allow
-CORS_ALLOWED_ORIGINS=http://192.168.31.109:5174,http://localhost:5174
+# Backend: Only needed if you disable the proxy and call API directly
+CORS_ALLOWED_ORIGINS=http://localhost:5174,http://127.0.0.1:5174
 ```
 
-**Optional: Vite Dev Proxy**
+With this setup:
 
-For local development convenience, you can use the Vite proxy instead of direct CORS requests:
+- Your Mac opens the console at `http://localhost:5174`
+- Your iPad opens the console at `http://<当前Mac的局域网IP>:5174`
+- Both clients call `/api/*` on the console origin
+- Vite proxies those requests to `http://localhost:8001` on the Mac
+
+**Optional: Direct API Mode**
+
+If you explicitly want the browser to call the API directly instead of using the proxy:
 
 ```bash
-VITE_USE_DEV_PROXY=true
-VITE_API_BASE_URL=/api  # This will be ignored when using proxy
+VITE_USE_DEV_PROXY=false
+VITE_API_BASE_URL=http://<your-current-lan-ip>:8001
+CORS_ALLOWED_ORIGINS=http://<your-current-lan-ip>:5174,http://localhost:5174,http://127.0.0.1:5174
 ```
 
 ## Run Apps

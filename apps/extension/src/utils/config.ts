@@ -12,7 +12,7 @@ export interface ApiConfig {
  */
 const DEFAULT_API_BASE_URL = 'http://localhost:8001';
 const API_TIMEOUT = 30000;
-const CONFIG_STORAGE_KEY = 'webagentflow:api:config';
+const CONFIG_STORAGE_KEY = 'local:webagentflow:api:config';
 
 export async function getApiConfig(): Promise<ApiConfig> {
   try {
