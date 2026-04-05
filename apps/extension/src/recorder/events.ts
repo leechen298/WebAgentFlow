@@ -16,6 +16,7 @@ export function createRecordingEvent(
     target?: RecordingEventTarget;
     value?: string | null;
     frameInfo?: FrameInfo;
+    htmlContent?: string;
   } = {},
 ): RecordingEvent {
   return {

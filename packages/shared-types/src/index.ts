@@ -2,7 +2,7 @@
 export type RecordingStatus = 'draft' | 'completed' | 'archived';
 
 // Recording Event Types
-export type RecordingEventType = 'navigate' | 'click' | 'input' | 'change';
+export type RecordingEventType = 'navigate' | 'click' | 'input' | 'change' | 'richtext-input';
 
 export interface FrameInfo {
   isIframe: boolean;
@@ -21,6 +21,8 @@ export interface RecordingEventTarget {
   className?: string;
   role?: string;
   nearbyText?: string;
+  // Rich text flag (Task Pack 5 RT)
+  isRichText?: boolean;
 }
 
 export interface RecordingEvent {
@@ -32,6 +34,8 @@ export interface RecordingEvent {
   value?: string | null;
   // Frame context (Task Pack 5)
   frameInfo?: FrameInfo;
+  // Rich text HTML snapshot — truncated, only present for richtext-input events
+  htmlContent?: string;
 }
 
 // Recording Meta
