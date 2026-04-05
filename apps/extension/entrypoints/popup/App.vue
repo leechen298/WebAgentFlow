@@ -107,6 +107,7 @@ const state = ref<RecorderState>({
   startTime: null,
   initialUrl: null,
   initialTitle: null,
+  initialState: null,
 });
 
 const isLoading = ref(false);
@@ -228,6 +229,7 @@ async function handleSubmit() {
       initialUrl: state.value.initialUrl,
       initialTitle: state.value.initialTitle,
       startTime: state.value.startTime,
+      initialState: state.value.initialState,
     });
 
     showMessage(`Successfully submitted recording: ${result.name}`, 'success');

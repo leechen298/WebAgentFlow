@@ -75,6 +75,7 @@ class NormalizedRecording:
     summary: NormalizationSummary
     segments: list[NormalizedSegment]
     key_actions: list[NormalizedStep]
+    initial_state: dict[str, Any] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -358,7 +359,6 @@ def _segment_steps(steps: list[NormalizedStep]) -> list[NormalizedSegment]:
     segments: list[NormalizedSegment] = []
     current_type: str = ""
     current_steps: list[NormalizedStep] = []
-    in_dialog = False
     after_dialog_close = False
 
     def _flush(seg_type: str, title: str) -> None:
@@ -390,26 +390,31 @@ def _segment_steps(steps: list[NormalizedStep]) -> list[NormalizedSegment]:
 
         # S1: navigation always starts fresh
         if at == "navigate-page":
-            _flush(current_type or "misc", _segment_title("misc", step) if current_type else "Preamble")
+            _flush(
+                current_type or "misc",
+                _segment_title("misc", step) if current_type else "Preamble",
+            )
             current_type = "navigation"
             current_steps.append(step)
             after_dialog_close = False
-            in_dialog = False
             continue
 
         # S5: after dialog close, start fresh
         if after_dialog_close:
             _flush(current_type or "misc", "Dialog interaction")
             current_type = ""
-            in_dialog = False
             after_dialog_close = False
 
         # S2: open-dialog
         if at == "open-dialog":
             if current_type != "dialog-interaction":
-                _flush(current_type or "form-fill", _segment_title("form-fill", step) if current_type in ("form-fill", "") else current_type)
+                _flush(
+                    current_type or "form-fill",
+                    _segment_title("form-fill", step)
+                    if current_type in ("form-fill", "")
+                    else current_type,
+                )
                 current_type = "dialog-interaction"
-            in_dialog = True
             current_steps.append(step)
             continue
 
@@ -422,7 +427,12 @@ def _segment_steps(steps: list[NormalizedStep]) -> list[NormalizedSegment]:
         # S4: richtext-edit
         if at == "edit-richtext":
             if current_type != "richtext-edit":
-                _flush(current_type or "form-fill", _segment_title("form-fill", step) if current_type in ("form-fill", "") else current_type)
+                _flush(
+                    current_type or "form-fill",
+                    _segment_title("form-fill", step)
+                    if current_type in ("form-fill", "")
+                    else current_type,
+                )
                 current_type = "richtext-edit"
             current_steps.append(step)
             continue
@@ -450,9 +460,17 @@ def _segment_steps(steps: list[NormalizedStep]) -> list[NormalizedSegment]:
             first_open = next(
                 (s for s in seg.steps if s.action_type == "open-dialog"), first
             )
-            seg.title = f"Dialog: {first_open.button_text or 'interaction'}" if first_open else "Dialog interaction"
+            seg.title = (
+                f"Dialog: {first_open.button_text or 'interaction'}"
+                if first_open
+                else "Dialog interaction"
+            )
         elif seg.type == "richtext-edit":
-            seg.title = f"Rich-text edit: {first.field_label or 'content'}" if first else "Rich-text edit"
+            seg.title = (
+                f"Rich-text edit: {first.field_label or 'content'}"
+                if first
+                else "Rich-text edit"
+            )
         else:
             seg.title = "Misc"
 
@@ -515,6 +533,7 @@ def _extract_key_actions(steps: list[NormalizedStep]) -> list[NormalizedStep]:
 def normalize_recording(
     recording_id: str,
     events: list[dict[str, Any]],
+    initial_state: dict[str, Any] | None = None,
 ) -> NormalizedRecording:
     """
     Main entry point: takes raw recording events and returns a NormalizedRecording.
@@ -540,6 +559,7 @@ def normalize_recording(
             ),
             segments=[],
             key_actions=[],
+            initial_state=initial_state,
         )
 
     # --- Merge & denoise ---
@@ -579,6 +599,7 @@ def normalize_recording(
         summary=summary,
         segments=segments,
         key_actions=key_actions,
+        initial_state=initial_state,
     )
 
 
@@ -626,4 +647,5 @@ def normalized_recording_to_dict(nr: NormalizedRecording) -> dict[str, Any]:
             for seg in nr.segments
         ],
         "key_actions": [_step_to_dict(s) for s in nr.key_actions],
+        "initial_state": nr.initial_state,
     }

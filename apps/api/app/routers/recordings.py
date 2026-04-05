@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.repos.recording_repo import RecordingRepository
 from app.schemas.common import ApiResponse
-from app.schemas.recording import NormalizedRecordingRead, RecordingCreate, RecordingRead, RecordingUpdate
+from app.schemas.recording import (
+    NormalizedRecordingRead,
+    RecordingCreate,
+    RecordingRead,
+    RecordingUpdate,
+)
 from app.services.recording_normalizer import normalize_recording, normalized_recording_to_dict
 from app.services.recording_service import RecordingService
 
@@ -60,7 +65,10 @@ class RecordingDeletePayload(BaseModel):
 
 
 @router.post("/delete", response_model=ApiResponse[dict[str, str]])
-def delete_recording(payload: RecordingDeletePayload, db: DbSession) -> ApiResponse[dict[str, str]]:
+def delete_recording(
+    payload: RecordingDeletePayload,
+    db: DbSession,
+) -> ApiResponse[dict[str, str]]:
     get_service(db).delete_recording(payload.recording_id)
     return ApiResponse(data={"recording_id": payload.recording_id})
 
@@ -71,5 +79,11 @@ def get_normalized_recording(
     db: DbSession,
 ) -> ApiResponse[NormalizedRecordingRead]:
     recording = get_service(db).get_recording(recording_id)
-    nr = normalize_recording(recording_id, recording.events or [])
+    # Extract initialState from meta (camelCase key, stored by the extension)
+    initial_state = (recording.meta or {}).get("initialState") if recording.meta else None
+    nr = normalize_recording(
+        recording_id,
+        recording.events or [],
+        initial_state=initial_state,
+    )
     return ApiResponse(data=NormalizedRecordingRead(**normalized_recording_to_dict(nr)))

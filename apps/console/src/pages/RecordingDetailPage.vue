@@ -82,6 +82,76 @@
             />
           </a-tab-pane>
 
+          <a-tab-pane key="initial-state" tab="Initial State">
+            <div v-if="initialState">
+              <a-descriptions :column="3" size="small" bordered style="margin-bottom: 16px">
+                <a-descriptions-item label="Page URL" :span="2">
+                  <a :href="initialState.pageUrl" target="_blank" rel="noopener">
+                    {{ initialState.pageUrl }}
+                  </a>
+                </a-descriptions-item>
+                <a-descriptions-item label="Page Title">
+                  {{ initialState.pageTitle }}
+                </a-descriptions-item>
+                <a-descriptions-item label="Captured At">
+                  {{ new Date(initialState.capturedAt).toLocaleString() }}
+                </a-descriptions-item>
+                <a-descriptions-item label="Fields Found">
+                  <a-tag color="blue">{{ initialState.fields.length }}</a-tag>
+                </a-descriptions-item>
+              </a-descriptions>
+
+              <a-table
+                :columns="initialStateColumns"
+                :data-source="initialState.fields"
+                :pagination="false"
+                size="small"
+                row-key="(r, i) => `${r.fieldLabel}_${r.fieldProp}_${i}`"
+                style="margin-bottom: 12px"
+              >
+                <template #bodyCell="{ column, record }">
+                  <template v-if="column.key === 'fieldType'">
+                    <a-tag :color="initialFieldTypeColor(record.fieldType)">
+                      {{ record.fieldType || 'unknown' }}
+                    </a-tag>
+                  </template>
+                  <template v-else-if="column.key === 'required'">
+                    <a-tag v-if="record.required" color="red" style="font-size: 11px">✓</a-tag>
+                    <span v-else style="color: #ccc">—</span>
+                  </template>
+                  <template v-else-if="column.key === 'defaultValueText'">
+                    <span v-if="record.defaultValueText" style="color: #1677ff">
+                      {{ truncate(record.defaultValueText, 80) }}
+                    </span>
+                    <span v-else-if="record.placeholder" style="color: #bbb; font-style: italic">
+                      {{ truncate(record.placeholder, 60) }}
+                    </span>
+                    <span v-else style="color: #ccc">—</span>
+                  </template>
+                </template>
+              </a-table>
+
+              <a-collapse style="margin-top: 12px">
+                <a-collapse-panel key="json" header="Initial State JSON (raw)">
+                  <a-textarea
+                    :value="formatJsonString(initialState)"
+                    :rows="16"
+                    readonly
+                    style="font-family: monospace; font-size: 11px"
+                  />
+                </a-collapse-panel>
+              </a-collapse>
+            </div>
+
+            <div v-else style="color: #999; text-align: center; padding: 32px">
+              No initial state captured for this recording.
+              <br />
+              <span style="font-size: 12px; margin-top: 8px; display: block">
+                Initial state is captured automatically by the extension (Task Pack 6.5+).
+              </span>
+            </div>
+          </a-tab-pane>
+
           <a-tab-pane key="normalized" tab="Normalized Recording">
             <a-spin :spinning="normLoading">
               <a-alert
@@ -283,7 +353,7 @@ import { EditOutlined, DeleteOutlined } from '@ant-design/icons-vue';
 import { useRecordingsStore } from '@/stores';
 import { safeParseJson, formatJsonString } from '@/utils';
 import { getNormalizedRecording } from '@/api/recordings';
-import type { Recording, RecordingUpdate, RecordingStatus, NormalizedRecording } from '@web-agent-flow/shared-types';
+import type { Recording, RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState } from '@web-agent-flow/shared-types';
 
 const route = useRoute();
 const router = useRouter();
@@ -325,6 +395,35 @@ const stepColumns = [
   { title: 'Value', key: 'value' },
   { title: 'Flags', key: 'flags', width: 100 },
 ];
+
+const initialStateColumns = [
+  { title: 'Label', dataIndex: 'fieldLabel', key: 'fieldLabel', width: 160 },
+  { title: 'Prop', dataIndex: 'fieldProp', key: 'fieldProp', width: 120 },
+  { title: 'Type', key: 'fieldType', width: 100 },
+  { title: 'Req', key: 'required', width: 60 },
+  { title: 'Default / Current Value', key: 'defaultValueText' },
+];
+
+const initialState = computed<PageInitialState | null>(() => {
+  const meta = recording.value?.meta as Record<string, unknown> | null;
+  if (!meta?.initialState) return null;
+  return meta.initialState as PageInitialState;
+});
+
+function initialFieldTypeColor(fieldType?: string): string {
+  const map: Record<string, string> = {
+    text: 'default',
+    number: 'blue',
+    select: 'green',
+    checkbox: 'orange',
+    radio: 'gold',
+    richtext: 'purple',
+    textarea: 'cyan',
+    'date-range': 'geekblue',
+    custom: 'magenta',
+  };
+  return map[fieldType ?? ''] ?? 'default';
+}
 
 function getStatusColor(status: string): string {
   const colors: Record<string, string> = {

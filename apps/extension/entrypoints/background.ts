@@ -5,8 +5,9 @@ import {
   stopRecording,
   addEvent,
   createInitialState,
+  setInitialState,
 } from '../src/recorder/state';
-import type { RecordingEvent } from '@web-agent-flow/shared-types';
+import type { RecordingEvent, PageInitialState } from '@web-agent-flow/shared-types';
 import type { RecorderState } from '../src/recorder/state';
 
 export default defineBackground(() => {
@@ -66,7 +67,7 @@ export default defineBackground(() => {
   }
 
   // Listen for messages from popup or content script
-  browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
       try {
         console.log('Background received message:', message.type);
@@ -77,6 +78,30 @@ export default defineBackground(() => {
             const event = message.data as RecordingEvent;
             currentState = addEvent(currentState, event);
             await saveState(currentState);
+            sendResponse({ success: true });
+            break;
+          }
+
+          case 'RECORDING_INITIAL_STATE': {
+            // NOTE: No isRecording guard here.
+            // The guard was removed because of a MV3 service worker race condition:
+            // if the SW is killed and restarted, initializeState() is async and
+            // currentState.isRecording may be false until storage loads. We trust
+            // that this message is only sent by the content script immediately after
+            // START_CAPTURE, so any received initial state is valid for the current
+            // recording session.
+            const newInitialState = message.data as PageInitialState;
+            const before = currentState.initialState;
+            currentState = setInitialState(currentState, newInitialState, {
+              frameId: sender.frameId,
+              senderUrl: sender.url ?? null,
+            });
+            await saveState(currentState);
+            const action = currentState.initialState === before ? 'kept' : 'stored';
+            const source = currentState.initialStateSource;
+            console.info(
+              `Background: ${action} initial state — ${newInitialState.fields.length} fields from ${newInitialState.pageUrl} (frameId=${sender.frameId ?? 'n/a'}, score=${source?.score ?? 'n/a'})`,
+            );
             sendResponse({ success: true });
             break;
           }

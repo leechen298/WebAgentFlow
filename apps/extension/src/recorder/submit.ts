@@ -3,6 +3,7 @@ import type {
   RecordingCreate,
   RecordingMeta,
   RecordingEvent,
+  PageInitialState,
 } from '@web-agent-flow/shared-types';
 import { createApiClient } from '../utils/api';
 
@@ -12,6 +13,8 @@ export interface SubmitRecordingOptions {
   initialUrl: string | null;
   initialTitle: string | null;
   startTime: number | null;
+  /** Page initial state snapshot (Task Pack 6.5) */
+  initialState?: PageInitialState | null;
 }
 
 /**
@@ -27,6 +30,7 @@ export function prepareRecordingData(
     startTime: options.startTime || now,
     endTime: now,
     eventCount: options.events.length,
+    ...(options.initialState ? { initialState: options.initialState } : {}),
   };
 
   return {

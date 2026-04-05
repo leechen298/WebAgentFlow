@@ -59,6 +59,40 @@ export interface RecordingEvent {
   fieldContext?: FieldContext;
 }
 
+// ---------------------------------------------------------------------------
+// Initial State types (Task Pack 6.5)
+// ---------------------------------------------------------------------------
+
+/** A snapshot of one form field's state at recording start. */
+export interface InitialFieldSnapshot {
+  /** Visible label text (e.g. "发放时间") */
+  fieldLabel?: string;
+  /** Validation prop name from framework (e.g. "awardTiming") */
+  fieldProp?: string;
+  /** Detected field type: text | number | select | checkbox | radio | richtext | textarea | date-range | custom */
+  fieldType?: string;
+  /** Whether the field is marked as required */
+  required?: boolean;
+  /** Current visible value at recording start (before any user interaction) */
+  defaultValueText?: string;
+  /** Placeholder text (when no value present) */
+  placeholder?: string;
+  /** Initial HTML content for richtext editors */
+  defaultValueHtml?: string;
+}
+
+/** Page initial state snapshot captured at recording start. */
+export interface PageInitialState {
+  /** Unix timestamp (ms) when the snapshot was taken */
+  capturedAt: number;
+  /** URL of the page at snapshot time */
+  pageUrl: string;
+  /** document.title at snapshot time */
+  pageTitle: string;
+  /** All form field snapshots found on the page */
+  fields: InitialFieldSnapshot[];
+}
+
 // Recording Meta
 export interface RecordingMeta {
   initialUrl: string;
@@ -66,6 +100,8 @@ export interface RecordingMeta {
   startTime: number;
   endTime?: number;
   eventCount: number;
+  /** Page initial state captured at recording start (Task Pack 6.5) */
+  initialState?: PageInitialState;
 }
 
 export interface Recording {
@@ -137,6 +173,8 @@ export interface NormalizedRecording {
   summary: NormalizationSummary;
   segments: NormalizedSegment[];
   key_actions: NormalizedStep[];
+  /** Initial page state captured at recording start (Task Pack 6.5) */
+  initial_state?: PageInitialState | null;
 }
 
 // Skill types

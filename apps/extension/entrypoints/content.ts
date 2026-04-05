@@ -1,4 +1,5 @@
 import { EventCapturer } from '../src/recorder/capture';
+import { captureInitialState } from '../src/recorder/initial-state';
 import type { RecordingEvent, FrameInfo } from '@web-agent-flow/shared-types';
 
 export default defineContentScript({
@@ -50,11 +51,34 @@ export default defineContentScript({
           if (response?.state?.isRecording && capturer) {
             capturer.start();
             console.info('WebAgentFlow iframe: auto-started capture (recording in progress)');
+            // RC4 fix: iframes may contain the actual business content — capture their
+            // initial state too. Two-pass to allow async data loading.
+            sendInitialState(1000);
+            sendInitialState(2500);
           }
         })
         .catch(() => {
           // Ignore — extension context may not be available in some edge cases
         });
+    }
+
+    // Helper: capture page initial state and send to background after a delay.
+    // Returns immediately; the send happens asynchronously after `delayMs`.
+    // Sending from content → background wakes the MV3 service worker if needed.
+    function sendInitialState(delayMs: number): void {
+      setTimeout(() => {
+        try {
+          const initialState = captureInitialState();
+          browser.runtime
+            .sendMessage({ type: 'RECORDING_INITIAL_STATE', data: initialState })
+            .catch(() => {}); // Errors silenced; background may log separately
+          console.info(
+            `WebAgentFlow: initial state sent (${delayMs}ms) — ${initialState.fields.length} fields from ${initialState.pageUrl}`,
+          );
+        } catch {
+          // Ignore any DOM access errors
+        }
+      }, delayMs);
     }
 
     // Listen for messages from background script
@@ -70,6 +94,24 @@ export default defineContentScript({
             capturer.start();
             console.info('WebAgentFlow: started event capture');
             sendResponse({ success: true });
+
+            // Capture initial state in every frame that actually starts recording.
+            // This fixes the common shell+iframe edit-page case where the iframe is
+            // already present at recording start: previously it received
+            // START_CAPTURE but skipped initial-state sampling entirely.
+            //
+            // Two-pass:
+            // - top frame: 500 / 1500 ms
+            // - iframe: 1000 / 2500 ms
+            // The iframe gets a slightly later window because embedded business
+            // pages often hydrate later than the shell page.
+            if (isIframe) {
+              sendInitialState(1000);
+              sendInitialState(2500);
+            } else {
+              sendInitialState(500);
+              sendInitialState(1500);
+            }
           } else {
             sendResponse({ success: false, error: 'Capturer not initialized' });
           }
@@ -91,6 +133,16 @@ export default defineContentScript({
           if (capturer) {
             capturer.captureNavigate();
             sendResponse({ success: true });
+
+            // Re-capture initial state after navigation in whichever frame is
+            // currently handling the business page.
+            if (isIframe) {
+              sendInitialState(1500);
+              sendInitialState(3000);
+            } else {
+              sendInitialState(1000);
+              sendInitialState(2500);
+            }
           } else {
             sendResponse({ success: false, error: 'Capturer not initialized' });
           }

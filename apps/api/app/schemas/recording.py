@@ -37,6 +37,29 @@ class RecordingRead(RecordingBase):
 
 
 # ---------------------------------------------------------------------------
+# Initial state schemas (Task Pack 6.5)
+# ---------------------------------------------------------------------------
+
+class InitialFieldSnapshot(BaseModel):
+    """Snapshot of one form field's state at recording start."""
+    field_label: str | None = None
+    field_prop: str | None = None
+    field_type: str | None = None
+    required: bool | None = None
+    default_value_text: str | None = None
+    placeholder: str | None = None
+    default_value_html: str | None = None
+
+
+class PageInitialState(BaseModel):
+    """Page initial state snapshot captured at recording start."""
+    captured_at: int | None = None
+    page_url: str | None = None
+    page_title: str | None = None
+    fields: list[InitialFieldSnapshot] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
 # Normalized recording schemas (Task Pack 6)
 # ---------------------------------------------------------------------------
 
@@ -78,3 +101,4 @@ class NormalizedRecordingRead(BaseModel):
     summary: NormalizationSummary
     segments: list[NormalizedSegment]
     key_actions: list[NormalizedStep]
+    initial_state: dict[str, Any] | None = None
