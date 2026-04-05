@@ -4,6 +4,11 @@ export type RecordingStatus = 'draft' | 'completed' | 'archived';
 // Recording Event Types
 export type RecordingEventType = 'navigate' | 'click' | 'input' | 'change';
 
+export interface FrameInfo {
+  isIframe: boolean;
+  frameUrl: string;
+}
+
 export interface RecordingEventTarget {
   tag: string;
   text?: string;
@@ -11,6 +16,11 @@ export interface RecordingEventTarget {
   label?: string;
   name?: string;
   id?: string;
+  // Richer context (Task Pack 5)
+  placeholder?: string;
+  className?: string;
+  role?: string;
+  nearbyText?: string;
 }
 
 export interface RecordingEvent {
@@ -20,6 +30,8 @@ export interface RecordingEvent {
   title?: string;
   target?: RecordingEventTarget;
   value?: string | null;
+  // Frame context (Task Pack 5)
+  frameInfo?: FrameInfo;
 }
 
 // Recording Meta

@@ -45,9 +45,9 @@ export default defineBackground(() => {
     }
 
     try {
-      // Inject the content script
+      // Inject the content script into all frames (top + iframes)
       await browser.scripting.executeScript({
-        target: { tabId },
+        target: { tabId, allFrames: true },
         files: ['/content-scripts/content.js'],
       });
       // Wait a bit for the script to initialize
