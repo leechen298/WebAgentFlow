@@ -26,8 +26,11 @@
  */
 
 import type { InitialFieldSnapshot, PageInitialState } from '@web-agent-flow/shared-types';
+import { getCanonicalPageUrl } from './page-url';
 
 const MAX_FIELDS = 80;
+const MAX_TABLE_ROWS = 5;
+const MAX_LIST_ITEMS = 5;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SHARED UTILITIES
@@ -35,6 +38,170 @@ const MAX_FIELDS = 80;
 
 function cleanLabel(raw: string): string {
   return raw.trim().replace(/[\s*：:]+$/, '').trim();
+}
+
+function normalizeText(raw: string): string {
+  return raw.replace(/\s+/g, ' ').trim();
+}
+
+function buildFieldPath(...parts: Array<string | undefined>): string | undefined {
+  const unique = parts
+    .map((part) => (part ? cleanLabel(part) : ''))
+    .filter(Boolean)
+    .filter((part, index, arr) => arr.indexOf(part) === index);
+
+  return unique.length > 0 ? unique.join(' / ') : undefined;
+}
+
+function extractHeadingText(el: Element): string | undefined {
+  const directText = normalizeText(el.textContent ?? '');
+  if (
+    directText &&
+    directText.length >= 2 &&
+    directText.length <= 40 &&
+    !/[，。！？;；]$/.test(directText)
+  ) {
+    return cleanLabel(directText).slice(0, 80);
+  }
+
+  const innerHeading = el.querySelector(
+    'h1, h2, h3, h4, h5, h6, [role="heading"], strong, b, ' +
+      '.title, .section-title, .module-title, .panel-title, .card-title, .ant-card-head-title, .el-divider__text',
+  );
+  const innerText = normalizeText(innerHeading?.textContent ?? '');
+  if (
+    innerText &&
+    innerText.length >= 2 &&
+    innerText.length <= 40 &&
+    !/[，。！？;；]$/.test(innerText)
+  ) {
+    return cleanLabel(innerText).slice(0, 80);
+  }
+
+  return undefined;
+}
+
+function findSectionLabel(
+  start: Element,
+  exclude: Array<string | undefined> = [],
+): string | undefined {
+  const excluded = new Set(
+    exclude.map((item) => (item ? cleanLabel(item) : '')).filter(Boolean),
+  );
+
+  let current: Element | null = start;
+  let depth = 0;
+
+  while (current && depth < 6) {
+    let prev: Element | null = current.previousElementSibling;
+    let hops = 0;
+    while (prev && hops < 4) {
+      const text = extractHeadingText(prev);
+      if (text && !excluded.has(text)) return text;
+      prev = prev.previousElementSibling;
+      hops += 1;
+    }
+
+    const parent = current.parentElement;
+    if (parent) {
+      const heading = Array.from(parent.children)
+        .slice(0, 4)
+        .map((child) => extractHeadingText(child))
+        .find((text) => text && !excluded.has(text));
+      if (heading) return heading;
+    }
+
+    current = current.parentElement;
+    depth += 1;
+  }
+
+  return undefined;
+}
+
+function summarizeElementText(
+  el: Element,
+  maxLength = 150,
+  options: { stripInteractive?: boolean } = {},
+): string | undefined {
+  const input = el.querySelector<HTMLInputElement>(
+    'input:not([type="hidden"]):not([type="button"]):not([type="submit"])' +
+      ':not([type="reset"]):not([type="image"]):not([type="file"])',
+  );
+  if (input?.value?.trim()) {
+    return normalizeText(input.value).slice(0, maxLength);
+  }
+
+  const select = el.querySelector<HTMLSelectElement>('select');
+  if (select) {
+    const selected = select.options[select.selectedIndex];
+    const value = normalizeText(selected?.text ?? select.value ?? '');
+    if (value) return value.slice(0, maxLength);
+  }
+
+  const textarea = el.querySelector<HTMLTextAreaElement>('textarea');
+  if (textarea?.value?.trim()) {
+    return normalizeText(textarea.value).slice(0, maxLength);
+  }
+
+  const clone = el.cloneNode(true) as Element;
+  clone
+    .querySelectorAll(
+      'script, style, svg, use, path, textarea, select, ' +
+        'input[type="hidden"], input[type="button"], input[type="submit"], input[type="reset"], ' +
+        '[aria-hidden="true"]',
+    )
+    .forEach((node) => node.remove());
+
+  if (options.stripInteractive !== false) {
+    clone
+      .querySelectorAll(
+        'button, a, [role="button"], [class*="btn"], [class*="button"], [class*="close"], [class*="icon"]',
+      )
+      .forEach((node) => node.remove());
+  }
+
+  const text = normalizeText(clone.textContent ?? '');
+  if (text) return text.slice(0, maxLength);
+
+  if (el.querySelector('img')) return '[image]';
+
+  return undefined;
+}
+
+function snapshotScore(snapshot: InitialFieldSnapshot): number {
+  let score = 0;
+  if (snapshot.fieldLabel) score += 2;
+  if (snapshot.fieldPath && snapshot.fieldPath !== snapshot.fieldLabel) score += 2;
+  if (snapshot.sectionLabel) score += 1;
+  if (snapshot.fieldProp) score += 1;
+  if (snapshot.fieldType && snapshot.fieldType !== 'unknown') score += 1;
+  if (snapshot.required) score += 1;
+  if (snapshot.itemCount) score += 2;
+  if (snapshot.defaultValueHtml) score += 2;
+  if (snapshot.defaultValueText) {
+    score += Math.min(6, Math.ceil(snapshot.defaultValueText.length / 30));
+  }
+  if (snapshot.placeholder) score += 1;
+  return score;
+}
+
+function mergeSnapshots(snapshots: InitialFieldSnapshot[]): InitialFieldSnapshot[] {
+  const deduped = new Map<string, InitialFieldSnapshot>();
+
+  for (const snapshot of snapshots) {
+    const key = [
+      snapshot.fieldPath ?? '',
+      snapshot.fieldLabel ?? '',
+      snapshot.fieldProp ?? '',
+    ].join('|');
+
+    const existing = deduped.get(key);
+    if (!existing || snapshotScore(snapshot) > snapshotScore(existing)) {
+      deduped.set(key, snapshot);
+    }
+  }
+
+  return Array.from(deduped.values());
 }
 
 /** True if the element is visible (not display:none, not zero-size). */
@@ -262,6 +429,8 @@ function scanGenericControls(excludedElements?: Set<Element>): {
 
     try {
       const label = findGenericLabel(el);
+      const sectionLabel = findSectionLabel(el, [label]);
+      const fieldPath = buildFieldPath(sectionLabel, label);
       const { value, type, placeholder, html } = extractControlValue(el);
       const name = el.getAttribute('name') ?? undefined;
 
@@ -272,6 +441,8 @@ function scanGenericControls(excludedElements?: Set<Element>): {
 
       const snapshot: InitialFieldSnapshot = {};
       if (label) snapshot.fieldLabel = label;
+      if (fieldPath) snapshot.fieldPath = fieldPath;
+      if (sectionLabel) snapshot.sectionLabel = sectionLabel;
       if (name) snapshot.fieldProp = name;
       if (type && type !== 'unknown') snapshot.fieldType = type;
       if (el.hasAttribute('required')) snapshot.required = true;
@@ -363,6 +534,7 @@ interface FieldData {
   defaultValueText?: string;
   placeholder?: string;
   defaultValueHtml?: string;
+  itemCount?: number;
 }
 
 function isSelectProxyInput(input: HTMLInputElement): boolean {
@@ -574,6 +746,90 @@ function extractContainerFieldData(container: Element): FieldData {
     return { fieldType: 'select' };
   }
 
+  // ── D1. Table inside container ──────────────────────────────────────────
+  //    el-form-item wrapping an el-table (e.g. "奖品配置")
+  {
+    const contentArea =
+      container.querySelector('.el-form-item__content') ??
+      container.querySelector('.ant-form-item-control-input-content') ??
+      container;
+    const tableRows = contentArea.querySelectorAll('table tbody tr, .el-table__row');
+    if (tableRows.length > 0) {
+      // Extract headers — handle Element UI split tables
+      let hdrs: string[] = [];
+      const innerTable = contentArea.querySelector('table');
+      if (innerTable) {
+        hdrs = Array.from(
+          innerTable.querySelectorAll('thead th, tr:first-child th'),
+        ).map((cell) => cleanLabel(cell.textContent ?? ''));
+      }
+      if (hdrs.length === 0) {
+        const elTableEl = contentArea.querySelector('.el-table');
+        if (elTableEl) {
+          const headerRoot = elTableEl.querySelector(
+            '.el-table__header-wrapper, .el-table__header',
+          );
+          if (headerRoot) {
+            hdrs = Array.from(headerRoot.querySelectorAll('th')).map(
+              (cell) => cleanLabel(cell.textContent ?? ''),
+            );
+          }
+        }
+      }
+      const rowSummaries = Array.from(tableRows)
+        .slice(0, MAX_TABLE_ROWS)
+        .map((row) => {
+          const cells = Array.from(row.querySelectorAll('td, th'));
+          const parts = cells
+            .map((cell, i) => {
+              const header = hdrs[i];
+              if (header && /^(操作|action|actions?)$/i.test(cleanLabel(header))) return undefined;
+              const text = summarizeElementText(cell, 80);
+              if (!text) return undefined;
+              if (!header || /^(序号|#)$/i.test(cleanLabel(header))) return text;
+              return `${cleanLabel(header)}:${text}`;
+            })
+            .filter(Boolean) as string[];
+          return normalizeText(parts.join(' | ')).slice(0, 180) || undefined;
+        })
+        .filter(Boolean) as string[];
+      const rowCount = tableRows.length;
+      return {
+        fieldType: 'table',
+        itemCount: rowCount,
+        defaultValueText:
+          rowSummaries.length > 0
+            ? `共${rowCount}行：${rowSummaries.join('；').slice(0, 420)}`
+            : `共${rowCount}行`,
+      };
+    }
+  }
+
+  // ── D2. Card/list inside container ────────────────────────────────────────
+  //    e.g. task cards inside a form-item
+  {
+    const contentArea =
+      container.querySelector('.el-form-item__content') ??
+      container.querySelector('.ant-form-item-control-input-content') ??
+      container;
+    const cards = contentArea.querySelectorAll<HTMLElement>(
+      '.task-card, .card-item, [class*="-card"]:not([class*="el-card"]):not(.el-form-item)',
+    );
+    if (cards.length >= 2) {
+      const summaries = Array.from(cards)
+        .slice(0, MAX_LIST_ITEMS)
+        .map((card) => extractItemTitle(card))
+        .filter(Boolean) as string[];
+      if (summaries.length > 0) {
+        return {
+          fieldType: 'list',
+          itemCount: cards.length,
+          defaultValueText: `共${cards.length}项：${summaries.join('；').slice(0, 420)}`,
+        };
+      }
+    }
+  }
+
   // ── D. Generic visible-text fallback ───────────────────────────────────
   //    For custom components: try to read visible text inside the control
   //    area, excluding labels and error messages.
@@ -618,9 +874,11 @@ function snapshotContainer(container: Element): {
 
   try {
     const label = extractContainerLabel(container);
+    const sectionLabel = findSectionLabel(container, [label]);
+    const fieldPath = buildFieldPath(sectionLabel, label);
     const prop = container.getAttribute('prop') ?? undefined;
     const required = detectRequired(container) || undefined;
-    const { fieldType, defaultValueText, placeholder, defaultValueHtml } =
+    const { fieldType, defaultValueText, placeholder, defaultValueHtml, itemCount } =
       extractContainerFieldData(container);
 
     // Skip containers with no useful data
@@ -630,12 +888,15 @@ function snapshotContainer(container: Element): {
 
     const snapshot: InitialFieldSnapshot = {};
     if (label) snapshot.fieldLabel = label;
+    if (fieldPath) snapshot.fieldPath = fieldPath;
+    if (sectionLabel) snapshot.sectionLabel = sectionLabel;
     if (prop) snapshot.fieldProp = prop;
     if (fieldType) snapshot.fieldType = fieldType;
     if (required) snapshot.required = true;
     if (defaultValueText) snapshot.defaultValueText = defaultValueText;
     if (placeholder) snapshot.placeholder = placeholder;
     if (defaultValueHtml) snapshot.defaultValueHtml = defaultValueHtml;
+    if (itemCount) snapshot.itemCount = itemCount;
 
     return { snapshot, innerControls };
   } catch {
@@ -675,6 +936,261 @@ function scanContainers(): {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// LAYER 2.5 — STRUCTURED TABLES / LISTS / SECTION BLOCKS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function summarizeTableCell(cell: Element, header?: string): string | undefined {
+  if (header && /^(操作|action|actions?)$/i.test(cleanLabel(header))) {
+    return undefined;
+  }
+
+  const text = summarizeElementText(cell, 80);
+  if (!text) return undefined;
+
+  if (!header || /^(序号|#)$/i.test(cleanLabel(header))) {
+    return text;
+  }
+
+  return `${cleanLabel(header)}:${text}`;
+}
+
+function findTableLabel(table: Element): {
+  fieldLabel?: string;
+  sectionLabel?: string;
+  fieldPath?: string;
+  required?: boolean;
+  fieldProp?: string;
+} {
+  const container = table.closest(CONTAINER_SELECTOR);
+  if (container) {
+    const fieldLabel = extractContainerLabel(container);
+    const sectionLabel = findSectionLabel(container, [fieldLabel]);
+    return {
+      fieldLabel,
+      sectionLabel,
+      fieldPath: buildFieldPath(sectionLabel, fieldLabel),
+      required: detectRequired(container) || undefined,
+      fieldProp: container.getAttribute('prop') ?? undefined,
+    };
+  }
+
+  const caption = table.querySelector('caption')?.textContent;
+  const fieldLabel = caption ? cleanLabel(caption) : findSectionLabel(table);
+  const sectionLabel = findSectionLabel(table, [fieldLabel]);
+
+  return {
+    fieldLabel,
+    sectionLabel,
+    fieldPath: buildFieldPath(sectionLabel, fieldLabel),
+  };
+}
+
+function scanStructuredTables(): InitialFieldSnapshot[] {
+  const snapshots: InitialFieldSnapshot[] = [];
+  const tables = document.querySelectorAll<HTMLElement>('table');
+  const seen = new Set<Element>();
+
+  for (const table of tables) {
+    if (seen.has(table)) continue;
+    seen.add(table);
+    if (!isVisible(table)) continue;
+
+    const rows = Array.from(table.querySelectorAll('tbody tr')).filter((row) =>
+      Array.from(row.children).some((cell) => ['TD', 'TH'].includes(cell.tagName)),
+    );
+    if (rows.length === 0) continue;
+
+    let headers = Array.from(
+      table.querySelectorAll('thead th, tr:first-child th'),
+    ).map((cell) => cleanLabel(cell.textContent ?? ''));
+
+    // Element UI renders header and body as separate <table> elements inside
+    // .el-table.  When headers are empty, look for a sibling header table.
+    if (headers.length === 0) {
+      const elTableWrapper = table.closest('.el-table, .el-table__body-wrapper');
+      if (elTableWrapper) {
+        const headerWrapper = elTableWrapper.querySelector(
+          '.el-table__header-wrapper th, .el-table__header th',
+        );
+        if (headerWrapper) {
+          const headerRoot = elTableWrapper.querySelector(
+            '.el-table__header-wrapper, .el-table__header',
+          );
+          if (headerRoot) {
+            headers = Array.from(headerRoot.querySelectorAll('th')).map(
+              (cell) => cleanLabel(cell.textContent ?? ''),
+            );
+          }
+        }
+      }
+      // Ant Design also uses separate table wrappers
+      if (headers.length === 0) {
+        const antWrapper = table.closest('.ant-table-wrapper, .ant-table');
+        if (antWrapper) {
+          headers = Array.from(
+            antWrapper.querySelectorAll('.ant-table-thead th'),
+          ).map((cell) => cleanLabel(cell.textContent ?? ''));
+        }
+      }
+    }
+
+    const rowSummaries = rows
+      .slice(0, MAX_TABLE_ROWS)
+      .map((row) => {
+        const cells = Array.from(row.querySelectorAll('td, th'));
+        const parts = cells
+          .map((cell, index) => summarizeTableCell(cell, headers[index]))
+          .filter(Boolean) as string[];
+        const joined = normalizeText(parts.join(' | '));
+        return joined ? joined.slice(0, 180) : undefined;
+      })
+      .filter(Boolean) as string[];
+
+    const { fieldLabel, sectionLabel, fieldPath, required, fieldProp } =
+      findTableLabel(table);
+
+    if (!fieldLabel && !sectionLabel && rowSummaries.length === 0) continue;
+
+    const snapshot: InitialFieldSnapshot = {
+      fieldLabel: fieldLabel ?? sectionLabel ?? '表格',
+      fieldPath: fieldPath ?? buildFieldPath(sectionLabel, fieldLabel),
+      sectionLabel,
+      fieldProp,
+      fieldType: 'table',
+      required,
+      itemCount: rows.length,
+      defaultValueText:
+        rowSummaries.length > 0
+          ? `共${rows.length}行：${rowSummaries.join('；').slice(0, 420)}`
+          : `共${rows.length}行`,
+    };
+
+    snapshots.push(snapshot);
+  }
+
+  return snapshots;
+}
+
+function findListLabel(container: Element): {
+  fieldLabel?: string;
+  sectionLabel?: string;
+  fieldPath?: string;
+  required?: boolean;
+  fieldProp?: string;
+} {
+  const formContainer = container.closest(CONTAINER_SELECTOR);
+  if (formContainer) {
+    const fieldLabel = extractContainerLabel(formContainer);
+    const sectionLabel = findSectionLabel(formContainer, [fieldLabel]);
+    return {
+      fieldLabel,
+      sectionLabel,
+      fieldPath: buildFieldPath(sectionLabel, fieldLabel),
+      required: detectRequired(formContainer) || undefined,
+      fieldProp: formContainer.getAttribute('prop') ?? undefined,
+    };
+  }
+
+  const sectionLabel = findSectionLabel(container);
+  const fieldLabel = sectionLabel ?? extractHeadingText(container) ?? '列表';
+  return {
+    fieldLabel,
+    sectionLabel,
+    fieldPath: buildFieldPath(sectionLabel, fieldLabel),
+  };
+}
+
+function extractItemTitle(item: Element): string | undefined {
+  const heading = item.querySelector(
+    'h1, h2, h3, h4, h5, h6, strong, b, ' +
+      '.title, .item-title, .task-title, .card-title, .name, .label, [class*="title"], [class*="name"]',
+  );
+  const headingText = normalizeText(heading?.textContent ?? '');
+  if (headingText && headingText.length <= 80) {
+    return headingText.slice(0, 80);
+  }
+
+  const summary = summarizeElementText(item, 120);
+  if (!summary) return undefined;
+
+  return summary.split(/[,，;；]/)[0]?.slice(0, 80);
+}
+
+function looksLikeRepeatedItemContainer(container: Element): boolean {
+  const directChildren = Array.from(container.children).filter(
+    (child) =>
+      child instanceof HTMLElement &&
+      isVisible(child) &&
+      !child.matches(CONTAINER_SELECTOR) &&
+      !['TABLE', 'TBODY', 'THEAD', 'TR'].includes(child.tagName),
+  );
+
+  if (directChildren.length < 2 || directChildren.length > 12) return false;
+
+  const meaningfulChildren = directChildren.filter((child) => {
+    const text = summarizeElementText(child, 120);
+    return Boolean(text && text.length >= 4);
+  });
+  if (meaningfulChildren.length < 2) return false;
+
+  const titledChildren = directChildren.filter((child) => extractItemTitle(child));
+  const interactiveChildren = directChildren.filter((child) =>
+    Boolean(child.querySelector('button, a, [role="button"]')),
+  );
+
+  return titledChildren.length >= 2 || interactiveChildren.length >= 2;
+}
+
+function scanStructuredLists(): InitialFieldSnapshot[] {
+  const snapshots: InitialFieldSnapshot[] = [];
+  const candidates = document.querySelectorAll<HTMLElement>(
+    'section, article, ul, ol, [role="list"], ' +
+      '[class*="list"], [class*="List"], [class*="task"], [class*="Task"], [class*="card"], [class*="Card"]',
+  );
+  const seen = new Set<Element>();
+
+  for (const container of candidates) {
+    if (seen.has(container)) continue;
+    seen.add(container);
+    if (!isVisible(container)) continue;
+    if (!looksLikeRepeatedItemContainer(container)) continue;
+
+    const { fieldLabel, sectionLabel, fieldPath, required, fieldProp } =
+      findListLabel(container);
+    const items = Array.from(container.children).filter(
+      (child) => child instanceof HTMLElement && isVisible(child),
+    );
+    const summaries = items
+      .slice(0, MAX_LIST_ITEMS)
+      .map((item) => {
+        const title = extractItemTitle(item);
+        const detail = summarizeElementText(item, 160);
+        const normalizedDetail =
+          detail && title && detail.startsWith(title)
+            ? detail.slice(title.length).replace(/^[\s:：|-]+/, '')
+            : detail;
+        return [title, normalizedDetail].filter(Boolean).join(' | ').slice(0, 180);
+      })
+      .filter(Boolean);
+
+    if (summaries.length === 0) continue;
+
+    snapshots.push({
+      fieldLabel,
+      fieldPath,
+      sectionLabel,
+      fieldProp,
+      fieldType: 'list',
+      required,
+      itemCount: items.length,
+      defaultValueText: `共${items.length}项：${summaries.join('；').slice(0, 420)}`,
+    });
+  }
+
+  return snapshots;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // LAYER 3 — MERGE & PUBLIC API
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -692,18 +1208,26 @@ function scanContainers(): {
 export function captureInitialState(): PageInitialState {
   // Layer 2 first — containers provide richer data and mark covered elements
   const { snapshots: containerFields, coveredElements } = scanContainers();
+  const structuredFields = [
+    ...scanStructuredTables(),
+    ...scanStructuredLists(),
+  ];
 
   // Layer 1 — find standalone controls not already covered by containers
   const { snapshots: standaloneFields } =
-    containerFields.length < MAX_FIELDS
+    containerFields.length + structuredFields.length < MAX_FIELDS
       ? scanGenericControls(coveredElements)
       : { snapshots: [], coveredElements: new Set<Element>() };
 
-  const fields = [...containerFields, ...standaloneFields].slice(0, MAX_FIELDS);
+  const fields = mergeSnapshots([
+    ...containerFields,
+    ...structuredFields,
+    ...standaloneFields,
+  ]).slice(0, MAX_FIELDS);
 
   return {
     capturedAt: Date.now(),
-    pageUrl: location.href,
+    pageUrl: getCanonicalPageUrl(location.href),
     pageTitle: document.title,
     fields,
   };

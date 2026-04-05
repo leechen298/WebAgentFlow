@@ -5,6 +5,7 @@ import type {
   FrameInfo,
   FieldContext,
 } from '@web-agent-flow/shared-types';
+import { getCanonicalPageUrl } from './page-url';
 
 /**
  * Create a recording event with the given properties
@@ -24,7 +25,7 @@ export function createRecordingEvent(
   return {
     type,
     timestamp: Date.now(),
-    url,
+    url: getCanonicalPageUrl(url),
     ...options,
   };
 }

@@ -1,5 +1,6 @@
 import { EventCapturer } from '../src/recorder/capture';
 import { captureInitialState } from '../src/recorder/initial-state';
+import { getCanonicalPageUrl } from '../src/recorder/page-url';
 import type { RecordingEvent, FrameInfo } from '@web-agent-flow/shared-types';
 
 export default defineContentScript({
@@ -151,7 +152,7 @@ export default defineContentScript({
 
         case 'GET_PAGE_INFO': {
           sendResponse({
-            url: window.location.href,
+            url: getCanonicalPageUrl(window.location.href),
             title: document.title,
             isIframe,
           });

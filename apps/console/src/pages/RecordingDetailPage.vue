@@ -110,17 +110,37 @@
                 style="margin-bottom: 12px"
               >
                 <template #bodyCell="{ column, record }">
-                  <template v-if="column.key === 'fieldType'">
+                  <template v-if="column.key === 'fieldLabel'">
+                    <div>{{ record.fieldPath || record.fieldLabel || '—' }}</div>
+                    <div
+                      v-if="record.sectionLabel && record.fieldPath !== record.sectionLabel"
+                      style="color: #999; font-size: 11px"
+                    >
+                      section: {{ record.sectionLabel }}
+                    </div>
+                  </template>
+                  <template v-else-if="column.key === 'fieldType'">
                     <a-tag :color="initialFieldTypeColor(record.fieldType)">
                       {{ record.fieldType || 'unknown' }}
                     </a-tag>
+                  </template>
+                  <template v-else-if="column.key === 'itemCount'">
+                    <span v-if="record.itemCount">{{ record.itemCount }}</span>
+                    <span v-else style="color: #ccc">—</span>
                   </template>
                   <template v-else-if="column.key === 'required'">
                     <a-tag v-if="record.required" color="red" style="font-size: 11px">✓</a-tag>
                     <span v-else style="color: #ccc">—</span>
                   </template>
                   <template v-else-if="column.key === 'defaultValueText'">
-                    <span v-if="record.defaultValueText" style="color: #1677ff">
+                    <a
+                      v-if="record.defaultValueText && (record.fieldType === 'table' || record.fieldType === 'list')"
+                      style="color: #1677ff"
+                      @click="openFieldDetailModal(record)"
+                    >
+                      {{ truncate(record.defaultValueText, 80) }}
+                    </a>
+                    <span v-else-if="record.defaultValueText" style="color: #1677ff">
                       {{ truncate(record.defaultValueText, 80) }}
                     </span>
                     <span v-else-if="record.placeholder" style="color: #bbb; font-style: italic">
@@ -292,6 +312,44 @@
       </a-card>
     </a-spin>
 
+    <!-- Field Detail Modal (table / list) -->
+    <a-modal
+      v-model:open="fieldDetailModalOpen"
+      :title="fieldDetailTitle"
+      :footer="null"
+      width="720px"
+    >
+      <div v-if="fieldDetailRecord">
+        <!-- Table view -->
+        <template v-if="fieldDetailRecord.fieldType === 'table'">
+          <a-table
+            :columns="parsedTableColumns"
+            :data-source="parsedTableRows"
+            :pagination="false"
+            size="small"
+            row-key="(r, i) => i"
+          />
+        </template>
+        <!-- List view -->
+        <template v-else-if="fieldDetailRecord.fieldType === 'list'">
+          <a-list
+            size="small"
+            :data-source="parsedListItems"
+            bordered
+          >
+            <template #renderItem="{ item, index }">
+              <a-list-item>
+                <a-space>
+                  <a-tag color="blue">{{ index + 1 }}</a-tag>
+                  {{ item }}
+                </a-space>
+              </a-list-item>
+            </template>
+          </a-list>
+        </template>
+      </div>
+    </a-modal>
+
     <!-- Edit Modal -->
     <a-modal
       v-model:open="editModalOpen"
@@ -353,7 +411,7 @@ import { EditOutlined, DeleteOutlined } from '@ant-design/icons-vue';
 import { useRecordingsStore } from '@/stores';
 import { safeParseJson, formatJsonString } from '@/utils';
 import { getNormalizedRecording } from '@/api/recordings';
-import type { Recording, RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState } from '@web-agent-flow/shared-types';
+import type { RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState, InitialFieldSnapshot } from '@web-agent-flow/shared-types';
 
 const route = useRoute();
 const router = useRouter();
@@ -366,6 +424,9 @@ const activeTab = ref('raw');
 const normalized = ref<NormalizedRecording | null>(null);
 const normLoading = ref(false);
 const normError = ref('');
+
+const fieldDetailModalOpen = ref(false);
+const fieldDetailRecord = ref<InitialFieldSnapshot | null>(null);
 
 const formData = reactive({
   name: '',
@@ -397,9 +458,10 @@ const stepColumns = [
 ];
 
 const initialStateColumns = [
-  { title: 'Label', dataIndex: 'fieldLabel', key: 'fieldLabel', width: 160 },
+  { title: 'Label / Path', dataIndex: 'fieldLabel', key: 'fieldLabel', width: 240 },
   { title: 'Prop', dataIndex: 'fieldProp', key: 'fieldProp', width: 120 },
   { title: 'Type', key: 'fieldType', width: 100 },
+  { title: 'Count', key: 'itemCount', width: 80 },
   { title: 'Req', key: 'required', width: 60 },
   { title: 'Default / Current Value', key: 'defaultValueText' },
 ];
@@ -409,6 +471,60 @@ const initialState = computed<PageInitialState | null>(() => {
   if (!meta?.initialState) return null;
   return meta.initialState as PageInitialState;
 });
+
+const fieldDetailTitle = computed(() => {
+  const r = fieldDetailRecord.value;
+  if (!r) return '';
+  const label = r.fieldPath || r.fieldLabel || r.fieldType || '';
+  const count = r.itemCount ? `（${r.itemCount} ${r.fieldType === 'table' ? '行' : '项'}）` : '';
+  return `${label}${count}`;
+});
+
+/**
+ * Parse `defaultValueText` for a table field.
+ * Format: "共N行：col1:val1 | col2:val2；col1:val2 | ..."
+ * Returns { columns, rows } for a-table.
+ */
+const parsedTableRows = computed<Array<Record<string, string>>>(() => {
+  const text = fieldDetailRecord.value?.defaultValueText;
+  if (!text) return [];
+  // Strip "共N行：" prefix
+  const body = text.replace(/^共\d+行[：:]\s*/, '');
+  return body.split(/[；;]/).filter(Boolean).map((rowStr) => {
+    const record: Record<string, string> = {};
+    rowStr.split(' | ').forEach((part, i) => {
+      const colonIdx = part.indexOf(':');
+      if (colonIdx > 0) {
+        const key = part.slice(0, colonIdx).trim();
+        const val = part.slice(colonIdx + 1).trim();
+        record[key || `col${i}`] = val;
+      } else {
+        record[`col${i}`] = part.trim();
+      }
+    });
+    return record;
+  });
+});
+
+const parsedTableColumns = computed(() => {
+  const rows = parsedTableRows.value;
+  if (rows.length === 0) return [];
+  const keys = Array.from(new Set(rows.flatMap((r) => Object.keys(r))));
+  return keys.map((k) => ({ title: k, dataIndex: k, key: k, ellipsis: true }));
+});
+
+const parsedListItems = computed<string[]>(() => {
+  const text = fieldDetailRecord.value?.defaultValueText;
+  if (!text) return [];
+  // Strip "共N项：" prefix
+  const body = text.replace(/^共\d+项[：:]\s*/, '');
+  return body.split(/[；;]/).filter(Boolean).map((s) => s.trim());
+});
+
+function openFieldDetailModal(record: InitialFieldSnapshot): void {
+  fieldDetailRecord.value = record;
+  fieldDetailModalOpen.value = true;
+}
 
 function initialFieldTypeColor(fieldType?: string): string {
   const map: Record<string, string> = {
@@ -421,6 +537,8 @@ function initialFieldTypeColor(fieldType?: string): string {
     textarea: 'cyan',
     'date-range': 'geekblue',
     custom: 'magenta',
+    table: 'volcano',
+    list: 'lime',
   };
   return map[fieldType ?? ''] ?? 'default';
 }

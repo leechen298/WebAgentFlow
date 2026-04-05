@@ -144,7 +144,14 @@ def _classify_click(ev: dict[str, Any]) -> str:
 
 def _field_label(ev: dict[str, Any]) -> str | None:
     fc = ev.get("fieldContext") or {}
-    label = fc.get("fieldLabel") or ""
+    label = fc.get("fieldPath") or fc.get("fieldLabel") or ""
+    if not label:
+        section = fc.get("sectionLabel") or ""
+        item = fc.get("itemLabel") or ""
+        if section and item:
+            label = f"{section} / {item}"
+        else:
+            label = section or item or ""
     if label:
         return label
     t = ev.get("target") or {}

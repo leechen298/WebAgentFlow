@@ -43,9 +43,12 @@ class RecordingRead(RecordingBase):
 class InitialFieldSnapshot(BaseModel):
     """Snapshot of one form field's state at recording start."""
     field_label: str | None = None
+    field_path: str | None = None
+    section_label: str | None = None
     field_prop: str | None = None
     field_type: str | None = None
     required: bool | None = None
+    item_count: int | None = None
     default_value_text: str | None = None
     placeholder: str | None = None
     default_value_html: str | None = None

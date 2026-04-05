@@ -31,9 +31,15 @@ export interface RecordingEventTarget {
  */
 export interface FieldContext {
   /** Type of the closest recognized container */
-  containerType: 'form-item' | 'unknown';
+  containerType: 'form-item' | 'table-row' | 'list-item' | 'section' | 'unknown';
   /** Visible label text of the form field (trailing colons/asterisks stripped) */
   fieldLabel?: string;
+  /** Hierarchical label path such as "奖品信息 / 奖品配置" */
+  fieldPath?: string;
+  /** Nearest higher-level section title such as "奖品信息" */
+  sectionLabel?: string;
+  /** Repeated item / row label such as "任务1：浏览服务号" */
+  itemLabel?: string;
   /** Current value(s) visible in the field at event time (tags, input value, etc.) */
   fieldValueText?: string;
   /** Whether the field is marked as required */
@@ -67,12 +73,18 @@ export interface RecordingEvent {
 export interface InitialFieldSnapshot {
   /** Visible label text (e.g. "发放时间") */
   fieldLabel?: string;
+  /** Hierarchical label path such as "奖品信息 / 奖品配置" */
+  fieldPath?: string;
+  /** Nearest higher-level section title such as "奖品信息" */
+  sectionLabel?: string;
   /** Validation prop name from framework (e.g. "awardTiming") */
   fieldProp?: string;
   /** Detected field type: text | number | select | checkbox | radio | richtext | textarea | date-range | custom */
   fieldType?: string;
   /** Whether the field is marked as required */
   required?: boolean;
+  /** Number of rows/items for table/list-like structures */
+  itemCount?: number;
   /** Current visible value at recording start (before any user interaction) */
   defaultValueText?: string;
   /** Placeholder text (when no value present) */
