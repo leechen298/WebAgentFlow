@@ -127,8 +127,12 @@ function summarizeElementText(
     'input:not([type="hidden"]):not([type="button"]):not([type="submit"])' +
       ':not([type="reset"]):not([type="image"]):not([type="file"])',
   );
-  if (input?.value?.trim()) {
-    return normalizeText(input.value).slice(0, maxLength);
+  if (input) {
+    const val = input.value?.trim();
+    if (val) return normalizeText(val).slice(0, maxLength);
+    // Fallback: aria-valuenow for spinbutton number inputs (e.g. el-input-number)
+    const ariaVal = input.getAttribute('aria-valuenow');
+    if (ariaVal !== null && ariaVal !== '') return ariaVal.slice(0, maxLength);
   }
 
   const select = el.querySelector<HTMLSelectElement>('select');
@@ -542,12 +546,39 @@ function isSelectProxyInput(input: HTMLInputElement): boolean {
   const ariaHasPopup = input.getAttribute('aria-haspopup');
   const className = input.className || '';
 
-  return (
-    role === 'combobox' ||
-    ariaHasPopup === 'listbox' ||
-    className.includes('selection-search-input') ||
-    className.includes('select__input')
-  );
+  // 1. Explicit ARIA / framework markers (Ant Design, custom)
+  if (role === 'combobox' || ariaHasPopup === 'listbox' || ariaHasPopup === 'true') return true;
+  if (className.includes('selection-search-input') || className.includes('select__input'))
+    return true;
+
+  // 2. For readonly inputs: use generic DOM heuristics to detect select-like wrappers.
+  //    Walk up to 5 ancestor levels (stop at form/body).
+  if (input.hasAttribute('readonly')) {
+    let el: Element | null = input.parentElement;
+    for (let depth = 0; depth < 5 && el; depth++) {
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'form' || tag === 'body') break;
+
+      const cls = (el.getAttribute('class') || '').toLowerCase();
+      // Class name contains a select/cascader/combobox/autocomplete fragment
+      if (/(select|cascader|combobox|autocomplete)/.test(cls)) return true;
+      // Ancestor itself has combobox role
+      if (el.getAttribute('role') === 'combobox') return true;
+
+      // A sibling of this element is a listbox popup → this is a dropdown trigger
+      const parent = el.parentElement;
+      if (parent) {
+        for (const sibling of parent.children) {
+          if (sibling === el) continue;
+          if (sibling.getAttribute('role') === 'listbox') return true;
+        }
+      }
+
+      el = el.parentElement;
+    }
+  }
+
+  return false;
 }
 
 function extractContainerFieldData(container: Element): FieldData {
@@ -746,16 +777,47 @@ function extractContainerFieldData(container: Element): FieldData {
     return { fieldType: 'select' };
   }
 
-  // ── D1. Table inside container ──────────────────────────────────────────
+  // ── D1. Card/list inside container ────────────────────────────────────────
+  //    Check cards BEFORE tables: if a container has both (e.g. task list with
+  //    an embedded probability table), the card list is the primary structure.
+  {
+    const contentArea =
+      container.querySelector('.el-form-item__content') ??
+      container.querySelector('.ant-form-item-control-input-content') ??
+      container;
+    const cards = Array.from(
+      contentArea.querySelectorAll<HTMLElement>(
+        '.task-card, .card-item, [class*="-card"]:not([class*="el-card"]):not(.el-form-item)',
+      ),
+    ).filter((c) => isVisible(c));
+    if (cards.length >= 2) {
+      const summaries = cards
+        .slice(0, MAX_LIST_ITEMS)
+        .map((card) => extractItemTitle(card))
+        .filter(Boolean) as string[];
+      if (summaries.length > 0) {
+        return {
+          fieldType: 'list',
+          itemCount: cards.length,
+          defaultValueText: `共${cards.length}项：${summaries.join('；').slice(0, 420)}`,
+        };
+      }
+    }
+  }
+
+  // ── D2. Table inside container ──────────────────────────────────────────
   //    el-form-item wrapping an el-table (e.g. "奖品配置")
   {
     const contentArea =
       container.querySelector('.el-form-item__content') ??
       container.querySelector('.ant-form-item-control-input-content') ??
       container;
-    const tableRows = contentArea.querySelectorAll('table tbody tr, .el-table__row');
+    // Only count visible rows to avoid counting hidden nested tables
+    const tableRows = Array.from(
+      contentArea.querySelectorAll<HTMLElement>('table tbody tr, .el-table__row'),
+    ).filter((row) => isVisible(row));
     if (tableRows.length > 0) {
-      // Extract headers — handle Element UI split tables
+      // Extract headers — handle Element UI split-table layout
       let hdrs: string[] = [];
       const innerTable = contentArea.querySelector('table');
       if (innerTable) {
@@ -776,17 +838,18 @@ function extractContainerFieldData(container: Element): FieldData {
           }
         }
       }
-      const rowSummaries = Array.from(tableRows)
+      const rowSummaries = tableRows
         .slice(0, MAX_TABLE_ROWS)
         .map((row) => {
           const cells = Array.from(row.querySelectorAll('td, th'));
           const parts = cells
             .map((cell, i) => {
               const header = hdrs[i];
-              if (header && /^(操作|action|actions?)$/i.test(cleanLabel(header))) return undefined;
+              if (header && /^(操作|action|actions?)$/i.test(cleanLabel(header)))
+                return undefined;
               const text = summarizeElementText(cell, 80);
               if (!text) return undefined;
-              if (!header || /^(序号|#)$/i.test(cleanLabel(header))) return text;
+              if (!header) return text;
               return `${cleanLabel(header)}:${text}`;
             })
             .filter(Boolean) as string[];
@@ -802,31 +865,6 @@ function extractContainerFieldData(container: Element): FieldData {
             ? `共${rowCount}行：${rowSummaries.join('；').slice(0, 420)}`
             : `共${rowCount}行`,
       };
-    }
-  }
-
-  // ── D2. Card/list inside container ────────────────────────────────────────
-  //    e.g. task cards inside a form-item
-  {
-    const contentArea =
-      container.querySelector('.el-form-item__content') ??
-      container.querySelector('.ant-form-item-control-input-content') ??
-      container;
-    const cards = contentArea.querySelectorAll<HTMLElement>(
-      '.task-card, .card-item, [class*="-card"]:not([class*="el-card"]):not(.el-form-item)',
-    );
-    if (cards.length >= 2) {
-      const summaries = Array.from(cards)
-        .slice(0, MAX_LIST_ITEMS)
-        .map((card) => extractItemTitle(card))
-        .filter(Boolean) as string[];
-      if (summaries.length > 0) {
-        return {
-          fieldType: 'list',
-          itemCount: cards.length,
-          defaultValueText: `共${cards.length}项：${summaries.join('；').slice(0, 420)}`,
-        };
-      }
     }
   }
 
@@ -947,10 +985,7 @@ function summarizeTableCell(cell: Element, header?: string): string | undefined 
   const text = summarizeElementText(cell, 80);
   if (!text) return undefined;
 
-  if (!header || /^(序号|#)$/i.test(cleanLabel(header))) {
-    return text;
-  }
-
+  if (!header) return text;
   return `${cleanLabel(header)}:${text}`;
 }
 
@@ -1005,22 +1040,17 @@ function scanStructuredTables(): InitialFieldSnapshot[] {
     ).map((cell) => cleanLabel(cell.textContent ?? ''));
 
     // Element UI renders header and body as separate <table> elements inside
-    // .el-table.  When headers are empty, look for a sibling header table.
+    // .el-table.  When this is the body table, look for the sibling header table.
     if (headers.length === 0) {
-      const elTableWrapper = table.closest('.el-table, .el-table__body-wrapper');
-      if (elTableWrapper) {
-        const headerWrapper = elTableWrapper.querySelector(
-          '.el-table__header-wrapper th, .el-table__header th',
+      const elTable = table.closest('.el-table');
+      if (elTable) {
+        const headerRoot = elTable.querySelector(
+          '.el-table__header-wrapper, .el-table__header',
         );
-        if (headerWrapper) {
-          const headerRoot = elTableWrapper.querySelector(
-            '.el-table__header-wrapper, .el-table__header',
+        if (headerRoot) {
+          headers = Array.from(headerRoot.querySelectorAll('th')).map(
+            (cell) => cleanLabel(cell.textContent ?? ''),
           );
-          if (headerRoot) {
-            headers = Array.from(headerRoot.querySelectorAll('th')).map(
-              (cell) => cleanLabel(cell.textContent ?? ''),
-            );
-          }
         }
       }
       // Ant Design also uses separate table wrappers
