@@ -3,6 +3,7 @@ import type {
   RecordingEventType,
   RecordingEventTarget,
   FrameInfo,
+  FieldContext,
 } from '@web-agent-flow/shared-types';
 
 /**
@@ -17,6 +18,7 @@ export function createRecordingEvent(
     value?: string | null;
     frameInfo?: FrameInfo;
     htmlContent?: string;
+    fieldContext?: FieldContext;
   } = {},
 ): RecordingEvent {
   return {

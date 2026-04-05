@@ -25,6 +25,25 @@ export interface RecordingEventTarget {
   isRichText?: boolean;
 }
 
+/**
+ * Semantic context of the form field that contains the event target.
+ * Extracted by walking up the DOM to the nearest recognizable form-item container.
+ */
+export interface FieldContext {
+  /** Type of the closest recognized container */
+  containerType: 'form-item' | 'unknown';
+  /** Visible label text of the form field (trailing colons/asterisks stripped) */
+  fieldLabel?: string;
+  /** Current value(s) visible in the field at event time (tags, input value, etc.) */
+  fieldValueText?: string;
+  /** Whether the field is marked as required */
+  fieldRequired?: boolean;
+  /** Validation prop name — e.g. "cityCodes" from Element UI prop="cityCodes" */
+  fieldProp?: string;
+  /** Inline error or hint message text */
+  fieldHintText?: string;
+}
+
 export interface RecordingEvent {
   type: RecordingEventType;
   timestamp: number;
@@ -36,6 +55,8 @@ export interface RecordingEvent {
   frameInfo?: FrameInfo;
   // Rich text HTML snapshot — truncated, only present for richtext-input events
   htmlContent?: string;
+  // Form field semantic context extracted from DOM at event time (Task Pack 5.5)
+  fieldContext?: FieldContext;
 }
 
 // Recording Meta

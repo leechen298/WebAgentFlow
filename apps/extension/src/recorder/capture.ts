@@ -1,4 +1,5 @@
 import { createRecordingEvent, getTargetInfo } from './events';
+import { getFieldContext } from './context';
 import type { RecordingEvent, FrameInfo } from '@web-agent-flow/shared-types';
 
 export interface CaptureCallbacks {
@@ -188,6 +189,7 @@ export class EventCapturer {
         title: document.title,
         target: getTargetInfo(target),
         frameInfo: this.frameInfo,
+        fieldContext: getFieldContext(target),
       }),
     );
   }
@@ -235,6 +237,7 @@ export class EventCapturer {
         target: getTargetInfo(element),
         value: (element as HTMLInputElement | HTMLTextAreaElement).value || null,
         frameInfo: this.frameInfo,
+        fieldContext: getFieldContext(element),
       }),
     );
   }
@@ -246,6 +249,7 @@ export class EventCapturer {
         target: getTargetInfo(element),
         value: (element as HTMLSelectElement | HTMLInputElement).value || null,
         frameInfo: this.frameInfo,
+        fieldContext: getFieldContext(element),
       }),
     );
   }
@@ -272,6 +276,7 @@ export class EventCapturer {
         value: text.slice(0, 5000),
         htmlContent: el.innerHTML?.slice(0, 2000),
         frameInfo: this.frameInfo,
+        fieldContext: getFieldContext(element),
       }),
     );
   }
