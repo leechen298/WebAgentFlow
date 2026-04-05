@@ -57,13 +57,6 @@
           <a-descriptions-item label="Updated At">
             {{ formatDate(recording.updated_at) }}
           </a-descriptions-item>
-          <a-descriptions-item label="Events" :span="2">
-            <a-textarea
-              :value="formatJsonString(recording.events)"
-              :rows="6"
-              readonly
-            />
-          </a-descriptions-item>
           <a-descriptions-item label="Meta" :span="2">
             <a-textarea
               :value="formatJsonString(recording.meta)"
@@ -72,6 +65,160 @@
             />
           </a-descriptions-item>
         </a-descriptions>
+      </a-card>
+
+      <!-- Events Tabs -->
+      <a-card v-if="recording" :bordered="false" style="margin-top: 16px">
+        <a-tabs v-model:activeKey="activeTab" @change="handleTabChange">
+          <a-tab-pane key="raw" tab="Raw Events">
+            <div style="margin-bottom: 8px; color: #666; font-size: 12px">
+              {{ recording.events.length }} raw events
+            </div>
+            <a-textarea
+              :value="formatJsonString(recording.events)"
+              :rows="20"
+              readonly
+              style="font-family: monospace; font-size: 12px"
+            />
+          </a-tab-pane>
+
+          <a-tab-pane key="normalized" tab="Normalized Recording">
+            <a-spin :spinning="normLoading">
+              <a-alert
+                v-if="normError"
+                :message="normError"
+                type="error"
+                show-icon
+                style="margin-bottom: 12px"
+              />
+
+              <div v-if="normalized">
+                <!-- Summary banner -->
+                <a-descriptions
+                  :column="6"
+                  size="small"
+                  bordered
+                  style="margin-bottom: 16px"
+                >
+                  <a-descriptions-item label="Raw events">
+                    {{ normalized.summary.event_count_raw }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="Normalized steps">
+                    {{ normalized.summary.event_count_normalized }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="Segments">
+                    {{ normalized.summary.segment_count }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="Pages">
+                    {{ normalized.summary.page_count }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="iFrame">
+                    <a-tag :color="normalized.summary.contains_iframe ? 'blue' : 'default'">
+                      {{ normalized.summary.contains_iframe ? 'Yes' : 'No' }}
+                    </a-tag>
+                  </a-descriptions-item>
+                  <a-descriptions-item label="Rich text">
+                    <a-tag :color="normalized.summary.contains_richtext ? 'purple' : 'default'">
+                      {{ normalized.summary.contains_richtext ? 'Yes' : 'No' }}
+                    </a-tag>
+                  </a-descriptions-item>
+                </a-descriptions>
+
+                <!-- Key actions -->
+                <a-card size="small" title="Key Actions" style="margin-bottom: 16px">
+                  <div v-if="normalized.key_actions.length === 0" style="color: #999">
+                    No key actions detected.
+                  </div>
+                  <a-list
+                    v-else
+                    size="small"
+                    :data-source="normalized.key_actions"
+                  >
+                    <template #renderItem="{ item }">
+                      <a-list-item>
+                        <a-space wrap>
+                          <a-tag :color="actionColor(item.action_type)">
+                            {{ item.action_type }}
+                          </a-tag>
+                          <span v-if="item.field_label" style="font-weight: 500">
+                            {{ item.field_label }}
+                          </span>
+                          <span v-if="item.button_text" style="color: #666">
+                            "{{ item.button_text }}"
+                          </span>
+                          <span v-if="item.value" style="color: #1677ff">
+                            = {{ truncate(item.value, 60) }}
+                          </span>
+                          <a-tag v-if="item.in_iframe" color="cyan" style="font-size: 11px">
+                            iframe
+                          </a-tag>
+                          <a-tag v-if="item.is_richtext" color="purple" style="font-size: 11px">
+                            richtext
+                          </a-tag>
+                        </a-space>
+                      </a-list-item>
+                    </template>
+                  </a-list>
+                </a-card>
+
+                <!-- Segments -->
+                <div v-for="seg in normalized.segments" :key="seg.index" style="margin-bottom: 12px">
+                  <a-card
+                    size="small"
+                    :title="`[${seg.type}] ${seg.title}`"
+                    :headStyle="segmentHeaderStyle(seg.type)"
+                  >
+                    <div v-if="seg.steps.length === 0" style="color: #999">Empty segment.</div>
+                    <a-table
+                      v-else
+                      :columns="stepColumns"
+                      :data-source="seg.steps"
+                      :pagination="false"
+                      size="small"
+                      row-key="timestamp"
+                    >
+                      <template #bodyCell="{ column, record }">
+                        <template v-if="column.key === 'action_type'">
+                          <a-tag :color="actionColor(record.action_type)">
+                            {{ record.action_type }}
+                          </a-tag>
+                        </template>
+                        <template v-else-if="column.key === 'field_label'">
+                          {{ record.field_label || record.button_text || '—' }}
+                        </template>
+                        <template v-else-if="column.key === 'value'">
+                          {{ record.value ? truncate(record.value, 50) : '—' }}
+                        </template>
+                        <template v-else-if="column.key === 'flags'">
+                          <a-space>
+                            <a-tag v-if="record.in_iframe" color="cyan" style="font-size: 11px">iframe</a-tag>
+                            <a-tag v-if="record.is_richtext" color="purple" style="font-size: 11px">rt</a-tag>
+                          </a-space>
+                        </template>
+                      </template>
+                    </a-table>
+                  </a-card>
+                </div>
+
+                <!-- Raw JSON toggle -->
+                <a-collapse style="margin-top: 12px">
+                  <a-collapse-panel key="json" header="Normalized JSON (raw)">
+                    <a-textarea
+                      :value="formatJsonString(normalized)"
+                      :rows="20"
+                      readonly
+                      style="font-family: monospace; font-size: 11px"
+                    />
+                  </a-collapse-panel>
+                </a-collapse>
+              </div>
+
+              <div v-else-if="!normLoading && !normError" style="color: #999; text-align: center; padding: 24px">
+                Click the tab to load normalized recording.
+              </div>
+            </a-spin>
+          </a-tab-pane>
+        </a-tabs>
       </a-card>
     </a-spin>
 
@@ -135,7 +282,8 @@ import { message, type FormInstance } from 'ant-design-vue';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons-vue';
 import { useRecordingsStore } from '@/stores';
 import { safeParseJson, formatJsonString } from '@/utils';
-import type { Recording, RecordingUpdate, RecordingStatus } from '@web-agent-flow/shared-types';
+import { getNormalizedRecording } from '@/api/recordings';
+import type { Recording, RecordingUpdate, RecordingStatus, NormalizedRecording } from '@web-agent-flow/shared-types';
 
 const route = useRoute();
 const router = useRouter();
@@ -143,6 +291,11 @@ const recordingsStore = useRecordingsStore();
 
 const formRef = ref<FormInstance>();
 const editModalOpen = ref(false);
+const activeTab = ref('raw');
+
+const normalized = ref<NormalizedRecording | null>(null);
+const normLoading = ref(false);
+const normError = ref('');
 
 const formData = reactive({
   name: '',
@@ -166,6 +319,13 @@ const recording = computed(() => recordingsStore.currentRecording);
 const loading = computed(() => recordingsStore.loading);
 const error = computed(() => recordingsStore.error);
 
+const stepColumns = [
+  { title: 'Action', key: 'action_type', width: 160 },
+  { title: 'Field / Button', key: 'field_label' },
+  { title: 'Value', key: 'value' },
+  { title: 'Flags', key: 'flags', width: 100 },
+];
+
 function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
     draft: 'default',
@@ -179,14 +339,63 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString();
 }
 
+function truncate(s: string, n: number): string {
+  return s.length > n ? s.slice(0, n) + '…' : s;
+}
+
+function actionColor(at: string): string {
+  const map: Record<string, string> = {
+    'navigate-page': 'geekblue',
+    'fill-field': 'green',
+    'select-field': 'lime',
+    'edit-richtext': 'purple',
+    'click-button': 'orange',
+    'open-dialog': 'gold',
+    'confirm-dialog': 'cyan',
+    'cancel-dialog': 'red',
+    'unknown-click': 'default',
+  };
+  return map[at] || 'default';
+}
+
+function segmentHeaderStyle(type: string): Record<string, string> {
+  const bg: Record<string, string> = {
+    navigation: '#e6f4ff',
+    'form-fill': '#f6ffed',
+    'dialog-interaction': '#fff7e6',
+    'richtext-edit': '#f9f0ff',
+    misc: '#fafafa',
+  };
+  return { background: bg[type] || '#fafafa' };
+}
+
 async function fetchRecording(): Promise<void> {
   const id = route.params.id as string;
   if (!id) return;
-
   try {
     await recordingsStore.fetchRecording(id);
   } catch (e) {
     message.error(e instanceof Error ? e.message : 'Failed to load recording');
+  }
+}
+
+async function loadNormalized(): Promise<void> {
+  const id = route.params.id as string;
+  if (!id || normalized.value) return;
+  normLoading.value = true;
+  normError.value = '';
+  try {
+    normalized.value = await getNormalizedRecording(id);
+  } catch (e) {
+    normError.value = e instanceof Error ? e.message : 'Failed to load normalized recording';
+  } finally {
+    normLoading.value = false;
+  }
+}
+
+function handleTabChange(key: string): void {
+  if (key === 'normalized') {
+    void loadNormalized();
   }
 }
 
@@ -238,6 +447,8 @@ async function handleSave(): Promise<void> {
     };
 
     await recordingsStore.updateRecording(route.params.id as string, updateData);
+    // Invalidate cached normalized result so it's re-fetched after edit
+    normalized.value = null;
     message.success('Recording updated');
     editModalOpen.value = false;
   } catch (e) {

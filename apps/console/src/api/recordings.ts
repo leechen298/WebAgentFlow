@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Recording, RecordingCreate, RecordingUpdate, DeleteResponse } from '@web-agent-flow/shared-types';
+import type { Recording, RecordingCreate, RecordingUpdate, DeleteResponse, NormalizedRecording } from '@web-agent-flow/shared-types';
 
 export async function getRecordingsList(): Promise<Recording[]> {
   return await apiClient.get('/recordings/list') as unknown as Recording[];
@@ -26,4 +26,10 @@ export async function deleteRecording(recordingId: string): Promise<DeleteRespon
   return await apiClient.post('/recordings/delete', {
     recording_id: recordingId
   }) as unknown as DeleteResponse;
+}
+
+export async function getNormalizedRecording(recordingId: string): Promise<NormalizedRecording> {
+  return await apiClient.get('/recordings/get_normalized', {
+    params: { recording_id: recordingId }
+  }) as unknown as NormalizedRecording;
 }

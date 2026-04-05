@@ -34,3 +34,47 @@ class RecordingRead(RecordingBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Normalized recording schemas (Task Pack 6)
+# ---------------------------------------------------------------------------
+
+class NormalizedStep(BaseModel):
+    action_type: str
+    timestamp: int
+    url: str
+    page_title: str | None = None
+    field_label: str | None = None
+    field_prop: str | None = None
+    field_required: bool | None = None
+    value: str | None = None
+    button_text: str | None = None
+    in_iframe: bool = False
+    frame_url: str | None = None
+    is_richtext: bool = False
+    html_content: str | None = None
+    raw_event_indices: list[int] = Field(default_factory=list)
+
+
+class NormalizedSegment(BaseModel):
+    index: int
+    type: str
+    title: str
+    steps: list[NormalizedStep] = Field(default_factory=list)
+
+
+class NormalizationSummary(BaseModel):
+    event_count_raw: int
+    event_count_normalized: int
+    page_count: int
+    segment_count: int
+    contains_iframe: bool
+    contains_richtext: bool
+
+
+class NormalizedRecordingRead(BaseModel):
+    recording_id: str
+    summary: NormalizationSummary
+    segments: list[NormalizedSegment]
+    key_actions: list[NormalizedStep]

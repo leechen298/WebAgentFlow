@@ -95,6 +95,50 @@ export interface RecordingUpdate {
   meta?: Record<string, unknown> | null;
 }
 
+// ---------------------------------------------------------------------------
+// Normalized Recording types (Task Pack 6)
+// ---------------------------------------------------------------------------
+
+export interface NormalizedStep {
+  action_type: string;
+  timestamp: number;
+  url: string;
+  page_title?: string | null;
+  field_label?: string | null;
+  field_prop?: string | null;
+  field_required?: boolean | null;
+  value?: string | null;
+  button_text?: string | null;
+  in_iframe: boolean;
+  frame_url?: string | null;
+  is_richtext: boolean;
+  html_content?: string | null;
+  raw_event_indices: number[];
+}
+
+export interface NormalizedSegment {
+  index: number;
+  type: string;
+  title: string;
+  steps: NormalizedStep[];
+}
+
+export interface NormalizationSummary {
+  event_count_raw: number;
+  event_count_normalized: number;
+  page_count: number;
+  segment_count: number;
+  contains_iframe: boolean;
+  contains_richtext: boolean;
+}
+
+export interface NormalizedRecording {
+  recording_id: string;
+  summary: NormalizationSummary;
+  segments: NormalizedSegment[];
+  key_actions: NormalizedStep[];
+}
+
 // Skill types
 export type SkillStatus = 'draft' | 'published' | 'archived';
 
