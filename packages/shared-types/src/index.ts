@@ -103,6 +103,8 @@ export interface PageInitialState {
   pageTitle: string;
   /** All form field snapshots found on the page */
   fields: InitialFieldSnapshot[];
+  /** Simplified HTML snapshot of the main content area (~30-80KB) */
+  htmlSnapshot?: string;
 }
 
 // Recording Meta

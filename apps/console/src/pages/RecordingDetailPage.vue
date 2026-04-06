@@ -160,6 +160,17 @@
                     style="font-family: monospace; font-size: 11px"
                   />
                 </a-collapse-panel>
+                <a-collapse-panel v-if="initialState.htmlSnapshot" key="html" header="HTML Snapshot (simplified)">
+                  <div style="margin-bottom: 8px; color: #666; font-size: 12px">
+                    {{ (initialState.htmlSnapshot.length / 1024).toFixed(1) }} KB
+                  </div>
+                  <a-textarea
+                    :value="initialState.htmlSnapshot"
+                    :rows="20"
+                    readonly
+                    style="font-family: monospace; font-size: 11px"
+                  />
+                </a-collapse-panel>
               </a-collapse>
             </div>
 
@@ -536,9 +547,26 @@ function initialFieldTypeColor(fieldType?: string): string {
     richtext: 'purple',
     textarea: 'cyan',
     'date-range': 'geekblue',
+    date: 'geekblue',
+    time: 'geekblue',
     custom: 'magenta',
     table: 'volcano',
     list: 'lime',
+    pagination: 'processing',
+    tabs: 'cyan',
+    steps: 'gold',
+    breadcrumb: 'default',
+    descriptions: 'purple',
+    dialog: 'orange',
+    cascader: 'green',
+    autocomplete: 'green',
+    switch: 'blue',
+    slider: 'blue',
+    rate: 'gold',
+    upload: 'magenta',
+    transfer: 'magenta',
+    'code-editor': 'purple',
+    color: 'magenta',
   };
   return map[fieldType ?? ''] ?? 'default';
 }
