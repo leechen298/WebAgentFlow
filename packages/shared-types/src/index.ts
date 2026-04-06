@@ -66,10 +66,10 @@ export interface RecordingEvent {
 }
 
 // ---------------------------------------------------------------------------
-// Initial State types (Task Pack 6.5)
+// Initial State types (Task Pack 6.5 / 7)
 // ---------------------------------------------------------------------------
 
-/** A snapshot of one form field's state at recording start. */
+/** A snapshot of one form field's state at recording start (flat format, legacy). */
 export interface InitialFieldSnapshot {
   /** Visible label text (e.g. "发放时间") */
   fieldLabel?: string;
@@ -93,6 +93,40 @@ export interface InitialFieldSnapshot {
   defaultValueHtml?: string;
 }
 
+/**
+ * A node in the initial state AST tree.
+ *
+ * type values:
+ *   - 'section'  — heading-based or ARIA-labeled section container
+ *   - 'group'    — complex form-item with nested children
+ *   - Leaf types — 'input', 'select', 'table', 'button', 'checkbox', 'radio',
+ *                  'richtext', 'textarea', 'date', 'number', 'switch', 'slider',
+ *                  'rate', 'upload', 'cascader', 'transfer', 'code-editor',
+ *                  'color', 'autocomplete', 'list', 'custom', etc.
+ */
+export interface StateNode {
+  /** Node type */
+  type: string;
+  /** Visible label text */
+  label?: string;
+  /** Current value at snapshot time */
+  value?: string;
+  /** Placeholder text */
+  placeholder?: string;
+  /** Whether field is required */
+  required?: boolean;
+  /** Validation prop name from framework */
+  fieldProp?: string;
+  /** Row/item count for tables/lists */
+  itemCount?: number;
+  /** Table column headers */
+  headers?: string[];
+  /** Rich text HTML content */
+  htmlContent?: string;
+  /** Child nodes (for section, group, and container types) */
+  children?: StateNode[];
+}
+
 /** Page initial state snapshot captured at recording start. */
 export interface PageInitialState {
   /** Unix timestamp (ms) when the snapshot was taken */
@@ -101,8 +135,10 @@ export interface PageInitialState {
   pageUrl: string;
   /** document.title at snapshot time */
   pageTitle: string;
-  /** All form field snapshots found on the page */
-  fields: InitialFieldSnapshot[];
+  /** AST tree of page state (preferred format) */
+  stateTree?: StateNode[];
+  /** Flat form field snapshots (legacy format, kept for backward compat) */
+  fields?: InitialFieldSnapshot[];
   /** Simplified HTML snapshot of the main content area (~30-80KB) */
   htmlSnapshot?: string;
 }

@@ -96,12 +96,93 @@
                 <a-descriptions-item label="Captured At">
                   {{ new Date(initialState.capturedAt).toLocaleString() }}
                 </a-descriptions-item>
-                <a-descriptions-item label="Fields Found">
-                  <a-tag color="blue">{{ initialState.fields.length }}</a-tag>
+                <a-descriptions-item label="Nodes">
+                  <a-tag color="blue">{{ stateTreeNodeCount }}</a-tag>
                 </a-descriptions-item>
               </a-descriptions>
 
+              <!-- AST Tree View (new format) -->
+              <div v-if="flatTreeRows.length > 0" style="margin-bottom: 12px">
+                <div
+                  v-for="row in flatTreeRows"
+                  :key="row.key"
+                  :style="{ paddingLeft: row.depth * 20 + 'px' }"
+                  class="state-tree-row"
+                >
+                  <!-- Section / Group nodes (containers) -->
+                  <template v-if="row.node.type === 'section' || row.node.type === 'group'">
+                    <span style="font-weight: 600; color: #333">
+                      <a-tag :color="row.node.type === 'section' ? 'blue' : 'cyan'" style="font-size: 11px">
+                        {{ row.node.type }}
+                      </a-tag>
+                      {{ row.node.label || '(unnamed)' }}
+                    </span>
+                    <a-tag v-if="row.node.required" color="red" style="font-size: 10px; margin-left: 4px">required</a-tag>
+                    <span v-if="row.node.fieldProp" style="color: #999; font-size: 11px; margin-left: 8px">
+                      prop={{ row.node.fieldProp }}
+                    </span>
+                  </template>
+
+                  <!-- Table nodes -->
+                  <template v-else-if="row.node.type === 'table'">
+                    <a-tag color="volcano" style="font-size: 11px">table</a-tag>
+                    <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
+                    <a
+                      v-if="row.node.headers && row.node.headers.length > 0"
+                      style="color: #1677ff; margin-left: 8px; cursor: pointer"
+                      @click="openTableDetailModal(row.node)"
+                    >
+                      {{ row.node.headers.join(' | ') }}
+                    </a>
+                    <span v-if="row.node.itemCount" style="color: #999; margin-left: 8px">
+                      {{ row.node.itemCount }} rows
+                    </span>
+                  </template>
+
+                  <!-- List nodes -->
+                  <template v-else-if="row.node.type === 'list'">
+                    <a-tag color="lime" style="font-size: 11px">list</a-tag>
+                    <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
+                    <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
+                      {{ row.node.itemCount }} items
+                    </span>
+                    <span v-if="row.node.value" style="color: #666; margin-left: 8px">
+                      {{ truncate(row.node.value, 80) }}
+                    </span>
+                  </template>
+
+                  <!-- Button nodes -->
+                  <template v-else-if="row.node.type === 'button'">
+                    <a-tag color="orange" style="font-size: 11px">button</a-tag>
+                    <span style="font-weight: 500">{{ row.node.label }}</span>
+                  </template>
+
+                  <!-- Leaf field nodes (input, select, checkbox, etc.) -->
+                  <template v-else>
+                    <a-tag :color="initialFieldTypeColor(row.node.type)" style="font-size: 11px">
+                      {{ row.node.type }}
+                    </a-tag>
+                    <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
+                    <a-tag v-if="row.node.required" color="red" style="font-size: 10px; margin-left: 4px">*</a-tag>
+                    <span v-if="row.node.fieldProp" style="color: #999; font-size: 11px; margin-left: 4px">
+                      [{{ row.node.fieldProp }}]
+                    </span>
+                    <span v-if="row.node.value" style="color: #1677ff; margin-left: 8px">
+                      = {{ truncate(row.node.value, 60) }}
+                    </span>
+                    <span v-else-if="row.node.placeholder" style="color: #bbb; font-style: italic; margin-left: 8px">
+                      {{ truncate(row.node.placeholder, 50) }}
+                    </span>
+                    <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
+                      ({{ row.node.itemCount }})
+                    </span>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Legacy flat table (old recordings with fields[]) -->
               <a-table
+                v-else-if="initialState.fields && initialState.fields.length > 0"
                 :columns="initialStateColumns"
                 :data-source="initialState.fields"
                 :pagination="false"
@@ -331,7 +412,7 @@
       width="720px"
     >
       <div v-if="fieldDetailRecord">
-        <!-- Table view -->
+        <!-- Table view (legacy) -->
         <template v-if="fieldDetailRecord.fieldType === 'table'">
           <a-table
             :columns="parsedTableColumns"
@@ -341,7 +422,7 @@
             row-key="(r, i) => i"
           />
         </template>
-        <!-- List view -->
+        <!-- List view (legacy) -->
         <template v-else-if="fieldDetailRecord.fieldType === 'list'">
           <a-list
             size="small"
@@ -358,6 +439,25 @@
             </template>
           </a-list>
         </template>
+      </div>
+
+      <!-- StateNode table detail -->
+      <div v-else-if="tableDetailNode">
+        <a-descriptions :column="2" size="small" bordered style="margin-bottom: 12px">
+          <a-descriptions-item v-if="tableDetailNode.label" label="Label">
+            {{ tableDetailNode.label }}
+          </a-descriptions-item>
+          <a-descriptions-item v-if="tableDetailNode.itemCount" label="Rows">
+            {{ tableDetailNode.itemCount }}
+          </a-descriptions-item>
+        </a-descriptions>
+        <div v-if="tableDetailNode.headers && tableDetailNode.headers.length > 0">
+          <div style="font-weight: 500; margin-bottom: 8px">Column Headers:</div>
+          <a-space wrap>
+            <a-tag v-for="(h, idx) in tableDetailNode.headers" :key="idx" color="blue">{{ h }}</a-tag>
+          </a-space>
+        </div>
+        <div v-else style="color: #999">No column headers detected.</div>
       </div>
     </a-modal>
 
@@ -422,7 +522,7 @@ import { EditOutlined, DeleteOutlined } from '@ant-design/icons-vue';
 import { useRecordingsStore } from '@/stores';
 import { safeParseJson, formatJsonString } from '@/utils';
 import { getNormalizedRecording } from '@/api/recordings';
-import type { RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState, InitialFieldSnapshot } from '@web-agent-flow/shared-types';
+import type { RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState, InitialFieldSnapshot, StateNode } from '@web-agent-flow/shared-types';
 
 const route = useRoute();
 const router = useRouter();
@@ -438,6 +538,7 @@ const normError = ref('');
 
 const fieldDetailModalOpen = ref(false);
 const fieldDetailRecord = ref<InitialFieldSnapshot | null>(null);
+const tableDetailNode = ref<StateNode | null>(null);
 
 const formData = reactive({
   name: '',
@@ -483,7 +584,52 @@ const initialState = computed<PageInitialState | null>(() => {
   return meta.initialState as PageInitialState;
 });
 
+interface FlatTreeRow {
+  depth: number;
+  node: StateNode;
+  key: string;
+}
+
+function flattenTree(nodes: StateNode[], depth = 0, prefix = ''): FlatTreeRow[] {
+  const rows: FlatTreeRow[] = [];
+  nodes.forEach((node, i) => {
+    const key = `${prefix}${i}`;
+    rows.push({ depth, node, key });
+    if (node.children) {
+      rows.push(...flattenTree(node.children, depth + 1, `${key}-`));
+    }
+  });
+  return rows;
+}
+
+function countNodes(nodes: StateNode[]): number {
+  let count = 0;
+  for (const node of nodes) {
+    count++;
+    if (node.children) count += countNodes(node.children);
+  }
+  return count;
+}
+
+const flatTreeRows = computed<FlatTreeRow[]>(() => {
+  const tree = initialState.value?.stateTree;
+  if (!tree || tree.length === 0) return [];
+  return flattenTree(tree);
+});
+
+const stateTreeNodeCount = computed(() => {
+  const tree = initialState.value?.stateTree;
+  if (tree && tree.length > 0) return countNodes(tree);
+  return initialState.value?.fields?.length ?? 0;
+});
+
 const fieldDetailTitle = computed(() => {
+  if (tableDetailNode.value) {
+    const n = tableDetailNode.value;
+    const label = n.label || 'Table';
+    const count = n.itemCount ? `（${n.itemCount} 行）` : '';
+    return `${label}${count}`;
+  }
   const r = fieldDetailRecord.value;
   if (!r) return '';
   const label = r.fieldPath || r.fieldLabel || r.fieldType || '';
@@ -533,7 +679,14 @@ const parsedListItems = computed<string[]>(() => {
 });
 
 function openFieldDetailModal(record: InitialFieldSnapshot): void {
+  tableDetailNode.value = null;
   fieldDetailRecord.value = record;
+  fieldDetailModalOpen.value = true;
+}
+
+function openTableDetailModal(node: StateNode): void {
+  fieldDetailRecord.value = null;
+  tableDetailNode.value = node;
   fieldDetailModalOpen.value = true;
 }
 
@@ -723,3 +876,15 @@ onUnmounted(() => {
   recordingsStore.clearCurrent();
 });
 </script>
+
+<style scoped>
+.state-tree-row {
+  padding: 4px 8px;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 13px;
+  line-height: 24px;
+}
+.state-tree-row:hover {
+  background: #fafafa;
+}
+</style>
