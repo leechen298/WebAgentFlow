@@ -1,122 +1,222 @@
 /**
- * Initial State Sampler — orchestrator module.
+ * Initial State Sampler — simple DOM structure capture.
  *
- * Captures form field default values and page state at recording start.
- * Delegates to specialized scanner modules for actual DOM traversal.
- *
- * Three-layer strategy:
- *   Layer 1 — Generic DOM rules (works on ANY page)
- *   Layer 2 — Container-enhanced (UI library pages, any library)
- *   Layer 3 — Merge & deduplicate
+ * Directly traverses the DOM and captures form fields + a clean HTML snapshot.
+ * No complex heuristics, just preserves the actual page structure.
  */
 
 import type { InitialFieldSnapshot, PageInitialState } from '@web-agent-flow/shared-types';
 import { getCanonicalPageUrl } from './page-url';
-import {
-  scanContainers,
-  scanGenericControls,
-  scanStructuredTables,
-  scanStructuredLists,
-  scanPaginationControls,
-  scanActiveTabs,
-  scanActiveSteps,
-  scanBreadcrumbs,
-  scanDescriptions,
-  scanOpenDialogs,
-} from './initial-state-scanners';
 import { captureSimplifiedHTML } from './html-snapshot';
 
-const MAX_FIELDS = 80;
+const MAX_FIELDS = 100;
 
-// ─── Scoring & deduplication ────────────────────────────────────────────────
-
-function snapshotScore(snapshot: InitialFieldSnapshot): number {
-  let score = 0;
-  if (snapshot.fieldLabel) score += 2;
-  if (snapshot.fieldPath && snapshot.fieldPath !== snapshot.fieldLabel) score += 2;
-  if (snapshot.sectionLabel) score += 1;
-  if (snapshot.fieldProp) score += 1;
-  if (snapshot.fieldType && snapshot.fieldType !== 'unknown') score += 1;
-  if (snapshot.required) score += 1;
-  if (snapshot.itemCount) score += 2;
-  if (snapshot.defaultValueHtml) score += 2;
-  if (snapshot.defaultValueText) {
-    score += Math.min(6, Math.ceil(snapshot.defaultValueText.length / 30));
-  }
-  if (snapshot.placeholder) score += 1;
-  return score;
+function cleanText(text: string | null | undefined): string | undefined {
+  if (!text) return undefined;
+  const cleaned = text.replace(/\s+/g, ' ').trim();
+  return cleaned.length > 0 ? cleaned : undefined;
 }
 
-function mergeSnapshots(snapshots: InitialFieldSnapshot[]): InitialFieldSnapshot[] {
-  const deduped = new Map<string, InitialFieldSnapshot>();
+function extractLabel(el: Element): string | undefined {
+  // aria-label
+  const ariaLabel = el.getAttribute('aria-label');
+  if (ariaLabel) return cleanText(ariaLabel);
 
-  for (const snapshot of snapshots) {
-    const key = [
-      snapshot.fieldPath ?? '',
-      snapshot.fieldLabel ?? '',
-      snapshot.fieldProp ?? '',
-    ].join('|');
+  // labelled-by
+  const labelledBy = el.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    const ids = labelledBy.split(/\s+/);
+    const labels = ids
+      .map((id) => document.getElementById(id)?.textContent)
+      .filter(Boolean)
+      .join(' ');
+    if (labels) return cleanText(labels);
+  }
 
-    const existing = deduped.get(key);
-    if (!existing || snapshotScore(snapshot) > snapshotScore(existing)) {
-      deduped.set(key, snapshot);
+  // label[for]
+  if (el.id) {
+    const label = document.querySelector(`label[for="${el.id}"]`);
+    if (label?.textContent) return cleanText(label.textContent);
+  }
+
+  // placeholder
+  const placeholder = el.getAttribute('placeholder');
+  if (placeholder) return cleanText(placeholder);
+
+  // closest label parent
+  const parentLabel = el.closest('label');
+  if (parentLabel) {
+    const clone = parentLabel.cloneNode(true) as Element;
+    clone.querySelectorAll('input, select, textarea, button').forEach((c) => c.remove());
+    return cleanText(clone.textContent);
+  }
+
+  return undefined;
+}
+
+function extractValue(el: Element): { value?: string; type?: string; placeholder?: string } {
+  const tag = el.tagName.toLowerCase();
+
+  if (tag === 'input') {
+    const input = el as HTMLInputElement;
+    const type = input.type || 'text';
+    if (type === 'checkbox' || type === 'radio') {
+      return { type, value: input.checked ? 'checked' : undefined };
+    }
+    return {
+      type,
+      value: cleanText(input.value),
+      placeholder: cleanText(input.getAttribute('placeholder')),
+    };
+  }
+
+  if (tag === 'select') {
+    const select = el as HTMLSelectElement;
+    const selected = select.options[select.selectedIndex];
+    return {
+      type: 'select',
+      value: selected ? cleanText(selected.text || select.value) : undefined,
+      placeholder: cleanText(select.getAttribute('placeholder')),
+    };
+  }
+
+  if (tag === 'textarea') {
+    const textarea = el as HTMLTextAreaElement;
+    return {
+      type: 'textarea',
+      value: cleanText(textarea.value),
+      placeholder: cleanText(textarea.getAttribute('placeholder')),
+    };
+  }
+
+  if (el.hasAttribute('contenteditable')) {
+    return {
+      type: 'richtext',
+      value: cleanText(el.textContent),
+    };
+  }
+
+  return {};
+}
+
+function traverseDOM(root: Element, fields: InitialFieldSnapshot[], path: string[]): void {
+  if (fields.length >= MAX_FIELDS) return;
+
+  // Collect form fields at this level
+  const controls = root.querySelectorAll<HTMLElement>(
+    'input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]), select, textarea, [contenteditable="true"]',
+  );
+
+  for (const el of controls) {
+    // Skip if already inside a form-item container that we'll process separately
+    if (el.closest('.el-form-item, .ant-form-item, .n-form-item, .form-item') !== root &&
+        el.closest('.el-form-item, .ant-form-item, .n-form-item, .form-item')) {
+      continue;
+    }
+
+    const label = extractLabel(el);
+    const { value, type, placeholder } = extractValue(el);
+
+    if (label || value) {
+      fields.push({
+        fieldLabel: label,
+        fieldPath: path.length > 0 ? path.join(' / ') : undefined,
+        sectionLabel: path[path.length - 1],
+        fieldType: type,
+        required: el.hasAttribute('required') || el.getAttribute('aria-required') === 'true',
+        defaultValueText: value,
+        placeholder,
+      });
     }
   }
 
-  return Array.from(deduped.values());
-}
+  // Process form-item containers
+  const containers = root.querySelectorAll(
+    '.el-form-item, .ant-form-item, .n-form-item, .form-item',
+  );
 
-// ─── Public API ─────────────────────────────────────────────────────────────
+  for (const container of containers) {
+    if (fields.length >= MAX_FIELDS) break;
+
+    // Get label from the container
+    const labelEl = container.querySelector(
+      '.el-form-item__label, .ant-form-item-label, .n-form-item-label, label',
+    );
+    const label = cleanText(labelEl?.textContent);
+
+    // Find the control inside
+    const control = container.querySelector<HTMLElement>(
+      'input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]), select, textarea, [contenteditable="true"]',
+    );
+
+    if (control) {
+      const { value, type, placeholder } = extractValue(control);
+      const prop = control.getAttribute('data-prop') || control.getAttribute('name') || control.getAttribute('id') || undefined;
+
+      fields.push({
+        fieldLabel: label,
+        fieldPath: path.length > 0 ? [...path, label].filter(Boolean).join(' / ') : label,
+        sectionLabel: path[path.length - 1],
+        fieldProp: prop,
+        fieldType: type,
+        required: control.hasAttribute('required') || control.getAttribute('aria-required') === 'true' ||
+                  container.classList.contains('is-required'),
+        defaultValueText: value,
+        placeholder,
+      });
+    }
+  }
+
+  // Recurse into sections with their own path context
+  const sections = root.querySelectorAll<HTMLElement>(
+    '.el-card, .ant-card, .section, [class*="-section"], fieldset, [role="region"]',
+  );
+
+  for (const section of sections) {
+    if (fields.length >= MAX_FIELDS) break;
+
+    // Get section title
+    const titleEl = section.querySelector(
+      '.el-card__header, .ant-card-head, .section-title, legend, h1, h2, h3, h4, h5, h6',
+    );
+    const sectionTitle = cleanText(titleEl?.textContent);
+
+    if (sectionTitle) {
+      traverseDOM(section, fields, [...path, sectionTitle]);
+    }
+  }
+}
 
 /**
  * Capture the initial state of the current page.
  *
- * Strategy:
- *   1. Scan recognized UI containers (Layer 2) — richer context
- *   2. Scan structural elements (tables, lists, pagination, tabs, etc.)
- *   3. Scan standalone form controls not inside containers (Layer 1)
- *   4. Capture simplified HTML snapshot as fallback
- *   5. Merge: container results first, then structured, then standalone
+ * Simple strategy:
+ *   1. Traverse DOM and extract form fields with path context
+ *   2. Capture a clean HTML snapshot for reference
  */
 export function captureInitialState(): PageInitialState {
-  // Layer 2 — containers provide richer data and mark covered elements
-  const { snapshots: containerFields, coveredElements } = scanContainers();
+  const fields: InitialFieldSnapshot[] = [];
 
-  // Layer 2.5 — structural elements
-  const structuredFields = [
-    ...scanStructuredTables(),
-    ...scanStructuredLists(),
-    ...scanPaginationControls(),
-    ...scanActiveTabs(),
-    ...scanActiveSteps(),
-    ...scanBreadcrumbs(),
-    ...scanDescriptions(),
-    ...scanOpenDialogs(),
-  ];
+  // Start traversal from main content area
+  const mainContent =
+    document.querySelector('main, [role="main"], .main-content, .app-main, .el-main, .ant-layout-content') ||
+    document.body;
 
-  // Layer 1 — standalone controls not already covered
-  const { snapshots: standaloneFields } =
-    containerFields.length + structuredFields.length < MAX_FIELDS
-      ? scanGenericControls(coveredElements)
-      : { snapshots: [], coveredElements: new Set<Element>() };
-
-  const fields = mergeSnapshots([
-    ...containerFields,
-    ...structuredFields,
-    ...standaloneFields,
-  ]).slice(0, MAX_FIELDS);
+  traverseDOM(mainContent, fields, []);
 
   // Capture simplified HTML snapshot
   let htmlSnapshot: string | undefined;
   try {
     htmlSnapshot = captureSimplifiedHTML();
-  } catch { /* degrade gracefully */ }
+  } catch {
+    // degrade gracefully
+  }
 
   return {
     capturedAt: Date.now(),
     pageUrl: getCanonicalPageUrl(location.href),
     pageTitle: document.title,
-    fields,
+    fields: fields.slice(0, MAX_FIELDS),
     ...(htmlSnapshot ? { htmlSnapshot } : {}),
   };
 }
