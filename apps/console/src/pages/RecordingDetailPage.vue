@@ -270,6 +270,17 @@
                         <span v-else-if="row.node.placeholder" style="color: #bbb; font-style: italic; margin-left: 8px">
                           {{ truncate(row.node.placeholder, 50) }}
                         </span>
+                        <span v-if="row.node.options && row.node.options.length > 0" style="margin-left: 8px">
+                          <a-tag
+                            v-for="(opt, oi) in row.node.options.slice(0, 10)"
+                            :key="oi"
+                            :color="opt.selected ? 'blue' : 'default'"
+                            style="font-size: 10px"
+                          >{{ opt.label }}</a-tag>
+                          <span v-if="row.node.options.length > 10" style="color: #999; font-size: 10px">
+                            +{{ row.node.options.length - 10 }}
+                          </span>
+                        </span>
                         <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
                           ({{ row.node.itemCount }})
                         </span>
