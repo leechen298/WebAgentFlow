@@ -138,13 +138,21 @@ walkNode(el):
 
 ### 各类型元素规则
 
-**表格**：提取表头和行数据。复杂单元格内容递归提取语义，而非直接转储 HTML。
+**表格**：提取表头和行数据。如果单元格包含 2+ 可操作元素（按钮、输入框等），递归展开单元格内容为子树，而非只取 textContent。简单表格保持 `rows[][]` 扁平格式，复杂表格使用 `children[]` 展开格式。`table` 节点可以同时有 `headers` 和 `children`。
 
-**Iframe**：同源 iframe 访问 `contentDocument` 递归解析（遵循相同规则），跨域静默跳过。产生 `blockType: 'iframe-content'` 的 section 节点。
+**Iframe**：同源 iframe 通过 `contentDocument` 递归解析（遵循相同规则），跨域静默跳过。产生 `blockType: 'iframe-content'` 的 section 节点。支持多层嵌套 iframe。
 
-**导航区域**：通过 HTML5 语义标签（`nav`、`aside`、`header`、`footer`）和 ARIA 角色（`role="navigation"` 等）检测 main content root **外部**的导航区域。支持嵌套子菜单（如 Element UI `el-submenu` + `aria-haspopup`）。叶子节点为 `link` 或 `button` 类型，带 `href`、`active` 状态和 `selector`。
+**导航区域**：通过 HTML5 语义标签（`nav`、`aside`、`header`、`footer`）和 ARIA 角色（`role="navigation"` 等）检测 main content root **外部**的导航区域。支持嵌套子菜单（如 `el-submenu` + `aria-haspopup`）。叶子节点为 `link` 或 `button` 类型，带 `href`、`active` 状态和 `selector`。**导航、菜单栏等内容不得被跳过或丢弃**，它们对跨系统操作场景有重要价值。
 
-**表单容器**：通过已知 form-item 模式检测（`.el-form-item`、`.ant-form-item` 等），作为 label + control 对处理。如果 processFormItem 返回空（如 `el-form-item__actions` 实际是按钮容器），**回溯**到通用 walkChildren。
+**表单容器**：通过已知 form-item 模式检测（`.el-form-item`、`.ant-form-item` 等），作为 label + control 对处理。如果内容区包含多个可操作元素（非简单控件 ≥2 个，或简单控件 ≥3 个），递归展开为 `group` + `children`，而非压扁成单个 leaf 节点。如果 processFormItem 返回空（如 `el-form-item__actions` 实际是按钮容器），**回溯**到通用 walkChildren。
+
+### 多 frame 初始状态合并
+
+页面可能包含多个 frame（顶层 + 一个或多个 iframe，iframe 可嵌套）。每个 frame 独立运行 content script，独立发送 `RECORDING_INITIAL_STATE`。background 的 `setInitialState`（`state.ts`）按以下规则处理：
+
+- **同一 frameId 的重复发送**（如 content.ts 的两次 pass）→ 分数竞争替换（取高分的）
+- **不同 frameId** → **一律合并**。iframe 的 stateTree 作为 `iframe-content` section 追加到已有状态中。不管嵌套几层、有几个 iframe，每个 frame 的内容都会被保留
+- **不得用替换代替合并** — 顶层 frame 的导航/菜单 和 iframe 的业务内容同等重要，不能因为 iframe 节点多/分数高就覆盖顶层
 
 ### 禁止事项
 
@@ -152,17 +160,20 @@ walkNode(el):
 - **不得拆解已知复合组件** — `el-select` 是一个 `select` 节点，不是 `input` + `div` + `ul`。组件边界就是分类边界。
 - **不得产生空容器** — section/group 节点如果 children 为空，丢弃该节点。
 - **不得静默丢弃内容** — 任何分类失败必须回溯到通用递归，通用递归也失败且有可见内容时必须产生 localHtml 兜底。
+- **不得压扁复杂结构** — 如果一个容器内有多个可操作子元素，必须递归展开为子树，不能压成单个 leaf + localHtml。
+- **不得添加特化逻辑** — 所有处理规则必须通用，不针对特定组件库或页面结构做 if-else 分支。组件库差异通过前缀无关的分类器统一处理。
 
 ### 输出结构
 
 - **容器节点**（`section`、`group`）：带 `children[]`、`blockType`、`label`。**无 `selector`**。
-- **叶子节点**（`input`、`select`、`button`、`link`、`table`、`custom` 等）：带 `selector`、`value`、`label`。**无 `children`**。
+- **叶子节点**（`input`、`select`、`button`、`link`、`custom` 等）：带 `selector`、`value`、`label`。**无 `children`**。
+- **`table` 节点**：可以是叶子（`rows[][]`）或容器（`children[]`），取决于单元格复杂度。
 - **`localHtml`**：仅用于语义提取不充分的叶子节点，最大 500 字符。
 - **`rawHtmlSnapshot`**：独立的调试用完整 HTML 快照，不属于 AST。
 
 ### 测试
 
-多场景测试（`apps/extension/src/__tests__/multi-scenario.test.ts`）覆盖 7 种 fixture：企业官网、后台管理、H5 移动端、多导航文档页、无语义标签页面、数据大盘、Element UI 嵌套菜单+iframe。**任何解析器改动必须通过所有现有 fixture 测试。新增解析行为必须同时新增对应 fixture 和测试。**
+多场景测试（`apps/extension/src/__tests__/multi-scenario.test.ts`）覆盖 8 种 fixture：企业官网、后台管理、H5 移动端、多导航文档页、无语义标签页面、数据大盘、Element UI 嵌套菜单+iframe、复杂嵌套结构（form-item 内嵌表格/子表单、表格操作列）。**任何解析器改动必须通过所有现有 fixture 测试。新增解析行为必须同时新增对应 fixture 和测试。**
 
 ## Infrastructure
 

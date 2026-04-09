@@ -212,15 +212,90 @@ function shouldReplaceInitialState(
 /**
  * Store the best initial page state snapshot in the recorder state.
  */
+/**
+ * Merge an iframe's stateTree into the existing top-frame state.
+ * The iframe content becomes a section node with blockType 'iframe-content'.
+ */
+function mergeIframeState(
+  existing: PageInitialState,
+  incoming: PageInitialState,
+): PageInitialState {
+  const iframeNodes = incoming.stateTree ?? [];
+  if (iframeNodes.length === 0) return existing;
+
+  const iframeSection: StateNode = {
+    type: 'section',
+    label: incoming.pageTitle || incoming.pageUrl || 'Iframe',
+    blockType: 'iframe-content',
+    children: iframeNodes,
+  };
+
+  return {
+    ...existing,
+    stateTree: [...(existing.stateTree ?? []), iframeSection],
+    // Keep the existing page-level info (url, title, heading, actions)
+    // since they belong to the top frame
+  };
+}
+
+/**
+ * Merge a top-frame's navigation/page-level info into an existing iframe state.
+ * Prepends navigation nodes and updates page-level metadata.
+ */
+function mergeTopFrameIntoIframeState(
+  existingIframeState: PageInitialState,
+  topFrameState: PageInitialState,
+): PageInitialState {
+  const topTree = topFrameState.stateTree ?? [];
+  const iframeTree = existingIframeState.stateTree ?? [];
+
+  return {
+    ...topFrameState, // Use top frame's page-level info (url, title, heading, actions)
+    stateTree: [...topTree, ...iframeTree],
+  };
+}
+
 export function setInitialState(
   state: RecorderState,
   initialState: PageInitialState,
   source?: InitialStateCandidateSource,
 ): RecorderState {
-  if (!shouldReplaceInitialState(state, initialState, source ?? {})) {
-    return state;
+  const incomingFrameId = source?.frameId ?? 0;
+  const isIncomingIframe = incomingFrameId > 0;
+  const existing = state.initialState;
+
+  // First state received — just store it
+  if (!existing) {
+    return applyInitialState(state, initialState, source);
   }
 
+  const existingFrameId = state.initialStateSource?.frameId ?? 0;
+
+  // Same frameId → score-based replacement (e.g. two-pass from same frame)
+  if (existingFrameId === incomingFrameId) {
+    if (!shouldReplaceInitialState(state, initialState, source ?? {})) {
+      return state;
+    }
+    return applyInitialState(state, initialState, source);
+  }
+
+  // Different frames → always merge
+  if (isIncomingIframe) {
+    // Incoming is iframe → append its content into existing state
+    const merged = mergeIframeState(existing, initialState);
+    return applyInitialState(state, merged, undefined);
+  } else {
+    // Incoming is top-frame, existing was iframe or merged → wrap with top-frame info
+    const merged = mergeTopFrameIntoIframeState(existing, initialState);
+    return applyInitialState(state, merged, undefined);
+  }
+}
+
+function applyInitialState(
+  state: RecorderState,
+  initialState: PageInitialState,
+  source?: InitialStateCandidateSource,
+): RecorderState {
   const nextState: RecorderState = {
     ...state,
     initialState,
@@ -230,16 +305,12 @@ export function setInitialState(
       score: computeInitialStateScore(initialState, source),
     },
   };
-
-  // If recording started too early on about:blank or an empty shell page, let a
-  // better initial-state candidate repair the visible recording metadata too.
   if (!hasUsableUrl(nextState.initialUrl) && hasUsableUrl(initialState.pageUrl)) {
     nextState.initialUrl = initialState.pageUrl;
   }
   if (!nextState.initialTitle?.trim() && initialState.pageTitle?.trim()) {
     nextState.initialTitle = initialState.pageTitle;
   }
-
   return nextState;
 }
 
