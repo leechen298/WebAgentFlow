@@ -146,6 +146,8 @@ export interface StateNode {
   cssState?: string;
   /** Current value at snapshot time */
   value?: string;
+  /** Available options for select/radio/checkbox fields (label + selected state) */
+  options?: { label: string; selected?: boolean }[];
   /** Placeholder text */
   placeholder?: string;
   /** Whether field is required */

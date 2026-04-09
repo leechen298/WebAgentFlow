@@ -476,15 +476,26 @@ function extractControlLabel(el: Element): string | undefined {
   return undefined;
 }
 
-function extractControlValue(
-  el: Element,
-): { value?: string; type?: string; placeholder?: string } {
+interface ControlValueResult {
+  value?: string;
+  type?: string;
+  placeholder?: string;
+  options?: { label: string; selected?: boolean }[];
+}
+
+function extractControlValue(el: Element): ControlValueResult {
   const tag = el.tagName.toLowerCase();
   if (tag === 'input') {
     const input = el as HTMLInputElement;
     const type = input.type || 'text';
     if (type === 'checkbox' || type === 'radio') {
-      return { type, value: input.checked ? 'checked' : undefined };
+      // For standalone radio/checkbox, also find sibling options in same name group
+      const options = extractRadioCheckboxOptions(input);
+      return {
+        type,
+        value: input.checked ? 'checked' : undefined,
+        ...(options.length > 0 ? { options } : {}),
+      };
     }
     return {
       type,
@@ -495,9 +506,15 @@ function extractControlValue(
   if (tag === 'select') {
     const select = el as HTMLSelectElement;
     const selected = select.options[select.selectedIndex];
+    const options: { label: string; selected?: boolean }[] = [];
+    for (const opt of select.options) {
+      const label = cleanText(opt.text);
+      if (label) options.push({ label, ...(opt.selected ? { selected: true } : {}) });
+    }
     return {
       type: 'select',
       value: selected ? cleanText(selected.text || select.value) : undefined,
+      ...(options.length > 0 ? { options } : {}),
     };
   }
   if (tag === 'textarea') {
@@ -507,6 +524,128 @@ function extractControlValue(
     return { type: 'richtext', value: cleanText(el.textContent) };
   }
   return {};
+}
+
+/**
+ * Extract options from a radio/checkbox group by finding siblings with same name.
+ */
+function extractRadioCheckboxOptions(input: HTMLInputElement): { label: string; selected?: boolean }[] {
+  const name = input.getAttribute('name');
+  if (!name) return [];
+  const form = input.closest('form') || document.body;
+  const siblings = form.querySelectorAll<HTMLInputElement>(
+    `input[type="${input.type}"][name="${CSS.escape(name)}"]`,
+  );
+  const options: { label: string; selected?: boolean }[] = [];
+  for (const sib of siblings) {
+    // Find label text: <label> wrapper, adjacent text, or value attribute
+    let label: string | undefined;
+    const parentLabel = sib.closest('label');
+    if (parentLabel) {
+      const clone = parentLabel.cloneNode(true) as Element;
+      clone.querySelectorAll('input').forEach((c) => c.remove());
+      label = cleanText(clone.textContent);
+    }
+    if (!label) {
+      // Check next sibling text
+      const next = sib.nextSibling;
+      if (next?.nodeType === Node.TEXT_NODE) label = cleanText(next.textContent);
+    }
+    if (!label) label = sib.value || undefined;
+    if (label) {
+      options.push({ label, ...(sib.checked ? { selected: true } : {}) });
+    }
+  }
+  return options;
+}
+
+/* ── Options extraction for select/radio/checkbox ────────────────────────── */
+
+/**
+ * Extract available options from a form field's content area.
+ * Handles native <select>/<input[radio|checkbox]> and component library patterns.
+ */
+function extractFieldOptions(
+  contentArea: Element,
+  fieldType: string,
+): { label: string; selected?: boolean }[] {
+  const options: { label: string; selected?: boolean }[] = [];
+  const MAX_OPTIONS = 50;
+
+  // 1. Native <select> options
+  const select = contentArea.querySelector('select');
+  if (select) {
+    for (const opt of (select as HTMLSelectElement).options) {
+      if (options.length >= MAX_OPTIONS) break;
+      const label = cleanText(opt.text);
+      if (label) options.push({ label, ...(opt.selected ? { selected: true } : {}) });
+    }
+    if (options.length > 0) return options;
+  }
+
+  // 2. Native radio/checkbox inputs
+  const inputs = contentArea.querySelectorAll<HTMLInputElement>(
+    'input[type="radio"], input[type="checkbox"]',
+  );
+  if (inputs.length > 0) {
+    for (const input of inputs) {
+      if (options.length >= MAX_OPTIONS) break;
+      let label: string | undefined;
+      // Label from wrapping <label>
+      const parentLabel = input.closest('label');
+      if (parentLabel) {
+        const clone = parentLabel.cloneNode(true) as Element;
+        clone.querySelectorAll('input').forEach((c) => c.remove());
+        label = cleanText(clone.textContent);
+      }
+      // Label from adjacent text/span
+      if (!label) {
+        const next = input.nextElementSibling;
+        if (next) label = cleanText(next.textContent);
+      }
+      if (!label) label = input.value || undefined;
+      if (label) {
+        options.push({ label, ...(input.checked ? { selected: true } : {}) });
+      }
+    }
+    if (options.length > 0) return options;
+  }
+
+  // 3. Component library radio/checkbox items (el-radio, ant-radio, etc.)
+  const componentItems = contentArea.querySelectorAll(
+    '[class*="radio"], [class*="checkbox"], [role="radio"], [role="checkbox"]',
+  );
+  const seen = new Set<string>();
+  for (const item of componentItems) {
+    if (options.length >= MAX_OPTIONS) break;
+    // Skip container elements (radio-group, checkbox-group)
+    const cls = (item.className || '').toLowerCase();
+    if (/group|wrapper|button-group/.test(cls)) continue;
+    const label = cleanText(item.textContent);
+    if (!label || label.length > 60 || seen.has(label)) continue;
+    seen.add(label);
+    const isSelected = cls.includes('is-checked') || cls.includes('is-active') ||
+      cls.includes('checked') || item.getAttribute('aria-checked') === 'true';
+    options.push({ label, ...(isSelected ? { selected: true } : {}) });
+  }
+  if (options.length > 0) return options;
+
+  // 4. Component library select dropdown items (may be in a popup, not always accessible)
+  // Try to find options within the component's DOM
+  const selectItems = contentArea.querySelectorAll(
+    '[class*="option"]:not([class*="group"]), [role="option"]',
+  );
+  for (const item of selectItems) {
+    if (options.length >= MAX_OPTIONS) break;
+    const label = cleanText(item.textContent);
+    if (!label || label.length > 60 || seen.has(label)) continue;
+    seen.add(label);
+    const isSelected = (item.className || '').toLowerCase().includes('selected') ||
+      item.getAttribute('aria-selected') === 'true';
+    options.push({ label, ...(isSelected ? { selected: true } : {}) });
+  }
+
+  return options;
 }
 
 /* ── Leaf-level local HTML capture ────────────────────────────────────────── */
@@ -769,6 +908,13 @@ function processFormItem(
     }
   }
 
+  // Extract options for select/radio/checkbox fields
+  const OPTION_TYPES = new Set(['select', 'radio', 'checkbox', 'cascader']);
+  let options: { label: string; selected?: boolean }[] | undefined;
+  if (OPTION_TYPES.has(fieldType)) {
+    options = extractFieldOptions(findContentArea(container), fieldType);
+  }
+
   // Backtrack: if no label and no value — this form-item container has no
   // meaningful form content. Return [] so walkNode falls back to generic
   // walkChildren (e.g. el-form-item__actions that only has buttons).
@@ -783,6 +929,7 @@ function processFormItem(
     ...(label ? { label } : {}),
     ...(value ? { value } : {}),
     ...(placeholder ? { placeholder } : {}),
+    ...(options && options.length > 0 ? { options } : {}),
     ...(detectRequired(container) ? { required: true } : {}),
     ...(prop ? { fieldProp: prop } : {}),
     ...(detected.itemCount ? { itemCount: detected.itemCount } : {}),
@@ -975,7 +1122,7 @@ function processDialog(node: Element, depth: number, counter: Counter): StateNod
 
 function processStandaloneControl(node: Element, counter: Counter): StateNode[] {
   const label = extractControlLabel(node);
-  const { value, type, placeholder } = extractControlValue(node);
+  const { value, type, placeholder, options } = extractControlValue(node);
   if (!label && !value && !placeholder) return []; // backtrack
   counter.n++;
   return [{
@@ -984,6 +1131,7 @@ function processStandaloneControl(node: Element, counter: Counter): StateNode[] 
     ...(label ? { label } : {}),
     ...(value ? { value } : {}),
     ...(placeholder ? { placeholder } : {}),
+    ...(options && options.length > 0 ? { options } : {}),
     ...(node.hasAttribute('required') || node.getAttribute('aria-required') === 'true'
       ? { required: true } : {}),
   }];
