@@ -60,6 +60,12 @@ cd apps/api && .venv/bin/pytest tests/test_health.py -v    # Single file
 cd apps/api && .venv/bin/pytest -k "test_create" -v        # Pattern match
 ```
 
+## Git Safety Rules
+
+- Any development branch whose name ends with `-local` is local-only and must never be pushed to any remote.
+- Before running `git push`, always check the current branch name first. If the branch ends with `-local`, stop and do not push.
+- If the work on a `-local` branch needs to be published, create or move a non-`-local` branch to the same commit first, then push that branch instead.
+
 ## API Architecture
 
 The FastAPI backend (`apps/api/app/`) uses a strict layered architecture:
