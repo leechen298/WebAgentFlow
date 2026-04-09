@@ -113,111 +113,228 @@
 
               <!-- AST Tree View (new format) -->
               <div v-if="flatTreeRows.length > 0" style="margin-bottom: 12px">
-                <div
-                  v-for="row in flatTreeRows"
-                  :key="row.key"
-                  :style="{ paddingLeft: row.depth * 20 + 'px' }"
-                  class="state-tree-row"
-                >
-                  <!-- Section / Group nodes (containers) -->
-                  <template v-if="row.node.type === 'section' || row.node.type === 'group'">
-                    <span style="font-weight: 600; color: #333">
-                      <a-tag :color="row.node.type === 'section' ? 'blue' : 'cyan'" style="font-size: 11px">
-                        {{ row.node.type }}
-                      </a-tag>
-                      <a-tag v-if="row.node.blockType" :color="blockTypeColor(row.node.blockType)" style="font-size: 10px">
-                        {{ row.node.blockType }}
-                      </a-tag>
-                      {{ row.node.label || '(unnamed)' }}
-                    </span>
-                    <a-tag v-if="row.node.required" color="red" style="font-size: 10px; margin-left: 4px">required</a-tag>
-                    <span v-if="row.node.fieldProp" style="color: #999; font-size: 11px; margin-left: 8px">
-                      prop={{ row.node.fieldProp }}
-                    </span>
-                    <span v-if="row.node.actions && row.node.actions.length > 0" style="margin-left: 8px">
-                      <a-tag v-for="a in row.node.actions" :key="a" color="orange" style="font-size: 10px">{{ a }}</a-tag>
-                    </span>
-                    <span v-if="row.node.summaryText" style="color: #666; font-size: 11px; margin-left: 8px">
-                      {{ truncate(row.node.summaryText, 60) }}
-                    </span>
-                  </template>
-
-                  <!-- Table nodes -->
-                  <template v-else-if="row.node.type === 'table'">
-                    <a-tag color="volcano" style="font-size: 11px">table</a-tag>
-                    <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
-                    <a
-                      v-if="row.node.headers && row.node.headers.length > 0"
-                      style="color: #1677ff; margin-left: 8px; cursor: pointer"
-                      @click="openTableDetailModal(row.node)"
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px">
+                  <span style="font-weight: 600; font-size: 14px">
+                    Semantic State Tree
+                    <a-tag color="blue" style="margin-left: 8px">{{ stateTreeNodeCount }} nodes</a-tag>
+                  </span>
+                  <a-space>
+                    <a-button size="small" @click="expandAllNodes">Expand All</a-button>
+                    <a-button size="small" @click="collapseAllNodes">Collapse All</a-button>
+                  </a-space>
+                </div>
+                <div class="state-tree-container">
+                  <template v-for="row in visibleTreeRows" :key="row.key">
+                    <div
+                      :style="{ paddingLeft: (row.depth * 20 + 8) + 'px' }"
+                      class="state-tree-row"
                     >
-                      {{ row.node.headers.join(' | ') }}
-                    </a>
-                    <span v-if="row.node.itemCount" style="color: #999; margin-left: 8px">
-                      {{ row.node.itemCount }} rows
-                    </span>
-                  </template>
+                      <!-- Expand/Collapse toggle for container nodes -->
+                      <span
+                        v-if="row.node.children && row.node.children.length > 0"
+                        class="tree-toggle"
+                        @click="toggleNode(row.key)"
+                      >
+                        <caret-right-outlined v-if="!expandedKeys.has(row.key)" class="toggle-icon" />
+                        <caret-down-outlined v-else class="toggle-icon" />
+                      </span>
+                      <span v-else class="tree-toggle-placeholder" />
 
-                  <!-- List nodes -->
-                  <template v-else-if="row.node.type === 'list'">
-                    <a-tag color="lime" style="font-size: 11px">list</a-tag>
-                    <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
-                    <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
-                      {{ row.node.itemCount }} items
-                    </span>
-                    <span
-                      v-if="row.node.value"
-                      style="color: #1677ff; margin-left: 8px; cursor: pointer"
-                      @click="openListDetailModal(row.node)"
+                      <!-- Section / Group nodes (containers) -->
+                      <template v-if="row.node.type === 'section' || row.node.type === 'group'">
+                        <span style="font-weight: 600; color: #333">
+                          <a-tag :color="row.node.type === 'section' ? 'blue' : 'cyan'" style="font-size: 11px">
+                            {{ row.node.type }}
+                          </a-tag>
+                          <a-tag v-if="row.node.blockType" :color="blockTypeColor(row.node.blockType)" style="font-size: 10px">
+                            {{ row.node.blockType }}
+                          </a-tag>
+                          {{ row.node.label || '(unnamed)' }}
+                        </span>
+                        <a-tag v-if="row.node.required" color="red" style="font-size: 10px; margin-left: 4px">required</a-tag>
+                        <span v-if="row.node.fieldProp" style="color: #999; font-size: 11px; margin-left: 8px">
+                          prop={{ row.node.fieldProp }}
+                        </span>
+                        <span v-if="row.node.actions && row.node.actions.length > 0" style="margin-left: 8px">
+                          <a-tag v-for="a in row.node.actions" :key="a" color="orange" style="font-size: 10px">{{ a }}</a-tag>
+                        </span>
+                        <span v-if="row.node.summaryText" style="color: #666; font-size: 11px; margin-left: 8px">
+                          {{ truncate(row.node.summaryText, 60) }}
+                        </span>
+                        <a-tag
+                          v-if="nodeHasLocalHtml(row.node)"
+                          color="purple"
+                          style="font-size: 9px; margin-left: 4px; cursor: pointer"
+                          @click="toggleDetail(row.key)"
+                        >
+                          localHtml
+                        </a-tag>
+                      </template>
+
+                      <!-- Table nodes -->
+                      <template v-else-if="row.node.type === 'table'">
+                        <a-tag color="volcano" style="font-size: 11px">table</a-tag>
+                        <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
+                        <span v-if="row.node.itemCount" style="color: #999; margin-left: 8px">
+                          {{ row.node.itemCount }} rows
+                        </span>
+                        <a-tag
+                          v-if="row.node.headers && row.node.headers.length > 0 || row.node.rows && row.node.rows.length > 0"
+                          color="processing"
+                          style="font-size: 10px; margin-left: 8px; cursor: pointer"
+                          @click="toggleDetail(row.key)"
+                        >
+                          {{ detailOpenKeys.has(row.key) ? '收起表格' : '展开表格' }}
+                        </a-tag>
+                        <a-tag
+                          v-if="nodeHasLocalHtml(row.node)"
+                          color="purple"
+                          style="font-size: 9px; margin-left: 4px; cursor: pointer"
+                          @click="toggleDetail(row.key + '__html')"
+                        >
+                          localHtml
+                        </a-tag>
+                      </template>
+
+                      <!-- List nodes -->
+                      <template v-else-if="row.node.type === 'list'">
+                        <a-tag color="lime" style="font-size: 11px">list</a-tag>
+                        <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
+                        <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
+                          {{ row.node.itemCount }} items
+                        </span>
+                        <a-tag
+                          v-if="row.node.value"
+                          color="processing"
+                          style="font-size: 10px; margin-left: 8px; cursor: pointer"
+                          @click="toggleDetail(row.key)"
+                        >
+                          {{ detailOpenKeys.has(row.key) ? '收起列表' : '展开列表' }}
+                        </a-tag>
+                        <a-tag
+                          v-if="nodeHasLocalHtml(row.node)"
+                          color="purple"
+                          style="font-size: 9px; margin-left: 4px; cursor: pointer"
+                          @click="toggleDetail(row.key + '__html')"
+                        >
+                          localHtml
+                        </a-tag>
+                      </template>
+
+                      <!-- Link nodes (navigation) -->
+                      <template v-else-if="row.node.type === 'link'">
+                        <a-tag color="magenta" style="font-size: 11px">link</a-tag>
+                        <a-tag v-if="row.node.active" color="green" style="font-size: 9px">active</a-tag>
+                        <span style="font-weight: 500">{{ row.node.label }}</span>
+                        <span v-if="row.node.href" style="color: #999; font-size: 11px; margin-left: 8px">
+                          → {{ truncate(row.node.href, 60) }}
+                        </span>
+                        <a-tag
+                          v-if="nodeHasLocalHtml(row.node)"
+                          color="purple"
+                          style="font-size: 9px; margin-left: 4px; cursor: pointer"
+                          @click="toggleDetail(row.key)"
+                        >
+                          localHtml
+                        </a-tag>
+                      </template>
+
+                      <!-- Button nodes -->
+                      <template v-else-if="row.node.type === 'button'">
+                        <a-tag color="orange" style="font-size: 11px">button</a-tag>
+                        <a-tag v-if="row.node.active" color="green" style="font-size: 9px">active</a-tag>
+                        <span style="font-weight: 500">{{ row.node.label }}</span>
+                        <a-tag
+                          v-if="nodeHasLocalHtml(row.node)"
+                          color="purple"
+                          style="font-size: 9px; margin-left: 4px; cursor: pointer"
+                          @click="toggleDetail(row.key)"
+                        >
+                          localHtml
+                        </a-tag>
+                      </template>
+
+                      <!-- Leaf field nodes (input, select, checkbox, etc.) -->
+                      <template v-else>
+                        <a-tag :color="initialFieldTypeColor(row.node.type)" style="font-size: 11px">
+                          {{ row.node.type }}
+                        </a-tag>
+                        <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
+                        <a-tag v-if="row.node.required" color="red" style="font-size: 10px; margin-left: 4px">*</a-tag>
+                        <span v-if="row.node.fieldProp" style="color: #999; font-size: 11px; margin-left: 4px">
+                          [{{ row.node.fieldProp }}]
+                        </span>
+                        <span v-if="row.node.value" style="color: #1677ff; margin-left: 8px">
+                          = {{ truncate(row.node.value, 60) }}
+                        </span>
+                        <span v-else-if="row.node.placeholder" style="color: #bbb; font-style: italic; margin-left: 8px">
+                          {{ truncate(row.node.placeholder, 50) }}
+                        </span>
+                        <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
+                          ({{ row.node.itemCount }})
+                        </span>
+                        <a-tag
+                          v-if="nodeHasLocalHtml(row.node)"
+                          color="purple"
+                          style="font-size: 9px; margin-left: 4px; cursor: pointer"
+                          @click="toggleDetail(row.key)"
+                        >
+                          localHtml
+                        </a-tag>
+                      </template>
+                    </div>
+
+                    <!-- Inline detail panel: table data -->
+                    <div
+                      v-if="row.node.type === 'table' && detailOpenKeys.has(row.key) && row.node.rows"
+                      :style="{ paddingLeft: (row.depth * 20 + 30) + 'px', paddingRight: '12px' }"
+                      class="inline-detail-panel"
                     >
-                      {{ truncate(row.node.value, 80) }}
-                    </span>
-                  </template>
+                      <a-table
+                        :columns="getInlineTableColumns(row.node)"
+                        :data-source="getInlineTableRows(row.node)"
+                        :pagination="false"
+                        size="small"
+                        :row-key="(_r: Record<string, string>, i: number) => i"
+                      />
+                    </div>
 
-                  <!-- Link nodes (navigation) -->
-                  <template v-else-if="row.node.type === 'link'">
-                    <a-tag color="magenta" style="font-size: 11px">link</a-tag>
-                    <a-tag v-if="row.node.active" color="green" style="font-size: 9px">active</a-tag>
-                    <span style="font-weight: 500">{{ row.node.label }}</span>
-                    <span v-if="row.node.href" style="color: #999; font-size: 11px; margin-left: 8px">
-                      → {{ truncate(row.node.href, 60) }}
-                    </span>
-                  </template>
-
-                  <!-- Button nodes -->
-                  <template v-else-if="row.node.type === 'button'">
-                    <a-tag color="orange" style="font-size: 11px">button</a-tag>
-                    <a-tag v-if="row.node.active" color="green" style="font-size: 9px">active</a-tag>
-                    <span style="font-weight: 500">{{ row.node.label }}</span>
-                  </template>
-
-                  <!-- Leaf field nodes (input, select, checkbox, etc.) -->
-                  <template v-else>
-                    <a-tag :color="initialFieldTypeColor(row.node.type)" style="font-size: 11px">
-                      {{ row.node.type }}
-                    </a-tag>
-                    <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
-                    <a-tag v-if="row.node.required" color="red" style="font-size: 10px; margin-left: 4px">*</a-tag>
-                    <span v-if="row.node.fieldProp" style="color: #999; font-size: 11px; margin-left: 4px">
-                      [{{ row.node.fieldProp }}]
-                    </span>
-                    <span v-if="row.node.value" style="color: #1677ff; margin-left: 8px">
-                      = {{ truncate(row.node.value, 60) }}
-                    </span>
-                    <span v-else-if="row.node.placeholder" style="color: #bbb; font-style: italic; margin-left: 8px">
-                      {{ truncate(row.node.placeholder, 50) }}
-                    </span>
-                    <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
-                      ({{ row.node.itemCount }})
-                    </span>
-                    <a-tag
-                      v-if="row.node.localHtml || row.node.htmlContent"
-                      color="purple"
-                      style="font-size: 9px; margin-left: 4px; cursor: pointer"
-                      @click="openLocalHtmlModal(row.node)"
+                    <!-- Inline detail panel: list data -->
+                    <div
+                      v-if="row.node.type === 'list' && detailOpenKeys.has(row.key) && row.node.value"
+                      :style="{ paddingLeft: (row.depth * 20 + 30) + 'px', paddingRight: '12px' }"
+                      class="inline-detail-panel"
                     >
-                      localHtml
-                    </a-tag>
+                      <a-list
+                        size="small"
+                        :data-source="getInlineListItems(row.node)"
+                        bordered
+                      >
+                        <template #renderItem="{ item, index }">
+                          <a-list-item>
+                            <a-space>
+                              <a-tag color="blue">{{ index + 1 }}</a-tag>
+                              {{ item }}
+                            </a-space>
+                          </a-list-item>
+                        </template>
+                      </a-list>
+                    </div>
+
+                    <!-- Inline detail panel: localHtml (for table/list uses __html suffix key) -->
+                    <div
+                      v-if="detailOpenKeys.has(row.node.type === 'table' || row.node.type === 'list' ? row.key + '__html' : row.key) && nodeHasLocalHtml(row.node)"
+                      :style="{ paddingLeft: (row.depth * 20 + 30) + 'px', paddingRight: '12px' }"
+                      class="inline-detail-panel"
+                    >
+                      <div style="margin-bottom: 4px; color: #999; font-size: 11px">HTML Preview</div>
+                      <div class="html-preview-inline" v-html="getNodeLocalHtml(row.node)" />
+                      <a-collapse size="small" style="margin-top: 8px">
+                        <a-collapse-panel key="raw" header="Raw HTML">
+                          <pre style="font-size: 11px; margin: 0; white-space: pre-wrap; word-break: break-all">{{ getNodeLocalHtml(row.node) }}</pre>
+                        </a-collapse-panel>
+                      </a-collapse>
+                    </div>
                   </template>
                 </div>
               </div>
@@ -466,7 +583,7 @@
       </a-card>
     </a-spin>
 
-    <!-- Field Detail Drawer (table / list) -->
+    <!-- Field Detail Drawer (legacy flat table records) -->
     <a-drawer
       v-model:open="fieldDetailModalOpen"
       :title="fieldDetailTitle"
@@ -502,54 +619,6 @@
         </template>
       </div>
 
-      <!-- StateNode table detail -->
-      <div v-else-if="tableDetailNode">
-        <a-descriptions :column="2" size="small" bordered style="margin-bottom: 12px">
-          <a-descriptions-item v-if="tableDetailNode.label" label="Label">
-            {{ tableDetailNode.label }}
-          </a-descriptions-item>
-          <a-descriptions-item label="Rows">
-            {{ tableDetailNode.itemCount ?? tableDetailNode.rows?.length ?? 0 }}
-          </a-descriptions-item>
-        </a-descriptions>
-        <a-table
-          v-if="treeTableColumns.length > 0"
-          :columns="treeTableColumns"
-          :data-source="treeTableRows"
-          :pagination="false"
-          size="small"
-          :row-key="(_r: Record<string, string>, i: number) => i"
-          style="margin-top: 8px"
-        />
-        <div v-else style="color: #999">No table data captured.</div>
-      </div>
-
-      <!-- StateNode list detail -->
-      <div v-else-if="listDetailNode">
-        <a-descriptions :column="2" size="small" bordered style="margin-bottom: 12px">
-          <a-descriptions-item v-if="listDetailNode.label" label="Label">
-            {{ listDetailNode.label }}
-          </a-descriptions-item>
-          <a-descriptions-item label="Items">
-            {{ listDetailNode.itemCount ?? parsedListDetailItems.length }}
-          </a-descriptions-item>
-        </a-descriptions>
-        <a-list
-          size="small"
-          :data-source="parsedListDetailItems"
-          bordered
-          style="margin-top: 8px"
-        >
-          <template #renderItem="{ item, index }">
-            <a-list-item>
-              <a-space>
-                <a-tag color="lime">{{ index + 1 }}</a-tag>
-                {{ item }}
-              </a-space>
-            </a-list-item>
-          </template>
-        </a-list>
-      </div>
     </a-drawer>
 
     <!-- Edit Modal -->
@@ -603,32 +672,6 @@
       </a-form>
     </a-modal>
 
-    <!-- Local HTML Preview Drawer -->
-    <a-drawer
-      v-model:open="localHtmlModalOpen"
-      :title="localHtmlModalTitle"
-      :width="640"
-    >
-      <div style="margin-bottom: 12px; color: #666; font-size: 12px">
-        Rendered preview of leaf-level local HTML snippet.
-      </div>
-      <a-tabs default-active-key="preview">
-        <a-tab-pane key="preview" tab="Preview">
-          <div
-            class="html-preview-container"
-            v-html="localHtmlContent"
-          />
-        </a-tab-pane>
-        <a-tab-pane key="raw" tab="Raw HTML">
-          <a-textarea
-            :value="localHtmlContent"
-            :rows="20"
-            readonly
-            style="font-family: monospace; font-size: 11px"
-          />
-        </a-tab-pane>
-      </a-tabs>
-    </a-drawer>
   </div>
 </template>
 
@@ -636,7 +679,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message, type FormInstance } from 'ant-design-vue';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons-vue';
+import { EditOutlined, DeleteOutlined, CaretRightOutlined, CaretDownOutlined } from '@ant-design/icons-vue';
 import { useRecordingsStore } from '@/stores';
 import { safeParseJson, formatJsonString } from '@/utils';
 import { getNormalizedRecording } from '@/api/recordings';
@@ -649,6 +692,8 @@ const recordingsStore = useRecordingsStore();
 const formRef = ref<FormInstance>();
 const editModalOpen = ref(false);
 const activeTab = ref('raw');
+const expandedKeys = ref<Set<string>>(new Set());
+const detailOpenKeys = ref<Set<string>>(new Set());
 
 const normalized = ref<NormalizedRecording | null>(null);
 const normLoading = ref(false);
@@ -656,11 +701,6 @@ const normError = ref('');
 
 const fieldDetailModalOpen = ref(false);
 const fieldDetailRecord = ref<InitialFieldSnapshot | null>(null);
-const tableDetailNode = ref<StateNode | null>(null);
-const listDetailNode = ref<StateNode | null>(null);
-const localHtmlModalOpen = ref(false);
-const localHtmlModalTitle = ref('Local HTML Preview');
-const localHtmlContent = ref('');
 
 const formData = reactive({
   name: '',
@@ -736,8 +776,99 @@ function countNodes(nodes: StateNode[]): number {
 const flatTreeRows = computed<FlatTreeRow[]>(() => {
   const tree = initialState.value?.stateTree;
   if (!tree || tree.length === 0) return [];
-  return flattenTree(tree);
+  const rows = flattenTree(tree);
+  // Initialize expandedKeys with all container keys on first compute
+  if (expandedKeys.value.size === 0 && rows.length > 0) {
+    const keys = new Set<string>();
+    for (const row of rows) {
+      if (row.node.children && row.node.children.length > 0) {
+        keys.add(row.key);
+      }
+    }
+    expandedKeys.value = keys;
+  }
+  return rows;
 });
+
+const visibleTreeRows = computed<FlatTreeRow[]>(() => {
+  const all = flatTreeRows.value;
+  if (all.length === 0) return [];
+  const visible: FlatTreeRow[] = [];
+  const collapsedPrefixes: string[] = [];
+  for (const row of all) {
+    // Check if this row is under a collapsed parent
+    const hidden = collapsedPrefixes.some(p => row.key.startsWith(p));
+    if (hidden) continue;
+    visible.push(row);
+    // If this node has children but is collapsed, hide its descendants
+    if (row.node.children && row.node.children.length > 0 && !expandedKeys.value.has(row.key)) {
+      collapsedPrefixes.push(row.key + '-');
+    }
+  }
+  return visible;
+});
+
+function toggleNode(key: string): void {
+  const keys = new Set(expandedKeys.value);
+  if (keys.has(key)) {
+    keys.delete(key);
+  } else {
+    keys.add(key);
+  }
+  expandedKeys.value = keys;
+}
+
+function expandAllNodes(): void {
+  const keys = new Set<string>();
+  for (const row of flatTreeRows.value) {
+    if (row.node.children && row.node.children.length > 0) {
+      keys.add(row.key);
+    }
+  }
+  expandedKeys.value = keys;
+}
+
+function collapseAllNodes(): void {
+  expandedKeys.value = new Set();
+}
+
+function toggleDetail(key: string): void {
+  const keys = new Set(detailOpenKeys.value);
+  if (keys.has(key)) {
+    keys.delete(key);
+  } else {
+    keys.add(key);
+  }
+  detailOpenKeys.value = keys;
+}
+
+function getNodeLocalHtml(node: StateNode): string {
+  return node.localHtml ?? (node as unknown as Record<string, unknown>).htmlContent as string ?? '';
+}
+
+function getInlineTableColumns(node: StateNode): Array<{ title: string; dataIndex: string; key: string; ellipsis: boolean }> {
+  if (node.headers && node.headers.length > 0) {
+    return node.headers.map((h, i) => ({ title: h, dataIndex: `col${i}`, key: `col${i}`, ellipsis: true }));
+  }
+  const firstRow = node.rows?.[0];
+  if (!firstRow) return [];
+  return firstRow.map((_, i) => ({ title: `Col ${i + 1}`, dataIndex: `col${i}`, key: `col${i}`, ellipsis: true }));
+}
+
+function getInlineTableRows(node: StateNode): Array<Record<string, string>> {
+  if (!node.rows) return [];
+  return node.rows.map((row) => {
+    const record: Record<string, string> = {};
+    row.forEach((cell, i) => { record[`col${i}`] = cell; });
+    return record;
+  });
+}
+
+function getInlineListItems(node: StateNode): string[] {
+  if (!node.value) return [];
+  const body = node.value.replace(/^共\d+项[：:]\s*/, '');
+  return body.split(/[；;]/).filter(Boolean).map((s) => s.trim());
+}
 
 const stateTreeNodeCount = computed(() => {
   const tree = initialState.value?.stateTree;
@@ -750,15 +881,15 @@ const rawHtmlSnapshotData = computed(() => {
   const s = initialState.value;
   if (!s) return undefined;
   // Support both old (htmlSnapshot) and new (rawHtmlSnapshot) field names
-  return (s as Record<string, unknown>).rawHtmlSnapshot as string | undefined
-    ?? (s as Record<string, unknown>).htmlSnapshot as string | undefined;
+  return (s as unknown as Record<string, unknown>).rawHtmlSnapshot as string | undefined
+    ?? (s as unknown as Record<string, unknown>).htmlSnapshot as string | undefined;
 });
 
 function collectLeafHtml(nodes: StateNode[] | undefined): Array<{ label?: string; type: string; localHtml: string }> {
   if (!nodes) return [];
   const result: Array<{ label?: string; type: string; localHtml: string }> = [];
   for (const node of nodes) {
-    const html = node.localHtml ?? (node as Record<string, unknown>).htmlContent as string | undefined;
+    const html = node.localHtml ?? (node as unknown as Record<string, unknown>).htmlContent as string | undefined;
     if (html) {
       result.push({ label: node.label, type: node.type, localHtml: html });
     }
@@ -773,32 +904,11 @@ const leafHtmlNodes = computed(() => collectLeafHtml(initialState.value?.stateTr
 const leafHtmlCount = computed(() => leafHtmlNodes.value.length);
 
 const fieldDetailTitle = computed(() => {
-  if (tableDetailNode.value) {
-    const n = tableDetailNode.value;
-    const label = n.label || 'Table';
-    const count = n.itemCount ? `（${n.itemCount} 行）` : '';
-    return `${label}${count}`;
-  }
-  if (listDetailNode.value) {
-    const n = listDetailNode.value;
-    const label = n.label || 'List';
-    const count = n.itemCount ? `（${n.itemCount} 项）` : '';
-    return `${label}${count}`;
-  }
   const r = fieldDetailRecord.value;
   if (!r) return '';
   const label = r.fieldPath || r.fieldLabel || r.fieldType || '';
   const count = r.itemCount ? `（${r.itemCount} ${r.fieldType === 'table' ? '行' : '项'}）` : '';
   return `${label}${count}`;
-});
-
-const parsedListDetailItems = computed<string[]>(() => {
-  const node = listDetailNode.value;
-  if (!node?.value) return [];
-  // Try to parse value in format "共N项：item1；item2；..."
-  const text = node.value;
-  const body = text.replace(/^共\d+项[：:]\s*/, '');
-  return body.split(/[；;]/).filter(Boolean).map((s) => s.trim());
 });
 
 /**
@@ -842,55 +952,13 @@ const parsedListItems = computed<string[]>(() => {
   return body.split(/[；;]/).filter(Boolean).map((s) => s.trim());
 });
 
-const treeTableColumns = computed(() => {
-  const node = tableDetailNode.value;
-  if (!node) return [];
-  if (node.headers && node.headers.length > 0) {
-    return node.headers.map((h, i) => ({ title: h, dataIndex: `col${i}`, key: `col${i}`, ellipsis: true }));
-  }
-  // No headers — infer column count from first row
-  const firstRow = node.rows?.[0];
-  if (!firstRow) return [];
-  return firstRow.map((_, i) => ({ title: `Col ${i + 1}`, dataIndex: `col${i}`, key: `col${i}`, ellipsis: true }));
-});
-
-const treeTableRows = computed<Array<Record<string, string>>>(() => {
-  const node = tableDetailNode.value;
-  if (!node?.rows) return [];
-  return node.rows.map((row) => {
-    const record: Record<string, string> = {};
-    row.forEach((cell, i) => { record[`col${i}`] = cell; });
-    return record;
-  });
-});
-
 function openFieldDetailModal(record: InitialFieldSnapshot): void {
-  tableDetailNode.value = null;
-  listDetailNode.value = null;
   fieldDetailRecord.value = record;
   fieldDetailModalOpen.value = true;
 }
 
-function openTableDetailModal(node: StateNode): void {
-  fieldDetailRecord.value = null;
-  listDetailNode.value = null;
-  tableDetailNode.value = node;
-  fieldDetailModalOpen.value = true;
-}
-
-function openListDetailModal(node: StateNode): void {
-  fieldDetailRecord.value = null;
-  tableDetailNode.value = null;
-  listDetailNode.value = node;
-  fieldDetailModalOpen.value = true;
-}
-
-function openLocalHtmlModal(node: StateNode): void {
-  const html = node.localHtml ?? (node as Record<string, unknown>).htmlContent as string | undefined;
-  if (!html) return;
-  localHtmlModalTitle.value = node.label ? `HTML Preview: ${node.label}` : 'HTML Preview';
-  localHtmlContent.value = html;
-  localHtmlModalOpen.value = true;
+function nodeHasLocalHtml(node: StateNode): boolean {
+  return !!(node.localHtml ?? (node as unknown as Record<string, unknown>).htmlContent);
 }
 
 function blockTypeColor(blockType: string): string {
@@ -1097,14 +1165,75 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.state-tree-container {
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
 .state-tree-row {
-  padding: 4px 8px;
+  padding: 5px 8px;
   border-bottom: 1px solid #f5f5f5;
   font-size: 13px;
   line-height: 24px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+}
+.state-tree-row:last-child {
+  border-bottom: none;
 }
 .state-tree-row:hover {
   background: #fafafa;
+}
+.tree-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  color: #999;
+  flex-shrink: 0;
+  margin-right: 4px;
+  border-radius: 3px;
+  transition: color 0.2s, background 0.2s;
+}
+.tree-toggle:hover {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+.toggle-icon {
+  font-size: 10px;
+}
+.tree-toggle-placeholder {
+  display: inline-block;
+  width: 18px;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+.inline-detail-panel {
+  padding-top: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafbfc;
+}
+.html-preview-inline {
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  padding: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #fff;
+}
+.html-preview-inline :deep(*) {
+  all: revert;
+  box-sizing: border-box;
+}
+.html-preview-inline :deep(style),
+.html-preview-inline :deep(script) {
+  display: none;
 }
 .html-preview-container {
   border: 1px solid #e8e8e8;
