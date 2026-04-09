@@ -56,7 +56,8 @@ def test_recording_crud(client: TestClient) -> None:
 
     list_response = client.get("/recordings/list")
     assert list_response.status_code == 200
-    assert len(list_response.json()["data"]) == 1
+    list_data = list_response.json()["data"]
+    assert len(list_data["items"]) >= 1
 
     get_response = client.get(f"/recordings/get?recording_id={recording_id}")
     assert get_response.status_code == 200

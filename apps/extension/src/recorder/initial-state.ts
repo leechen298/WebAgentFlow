@@ -1,9 +1,13 @@
 /**
- * Initial State Sampler — AST tree output.
+ * Initial State Sampler — Semantic State Tree output.
  *
- * Produces a `StateNode[]` tree that preserves DOM hierarchy.
- * Recursion stops at leaf nodes (input, select, table, button, etc.)
- * and captures their data. Structural containers become section/group nodes.
+ * Three-layer architecture:
+ *   1. Semantic State Tree (stateTree) — primary, expresses page semantic blocks
+ *   2. Leaf-level local HTML (localHtml) — fallback on complex leaf nodes
+ *   3. Raw HTML Snapshot (rawHtmlSnapshot) — debug/fallback only
+ *
+ * Container nodes (section/group) carry semantic info only (no selector).
+ * Leaf nodes (input/select/button/table) carry selector + value + optional localHtml.
  */
 
 import type { StateNode, PageInitialState } from '@web-agent-flow/shared-types';
@@ -434,6 +438,24 @@ function extractControlValue(
   return {};
 }
 
+/* ── Leaf-level local HTML capture ────────────────────────────────────────── */
+
+const MAX_LOCAL_HTML = 500;
+
+/**
+ * Capture a small HTML snippet from a content area for complex leaf nodes.
+ * Strips scripts, styles, SVGs, hidden elements. Returns undefined if trivial.
+ */
+function captureLocalHtml(area: Element): string | undefined {
+  const clone = area.cloneNode(true) as Element;
+  clone.querySelectorAll(
+    'script, style, svg, link, [aria-hidden="true"], [class*="icon"]',
+  ).forEach((n) => n.remove());
+  const html = clone.innerHTML?.trim();
+  if (!html || html.length < 10) return undefined;
+  return html.slice(0, MAX_LOCAL_HTML);
+}
+
 /* ── Form-item processing ────────────────────────────────────────────────── */
 
 function processFormItem(
@@ -452,7 +474,6 @@ function processFormItem(
     counter.n++;
     return [{
       type: 'group',
-      selector: sel,
       ...(label ? { label } : {}),
       children,
     }];
@@ -478,7 +499,6 @@ function processFormItem(
     counter.n++;
     return [{
       type: 'group',
-      selector: sel,
       ...(label ? { label } : {}),
       ...(detectRequired(container) ? { required: true } : {}),
       ...(extractProp(container) ? { fieldProp: extractProp(container) } : {}),
@@ -502,6 +522,58 @@ function processFormItem(
     }
     if (tagTexts.length > 0) {
       value = tagTexts.join(', ').slice(0, 200);
+    }
+  }
+
+  // Fallback: read readonly input value (common in pseudo-selects / date pickers)
+  if (!value) {
+    const content = findContentArea(container);
+    const readonlyInputs = content.querySelectorAll<HTMLInputElement>('input[readonly], input[disabled]');
+    const vals: string[] = [];
+    for (const inp of readonlyInputs) {
+      const v = inp.value?.trim();
+      const ph = inp.getAttribute('placeholder')?.trim();
+      if (v && v !== ph && v.length <= 100) vals.push(v);
+    }
+    if (vals.length === 1) {
+      value = vals[0];
+    } else if (vals.length >= 2) {
+      // Date range pattern: two readonly inputs
+      value = vals.slice(0, 2).join(' ~ ');
+    }
+  }
+
+  // Fallback: read visible text from display-only spans/divs (custom components)
+  if (!value) {
+    const content = findContentArea(container);
+    // Look for display text in common patterns: *-selection, *-content, *-value, *-text
+    const displayEl = Array.from(content.querySelectorAll('*')).find((el) => {
+      const names = getComponentNames(el);
+      return names.some((n) =>
+        /^(selection-item|selected-item|selection-label|input-content|suffix|value-text)$/.test(n),
+      );
+    });
+    if (displayEl?.textContent?.trim()) {
+      const text = displayEl.textContent.trim();
+      const cls = (displayEl.className || '').toLowerCase();
+      if (!cls.includes('placeholder') && !cls.includes('transparent') && text.length <= 150) {
+        value = text;
+      }
+    }
+  }
+
+  // Fallback: for types that normally show text, read non-label visible content
+  if (!value && !placeholder && !['input', 'textarea', 'number'].includes(fieldType)) {
+    const content = findContentArea(container);
+    const clone = content.cloneNode(true) as Element;
+    // Remove label elements, icons, hidden elements
+    clone.querySelectorAll(
+      'label, legend, [class*="label"], svg, [class*="icon"], [aria-hidden="true"], ' +
+      'script, style, button, [role="button"]',
+    ).forEach((x) => x.remove());
+    const visibleText = cleanText(clone.textContent);
+    if (visibleText && visibleText.length >= 1 && visibleText.length <= 120) {
+      value = visibleText;
     }
   }
 
@@ -540,12 +612,25 @@ function processFormItem(
     ...(prop ? { fieldProp: prop } : {}),
     ...(detected.itemCount ? { itemCount: detected.itemCount } : {}),
   };
-  if (defaultValueHtml) node.htmlContent = defaultValueHtml;
+  // Leaf-level local HTML: for richtext or complex nodes where value alone is insufficient
+  if (defaultValueHtml) {
+    node.localHtml = defaultValueHtml;
+  } else if (!value && fieldType !== 'input' && fieldType !== 'textarea' && fieldType !== 'number') {
+    // Capture local HTML snippet for complex leaf nodes that couldn't yield a value
+    const content = findContentArea(container);
+    const snippet = captureLocalHtml(content);
+    if (snippet) node.localHtml = snippet;
+  }
 
   return [node];
 }
 
 function extractProp(container: Element): string | undefined {
+  // 1. Check container-level prop attribute (Element UI/Plus, Ant Design)
+  const containerProp = container.getAttribute('prop') || container.getAttribute('data-prop');
+  if (containerProp) return containerProp;
+
+  // 2. Check inner control attributes
   const control = container.querySelector<HTMLElement>(
     'input, select, textarea, [contenteditable="true"]',
   );
@@ -591,7 +676,13 @@ function walkChildren(
       // Flush previous section
       if (heading && sectionChildren.length > 0) {
         counter.n++;
-        results.push({ type: 'section', label: heading, children: sectionChildren });
+        const bt = inferBlockType(sectionChildren);
+        results.push({
+          type: 'section',
+          label: heading,
+          ...(bt ? { blockType: bt } : {}),
+          children: sectionChildren,
+        });
       } else {
         results.push(...sectionChildren);
       }
@@ -618,7 +709,13 @@ function walkChildren(
   // Flush final section
   if (heading && sectionChildren.length > 0) {
     counter.n++;
-    results.push({ type: 'section', label: heading, children: sectionChildren });
+    const bt = inferBlockType(sectionChildren);
+    results.push({
+      type: 'section',
+      label: heading,
+      ...(bt ? { blockType: bt } : {}),
+      children: sectionChildren,
+    });
   } else {
     results.push(...sectionChildren);
   }
@@ -649,6 +746,19 @@ function walkNode(
     return [buildTableNode(node, counter)];
   }
 
+  // Dialog container → wrap as section with blockType
+  if (classification?.type === 'dialog') {
+    const children = walkChildren(node, depth, counter);
+    if (children.length === 0) return [];
+    counter.n++;
+    return [{
+      type: 'section',
+      label: cleanText(node.getAttribute('aria-label') || node.getAttribute('title')) || 'Dialog',
+      blockType: 'dialog',
+      children,
+    }];
+  }
+
   // Standalone form control not wrapped in a form-item
   if (isStandaloneControl(node)) {
     const label = extractControlLabel(node);
@@ -676,16 +786,137 @@ function walkNode(
     return [{ type: 'button', selector: buildSelector(node), label: text }];
   }
 
+  // Card-like container: has 'card' or 'panel' in class, contains mixed content
+  const nodeCls = (node.className || '').toLowerCase();
+  if (/(?:^|[\s_-])(?:card|panel)(?:$|[\s_-])/.test(nodeCls) && !/(card-body|panel-body|card-content)/.test(nodeCls)) {
+    const children = walkChildren(node, depth, counter);
+    if (children.length > 0) {
+      // Try to extract card title
+      const titleEl = node.querySelector(':scope > [class*="header"] [class*="title"], :scope > [class*="head"] [class*="title"]');
+      const cardTitle = titleEl ? cleanText(titleEl.textContent) : undefined;
+      counter.n++;
+      return [{
+        type: 'section',
+        ...(cardTitle ? { label: cardTitle } : {}),
+        blockType: inferBlockType(children, node) || 'card-block',
+        children,
+      }];
+    }
+  }
+
   // Transparent container → recurse, possibly wrap in section
   const children = walkChildren(node, depth, counter);
 
   const ctx = getNodeLabel(node);
   if (ctx && children.length > 0) {
     counter.n++;
-    return [{ type: 'section', selector: buildSelector(node), label: ctx, children }];
+    const bt = inferBlockType(children, node);
+    return [{
+      type: 'section',
+      label: ctx,
+      ...(bt ? { blockType: bt } : {}),
+      children,
+    }];
   }
 
   return children; // flatten
+}
+
+/* ── Page-level info extraction ──────────────────────────────────────────── */
+
+/**
+ * Extract the main visible heading from the page content area.
+ * Tries: h1 > h2 > page-header title > card header > prominent heading element.
+ */
+function extractPageHeading(root: Element): string | undefined {
+  // 1. Look for h1/h2 directly in the main content
+  for (const sel of ['h1', 'h2', '[class*="page-header"] [class*="title"]', '[class*="page-title"]']) {
+    const el = root.querySelector(sel);
+    if (el) {
+      const text = cleanText(el.textContent);
+      if (text && text.length <= 80 && text.length >= 2) return text;
+    }
+  }
+
+  // 2. ARIA heading
+  const ariaHeading = root.querySelector('[role="heading"]');
+  if (ariaHeading) {
+    const text = cleanText(ariaHeading.textContent);
+    if (text && text.length <= 80 && text.length >= 2) return text;
+  }
+
+  return undefined;
+}
+
+/**
+ * Extract primary CTA buttons visible on the page (save, submit, cancel, etc.).
+ * Scans top-level button areas and footer/toolbar regions.
+ */
+const CTA_KEYWORDS_RE =
+  /保存|提交|确认|确定|发布|创建|新增|取消|返回|下一步|上一步|编辑|删除|导入|导出|上传|save|submit|confirm|cancel|publish|create|next|back|edit|delete|import|export|upload/i;
+
+function extractPrimaryActions(root: Element): string[] | undefined {
+  const actions: string[] = [];
+  const seen = new Set<string>();
+
+  // Scan visible buttons in the content area
+  const buttons = root.querySelectorAll('button, [role="button"], a[class*="btn"], a[class*="button"]');
+  for (const btn of buttons) {
+    if (!(btn instanceof HTMLElement) || !isVisible(btn)) continue;
+    // Skip small icon-only buttons
+    const text = cleanText(btn.textContent);
+    if (!text || text.length > 20 || text.length < 1) continue;
+    const cls = (btn.className || '').toLowerCase();
+    if (/close|icon-only|collapse|dropdown/.test(cls)) continue;
+
+    if (CTA_KEYWORDS_RE.test(text) && !seen.has(text)) {
+      seen.add(text);
+      actions.push(text);
+      if (actions.length >= 6) break;
+    }
+  }
+
+  return actions.length > 0 ? actions : undefined;
+}
+
+/* ── Block type inference ──────────────────────────────────────────────────── */
+
+/**
+ * Infer a semantic block type for a section/group node based on its children.
+ * Used to add blockType to structural nodes.
+ */
+function inferBlockType(children: StateNode[], el?: Element): string | undefined {
+  if (!children || children.length === 0) return undefined;
+
+  // Check if the element itself has clues
+  if (el) {
+    const cls = (el.className || '').toLowerCase();
+    const role = el.getAttribute('role');
+
+    if (role === 'dialog' || /dialog|modal|drawer/.test(cls)) return 'dialog';
+    if (role === 'toolbar' || /toolbar|action-bar|btn-group|button-group|footer-action/.test(cls)) return 'toolbar';
+    if (/card|panel/.test(cls) && !/card-body|panel-body/.test(cls)) return 'card-block';
+  }
+
+  // Classify by children content
+  const types = children.map((c) => c.type);
+  const hasFormFields = types.some((t) =>
+    ['input', 'select', 'checkbox', 'radio', 'textarea', 'richtext',
+     'date', 'time', 'number', 'switch', 'slider', 'rate', 'upload',
+     'cascader', 'autocomplete', 'color', 'transfer', 'custom'].includes(t),
+  );
+  const hasTable = types.includes('table');
+  const hasList = types.includes('list');
+  const hasButtons = types.filter((t) => t === 'button').length >= 2;
+  const hasRichtext = types.includes('richtext');
+
+  if (hasButtons && !hasFormFields && !hasTable) return 'toolbar';
+  if (hasRichtext && types.length <= 3) return 'richtext-block';
+  if (hasFormFields) return 'form-section';
+  if (hasTable) return 'content-block';
+  if (hasList) return 'list-block';
+
+  return 'content-block';
 }
 
 /* ── Entry point ─────────────────────────────────────────────────────────── */
@@ -700,18 +931,31 @@ export function captureInitialState(): PageInitialState {
 
   const stateTree = walkChildren(root, 0, counter);
 
-  let htmlSnapshot: string | undefined;
+  // Assign blockType to top-level section/group nodes
+  for (const node of stateTree) {
+    if ((node.type === 'section' || node.type === 'group') && node.children && !node.blockType) {
+      node.blockType = inferBlockType(node.children);
+    }
+  }
+
+  // Raw HTML snapshot — debug/fallback layer only (not used in primary analysis)
+  let rawHtmlSnapshot: string | undefined;
   try {
-    htmlSnapshot = captureSimplifiedHTML();
+    rawHtmlSnapshot = captureSimplifiedHTML();
   } catch {
     // degrade gracefully
   }
+
+  const pageHeading = extractPageHeading(root);
+  const primaryActions = extractPrimaryActions(root);
 
   return {
     capturedAt: Date.now(),
     pageUrl: getCanonicalPageUrl(location.href),
     pageTitle: document.title,
+    ...(pageHeading ? { pageHeading } : {}),
+    ...(primaryActions ? { primaryActions } : {}),
     stateTree,
-    ...(htmlSnapshot ? { htmlSnapshot } : {}),
+    ...(rawHtmlSnapshot ? { rawHtmlSnapshot } : {}),
   };
 }

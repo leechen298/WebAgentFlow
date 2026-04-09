@@ -102,7 +102,7 @@ function countStateTreeNodes(nodes: StateNode[]): number {
 
 function hasMeaningfulStateTreeData(nodes: StateNode[]): boolean {
   for (const node of nodes) {
-    if (node.value?.trim() || node.htmlContent?.trim() || node.placeholder?.trim()) {
+    if (node.value?.trim() || node.localHtml?.trim() || node.placeholder?.trim()) {
       return true;
     }
     if (node.children && hasMeaningfulStateTreeData(node.children)) {

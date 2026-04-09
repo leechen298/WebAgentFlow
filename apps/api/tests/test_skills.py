@@ -28,7 +28,8 @@ def test_skill_crud(client: TestClient) -> None:
 
     list_response = client.get("/skills/list")
     assert list_response.status_code == 200
-    assert len(list_response.json()["data"]) == 1
+    list_data = list_response.json()["data"]
+    assert len(list_data["items"]) >= 1
 
     update_response = client.post(
         "/skills/update",

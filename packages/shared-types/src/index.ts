@@ -73,7 +73,18 @@ export interface RecordingEvent {
 }
 
 // ---------------------------------------------------------------------------
-// Initial State types (Task Pack 6.5 / 7)
+// Initial State types (Task Pack 6.5 / 6.6)
+//
+// Three-layer architecture:
+//   1. Semantic State Tree (stateTree) — primary structure expressing page
+//      semantic blocks, key values, actions, and hierarchy. This is the main
+//      input for downstream consumers (normalization, skill draft, LLM).
+//   2. Leaf-level local HTML (localHtml on StateNode) — small HTML snippets
+//      on complex leaf nodes where semantic extraction alone is insufficient
+//      (richtext, custom components). Fallback facts layer.
+//   3. Raw HTML Snapshot (rawHtmlSnapshot) — full simplified page snapshot
+//      for debug, tracing, and offline re-analysis. NOT used in the primary
+//      analysis pipeline.
 // ---------------------------------------------------------------------------
 
 /** A snapshot of one form field's state at recording start (flat format, legacy). */
@@ -116,7 +127,13 @@ export interface StateNode {
   type: string;
   /** Visible label text */
   label?: string;
-  /** CSS selector path for locating this element on the page */
+  /** Semantic block classification for section/group nodes (e.g. 'form-section', 'card-block', 'toolbar') */
+  blockType?: string;
+  /** Short summary of the block content (for non-field nodes) */
+  summaryText?: string;
+  /** Action button labels found inside this block */
+  actions?: string[];
+  /** CSS selector for locating this element (leaf/actionable nodes only, omitted on containers) */
   selector?: string;
   /** Current value at snapshot time */
   value?: string;
@@ -132,8 +149,12 @@ export interface StateNode {
   headers?: string[];
   /** Table row data (max ~20 rows, each row is array of cell text values) */
   rows?: string[][];
-  /** Rich text HTML content */
-  htmlContent?: string;
+  /**
+   * Leaf-level local HTML snippet — fallback facts layer for complex nodes
+   * where semantic extraction alone is insufficient (richtext content,
+   * custom components with complex display). Max ~500 chars.
+   */
+  localHtml?: string;
   /** Child nodes (for section, group, and container types) */
   children?: StateNode[];
 }
@@ -146,12 +167,20 @@ export interface PageInitialState {
   pageUrl: string;
   /** document.title at snapshot time */
   pageTitle: string;
-  /** AST tree of page state (preferred format) */
+  /** Visible main heading extracted from the page content (h1/h2/page-header) */
+  pageHeading?: string;
+  /** Primary CTA button labels found on the page (e.g. ["保存", "取消"]) */
+  primaryActions?: string[];
+  /** Semantic state tree — primary structure (see 3-layer doc above) */
   stateTree?: StateNode[];
   /** Flat form field snapshots (legacy format, kept for backward compat) */
   fields?: InitialFieldSnapshot[];
-  /** Simplified HTML snapshot of the main content area (~30-80KB) */
-  htmlSnapshot?: string;
+  /**
+   * Raw HTML snapshot of the main content area (~30-80KB).
+   * Debug/fallback layer only — NOT used in the primary analysis pipeline.
+   * Kept for tracing, offline re-analysis, and regression debugging.
+   */
+  rawHtmlSnapshot?: string;
 }
 
 // Recording Meta

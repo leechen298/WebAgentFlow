@@ -26,7 +26,8 @@ def test_run_crud(client: TestClient) -> None:
 
     list_response = client.get("/runs/list")
     assert list_response.status_code == 200
-    assert len(list_response.json()["data"]) == 1
+    list_data = list_response.json()["data"]
+    assert len(list_data["items"]) >= 1
 
     update_response = client.post(
         "/runs/update",

@@ -99,6 +99,16 @@
                 <a-descriptions-item label="Nodes">
                   <a-tag color="blue">{{ stateTreeNodeCount }}</a-tag>
                 </a-descriptions-item>
+                <a-descriptions-item v-if="initialState.pageHeading" label="Page Heading">
+                  <span style="font-weight: 600">{{ initialState.pageHeading }}</span>
+                </a-descriptions-item>
+                <a-descriptions-item v-if="initialState.primaryActions && initialState.primaryActions.length > 0" label="Primary Actions" :span="2">
+                  <a-space>
+                    <a-tag v-for="action in initialState.primaryActions" :key="action" color="orange">
+                      {{ action }}
+                    </a-tag>
+                  </a-space>
+                </a-descriptions-item>
               </a-descriptions>
 
               <!-- AST Tree View (new format) -->
@@ -115,11 +125,20 @@
                       <a-tag :color="row.node.type === 'section' ? 'blue' : 'cyan'" style="font-size: 11px">
                         {{ row.node.type }}
                       </a-tag>
+                      <a-tag v-if="row.node.blockType" :color="blockTypeColor(row.node.blockType)" style="font-size: 10px">
+                        {{ row.node.blockType }}
+                      </a-tag>
                       {{ row.node.label || '(unnamed)' }}
                     </span>
                     <a-tag v-if="row.node.required" color="red" style="font-size: 10px; margin-left: 4px">required</a-tag>
                     <span v-if="row.node.fieldProp" style="color: #999; font-size: 11px; margin-left: 8px">
                       prop={{ row.node.fieldProp }}
+                    </span>
+                    <span v-if="row.node.actions && row.node.actions.length > 0" style="margin-left: 8px">
+                      <a-tag v-for="a in row.node.actions" :key="a" color="orange" style="font-size: 10px">{{ a }}</a-tag>
+                    </span>
+                    <span v-if="row.node.summaryText" style="color: #666; font-size: 11px; margin-left: 8px">
+                      {{ truncate(row.node.summaryText, 60) }}
                     </span>
                   </template>
 
@@ -176,6 +195,9 @@
                     <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
                       ({{ row.node.itemCount }})
                     </span>
+                    <a-tag v-if="row.node.localHtml || row.node.htmlContent" color="purple" style="font-size: 9px; margin-left: 4px">
+                      localHtml
+                    </a-tag>
                   </template>
                 </div>
               </div>
@@ -233,21 +255,41 @@
               </a-table>
 
               <a-collapse style="margin-top: 12px">
-                <a-collapse-panel key="json" header="Initial State JSON (raw)">
+                <a-collapse-panel key="json" header="Semantic State Tree (JSON)">
                   <a-textarea
-                    :value="formatJsonString(initialState)"
+                    :value="formatJsonString({ stateTree: initialState.stateTree, pageHeading: initialState.pageHeading, primaryActions: initialState.primaryActions })"
                     :rows="16"
                     readonly
                     style="font-family: monospace; font-size: 11px"
                   />
                 </a-collapse-panel>
-                <a-collapse-panel v-if="initialState.htmlSnapshot" key="html" header="HTML Snapshot (simplified)">
-                  <div style="margin-bottom: 8px; color: #666; font-size: 12px">
-                    {{ (initialState.htmlSnapshot.length / 1024).toFixed(1) }} KB
+                <a-collapse-panel v-if="leafHtmlCount > 0" key="leaf-html" :header="`Leaf-level Local HTML (${leafHtmlCount} nodes)`">
+                  <div style="color: #666; font-size: 12px; margin-bottom: 8px">
+                    Small HTML snippets on complex leaf nodes where semantic extraction alone is insufficient.
                   </div>
                   <a-textarea
-                    :value="initialState.htmlSnapshot"
+                    :value="formatJsonString(leafHtmlNodes)"
+                    :rows="12"
+                    readonly
+                    style="font-family: monospace; font-size: 11px"
+                  />
+                </a-collapse-panel>
+                <a-collapse-panel v-if="rawHtmlSnapshotData" key="html" header="Raw HTML Snapshot (debug/fallback)">
+                  <div style="margin-bottom: 8px; color: #999; font-size: 12px">
+                    Debug/fallback layer — {{ (rawHtmlSnapshotData.length / 1024).toFixed(1) }} KB.
+                    Not used in primary analysis pipeline.
+                  </div>
+                  <a-textarea
+                    :value="rawHtmlSnapshotData"
                     :rows="20"
+                    readonly
+                    style="font-family: monospace; font-size: 11px"
+                  />
+                </a-collapse-panel>
+                <a-collapse-panel key="full-json" header="Full Initial State JSON">
+                  <a-textarea
+                    :value="formatJsonString(initialState)"
+                    :rows="16"
                     readonly
                     style="font-family: monospace; font-size: 11px"
                   />
@@ -626,6 +668,33 @@ const stateTreeNodeCount = computed(() => {
   return initialState.value?.fields?.length ?? 0;
 });
 
+// 3-layer architecture helpers
+const rawHtmlSnapshotData = computed(() => {
+  const s = initialState.value;
+  if (!s) return undefined;
+  // Support both old (htmlSnapshot) and new (rawHtmlSnapshot) field names
+  return (s as Record<string, unknown>).rawHtmlSnapshot as string | undefined
+    ?? (s as Record<string, unknown>).htmlSnapshot as string | undefined;
+});
+
+function collectLeafHtml(nodes: StateNode[] | undefined): Array<{ label?: string; type: string; localHtml: string }> {
+  if (!nodes) return [];
+  const result: Array<{ label?: string; type: string; localHtml: string }> = [];
+  for (const node of nodes) {
+    const html = node.localHtml ?? (node as Record<string, unknown>).htmlContent as string | undefined;
+    if (html) {
+      result.push({ label: node.label, type: node.type, localHtml: html });
+    }
+    if (node.children) {
+      result.push(...collectLeafHtml(node.children));
+    }
+  }
+  return result;
+}
+
+const leafHtmlNodes = computed(() => collectLeafHtml(initialState.value?.stateTree));
+const leafHtmlCount = computed(() => leafHtmlNodes.value.length);
+
 const fieldDetailTitle = computed(() => {
   if (tableDetailNode.value) {
     const n = tableDetailNode.value;
@@ -713,6 +782,21 @@ function openTableDetailModal(node: StateNode): void {
   fieldDetailRecord.value = null;
   tableDetailNode.value = node;
   fieldDetailModalOpen.value = true;
+}
+
+function blockTypeColor(blockType: string): string {
+  const map: Record<string, string> = {
+    'form-section': 'green',
+    'dialog': 'orange',
+    'card-block': 'geekblue',
+    'toolbar': 'gold',
+    'content-block': 'default',
+    'list-block': 'lime',
+    'richtext-block': 'purple',
+    'repeated-items-block': 'cyan',
+    'table-section': 'volcano',
+  };
+  return map[blockType] ?? 'default';
 }
 
 function initialFieldTypeColor(fieldType?: string): string {
