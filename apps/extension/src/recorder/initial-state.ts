@@ -124,8 +124,8 @@ function isHeadingElement(el: Element): boolean {
 
 function isLeafLike(el: Element): boolean {
   return !el.querySelector(
-    'table, ul, ol, dl, form, input, select, textarea, ' +
-      '[contenteditable="true"], [role="grid"], [role="table"]',
+    'table, ul, ol, dl, form, input, select, textarea, button, [role="button"], ' +
+      'a[href], [contenteditable="true"], [role="grid"], [role="table"]',
   );
 }
 
@@ -564,6 +564,25 @@ function extractControlValue(el: Element): ControlValueResult {
   if (el.hasAttribute('contenteditable')) {
     return { type: 'richtext', value: cleanText(el.textContent) };
   }
+
+  // Component library control (e.g. el-input-number, ant-slider) — non-native element.
+  // Try to extract value from inner input, aria attributes, or visible text.
+  const cls = classifyElement(el);
+  if (cls) {
+    const innerInput = el.querySelector<HTMLInputElement>('input:not([type="hidden"])');
+    const ariaValue = el.getAttribute('aria-valuenow') || innerInput?.getAttribute('aria-valuenow');
+    const inputValue = innerInput?.value;
+    const value = cleanText(ariaValue || inputValue);
+    const placeholder = cleanText(
+      innerInput?.getAttribute('placeholder') || el.getAttribute('placeholder'),
+    );
+    return {
+      type: cls.type,
+      ...(value ? { value } : {}),
+      ...(placeholder ? { placeholder } : {}),
+    };
+  }
+
   return {};
 }
 
@@ -1129,11 +1148,16 @@ function classifyNode(node: Element): NodeClassification {
   // 2. Known component library via classifier
   const cls = classifyElement(node);
   if (cls) {
-    // Component classifier returned a known type
     if (cls.type === 'table') return 'table';
     if (cls.type === 'dialog') return 'dialog';
-    // Other known component types (select, cascader, etc.) inside form-items
-    // are handled by processFormItem; standalone ones fall through to control check
+    // Known control types (input, number, select, etc.) detected by component
+    // classifier on non-native elements (e.g. el-input-number is a <div>).
+    // Treat as standalone control so processStandaloneControl can extract value.
+    const CONTROL_TYPES = new Set([
+      'input', 'number', 'textarea', 'select', 'checkbox', 'radio', 'switch',
+      'slider', 'rate', 'date', 'time', 'color', 'cascader', 'autocomplete',
+    ]);
+    if (CONTROL_TYPES.has(cls.type)) return 'standalone-control';
   }
 
   // 3. Form container (el-form-item, ant-form-item, fieldset, etc.)
