@@ -154,18 +154,32 @@ walkNode(el):
 - **不同 frameId** → **一律合并**。iframe 的 stateTree 作为 `iframe-content` section 追加到已有状态中。不管嵌套几层、有几个 iframe，每个 frame 的内容都会被保留
 - **不得用替换代替合并** — 顶层 frame 的导航/菜单 和 iframe 的业务内容同等重要，不能因为 iframe 节点多/分数高就覆盖顶层
 
+### 可见性处理
+
+所有 walk 逻辑统一处理可见性，**不跳过不可见元素**。`shouldSkip` 只过滤 `SKIP_TAGS`（script/style/svg 等纯技术标签），不检查 `isVisible`。不可见元素（`display:none`、`visibility:hidden`）仍然被解析，通过 `cssState` 字段标注状态。`display:none` 表示不渲染不可点击（如折叠菜单），`visibility:hidden` 表示占位但仍可接收交互。
+
+**不得对不同类型的 walk（导航 vs 内容）做不同的可见性处理** — 所有 walk 共享同一套规则。
+
+### 超限兜底
+
+当 `MAX_NODES`（300）或 `MAX_NAV_ITEMS`（100）导致采集被截断时，**剩余内容不得静默丢弃**。被截断的导航区域在 section 节点上附带 `localHtml`，保存原始 HTML 以便后续扩展。
+
+### 信息保留原则
+
+优先保留对 Agent 理解页面功能有分析价值的信息：页面是做什么的、有哪些可操作元素、当前状态是什么。暂时无直接分析价值但后续可能需要的信息（如完整导航菜单的原始 HTML），用 `localHtml` 暂存，不进入 Agent 的主分析管线。
+
 ### 禁止事项
 
-- **不得基于假设跳过元素** — 不设硬编码的跳过列表。所有可见元素均需处理。不假设开发者遵循语义化 HTML 规范。
+- **不得基于假设跳过元素** — 不设硬编码的跳过列表（`SKIP_TAGS` 除外）。所有元素均需处理（包括不可见元素）。不假设开发者遵循语义化 HTML 规范。
 - **不得拆解已知复合组件** — `el-select` 是一个 `select` 节点，不是 `input` + `div` + `ul`。组件边界就是分类边界。
 - **不得产生空容器** — section/group 节点如果 children 为空，丢弃该节点。
-- **不得静默丢弃内容** — 任何分类失败必须回溯到通用递归，通用递归也失败且有可见内容时必须产生 localHtml 兜底。
+- **不得静默丢弃内容** — 任何分类失败必须回溯到通用递归，通用递归也失败且有可见内容时必须产生 localHtml 兜底。超限截断时必须保留 localHtml。
 - **不得压扁复杂结构** — 如果一个容器内有多个可操作子元素，必须递归展开为子树，不能压成单个 leaf + localHtml。
-- **不得添加特化逻辑** — 所有处理规则必须通用，不针对特定组件库或页面结构做 if-else 分支。组件库差异通过前缀无关的分类器统一处理。
+- **不得添加特化逻辑** — 所有处理规则必须通用，不针对特定组件库或页面结构做 if-else 分支。不同类型的 walk 共享同一套过滤和处理规则。
 
 ### 输出结构
 
-- **容器节点**（`section`、`group`）：带 `children[]`、`blockType`、`label`。**无 `selector`**。
+- **容器节点**（`section`、`group`）：带 `children[]`、`blockType`、`label`。**无 `selector`**。截断时可带 `localHtml`。
 - **叶子节点**（`input`、`select`、`button`、`link`、`custom` 等）：带 `selector`、`value`、`label`。**无 `children`**。
 - **`table` 节点**：可以是叶子（`rows[][]`）或容器（`children[]`），取决于单元格复杂度。
 - **`localHtml`**：仅用于语义提取不充分的叶子节点，最大 500 字符。

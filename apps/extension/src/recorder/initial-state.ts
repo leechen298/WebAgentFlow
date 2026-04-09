@@ -108,7 +108,7 @@ const SKIP_TAGS = new Set([
 function shouldSkip(el: Element): boolean {
   const tag = el.tagName.toLowerCase();
   if (SKIP_TAGS.has(tag)) return true;
-  if (el instanceof HTMLElement && !isVisible(el)) return true;
+  // No visibility skip — hidden elements are still parsed and marked with cssState.
   return false;
 }
 
@@ -1054,8 +1054,16 @@ function walkNode(
       break;
   }
 
-  // If specialized processor succeeded → return
-  if (result && result.length > 0) return result;
+  // If specialized processor succeeded → return (with cssState if hidden)
+  if (result && result.length > 0) {
+    if (node instanceof HTMLElement) {
+      const css = detectCssState(node);
+      if (css) {
+        for (const r of result) r.cssState = css;
+      }
+    }
+    return result;
+  }
 
   // ── Step 2: Backtrack — generic recursive walk ──
   const children = walkChildren(node, depth, counter);
@@ -1293,11 +1301,21 @@ function isNavActionable(el: Element): boolean {
  * Supports nested submenus — produces hierarchical StateNode[] with
  * section nodes for submenus and link/button leaves for actionable items.
  */
-function extractNavItems(navEl: Element, counter: Counter): StateNode[] {
+interface NavExtractResult {
+  items: StateNode[];
+  /** True if extraction was truncated by MAX_NAV_ITEMS or MAX_NODES */
+  truncated: boolean;
+}
+
+function extractNavItems(navEl: Element, counter: Counter): NavExtractResult {
   const seen = new Set<string>();
+  let truncated = false;
 
   function walkNavNode(el: Element, depth: number): StateNode | undefined {
-    if (depth > MAX_NAV_DEPTH || counter.n >= MAX_NODES || seen.size >= MAX_NAV_ITEMS) return undefined;
+    if (depth > MAX_NAV_DEPTH || counter.n >= MAX_NODES || seen.size >= MAX_NAV_ITEMS) {
+      truncated = true;
+      return undefined;
+    }
     if (!(el instanceof HTMLElement)) return undefined;
     // No visibility skip — hidden items are still parsed, but marked with cssState.
     const cssState = detectCssState(el);
@@ -1412,7 +1430,8 @@ function extractNavItems(navEl: Element, counter: Counter): StateNode[] {
     return results;
   }
 
-  return walkNavChildren(navEl, 0);
+  const items = walkNavChildren(navEl, 0);
+  return { items, truncated };
 }
 
 /**
@@ -1453,7 +1472,7 @@ function scanNavigation(mainRoot: Element, counter: Counter): StateNode[] {
 
   for (const el of candidates) {
     if (counter.n >= MAX_NODES) break;
-    if (!(el instanceof HTMLElement) || !isVisible(el)) continue;
+    if (!(el instanceof HTMLElement)) continue;
     // Skip if inside the main content root (those are handled by walkChildren)
     if (mainRoot.contains(el) && el !== mainRoot) continue;
     // Skip if already processed (ancestor was already captured)
@@ -1465,17 +1484,24 @@ function scanNavigation(mainRoot: Element, counter: Counter): StateNode[] {
     }
     if (parentProcessed) continue;
 
-    const items = extractNavItems(el, counter);
+    const { items, truncated } = extractNavItems(el, counter);
     if (items.length === 0) continue;
 
     processed.add(el);
     counter.n++;
-    navNodes.push({
+    const navNode: StateNode = {
       type: 'section',
       label: getNavLabel(el),
       blockType: 'navigation',
       children: items,
-    });
+    };
+    // When truncated by limits, preserve remaining content as localHtml
+    // so it can be expanded later if needed (not lost silently).
+    if (truncated) {
+      const html = captureLocalHtml(el);
+      if (html) navNode.localHtml = html;
+    }
+    navNodes.push(navNode);
   }
 
   return navNodes;
