@@ -1200,7 +1200,7 @@ function isActiveItem(el: Element): boolean {
   return ACTIVE_CLASS_RE.test((el.className || '').toLowerCase());
 }
 
-const MAX_NAV_ITEMS = 40;
+const MAX_NAV_ITEMS = 100;
 const MAX_NAV_DEPTH = 5;
 
 /**
@@ -1231,11 +1231,12 @@ function detectCssState(el: HTMLElement): string | undefined {
  * Detects: aria-haspopup, el-submenu, ant-menu-submenu, and similar patterns.
  */
 function isSubmenu(el: Element): boolean {
-  if (el.getAttribute('aria-haspopup') === 'true') return true;
+  const haspopup = el.getAttribute('aria-haspopup');
+  if (haspopup === 'true' || haspopup === 'menu' || haspopup === 'list') return true;
   const cls = (el.className || '').toLowerCase();
-  if (/submenu|sub-menu/.test(cls)) return true;
-  // Has a nested ul/ol role="menu" child
-  if (el.querySelector(':scope > ul[role="menu"], :scope > ol[role="menu"], :scope > [role="menu"]')) return true;
+  if (/submenu|sub-menu|dropdown/.test(cls)) return true;
+  // Has a nested ul/ol role="menu" child or dropdown list
+  if (el.querySelector(':scope > ul[role="menu"], :scope > ol[role="menu"], :scope > [role="menu"], :scope > ul[class*="dropdown"]')) return true;
   return false;
 }
 
@@ -1277,9 +1278,13 @@ function isNavActionable(el: Element): boolean {
   const tag = el.tagName.toLowerCase();
   if (tag === 'a' && el.hasAttribute('href')) return true;
   if (tag === 'button') return true;
-  if (tag === 'input') return true; // search boxes in nav areas
+  if (tag === 'input') return true;
   const role = el.getAttribute('role');
   if (role === 'menuitem' || role === 'link' || role === 'tab' || role === 'button') return true;
+  // Dropdown menu items (li with tabindex, or with dropdown-item class)
+  if (tag === 'li' && el.hasAttribute('tabindex')) return true;
+  const cls = (el.className || '').toLowerCase();
+  if (/dropdown-menu-item|dropdown-item/.test(cls)) return true;
   return false;
 }
 
@@ -1365,7 +1370,9 @@ function extractNavItems(navEl: Element, counter: Counter): StateNode[] {
     // Use broad descendant query, then filter to "top-level within this parent"
     const allCandidates = parent.querySelectorAll(
       '[role="menuitem"], a[href], button, [role="button"], [role="link"], [role="tab"], ' +
-      'input:not([type="hidden"])',
+      'input:not([type="hidden"]), ' +
+      // Dropdown menu items (el-dropdown-menu__item, ant-dropdown-menu-item, etc.)
+      'li[tabindex], [class*="dropdown-menu-item"], [class*="dropdown-item"]',
     );
 
     const processed = new Set<Element>();
