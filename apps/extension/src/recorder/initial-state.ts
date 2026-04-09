@@ -622,6 +622,20 @@ function processFormItem(
     if (snippet) node.localHtml = snippet;
   }
 
+  // Extract embedded action buttons inside this form-item (e.g. "城市管理", "选择")
+  const embeddedButtons: string[] = [];
+  const content = findContentArea(container);
+  for (const btn of content.querySelectorAll('button, [role="button"]')) {
+    const btnText = cleanText(btn.textContent);
+    if (btnText && btnText.length <= 20 && btnText.length >= 1) {
+      const btnCls = (btn.className || '').toLowerCase();
+      if (!/close|icon-only/.test(btnCls)) {
+        embeddedButtons.push(btnText);
+      }
+    }
+  }
+  if (embeddedButtons.length > 0) node.actions = embeddedButtons;
+
   return [node];
 }
 

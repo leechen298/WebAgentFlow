@@ -277,8 +277,13 @@ export function detectFieldType(container: Element): { fieldType: string; placeh
   const contentArea = findContentArea(container);
   const classifiedType = classifyContainerContent(contentArea);
 
-  // Map classified type to field type string
-  const typeStr = classifiedType as string;
+  // If classifier returned 'input' but there's no actual <input> element,
+  // this is a custom component (e.g. city picker, tag display, custom widget).
+  const hasRealInput = !!contentArea.querySelector(
+    'input:not([type="hidden"]):not([type="button"]):not([type="submit"])' +
+    ':not([type="checkbox"]):not([type="radio"]):not([type="file"])',
+  );
+  const typeStr = (classifiedType === 'input' && !hasRealInput) ? 'custom' : classifiedType as string;
 
   // Get value based on detected type
   const value = extractUniversalValue(container, classifiedType);
