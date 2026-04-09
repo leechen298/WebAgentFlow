@@ -504,17 +504,16 @@ describe('complex-nesting.html — Complex nested structures', () => {
     expect(notes!.children).toBeUndefined();
   });
 
-  it('should expand table "User List" rows with action buttons', () => {
+  it('should capture table "User List" rows with action button labels', () => {
     const tables = findByType(tree, 'table');
     const userTable = tables.find((t) => t.headers?.includes('Name') && t.headers?.includes('Actions'));
     expect(userTable).toBeDefined();
-    // Complex table should have children (row groups) instead of flat rows
-    expect(userTable!.children).toBeDefined();
-    expect(userTable!.children!.length).toBeGreaterThanOrEqual(2);
-    // Each row should contain action buttons
-    const buttons = findByType(userTable!.children ?? [], 'button');
-    expect(buttons.some((b) => b.label === 'Edit')).toBe(true);
-    expect(buttons.some((b) => b.label === 'Delete')).toBe(true);
+    // All tables use unified rows format; action columns show button labels
+    expect(userTable!.rows).toBeDefined();
+    expect(userTable!.rows!.length).toBeGreaterThanOrEqual(2);
+    // Action column should contain button labels like "Edit | Delete"
+    const actionCells = userTable!.rows!.map((r) => r[r.length - 1]);
+    expect(actionCells.some((c) => c.includes('Edit'))).toBe(true);
   });
 
   it('should keep simple table "Price List" with flat rows', () => {

@@ -224,24 +224,21 @@ function hasSubSections(container: Element): boolean {
 const MAX_TABLE_ROWS = 20;
 const MAX_CELL_TEXT = 60;
 
-/**
- * Check if a table cell contains complex actionable content (inputs, buttons, etc.)
- * beyond simple display text.
- */
-function isCellComplex(cell: Element): boolean {
-  return cell.querySelectorAll(
-    'input:not([type="hidden"]), select, textarea, button, [role="button"], ' +
-    'a[href], [contenteditable="true"]',
-  ).length >= 2;
-}
+/* isCellComplex/hasComplexCells removed — all tables use unified rows format
+ * with enhanced extractCellText that handles inputs, buttons, checkboxes. */
 
 function extractCellText(cell: Element): string {
-  // Check for input/select value inside cell
+  // 1. Check for input value (including aria-valuenow for component controls)
   const input = cell.querySelector<HTMLInputElement>(
     'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])',
   );
-  if (input?.value?.trim()) return input.value.trim().slice(0, MAX_CELL_TEXT);
+  if (input) {
+    const ariaVal = input.getAttribute('aria-valuenow');
+    const val = ariaVal || input.value?.trim();
+    if (val) return val.slice(0, MAX_CELL_TEXT);
+  }
 
+  // 2. Check for select value
   const select = cell.querySelector<HTMLSelectElement>('select');
   if (select) {
     const selected = select.options[select.selectedIndex];
@@ -249,20 +246,34 @@ function extractCellText(cell: Element): string {
     if (val) return val.slice(0, MAX_CELL_TEXT);
   }
 
+  // 3. Check for checkbox/radio state
+  const checkbox = cell.querySelector<HTMLInputElement>('input[type="checkbox"], input[type="radio"]');
+  if (checkbox) return checkbox.checked ? '✓' : '✗';
+
+  // 4. Collect button labels in the cell (e.g. action columns)
+  const buttons = cell.querySelectorAll('button, [role="button"], a[href]');
+  if (buttons.length > 0) {
+    const labels: string[] = [];
+    for (const btn of buttons) {
+      const btnText = cleanText(btn.textContent);
+      if (btnText && btnText.length <= 20 && btnText.length >= 1) {
+        const cls = (btn.className || '').toLowerCase();
+        if (!/icon-only|close|decrease|increase/.test(cls)) labels.push(btnText);
+      }
+    }
+    if (labels.length > 0) {
+      // If there's also plain text, combine
+      const plainText = cleanText(cell.textContent);
+      if (plainText && plainText !== labels.join(' ')) {
+        return plainText.slice(0, MAX_CELL_TEXT);
+      }
+      return labels.join(' | ').slice(0, MAX_CELL_TEXT);
+    }
+  }
+
+  // 5. Default: full text content
   const text = cleanText(cell.textContent);
   return text ? text.slice(0, MAX_CELL_TEXT) : '';
-}
-
-/**
- * Check if a table has any row with complex cells.
- * If so, the table should use expanded row representation.
- */
-function hasComplexCells(el: Element): boolean {
-  const cells = el.querySelectorAll('td, [role="gridcell"], [role="cell"]');
-  for (const cell of cells) {
-    if (isCellComplex(cell)) return true;
-  }
-  return false;
 }
 
 function buildTableNode(el: Element, counter: Counter): StateNode {
@@ -279,58 +290,8 @@ function buildTableNode(el: Element, counter: Counter): StateNode {
     dataRows = headers.length > 0 ? allRows.slice(1) : allRows;
   }
 
-  // If any cell has complex content (multiple actionable elements),
-  // expand each row as a group with recursively extracted children.
-  if (hasComplexCells(el)) {
-    const rowNodes: StateNode[] = [];
-    for (const tr of dataRows.slice(0, MAX_TABLE_ROWS)) {
-      if (counter.n >= MAX_NODES) break;
-      const cells = tr.querySelectorAll('td, [role="gridcell"], [role="cell"]');
-      if (cells.length === 0) continue;
-      const cellNodes: StateNode[] = [];
-      for (let ci = 0; ci < cells.length; ci++) {
-        const cell = cells[ci];
-        const headerLabel = headers[ci];
-        if (isCellComplex(cell)) {
-          // Complex cell → recurse into its content
-          // (walkNode is defined later but called via closure)
-          const cellChildren = walkChildren(cell, 20, counter);
-          if (cellChildren.length > 0) {
-            counter.n++;
-            cellNodes.push({
-              type: 'group',
-              ...(headerLabel ? { label: headerLabel } : {}),
-              children: cellChildren,
-            });
-          }
-        } else {
-          // Simple cell → text value
-          const text = extractCellText(cell);
-          if (text) {
-            cellNodes.push({
-              type: 'custom',
-              ...(headerLabel ? { label: headerLabel } : {}),
-              value: text,
-            });
-          }
-        }
-      }
-      if (cellNodes.length > 0) {
-        counter.n++;
-        rowNodes.push({ type: 'group', children: cellNodes });
-      }
-    }
-    counter.n++;
-    return {
-      type: 'table',
-      selector: buildSelector(el),
-      ...(headers.length > 0 ? { headers } : {}),
-      itemCount: dataRows.length,
-      ...(rowNodes.length > 0 ? { children: rowNodes } : {}),
-    };
-  }
-
-  // Simple table: all cells are text-only → flat rows[][] format
+  // All tables use unified rows[][] format.
+  // Complex cells extract richer text (aria values, input values, button labels).
   const rows: string[][] = [];
   for (const tr of dataRows.slice(0, MAX_TABLE_ROWS)) {
     const cells = tr.querySelectorAll('td, [role="gridcell"], [role="cell"]');
@@ -1088,6 +1049,12 @@ function walkChildren(
       }
       heading = title;
       sectionChildren = [];
+      // Walk the heading element's children to capture non-title content
+      // (buttons, tags, etc.) that would otherwise be lost.
+      if (!isHeadingElement(child)) {
+        const headingChildren = walkChildren(child, depth + 1, counter);
+        sectionChildren.push(...headingChildren);
+      }
       i++;
       continue;
     }
