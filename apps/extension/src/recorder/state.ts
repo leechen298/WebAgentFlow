@@ -1,4 +1,4 @@
-import type { RecordingEvent, PageInitialState } from '@web-agent-flow/shared-types';
+import type { RecordingEvent, PageInitialState, StateNode } from '@web-agent-flow/shared-types';
 
 export interface InitialStateSourceInfo {
   frameId: number | null;
@@ -90,13 +90,64 @@ function hasUsableUrl(url?: string | null): boolean {
   return trimmed.length > 0 && trimmed !== 'about:blank';
 }
 
+function countStateTreeNodes(nodes: StateNode[]): number {
+  let count = nodes.length;
+  for (const node of nodes) {
+    if (node.children) {
+      count += countStateTreeNodes(node.children);
+    }
+  }
+  return count;
+}
+
+function hasMeaningfulStateTreeData(nodes: StateNode[]): boolean {
+  for (const node of nodes) {
+    if (node.value?.trim() || node.htmlContent?.trim() || node.placeholder?.trim()) {
+      return true;
+    }
+    if (node.children && hasMeaningfulStateTreeData(node.children)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasRequiredField(nodes: StateNode[]): boolean {
+  for (const node of nodes) {
+    if (node.required) return true;
+    if (node.children && hasRequiredField(node.children)) return true;
+  }
+  return false;
+}
+
 function hasMeaningfulFieldData(initialState: PageInitialState): boolean {
-  return initialState.fields.some(
-    (field) =>
-      Boolean(field.defaultValueText?.trim()) ||
-      Boolean(field.defaultValueHtml?.trim()) ||
-      Boolean(field.placeholder?.trim()),
-  );
+  if (initialState.stateTree && initialState.stateTree.length > 0) {
+    return hasMeaningfulStateTreeData(initialState.stateTree);
+  }
+  if (initialState.fields && initialState.fields.length > 0) {
+    return initialState.fields.some(
+      (field) =>
+        Boolean(field.defaultValueText?.trim()) ||
+        Boolean(field.defaultValueHtml?.trim()) ||
+        Boolean(field.placeholder?.trim()),
+    );
+  }
+  return false;
+}
+
+/** Count total nodes in either stateTree or legacy fields format. */
+function getNodeCount(initialState: PageInitialState): number {
+  if (initialState.stateTree && initialState.stateTree.length > 0) {
+    return countStateTreeNodes(initialState.stateTree);
+  }
+  return initialState.fields?.length ?? 0;
+}
+
+function hasRequiredInState(initialState: PageInitialState): boolean {
+  if (initialState.stateTree && initialState.stateTree.length > 0) {
+    return hasRequiredField(initialState.stateTree);
+  }
+  return initialState.fields?.some((f) => f.required) ?? false;
 }
 
 function computeInitialStateScore(
@@ -105,10 +156,11 @@ function computeInitialStateScore(
 ): number {
   let score = 0;
 
-  score += initialState.fields.length * 100;
+  const nodeCount = getNodeCount(initialState);
+  score += nodeCount * 100;
 
   if (hasMeaningfulFieldData(initialState)) score += 40;
-  if (initialState.fields.some((field) => field.required)) score += 10;
+  if (hasRequiredInState(initialState)) score += 10;
 
   if (hasUsableUrl(initialState.pageUrl)) {
     score += 80;
@@ -126,10 +178,7 @@ function computeInitialStateScore(
     score += 20;
   }
 
-  // In iframe scenes, the business form is often inside a child frame. This is
-  // only a mild bonus so top-level pages still win when they clearly have
-  // better field data.
-  if ((source?.frameId ?? 0) > 0 && initialState.fields.length > 0) {
+  if ((source?.frameId ?? 0) > 0 && nodeCount > 0) {
     score += 15;
   }
 
@@ -151,8 +200,10 @@ function shouldReplaceInitialState(
     return incomingScore > currentScore;
   }
 
-  if (incoming.fields.length !== currentState.initialState.fields.length) {
-    return incoming.fields.length > currentState.initialState.fields.length;
+  const incomingCount = getNodeCount(incoming);
+  const currentCount = getNodeCount(currentState.initialState);
+  if (incomingCount !== currentCount) {
+    return incomingCount > currentCount;
   }
 
   return incoming.capturedAt >= currentState.initialState.capturedAt;

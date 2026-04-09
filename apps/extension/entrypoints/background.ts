@@ -99,8 +99,9 @@ export default defineBackground(() => {
             await saveState(currentState);
             const action = currentState.initialState === before ? 'kept' : 'stored';
             const source = currentState.initialStateSource;
+            const nodeCount = newInitialState.stateTree?.length ?? newInitialState.fields?.length ?? 0;
             console.info(
-              `Background: ${action} initial state — ${newInitialState.fields.length} fields from ${newInitialState.pageUrl} (frameId=${sender.frameId ?? 'n/a'}, score=${source?.score ?? 'n/a'})`,
+              `Background: ${action} initial state — ${nodeCount} nodes from ${newInitialState.pageUrl} (frameId=${sender.frameId ?? 'n/a'}, score=${source?.score ?? 'n/a'})`,
             );
             sendResponse({ success: true });
             break;

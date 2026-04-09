@@ -73,8 +73,9 @@ export default defineContentScript({
           browser.runtime
             .sendMessage({ type: 'RECORDING_INITIAL_STATE', data: initialState })
             .catch(() => {}); // Errors silenced; background may log separately
+          const nodeCount = initialState.stateTree?.length ?? initialState.fields?.length ?? 0;
           console.info(
-            `WebAgentFlow: initial state sent (${delayMs}ms) — ${initialState.fields.length} fields from ${initialState.pageUrl}`,
+            `WebAgentFlow: initial state sent (${delayMs}ms) — ${nodeCount} nodes from ${initialState.pageUrl}`,
           );
         } catch {
           // Ignore any DOM access errors
