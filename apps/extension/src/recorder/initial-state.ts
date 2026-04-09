@@ -1049,10 +1049,10 @@ function walkChildren(
       }
       heading = title;
       sectionChildren = [];
-      // Walk the heading element's children to capture any actionable content
-      // (buttons, links, tags, etc.) that lives inside the heading.
-      const headingChildren = walkChildren(child, depth + 1, counter);
-      sectionChildren.push(...headingChildren);
+      // Walk the heading element through the same unified walkNode path as
+      // every other element — no special treatment.
+      const headingNodes = walkNode(child, depth + 1, counter);
+      sectionChildren.push(...headingNodes);
       i++;
       continue;
     }
