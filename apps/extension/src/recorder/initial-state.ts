@@ -1049,12 +1049,10 @@ function walkChildren(
       }
       heading = title;
       sectionChildren = [];
-      // Walk the heading element's children to capture non-title content
-      // (buttons, tags, etc.) that would otherwise be lost.
-      if (!isHeadingElement(child)) {
-        const headingChildren = walkChildren(child, depth + 1, counter);
-        sectionChildren.push(...headingChildren);
-      }
+      // Walk the heading element's children to capture any actionable content
+      // (buttons, links, tags, etc.) that lives inside the heading.
+      const headingChildren = walkChildren(child, depth + 1, counter);
+      sectionChildren.push(...headingChildren);
       i++;
       continue;
     }
