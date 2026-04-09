@@ -296,10 +296,10 @@ describe('captureInitialState — lottery activity page', () => {
       });
     });
 
-    it('section/group nodes should have children arrays', () => {
+    it('section/group nodes should have children arrays (except navigation)', () => {
       const containers = findNodes(
         tree,
-        (n) => n.type === 'section' || n.type === 'group',
+        (n) => (n.type === 'section' || n.type === 'group') && n.blockType !== 'navigation',
       );
       for (const c of containers) {
         expect(c.children).toBeInstanceOf(Array);

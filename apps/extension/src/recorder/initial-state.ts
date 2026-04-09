@@ -1208,8 +1208,7 @@ function isActiveItem(el: Element): boolean {
   return ACTIVE_CLASS_RE.test((el.className || '').toLowerCase());
 }
 
-const MAX_NAV_ITEMS = 100;
-const MAX_NAV_DEPTH = 5;
+/* (MAX_NAV_ITEMS/MAX_NAV_DEPTH removed — nav areas now use localHtml, not detailed extraction) */
 
 /**
  * Detect key CSS visibility state of an element or its ancestors.
@@ -1232,206 +1231,6 @@ function detectCssState(el: HTMLElement): string | undefined {
     current = current.parentElement as HTMLElement | null;
   }
   return undefined;
-}
-
-/**
- * Check if an element is a submenu container (has nested menu children).
- * Detects: aria-haspopup, el-submenu, ant-menu-submenu, and similar patterns.
- */
-function isSubmenu(el: Element): boolean {
-  const haspopup = el.getAttribute('aria-haspopup');
-  if (haspopup === 'true' || haspopup === 'menu' || haspopup === 'list') return true;
-  const cls = (el.className || '').toLowerCase();
-  if (/submenu|sub-menu|dropdown/.test(cls)) return true;
-  // Has a nested ul/ol role="menu" child or dropdown list
-  if (el.querySelector(':scope > ul[role="menu"], :scope > ol[role="menu"], :scope > [role="menu"], :scope > ul[class*="dropdown"]')) return true;
-  return false;
-}
-
-/**
- * Get the direct label text of a submenu (its title, not children text).
- */
-function getSubmenuLabel(el: Element): string | undefined {
-  // Try submenu title element (el-submenu__title, ant-menu-submenu-title, etc.)
-  const titleEl = el.querySelector(
-    ':scope > [class*="submenu__title"], :scope > [class*="submenu-title"], ' +
-    ':scope > [class*="sub-menu-title"], :scope > .menu-title',
-  );
-  if (titleEl) {
-    const text = cleanText(titleEl.textContent);
-    if (text && text.length <= 50) return text;
-  }
-  // Try aria-label
-  const ariaLabel = cleanText(el.getAttribute('aria-label'));
-  if (ariaLabel) return ariaLabel;
-  // Try first direct text node or span (not inside nested ul/menu)
-  for (const child of el.children) {
-    const tag = child.tagName.toLowerCase();
-    if (tag === 'ul' || tag === 'ol' || child.getAttribute('role') === 'menu') continue;
-    if (tag === 'span' || tag === 'div' || tag === 'a') {
-      // Only use text if it doesn't contain nested menu items' text
-      if (!child.querySelector('[role="menuitem"], [role="menu"], ul, ol')) {
-        const text = cleanText(child.textContent);
-        if (text && text.length <= 50) return text;
-      }
-    }
-  }
-  return undefined;
-}
-
-/**
- * Check if an element is a direct actionable nav item (link, button, tab).
- */
-function isNavActionable(el: Element): boolean {
-  const tag = el.tagName.toLowerCase();
-  if (tag === 'a' && el.hasAttribute('href')) return true;
-  if (tag === 'button') return true;
-  if (tag === 'input') return true;
-  const role = el.getAttribute('role');
-  if (role === 'menuitem' || role === 'link' || role === 'tab' || role === 'button') return true;
-  // Dropdown menu items (li with tabindex, or with dropdown-item class)
-  if (tag === 'li' && el.hasAttribute('tabindex')) return true;
-  const cls = (el.className || '').toLowerCase();
-  if (/dropdown-menu-item|dropdown-item/.test(cls)) return true;
-  return false;
-}
-
-/**
- * Extract actionable items (links, buttons) from a navigation region.
- * Supports nested submenus — produces hierarchical StateNode[] with
- * section nodes for submenus and link/button leaves for actionable items.
- */
-interface NavExtractResult {
-  items: StateNode[];
-  /** True if extraction was truncated by MAX_NAV_ITEMS or MAX_NODES */
-  truncated: boolean;
-}
-
-function extractNavItems(navEl: Element, counter: Counter): NavExtractResult {
-  const seen = new Set<string>();
-  let truncated = false;
-
-  function walkNavNode(el: Element, depth: number): StateNode | undefined {
-    if (depth > MAX_NAV_DEPTH || counter.n >= MAX_NODES || seen.size >= MAX_NAV_ITEMS) {
-      truncated = true;
-      return undefined;
-    }
-    if (!(el instanceof HTMLElement)) return undefined;
-    // No visibility skip — hidden items are still parsed, but marked with cssState.
-    const cssState = detectCssState(el);
-
-    // Submenu container → recurse into children, produce section node
-    if (isSubmenu(el)) {
-      const label = getSubmenuLabel(el);
-      const children = walkNavChildren(el, depth + 1);
-      if (children.length === 0) return undefined;
-      counter.n++;
-      return {
-        type: 'section',
-        label: label || '(submenu)',
-        blockType: 'navigation',
-        ...(isActiveItem(el) ? { active: true } : {}),
-        ...(cssState ? { cssState } : {}),
-        children,
-      };
-    }
-
-    // Input element in nav area (e.g. search box)
-    if (el.tagName === 'INPUT') {
-      const input = el as HTMLInputElement;
-      if (input.type === 'hidden') return undefined;
-      const label = cleanText(input.getAttribute('placeholder') || input.getAttribute('aria-label'));
-      if (!label) return undefined;
-      if (seen.has(label)) return undefined;
-      seen.add(label);
-      counter.n++;
-      return {
-        type: 'input',
-        label,
-        selector: buildSelector(el),
-        ...(input.value?.trim() ? { value: input.value.trim() } : {}),
-        ...(input.getAttribute('placeholder') ? { placeholder: cleanText(input.getAttribute('placeholder')) } : {}),
-        ...(cssState ? { cssState } : {}),
-      };
-    }
-
-    // Leaf actionable item (link, button, tab)
-    if (isNavActionable(el)) {
-      const text = cleanText(el.textContent);
-      if (!text || text.length > 50 || text.length < 1) return undefined;
-      const cls = (el.className || '').toLowerCase();
-      if (/icon-only|collapse-btn|toggle/.test(cls)) return undefined;
-      if (seen.has(text)) return undefined;
-      seen.add(text);
-
-      const href = el.getAttribute('href');
-      const active = isActiveItem(el);
-      const isLink = el.tagName === 'A' || el.getAttribute('role') === 'link' || el.getAttribute('role') === 'menuitem';
-
-      counter.n++;
-      return {
-        type: isLink ? 'link' : 'button',
-        label: text,
-        selector: buildSelector(el),
-        ...(href && href !== '#' && href !== 'javascript:void(0)' ? { href } : {}),
-        ...(active ? { active: true } : {}),
-        ...(cssState ? { cssState } : {}),
-      };
-    }
-
-    return undefined;
-  }
-
-  function walkNavChildren(parent: Element, depth: number): StateNode[] {
-    const results: StateNode[] = [];
-    // Find all candidate items: submenus and leaf actionables
-    // Use broad descendant query, then filter to "top-level within this parent"
-    const allCandidates = parent.querySelectorAll(
-      '[role="menuitem"], a[href], button, [role="button"], [role="link"], [role="tab"], ' +
-      'input:not([type="hidden"]), ' +
-      // Dropdown menu items (el-dropdown-menu__item, ant-dropdown-menu-item, etc.)
-      'li[tabindex], [class*="dropdown-menu-item"], [class*="dropdown-item"]',
-    );
-
-    const processed = new Set<Element>();
-    for (const candidate of allCandidates) {
-      if (counter.n >= MAX_NODES || seen.size >= MAX_NAV_ITEMS) break;
-      if (processed.has(candidate)) continue;
-
-      // Skip if already inside a processed submenu
-      let insideProcessed = false;
-      for (const p of processed) {
-        if (p.contains(candidate)) { insideProcessed = true; break; }
-      }
-      if (insideProcessed) continue;
-
-      // Skip if this candidate is inside a *different* submenu that hasn't been
-      // processed yet — it should be handled when we recurse into that submenu.
-      // Walk up to find if there's an unprocessed submenu between candidate and parent.
-      let intermediateSubmenu: Element | null = null;
-      let walk: Element | null = candidate.parentElement;
-      while (walk && walk !== parent) {
-        if (isSubmenu(walk) && !processed.has(walk)) {
-          intermediateSubmenu = walk;
-          break;
-        }
-        walk = walk.parentElement;
-      }
-      // If there's an intermediate submenu, process that instead of the leaf
-      const target = intermediateSubmenu || candidate;
-      if (processed.has(target)) continue;
-
-      const node = walkNavNode(target, depth);
-      if (node) {
-        results.push(node);
-        processed.add(target);
-      }
-    }
-    return results;
-  }
-
-  const items = walkNavChildren(navEl, 0);
-  return { items, truncated };
 }
 
 /**
@@ -1484,24 +1283,35 @@ function scanNavigation(mainRoot: Element, counter: Counter): StateNode[] {
     }
     if (parentProcessed) continue;
 
-    const { items, truncated } = extractNavItems(el, counter);
-    if (items.length === 0) continue;
+    // Navigation areas are stored as lightweight summary + localHtml.
+    // Full nav structure is preserved as raw HTML for future expansion,
+    // but NOT expanded into detailed link/button children — keeps the
+    // Agent's analysis focused on actual page content.
+    const label = getNavLabel(el);
+    // Use a larger HTML limit for navigation areas (they can be big menus)
+    const MAX_NAV_HTML = 5000;
+    let html: string | undefined;
+    try {
+      const clone = el.cloneNode(true) as Element;
+      clone.querySelectorAll('script, style, svg, link, [aria-hidden="true"]').forEach((n) => n.remove());
+      const raw = clone.innerHTML?.trim();
+      if (raw && raw.length >= 10) html = raw.slice(0, MAX_NAV_HTML);
+    } catch { /* degrade gracefully */ }
+    if (!html && !el.textContent?.trim()) continue;
+
+    // Extract just the active/current item as quick reference
+    const activeEl = el.querySelector(ACTIVE_SELECTORS) as HTMLElement | null;
+    const activeLabel = activeEl ? cleanText(activeEl.textContent) : undefined;
 
     processed.add(el);
     counter.n++;
-    const navNode: StateNode = {
+    navNodes.push({
       type: 'section',
-      label: getNavLabel(el),
+      label,
       blockType: 'navigation',
-      children: items,
-    };
-    // When truncated by limits, preserve remaining content as localHtml
-    // so it can be expanded later if needed (not lost silently).
-    if (truncated) {
-      const html = captureLocalHtml(el);
-      if (html) navNode.localHtml = html;
-    }
-    navNodes.push(navNode);
+      ...(activeLabel ? { summaryText: `当前: ${activeLabel}` } : {}),
+      ...(html ? { localHtml: html } : {}),
+    });
   }
 
   return navNodes;
