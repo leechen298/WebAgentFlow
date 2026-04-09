@@ -165,7 +165,11 @@
                     <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
                       {{ row.node.itemCount }} items
                     </span>
-                    <span v-if="row.node.value" style="color: #666; margin-left: 8px">
+                    <span
+                      v-if="row.node.value"
+                      style="color: #1677ff; margin-left: 8px; cursor: pointer"
+                      @click="openListDetailModal(row.node)"
+                    >
                       {{ truncate(row.node.value, 80) }}
                     </span>
                   </template>
@@ -451,12 +455,11 @@
       </a-card>
     </a-spin>
 
-    <!-- Field Detail Modal (table / list) -->
-    <a-modal
+    <!-- Field Detail Drawer (table / list) -->
+    <a-drawer
       v-model:open="fieldDetailModalOpen"
       :title="fieldDetailTitle"
-      :footer="null"
-      width="720px"
+      :width="640"
     >
       <div v-if="fieldDetailRecord">
         <!-- Table view (legacy) -->
@@ -509,7 +512,34 @@
         />
         <div v-else style="color: #999">No table data captured.</div>
       </div>
-    </a-modal>
+
+      <!-- StateNode list detail -->
+      <div v-else-if="listDetailNode">
+        <a-descriptions :column="2" size="small" bordered style="margin-bottom: 12px">
+          <a-descriptions-item v-if="listDetailNode.label" label="Label">
+            {{ listDetailNode.label }}
+          </a-descriptions-item>
+          <a-descriptions-item label="Items">
+            {{ listDetailNode.itemCount ?? parsedListDetailItems.length }}
+          </a-descriptions-item>
+        </a-descriptions>
+        <a-list
+          size="small"
+          :data-source="parsedListDetailItems"
+          bordered
+          style="margin-top: 8px"
+        >
+          <template #renderItem="{ item, index }">
+            <a-list-item>
+              <a-space>
+                <a-tag color="lime">{{ index + 1 }}</a-tag>
+                {{ item }}
+              </a-space>
+            </a-list-item>
+          </template>
+        </a-list>
+      </div>
+    </a-drawer>
 
     <!-- Edit Modal -->
     <a-modal
@@ -616,6 +646,7 @@ const normError = ref('');
 const fieldDetailModalOpen = ref(false);
 const fieldDetailRecord = ref<InitialFieldSnapshot | null>(null);
 const tableDetailNode = ref<StateNode | null>(null);
+const listDetailNode = ref<StateNode | null>(null);
 const localHtmlModalOpen = ref(false);
 const localHtmlModalTitle = ref('Local HTML Preview');
 const localHtmlContent = ref('');
@@ -737,11 +768,26 @@ const fieldDetailTitle = computed(() => {
     const count = n.itemCount ? `（${n.itemCount} 行）` : '';
     return `${label}${count}`;
   }
+  if (listDetailNode.value) {
+    const n = listDetailNode.value;
+    const label = n.label || 'List';
+    const count = n.itemCount ? `（${n.itemCount} 项）` : '';
+    return `${label}${count}`;
+  }
   const r = fieldDetailRecord.value;
   if (!r) return '';
   const label = r.fieldPath || r.fieldLabel || r.fieldType || '';
   const count = r.itemCount ? `（${r.itemCount} ${r.fieldType === 'table' ? '行' : '项'}）` : '';
   return `${label}${count}`;
+});
+
+const parsedListDetailItems = computed<string[]>(() => {
+  const node = listDetailNode.value;
+  if (!node?.value) return [];
+  // Try to parse value in format "共N项：item1；item2；..."
+  const text = node.value;
+  const body = text.replace(/^共\d+项[：:]\s*/, '');
+  return body.split(/[；;]/).filter(Boolean).map((s) => s.trim());
 });
 
 /**
@@ -809,13 +855,22 @@ const treeTableRows = computed<Array<Record<string, string>>>(() => {
 
 function openFieldDetailModal(record: InitialFieldSnapshot): void {
   tableDetailNode.value = null;
+  listDetailNode.value = null;
   fieldDetailRecord.value = record;
   fieldDetailModalOpen.value = true;
 }
 
 function openTableDetailModal(node: StateNode): void {
   fieldDetailRecord.value = null;
+  listDetailNode.value = null;
   tableDetailNode.value = node;
+  fieldDetailModalOpen.value = true;
+}
+
+function openListDetailModal(node: StateNode): void {
+  fieldDetailRecord.value = null;
+  tableDetailNode.value = null;
+  listDetailNode.value = node;
   fieldDetailModalOpen.value = true;
 }
 
