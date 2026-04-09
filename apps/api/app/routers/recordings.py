@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.repos.recording_repo import RecordingRepository
-from app.schemas.common import ApiResponse
+from app.schemas.common import ApiResponse, CursorPage, decode_cursor, encode_cursor
 from app.schemas.recording import (
     NormalizedRecordingRead,
     RecordingCreate,
@@ -24,9 +24,18 @@ def get_service(db: Session) -> RecordingService:
     return RecordingService(RecordingRepository(db))
 
 
-@router.get("/list", response_model=ApiResponse[list[RecordingRead]])
-def list_recordings(db: DbSession) -> ApiResponse[list[RecordingRead]]:
-    return ApiResponse(data=get_service(db).list_recordings())
+@router.get("/list", response_model=ApiResponse[CursorPage[RecordingRead]])
+def list_recordings(
+    db: DbSession,
+    limit: int = Query(20, ge=1, le=100),
+    cursor: str | None = Query(None),
+) -> ApiResponse[CursorPage[RecordingRead]]:
+    cursor_created_at = cursor_id = None
+    if cursor:
+        cursor_created_at, cursor_id = decode_cursor(cursor)
+    items, has_next = get_service(db).list_recordings_page(limit, cursor_created_at, cursor_id)
+    next_cursor = encode_cursor(items[-1].created_at, items[-1].id) if has_next and items else None
+    return ApiResponse(data=CursorPage(items=items, has_next=has_next, next_cursor=next_cursor))
 
 
 @router.post("/create", response_model=ApiResponse[RecordingRead])

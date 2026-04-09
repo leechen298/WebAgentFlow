@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from app.core.exceptions import NotFoundError
 from app.models.run import Run
 from app.repos.run_repo import RunRepository
@@ -16,6 +18,14 @@ class RunService:
 
     def list_runs(self) -> list[Run]:
         return self.run_repo.list()
+
+    def list_runs_page(
+        self,
+        limit: int = 20,
+        cursor_created_at: datetime | None = None,
+        cursor_id: str | None = None,
+    ) -> tuple[list[Run], bool]:
+        return self.run_repo.list_page(limit, cursor_created_at, cursor_id)
 
     def create_run(self, payload: RunCreate) -> Run:
         data = payload.model_dump()

@@ -1,8 +1,8 @@
 import apiClient from './client';
-import type { Recording, RecordingCreate, RecordingUpdate, DeleteResponse, NormalizedRecording } from '@web-agent-flow/shared-types';
+import type { Recording, RecordingCreate, RecordingUpdate, DeleteResponse, NormalizedRecording, CursorPage } from '@web-agent-flow/shared-types';
 
-export async function getRecordingsList(): Promise<Recording[]> {
-  return await apiClient.get('/recordings/list') as unknown as Recording[];
+export async function getRecordingsList(params?: { limit?: number; cursor?: string }): Promise<CursorPage<Recording>> {
+  return await apiClient.get('/recordings/list', { params }) as unknown as CursorPage<Recording>;
 }
 
 export async function getRecordingById(recordingId: string): Promise<Recording> {

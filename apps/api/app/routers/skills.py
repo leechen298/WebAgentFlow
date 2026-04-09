@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.repos.recording_repo import RecordingRepository
 from app.repos.skill_repo import SkillRepository
-from app.schemas.common import ApiResponse
+from app.schemas.common import ApiResponse, CursorPage, decode_cursor, encode_cursor
 from app.schemas.skill import SkillCreate, SkillRead, SkillUpdate
 from app.services.skill_service import SkillService
 
@@ -19,9 +19,18 @@ def get_service(db: Session) -> SkillService:
     return SkillService(SkillRepository(db), RecordingRepository(db))
 
 
-@router.get("/list", response_model=ApiResponse[list[SkillRead]])
-def list_skills(db: DbSession) -> ApiResponse[list[SkillRead]]:
-    return ApiResponse(data=get_service(db).list_skills())
+@router.get("/list", response_model=ApiResponse[CursorPage[SkillRead]])
+def list_skills(
+    db: DbSession,
+    limit: int = Query(20, ge=1, le=100),
+    cursor: str | None = Query(None),
+) -> ApiResponse[CursorPage[SkillRead]]:
+    cursor_created_at = cursor_id = None
+    if cursor:
+        cursor_created_at, cursor_id = decode_cursor(cursor)
+    items, has_next = get_service(db).list_skills_page(limit, cursor_created_at, cursor_id)
+    next_cursor = encode_cursor(items[-1].created_at, items[-1].id) if has_next and items else None
+    return ApiResponse(data=CursorPage(items=items, has_next=has_next, next_cursor=next_cursor))
 
 
 @router.post("/create", response_model=ApiResponse[SkillRead])

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from app.core.exceptions import NotFoundError
 from app.models.skill import Skill
 from app.repos.recording_repo import RecordingRepository
@@ -16,6 +18,14 @@ class SkillService:
 
     def list_skills(self) -> list[Skill]:
         return self.skill_repo.list()
+
+    def list_skills_page(
+        self,
+        limit: int = 20,
+        cursor_created_at: datetime | None = None,
+        cursor_id: str | None = None,
+    ) -> tuple[list[Skill], bool]:
+        return self.skill_repo.list_page(limit, cursor_created_at, cursor_id)
 
     def create_skill(self, payload: SkillCreate) -> Skill:
         data = payload.model_dump()

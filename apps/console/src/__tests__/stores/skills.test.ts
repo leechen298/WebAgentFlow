@@ -11,8 +11,10 @@ const mockSkill: Skill = {
   id: 'skill-123',
   name: 'Test Skill',
   description: 'Test description',
-  type: 'automation',
-  config: {},
+  version: '1.0.0',
+  status: 'draft',
+  recording_id: null,
+  definition: {},
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
 };
@@ -36,7 +38,7 @@ describe('Skills Store', () => {
   it('should fetch skills successfully', async () => {
     const store = useSkillsStore();
     const mockGetSkillsList = vi.mocked(skillsApi.getSkillsList);
-    mockGetSkillsList.mockResolvedValue([mockSkill]);
+    mockGetSkillsList.mockResolvedValue({ items: [mockSkill], has_next: false, next_cursor: null });
 
     await store.fetchSkills();
 
@@ -63,8 +65,8 @@ describe('Skills Store', () => {
     const result = await store.createSkill({
       name: 'New Skill',
       description: 'New description',
-      type: 'automation',
-      config: {},
+      version: '1.0.0',
+      definition: {},
     });
 
     expect(result).toEqual(newSkill);

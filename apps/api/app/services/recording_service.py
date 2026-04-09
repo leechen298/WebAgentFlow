@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from app.core.exceptions import NotFoundError
 from app.models.recording import Recording
 from app.repos.recording_repo import RecordingRepository
@@ -10,6 +12,14 @@ class RecordingService:
 
     def list_recordings(self) -> list[Recording]:
         return self.recording_repo.list()
+
+    def list_recordings_page(
+        self,
+        limit: int = 20,
+        cursor_created_at: datetime | None = None,
+        cursor_id: str | None = None,
+    ) -> tuple[list[Recording], bool]:
+        return self.recording_repo.list_page(limit, cursor_created_at, cursor_id)
 
     def create_recording(self, payload: RecordingCreate) -> Recording:
         recording = Recording(**payload.model_dump())

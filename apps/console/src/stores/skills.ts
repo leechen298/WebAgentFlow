@@ -17,21 +17,48 @@ export const useSkillsStore = defineStore('skills', () => {
   const loadingList = ref(false);
   const error = ref<string | null>(null);
 
+  // Pagination state
+  const hasNext = ref(false);
+  const nextCursor = ref<string | null>(null);
+  const cursorStack = ref<string[]>([]);
+  const hasPrev = computed(() => cursorStack.value.length > 0);
+
   // Getters
   const hasSkills = computed(() => skills.value.length > 0);
 
   // Actions
-  async function fetchSkills(): Promise<void> {
+  async function fetchSkills(cursor?: string): Promise<void> {
     loadingList.value = true;
     error.value = null;
     try {
-      skills.value = await getSkillsList();
+      const page = await getSkillsList({ cursor });
+      skills.value = page.items;
+      hasNext.value = page.has_next;
+      nextCursor.value = page.next_cursor;
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch skills';
       throw e;
     } finally {
       loadingList.value = false;
     }
+  }
+
+  async function fetchNextPage(): Promise<void> {
+    if (!hasNext.value || !nextCursor.value) return;
+    cursorStack.value.push(nextCursor.value);
+    await fetchSkills(nextCursor.value);
+  }
+
+  async function fetchPrevPage(): Promise<void> {
+    if (cursorStack.value.length === 0) return;
+    cursorStack.value.pop();
+    const prevCursor = cursorStack.value.length > 0 ? cursorStack.value[cursorStack.value.length - 1] : undefined;
+    await fetchSkills(prevCursor);
+  }
+
+  async function fetchFirstPage(): Promise<void> {
+    cursorStack.value = [];
+    await fetchSkills();
   }
 
   async function fetchSkill(id: string): Promise<void> {
@@ -112,10 +139,16 @@ export const useSkillsStore = defineStore('skills', () => {
     loading,
     loadingList,
     error,
+    // Pagination
+    hasNext,
+    hasPrev,
     // Getters
     hasSkills,
     // Actions
     fetchSkills,
+    fetchNextPage,
+    fetchPrevPage,
+    fetchFirstPage,
     fetchSkill,
     createSkill,
     updateSkill,

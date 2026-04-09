@@ -59,6 +59,12 @@
             </a-empty>
           </template>
         </a-table>
+
+        <div v-if="recordings.length > 0" style="display: flex; justify-content: flex-end; margin-top: 16px; gap: 8px">
+          <a-button size="small" :disabled="!recordingsStore.hasPrev" @click="goFirstPage">First</a-button>
+          <a-button size="small" :disabled="!recordingsStore.hasPrev" @click="goPrevPage">Prev</a-button>
+          <a-button size="small" :disabled="!recordingsStore.hasNext" @click="goNextPage">Next</a-button>
+        </div>
       </a-spin>
     </a-card>
 
@@ -180,11 +186,33 @@ function formatDate(dateStr: string): string {
 
 async function fetchRecordings(): Promise<void> {
   try {
-    await recordingsStore.fetchRecordings();
+    await recordingsStore.fetchFirstPage();
     recordings.value = recordingsStore.recordings;
   } catch (e) {
     message.error(e instanceof Error ? e.message : 'Failed to load recordings');
   }
+}
+
+async function goNextPage(): Promise<void> {
+  try {
+    await recordingsStore.fetchNextPage();
+    recordings.value = recordingsStore.recordings;
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to load recordings');
+  }
+}
+
+async function goPrevPage(): Promise<void> {
+  try {
+    await recordingsStore.fetchPrevPage();
+    recordings.value = recordingsStore.recordings;
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to load recordings');
+  }
+}
+
+async function goFirstPage(): Promise<void> {
+  await fetchRecordings();
 }
 
 function showCreateModal(): void {
@@ -266,7 +294,7 @@ async function handleSave(): Promise<void> {
     }
 
     modalOpen.value = false;
-    recordings.value = recordingsStore.recordings;
+    await fetchRecordings();
   } catch (e) {
     if (e instanceof Error && e.message !== 'Validation failed') {
       message.error(e.message);
@@ -278,7 +306,7 @@ async function deleteRecording(id: string): Promise<void> {
   try {
     await recordingsStore.deleteRecording(id);
     message.success('Recording deleted');
-    recordings.value = recordingsStore.recordings;
+    await fetchRecordings();
   } catch (e) {
     message.error(e instanceof Error ? e.message : 'Failed to delete recording');
   }

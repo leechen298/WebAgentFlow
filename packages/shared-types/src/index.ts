@@ -1,3 +1,10 @@
+// Cursor pagination
+export interface CursorPage<T> {
+  items: T[];
+  has_next: boolean;
+  next_cursor: string | null;
+}
+
 // Recording types
 export type RecordingStatus = 'draft' | 'completed' | 'archived';
 

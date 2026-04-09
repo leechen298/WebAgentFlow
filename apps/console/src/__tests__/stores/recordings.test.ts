@@ -40,7 +40,7 @@ describe('Recordings Store', () => {
     it('should fetch recordings and update state', async () => {
       const store = useRecordingsStore();
       const mockGetRecordingsList = vi.mocked(recordingsApi.getRecordingsList);
-      mockGetRecordingsList.mockResolvedValue([mockRecording]);
+      mockGetRecordingsList.mockResolvedValue({ items: [mockRecording], has_next: false, next_cursor: null });
 
       await store.fetchRecordings();
 

@@ -59,6 +59,12 @@
             </a-empty>
           </template>
         </a-table>
+
+        <div v-if="skills.length > 0" style="display: flex; justify-content: flex-end; margin-top: 16px; gap: 8px">
+          <a-button size="small" :disabled="!skillsStore.hasPrev" @click="goFirstPage">First</a-button>
+          <a-button size="small" :disabled="!skillsStore.hasPrev" @click="goPrevPage">Prev</a-button>
+          <a-button size="small" :disabled="!skillsStore.hasNext" @click="goNextPage">Next</a-button>
+        </div>
       </a-spin>
     </a-card>
 
@@ -189,11 +195,33 @@ function formatDate(dateStr: string): string {
 
 async function fetchSkills(): Promise<void> {
   try {
-    await skillsStore.fetchSkills();
+    await skillsStore.fetchFirstPage();
     skills.value = skillsStore.skills;
   } catch (e) {
     message.error(e instanceof Error ? e.message : 'Failed to load skills');
   }
+}
+
+async function goNextPage(): Promise<void> {
+  try {
+    await skillsStore.fetchNextPage();
+    skills.value = skillsStore.skills;
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to load skills');
+  }
+}
+
+async function goPrevPage(): Promise<void> {
+  try {
+    await skillsStore.fetchPrevPage();
+    skills.value = skillsStore.skills;
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to load skills');
+  }
+}
+
+async function goFirstPage(): Promise<void> {
+  await fetchSkills();
 }
 
 function showCreateModal(): void {
@@ -276,7 +304,7 @@ async function handleSave(): Promise<void> {
     }
 
     modalOpen.value = false;
-    skills.value = skillsStore.skills;
+    await fetchSkills();
   } catch (e) {
     if (e instanceof Error && e.message !== 'Validation failed') {
       message.error(e.message);
@@ -288,7 +316,7 @@ async function deleteSkill(id: string): Promise<void> {
   try {
     await skillsStore.deleteSkill(id);
     message.success('Skill deleted');
-    skills.value = skillsStore.skills;
+    await fetchSkills();
   } catch (e) {
     message.error(e instanceof Error ? e.message : 'Failed to delete skill');
   }

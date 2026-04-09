@@ -9,14 +9,13 @@ vi.mock('@/api/runs');
 
 const mockRun: Run = {
   id: 'run-123',
-  name: 'Test Run',
-  status: 'pending',
-  recording_id: 'rec-123',
   skill_id: 'skill-123',
-  config: {},
-  result: null,
+  status: 'pending',
+  input_payload: {},
+  result_payload: null,
+  logs: null,
   started_at: null,
-  completed_at: null,
+  finished_at: null,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
 };
@@ -40,7 +39,7 @@ describe('Runs Store', () => {
   it('should fetch runs successfully', async () => {
     const store = useRunsStore();
     const mockGetRunsList = vi.mocked(runsApi.getRunsList);
-    mockGetRunsList.mockResolvedValue([mockRun]);
+    mockGetRunsList.mockResolvedValue({ items: [mockRun], has_next: false, next_cursor: null });
 
     await store.fetchRuns();
 
@@ -65,10 +64,8 @@ describe('Runs Store', () => {
     mockCreateRun.mockResolvedValue(newRun);
 
     const result = await store.createRun({
-      name: 'New Run',
-      recording_id: 'rec-123',
       skill_id: 'skill-123',
-      config: {},
+      input_payload: {},
     });
 
     expect(result).toEqual(newRun);
@@ -79,7 +76,7 @@ describe('Runs Store', () => {
   it('should update a run', async () => {
     const store = useRunsStore();
     const mockUpdateRun = vi.mocked(runsApi.updateRun);
-    const updated = { ...mockRun, status: 'running' };
+    const updated: Run = { ...mockRun, status: 'running' };
     mockUpdateRun.mockResolvedValue(updated);
 
     store.runs = [mockRun];

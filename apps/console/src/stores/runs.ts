@@ -17,21 +17,48 @@ export const useRunsStore = defineStore('runs', () => {
   const loadingList = ref(false);
   const error = ref<string | null>(null);
 
+  // Pagination state
+  const hasNext = ref(false);
+  const nextCursor = ref<string | null>(null);
+  const cursorStack = ref<string[]>([]);
+  const hasPrev = computed(() => cursorStack.value.length > 0);
+
   // Getters
   const hasRuns = computed(() => runs.value.length > 0);
 
   // Actions
-  async function fetchRuns(): Promise<void> {
+  async function fetchRuns(cursor?: string): Promise<void> {
     loadingList.value = true;
     error.value = null;
     try {
-      runs.value = await getRunsList();
+      const page = await getRunsList({ cursor });
+      runs.value = page.items;
+      hasNext.value = page.has_next;
+      nextCursor.value = page.next_cursor;
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch runs';
       throw e;
     } finally {
       loadingList.value = false;
     }
+  }
+
+  async function fetchNextPage(): Promise<void> {
+    if (!hasNext.value || !nextCursor.value) return;
+    cursorStack.value.push(nextCursor.value);
+    await fetchRuns(nextCursor.value);
+  }
+
+  async function fetchPrevPage(): Promise<void> {
+    if (cursorStack.value.length === 0) return;
+    cursorStack.value.pop();
+    const prevCursor = cursorStack.value.length > 0 ? cursorStack.value[cursorStack.value.length - 1] : undefined;
+    await fetchRuns(prevCursor);
+  }
+
+  async function fetchFirstPage(): Promise<void> {
+    cursorStack.value = [];
+    await fetchRuns();
   }
 
   async function fetchRun(id: string): Promise<void> {
@@ -112,10 +139,16 @@ export const useRunsStore = defineStore('runs', () => {
     loading,
     loadingList,
     error,
+    // Pagination
+    hasNext,
+    hasPrev,
     // Getters
     hasRuns,
     // Actions
     fetchRuns,
+    fetchNextPage,
+    fetchPrevPage,
+    fetchFirstPage,
     fetchRun,
     createRun,
     updateRun,

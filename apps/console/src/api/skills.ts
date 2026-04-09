@@ -1,8 +1,8 @@
 import apiClient from './client';
-import type { Skill, SkillCreate, SkillUpdate, DeleteResponse } from '@web-agent-flow/shared-types';
+import type { Skill, SkillCreate, SkillUpdate, DeleteResponse, CursorPage } from '@web-agent-flow/shared-types';
 
-export async function getSkillsList(): Promise<Skill[]> {
-  return await apiClient.get('/skills/list') as unknown as Skill[];
+export async function getSkillsList(params?: { limit?: number; cursor?: string }): Promise<CursorPage<Skill>> {
+  return await apiClient.get('/skills/list', { params }) as unknown as CursorPage<Skill>;
 }
 
 export async function getSkillById(skillId: string): Promise<Skill> {

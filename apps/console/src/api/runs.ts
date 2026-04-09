@@ -1,8 +1,8 @@
 import apiClient from './client';
-import type { Run, RunCreate, RunUpdate, DeleteResponse } from '@web-agent-flow/shared-types';
+import type { Run, RunCreate, RunUpdate, DeleteResponse, CursorPage } from '@web-agent-flow/shared-types';
 
-export async function getRunsList(): Promise<Run[]> {
-  return await apiClient.get('/runs/list') as unknown as Run[];
+export async function getRunsList(params?: { limit?: number; cursor?: string }): Promise<CursorPage<Run>> {
+  return await apiClient.get('/runs/list', { params }) as unknown as CursorPage<Run>;
 }
 
 export async function getRunById(runId: string): Promise<Run> {

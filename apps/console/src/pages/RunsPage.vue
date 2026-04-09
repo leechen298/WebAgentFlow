@@ -65,6 +65,12 @@
             </a-empty>
           </template>
         </a-table>
+
+        <div v-if="runs.length > 0" style="display: flex; justify-content: flex-end; margin-top: 16px; gap: 8px">
+          <a-button size="small" :disabled="!runsStore.hasPrev" @click="goFirstPage">First</a-button>
+          <a-button size="small" :disabled="!runsStore.hasPrev" @click="goPrevPage">Prev</a-button>
+          <a-button size="small" :disabled="!runsStore.hasNext" @click="goNextPage">Next</a-button>
+        </div>
       </a-spin>
     </a-card>
 
@@ -225,11 +231,33 @@ function formatDate(dateStr: string): string {
 
 async function fetchRuns(): Promise<void> {
   try {
-    await runsStore.fetchRuns();
+    await runsStore.fetchFirstPage();
     runs.value = runsStore.runs;
   } catch (e) {
     message.error(e instanceof Error ? e.message : 'Failed to load runs');
   }
+}
+
+async function goNextPage(): Promise<void> {
+  try {
+    await runsStore.fetchNextPage();
+    runs.value = runsStore.runs;
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to load runs');
+  }
+}
+
+async function goPrevPage(): Promise<void> {
+  try {
+    await runsStore.fetchPrevPage();
+    runs.value = runsStore.runs;
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to load runs');
+  }
+}
+
+async function goFirstPage(): Promise<void> {
+  await fetchRuns();
 }
 
 function showCreateModal(): void {
@@ -334,7 +362,7 @@ async function handleSave(): Promise<void> {
     }
 
     modalOpen.value = false;
-    runs.value = runsStore.runs;
+    await fetchRuns();
   } catch (e) {
     if (e instanceof Error && e.message !== 'Validation failed') {
       message.error(e.message);
@@ -346,7 +374,7 @@ async function deleteRun(id: string): Promise<void> {
   try {
     await runsStore.deleteRun(id);
     message.success('Run deleted');
-    runs.value = runsStore.runs;
+    await fetchRuns();
   } catch (e) {
     message.error(e instanceof Error ? e.message : 'Failed to delete run');
   }

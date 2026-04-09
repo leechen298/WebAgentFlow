@@ -17,21 +17,48 @@ export const useRecordingsStore = defineStore('recordings', () => {
   const loadingList = ref(false);
   const error = ref<string | null>(null);
 
+  // Pagination state
+  const hasNext = ref(false);
+  const nextCursor = ref<string | null>(null);
+  const cursorStack = ref<string[]>([]);
+  const hasPrev = computed(() => cursorStack.value.length > 0);
+
   // Getters
   const hasRecordings = computed(() => recordings.value.length > 0);
 
   // Actions
-  async function fetchRecordings(): Promise<void> {
+  async function fetchRecordings(cursor?: string): Promise<void> {
     loadingList.value = true;
     error.value = null;
     try {
-      recordings.value = await getRecordingsList();
+      const page = await getRecordingsList({ cursor });
+      recordings.value = page.items;
+      hasNext.value = page.has_next;
+      nextCursor.value = page.next_cursor;
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch recordings';
       throw e;
     } finally {
       loadingList.value = false;
     }
+  }
+
+  async function fetchNextPage(): Promise<void> {
+    if (!hasNext.value || !nextCursor.value) return;
+    cursorStack.value.push(nextCursor.value);
+    await fetchRecordings(nextCursor.value);
+  }
+
+  async function fetchPrevPage(): Promise<void> {
+    if (cursorStack.value.length === 0) return;
+    cursorStack.value.pop();
+    const prevCursor = cursorStack.value.length > 0 ? cursorStack.value[cursorStack.value.length - 1] : undefined;
+    await fetchRecordings(prevCursor);
+  }
+
+  async function fetchFirstPage(): Promise<void> {
+    cursorStack.value = [];
+    await fetchRecordings();
   }
 
   async function fetchRecording(id: string): Promise<void> {
@@ -112,10 +139,16 @@ export const useRecordingsStore = defineStore('recordings', () => {
     loading,
     loadingList,
     error,
+    // Pagination
+    hasNext,
+    hasPrev,
     // Getters
     hasRecordings,
     // Actions
     fetchRecordings,
+    fetchNextPage,
+    fetchPrevPage,
+    fetchFirstPage,
     fetchRecording,
     createRecording,
     updateRecording,
