@@ -518,21 +518,36 @@ const MAX_LOCAL_HTML = 500;
  * Strips scripts, styles, SVGs, hidden elements. Returns undefined if trivial.
  */
 /**
- * Strip inline style attributes, keeping only visibility-affecting properties
- * (display, visibility) that impact operability. Removes decorative CSS
- * (color, padding, transform, etc.) to reduce HTML size.
+ * Clean up a cloned DOM tree for localHtml storage:
+ * 1. Strip inline styles, keeping only display/visibility (affect operability)
+ * 2. Remove framework-generated noise attributes (Vue scoped, Dark Reader, etc.)
+ * 3. Remove HTML comments
  */
-function stripDecorativeStyles(root: Element): void {
-  for (const el of root.querySelectorAll('[style]')) {
-    const style = (el as HTMLElement).style;
-    const keep: string[] = [];
-    if (style.display && style.display !== '') keep.push(`display:${style.display}`);
-    if (style.visibility && style.visibility !== '') keep.push(`visibility:${style.visibility}`);
-    if (keep.length > 0) {
-      el.setAttribute('style', keep.join(';'));
-    } else {
-      el.removeAttribute('style');
+const NOISE_ATTR_RE = /^(data-v-|data-darkreader|data-old-)/;
+const KEEP_DATA_ATTRS = new Set(['data-id', 'data-prop', 'data-type', 'data-name', 'data-key']);
+
+function cleanHtmlTree(root: Element): void {
+  for (const el of root.querySelectorAll('*')) {
+    // 1. Strip decorative inline styles, keep display/visibility
+    if (el.hasAttribute('style')) {
+      const style = (el as HTMLElement).style;
+      const keep: string[] = [];
+      if (style.display && style.display !== '') keep.push(`display:${style.display}`);
+      if (style.visibility && style.visibility !== '') keep.push(`visibility:${style.visibility}`);
+      if (keep.length > 0) {
+        el.setAttribute('style', keep.join(';'));
+      } else {
+        el.removeAttribute('style');
+      }
     }
+    // 2. Remove framework noise attributes
+    const toRemove: string[] = [];
+    for (const attr of el.attributes) {
+      if (NOISE_ATTR_RE.test(attr.name) && !KEEP_DATA_ATTRS.has(attr.name)) {
+        toRemove.push(attr.name);
+      }
+    }
+    for (const name of toRemove) el.removeAttribute(name);
   }
 }
 
@@ -541,7 +556,7 @@ function captureLocalHtml(area: Element): string | undefined {
   clone.querySelectorAll(
     'script, style, svg, link, [aria-hidden="true"], [class*="icon"]',
   ).forEach((n) => n.remove());
-  stripDecorativeStyles(clone);
+  cleanHtmlTree(clone);
   const html = clone.innerHTML?.trim();
   if (!html || html.length < 10) return undefined;
   return html.slice(0, MAX_LOCAL_HTML);
@@ -1308,15 +1323,14 @@ function scanNavigation(mainRoot: Element, counter: Counter): StateNode[] {
     // but NOT expanded into detailed link/button children — keeps the
     // Agent's analysis focused on actual page content.
     const label = getNavLabel(el);
-    // Use a larger HTML limit for navigation areas (they can be big menus)
-    const MAX_NAV_HTML = 5000;
+    // No size limit — style/attribute cleanup already reduces size significantly
     let html: string | undefined;
     try {
       const clone = el.cloneNode(true) as Element;
       clone.querySelectorAll('script, style, svg, link, [aria-hidden="true"]').forEach((n) => n.remove());
-      stripDecorativeStyles(clone);
+      cleanHtmlTree(clone);
       const raw = clone.innerHTML?.trim();
-      if (raw && raw.length >= 10) html = raw.slice(0, MAX_NAV_HTML);
+      if (raw && raw.length >= 10) html = raw;
     } catch { /* degrade gracefully */ }
     if (!html && !el.textContent?.trim()) continue;
 
