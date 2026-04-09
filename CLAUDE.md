@@ -108,6 +108,62 @@ Built with WXT framework (`apps/extension/`):
 - `entrypoints/popup/` — Vue 3 recording UI (status, name input, start/stop)
 - Recording state is persisted via extension storage
 
+## 初始状态解析器 — DOM 转 AST 规则
+
+扩展的 `initial-state.ts` 将实时 DOM 构建为简化 AST（StateNode 树）。修改或扩展解析器时，以下规则为**强制约束**。
+
+### 核心原则：统一递归 + 回溯
+
+解析器以统一的流程递归处理每个 DOM 节点：
+
+```
+walkNode(el):
+  1. classifyNode(el)     → 统一分类（已知组件 > class/tag/id > 原生HTML > null）
+  2. tryProcess(el, type) → 用对应处理器尝试提取
+  3. 处理器返回空 → 回溯到 walkChildren 通用递归
+  4. walkChildren 也为空 + 有可见内容 → localHtml 兜底（type: 'custom'）
+```
+
+**任何分支失败都不能静默丢弃内容**。处理器返回 `[]` 意味着"我处理不了，请回溯"，不意味着"这个元素没有内容"。
+
+### 分类优先级（从高到低，首次匹配生效）
+
+1. **已知组件库元素** — 如 `el-select`、`ant-cascader`、`van-cell`、`n-date-picker`，按组件整体类型处理，**不拆解其内部 DOM 结构**（如 el-select 内部有 input，仍作为 select 处理）。组件分类器（`component-classifier.ts`）使用前缀无关检测，覆盖 12+ 组件库。
+
+2. **class/tag/id 可识别的自定义结构** — 如 `class="xx-select"`、`role="listbox"` 等开发者命名的组件，按模式匹配分类。
+
+3. **标准 HTML 语义元素** — `<table>`、`<input>`、`<select>`、`<button>`、`<a>` 等，按原生语义处理。
+
+4. **无法分类的元素** — 递归 walkChildren 尝试提取子节点结构。如有可见内容但无法提取，产生 `type: 'custom'` 节点并附带 `localHtml`（最大 500 字符）。
+
+### 各类型元素规则
+
+**表格**：提取表头和行数据。复杂单元格内容递归提取语义，而非直接转储 HTML。
+
+**Iframe**：同源 iframe 访问 `contentDocument` 递归解析（遵循相同规则），跨域静默跳过。产生 `blockType: 'iframe-content'` 的 section 节点。
+
+**导航区域**：通过 HTML5 语义标签（`nav`、`aside`、`header`、`footer`）和 ARIA 角色（`role="navigation"` 等）检测 main content root **外部**的导航区域。支持嵌套子菜单（如 Element UI `el-submenu` + `aria-haspopup`）。叶子节点为 `link` 或 `button` 类型，带 `href`、`active` 状态和 `selector`。
+
+**表单容器**：通过已知 form-item 模式检测（`.el-form-item`、`.ant-form-item` 等），作为 label + control 对处理。如果 processFormItem 返回空（如 `el-form-item__actions` 实际是按钮容器），**回溯**到通用 walkChildren。
+
+### 禁止事项
+
+- **不得基于假设跳过元素** — 不设硬编码的跳过列表。所有可见元素均需处理。不假设开发者遵循语义化 HTML 规范。
+- **不得拆解已知复合组件** — `el-select` 是一个 `select` 节点，不是 `input` + `div` + `ul`。组件边界就是分类边界。
+- **不得产生空容器** — section/group 节点如果 children 为空，丢弃该节点。
+- **不得静默丢弃内容** — 任何分类失败必须回溯到通用递归，通用递归也失败且有可见内容时必须产生 localHtml 兜底。
+
+### 输出结构
+
+- **容器节点**（`section`、`group`）：带 `children[]`、`blockType`、`label`。**无 `selector`**。
+- **叶子节点**（`input`、`select`、`button`、`link`、`table`、`custom` 等）：带 `selector`、`value`、`label`。**无 `children`**。
+- **`localHtml`**：仅用于语义提取不充分的叶子节点，最大 500 字符。
+- **`rawHtmlSnapshot`**：独立的调试用完整 HTML 快照，不属于 AST。
+
+### 测试
+
+多场景测试（`apps/extension/src/__tests__/multi-scenario.test.ts`）覆盖 7 种 fixture：企业官网、后台管理、H5 移动端、多导航文档页、无语义标签页面、数据大盘、Element UI 嵌套菜单+iframe。**任何解析器改动必须通过所有现有 fixture 测试。新增解析行为必须同时新增对应 fixture 和测试。**
+
 ## Infrastructure
 
 Docker Compose (`infra/docker/docker-compose.yml`) provides:

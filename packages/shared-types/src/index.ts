@@ -117,10 +117,11 @@ export interface InitialFieldSnapshot {
  * type values:
  *   - 'section'  — heading-based or ARIA-labeled section container
  *   - 'group'    — complex form-item with nested children
- *   - Leaf types — 'input', 'select', 'table', 'button', 'checkbox', 'radio',
- *                  'richtext', 'textarea', 'date', 'number', 'switch', 'slider',
- *                  'rate', 'upload', 'cascader', 'transfer', 'code-editor',
- *                  'color', 'autocomplete', 'list', 'custom', etc.
+ *   - 'table'    — may have flat rows[][] (simple) or children[] (complex cells)
+ *   - Leaf types — 'input', 'select', 'button', 'link', 'checkbox',
+ *                  'radio', 'richtext', 'textarea', 'date', 'number', 'switch',
+ *                  'slider', 'rate', 'upload', 'cascader', 'transfer',
+ *                  'code-editor', 'color', 'autocomplete', 'list', 'custom', etc.
  */
 export interface StateNode {
   /** Node type */
@@ -135,6 +136,10 @@ export interface StateNode {
   actions?: string[];
   /** CSS selector for locating this element (leaf/actionable nodes only, omitted on containers) */
   selector?: string;
+  /** Link target URL (for navigation links) */
+  href?: string;
+  /** Whether this item is currently active/selected (e.g. active menu item) */
+  active?: boolean;
   /** Current value at snapshot time */
   value?: string;
   /** Placeholder text */

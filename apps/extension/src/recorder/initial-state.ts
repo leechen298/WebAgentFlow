@@ -15,7 +15,6 @@ import { getCanonicalPageUrl } from './page-url';
 import { captureSimplifiedHTML } from './html-snapshot';
 import {
   isFormContainer,
-  isNavigationChrome,
   classifyElement,
   getComponentNames,
 } from './component-classifier';
@@ -103,15 +102,13 @@ function cleanText(text: string | null | undefined): string | undefined {
 /* ── Skip detection ──────────────────────────────────────────────────────── */
 
 const SKIP_TAGS = new Set([
-  'script', 'style', 'svg', 'link', 'meta', 'noscript', 'template', 'iframe',
+  'script', 'style', 'svg', 'link', 'meta', 'noscript', 'template',
 ]);
 
 function shouldSkip(el: Element): boolean {
   const tag = el.tagName.toLowerCase();
   if (SKIP_TAGS.has(tag)) return true;
   if (el instanceof HTMLElement && !isVisible(el)) return true;
-  if (tag === 'main') return false;
-  if (isNavigationChrome(el)) return true;
   return false;
 }
 
@@ -227,6 +224,17 @@ function hasSubSections(container: Element): boolean {
 const MAX_TABLE_ROWS = 20;
 const MAX_CELL_TEXT = 60;
 
+/**
+ * Check if a table cell contains complex actionable content (inputs, buttons, etc.)
+ * beyond simple display text.
+ */
+function isCellComplex(cell: Element): boolean {
+  return cell.querySelectorAll(
+    'input:not([type="hidden"]), select, textarea, button, [role="button"], ' +
+    'a[href], [contenteditable="true"]',
+  ).length >= 2;
+}
+
 function extractCellText(cell: Element): string {
   // Check for input/select value inside cell
   const input = cell.querySelector<HTMLInputElement>(
@@ -245,6 +253,18 @@ function extractCellText(cell: Element): string {
   return text ? text.slice(0, MAX_CELL_TEXT) : '';
 }
 
+/**
+ * Check if a table has any row with complex cells.
+ * If so, the table should use expanded row representation.
+ */
+function hasComplexCells(el: Element): boolean {
+  const cells = el.querySelectorAll('td, [role="gridcell"], [role="cell"]');
+  for (const cell of cells) {
+    if (isCellComplex(cell)) return true;
+  }
+  return false;
+}
+
 function buildTableNode(el: Element, counter: Counter): StateNode {
   const headers: string[] = [];
   for (const th of el.querySelectorAll('thead th, [role="columnheader"]')) {
@@ -255,11 +275,62 @@ function buildTableNode(el: Element, counter: Counter): StateNode {
   // Extract row data
   let dataRows = Array.from(el.querySelectorAll('tbody > tr'));
   if (!dataRows.length) {
-    // ARIA table: skip the first row if headers were found (it's the header row)
     const allRows = Array.from(el.querySelectorAll('[role="row"]'));
     dataRows = headers.length > 0 ? allRows.slice(1) : allRows;
   }
 
+  // If any cell has complex content (multiple actionable elements),
+  // expand each row as a group with recursively extracted children.
+  if (hasComplexCells(el)) {
+    const rowNodes: StateNode[] = [];
+    for (const tr of dataRows.slice(0, MAX_TABLE_ROWS)) {
+      if (counter.n >= MAX_NODES) break;
+      const cells = tr.querySelectorAll('td, [role="gridcell"], [role="cell"]');
+      if (cells.length === 0) continue;
+      const cellNodes: StateNode[] = [];
+      for (let ci = 0; ci < cells.length; ci++) {
+        const cell = cells[ci];
+        const headerLabel = headers[ci];
+        if (isCellComplex(cell)) {
+          // Complex cell → recurse into its content
+          // (walkNode is defined later but called via closure)
+          const cellChildren = walkChildren(cell, 20, counter);
+          if (cellChildren.length > 0) {
+            counter.n++;
+            cellNodes.push({
+              type: 'group',
+              ...(headerLabel ? { label: headerLabel } : {}),
+              children: cellChildren,
+            });
+          }
+        } else {
+          // Simple cell → text value
+          const text = extractCellText(cell);
+          if (text) {
+            cellNodes.push({
+              type: 'custom',
+              ...(headerLabel ? { label: headerLabel } : {}),
+              value: text,
+            });
+          }
+        }
+      }
+      if (cellNodes.length > 0) {
+        counter.n++;
+        rowNodes.push({ type: 'group', children: cellNodes });
+      }
+    }
+    counter.n++;
+    return {
+      type: 'table',
+      selector: buildSelector(el),
+      ...(headers.length > 0 ? { headers } : {}),
+      itemCount: dataRows.length,
+      ...(rowNodes.length > 0 ? { children: rowNodes } : {}),
+    };
+  }
+
+  // Simple table: all cells are text-only → flat rows[][] format
   const rows: string[][] = [];
   for (const tr of dataRows.slice(0, MAX_TABLE_ROWS)) {
     const cells = tr.querySelectorAll('td, [role="gridcell"], [role="cell"]');
@@ -470,7 +541,7 @@ function processFormItem(
   // Complex form-item with titled sub-sections → group node with children
   if (hasSubSections(container)) {
     const children = walkChildren(container, depth, counter);
-    if (children.length === 0) return [];
+    if (children.length === 0) return []; // backtrack to walkNode's generic path
     counter.n++;
     return [{
       type: 'group',
@@ -479,7 +550,7 @@ function processFormItem(
     }];
   }
 
-  // Simple form-item → leaf node
+  // Detect field type first to determine simple vs complex path
   const detected = detectFieldType(container);
   let { fieldType } = detected;
   const { placeholder, defaultValueText, defaultValueHtml } = detected;
@@ -490,6 +561,46 @@ function processFormItem(
     const structural = detectStructuralContent(findContentArea(container));
     if (structural) {
       fieldType = structural.type;
+    }
+  }
+
+  // Complex content detection: if the content area contains multiple actionable
+  // elements or nested structures, expand via walkChildren instead of collapsing
+  // into a single leaf node. This prevents loss of internal structure.
+  const SIMPLE_FIELD_TYPES = new Set([
+    'input', 'number', 'textarea', 'select', 'checkbox', 'radio', 'switch',
+    'slider', 'rate', 'date', 'time', 'color', 'upload', 'cascader',
+    'autocomplete', 'transfer',
+  ]);
+  {
+    const contentArea = findContentArea(container);
+    // Count distinct actionable elements, but group radio/checkbox as one
+    // (a radio group with 5 radios is still one control, not 5)
+    const radios = contentArea.querySelectorAll('input[type="radio"]').length;
+    const checkboxes = contentArea.querySelectorAll('input[type="checkbox"]').length;
+    const otherActionables = contentArea.querySelectorAll(
+      'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), ' +
+      'select, textarea, button, [role="button"], ' +
+      'table, [contenteditable="true"], a[href]',
+    ).length;
+    // Treat all radios as 1 control, all checkboxes as 1 control
+    const actionableCount = otherActionables + (radios > 0 ? 1 : 0) + (checkboxes > 0 ? 1 : 0);
+    // Even "simple" field types should expand if there are many sibling controls
+    // (e.g. a form-item containing 3 inputs + 1 select = address block)
+    const threshold = SIMPLE_FIELD_TYPES.has(fieldType) ? 3 : 2;
+    if (actionableCount >= threshold) {
+      const children = walkChildren(container, depth, counter);
+      if (children.length > 0) {
+        counter.n++;
+        return [{
+          type: 'group',
+          ...(label ? { label } : {}),
+          ...(detectRequired(container) ? { required: true } : {}),
+          ...(extractProp(container) ? { fieldProp: extractProp(container) } : {}),
+          children,
+        }];
+      }
+      return []; // backtrack
     }
   }
 
@@ -601,6 +712,35 @@ function processFormItem(
   // Extract prop
   const prop = extractProp(container);
 
+  // Leaf-level local HTML: for richtext or complex nodes where value alone is insufficient
+  let localHtml: string | undefined;
+  if (defaultValueHtml) {
+    localHtml = defaultValueHtml;
+  } else if (!value && fieldType !== 'input' && fieldType !== 'textarea' && fieldType !== 'number') {
+    const contentArea = findContentArea(container);
+    localHtml = captureLocalHtml(contentArea);
+  }
+
+  // Extract embedded action buttons inside this form-item (e.g. "城市管理", "选择")
+  const embeddedButtons: string[] = [];
+  const contentArea2 = findContentArea(container);
+  for (const btn of contentArea2.querySelectorAll('button, [role="button"]')) {
+    const btnText = cleanText(btn.textContent);
+    if (btnText && btnText.length <= 20 && btnText.length >= 1) {
+      const btnCls = (btn.className || '').toLowerCase();
+      if (!/close|icon-only/.test(btnCls)) {
+        embeddedButtons.push(btnText);
+      }
+    }
+  }
+
+  // Backtrack: if no label and no value — this form-item container has no
+  // meaningful form content. Return [] so walkNode falls back to generic
+  // walkChildren (e.g. el-form-item__actions that only has buttons).
+  if (!label && !value && !placeholder) {
+    return []; // backtrack
+  }
+
   counter.n++;
   const node: StateNode = {
     type: fieldType,
@@ -612,28 +752,7 @@ function processFormItem(
     ...(prop ? { fieldProp: prop } : {}),
     ...(detected.itemCount ? { itemCount: detected.itemCount } : {}),
   };
-  // Leaf-level local HTML: for richtext or complex nodes where value alone is insufficient
-  if (defaultValueHtml) {
-    node.localHtml = defaultValueHtml;
-  } else if (!value && fieldType !== 'input' && fieldType !== 'textarea' && fieldType !== 'number') {
-    // Capture local HTML snippet for complex leaf nodes that couldn't yield a value
-    const content = findContentArea(container);
-    const snippet = captureLocalHtml(content);
-    if (snippet) node.localHtml = snippet;
-  }
-
-  // Extract embedded action buttons inside this form-item (e.g. "城市管理", "选择")
-  const embeddedButtons: string[] = [];
-  const content = findContentArea(container);
-  for (const btn of content.querySelectorAll('button, [role="button"]')) {
-    const btnText = cleanText(btn.textContent);
-    if (btnText && btnText.length <= 20 && btnText.length >= 1) {
-      const btnCls = (btn.className || '').toLowerCase();
-      if (!/close|icon-only/.test(btnCls)) {
-        embeddedButtons.push(btnText);
-      }
-    }
-  }
+  if (localHtml) node.localHtml = localHtml;
   if (embeddedButtons.length > 0) node.actions = embeddedButtons;
 
   return [node];
@@ -737,10 +856,157 @@ function walkChildren(
   return results;
 }
 
+/* ── Unified node classification ────────────────────────────────────────── */
+
+type NodeClassification =
+  | 'iframe' | 'form-item' | 'table' | 'dialog'
+  | 'standalone-control' | 'button' | 'card' | 'link'
+  | null; // null = no specific classification, treat as generic container
+
 /**
- * Process a single DOM node → returns 0, 1, or many StateNode items.
- * Transparent containers are flattened (children returned directly).
- * ARIA-labeled regions become section nodes.
+ * Classify a DOM node into a semantic type. Priority order:
+ *   1. Cross-document: iframe
+ *   2. Known component library: via classifyElement() (e.g. el-select → 'table', 'dialog')
+ *   3. Form container: via isFormContainer() (e.g. el-form-item, ant-form-item)
+ *   4. Standard HTML: native <input>, <select>, <textarea>, <table>, <button>, <a>
+ *   5. Class/id/tag identifiable: card, panel patterns
+ *   6. null → generic container, walk children
+ */
+function classifyNode(node: Element): NodeClassification {
+  const tag = node.tagName.toLowerCase();
+
+  // 1. Iframe — cross-document boundary
+  if (tag === 'iframe') return 'iframe';
+
+  // 2. Known component library via classifier
+  const cls = classifyElement(node);
+  if (cls) {
+    // Component classifier returned a known type
+    if (cls.type === 'table') return 'table';
+    if (cls.type === 'dialog') return 'dialog';
+    // Other known component types (select, cascader, etc.) inside form-items
+    // are handled by processFormItem; standalone ones fall through to control check
+  }
+
+  // 3. Form container (el-form-item, ant-form-item, fieldset, etc.)
+  if (isFormContainer(node)) return 'form-item';
+
+  // 4. Standard HTML native elements
+  if (tag === 'table') return 'table';
+  if (isStandaloneControl(node)) return 'standalone-control';
+  if (isActionButton(node)) return 'button';
+  if (tag === 'a' && node.hasAttribute('href')) return 'link';
+
+  // 5. Class/id identifiable patterns
+  const nodeCls = (node.className || '').toLowerCase();
+  if (/(?:^|[\s_-])(?:card|panel)(?:$|[\s_-])/.test(nodeCls) && !/(card-body|panel-body|card-content)/.test(nodeCls)) {
+    return 'card';
+  }
+
+  return null; // generic container
+}
+
+/* ── Specialized processors ─────────────────────────────────────────────── */
+
+function processIframe(node: Element, depth: number, counter: Counter): StateNode[] {
+  try {
+    const iframe = node as HTMLIFrameElement;
+    const iframeDoc = iframe.contentDocument;
+    if (iframeDoc?.body) {
+      const children = walkChildren(iframeDoc.body, depth + 1, counter);
+      if (children.length > 0) {
+        counter.n++;
+        const label = cleanText(iframe.getAttribute('title') || iframe.getAttribute('aria-label')) || 'Iframe';
+        return [{ type: 'section', label, blockType: 'iframe-content', children }];
+      }
+    }
+  } catch {
+    // Cross-origin iframe — skip silently
+  }
+  return [];
+}
+
+function processDialog(node: Element, depth: number, counter: Counter): StateNode[] {
+  const children = walkChildren(node, depth, counter);
+  if (children.length === 0) return [];
+  counter.n++;
+  return [{
+    type: 'section',
+    label: cleanText(node.getAttribute('aria-label') || node.getAttribute('title')) || 'Dialog',
+    blockType: 'dialog',
+    children,
+  }];
+}
+
+function processStandaloneControl(node: Element, counter: Counter): StateNode[] {
+  const label = extractControlLabel(node);
+  const { value, type, placeholder } = extractControlValue(node);
+  if (!label && !value && !placeholder) return []; // backtrack
+  counter.n++;
+  return [{
+    type: type || 'input',
+    selector: buildSelector(node),
+    ...(label ? { label } : {}),
+    ...(value ? { value } : {}),
+    ...(placeholder ? { placeholder } : {}),
+    ...(node.hasAttribute('required') || node.getAttribute('aria-required') === 'true'
+      ? { required: true } : {}),
+  }];
+}
+
+function processButton(node: Element, counter: Counter): StateNode[] {
+  const text = cleanText(node.textContent);
+  if (!text) return []; // backtrack
+  counter.n++;
+  return [{ type: 'button', selector: buildSelector(node), label: text }];
+}
+
+function processLink(node: Element, counter: Counter): StateNode[] {
+  const text = cleanText(node.textContent);
+  if (!text || text.length > 80) return []; // backtrack
+  const href = node.getAttribute('href');
+  counter.n++;
+  return [{
+    type: 'link',
+    label: text,
+    selector: buildSelector(node),
+    ...(href && href !== '#' && href !== 'javascript:void(0)' ? { href } : {}),
+  }];
+}
+
+function processCard(node: Element, depth: number, counter: Counter): StateNode[] {
+  const children = walkChildren(node, depth, counter);
+  if (children.length === 0) return []; // backtrack
+  const titleEl = node.querySelector(':scope > [class*="header"] [class*="title"], :scope > [class*="head"] [class*="title"]');
+  const cardTitle = titleEl ? cleanText(titleEl.textContent) : undefined;
+  counter.n++;
+  return [{
+    type: 'section',
+    ...(cardTitle ? { label: cardTitle } : {}),
+    blockType: inferBlockType(children, node) || 'card-block',
+    children,
+  }];
+}
+
+/* ── Main walk logic: classify → try → backtrack → fallback ─────────────── */
+
+/**
+ * Check if an element has enough visible content to warrant a localHtml fallback.
+ */
+function hasVisibleContent(el: Element): boolean {
+  const text = el.textContent?.trim();
+  if (text && text.length >= 2) return true;
+  if (el.querySelector('img, video, canvas, [contenteditable]')) return true;
+  return false;
+}
+
+/**
+ * Process a single DOM node using unified classify → try → backtrack → fallback.
+ *
+ * 1. classifyNode(el) → determine semantic type
+ * 2. tryProcess with specialized processor
+ * 3. If processor returns [] → BACKTRACK to generic walkChildren
+ * 4. If walkChildren also empty + element has visible content → localHtml fallback
  */
 function walkNode(
   node: Element,
@@ -749,76 +1015,49 @@ function walkNode(
 ): StateNode[] {
   if (counter.n >= MAX_NODES || depth > MAX_DEPTH) return [];
 
-  // Form-item: leaf (simple) or group (complex)
-  if (isFormContainer(node)) {
-    return processFormItem(node, depth, counter);
+  const classification = classifyNode(node);
+
+  // ── Step 1: Try specialized processor ──
+  let result: StateNode[] | undefined;
+
+  switch (classification) {
+    case 'iframe':
+      // Iframe has no meaningful backtrack — cross-document boundary
+      return processIframe(node, depth, counter);
+
+    case 'form-item':
+      result = processFormItem(node, depth, counter);
+      break;
+
+    case 'table':
+      result = [buildTableNode(node, counter)];
+      break;
+
+    case 'dialog':
+      result = processDialog(node, depth, counter);
+      break;
+
+    case 'standalone-control':
+      result = processStandaloneControl(node, counter);
+      break;
+
+    case 'button':
+      result = processButton(node, counter);
+      break;
+
+    case 'link':
+      result = processLink(node, counter);
+      break;
+
+    case 'card':
+      result = processCard(node, depth, counter);
+      break;
   }
 
-  // Table / grid → leaf node
-  const classification = classifyElement(node);
-  if (classification?.type === 'table') {
-    return [buildTableNode(node, counter)];
-  }
+  // If specialized processor succeeded → return
+  if (result && result.length > 0) return result;
 
-  // Dialog container → wrap as section with blockType
-  if (classification?.type === 'dialog') {
-    const children = walkChildren(node, depth, counter);
-    if (children.length === 0) return [];
-    counter.n++;
-    return [{
-      type: 'section',
-      label: cleanText(node.getAttribute('aria-label') || node.getAttribute('title')) || 'Dialog',
-      blockType: 'dialog',
-      children,
-    }];
-  }
-
-  // Standalone form control not wrapped in a form-item
-  if (isStandaloneControl(node)) {
-    const label = extractControlLabel(node);
-    const { value, type, placeholder } = extractControlValue(node);
-    if (!label && !value) return [];
-
-    counter.n++;
-    return [{
-      type: type || 'input',
-      selector: buildSelector(node),
-      ...(label ? { label } : {}),
-      ...(value ? { value } : {}),
-      ...(placeholder ? { placeholder } : {}),
-      ...(node.hasAttribute('required') || node.getAttribute('aria-required') === 'true'
-        ? { required: true }
-        : {}),
-    }];
-  }
-
-  // Action button (not icon-only / close)
-  if (isActionButton(node)) {
-    const text = cleanText(node.textContent);
-    if (!text) return [];
-    counter.n++;
-    return [{ type: 'button', selector: buildSelector(node), label: text }];
-  }
-
-  // Card-like container: has 'card' or 'panel' in class, contains mixed content
-  const nodeCls = (node.className || '').toLowerCase();
-  if (/(?:^|[\s_-])(?:card|panel)(?:$|[\s_-])/.test(nodeCls) && !/(card-body|panel-body|card-content)/.test(nodeCls)) {
-    const children = walkChildren(node, depth, counter);
-    if (children.length > 0) {
-      // Try to extract card title
-      const titleEl = node.querySelector(':scope > [class*="header"] [class*="title"], :scope > [class*="head"] [class*="title"]');
-      const cardTitle = titleEl ? cleanText(titleEl.textContent) : undefined;
-      counter.n++;
-      return [{
-        type: 'section',
-        ...(cardTitle ? { label: cardTitle } : {}),
-        blockType: inferBlockType(children, node) || 'card-block',
-        children,
-      }];
-    }
-  }
-
-  // Transparent container → recurse, possibly wrap in section
+  // ── Step 2: Backtrack — generic recursive walk ──
   const children = walkChildren(node, depth, counter);
 
   const ctx = getNodeLabel(node);
@@ -833,7 +1072,25 @@ function walkNode(
     }];
   }
 
-  return children; // flatten
+  if (children.length > 0) return children; // flatten
+
+  // ── Step 3: localHtml fallback for non-empty visible elements ──
+  // Only for elements that had a classification but processor failed,
+  // or for elements with visible content that walkChildren couldn't extract.
+  if (classification && hasVisibleContent(node)) {
+    const snippet = captureLocalHtml(node);
+    if (snippet) {
+      counter.n++;
+      return [{
+        type: 'custom',
+        selector: buildSelector(node),
+        ...(ctx ? { label: ctx } : {}),
+        localHtml: snippet,
+      }];
+    }
+  }
+
+  return [];
 }
 
 /* ── Page-level info extraction ──────────────────────────────────────────── */
@@ -933,6 +1190,242 @@ function inferBlockType(children: StateNode[], el?: Element): string | undefined
   return 'content-block';
 }
 
+/* ── Navigation scanning ─────────────────────────────────────────────────── */
+
+const ACTIVE_SELECTORS = '.active, .is-active, .router-link-active, .router-link-exact-active, [aria-current="page"], [aria-current="true"], [aria-selected="true"]';
+const ACTIVE_CLASS_RE = /(?:^|[\s_-])(?:active|selected|current|is-active)(?:$|[\s_-])/;
+
+function isActiveItem(el: Element): boolean {
+  try { if (el.matches(ACTIVE_SELECTORS)) return true; } catch { /* ignore */ }
+  return ACTIVE_CLASS_RE.test((el.className || '').toLowerCase());
+}
+
+const MAX_NAV_ITEMS = 40;
+const MAX_NAV_DEPTH = 5;
+
+/**
+ * Check if an element is a submenu container (has nested menu children).
+ * Detects: aria-haspopup, el-submenu, ant-menu-submenu, and similar patterns.
+ */
+function isSubmenu(el: Element): boolean {
+  if (el.getAttribute('aria-haspopup') === 'true') return true;
+  const cls = (el.className || '').toLowerCase();
+  if (/submenu|sub-menu/.test(cls)) return true;
+  // Has a nested ul/ol role="menu" child
+  if (el.querySelector(':scope > ul[role="menu"], :scope > ol[role="menu"], :scope > [role="menu"]')) return true;
+  return false;
+}
+
+/**
+ * Get the direct label text of a submenu (its title, not children text).
+ */
+function getSubmenuLabel(el: Element): string | undefined {
+  // Try submenu title element (el-submenu__title, ant-menu-submenu-title, etc.)
+  const titleEl = el.querySelector(
+    ':scope > [class*="submenu__title"], :scope > [class*="submenu-title"], ' +
+    ':scope > [class*="sub-menu-title"], :scope > .menu-title',
+  );
+  if (titleEl) {
+    const text = cleanText(titleEl.textContent);
+    if (text && text.length <= 50) return text;
+  }
+  // Try aria-label
+  const ariaLabel = cleanText(el.getAttribute('aria-label'));
+  if (ariaLabel) return ariaLabel;
+  // Try first direct text node or span (not inside nested ul/menu)
+  for (const child of el.children) {
+    const tag = child.tagName.toLowerCase();
+    if (tag === 'ul' || tag === 'ol' || child.getAttribute('role') === 'menu') continue;
+    if (tag === 'span' || tag === 'div' || tag === 'a') {
+      // Only use text if it doesn't contain nested menu items' text
+      if (!child.querySelector('[role="menuitem"], [role="menu"], ul, ol')) {
+        const text = cleanText(child.textContent);
+        if (text && text.length <= 50) return text;
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Check if an element is a direct actionable nav item (link, button, tab).
+ */
+function isNavActionable(el: Element): boolean {
+  const tag = el.tagName.toLowerCase();
+  if (tag === 'a' && el.hasAttribute('href')) return true;
+  if (tag === 'button') return true;
+  const role = el.getAttribute('role');
+  if (role === 'menuitem' || role === 'link' || role === 'tab') return true;
+  return false;
+}
+
+/**
+ * Extract actionable items (links, buttons) from a navigation region.
+ * Supports nested submenus — produces hierarchical StateNode[] with
+ * section nodes for submenus and link/button leaves for actionable items.
+ */
+function extractNavItems(navEl: Element, counter: Counter): StateNode[] {
+  const seen = new Set<string>();
+
+  function walkNavNode(el: Element, depth: number): StateNode | undefined {
+    if (depth > MAX_NAV_DEPTH || counter.n >= MAX_NODES || seen.size >= MAX_NAV_ITEMS) return undefined;
+    if (!(el instanceof HTMLElement) || !isVisible(el)) return undefined;
+
+    // Submenu container → recurse into children, produce section node
+    if (isSubmenu(el)) {
+      const label = getSubmenuLabel(el);
+      const children = walkNavChildren(el, depth + 1);
+      if (children.length === 0) return undefined;
+      counter.n++;
+      return {
+        type: 'section',
+        label: label || '(submenu)',
+        blockType: 'navigation',
+        ...(isActiveItem(el) ? { active: true } : {}),
+        children,
+      };
+    }
+
+    // Leaf actionable item (link, button, tab)
+    if (isNavActionable(el)) {
+      const text = cleanText(el.textContent);
+      if (!text || text.length > 50 || text.length < 1) return undefined;
+      const cls = (el.className || '').toLowerCase();
+      if (/icon-only|collapse-btn|toggle/.test(cls)) return undefined;
+      if (seen.has(text)) return undefined;
+      seen.add(text);
+
+      const href = el.getAttribute('href');
+      const active = isActiveItem(el);
+      const isLink = el.tagName === 'A' || el.getAttribute('role') === 'link' || el.getAttribute('role') === 'menuitem';
+
+      counter.n++;
+      return {
+        type: isLink ? 'link' : 'button',
+        label: text,
+        selector: buildSelector(el),
+        ...(href && href !== '#' && href !== 'javascript:void(0)' ? { href } : {}),
+        ...(active ? { active: true } : {}),
+      };
+    }
+
+    return undefined;
+  }
+
+  function walkNavChildren(parent: Element, depth: number): StateNode[] {
+    const results: StateNode[] = [];
+    // Find all candidate items: submenus and leaf actionables
+    // Use broad descendant query, then filter to "top-level within this parent"
+    const allCandidates = parent.querySelectorAll(
+      '[role="menuitem"], a[href], button, [role="link"], [role="tab"]',
+    );
+
+    const processed = new Set<Element>();
+    for (const candidate of allCandidates) {
+      if (counter.n >= MAX_NODES || seen.size >= MAX_NAV_ITEMS) break;
+      if (processed.has(candidate)) continue;
+
+      // Skip if already inside a processed submenu
+      let insideProcessed = false;
+      for (const p of processed) {
+        if (p.contains(candidate)) { insideProcessed = true; break; }
+      }
+      if (insideProcessed) continue;
+
+      // Skip if this candidate is inside a *different* submenu that hasn't been
+      // processed yet — it should be handled when we recurse into that submenu.
+      // Walk up to find if there's an unprocessed submenu between candidate and parent.
+      let intermediateSubmenu: Element | null = null;
+      let walk: Element | null = candidate.parentElement;
+      while (walk && walk !== parent) {
+        if (isSubmenu(walk) && !processed.has(walk)) {
+          intermediateSubmenu = walk;
+          break;
+        }
+        walk = walk.parentElement;
+      }
+      // If there's an intermediate submenu, process that instead of the leaf
+      const target = intermediateSubmenu || candidate;
+      if (processed.has(target)) continue;
+
+      const node = walkNavNode(target, depth);
+      if (node) {
+        results.push(node);
+        processed.add(target);
+      }
+    }
+    return results;
+  }
+
+  return walkNavChildren(navEl, 0);
+}
+
+/**
+ * Infer a navigation area label from element attributes or tag.
+ */
+function getNavLabel(el: Element): string {
+  const ariaLabel = cleanText(el.getAttribute('aria-label'));
+  if (ariaLabel) return ariaLabel;
+
+  const tag = el.tagName.toLowerCase();
+  const cls = (el.className || '').toLowerCase();
+
+  // Check for common patterns
+  if (/sidebar|side-bar|sider/.test(cls)) return 'Sidebar';
+  if (/top-?bar|header-?nav|head-?bar/.test(cls)) return 'Header';
+  if (tag === 'header') return 'Header';
+  if (tag === 'footer') return 'Footer';
+  if (tag === 'aside') return 'Sidebar';
+  if (tag === 'nav') {
+    // Try to infer from position or class
+    if (/breadcrumb/.test(cls)) return 'Breadcrumb';
+    return 'Navigation';
+  }
+
+  return 'Navigation';
+}
+
+/**
+ * Scan navigation areas (header, nav, aside, footer) outside the main content root.
+ * Returns lightweight section nodes with blockType 'navigation'.
+ */
+function scanNavigation(mainRoot: Element, counter: Counter): StateNode[] {
+  const navNodes: StateNode[] = [];
+  const processed = new Set<Element>();
+
+  // Collect candidate nav elements from body level
+  const candidates = document.body.querySelectorAll('nav, aside, header, footer, [role="navigation"], [role="banner"], [role="complementary"], [role="contentinfo"]');
+
+  for (const el of candidates) {
+    if (counter.n >= MAX_NODES) break;
+    if (!(el instanceof HTMLElement) || !isVisible(el)) continue;
+    // Skip if inside the main content root (those are handled by walkChildren)
+    if (mainRoot.contains(el) && el !== mainRoot) continue;
+    // Skip if already processed (ancestor was already captured)
+    if (processed.has(el)) continue;
+    // Skip if a parent nav is already in our list
+    let parentProcessed = false;
+    for (const p of processed) {
+      if (p.contains(el)) { parentProcessed = true; break; }
+    }
+    if (parentProcessed) continue;
+
+    const items = extractNavItems(el, counter);
+    if (items.length === 0) continue;
+
+    processed.add(el);
+    counter.n++;
+    navNodes.push({
+      type: 'section',
+      label: getNavLabel(el),
+      blockType: 'navigation',
+      children: items,
+    });
+  }
+
+  return navNodes;
+}
+
 /* ── Entry point ─────────────────────────────────────────────────────────── */
 
 export function captureInitialState(): PageInitialState {
@@ -943,7 +1436,10 @@ export function captureInitialState(): PageInitialState {
       'main, [role="main"], .main-content, .app-main, .el-main, .ant-layout-content',
     ) || document.body;
 
-  const stateTree = walkChildren(root, 0, counter);
+  // Scan navigation areas outside main content
+  const navNodes = root !== document.body ? scanNavigation(root, counter) : [];
+
+  const stateTree = [...navNodes, ...walkChildren(root, 0, counter)];
 
   // Assign blockType to top-level section/group nodes
   for (const node of stateTree) {

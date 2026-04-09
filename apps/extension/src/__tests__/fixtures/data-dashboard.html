@@ -1,0 +1,102 @@
+<nav class="top-nav">
+  <div class="nav-brand">
+    <span class="brand-icon">📊</span>
+    <span class="brand-name">DataViz Pro</span>
+  </div>
+  <div class="nav-tabs" role="tablist">
+    <a href="/overview" class="nav-tab" role="tab" aria-selected="false">Overview</a>
+    <a href="/analytics" class="nav-tab active" role="tab" aria-selected="true">Analytics</a>
+    <a href="/reports" class="nav-tab" role="tab" aria-selected="false">Reports</a>
+    <a href="/settings" class="nav-tab" role="tab" aria-selected="false">Settings</a>
+  </div>
+  <div class="nav-user">
+    <span class="user-avatar">JD</span>
+    <span class="user-name">Jane Doe</span>
+  </div>
+</nav>
+
+<main class="dashboard-main">
+  <div class="dashboard-header">
+    <h1>Analytics Dashboard</h1>
+    <div class="header-controls">
+      <div class="date-filter">
+        <label for="date-range">Date Range</label>
+        <input type="date" id="date-start" name="date_start" value="2026-03-01" />
+        <span class="date-separator">to</span>
+        <input type="date" id="date-end" name="date_end" value="2026-03-31" />
+        <button type="button" class="btn btn-apply">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-title">Total Users</div>
+      <div class="metric-value">24,583</div>
+      <div class="metric-change positive">+12.5% vs last month</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Revenue</div>
+      <div class="metric-value">¥1,284,500</div>
+      <div class="metric-change positive">+8.3% vs last month</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Conversion Rate</div>
+      <div class="metric-value">3.42%</div>
+      <div class="metric-change negative">-0.8% vs last month</div>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <h2>Traffic Trend</h2>
+    <div class="chart-container" data-chart-type="line" style="height: 300px; background: #f5f5f5; display: flex; align-items: center; justify-content: center;">
+      <span class="chart-placeholder">[Line Chart: Daily visitors over time]</span>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <h2>Daily Breakdown</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Visitors</th>
+          <th>Conversions</th>
+          <th>Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2026-03-31</td>
+          <td>1,245</td>
+          <td>43</td>
+          <td>¥52,300</td>
+        </tr>
+        <tr>
+          <td>2026-03-30</td>
+          <td>1,189</td>
+          <td>38</td>
+          <td>¥46,800</td>
+        </tr>
+        <tr>
+          <td>2026-03-29</td>
+          <td>987</td>
+          <td>29</td>
+          <td>¥38,200</td>
+        </tr>
+        <tr>
+          <td>2026-03-28</td>
+          <td>1,102</td>
+          <td>41</td>
+          <td>¥49,500</td>
+        </tr>
+        <tr>
+          <td>2026-03-27</td>
+          <td>1,310</td>
+          <td>47</td>
+          <td>¥55,100</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>

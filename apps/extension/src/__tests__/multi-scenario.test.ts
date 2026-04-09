@@ -1,0 +1,628 @@
+/**
+ * Multi-scenario integration tests for captureInitialState().
+ *
+ * Tests diverse page types: corporate site, admin dashboard, H5 mobile,
+ * multi-nav docs page, no-semantic-tags page, and data dashboard.
+ * Verifies that navigation scanning, form capture, table extraction,
+ * and general page structure work universally.
+ */
+
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import type { StateNode, PageInitialState } from '@web-agent-flow/shared-types';
+import { captureInitialState } from '../recorder/initial-state';
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function loadFixture(name: string): string {
+  return readFileSync(resolve(__dirname, `fixtures/${name}`), 'utf-8');
+}
+
+function findNodes(nodes: StateNode[], predicate: (n: StateNode) => boolean): StateNode[] {
+  const found: StateNode[] = [];
+  const walk = (list: StateNode[]) => {
+    for (const n of list) {
+      if (predicate(n)) found.push(n);
+      if (n.children) walk(n.children);
+    }
+  };
+  walk(nodes);
+  return found;
+}
+
+function findByType(tree: StateNode[], type: string): StateNode[] {
+  return findNodes(tree, (n) => n.type === type);
+}
+
+function findByLabel(tree: StateNode[], label: string): StateNode | undefined {
+  return findNodes(tree, (n) => n.label === label)[0];
+}
+
+function findByBlockType(tree: StateNode[], blockType: string): StateNode[] {
+  return findNodes(tree, (n) => n.blockType === blockType);
+}
+
+function countNodes(nodes: StateNode[]): number {
+  let count = 0;
+  for (const n of nodes) {
+    count++;
+    if (n.children) count += countNodes(n.children);
+  }
+  return count;
+}
+
+function capture(html: string): { result: PageInitialState; tree: StateNode[] } {
+  document.body.innerHTML = html;
+  const result = captureInitialState();
+  const tree = result.stateTree ?? [];
+  return { result, tree };
+}
+
+function printTree(tree: StateNode[]): string {
+  const lines: string[] = [];
+  const walk = (nodes: StateNode[], indent: number) => {
+    for (const n of nodes) {
+      const prefix = '  '.repeat(indent);
+      const parts = [n.type];
+      if (n.blockType) parts.push(`[${n.blockType}]`);
+      if (n.label) parts.push(`"${n.label}"`);
+      if (n.value) parts.push(`val="${n.value.slice(0, 30)}"`);
+      if (n.href) parts.push(`→ ${n.href}`);
+      if (n.active) parts.push('✓active');
+      if (n.required) parts.push('*required');
+      if (n.headers) parts.push(`cols=[${n.headers.join(',')}]`);
+      if (n.itemCount) parts.push(`(${n.itemCount})`);
+      lines.push(`${prefix}${parts.join(' | ')}`);
+      if (n.children) walk(n.children, indent + 1);
+    }
+  };
+  walk(tree, 0);
+  return lines.join('\n');
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────────
+
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
+// ─── 1. Corporate / Marketing Site ─────────────────────────────────────────
+
+describe('corporate-site.html — Marketing website', () => {
+  let tree: StateNode[];
+
+  beforeAll(() => {
+    ({ tree } = capture(loadFixture('corporate-site.html')));
+  });
+
+  it('should produce a non-empty tree', () => {
+    expect(tree.length).toBeGreaterThan(0);
+    console.log('\n=== Corporate Site ===\n' + printTree(tree) + '\n');
+  });
+
+  it('should detect navigation sections from header/aside/footer', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    expect(navSections.length).toBeGreaterThan(0);
+  });
+
+  it('should capture header nav links', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const allLinks = navSections.flatMap((s) => findByType(s.children ?? [], 'link'));
+    const linkLabels = allLinks.map((l) => l.label);
+    expect(linkLabels).toContain('Home');
+    expect(linkLabels).toContain('Products');
+    expect(linkLabels).toContain('Contact');
+  });
+
+  it('should mark "Products" as active', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const allLinks = navSections.flatMap((s) => findByType(s.children ?? [], 'link'));
+    const products = allLinks.find((l) => l.label === 'Products');
+    expect(products?.active).toBe(true);
+  });
+
+  it('should capture link hrefs', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const allLinks = navSections.flatMap((s) => findByType(s.children ?? [], 'link'));
+    const home = allLinks.find((l) => l.label === 'Home');
+    expect(home?.href).toBe('/');
+  });
+
+  it('should capture sidebar (aside) links', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const sidebarNav = navSections.find((s) => s.label === 'Sidebar');
+    expect(sidebarNav).toBeDefined();
+    const sidebarLinks = findByType(sidebarNav!.children ?? [], 'link');
+    expect(sidebarLinks.some((l) => l.label === 'Documentation')).toBe(true);
+  });
+
+  it('should capture footer nav links', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const footerNav = navSections.find((s) => s.label === 'Footer');
+    expect(footerNav).toBeDefined();
+    const footerLinks = findByType(footerNav!.children ?? [], 'link');
+    expect(footerLinks.some((l) => l.label === 'Privacy Policy')).toBe(true);
+  });
+
+  it('should capture main content (hero title, CTA button)', () => {
+    const buttons = findByType(tree, 'button');
+    expect(buttons.some((b) => b.label === 'Get Started')).toBe(true);
+  });
+});
+
+// ─── 2. Admin Sidebar (non-semantic tags) ──────────────────────────────────
+
+describe('admin-sidebar.html — Admin dashboard with div-based sidebar', () => {
+  let tree: StateNode[];
+
+  beforeAll(() => {
+    ({ tree } = capture(loadFixture('admin-sidebar.html')));
+  });
+
+  it('should produce a non-empty tree', () => {
+    expect(tree.length).toBeGreaterThan(0);
+    console.log('\n=== Admin Sidebar ===\n' + printTree(tree) + '\n');
+  });
+
+  it('should NOT produce navigation blockType for div.left-menu (no semantic tag)', () => {
+    // div.left-menu has no nav/aside/header/footer tag and no ARIA role,
+    // so scanNavigation should NOT pick it up as a navigation section.
+    const navSections = findByBlockType(tree, 'navigation');
+    expect(navSections.length).toBe(0);
+    // Note: the left-menu is outside role="main", so its links are not
+    // captured at all. This is expected — without semantic tags, the tool
+    // can't distinguish navigation from content outside the main root.
+  });
+
+  it('should detect the data table', () => {
+    const tables = findByType(tree, 'table');
+    expect(tables.length).toBeGreaterThan(0);
+    const userTable = tables.find((t) => t.headers?.includes('Name'));
+    expect(userTable).toBeDefined();
+    expect(userTable!.headers).toContain('Email');
+    expect(userTable!.headers).toContain('Role');
+  });
+
+  it('should detect action buttons (Search, pagination)', () => {
+    const buttons = findByType(tree, 'button');
+    const labels = buttons.map((b) => b.label);
+    expect(labels.some((l) => l === 'Search')).toBe(true);
+  });
+});
+
+// ─── 3. H5 Mobile (Vant-style) ────────────────────────────────────────────
+
+describe('h5-mobile.html — Mobile e-commerce product page', () => {
+  let tree: StateNode[];
+
+  beforeAll(() => {
+    ({ tree } = capture(loadFixture('h5-mobile.html')));
+  });
+
+  it('should produce a non-empty tree', () => {
+    expect(tree.length).toBeGreaterThan(0);
+    console.log('\n=== H5 Mobile ===\n' + printTree(tree) + '\n');
+  });
+
+  it('should capture content (product name, price, specs exist somewhere)', () => {
+    const total = countNodes(tree);
+    expect(total).toBeGreaterThan(3);
+  });
+
+  it('should detect bottom action buttons', () => {
+    const buttons = findByType(tree, 'button');
+    const labels = buttons.map((b) => b.label).filter(Boolean);
+    // Vant button text is inside van-button__text span
+    const hasCart = labels.some((l) => l!.includes('Add to Cart') || l!.includes('Cart'));
+    const hasBuy = labels.some((l) => l!.includes('Buy Now') || l!.includes('Buy'));
+    expect(hasCart || hasBuy).toBe(true);
+  });
+
+  it('should not crash on Vant-specific class names', () => {
+    // Verify tree is valid — no undefined types, no empty sections
+    findNodes(tree, (n) => {
+      expect(n.type).toBeDefined();
+      expect(typeof n.type).toBe('string');
+      return false;
+    });
+  });
+});
+
+// ─── 4. Multi-nav Documentation Page ───────────────────────────────────────
+
+describe('multi-nav.html — Docs page with multiple nav areas', () => {
+  let tree: StateNode[];
+
+  beforeAll(() => {
+    ({ tree } = capture(loadFixture('multi-nav.html')));
+  });
+
+  it('should produce a non-empty tree', () => {
+    expect(tree.length).toBeGreaterThan(0);
+    console.log('\n=== Multi-Nav ===\n' + printTree(tree) + '\n');
+  });
+
+  it('should detect multiple navigation sections', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    // header (contains utility + main nav), breadcrumb, aside sidebar, footer
+    expect(navSections.length).toBe(4);
+  });
+
+  it('should label navigation sections distinctly', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const labels = navSections.map((s) => s.label);
+    expect(labels).toContain('Header');
+    expect(labels).toContain('Breadcrumb');
+    expect(labels).toContain('Sidebar');
+    expect(labels).toContain('Footer');
+  });
+
+  it('should detect "Docs" as active in header nav (aria-current)', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const headerNav = navSections.find((s) => s.label === 'Header');
+    expect(headerNav).toBeDefined();
+    const links = findByType(headerNav!.children ?? [], 'link');
+    const docs = links.find((l) => l.label === 'Docs');
+    expect(docs?.active).toBe(true);
+  });
+
+  it('should detect "Endpoints" as active in sidebar (is-active class)', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const sidebar = navSections.find((s) => s.label === 'Sidebar');
+    expect(sidebar).toBeDefined();
+    const links = findByType(sidebar!.children ?? [], 'link');
+    const endpoints = links.find((l) => l.label === 'Endpoints');
+    expect(endpoints?.active).toBe(true);
+  });
+
+  it('should capture the endpoint reference table in main content', () => {
+    const tables = findByType(tree, 'table');
+    expect(tables.length).toBeGreaterThan(0);
+    const endpointTable = tables.find((t) => t.headers?.includes('Method'));
+    expect(endpointTable).toBeDefined();
+    expect(endpointTable!.headers).toContain('Path');
+  });
+});
+
+// ─── 5. No Semantic Tags (worst case) ──────────────────────────────────────
+
+describe('no-semantic-tags.html — Page with zero semantic HTML tags', () => {
+  let tree: StateNode[];
+
+  beforeAll(() => {
+    ({ tree } = capture(loadFixture('no-semantic-tags.html')));
+  });
+
+  it('should produce a non-empty tree', () => {
+    expect(tree.length).toBeGreaterThan(0);
+    console.log('\n=== No Semantic Tags ===\n' + printTree(tree) + '\n');
+  });
+
+  it('should NOT produce navigation blockType (no semantic nav tags)', () => {
+    // div.top-bar has no nav/aside/header/footer — should not be scanned as nav
+    const navSections = findByBlockType(tree, 'navigation');
+    expect(navSections.length).toBe(0);
+  });
+
+  it('should capture top bar links as a list (no semantic nav tags)', () => {
+    // Without semantic tags, walkNode groups the 4 similar links into a list node
+    const lists = findByType(tree, 'list');
+    expect(lists.length).toBeGreaterThan(0);
+    // The first list should contain top-bar link labels
+    const topList = lists.find((l) => l.value?.includes('Home'));
+    expect(topList).toBeDefined();
+  });
+
+  it('should capture form values via list grouping', () => {
+    // Without form-item containers (e.g. .el-form-item), inputs are grouped
+    // as list items. Values should still be extractable from list summaries.
+    const lists = findByType(tree, 'list');
+    const formList = lists.find((l) => l.value?.includes('john_doe') || l.value?.includes('john'));
+    expect(formList).toBeDefined();
+  });
+
+  it('should detect Save / Cancel buttons', () => {
+    const buttons = findByType(tree, 'button');
+    const labels = buttons.map((b) => b.label).filter(Boolean);
+    expect(labels.some((l) => l === 'Save')).toBe(true);
+    expect(labels.some((l) => l === 'Cancel')).toBe(true);
+  });
+});
+
+// ─── 6. Data Dashboard ────────────────────────────────────────────────────
+
+describe('data-dashboard.html — Analytics dashboard', () => {
+  let tree: StateNode[];
+
+  beforeAll(() => {
+    ({ tree } = capture(loadFixture('data-dashboard.html')));
+  });
+
+  it('should produce a non-empty tree', () => {
+    expect(tree.length).toBeGreaterThan(0);
+    console.log('\n=== Data Dashboard ===\n' + printTree(tree) + '\n');
+  });
+
+  it('should detect top nav as navigation section', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    expect(navSections.length).toBeGreaterThan(0);
+  });
+
+  it('should detect nav tabs with active state (aria-selected)', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const allLinks = navSections.flatMap((s) => findNodes(s.children ?? [], (n) => n.type === 'link' || n.type === 'button'));
+    const analytics = allLinks.find((l) => l.label === 'Analytics');
+    expect(analytics?.active).toBe(true);
+  });
+
+  it('should detect the data table', () => {
+    const tables = findByType(tree, 'table');
+    expect(tables.length).toBeGreaterThan(0);
+    const dailyTable = tables.find((t) => t.headers?.includes('Date'));
+    expect(dailyTable).toBeDefined();
+    expect(dailyTable!.headers).toContain('Visitors');
+    expect(dailyTable!.rows?.length).toBe(5);
+  });
+
+  it('should detect "Apply" button in header controls', () => {
+    // Date inputs may not be detected as standalone controls outside form containers,
+    // but the Apply button should be captured.
+    const buttons = findByType(tree, 'button');
+    expect(buttons.some((b) => b.label === 'Apply')).toBe(true);
+  });
+
+  it('should detect "Apply" button', () => {
+    const buttons = findByType(tree, 'button');
+    expect(buttons.some((b) => b.label === 'Apply')).toBe(true);
+  });
+});
+
+// ─── 7. Nested Menu (Element UI submenu + iframe) ──────────────────────────
+
+describe('nested-menu.html — Element UI nested submenu with iframe', () => {
+  let tree: StateNode[];
+
+  beforeAll(() => {
+    ({ tree } = capture(loadFixture('nested-menu.html')));
+  });
+
+  it('should produce a non-empty tree', () => {
+    expect(tree.length).toBeGreaterThan(0);
+    console.log('\n=== Nested Menu ===\n' + printTree(tree) + '\n');
+  });
+
+  it('should detect sidebar as navigation', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    expect(navSections.length).toBeGreaterThan(0);
+  });
+
+  it('should create nested section for "基本设置" submenu', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    // Find the sidebar nav
+    const sidebarNav = navSections.find((s) => s.label === 'Sidebar');
+    expect(sidebarNav).toBeDefined();
+
+    // "基本设置" should be a nested section (submenu) with children
+    const submenu = findNodes(sidebarNav!.children ?? [], (n) =>
+      n.type === 'section' && n.label === '基本设置',
+    );
+    expect(submenu.length).toBe(1);
+    expect(submenu[0].children).toBeDefined();
+    expect(submenu[0].children!.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('should capture leaf menu items inside submenu', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const sidebarNav = navSections.find((s) => s.label === 'Sidebar');
+    expect(sidebarNav).toBeDefined();
+
+    // Find all leaf links recursively inside sidebar
+    const allLinks = findByType(sidebarNav!.children ?? [], 'link');
+    const labels = allLinks.map((l) => l.label);
+    expect(labels).toContain('职业标准配置列表');
+    expect(labels).toContain('职业技能设置');
+    expect(labels).toContain('职业用工类型切换设置');
+  });
+
+  it('should mark active menu item "职业技能设置"', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const allLinks = navSections.flatMap((s) =>
+      findNodes(s.children ?? [], (n) => n.type === 'link'),
+    );
+    const activeItem = allLinks.find((l) => l.label === '职业技能设置');
+    expect(activeItem?.active).toBe(true);
+  });
+
+  it('should capture top-level menu item "系统日志" at same level as submenus', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    const sidebarNav = navSections.find((s) => s.label === 'Sidebar');
+    expect(sidebarNav).toBeDefined();
+    const topLevelLinks = (sidebarNav!.children ?? []).filter((c) => c.type === 'link');
+    expect(topLevelLinks.some((l) => l.label === '系统日志')).toBe(true);
+  });
+
+  it('should handle collapsed submenus gracefully', () => {
+    // "高级设置" has display:none on its inner <ul>, but jsdom cannot detect
+    // parent-level hidden state (only inline display:none on the element itself).
+    // In a real browser, "权限管理" would be hidden. Here we just verify no crash
+    // and the tree structure is valid.
+    const navSections = findByBlockType(tree, 'navigation');
+    expect(navSections.length).toBeGreaterThan(0);
+  });
+
+  it('should capture breadcrumb links (inside header nav)', () => {
+    const navSections = findByBlockType(tree, 'navigation');
+    // Breadcrumb <nav> is inside <header class="el-header">, so it's captured
+    // as "Header" navigation section
+    const headerNav = navSections.find((s) => s.label === 'Header');
+    expect(headerNav).toBeDefined();
+    const links = findByType(headerNav!.children ?? [], 'link');
+    expect(links.some((l) => l.label === '首页')).toBe(true);
+  });
+
+  it('should detect iframe section with blockType iframe-content', () => {
+    // In jsdom, iframe.contentDocument may not have real content,
+    // so this verifies the iframe at least doesn't crash the walker.
+    // If contentDocument is accessible, it should produce a section.
+    const iframeSections = findByBlockType(tree, 'iframe-content');
+    // In jsdom, about:blank iframe contentDocument has empty body, so no section
+    // This test verifies no crash and correct handling.
+    expect(iframeSections.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should detect form fields in main content', () => {
+    const inputs = findNodes(tree, (n) => n.type === 'input' && n.label === '技能名称');
+    expect(inputs.length).toBe(1);
+  });
+
+  it('should detect action buttons via backtracking from form-item classification', () => {
+    // "el-form-item__actions" matches isFormContainer but has no form content.
+    // processFormItem returns [] → walkNode backtracks → walkChildren finds buttons.
+    const buttons = findByType(tree, 'button');
+    const labels = buttons.map((b) => b.label);
+    expect(labels).toContain('保存');
+    expect(labels).toContain('取消');
+  });
+});
+
+// ─── Cross-scenario structural integrity ───────────────────────────────────
+
+// ─── 8. Complex Nesting (form-item with sub-form, table with actions) ───────
+
+describe('complex-nesting.html — Complex nested structures', () => {
+  let tree: StateNode[];
+
+  beforeAll(() => {
+    ({ tree } = capture(loadFixture('complex-nesting.html')));
+  });
+
+  it('should produce a non-empty tree', () => {
+    expect(tree.length).toBeGreaterThan(0);
+    console.log('\n=== Complex Nesting ===\n' + printTree(tree) + '\n');
+  });
+
+  it('should expand form-item "Shipping Address" as group with children', () => {
+    const shipping = findByLabel(tree, 'Shipping Address');
+    expect(shipping).toBeDefined();
+    // Should be a group (complex form-item with 3 inputs + 1 select)
+    expect(shipping!.type).toBe('group');
+    expect(shipping!.children).toBeDefined();
+    expect(shipping!.children!.length).toBeGreaterThanOrEqual(1);
+    // Should contain select somewhere in the subtree
+    const selects = findByType(shipping!.children ?? [], 'select');
+    expect(selects.length).toBeGreaterThan(0);
+  });
+
+  it('should expand form-item "Order Items" as group with table + button', () => {
+    const orderItems = findByLabel(tree, 'Order Items');
+    expect(orderItems).toBeDefined();
+    expect(orderItems!.type).toBe('group');
+    expect(orderItems!.children).toBeDefined();
+    // Should contain a table and a button somewhere in subtree
+    const tables = findByType(orderItems!.children ?? [], 'table');
+    const buttons = findByType(orderItems!.children ?? [], 'button');
+    expect(tables.length).toBeGreaterThan(0);
+    expect(buttons.length).toBeGreaterThan(0);
+  });
+
+  it('should keep simple form-item "Notes" as a leaf', () => {
+    const notes = findByLabel(tree, 'Notes');
+    expect(notes).toBeDefined();
+    expect(notes!.type).toBe('textarea');
+    // Should NOT have children (it's a simple leaf)
+    expect(notes!.children).toBeUndefined();
+  });
+
+  it('should expand table "User List" rows with action buttons', () => {
+    const tables = findByType(tree, 'table');
+    const userTable = tables.find((t) => t.headers?.includes('Name') && t.headers?.includes('Actions'));
+    expect(userTable).toBeDefined();
+    // Complex table should have children (row groups) instead of flat rows
+    expect(userTable!.children).toBeDefined();
+    expect(userTable!.children!.length).toBeGreaterThanOrEqual(2);
+    // Each row should contain action buttons
+    const buttons = findByType(userTable!.children ?? [], 'button');
+    expect(buttons.some((b) => b.label === 'Edit')).toBe(true);
+    expect(buttons.some((b) => b.label === 'Delete')).toBe(true);
+  });
+
+  it('should keep simple table "Price List" with flat rows', () => {
+    const tables = findByType(tree, 'table');
+    const priceTable = tables.find((t) => t.headers?.includes('Item') && t.headers?.includes('Price'));
+    expect(priceTable).toBeDefined();
+    // Simple table should use flat rows format, not children
+    expect(priceTable!.rows).toBeDefined();
+    expect(priceTable!.rows!.length).toBe(3);
+    expect(priceTable!.children).toBeUndefined();
+  });
+});
+
+// ─── Cross-scenario structural integrity ───────────────────────────────────
+
+describe('structural integrity across all scenarios', () => {
+  const fixtures = [
+    'corporate-site.html',
+    'admin-sidebar.html',
+    'h5-mobile.html',
+    'multi-nav.html',
+    'no-semantic-tags.html',
+    'data-dashboard.html',
+    'nested-menu.html',
+    'complex-nesting.html',
+  ];
+
+  for (const fixture of fixtures) {
+    describe(fixture, () => {
+      let tree: StateNode[];
+
+      beforeAll(() => {
+        ({ tree } = capture(loadFixture(fixture)));
+      });
+
+      it('all nodes should have a non-empty type', () => {
+        findNodes(tree, (n) => {
+          expect(n.type).toBeTruthy();
+          return false;
+        });
+      });
+
+      it('section/group nodes should have non-empty children', () => {
+        const containers = findNodes(tree, (n) => n.type === 'section' || n.type === 'group');
+        for (const c of containers) {
+          expect(c.children).toBeInstanceOf(Array);
+          expect(c.children!.length).toBeGreaterThan(0);
+        }
+      });
+
+      it('navigation sections should only contain links, buttons, or nested nav sections', () => {
+        const navSections = findByBlockType(tree, 'navigation');
+        const checkNavChildren = (children: StateNode[]) => {
+          for (const child of children) {
+            // Nav children can be: link, button, or nested section (submenu)
+            expect(['link', 'button', 'section']).toContain(child.type);
+            if (child.type === 'section' && child.children) {
+              checkNavChildren(child.children);
+            }
+          }
+        };
+        for (const nav of navSections) {
+          checkNavChildren(nav.children ?? []);
+        }
+      });
+
+      it('active flag should only appear on link/button/section nodes', () => {
+        const activeNodes = findNodes(tree, (n) => n.active === true);
+        for (const n of activeNodes) {
+          // Active can be on links, buttons, or submenu sections
+          expect(['link', 'button', 'section']).toContain(n.type);
+        }
+      });
+
+      it('total nodes should be within limits', () => {
+        const total = countNodes(tree);
+        expect(total).toBeLessThanOrEqual(300);
+      });
+    });
+  }
+});

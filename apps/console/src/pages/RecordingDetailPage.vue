@@ -174,9 +174,20 @@
                     </span>
                   </template>
 
+                  <!-- Link nodes (navigation) -->
+                  <template v-else-if="row.node.type === 'link'">
+                    <a-tag color="magenta" style="font-size: 11px">link</a-tag>
+                    <a-tag v-if="row.node.active" color="green" style="font-size: 9px">active</a-tag>
+                    <span style="font-weight: 500">{{ row.node.label }}</span>
+                    <span v-if="row.node.href" style="color: #999; font-size: 11px; margin-left: 8px">
+                      → {{ truncate(row.node.href, 60) }}
+                    </span>
+                  </template>
+
                   <!-- Button nodes -->
                   <template v-else-if="row.node.type === 'button'">
                     <a-tag color="orange" style="font-size: 11px">button</a-tag>
+                    <a-tag v-if="row.node.active" color="green" style="font-size: 9px">active</a-tag>
                     <span style="font-weight: 500">{{ row.node.label }}</span>
                   </template>
 
@@ -893,6 +904,7 @@ function blockTypeColor(blockType: string): string {
     'richtext-block': 'purple',
     'repeated-items-block': 'cyan',
     'table-section': 'volcano',
+    'navigation': 'magenta',
   };
   return map[blockType] ?? 'default';
 }

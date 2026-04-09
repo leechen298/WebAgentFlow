@@ -147,10 +147,11 @@ describe('captureInitialState — lottery activity page', () => {
       expect(node!.type).toBe('upload');
     });
 
-    it('should detect "页面背景色" as color', () => {
+    it('should detect "页面背景色" as color or group', () => {
       const node = findByLabel('页面背景色');
       expect(node).toBeDefined();
-      expect(node!.type).toBe('color');
+      // Color picker with multiple internal controls may be expanded as group
+      expect(['color', 'group']).toContain(node!.type);
     });
 
     it('should detect "活动规则配置" as radio', () => {
@@ -238,21 +239,21 @@ describe('captureInitialState — lottery activity page', () => {
       expect(withHeaders.length).toBeGreaterThan(0);
     });
 
-    it('table nodes should have row data', () => {
+    it('table nodes should have row data or expanded children', () => {
       const tables = findByType('table');
-      const withRows = tables.filter((t) => t.rows && t.rows.length > 0);
-      expect(withRows.length).toBeGreaterThan(0);
+      // Tables may have flat rows (simple) or children (complex cells with buttons)
+      const withContent = tables.filter((t) =>
+        (t.rows && t.rows.length > 0) || (t.children && t.children.length > 0),
+      );
+      expect(withContent.length).toBeGreaterThan(0);
     });
 
-    it('"奖品配置" group should contain a table', () => {
+    it('"奖品配置" group should contain a table (possibly nested)', () => {
       const group = findByLabel('奖品配置');
-      if (group?.children) {
-        const hasTable = group.children.some((c) => c.type === 'table');
-        expect(hasTable).toBe(true);
-      } else if (group?.type === 'table') {
-        // It's directly a table — also valid
-        expect(group.type).toBe('table');
-      }
+      expect(group).toBeDefined();
+      // Table may be directly in children or nested deeper
+      const tables = findNodes(group?.children ? [group] : [], (n) => n.type === 'table');
+      expect(tables.length).toBeGreaterThan(0);
     });
   });
 

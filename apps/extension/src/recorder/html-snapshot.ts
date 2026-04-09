@@ -12,7 +12,7 @@
  * navigation chrome.
  */
 
-import { isNavigationChrome } from './component-classifier';
+
 
 const MAX_HTML_SIZE = 80_000;
 const MAX_TEXT_NODE = 100;
@@ -89,9 +89,6 @@ function simplifyNode(node: Node, depth: number, output: string[], size: { curre
 
   // Skip hidden elements
   if (isHidden(el)) return;
-
-  // Skip navigation chrome (except at top level)
-  if (depth > 1 && isNavigationChrome(el)) return;
 
   // Build opening tag with filtered attributes
   const attrs = buildAttrs(el);
