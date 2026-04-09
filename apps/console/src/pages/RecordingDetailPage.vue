@@ -195,7 +195,12 @@
                     <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
                       ({{ row.node.itemCount }})
                     </span>
-                    <a-tag v-if="row.node.localHtml || row.node.htmlContent" color="purple" style="font-size: 9px; margin-left: 4px">
+                    <a-tag
+                      v-if="row.node.localHtml || row.node.htmlContent"
+                      color="purple"
+                      style="font-size: 9px; margin-left: 4px; cursor: pointer"
+                      @click="openLocalHtmlModal(row.node)"
+                    >
                       localHtml
                     </a-tag>
                   </template>
@@ -556,6 +561,34 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- Local HTML Preview Modal -->
+    <a-modal
+      v-model:open="localHtmlModalOpen"
+      :title="localHtmlModalTitle"
+      :width="800"
+      :footer="null"
+    >
+      <div style="margin-bottom: 12px; color: #666; font-size: 12px">
+        Rendered preview of leaf-level local HTML snippet.
+      </div>
+      <a-tabs default-active-key="preview">
+        <a-tab-pane key="preview" tab="Preview">
+          <div
+            class="html-preview-container"
+            v-html="localHtmlContent"
+          />
+        </a-tab-pane>
+        <a-tab-pane key="raw" tab="Raw HTML">
+          <a-textarea
+            :value="localHtmlContent"
+            :rows="16"
+            readonly
+            style="font-family: monospace; font-size: 11px"
+          />
+        </a-tab-pane>
+      </a-tabs>
+    </a-modal>
   </div>
 </template>
 
@@ -584,6 +617,9 @@ const normError = ref('');
 const fieldDetailModalOpen = ref(false);
 const fieldDetailRecord = ref<InitialFieldSnapshot | null>(null);
 const tableDetailNode = ref<StateNode | null>(null);
+const localHtmlModalOpen = ref(false);
+const localHtmlModalTitle = ref('Local HTML Preview');
+const localHtmlContent = ref('');
 
 const formData = reactive({
   name: '',
@@ -782,6 +818,14 @@ function openTableDetailModal(node: StateNode): void {
   fieldDetailRecord.value = null;
   tableDetailNode.value = node;
   fieldDetailModalOpen.value = true;
+}
+
+function openLocalHtmlModal(node: StateNode): void {
+  const html = node.localHtml ?? (node as Record<string, unknown>).htmlContent as string | undefined;
+  if (!html) return;
+  localHtmlModalTitle.value = node.label ? `HTML Preview: ${node.label}` : 'HTML Preview';
+  localHtmlContent.value = html;
+  localHtmlModalOpen.value = true;
 }
 
 function blockTypeColor(blockType: string): string {
@@ -995,5 +1039,22 @@ onUnmounted(() => {
 }
 .state-tree-row:hover {
   background: #fafafa;
+}
+.html-preview-container {
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  padding: 16px;
+  min-height: 200px;
+  max-height: 500px;
+  overflow-y: auto;
+  background: #fff;
+}
+.html-preview-container :deep(*) {
+  all: revert;
+  box-sizing: border-box;
+}
+.html-preview-container :deep(style),
+.html-preview-container :deep(script) {
+  display: none;
 }
 </style>
