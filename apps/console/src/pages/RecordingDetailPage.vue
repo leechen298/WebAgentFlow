@@ -562,12 +562,11 @@
       </a-form>
     </a-modal>
 
-    <!-- Local HTML Preview Modal -->
-    <a-modal
+    <!-- Local HTML Preview Drawer -->
+    <a-drawer
       v-model:open="localHtmlModalOpen"
       :title="localHtmlModalTitle"
-      :width="800"
-      :footer="null"
+      :width="640"
     >
       <div style="margin-bottom: 12px; color: #666; font-size: 12px">
         Rendered preview of leaf-level local HTML snippet.
@@ -582,13 +581,13 @@
         <a-tab-pane key="raw" tab="Raw HTML">
           <a-textarea
             :value="localHtmlContent"
-            :rows="16"
+            :rows="20"
             readonly
             style="font-family: monospace; font-size: 11px"
           />
         </a-tab-pane>
       </a-tabs>
-    </a-modal>
+    </a-drawer>
   </div>
 </template>
 
