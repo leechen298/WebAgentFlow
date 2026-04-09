@@ -748,15 +748,31 @@ function processFormItem(
   ]);
   {
     const contentArea = findContentArea(container);
-    // Count distinct actionable elements, but group radio/checkbox as one
-    // (a radio group with 5 radios is still one control, not 5)
-    const radios = contentArea.querySelectorAll('input[type="radio"]').length;
-    const checkboxes = contentArea.querySelectorAll('input[type="checkbox"]').length;
-    const otherActionables = contentArea.querySelectorAll(
+    // Count distinct VISIBLE actionable elements (exclude elements inside
+    // display:none ancestors like hidden dropdown panels / popup menus).
+    // Hidden popup buttons should not trigger complex field expansion.
+    const isInsideHidden = (el: Element): boolean => {
+      let cur = el.parentElement;
+      while (cur && cur !== contentArea) {
+        if ((cur as HTMLElement).style?.display === 'none') return true;
+        cur = cur.parentElement;
+      }
+      return false;
+    };
+    const countVisible = (selector: string): number => {
+      let count = 0;
+      for (const el of contentArea.querySelectorAll(selector)) {
+        if (!isInsideHidden(el)) count++;
+      }
+      return count;
+    };
+    const radios = countVisible('input[type="radio"]');
+    const checkboxes = countVisible('input[type="checkbox"]');
+    const otherActionables = countVisible(
       'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), ' +
       'select, textarea, button, [role="button"], ' +
       'table, [contenteditable="true"], a[href]',
-    ).length;
+    );
     // Treat all radios as 1 control, all checkboxes as 1 control
     const actionableCount = otherActionables + (radios > 0 ? 1 : 0) + (checkboxes > 0 ? 1 : 0);
     // Even "simple" field types should expand if there are many sibling controls
@@ -881,6 +897,15 @@ function processFormItem(
       }
     }
     if (urls.length > 0) value = urls.join(', ').slice(0, 500);
+  }
+
+  // Color picker: extract selected color from background-color style
+  if (fieldType === 'color' && !value) {
+    const content = findContentArea(container);
+    const colorInner = content.querySelector('[class*="color-inner"], [class*="color__value"], [class*="color-block"]') as HTMLElement | null;
+    if (colorInner?.style.backgroundColor) {
+      value = colorInner.style.backgroundColor;
+    }
   }
 
   // Extract prop
