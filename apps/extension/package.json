@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
-    "lint": "eslint . --ext .ts,.vue"
+    "lint": "eslint . --ext .ts,.vue",
+    "test": "vitest run",
+    "test:dev": "vitest"
   },
   "dependencies": {
     "@web-agent-flow/shared-types": "workspace:*",
@@ -20,8 +22,10 @@
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^9.28.0",
+    "jsdom": "^29.0.1",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2",
+    "vitest": "^4.1.0",
     "wxt": "^0.20.6"
   }
 }

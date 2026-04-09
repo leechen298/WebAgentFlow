@@ -447,17 +447,20 @@
           <a-descriptions-item v-if="tableDetailNode.label" label="Label">
             {{ tableDetailNode.label }}
           </a-descriptions-item>
-          <a-descriptions-item v-if="tableDetailNode.itemCount" label="Rows">
-            {{ tableDetailNode.itemCount }}
+          <a-descriptions-item label="Rows">
+            {{ tableDetailNode.itemCount ?? tableDetailNode.rows?.length ?? 0 }}
           </a-descriptions-item>
         </a-descriptions>
-        <div v-if="tableDetailNode.headers && tableDetailNode.headers.length > 0">
-          <div style="font-weight: 500; margin-bottom: 8px">Column Headers:</div>
-          <a-space wrap>
-            <a-tag v-for="(h, idx) in tableDetailNode.headers" :key="idx" color="blue">{{ h }}</a-tag>
-          </a-space>
-        </div>
-        <div v-else style="color: #999">No column headers detected.</div>
+        <a-table
+          v-if="treeTableColumns.length > 0"
+          :columns="treeTableColumns"
+          :data-source="treeTableRows"
+          :pagination="false"
+          size="small"
+          :row-key="(_r: Record<string, string>, i: number) => i"
+          style="margin-top: 8px"
+        />
+        <div v-else style="color: #999">No table data captured.</div>
       </div>
     </a-modal>
 
@@ -676,6 +679,28 @@ const parsedListItems = computed<string[]>(() => {
   // Strip "共N项：" prefix
   const body = text.replace(/^共\d+项[：:]\s*/, '');
   return body.split(/[；;]/).filter(Boolean).map((s) => s.trim());
+});
+
+const treeTableColumns = computed(() => {
+  const node = tableDetailNode.value;
+  if (!node) return [];
+  if (node.headers && node.headers.length > 0) {
+    return node.headers.map((h, i) => ({ title: h, dataIndex: `col${i}`, key: `col${i}`, ellipsis: true }));
+  }
+  // No headers — infer column count from first row
+  const firstRow = node.rows?.[0];
+  if (!firstRow) return [];
+  return firstRow.map((_, i) => ({ title: `Col ${i + 1}`, dataIndex: `col${i}`, key: `col${i}`, ellipsis: true }));
+});
+
+const treeTableRows = computed<Array<Record<string, string>>>(() => {
+  const node = tableDetailNode.value;
+  if (!node?.rows) return [];
+  return node.rows.map((row) => {
+    const record: Record<string, string> = {};
+    row.forEach((cell, i) => { record[`col${i}`] = cell; });
+    return record;
+  });
 });
 
 function openFieldDetailModal(record: InitialFieldSnapshot): void {

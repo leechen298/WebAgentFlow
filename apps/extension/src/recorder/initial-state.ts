@@ -25,8 +25,68 @@ import { cleanLabel, isVisible, extractItemTitle } from './dom-utils';
 
 const MAX_NODES = 300;
 const MAX_DEPTH = 30;
+const SELECTOR_MAX_DEPTH = 5;
 
 interface Counter { n: number }
+
+/* ── Selector builder ────────────────────────────────────────────────────── */
+
+/**
+ * Build a short, reasonably unique CSS selector for the given element.
+ * Walks up to SELECTOR_MAX_DEPTH ancestors or until hitting an #id.
+ */
+function buildSelector(el: Element): string {
+  const parts: string[] = [];
+  let current: Element | null = el;
+
+  for (let d = 0; d < SELECTOR_MAX_DEPTH && current && current !== document.body; d++) {
+    const tag = current.tagName.toLowerCase();
+    const id = current.getAttribute('id');
+
+    // If element has an id, use it and stop
+    if (id && /^[a-zA-Z][\w-]*$/.test(id)) {
+      parts.unshift(`#${id}`);
+      break;
+    }
+
+    // Build tag + distinguishing attributes
+    let segment = tag;
+
+    // Prefer data-prop, name for form elements
+    const dataProp = current.getAttribute('data-prop');
+    const name = current.getAttribute('name');
+    if (dataProp) {
+      segment += `[data-prop="${dataProp}"]`;
+    } else if (name) {
+      segment += `[name="${name}"]`;
+    } else {
+      // Use classes (filter out state classes and very long ones)
+      const classes = Array.from(current.classList).filter(
+        (c) => c.length <= 30 && !/^(is-|has-|el-icon|ant-icon|active|focus|hover|disabled)/.test(c),
+      );
+      if (classes.length > 0) {
+        segment += '.' + classes.slice(0, 3).join('.');
+      }
+    }
+
+    // nth-of-type when siblings share the same tag+class
+    const parent = current.parentElement;
+    if (parent && !id) {
+      const siblings = Array.from(parent.children).filter(
+        (s) => s.tagName === current!.tagName,
+      );
+      if (siblings.length > 1) {
+        const idx = siblings.indexOf(current) + 1;
+        segment += `:nth-of-type(${idx})`;
+      }
+    }
+
+    parts.unshift(segment);
+    current = parent;
+  }
+
+  return parts.join(' > ');
+}
 
 /* ── Text helpers ────────────────────────────────────────────────────────── */
 
@@ -160,23 +220,55 @@ function hasSubSections(container: Element): boolean {
 
 /* ── Table node building ─────────────────────────────────────────────────── */
 
+const MAX_TABLE_ROWS = 20;
+const MAX_CELL_TEXT = 60;
+
+function extractCellText(cell: Element): string {
+  // Check for input/select value inside cell
+  const input = cell.querySelector<HTMLInputElement>(
+    'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])',
+  );
+  if (input?.value?.trim()) return input.value.trim().slice(0, MAX_CELL_TEXT);
+
+  const select = cell.querySelector<HTMLSelectElement>('select');
+  if (select) {
+    const selected = select.options[select.selectedIndex];
+    const val = selected?.text?.trim() || select.value?.trim();
+    if (val) return val.slice(0, MAX_CELL_TEXT);
+  }
+
+  const text = cleanText(cell.textContent);
+  return text ? text.slice(0, MAX_CELL_TEXT) : '';
+}
+
 function buildTableNode(el: Element, counter: Counter): StateNode {
   const headers: string[] = [];
   for (const th of el.querySelectorAll('thead th, [role="columnheader"]')) {
     const text = cleanText(th.textContent);
     if (text && text.length <= 40) headers.push(text);
   }
-  let rowCount = el.querySelectorAll('tbody > tr').length;
-  if (!rowCount) {
-    const ariaRows = el.querySelectorAll('[role="row"]');
-    rowCount = Math.max(0, ariaRows.length - (headers.length > 0 ? 1 : 0));
+
+  // Extract row data
+  let dataRows = Array.from(el.querySelectorAll('tbody > tr'));
+  if (!dataRows.length) {
+    // ARIA table: skip the first row if headers were found (it's the header row)
+    const allRows = Array.from(el.querySelectorAll('[role="row"]'));
+    dataRows = headers.length > 0 ? allRows.slice(1) : allRows;
+  }
+
+  const rows: string[][] = [];
+  for (const tr of dataRows.slice(0, MAX_TABLE_ROWS)) {
+    const cells = tr.querySelectorAll('td, [role="gridcell"], [role="cell"]');
+    if (cells.length === 0) continue;
+    rows.push(Array.from(cells).map(extractCellText));
   }
 
   counter.n++;
   return {
     type: 'table',
+    selector: buildSelector(el),
     ...(headers.length > 0 ? { headers } : {}),
-    ...(rowCount > 0 ? { itemCount: rowCount } : {}),
+    ...(rows.length > 0 ? { rows, itemCount: dataRows.length } : {}),
   };
 }
 
@@ -259,6 +351,7 @@ function buildListNode(items: Element[], counter: Counter): StateNode {
   counter.n++;
   return {
     type: 'list',
+    selector: buildSelector(items[0]),
     itemCount: items.length,
     ...(labels.length > 0 ? { value: labels.join(', ') } : {}),
   };
@@ -350,6 +443,8 @@ function processFormItem(
 ): StateNode[] {
   const label = extractUniversalLabel(container);
 
+  const sel = buildSelector(container);
+
   // Complex form-item with titled sub-sections → group node with children
   if (hasSubSections(container)) {
     const children = walkChildren(container, depth, counter);
@@ -357,6 +452,7 @@ function processFormItem(
     counter.n++;
     return [{
       type: 'group',
+      selector: sel,
       ...(label ? { label } : {}),
       children,
     }];
@@ -382,11 +478,52 @@ function processFormItem(
     counter.n++;
     return [{
       type: 'group',
+      selector: sel,
       ...(label ? { label } : {}),
       ...(detectRequired(container) ? { required: true } : {}),
       ...(extractProp(container) ? { fieldProp: extractProp(container) } : {}),
       children: [tableChild],
     }];
+  }
+
+  // Fallback value extraction: if classifier returned a type but no value,
+  // try reading visible non-label text from the content area.
+  let value = defaultValueText;
+  if (!value) {
+    const content = findContentArea(container);
+    // Tags / chips (multi-select display)
+    const tagEls = content.querySelectorAll('[class*="tag"]:not([class*="close"])');
+    const tagTexts: string[] = [];
+    for (const tag of Array.from(tagEls).slice(0, 10)) {
+      const clone = tag.cloneNode(true) as Element;
+      clone.querySelectorAll('[class*="close"], [aria-label="close"]').forEach((x) => x.remove());
+      const t = clone.textContent?.trim();
+      if (t && t.length <= 40) tagTexts.push(t);
+    }
+    if (tagTexts.length > 0) {
+      value = tagTexts.join(', ').slice(0, 200);
+    }
+  }
+
+  // Upload: extract file URLs from <img> or <a> inside the upload area
+  if (fieldType === 'upload' && !value) {
+    const content = findContentArea(container);
+    const urls: string[] = [];
+    for (const img of content.querySelectorAll<HTMLImageElement>('img[src]')) {
+      const src = img.src;
+      if (src && !src.startsWith('data:') && !src.includes('placeholder')) {
+        urls.push(src);
+      }
+    }
+    if (urls.length === 0) {
+      for (const a of content.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+        const href = a.href;
+        if (href && href !== '#' && !href.startsWith('javascript:')) {
+          urls.push(href);
+        }
+      }
+    }
+    if (urls.length > 0) value = urls.join(', ').slice(0, 500);
   }
 
   // Extract prop
@@ -395,8 +532,9 @@ function processFormItem(
   counter.n++;
   const node: StateNode = {
     type: fieldType,
+    selector: sel,
     ...(label ? { label } : {}),
-    ...(defaultValueText ? { value: defaultValueText } : {}),
+    ...(value ? { value } : {}),
     ...(placeholder ? { placeholder } : {}),
     ...(detectRequired(container) ? { required: true } : {}),
     ...(prop ? { fieldProp: prop } : {}),
@@ -520,6 +658,7 @@ function walkNode(
     counter.n++;
     return [{
       type: type || 'input',
+      selector: buildSelector(node),
       ...(label ? { label } : {}),
       ...(value ? { value } : {}),
       ...(placeholder ? { placeholder } : {}),
@@ -534,7 +673,7 @@ function walkNode(
     const text = cleanText(node.textContent);
     if (!text) return [];
     counter.n++;
-    return [{ type: 'button', label: text }];
+    return [{ type: 'button', selector: buildSelector(node), label: text }];
   }
 
   // Transparent container → recurse, possibly wrap in section
@@ -543,7 +682,7 @@ function walkNode(
   const ctx = getNodeLabel(node);
   if (ctx && children.length > 0) {
     counter.n++;
-    return [{ type: 'section', label: ctx, children }];
+    return [{ type: 'section', selector: buildSelector(node), label: ctx, children }];
   }
 
   return children; // flatten

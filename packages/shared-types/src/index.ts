@@ -109,6 +109,8 @@ export interface StateNode {
   type: string;
   /** Visible label text */
   label?: string;
+  /** CSS selector path for locating this element on the page */
+  selector?: string;
   /** Current value at snapshot time */
   value?: string;
   /** Placeholder text */
@@ -121,6 +123,8 @@ export interface StateNode {
   itemCount?: number;
   /** Table column headers */
   headers?: string[];
+  /** Table row data (max ~20 rows, each row is array of cell text values) */
+  rows?: string[][];
   /** Rich text HTML content */
   htmlContent?: string;
   /** Child nodes (for section, group, and container types) */
