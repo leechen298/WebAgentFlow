@@ -1204,6 +1204,29 @@ const MAX_NAV_ITEMS = 40;
 const MAX_NAV_DEPTH = 5;
 
 /**
+ * Detect key CSS visibility state of an element or its ancestors.
+ * Returns a string like 'display:none' or 'visibility:hidden', or undefined if visible.
+ */
+function detectCssState(el: HTMLElement): string | undefined {
+  let current: HTMLElement | null = el;
+  while (current && current !== document.body) {
+    const style = current.style;
+    if (style.display === 'none') return 'display:none';
+    if (style.visibility === 'hidden') return 'visibility:hidden';
+    // Check computed style for class-driven hiding
+    try {
+      const computed = window.getComputedStyle(current);
+      if (computed.display === 'none') return 'display:none';
+      if (computed.visibility === 'hidden') return 'visibility:hidden';
+    } catch {
+      // getComputedStyle may fail in some contexts
+    }
+    current = current.parentElement as HTMLElement | null;
+  }
+  return undefined;
+}
+
+/**
  * Check if an element is a submenu container (has nested menu children).
  * Detects: aria-haspopup, el-submenu, ant-menu-submenu, and similar patterns.
  */
@@ -1254,8 +1277,9 @@ function isNavActionable(el: Element): boolean {
   const tag = el.tagName.toLowerCase();
   if (tag === 'a' && el.hasAttribute('href')) return true;
   if (tag === 'button') return true;
+  if (tag === 'input') return true; // search boxes in nav areas
   const role = el.getAttribute('role');
-  if (role === 'menuitem' || role === 'link' || role === 'tab') return true;
+  if (role === 'menuitem' || role === 'link' || role === 'tab' || role === 'button') return true;
   return false;
 }
 
@@ -1269,36 +1293,43 @@ function extractNavItems(navEl: Element, counter: Counter): StateNode[] {
 
   function walkNavNode(el: Element, depth: number): StateNode | undefined {
     if (depth > MAX_NAV_DEPTH || counter.n >= MAX_NODES || seen.size >= MAX_NAV_ITEMS) return undefined;
-    if (!(el instanceof HTMLElement) || !isVisible(el)) return undefined;
+    if (!(el instanceof HTMLElement)) return undefined;
+    // No visibility skip — hidden items are still parsed, but marked with cssState.
+    const cssState = detectCssState(el);
 
     // Submenu container → recurse into children, produce section node
     if (isSubmenu(el)) {
       const label = getSubmenuLabel(el);
       const children = walkNavChildren(el, depth + 1);
-      if (children.length > 0) {
-        counter.n++;
-        return {
-          type: 'section',
-          label: label || '(submenu)',
-          blockType: 'navigation',
-          ...(isActiveItem(el) ? { active: true } : {}),
-          children,
-        };
-      }
-      // Collapsed/hidden submenu: children not visible, but the submenu title
-      // itself is a visible clickable element. Preserve it as a leaf link node
-      // so the menu structure is not silently lost.
-      if (label && !seen.has(label)) {
-        seen.add(label);
-        counter.n++;
-        return {
-          type: 'link',
-          label,
-          selector: buildSelector(el),
-          ...(isActiveItem(el) ? { active: true } : {}),
-        };
-      }
-      return undefined;
+      if (children.length === 0) return undefined;
+      counter.n++;
+      return {
+        type: 'section',
+        label: label || '(submenu)',
+        blockType: 'navigation',
+        ...(isActiveItem(el) ? { active: true } : {}),
+        ...(cssState ? { cssState } : {}),
+        children,
+      };
+    }
+
+    // Input element in nav area (e.g. search box)
+    if (el.tagName === 'INPUT') {
+      const input = el as HTMLInputElement;
+      if (input.type === 'hidden') return undefined;
+      const label = cleanText(input.getAttribute('placeholder') || input.getAttribute('aria-label'));
+      if (!label) return undefined;
+      if (seen.has(label)) return undefined;
+      seen.add(label);
+      counter.n++;
+      return {
+        type: 'input',
+        label,
+        selector: buildSelector(el),
+        ...(input.value?.trim() ? { value: input.value.trim() } : {}),
+        ...(input.getAttribute('placeholder') ? { placeholder: cleanText(input.getAttribute('placeholder')) } : {}),
+        ...(cssState ? { cssState } : {}),
+      };
     }
 
     // Leaf actionable item (link, button, tab)
@@ -1321,6 +1352,7 @@ function extractNavItems(navEl: Element, counter: Counter): StateNode[] {
         selector: buildSelector(el),
         ...(href && href !== '#' && href !== 'javascript:void(0)' ? { href } : {}),
         ...(active ? { active: true } : {}),
+        ...(cssState ? { cssState } : {}),
       };
     }
 
@@ -1332,7 +1364,8 @@ function extractNavItems(navEl: Element, counter: Counter): StateNode[] {
     // Find all candidate items: submenus and leaf actionables
     // Use broad descendant query, then filter to "top-level within this parent"
     const allCandidates = parent.querySelectorAll(
-      '[role="menuitem"], a[href], button, [role="link"], [role="tab"]',
+      '[role="menuitem"], a[href], button, [role="button"], [role="link"], [role="tab"], ' +
+      'input:not([type="hidden"])',
     );
 
     const processed = new Set<Element>();

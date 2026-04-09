@@ -599,8 +599,8 @@ describe('structural integrity across all scenarios', () => {
         const navSections = findByBlockType(tree, 'navigation');
         const checkNavChildren = (children: StateNode[]) => {
           for (const child of children) {
-            // Nav children can be: link, button, or nested section (submenu)
-            expect(['link', 'button', 'section']).toContain(child.type);
+            // Nav children can be: link, button, input (search), or nested section (submenu)
+            expect(['link', 'button', 'input', 'section']).toContain(child.type);
             if (child.type === 'section' && child.children) {
               checkNavChildren(child.children);
             }

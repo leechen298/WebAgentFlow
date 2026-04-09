@@ -140,6 +140,10 @@ export interface StateNode {
   href?: string;
   /** Whether this item is currently active/selected (e.g. active menu item) */
   active?: boolean;
+  /** Key CSS visibility state affecting interaction (e.g. 'display:none', 'visibility:hidden').
+   *  display:none = not rendered, not clickable. visibility:hidden = rendered, occupies space, still clickable.
+   *  Omitted when the element is normally visible. */
+  cssState?: string;
   /** Current value at snapshot time */
   value?: string;
   /** Placeholder text */
