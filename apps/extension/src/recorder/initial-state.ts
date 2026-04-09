@@ -290,13 +290,23 @@ function buildTableNode(el: Element, counter: Counter): StateNode {
     dataRows = headers.length > 0 ? allRows.slice(1) : allRows;
   }
 
-  // All tables use unified rows[][] format.
-  // Complex cells extract richer text (aria values, input values, button labels).
+  // rows[][] for frontend display (text summary of each cell)
   const rows: string[][] = [];
   for (const tr of dataRows.slice(0, MAX_TABLE_ROWS)) {
     const cells = tr.querySelectorAll('td, [role="gridcell"], [role="cell"]');
     if (cells.length === 0) continue;
     rows.push(Array.from(cells).map(extractCellText));
+  }
+
+  // Also walk each row through walkNode for full structure (Agent analysis).
+  // Each row becomes a group node with cells walked through the unified path.
+  const rowChildren: StateNode[] = [];
+  for (const tr of dataRows.slice(0, MAX_TABLE_ROWS)) {
+    if (counter.n >= MAX_NODES) break;
+    const rowNodes = walkNode(tr, 20, counter);
+    if (rowNodes.length > 0) {
+      rowChildren.push(...rowNodes);
+    }
   }
 
   counter.n++;
@@ -305,6 +315,7 @@ function buildTableNode(el: Element, counter: Counter): StateNode {
     selector: buildSelector(el),
     ...(headers.length > 0 ? { headers } : {}),
     ...(rows.length > 0 ? { rows, itemCount: dataRows.length } : {}),
+    ...(rowChildren.length > 0 ? { children: rowChildren } : {}),
   };
 }
 
@@ -408,21 +419,23 @@ function buildListNode(items: Element[], counter: Counter): StateNode {
     }
   }
 
-  // Summarize remaining items as titles only
+  // Remaining items: preserve localHtml for future expansion
   if (items.length > MAX_EXPANDED_LIST_ITEMS) {
-    const remainingLabels: string[] = [];
-    for (const item of items.slice(MAX_EXPANDED_LIST_ITEMS, 10)) {
-      const label = extractItemTitle(item);
-      if (label) remainingLabels.push(label);
+    const remaining = items.slice(MAX_EXPANDED_LIST_ITEMS);
+    // Create a wrapper div with all remaining items, capture its HTML
+    const wrapper = document.createElement('div');
+    for (const item of remaining) {
+      wrapper.appendChild(item.cloneNode(true));
     }
-    if (remainingLabels.length > 0) {
-      counter.n++;
-      children.push({
-        type: 'custom',
-        label: `其他 ${items.length - MAX_EXPANDED_LIST_ITEMS} 项`,
-        value: remainingLabels.join(', '),
-      });
-    }
+    wrapper.querySelectorAll('script, style, svg, link, [aria-hidden="true"]').forEach((n) => n.remove());
+    cleanHtmlTree(wrapper);
+    const html = wrapper.innerHTML?.trim();
+    counter.n++;
+    children.push({
+      type: 'custom',
+      label: `其他 ${remaining.length} 项`,
+      ...(html ? { localHtml: html } : {}),
+    });
   }
 
   counter.n++;

@@ -138,7 +138,7 @@ walkNode(el):
 
 ### 各类型元素规则
 
-**表格**：提取表头和行数据。如果单元格包含 2+ 可操作元素（按钮、输入框等），递归展开单元格内容为子树，而非只取 textContent。简单表格保持 `rows[][]` 扁平格式，复杂表格使用 `children[]` 展开格式。`table` 节点可以同时有 `headers` 和 `children`。
+**表格**：提取表头和行数据。每行的每个单元格都通过 `walkNode` 走统一的处理路径（而非纯文本提取）。`table` 节点同时有 `rows`（文本摘要，用于前端展示）和 `children`（walkNode 产出的完整结构，用于 Agent 分析）。
 
 **Iframe**：同源 iframe 通过 `contentDocument` 递归解析（遵循相同规则），跨域静默跳过。产生 `blockType: 'iframe-content'` 的 section 节点。支持多层嵌套 iframe。
 
