@@ -1275,15 +1275,30 @@ function extractNavItems(navEl: Element, counter: Counter): StateNode[] {
     if (isSubmenu(el)) {
       const label = getSubmenuLabel(el);
       const children = walkNavChildren(el, depth + 1);
-      if (children.length === 0) return undefined;
-      counter.n++;
-      return {
-        type: 'section',
-        label: label || '(submenu)',
-        blockType: 'navigation',
-        ...(isActiveItem(el) ? { active: true } : {}),
-        children,
-      };
+      if (children.length > 0) {
+        counter.n++;
+        return {
+          type: 'section',
+          label: label || '(submenu)',
+          blockType: 'navigation',
+          ...(isActiveItem(el) ? { active: true } : {}),
+          children,
+        };
+      }
+      // Collapsed/hidden submenu: children not visible, but the submenu title
+      // itself is a visible clickable element. Preserve it as a leaf link node
+      // so the menu structure is not silently lost.
+      if (label && !seen.has(label)) {
+        seen.add(label);
+        counter.n++;
+        return {
+          type: 'link',
+          label,
+          selector: buildSelector(el),
+          ...(isActiveItem(el) ? { active: true } : {}),
+        };
+      }
+      return undefined;
     }
 
     // Leaf actionable item (link, button, tab)
