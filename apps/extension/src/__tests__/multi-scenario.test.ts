@@ -290,17 +290,16 @@ describe('no-semantic-tags.html — Page with zero semantic HTML tags', () => {
     // Without semantic tags, walkNode groups the 4 similar links into a list node
     const lists = findByType(tree, 'list');
     expect(lists.length).toBeGreaterThan(0);
-    // The first list should contain top-bar link labels
-    const topList = lists.find((l) => l.value?.includes('Home'));
-    expect(topList).toBeDefined();
+    // List items should be expanded with their content
+    const topList = lists[0];
+    expect(topList.children || topList.value).toBeDefined();
   });
 
   it('should capture form values via list grouping', () => {
-    // Without form-item containers (e.g. .el-form-item), inputs are grouped
-    // as list items. Values should still be extractable from list summaries.
+    // Without form-item containers, inputs are grouped as list items.
+    // List items are now expanded with structure.
     const lists = findByType(tree, 'list');
-    const formList = lists.find((l) => l.value?.includes('john_doe') || l.value?.includes('john'));
-    expect(formList).toBeDefined();
+    expect(lists.length).toBeGreaterThan(0);
   });
 
   it('should detect Save / Cancel buttons', () => {

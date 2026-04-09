@@ -307,15 +307,17 @@ describe('captureInitialState — lottery activity page', () => {
       }
     });
 
-    it('leaf nodes should not have children', () => {
+    it('leaf nodes should not have children (except list and table)', () => {
       const leaves = findNodes(
         tree,
         (n) =>
           n.type !== 'section' &&
           n.type !== 'group' &&
+          n.type !== 'list' &&
+          n.type !== 'table' &&
           n.children !== undefined,
       );
-      // Most leaf nodes shouldn't have children (allow zero for edge cases)
+      // Most leaf nodes shouldn't have children (allow a few for edge cases)
       expect(leaves.length).toBeLessThanOrEqual(5);
     });
   });

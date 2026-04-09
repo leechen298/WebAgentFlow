@@ -417,18 +417,59 @@ function findRepeatedGroupEnd(children: Element[], start: number): number {
   return end;
 }
 
+/**
+ * Build a list node from repeated sibling elements.
+ * Expands the first few items fully via walkNode to preserve internal structure
+ * (buttons, tables, nested content). Remaining items are summarized as titles.
+ */
+const MAX_EXPANDED_LIST_ITEMS = 3;
+
 function buildListNode(items: Element[], counter: Counter): StateNode {
-  const labels: string[] = [];
-  for (const item of items.slice(0, 10)) {
-    const label = extractItemTitle(item);
-    if (label) labels.push(label);
+  const children: StateNode[] = [];
+
+  // Expand first few items fully to preserve internal structure
+  for (const item of items.slice(0, MAX_EXPANDED_LIST_ITEMS)) {
+    if (counter.n >= MAX_NODES) break;
+    const itemChildren = walkNode(item, 20, counter);
+    if (itemChildren.length > 0) {
+      // Wrap in a group if multiple nodes returned, otherwise use directly
+      if (itemChildren.length === 1) {
+        children.push(itemChildren[0]);
+      } else {
+        const title = extractItemTitle(item);
+        counter.n++;
+        children.push({
+          type: 'group',
+          ...(title ? { label: title } : {}),
+          children: itemChildren,
+        });
+      }
+    }
   }
+
+  // Summarize remaining items as titles only
+  if (items.length > MAX_EXPANDED_LIST_ITEMS) {
+    const remainingLabels: string[] = [];
+    for (const item of items.slice(MAX_EXPANDED_LIST_ITEMS, 10)) {
+      const label = extractItemTitle(item);
+      if (label) remainingLabels.push(label);
+    }
+    if (remainingLabels.length > 0) {
+      counter.n++;
+      children.push({
+        type: 'custom',
+        label: `其他 ${items.length - MAX_EXPANDED_LIST_ITEMS} 项`,
+        value: remainingLabels.join(', '),
+      });
+    }
+  }
+
   counter.n++;
   return {
     type: 'list',
     selector: buildSelector(items[0]),
     itemCount: items.length,
-    ...(labels.length > 0 ? { value: labels.join(', ') } : {}),
+    ...(children.length > 0 ? { children } : {}),
   };
 }
 
