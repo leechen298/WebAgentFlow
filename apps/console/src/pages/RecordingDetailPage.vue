@@ -143,7 +143,7 @@
                       <!-- Section / Group nodes (containers) -->
                       <template v-if="row.node.type === 'section' || row.node.type === 'group'">
                         <span style="font-weight: 600; color: #333">
-                          <a-tag :color="row.node.type === 'section' ? 'blue' : 'cyan'" style="font-size: 11px">
+                          <a-tag :color="row.node.type === 'section' ? 'blue' : 'cyan'" style="font-size: 11px; cursor: pointer" @click.stop="showNodeJson(row.key)">
                             {{ row.node.type }}
                           </a-tag>
                           <a-tag v-if="row.node.blockType" :color="blockTypeColor(row.node.blockType)" style="font-size: 10px">
@@ -173,7 +173,7 @@
 
                       <!-- Table nodes -->
                       <template v-else-if="row.node.type === 'table'">
-                        <a-tag color="volcano" style="font-size: 11px">table</a-tag>
+                        <a-tag color="volcano" style="font-size: 11px; cursor: pointer" @click.stop="showNodeJson(row.key)">table</a-tag>
                         <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
                         <span v-if="row.node.itemCount" style="color: #999; margin-left: 8px">
                           {{ row.node.itemCount }} rows
@@ -198,7 +198,7 @@
 
                       <!-- List nodes -->
                       <template v-else-if="row.node.type === 'list'">
-                        <a-tag color="lime" style="font-size: 11px">list</a-tag>
+                        <a-tag color="lime" style="font-size: 11px; cursor: pointer" @click.stop="showNodeJson(row.key)">list</a-tag>
                         <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
                         <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
                           {{ row.node.itemCount }} items
@@ -223,7 +223,7 @@
 
                       <!-- Link nodes (navigation) -->
                       <template v-else-if="row.node.type === 'link'">
-                        <a-tag color="magenta" style="font-size: 11px">link</a-tag>
+                        <a-tag color="magenta" style="font-size: 11px; cursor: pointer" @click.stop="showNodeJson(row.key)">link</a-tag>
                         <a-tag v-if="row.node.active" color="green" style="font-size: 9px">active</a-tag>
                         <span style="font-weight: 500">{{ row.node.label }}</span>
                         <span v-if="row.node.href" style="color: #999; font-size: 11px; margin-left: 8px">
@@ -241,7 +241,7 @@
 
                       <!-- Button nodes -->
                       <template v-else-if="row.node.type === 'button'">
-                        <a-tag color="orange" style="font-size: 11px">button</a-tag>
+                        <a-tag color="orange" style="font-size: 11px; cursor: pointer" @click.stop="showNodeJson(row.key)">button</a-tag>
                         <a-tag v-if="row.node.active" color="green" style="font-size: 9px">active</a-tag>
                         <span style="font-weight: 500">{{ row.node.label }}</span>
                         <a-tag
@@ -256,7 +256,7 @@
 
                       <!-- Leaf field nodes (input, select, checkbox, etc.) -->
                       <template v-else>
-                        <a-tag :color="initialFieldTypeColor(row.node.type)" style="font-size: 11px">
+                        <a-tag :color="initialFieldTypeColor(row.node.type)" style="font-size: 11px; cursor: pointer" @click.stop="showNodeJson(row.key)">
                           {{ row.node.type }}
                         </a-tag>
                         <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
@@ -345,6 +345,15 @@
                           <pre style="font-size: 11px; margin: 0; white-space: pre-wrap; word-break: break-all">{{ getNodeLocalHtml(row.node) }}</pre>
                         </a-collapse-panel>
                       </a-collapse>
+                    </div>
+
+                    <!-- Inline detail panel: node JSON -->
+                    <div
+                      v-if="detailOpenKeys.has(row.key + '__json')"
+                      :style="{ paddingLeft: (row.depth * 20 + 30) + 'px', paddingRight: '12px' }"
+                      class="inline-detail-panel"
+                    >
+                      <pre style="font-size: 11px; margin: 0; white-space: pre-wrap; word-break: break-all; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #e8e8e8; max-height: 400px; overflow-y: auto">{{ formatJsonString(row.node) }}</pre>
                     </div>
                   </template>
                 </div>
@@ -713,6 +722,7 @@ const normError = ref('');
 const fieldDetailModalOpen = ref(false);
 const fieldDetailRecord = ref<InitialFieldSnapshot | null>(null);
 
+
 const formData = reactive({
   name: '',
   status: 'draft' as RecordingStatus,
@@ -966,6 +976,10 @@ const parsedListItems = computed<string[]>(() => {
 function openFieldDetailModal(record: InitialFieldSnapshot): void {
   fieldDetailRecord.value = record;
   fieldDetailModalOpen.value = true;
+}
+
+function showNodeJson(key: string): void {
+  toggleDetail(key + '__json');
 }
 
 function nodeHasLocalHtml(node: StateNode): boolean {
