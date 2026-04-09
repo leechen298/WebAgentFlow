@@ -517,11 +517,31 @@ const MAX_LOCAL_HTML = 500;
  * Capture a small HTML snippet from a content area for complex leaf nodes.
  * Strips scripts, styles, SVGs, hidden elements. Returns undefined if trivial.
  */
+/**
+ * Strip inline style attributes, keeping only visibility-affecting properties
+ * (display, visibility) that impact operability. Removes decorative CSS
+ * (color, padding, transform, etc.) to reduce HTML size.
+ */
+function stripDecorativeStyles(root: Element): void {
+  for (const el of root.querySelectorAll('[style]')) {
+    const style = (el as HTMLElement).style;
+    const keep: string[] = [];
+    if (style.display && style.display !== '') keep.push(`display:${style.display}`);
+    if (style.visibility && style.visibility !== '') keep.push(`visibility:${style.visibility}`);
+    if (keep.length > 0) {
+      el.setAttribute('style', keep.join(';'));
+    } else {
+      el.removeAttribute('style');
+    }
+  }
+}
+
 function captureLocalHtml(area: Element): string | undefined {
   const clone = area.cloneNode(true) as Element;
   clone.querySelectorAll(
     'script, style, svg, link, [aria-hidden="true"], [class*="icon"]',
   ).forEach((n) => n.remove());
+  stripDecorativeStyles(clone);
   const html = clone.innerHTML?.trim();
   if (!html || html.length < 10) return undefined;
   return html.slice(0, MAX_LOCAL_HTML);
@@ -1294,6 +1314,7 @@ function scanNavigation(mainRoot: Element, counter: Counter): StateNode[] {
     try {
       const clone = el.cloneNode(true) as Element;
       clone.querySelectorAll('script, style, svg, link, [aria-hidden="true"]').forEach((n) => n.remove());
+      stripDecorativeStyles(clone);
       const raw = clone.innerHTML?.trim();
       if (raw && raw.length >= 10) html = raw.slice(0, MAX_NAV_HTML);
     } catch { /* degrade gracefully */ }
