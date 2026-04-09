@@ -17,12 +17,14 @@ import {
   isFormContainer,
   classifyElement,
   getComponentNames,
+  isInsideCompound,
 } from './component-classifier';
 import {
   extractUniversalLabel,
   detectRequired,
   detectFieldType,
   findContentArea,
+  extractHintOrError,
 } from './label-extractor';
 import { cleanLabel, isVisible, extractItemTitle } from './dom-utils';
 
@@ -309,6 +311,22 @@ function buildTableNode(el: Element, counter: Counter): StateNode {
     }
   }
 
+  // If table has complex content (images, buttons, inputs), preserve localHtml
+  // so the full structure isn't lost in the text-only rows format.
+  const hasComplexContent = el.querySelector(
+    'img, button, [role="button"], input:not([type="hidden"]), select, [contenteditable="true"]',
+  );
+  let tableLocalHtml: string | undefined;
+  if (hasComplexContent) {
+    try {
+      const clone = el.cloneNode(true) as Element;
+      clone.querySelectorAll('script, style, svg, link, [aria-hidden="true"]').forEach((n) => n.remove());
+      cleanHtmlTree(clone);
+      const raw = clone.innerHTML?.trim();
+      if (raw && raw.length >= 10) tableLocalHtml = raw;
+    } catch { /* degrade gracefully */ }
+  }
+
   counter.n++;
   return {
     type: 'table',
@@ -316,6 +334,7 @@ function buildTableNode(el: Element, counter: Counter): StateNode {
     ...(headers.length > 0 ? { headers } : {}),
     ...(rows.length > 0 ? { rows, itemCount: dataRows.length } : {}),
     ...(rowChildren.length > 0 ? { children: rowChildren } : {}),
+    ...(tableLocalHtml ? { localHtml: tableLocalHtml } : {}),
   };
 }
 
@@ -758,7 +777,72 @@ function processFormItem(
     }];
   }
 
-  // Detect field type first to determine simple vs complex path
+  // ── walkNode-first: try walking the content area through the unified pipeline ──
+  // If walkNode produces meaningful results, use them (enriched with form metadata).
+  // Otherwise, fall back to the existing specialized extraction below.
+  // Note: walkChildren filters out self-closing elements (input/img), so we
+  // explicitly find form controls and walk the content area together.
+  const contentAreaForWalk = findContentArea(container);
+  const walkedChildren: StateNode[] = [];
+  // Walk the content area — walkNode handles transparent containers
+  const contentWalkResult = walkNode(contentAreaForWalk, depth + 1, counter);
+  walkedChildren.push(...contentWalkResult);
+  // Also capture standalone inputs that walkChildren's pre-filter may have skipped
+  // (self-closing elements like <input> have no children and no textContent).
+  // Walk them explicitly through walkNode if not already captured.
+  // Also capture standalone inputs that walkChildren's pre-filter may have skipped
+  // (self-closing <input> has no children and no textContent).
+  // Only capture top-level controls, NOT inputs deep inside compound components.
+  if (walkedChildren.length <= 1) {
+    const walkedSelectors = new Set(walkedChildren.map((c) => c.selector).filter(Boolean));
+    const controls = contentAreaForWalk.querySelectorAll(
+      'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), ' +
+      'select, textarea, [contenteditable="true"]',
+    );
+    for (const ctrl of controls) {
+      if (counter.n >= MAX_NODES) break;
+      // Skip controls that are inside known compound components (el-select, etc.)
+      if (isInsideCompound(ctrl as Element)) continue;
+      const ctrlSel = buildSelector(ctrl as Element);
+      if (walkedSelectors.has(ctrlSel)) continue;
+      const ctrlNodes = walkNode(ctrl as Element, depth + 2, counter);
+      walkedChildren.push(...ctrlNodes);
+    }
+  }
+  if (walkedChildren.length > 0) {
+    const required = detectRequired(container);
+    const prop = extractProp(container);
+    const hint = extractHintOrError(container);
+
+    if (walkedChildren.length === 1 && !walkedChildren[0].children) {
+      // Single leaf control — merge form metadata into it
+      const child = walkedChildren[0];
+      if (label) child.label = label; // form-item label is authoritative
+      if (!child.required && required) child.required = true;
+      if (prop && !child.fieldProp) child.fieldProp = prop;
+      if (hint) child.hint = hint;
+      // Extract options if applicable
+      const OPTION_TYPES = new Set(['select', 'radio', 'checkbox', 'cascader']);
+      if (OPTION_TYPES.has(child.type) && !child.options) {
+        const opts = extractFieldOptions(contentAreaForWalk, child.type);
+        if (opts.length > 0) child.options = opts;
+      }
+      return [child];
+    }
+
+    // Multiple children — wrap in group with form metadata
+    counter.n++;
+    return [{
+      type: 'group',
+      ...(label ? { label } : {}),
+      ...(required ? { required: true } : {}),
+      ...(prop ? { fieldProp: prop } : {}),
+      ...(hint ? { hint } : {}),
+      children: walkedChildren,
+    }];
+  }
+
+  // ── Fallback: walkNode produced nothing — use existing specialized extraction ──
   const detected = detectFieldType(container);
   let { fieldType } = detected;
   const { placeholder, defaultValueText, defaultValueHtml } = detected;
@@ -995,6 +1079,10 @@ function processFormItem(
   };
   if (localHtml) node.localHtml = localHtml;
   if (embeddedButtons.length > 0) node.actions = embeddedButtons;
+
+  // Extract hint/tip/description text from the form-item container
+  const hint = extractHintOrError(container);
+  if (hint) node.hint = hint;
 
   return [node];
 }

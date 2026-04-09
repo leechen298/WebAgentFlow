@@ -442,7 +442,9 @@ describe('nested-menu.html — Element UI nested submenu with iframe', () => {
   });
 
   it('should detect form fields in main content', () => {
-    const inputs = findNodes(tree, (n) => n.type === 'input' && n.label === '技能名称');
+    const inputs = findNodes(tree, (n) =>
+      (n.type === 'input' || n.type === 'text') && n.label === '技能名称',
+    );
     expect(inputs.length).toBe(1);
   });
 

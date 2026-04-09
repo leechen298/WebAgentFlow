@@ -169,17 +169,19 @@ export function extractUniversalValue(container: Element, type?: ComponentType):
  * Uses component name matching instead of library-specific selectors.
  */
 export function extractHintOrError(container: Element): string | undefined {
-  // 1. Find elements whose component name ends with "error", "feedback", or "explain"
+  // 1. Find elements whose component name or class indicates hint/error/tip/description
   const hintEl = Array.from(container.querySelectorAll('*')).find((el) => {
     const names = getComponentNames(el);
-    if (names.some((n) => /error|feedback|explain/.test(n))) return true;
-    // Also check generic class patterns
+    if (names.some((n) => /error|feedback|explain|hint|help|description|extra/.test(n))) return true;
     const cls = (el.getAttribute('class') || '').toLowerCase();
-    return /form-item[_-]*error|form-error|field-error|form-hint/.test(cls);
+    if (/form-item[_-]*error|form-error|field-error|form-hint|tip|desc|help-text|extra/.test(cls)) return true;
+    // 2. <p> tags inside form content area are typically hints/descriptions
+    if (el.tagName === 'P') return true;
+    return false;
   });
 
   const text = hintEl?.textContent?.trim();
-  return text ? text.slice(0, 100) : undefined;
+  return text ? text.slice(0, 500) : undefined;
 }
 
 // ─── Required detection ─────────────────────────────────────────────────────

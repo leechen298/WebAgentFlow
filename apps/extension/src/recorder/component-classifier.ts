@@ -199,9 +199,13 @@ function extractComponentNames(el: Element): string[] {
     // Check known prefixes
     for (const prefix of KNOWN_PREFIXES) {
       if (cls.startsWith(prefix)) {
-        // Strip prefix, then strip BEM suffixes (__*, --*)
-        let name = cls.slice(prefix.length);
-        name = name.replace(/(__|--).*$/, '');
+        const afterPrefix = cls.slice(prefix.length);
+        // BEM child elements (el-form-item__label, el-input-number__decrease)
+        // are CHILDREN of the component, not the component itself.
+        // Do not push the parent component name for BEM children.
+        if (afterPrefix.includes('__')) break;
+        // Strip BEM modifier suffixes (--*) only
+        const name = afterPrefix.replace(/--.*$/, '');
         if (name) names.push(name);
         break;
       }

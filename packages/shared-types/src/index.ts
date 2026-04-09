@@ -150,6 +150,8 @@ export interface StateNode {
   options?: { label: string; selected?: boolean }[];
   /** Placeholder text */
   placeholder?: string;
+  /** Hint, tip, or description text associated with a form field */
+  hint?: string;
   /** Whether field is required */
   required?: boolean;
   /** Validation prop name from framework */
