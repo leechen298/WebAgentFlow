@@ -132,6 +132,17 @@ walkNode(el):
 
 **任何分支失败都不能静默丢弃内容**。处理器返回 `[]` 意味着"我处理不了，请回溯"，不意味着"这个元素没有内容"。
 
+### 最高原则：DOM 保真优先
+
+解析器不是在"理解页面后重写页面"，而是在"忠实转录页面为结构化中间表示"。
+
+1. **DOM 原始树形关系优先** — 输出 JSON 的 children 顺序必须和原始 DOM 顺序一致
+2. **sibling 顺序优先** — 不允许为了抽象语义重组 sibling 顺序
+3. **节点类型优先** — 每个 DOM 节点应该按其实际类型保留
+4. **hidden 节点也必须保留** — 通过 `cssState` 标注，不跳过
+5. **复杂节点保留 localHtml fallback** — 语义提取不充分时必须兜底
+6. **绝对不要为了形成"标题 + 内容""分组 + 明细"这类更抽象的结构，去硬重组页面原始结构**
+
 ### 分类优先级（从高到低，首次匹配生效）
 
 1. **已知组件库元素** — 如 `el-select`、`ant-cascader`、`van-cell`、`n-date-picker`，按组件整体类型处理，**不拆解其内部 DOM 结构**（如 el-select 内部有 input，仍作为 select 处理）。组件分类器（`component-classifier.ts`）使用前缀无关检测，覆盖 12+ 组件库。
@@ -182,6 +193,10 @@ walkNode(el):
 - **不得静默丢弃内容** — 任何分类失败必须回溯到通用递归，通用递归也失败且有可见内容时必须产生 localHtml 兜底。超限截断时必须保留 localHtml。
 - **不得压扁复杂结构** — 如果一个容器内有多个可操作子元素，必须递归展开为子树，不能压成单个 leaf + localHtml。
 - **不得添加特化逻辑** — 所有处理规则必须通用，不针对特定组件库或页面结构做 if-else 分支。不同类型的 walk 共享同一套过滤和处理规则。
+- **不得为了语义整理去硬重组页面结构** — 不把多个并列 sibling 合并成"标题+内容"块，不为了"更清晰"改变节点边界，不为了"更整洁"重排节点顺序，不为了"标题+内容"格式吞掉中间的 tip/alert/button group/status text。
+- **不得把复杂 cell 退化成纯文本** — 表格图片列保留 `src`，操作列保留真实按钮，input-number 保留为结构化控件。
+- **不得把多个按钮拼成一个字符串** — 按钮必须作为独立节点保留。
+- **不得只保留主控件忽略同容器辅助信息** — form-item 内的 tip/description/status text 必须保留。
 
 ### 输出结构
 
@@ -194,6 +209,10 @@ walkNode(el):
 ### 测试
 
 多场景测试（`apps/extension/src/__tests__/multi-scenario.test.ts`）覆盖 8 种 fixture：企业官网、后台管理、H5 移动端、多导航文档页、无语义标签页面、数据大盘、Element UI 嵌套菜单+iframe、复杂嵌套结构（form-item 内嵌表格/子表单、表格操作列）。**任何解析器改动必须通过所有现有 fixture 测试。新增解析行为必须同时新增对应 fixture 和测试。**
+
+### 参考测试用例
+
+`apps/extension/src/__tests__/fixtures/lottery-page.html` 是用户实际页面的完整 HTML fixture。`apps/extension/src/__tests__/fixtures/lottery-page-expected.jsonc` 是**当前有问题的解析器输出**，其中用户通过 `//` 和 `/* */` 注释标注了具体问题点。这不是正确的预期输出，而是需要修复的问题清单。新的解析器改动必须解决所有标注的问题。
 
 ## Infrastructure
 
