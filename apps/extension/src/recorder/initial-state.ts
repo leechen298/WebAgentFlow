@@ -10,7 +10,11 @@
  * Leaf nodes (input/select/button/table) carry selector + value + optional localHtml.
  */
 
-import type { StateNode, PageInitialState } from '@web-agent-flow/shared-types';
+import type {
+  StateNode,
+  PageInitialState,
+  TableCellNode,
+} from '@web-agent-flow/shared-types';
 import { getCanonicalPageUrl } from './page-url';
 import { captureSimplifiedHTML } from './html-snapshot';
 import {
@@ -28,7 +32,7 @@ import {
 } from './label-extractor';
 import { cleanLabel, isVisible, extractItemTitle } from './dom-utils';
 
-const MAX_NODES = 300;
+const MAX_NODES = 1000;
 const MAX_DEPTH = 30;
 const SELECTOR_MAX_DEPTH = 5;
 
@@ -99,6 +103,26 @@ function cleanText(text: string | null | undefined): string | undefined {
   if (!text) return undefined;
   const cleaned = text.replace(/\s+/g, ' ').trim();
   return cleaned.length > 0 ? cleaned : undefined;
+}
+
+function cleanTextNodeValue(node: ChildNode | null | undefined): string | undefined {
+  if (!node || node.nodeType !== Node.TEXT_NODE) return undefined;
+  return cleanText(node.textContent);
+}
+
+function getDirectTextSnippets(el: Element): string[] {
+  const snippets: string[] = [];
+  for (const child of el.childNodes) {
+    const text = cleanTextNodeValue(child);
+    if (text) snippets.push(text);
+  }
+  return snippets;
+}
+
+function getDirectText(el: Element): string | undefined {
+  const snippets = getDirectTextSnippets(el);
+  if (snippets.length === 0) return undefined;
+  return snippets.join(' ').trim();
 }
 
 /* ── Skip detection ──────────────────────────────────────────────────────── */
@@ -180,6 +204,91 @@ function getNodeLabel(node: Element): string | undefined {
   return undefined;
 }
 
+function getContainerLabel(node: Element): string | undefined {
+  const aria = cleanText(node.getAttribute('aria-label'));
+  if (aria) return aria;
+
+  const titleAttr = cleanText(node.getAttribute('title'));
+  if (titleAttr && titleAttr.length <= 120) return titleAttr;
+
+  for (const child of Array.from(node.children)) {
+    if (!isHeadingElement(child) && !extractInlineTitle(child)) continue;
+    const text = extractTitleText(child);
+    if (text) return text;
+  }
+
+  return getNodeLabel(node);
+}
+
+function inferPreservedContainerType(node: Element): string {
+  const cls = (node.className || '').toLowerCase();
+  const role = (node.getAttribute('role') || '').toLowerCase();
+  const tag = node.tagName.toLowerCase();
+
+  if (role === 'alert' || /\bel-alert\b|\balert\b|\btip\b/.test(cls)) return 'alert';
+  if (/\bsection-title\b/.test(cls) || isHeadingElement(node) || extractInlineTitle(node)) return 'heading';
+  if (/\btask-card\b/.test(cls)) return 'task-card';
+  if (/\btask-header\b/.test(cls)) return 'task-header';
+  if (/\btask-actions\b/.test(cls) || /\bmove-buttons\b/.test(cls) || /\bbatch-actions\b/.test(cls)) {
+    return 'button-group';
+  }
+  if (/\bprobability-sum\b|\bstatus\b/.test(cls)) return 'status-block';
+  if (/\bcustom-config\b/.test(cls)) return 'custom-config';
+  if (/\bel-dialog__footer\b|\bdialog-footer\b|\bcomplex-footer\b/.test(cls)) return 'dialog-footer';
+  if (/\baction-wrapper\b/.test(cls)) return 'button-group';
+  if (/\btable-wrapper\b/.test(cls)) return 'table-wrapper';
+  if (/\bitem-container\b|\bcontent\b|\bwrapper\b|\bcontainer\b/.test(cls)) return 'group';
+  if (/\bitem\b|\bsection\b/.test(cls)) return 'section';
+  if (role === 'group' || role === 'region') return 'group';
+  if (tag === 'header' || tag === 'footer' || tag === 'aside' || tag === 'main' || tag === 'section') {
+    return 'section';
+  }
+  return 'group';
+}
+
+function hasMeaningfulContainerSignal(node: Element): boolean {
+  const cls = (node.className || '').toLowerCase();
+  const role = node.getAttribute('role');
+  const tag = node.tagName.toLowerCase();
+
+  if (role && role !== 'presentation' && role !== 'none') return true;
+  if (tag === 'section' || tag === 'main' || tag === 'header' || tag === 'footer' || tag === 'aside') {
+    return true;
+  }
+  if (
+    /\b(item|section|content|wrapper|container|footer|header|body|card|panel|config|actions?|toolbar|dialog|alert|tip|status|sum)\b/.test(
+      cls,
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function applyVisibilityState<T extends { cssState?: string; visible?: boolean }>(
+  node: T,
+  cssState: string | undefined,
+): T {
+  if (!cssState) return node;
+  node.cssState = cssState;
+  node.visible = false;
+  return node;
+}
+
+function buildTextNode(
+  text: string,
+  parent: Element,
+  index: number,
+  hiddenCss?: string,
+): StateNode {
+  return applyVisibilityState({
+    type: 'text',
+    label: text,
+    selector: `${buildSelector(parent)} ::text(${index})`,
+  }, hiddenCss);
+}
+
 /* ── Structural content inside form items ────────────────────────────────── */
 
 function detectStructuralContent(
@@ -224,68 +333,113 @@ function hasSubSections(container: Element): boolean {
 /* ── Table node building ─────────────────────────────────────────────────── */
 
 const MAX_TABLE_ROWS = 20;
-const MAX_CELL_TEXT = 60;
 
-/* isCellComplex/hasComplexCells removed — all tables use unified rows format
- * with enhanced extractCellText that handles inputs, buttons, checkboxes. */
+function buildTableCell(cell: Element, counter: Counter): TableCellNode {
+  const selector = buildSelector(cell);
+  const cssState = cell instanceof HTMLElement ? detectCssState(cell) : undefined;
+  const directText = getDirectText(cell);
+  const children = walkChildren(cell, 20, counter);
 
-function extractCellText(cell: Element): string {
-  // 1. Check for input value (including aria-valuenow for component controls)
-  const input = cell.querySelector<HTMLInputElement>(
-    'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])',
-  );
-  if (input) {
-    const ariaVal = input.getAttribute('aria-valuenow');
-    const val = ariaVal || input.value?.trim();
-    if (val) return val.slice(0, MAX_CELL_TEXT);
-  }
-
-  // 2. Check for select value
-  const select = cell.querySelector<HTMLSelectElement>('select');
-  if (select) {
-    const selected = select.options[select.selectedIndex];
-    const val = selected?.text?.trim() || select.value?.trim();
-    if (val) return val.slice(0, MAX_CELL_TEXT);
-  }
-
-  // 3. Check for checkbox/radio state
-  const checkbox = cell.querySelector<HTMLInputElement>('input[type="checkbox"], input[type="radio"]');
-  if (checkbox) return checkbox.checked ? '✓' : '✗';
-
-  // 3.5. Check for image (preserve src so Agent knows there's an image)
   const img = cell.querySelector<HTMLImageElement>('img[src]');
   if (img) {
-    const alt = img.getAttribute('alt')?.trim();
-    const src = img.getAttribute('src') || '';
-    if (alt) return alt.slice(0, MAX_CELL_TEXT);
-    if (src && !src.startsWith('data:')) return `[img:${src.slice(0, MAX_CELL_TEXT - 5)}]`;
-    return '[img]';
+    return applyVisibilityState({
+      type: 'image',
+      selector,
+      src: img.getAttribute('src') || img.src || undefined,
+      ...(cleanText(img.getAttribute('alt')) ? { text: cleanText(img.getAttribute('alt')) } : {}),
+      ...(children.length > 0 ? { children } : {}),
+      ...(captureLocalHtml(cell) ? { localHtml: captureLocalHtml(cell) } : {}),
+    }, cssState);
   }
 
-  // 4. Collect button labels in the cell (e.g. action columns)
-  const buttons = cell.querySelectorAll('button, [role="button"], a[href]');
-  if (buttons.length > 0) {
-    const labels: string[] = [];
-    for (const btn of buttons) {
-      const btnText = cleanText(btn.textContent);
-      if (btnText && btnText.length <= 20 && btnText.length >= 1) {
-        const cls = (btn.className || '').toLowerCase();
-        if (!/icon-only|close|decrease|increase/.test(cls)) labels.push(btnText);
-      }
-    }
-    if (labels.length > 0) {
-      // If there's also plain text, combine
-      const plainText = cleanText(cell.textContent);
-      if (plainText && plainText !== labels.join(' ')) {
-        return plainText.slice(0, MAX_CELL_TEXT);
-      }
-      return labels.join(' | ').slice(0, MAX_CELL_TEXT);
-    }
+  const buttonNodes = children.filter((child) => child.type === 'button');
+  if (buttonNodes.length > 1) {
+    return applyVisibilityState({
+      type: 'button-group',
+      selector,
+      actions: buttonNodes,
+      children,
+      ...(captureLocalHtml(cell) ? { localHtml: captureLocalHtml(cell) } : {}),
+    }, cssState);
+  }
+  if (buttonNodes.length === 1 && children.length === 1) {
+    return applyVisibilityState({
+      type: 'button',
+      selector,
+      text: buttonNodes[0].label,
+      actions: buttonNodes,
+      children,
+    }, cssState);
   }
 
-  // 5. Default: full text content
-  const text = cleanText(cell.textContent);
-  return text ? text.slice(0, MAX_CELL_TEXT) : '';
+  const controlNode = children.find((child) =>
+    ['number', 'input', 'text', 'textarea', 'select', 'checkbox', 'radio', 'color', 'upload'].includes(child.type),
+  );
+  if (controlNode) {
+    const nodeType = controlNode.type === 'number' ? 'input-number' : controlNode.type;
+    return applyVisibilityState({
+      type: nodeType,
+      selector,
+      ...(controlNode.value ? { value: controlNode.value } : {}),
+      ...(controlNode.placeholder ? { placeholder: controlNode.placeholder } : {}),
+      children,
+      ...(captureLocalHtml(cell) ? { localHtml: captureLocalHtml(cell) } : {}),
+    }, cssState);
+  }
+
+  if (children.length === 0 && !directText) {
+    return applyVisibilityState({ type: 'empty', selector }, cssState);
+  }
+
+  if (children.length === 1 && children[0].type === 'text') {
+    return applyVisibilityState({
+      type: 'text',
+      selector,
+      text: children[0].label,
+      children,
+    }, cssState);
+  }
+
+  if (children.length === 0 && directText) {
+    return applyVisibilityState({
+      type: 'text',
+      selector,
+      text: directText,
+    }, cssState);
+  }
+
+  return applyVisibilityState({
+    type: 'custom',
+    selector,
+    ...(directText ? { text: directText } : {}),
+    ...(children.length > 0 ? { children } : {}),
+    ...(captureLocalHtml(cell) ? { localHtml: captureLocalHtml(cell) } : {}),
+  }, cssState);
+}
+
+function buildFooterTips(tableEl: Element, counter: Counter): StateNode[] | undefined {
+  const parent = tableEl.parentElement;
+  if (!parent) return undefined;
+
+  const footerTips: StateNode[] = [];
+  let afterTable = false;
+
+  for (const child of Array.from(parent.children)) {
+    if (child === tableEl) {
+      afterTable = true;
+      continue;
+    }
+    if (!afterTable) continue;
+
+    const cls = (child.className || '').toLowerCase();
+    if (!/tip|hint|desc|description|help|alert|extra/.test(cls) && child.getAttribute('role') !== 'alert') {
+      continue;
+    }
+
+    footerTips.push(...walkNode(child, 20, counter));
+  }
+
+  return footerTips.length > 0 ? footerTips : undefined;
 }
 
 function buildTableNode(el: Element, counter: Counter): StateNode {
@@ -302,23 +456,11 @@ function buildTableNode(el: Element, counter: Counter): StateNode {
     dataRows = headers.length > 0 ? allRows.slice(1) : allRows;
   }
 
-  // rows[][] for frontend display (text summary of each cell)
-  const rows: string[][] = [];
+  const rows: TableCellNode[][] = [];
   for (const tr of dataRows.slice(0, MAX_TABLE_ROWS)) {
     const cells = tr.querySelectorAll('td, [role="gridcell"], [role="cell"]');
     if (cells.length === 0) continue;
-    rows.push(Array.from(cells).map(extractCellText));
-  }
-
-  // Also walk each row through walkNode for full structure (Agent analysis).
-  // Each row becomes a group node with cells walked through the unified path.
-  const rowChildren: StateNode[] = [];
-  for (const tr of dataRows.slice(0, MAX_TABLE_ROWS)) {
-    if (counter.n >= MAX_NODES) break;
-    const rowNodes = walkNode(tr, 20, counter);
-    if (rowNodes.length > 0) {
-      rowChildren.push(...rowNodes);
-    }
+    rows.push(Array.from(cells).map((cell) => buildTableCell(cell, counter)));
   }
 
   // If table has complex content (images, buttons, inputs), preserve localHtml
@@ -337,15 +479,17 @@ function buildTableNode(el: Element, counter: Counter): StateNode {
     } catch { /* degrade gracefully */ }
   }
 
+  const footerTips = buildFooterTips(el, counter);
+  const cssState = el instanceof HTMLElement ? detectCssState(el) : undefined;
   counter.n++;
-  return {
+  return applyVisibilityState({
     type: 'table',
     selector: buildSelector(el),
     ...(headers.length > 0 ? { headers } : {}),
     ...(rows.length > 0 ? { rows, itemCount: dataRows.length } : {}),
-    ...(rowChildren.length > 0 ? { children: rowChildren } : {}),
+    ...(footerTips ? { footerTips } : {}),
     ...(tableLocalHtml ? { localHtml: tableLocalHtml } : {}),
-  };
+  }, cssState);
 }
 
 function buildTableNodeFromArea(area: Element, counter: Counter): StateNode {
@@ -866,7 +1010,11 @@ function processFormItem(
       if (label) child.label = label; // form-item label is authoritative
       if (!child.required && required) child.required = true;
       if (prop && !child.fieldProp) child.fieldProp = prop;
-      if (hint) child.hint = hint;
+      if (hint) {
+        child.hint = hint;
+        child.helpText = hint;
+        child.tips = [hint];
+      }
       // Extract options if applicable
       const OPTION_TYPES = new Set(['select', 'radio', 'checkbox', 'cascader']);
       if (OPTION_TYPES.has(child.type) && !child.options) {
@@ -880,10 +1028,11 @@ function processFormItem(
     counter.n++;
     return [{
       type: 'group',
+      selector: sel,
       ...(label ? { label } : {}),
       ...(required ? { required: true } : {}),
       ...(prop ? { fieldProp: prop } : {}),
-      ...(hint ? { hint } : {}),
+      ...(hint ? { hint, helpText: hint, tips: [hint] } : {}),
       children: walkedChildren,
     }];
   }
@@ -1128,7 +1277,11 @@ function processFormItem(
 
   // Extract hint/tip/description text from the form-item container
   const hint = extractHintOrError(container);
-  if (hint) node.hint = hint;
+  if (hint) {
+    node.hint = hint;
+    node.helpText = hint;
+    node.tips = [hint];
+  }
 
   return [node];
 }
@@ -1161,74 +1314,26 @@ function walkChildren(
   depth: number,
   counter: Counter,
 ): StateNode[] {
-  // Pre-filter to visible, non-empty children
-  const visible: Element[] = [];
-  for (const child of parent.children) {
-    if (shouldSkip(child)) continue;
-    if (!child.children.length && !(child.textContent?.trim())) continue;
-    visible.push(child);
-  }
   const results: StateNode[] = [];
-  let heading: string | undefined;
-  let sectionChildren: StateNode[] = [];
-  let i = 0;
+  const hiddenCss = parent instanceof HTMLElement ? detectCssState(parent) : undefined;
 
-  while (i < visible.length) {
+  let textIndex = 0;
+  for (const childNode of Array.from(parent.childNodes)) {
     if (counter.n >= MAX_NODES) break;
-    const child = visible[i];
 
-    // Check for inline title → start new section
-    const title = extractInlineTitle(child);
-    if (title) {
-      // Flush previous section
-      if (heading && sectionChildren.length > 0) {
-        counter.n++;
-        const bt = inferBlockType(sectionChildren);
-        results.push({
-          type: 'section',
-          label: heading,
-          ...(bt ? { blockType: bt } : {}),
-          children: sectionChildren,
-        });
-      } else {
-        results.push(...sectionChildren);
-      }
-      heading = title;
-      sectionChildren = [];
-      // Walk the heading element through the same unified walkNode path as
-      // every other element — no special treatment.
-      const headingNodes = walkNode(child, depth + 1, counter);
-      sectionChildren.push(...headingNodes);
-      i++;
+    if (childNode.nodeType === Node.TEXT_NODE) {
+      const text = cleanTextNodeValue(childNode);
+      if (!text) continue;
+      counter.n++;
+      results.push(buildTextNode(text, parent, textIndex++, hiddenCss));
       continue;
     }
 
-    // Detect 3+ consecutive similar siblings → list node
-    const groupEnd = findRepeatedGroupEnd(visible, i);
-    if (groupEnd - i >= 3) {
-      sectionChildren.push(buildListNode(visible.slice(i, groupEnd), counter));
-      i = groupEnd;
-      continue;
-    }
-
-    // Normal node
-    const childNodes = walkNode(child, depth + 1, counter);
-    sectionChildren.push(...childNodes);
-    i++;
-  }
-
-  // Flush final section
-  if (heading && sectionChildren.length > 0) {
-    counter.n++;
-    const bt = inferBlockType(sectionChildren);
-    results.push({
-      type: 'section',
-      label: heading,
-      ...(bt ? { blockType: bt } : {}),
-      children: sectionChildren,
-    });
-  } else {
-    results.push(...sectionChildren);
+    if (childNode.nodeType !== Node.ELEMENT_NODE) continue;
+    const child = childNode as Element;
+    if (shouldSkip(child)) continue;
+    if (!child.children.length && !child.textContent?.trim()) continue;
+    results.push(...walkNode(child, depth + 1, counter));
   }
 
   return results;
@@ -1283,7 +1388,10 @@ function classifyNode(node: Element): NodeClassification {
 
   // 5. Class/id identifiable patterns
   const nodeCls = (node.className || '').toLowerCase();
-  if (/(?:^|[\s_-])(?:card|panel)(?:$|[\s_-])/.test(nodeCls) && !/(card-body|panel-body|card-content)/.test(nodeCls)) {
+  if (
+    /(?:^|[\s_-])(?:card|panel)(?:$|[\s_-])/.test(nodeCls) &&
+    !/(card-body|panel-body|card-content|task-card)/.test(nodeCls)
+  ) {
     return 'card';
   }
 
@@ -1293,20 +1401,57 @@ function classifyNode(node: Element): NodeClassification {
 /* ── Specialized processors ─────────────────────────────────────────────── */
 
 function processIframe(node: Element, depth: number, counter: Counter): StateNode[] {
+  const buildIframeNode = (contentRoot: Element): StateNode[] => {
+    const children = walkChildren(contentRoot, depth + 1, counter);
+    if (children.length === 0) return [];
+    counter.n++;
+    const label =
+      cleanText(
+        node.getAttribute('title') ||
+        node.getAttribute('aria-label') ||
+        node.getAttribute('data-title'),
+      ) || 'Iframe';
+    return [{ type: 'section', label, blockType: 'iframe-content', children }];
+  };
+
   try {
     const iframe = node as HTMLIFrameElement;
     const iframeDoc = iframe.contentDocument;
     if (iframeDoc?.body) {
-      const children = walkChildren(iframeDoc.body, depth + 1, counter);
-      if (children.length > 0) {
-        counter.n++;
-        const label = cleanText(iframe.getAttribute('title') || iframe.getAttribute('aria-label')) || 'Iframe';
-        return [{ type: 'section', label, blockType: 'iframe-content', children }];
-      }
+      const docResult = buildIframeNode(iframeDoc.body);
+      if (docResult.length > 0) return docResult;
     }
   } catch {
     // Cross-origin iframe — skip silently
   }
+
+  // Offline HTML snapshots may inline iframe content directly as child nodes
+  // instead of providing a live contentDocument. Preserve and parse that DOM too.
+  const inlineBody = node.querySelector(':scope > body');
+  if (inlineBody) {
+    const inlineResult = buildIframeNode(inlineBody);
+    if (inlineResult.length > 0) return inlineResult;
+  }
+
+  const inlineRoot = node.firstElementChild;
+  if (inlineRoot) {
+    const inlineResult = buildIframeNode(inlineRoot);
+    if (inlineResult.length > 0) return inlineResult;
+  }
+
+  const inlineHtml = node.innerHTML?.trim();
+  if (inlineHtml && /<\w+/i.test(inlineHtml)) {
+    try {
+      const parsed = new DOMParser().parseFromString(inlineHtml, 'text/html');
+      if (parsed.body) {
+        const parsedResult = buildIframeNode(parsed.body);
+        if (parsedResult.length > 0) return parsedResult;
+      }
+    } catch {
+      // Ignore malformed offline iframe HTML and fall through
+    }
+  }
+
   return [];
 }
 
@@ -1369,13 +1514,16 @@ function processCard(node: Element, depth: number, counter: Counter): StateNode[
   if (children.length === 0) return []; // backtrack
   const titleEl = node.querySelector(':scope > [class*="header"] [class*="title"], :scope > [class*="head"] [class*="title"]');
   const cardTitle = titleEl ? cleanText(titleEl.textContent) : undefined;
+  const cssState = node instanceof HTMLElement ? detectCssState(node) : undefined;
   counter.n++;
-  return [{
-    type: 'section',
+  return [applyVisibilityState({
+    type: inferPreservedContainerType(node),
+    selector: buildSelector(node),
     ...(cardTitle ? { label: cardTitle } : {}),
-    blockType: inferBlockType(children, node) || 'card-block',
+    ...(inferBlockType(children, node) ? { blockType: inferBlockType(children, node) } : {}),
     children,
-  }];
+    ...(captureLocalHtml(node) ? { localHtml: captureLocalHtml(node) } : {}),
+  }, cssState)];
 }
 
 /* ── Main walk logic: classify → try → backtrack → fallback ─────────────── */
@@ -1387,6 +1535,18 @@ function hasVisibleContent(el: Element): boolean {
   const text = el.textContent?.trim();
   if (text && text.length >= 2) return true;
   if (el.querySelector('img, video, canvas, [contenteditable]')) return true;
+  return false;
+}
+
+function shouldPreserveContainerBoundary(node: Element, children: StateNode[], cssState?: string): boolean {
+  if (cssState) return true;
+  if (children.length === 0) return false;
+  if (children.length > 1) {
+    return hasMeaningfulContainerSignal(node) || !!getDirectText(node);
+  }
+  if (getDirectText(node)) return true;
+  if (hasMeaningfulContainerSignal(node)) return true;
+  if (node instanceof HTMLElement && node.dataset && Object.keys(node.dataset).length > 0) return true;
   return false;
 }
 
@@ -1449,7 +1609,7 @@ function walkNode(
     if (node instanceof HTMLElement) {
       const css = detectCssState(node);
       if (css) {
-        for (const r of result) r.cssState = css;
+        for (const r of result) applyVisibilityState(r, css);
       }
     }
     return result;
@@ -1457,20 +1617,40 @@ function walkNode(
 
   // ── Step 2: Backtrack — generic recursive walk ──
   const children = walkChildren(node, depth, counter);
+  const cssState = node instanceof HTMLElement ? detectCssState(node) : undefined;
+  const label = getContainerLabel(node);
+  const directText = getDirectText(node);
 
-  const ctx = getNodeLabel(node);
-  if (ctx && children.length > 0) {
+  if (children.length > 0 && shouldPreserveContainerBoundary(node, children, cssState)) {
     counter.n++;
-    const bt = inferBlockType(children, node);
-    return [{
-      type: 'section',
-      label: ctx,
-      ...(bt ? { blockType: bt } : {}),
+    const blockType = inferBlockType(children, node);
+    const containerNode: StateNode = {
+      type: inferPreservedContainerType(node),
+      selector: buildSelector(node),
+      ...(label ? { label } : {}),
+      ...(blockType ? { blockType } : {}),
+      ...(captureLocalHtml(node) ? { localHtml: captureLocalHtml(node) } : {}),
       children,
-    }];
+    };
+
+    if (directText) {
+      if (containerNode.type === 'status-block') {
+        containerNode.statusText = directText;
+      } else if (containerNode.type === 'alert') {
+        containerNode.description = directText;
+        containerNode.tips = [directText];
+      }
+    }
+
+    return [applyVisibilityState(containerNode, cssState)];
   }
 
-  if (children.length > 0) return children; // flatten
+  if (children.length > 0) {
+    if (cssState) {
+      for (const child of children) applyVisibilityState(child, cssState);
+    }
+    return children;
+  }
 
   // ── Step 3: localHtml fallback for non-empty visible elements ──
   // Per CLAUDE.md: walkChildren returns empty + visible content → localHtml fallback.
@@ -1479,23 +1659,23 @@ function walkNode(
     const snippet = captureLocalHtml(node);
     if (snippet) {
       counter.n++;
-      return [{
+      return [applyVisibilityState({
         type: 'custom',
         selector: buildSelector(node),
-        ...(ctx ? { label: ctx } : {}),
+        ...(label ? { label } : {}),
         localHtml: snippet,
-      }];
+      }, cssState)];
     }
     // captureLocalHtml returned undefined (short/trivial HTML) but element has
     // visible text content — create a lightweight label-only custom node.
     const text = cleanText(node.textContent);
     if (text && text.length >= 2) {
       counter.n++;
-      return [{
+      return [applyVisibilityState({
         type: 'custom',
         selector: buildSelector(node),
         label: text.slice(0, 200),
-      }];
+      }, cssState)];
     }
   }
 

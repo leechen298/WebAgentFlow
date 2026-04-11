@@ -145,7 +145,12 @@ describe('captureInitialState — lottery activity page', () => {
     it('should detect "活动主视觉" as upload', () => {
       const node = findByLabel('活动主视觉');
       expect(node).toBeDefined();
-      expect(node!.type).toBe('upload');
+      if (node!.type === 'group' && node!.children) {
+        const uploadLeaf = findNodes([node!], (n) => n.type === 'upload')[0];
+        expect(uploadLeaf).toBeDefined();
+      } else {
+        expect(node!.type).toBe('upload');
+      }
     });
 
     it('should detect "页面背景色" as color or group', () => {
@@ -308,18 +313,16 @@ describe('captureInitialState — lottery activity page', () => {
       }
     });
 
-    it('leaf nodes should not have children (except list and table)', () => {
+    it('high-fidelity tree should preserve meaningful non-section container nodes', () => {
       const leaves = findNodes(
         tree,
         (n) =>
           n.type !== 'section' &&
           n.type !== 'group' &&
-          n.type !== 'list' &&
           n.type !== 'table' &&
           n.children !== undefined,
       );
-      // Most leaf nodes shouldn't have children (allow a few for edge cases)
-      expect(leaves.length).toBeLessThanOrEqual(5);
+      expect(leaves.length).toBeGreaterThan(0);
     });
   });
 
@@ -329,41 +332,73 @@ describe('captureInitialState — lottery activity page', () => {
     it('"活动名称" form-item should contain tip text as sibling node', () => {
       const nameNode = findByLabel('活动名称');
       expect(nameNode).toBeDefined();
-      // The tip span.tip is a sibling of the input — should be captured as a custom node
-      if (nameNode!.type === 'group' && nameNode!.children) {
-        const tipNode = nameNode!.children.find(
-          (c) => c.type === 'custom' && (c.localHtml?.includes('活动') || c.label?.includes('活动')),
-        );
-        expect(tipNode, 'tip text should be preserved in form-item children').toBeDefined();
+      if (nameNode!.children) {
+        const tipNode = findNodes(nameNode!.children, (c) =>
+          (c.type === 'alert' || c.type === 'text' || c.type === 'custom') &&
+          (c.label?.includes('规范命名') || c.localHtml?.includes('规范命名') || c.description?.includes('规范命名')),
+        )[0];
+        expect(tipNode, 'tip text should be preserved in form-item subtree').toBeDefined();
       }
     });
   });
 
   describe('DOM fidelity — table image column (issue 2)', () => {
-    it('prize table rows should have image URL in 奖品图 column', () => {
+    it('prize table rows should keep image cells as structured objects with src', () => {
       const tables = findByType('table');
       const prizeTable = tables.find((t) => t.headers?.includes('奖品图'));
       expect(prizeTable).toBeDefined();
       expect(prizeTable!.rows).toBeDefined();
-      // Row cells for image column should not be empty
       const imgColIdx = prizeTable!.headers!.indexOf('奖品图');
       const imgCells = prizeTable!.rows!.map((r) => r[imgColIdx]);
-      const nonEmpty = imgCells.filter((c) => c && c.length > 0);
-      expect(nonEmpty.length).toBeGreaterThan(0);
+      const imageCell = imgCells.find((cell) =>
+        typeof cell === 'object' &&
+        cell !== null &&
+        'type' in cell &&
+        (cell as Record<string, unknown>).type === 'image' &&
+        typeof (cell as Record<string, unknown>).src === 'string',
+      );
+      expect(imageCell).toBeDefined();
+    });
+
+    it('prize table action cells should preserve Edit/Delete buttons structurally', () => {
+      const tables = findByType('table');
+      const prizeTable = tables.find((t) => t.headers?.includes('操作'));
+      expect(prizeTable).toBeDefined();
+      const actionColIdx = prizeTable!.headers!.indexOf('操作');
+      const actionCells = prizeTable!.rows!.map((r) => r[actionColIdx]);
+      const actionCell = actionCells.find((cell) =>
+        typeof cell === 'object' &&
+        cell !== null &&
+        'type' in cell &&
+        (cell as Record<string, unknown>).type === 'button-group',
+      ) as Record<string, unknown> | undefined;
+      expect(actionCell).toBeDefined();
+      const actions = (actionCell?.actions ?? []) as Array<Record<string, unknown>>;
+      expect(actions.some((a) => a.label === '编辑')).toBe(true);
+      expect(actions.some((a) => a.label === '删除')).toBe(true);
+    });
+
+    it('prize table footer tip block should be preserved after the table', () => {
+      const prizeGroup = findByLabel('奖品配置');
+      expect(prizeGroup).toBeDefined();
+      const subtree = findNodes([prizeGroup!], () => true);
+      const tableWrapperIdx = subtree.findIndex((n) => n.type === 'table-wrapper');
+      const footerTipIdx = subtree.findIndex((n) =>
+        (n.type === 'alert' || n.type === 'text') &&
+        (n.label?.includes('说明：1') || n.description?.includes('说明：1')),
+      );
+      expect(tableWrapperIdx).toBeGreaterThanOrEqual(0);
+      expect(footerTipIdx).toBeGreaterThan(tableWrapperIdx);
     });
   });
 
   describe('DOM fidelity — alert/tip between title and table (issues 4,5)', () => {
-    it('"全局中奖概率配置" section should preserve alert text', () => {
+    it('"全局中奖概率配置" section should preserve title → alert → table → actions order', () => {
       const section = findByLabel('🎯 全局中奖概率配置');
       expect(section).toBeDefined();
       expect(section!.children).toBeDefined();
-      // Alert text should appear as a child node (custom or section)
-      const allChildren = findNodes(section!.children!, () => true);
-      const alertNode = allChildren.find(
-        (c) => c.label?.includes('默认中奖概率') || c.localHtml?.includes('默认中奖概率'),
-      );
-      expect(alertNode, 'alert text about default probability should be preserved').toBeDefined();
+      const directTypes = section!.children!.map((c) => c.type);
+      expect(directTypes.slice(0, 4)).toEqual(['heading', 'alert', 'table', 'button-group']);
     });
   });
 
@@ -377,43 +412,74 @@ describe('captureInitialState — lottery activity page', () => {
   });
 
   describe('DOM fidelity — input-number in table (issue 7)', () => {
-    it('probability table children should have number-type nodes', () => {
+    it('probability table rows should keep input-number cells as structured controls', () => {
       const tables = findByType('table');
       const probTable = tables.find((t) => t.headers?.includes('中奖概率'));
       expect(probTable).toBeDefined();
-      const numberNodes = findNodes(probTable!.children ?? [], (n) => n.type === 'number');
-      expect(numberNodes.length).toBeGreaterThan(0);
-      // Should have actual values
-      const withValues = numberNodes.filter((n) => n.value !== undefined);
-      expect(withValues.length).toBeGreaterThan(0);
+      const lastCell = probTable!.rows?.[0]?.[probTable!.rows![0].length - 1];
+      expect(typeof lastCell).toBe('object');
+      expect((lastCell as Record<string, unknown>).type).toBe('input-number');
+      expect((lastCell as Record<string, unknown>).value).toBeDefined();
     });
   });
 
-  describe('DOM fidelity — remaining items localHtml (issue 8)', () => {
-    it('"其他 5 项" node should have localHtml', () => {
-      const remaining = findNodes(tree, (n) => n.label === '其他 5 项');
-      expect(remaining.length).toBeGreaterThan(0);
-      // localHtml should be captured for unexpanded items
-      expect(remaining[0].localHtml).toBeDefined();
-      expect(remaining[0].localHtml!.length).toBeGreaterThan(0);
+  describe('DOM fidelity — no hard regroup / no list compression', () => {
+    it('should preserve all task-card siblings instead of collapsing to "其他 N 项"', () => {
+      const taskCards = findNodes(tree, (n) => n.type === 'task-card');
+      const titledTaskCards = taskCards.filter((n) =>
+        findNodes([n], (child) => child.label?.includes('任务')).length > 0,
+      );
+      expect(titledTaskCards.length).toBeGreaterThanOrEqual(8);
+      expect(findNodes(tree, (n) => n.label?.startsWith('其他 ')).length).toBe(0);
     });
   });
 
   describe('DOM fidelity — color picker (issue 9)', () => {
-    it('"页面背景色" should be color type with value, not expanded into buttons', () => {
+    it('"页面背景色" subtree should contain a color node with extracted value', () => {
       const node = findByLabel('页面背景色');
       expect(node).toBeDefined();
-      expect(node!.type).toBe('color');
-      // Should have extracted color value
-      expect(node!.value).toBeDefined();
-      expect(node!.value).toMatch(/rgb/);
+      const colorNode = findNodes([node!], (n) => n.type === 'color')[0];
+      expect(colorNode).toBeDefined();
+      expect(colorNode!.value).toBeDefined();
+      expect(colorNode!.value).toMatch(/rgb/);
     });
 
-    it('"页面背景色" children should not contain hidden popup buttons', () => {
+    it('"页面背景色" subtree should not surface hidden popup action buttons', () => {
       const node = findByLabel('页面背景色');
       expect(node).toBeDefined();
-      // Color node should be a leaf, not a group with children
-      expect(node!.children).toBeUndefined();
+      const popupButtons = findNodes([node!], (n) =>
+        n.type === 'button' && ['清空', '确定'].includes(n.label ?? ''),
+      );
+      expect(popupButtons.length).toBe(0);
+    });
+  });
+
+  describe('DOM fidelity — hidden blocks and status text', () => {
+    it('should preserve hidden custom-config blocks with hidden state', () => {
+      const configs = findNodes(tree, (n) => n.type === 'custom-config');
+      expect(configs.length).toBeGreaterThan(0);
+      expect(configs.every((n) => n.cssState === 'display:none' || n.visible === false)).toBe(true);
+    });
+
+    it('should preserve probability-sum status text together with save button', () => {
+      const statusBlocks = findNodes(tree, (n) => n.type === 'status-block');
+      expect(statusBlocks.length).toBeGreaterThan(0);
+      const status = statusBlocks.find((n) =>
+        n.statusText?.includes('概率总和：100%') ||
+        findNodes([n], (child) => child.label?.includes('概率总和：100%')).length > 0,
+      );
+      expect(status).toBeDefined();
+      expect(findNodes([status!], (n) => n.type === 'button' && n.label === '保存自定义概率').length).toBeGreaterThan(0);
+    });
+
+    it('should preserve hidden batch dialog footer with hidden state', () => {
+      const hiddenFooters = findNodes(tree, (n) =>
+        n.type === 'dialog-footer' && (n.cssState === 'display:none' || n.visible === false),
+      );
+      expect(hiddenFooters.length).toBeGreaterThan(0);
+      const footer = hiddenFooters[0];
+      expect(findNodes([footer], (n) => n.type === 'button' && n.label === '取 消').length).toBeGreaterThan(0);
+      expect(findNodes([footer], (n) => n.type === 'button' && n.label === '确 定').length).toBeGreaterThan(0);
     });
   });
 

@@ -286,20 +286,16 @@ describe('no-semantic-tags.html — Page with zero semantic HTML tags', () => {
     expect(navSections.length).toBe(0);
   });
 
-  it('should capture top bar links as a list (no semantic nav tags)', () => {
-    // Without semantic tags, walkNode groups the 4 similar links into a list node
-    const lists = findByType(tree, 'list');
-    expect(lists.length).toBeGreaterThan(0);
-    // List items should be expanded with their content
-    const topList = lists[0];
-    expect(topList.children || topList.value).toBeDefined();
+  it('should capture top bar links as individual links in DOM order', () => {
+    const links = findByType(tree, 'link');
+    const labels = links.map((l) => l.label).filter(Boolean);
+    expect(labels).toEqual(expect.arrayContaining(['Home', 'Profile', 'Settings', 'Logout']));
   });
 
-  it('should capture form values via list grouping', () => {
-    // Without form-item containers, inputs are grouped as list items.
-    // List items are now expanded with structure.
-    const lists = findByType(tree, 'list');
-    expect(lists.length).toBeGreaterThan(0);
+  it('should capture form values without relying on list grouping', () => {
+    expect(findByLabel(tree, 'Username')).toBeDefined();
+    expect(findByLabel(tree, 'Email')).toBeDefined();
+    expect(findByLabel(tree, 'Language')).toBeDefined();
   });
 
   it('should detect Save / Cancel buttons', () => {
@@ -510,12 +506,18 @@ describe('complex-nesting.html — Complex nested structures', () => {
     const tables = findByType(tree, 'table');
     const userTable = tables.find((t) => t.headers?.includes('Name') && t.headers?.includes('Actions'));
     expect(userTable).toBeDefined();
-    // All tables use unified rows format; action columns show button labels
     expect(userTable!.rows).toBeDefined();
     expect(userTable!.rows!.length).toBeGreaterThanOrEqual(2);
-    // Action column should contain button labels like "Edit | Delete"
     const actionCells = userTable!.rows!.map((r) => r[r.length - 1]);
-    expect(actionCells.some((c) => c.includes('Edit'))).toBe(true);
+    const actionCell = actionCells.find((cell) =>
+      typeof cell === 'object' &&
+      cell !== null &&
+      'type' in cell &&
+      (cell as Record<string, unknown>).type === 'button-group',
+    ) as Record<string, unknown> | undefined;
+    expect(actionCell).toBeDefined();
+    const actions = (actionCell?.actions ?? []) as Array<Record<string, unknown>>;
+    expect(actions.some((a) => a.label === 'Edit')).toBe(true);
   });
 
   it('should keep simple table "Price List" with flat rows', () => {

@@ -876,11 +876,34 @@ function getInlineTableColumns(node: StateNode): Array<{ title: string; dataInde
   return firstRow.map((_, i) => ({ title: `Col ${i + 1}`, dataIndex: `col${i}`, key: `col${i}`, ellipsis: true }));
 }
 
+function stringifyTableCell(cell: unknown): string {
+  if (typeof cell === 'string') return cell;
+  if (!cell || typeof cell !== 'object') return '';
+  const c = cell as Record<string, unknown>;
+  if (typeof c.text === 'string' && c.text) return c.text;
+  if (typeof c.value === 'string' && c.value) return c.value;
+  if (typeof c.src === 'string' && c.src) return c.src;
+  if (Array.isArray(c.actions) && c.actions.length > 0) {
+    return c.actions
+      .map((action) => (action && typeof action === 'object' ? (action as Record<string, unknown>).label : undefined))
+      .filter((label): label is string => typeof label === 'string' && label.length > 0)
+      .join(' | ');
+  }
+  if (Array.isArray(c.children) && c.children.length > 0) {
+    return c.children
+      .map((child) => (child && typeof child === 'object' ? (child as Record<string, unknown>).label ?? (child as Record<string, unknown>).value : undefined))
+      .filter((label): label is string => typeof label === 'string' && label.length > 0)
+      .join(' ');
+  }
+  if (typeof c.type === 'string') return `[${c.type}]`;
+  return '';
+}
+
 function getInlineTableRows(node: StateNode): Array<Record<string, string>> {
   if (!node.rows) return [];
   return node.rows.map((row) => {
     const record: Record<string, string> = {};
-    row.forEach((cell, i) => { record[`col${i}`] = cell; });
+    row.forEach((cell, i) => { record[`col${i}`] = stringifyTableCell(cell); });
     return record;
   });
 }

@@ -123,6 +123,35 @@ export interface InitialFieldSnapshot {
  *                  'slider', 'rate', 'upload', 'cascader', 'transfer',
  *                  'code-editor', 'color', 'autocomplete', 'list', 'custom', etc.
  */
+export interface TableCellNode {
+  /** Cell type: text | image | button | button-group | input | input-number | custom | empty | cell */
+  type: string;
+  /** Optional cell label */
+  label?: string;
+  /** Selector for the cell root or primary control */
+  selector?: string;
+  /** Plain text content */
+  text?: string;
+  /** Image source for image cells */
+  src?: string;
+  /** Structured control value */
+  value?: string;
+  /** Placeholder for embedded controls */
+  placeholder?: string;
+  /** Child action nodes for button/button-group cells */
+  actions?: StateNode[];
+  /** Structured child nodes preserved from the cell DOM */
+  children?: StateNode[];
+  /** Explicit visibility flag when hidden */
+  visible?: boolean;
+  /** Key CSS visibility state affecting interaction */
+  cssState?: string;
+  /** Local HTML fallback for complex cells */
+  localHtml?: string;
+}
+
+export type TableRowValue = string | TableCellNode;
+
 export interface StateNode {
   /** Node type */
   type: string;
@@ -140,6 +169,8 @@ export interface StateNode {
   href?: string;
   /** Whether this item is currently active/selected (e.g. active menu item) */
   active?: boolean;
+  /** Explicit visibility flag for hidden nodes; omitted for visible nodes */
+  visible?: boolean;
   /** Key CSS visibility state affecting interaction (e.g. 'display:none', 'visibility:hidden').
    *  display:none = not rendered, not clickable. visibility:hidden = rendered, occupies space, still clickable.
    *  Omitted when the element is normally visible. */
@@ -152,6 +183,14 @@ export interface StateNode {
   placeholder?: string;
   /** Hint, tip, or description text associated with a form field */
   hint?: string;
+  /** Help text associated with the node */
+  helpText?: string;
+  /** Tip texts associated with the node */
+  tips?: string[];
+  /** Longer descriptive text associated with the node */
+  description?: string;
+  /** Status text associated with the node */
+  statusText?: string;
   /** Whether field is required */
   required?: boolean;
   /** Validation prop name from framework */
@@ -160,8 +199,10 @@ export interface StateNode {
   itemCount?: number;
   /** Table column headers */
   headers?: string[];
-  /** Table row data (max ~20 rows, each row is array of cell text values) */
-  rows?: string[][];
+  /** Table row data; parsers may emit legacy strings or structured cell objects */
+  rows?: TableRowValue[][];
+  /** Tip / description nodes that belong to the table footer area */
+  footerTips?: StateNode[];
   /**
    * Leaf-level local HTML snippet — fallback facts layer for complex nodes
    * where semantic extraction alone is insufficient (richtext content,
