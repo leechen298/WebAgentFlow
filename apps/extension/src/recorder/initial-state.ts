@@ -252,6 +252,16 @@ function extractCellText(cell: Element): string {
   const checkbox = cell.querySelector<HTMLInputElement>('input[type="checkbox"], input[type="radio"]');
   if (checkbox) return checkbox.checked ? '✓' : '✗';
 
+  // 3.5. Check for image (preserve src so Agent knows there's an image)
+  const img = cell.querySelector<HTMLImageElement>('img[src]');
+  if (img) {
+    const alt = img.getAttribute('alt')?.trim();
+    const src = img.getAttribute('src') || '';
+    if (alt) return alt.slice(0, MAX_CELL_TEXT);
+    if (src && !src.startsWith('data:')) return `[img:${src.slice(0, MAX_CELL_TEXT - 5)}]`;
+    return '[img]';
+  }
+
   // 4. Collect button labels in the cell (e.g. action columns)
   const buttons = cell.querySelectorAll('button, [role="button"], a[href]');
   if (buttons.length > 0) {
@@ -358,7 +368,8 @@ function buildTableNodeFromArea(area: Element, counter: Counter): StateNode {
 function isActionButton(el: Element): boolean {
   const tag = el.tagName.toLowerCase();
   if (tag !== 'button' && el.getAttribute('role') !== 'button') return false;
-  const text = cleanText(el.textContent);
+  // Use title attribute as fallback for icon-only buttons (e.g. move-up/down)
+  const text = cleanText(el.textContent) || cleanText(el.getAttribute('title'));
   if (!text || text.length > 30) return false;
   const cls = (el.className || '').toLowerCase();
   if (/close|icon-only|collapse/.test(cls)) return false;
@@ -562,6 +573,41 @@ function extractControlValue(el: Element): ControlValueResult {
   // Try to extract value from inner input, aria attributes, or visible text.
   const cls = classifyElement(el);
   if (cls) {
+    // Color picker: extract selected color from inner color-display element's background
+    if (cls.type === 'color') {
+      const colorInner = el.querySelector(
+        '[class*="color-inner"], [class*="color__value"], [class*="color-block"]',
+      ) as HTMLElement | null;
+      const bgColor = colorInner?.style?.backgroundColor;
+      return {
+        type: 'color',
+        ...(bgColor ? { value: bgColor } : {}),
+      };
+    }
+
+    // Upload: extract file URLs from img/a elements inside the component
+    if (cls.type === 'upload') {
+      const urls: string[] = [];
+      for (const img of el.querySelectorAll<HTMLImageElement>('img[src]')) {
+        const src = img.src || img.getAttribute('src') || '';
+        if (src && !src.startsWith('data:') && !src.includes('placeholder')) {
+          urls.push(src);
+        }
+      }
+      if (urls.length === 0) {
+        for (const a of el.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+          const href = a.href;
+          if (href && href !== '#' && !href.startsWith('javascript:')) {
+            urls.push(href);
+          }
+        }
+      }
+      return {
+        type: 'upload',
+        ...(urls.length > 0 ? { value: urls.join(', ').slice(0, 500) } : {}),
+      };
+    }
+
     const innerInput = el.querySelector<HTMLInputElement>('input:not([type="hidden"])');
     const ariaValue = el.getAttribute('aria-valuenow') || innerInput?.getAttribute('aria-valuenow');
     const inputValue = innerInput?.value;
@@ -1122,7 +1168,6 @@ function walkChildren(
     if (!child.children.length && !(child.textContent?.trim())) continue;
     visible.push(child);
   }
-
   const results: StateNode[] = [];
   let heading: string | undefined;
   let sectionChildren: StateNode[] = [];
@@ -1222,6 +1267,7 @@ function classifyNode(node: Element): NodeClassification {
     const CONTROL_TYPES = new Set([
       'input', 'number', 'textarea', 'select', 'checkbox', 'radio', 'switch',
       'slider', 'rate', 'date', 'time', 'color', 'cascader', 'autocomplete',
+      'upload', 'transfer',
     ]);
     if (CONTROL_TYPES.has(cls.type)) return 'standalone-control';
   }
@@ -1279,7 +1325,11 @@ function processDialog(node: Element, depth: number, counter: Counter): StateNod
 function processStandaloneControl(node: Element, counter: Counter): StateNode[] {
   const label = extractControlLabel(node);
   const { value, type, placeholder, options } = extractControlValue(node);
-  if (!label && !value && !placeholder) return []; // backtrack
+  // Don't backtrack for classified component types — they ARE controls even
+  // without extractable label/value (prevents walking into internal structure
+  // like hidden popups in color pickers).
+  const isClassified = !!classifyElement(node);
+  if (!isClassified && !label && !value && !placeholder) return []; // backtrack
   counter.n++;
   return [{
     type: type || 'input',
@@ -1294,7 +1344,8 @@ function processStandaloneControl(node: Element, counter: Counter): StateNode[] 
 }
 
 function processButton(node: Element, counter: Counter): StateNode[] {
-  const text = cleanText(node.textContent);
+  // Use title attribute as fallback for icon-only buttons (e.g. move-up/down)
+  const text = cleanText(node.textContent) || cleanText(node.getAttribute('title'));
   if (!text) return []; // backtrack
   counter.n++;
   return [{ type: 'button', selector: buildSelector(node), label: text }];
@@ -1422,9 +1473,9 @@ function walkNode(
   if (children.length > 0) return children; // flatten
 
   // ── Step 3: localHtml fallback for non-empty visible elements ──
-  // Only for elements that had a classification but processor failed,
-  // or for elements with visible content that walkChildren couldn't extract.
-  if (classification && hasVisibleContent(node)) {
+  // Per CLAUDE.md: walkChildren returns empty + visible content → localHtml fallback.
+  // No classification guard — ANY element with extractable content gets a fallback.
+  if (hasVisibleContent(node)) {
     const snippet = captureLocalHtml(node);
     if (snippet) {
       counter.n++;
@@ -1433,6 +1484,17 @@ function walkNode(
         selector: buildSelector(node),
         ...(ctx ? { label: ctx } : {}),
         localHtml: snippet,
+      }];
+    }
+    // captureLocalHtml returned undefined (short/trivial HTML) but element has
+    // visible text content — create a lightweight label-only custom node.
+    const text = cleanText(node.textContent);
+    if (text && text.length >= 2) {
+      counter.n++;
+      return [{
+        type: 'custom',
+        selector: buildSelector(node),
+        label: text.slice(0, 200),
       }];
     }
   }

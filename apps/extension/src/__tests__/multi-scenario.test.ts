@@ -522,10 +522,11 @@ describe('complex-nesting.html — Complex nested structures', () => {
     const tables = findByType(tree, 'table');
     const priceTable = tables.find((t) => t.headers?.includes('Item') && t.headers?.includes('Price'));
     expect(priceTable).toBeDefined();
-    // Simple table should use flat rows format, not children
+    // Simple table should have rows for text summary
     expect(priceTable!.rows).toBeDefined();
     expect(priceTable!.rows!.length).toBe(3);
-    expect(priceTable!.children).toBeUndefined();
+    // Per DOM-fidelity rules, all cells go through walkNode — children may exist
+    // even for simple tables (text cells produce custom nodes via fallback)
   });
 });
 

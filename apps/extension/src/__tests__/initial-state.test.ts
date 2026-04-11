@@ -323,6 +323,100 @@ describe('captureInitialState — lottery activity page', () => {
     });
   });
 
+  // ── DOM fidelity issue regression tests (JSONC issues 1-9) ──────────────
+
+  describe('DOM fidelity — tip/hint preservation (issue 1)', () => {
+    it('"活动名称" form-item should contain tip text as sibling node', () => {
+      const nameNode = findByLabel('活动名称');
+      expect(nameNode).toBeDefined();
+      // The tip span.tip is a sibling of the input — should be captured as a custom node
+      if (nameNode!.type === 'group' && nameNode!.children) {
+        const tipNode = nameNode!.children.find(
+          (c) => c.type === 'custom' && (c.localHtml?.includes('活动') || c.label?.includes('活动')),
+        );
+        expect(tipNode, 'tip text should be preserved in form-item children').toBeDefined();
+      }
+    });
+  });
+
+  describe('DOM fidelity — table image column (issue 2)', () => {
+    it('prize table rows should have image URL in 奖品图 column', () => {
+      const tables = findByType('table');
+      const prizeTable = tables.find((t) => t.headers?.includes('奖品图'));
+      expect(prizeTable).toBeDefined();
+      expect(prizeTable!.rows).toBeDefined();
+      // Row cells for image column should not be empty
+      const imgColIdx = prizeTable!.headers!.indexOf('奖品图');
+      const imgCells = prizeTable!.rows!.map((r) => r[imgColIdx]);
+      const nonEmpty = imgCells.filter((c) => c && c.length > 0);
+      expect(nonEmpty.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('DOM fidelity — alert/tip between title and table (issues 4,5)', () => {
+    it('"全局中奖概率配置" section should preserve alert text', () => {
+      const section = findByLabel('🎯 全局中奖概率配置');
+      expect(section).toBeDefined();
+      expect(section!.children).toBeDefined();
+      // Alert text should appear as a child node (custom or section)
+      const allChildren = findNodes(section!.children!, () => true);
+      const alertNode = allChildren.find(
+        (c) => c.label?.includes('默认中奖概率') || c.localHtml?.includes('默认中奖概率'),
+      );
+      expect(alertNode, 'alert text about default probability should be preserved').toBeDefined();
+    });
+  });
+
+  describe('DOM fidelity — move buttons (issue 6)', () => {
+    it('task cards should have 上移/下移 buttons', () => {
+      const moveUp = findNodes(tree, (n) => n.type === 'button' && n.label === '上移');
+      const moveDown = findNodes(tree, (n) => n.type === 'button' && n.label === '下移');
+      expect(moveUp.length).toBeGreaterThan(0);
+      expect(moveDown.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('DOM fidelity — input-number in table (issue 7)', () => {
+    it('probability table children should have number-type nodes', () => {
+      const tables = findByType('table');
+      const probTable = tables.find((t) => t.headers?.includes('中奖概率'));
+      expect(probTable).toBeDefined();
+      const numberNodes = findNodes(probTable!.children ?? [], (n) => n.type === 'number');
+      expect(numberNodes.length).toBeGreaterThan(0);
+      // Should have actual values
+      const withValues = numberNodes.filter((n) => n.value !== undefined);
+      expect(withValues.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('DOM fidelity — remaining items localHtml (issue 8)', () => {
+    it('"其他 5 项" node should have localHtml', () => {
+      const remaining = findNodes(tree, (n) => n.label === '其他 5 项');
+      expect(remaining.length).toBeGreaterThan(0);
+      // localHtml should be captured for unexpanded items
+      expect(remaining[0].localHtml).toBeDefined();
+      expect(remaining[0].localHtml!.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('DOM fidelity — color picker (issue 9)', () => {
+    it('"页面背景色" should be color type with value, not expanded into buttons', () => {
+      const node = findByLabel('页面背景色');
+      expect(node).toBeDefined();
+      expect(node!.type).toBe('color');
+      // Should have extracted color value
+      expect(node!.value).toBeDefined();
+      expect(node!.value).toMatch(/rgb/);
+    });
+
+    it('"页面背景色" children should not contain hidden popup buttons', () => {
+      const node = findByLabel('页面背景色');
+      expect(node).toBeDefined();
+      // Color node should be a leaf, not a group with children
+      expect(node!.children).toBeUndefined();
+    });
+  });
+
   describe('tree snapshot', () => {
     it('should output tree summary for manual inspection', () => {
       const lines: string[] = [];
