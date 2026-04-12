@@ -1,8 +1,8 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (and other AI coding agents) when working with code in this repository.
 
-> **Multi-agent sync rule**: This file is kept in sync with `CLAUDE.zh.md` (Chinese) and `AGENTS.md` (for Codex and other AI agents). When any of the three files is modified, the others must be updated to stay consistent.
+> **Multi-agent sync rule**: This file is kept in sync with `CLAUDE.md` (English) and `CLAUDE.zh.md` (Chinese). When any of the three files is modified, the others must be updated to stay consistent.
 
 ## Project Overview
 
