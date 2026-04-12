@@ -155,14 +155,26 @@ def _walk_element(
         visible=visible,
     )
 
-    # Handle iframe: fill frame_content from provided HTML
+    # Handle iframe: attach frame document as subtree via <frame-body> wrapper
     if tag_lower == "iframe" and iframe_html:
         src = el.get("src", "")
         frame_id = el.get("data-frame-id", "")
         iframe_content_html = iframe_html.get(frame_id) or iframe_html.get(src)
         if iframe_content_html:
             parsed = parse_html(iframe_content_html, iframe_html=iframe_html)
-            node.frame_content = parsed.nodes
+            if parsed.nodes:
+                frame_attrs: dict[str, str] = {}
+                if src:
+                    frame_attrs["data-frame-src"] = src
+                if frame_id:
+                    frame_attrs["data-frame-id"] = frame_id
+                frame_body = ASTNode(
+                    node_type="element",
+                    tag="frame-body",
+                    attrs=frame_attrs,
+                    children=parsed.nodes,
+                )
+                node.children.append(frame_body)
 
     return node
 
@@ -179,8 +191,8 @@ def parse_html(
     Args:
         html_str: The HTML to parse. Can be a fragment or a full document.
         iframe_html: Optional mapping of iframe identifiers (src URL or
-            data-frame-id) to their HTML content strings. Used to fill
-            frame_content on <iframe> nodes.
+            data-frame-id) to their HTML content strings. Parsed and
+            attached as a <frame-body> subtree inside <iframe> nodes.
         max_nodes: Maximum number of AST nodes to produce before stopping.
         max_depth: Maximum nesting depth.
 

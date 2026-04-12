@@ -7,11 +7,15 @@ and text content becomes text-type ASTNodes. The tree faithfully represents:
 - Sibling order
 - Key attributes
 - Visibility state (from inline style / hidden attribute)
-- iframe placeholder for separate content
+- iframe content as subtree (via synthetic <frame-body> child node)
 
 This is the "fact layer" — downstream consumers can derive semantic
 views (Simplified AST) from it, but the Full AST itself does not
 reorganize, merge, or interpret the structure.
+
+iframe content is attached as a subtree of the <iframe> node's children,
+not as a side-channel field. A synthetic <frame-body> element wraps the
+parsed iframe document body content.
 """
 
 from __future__ import annotations
@@ -47,11 +51,6 @@ class ASTNode(BaseModel):
     visible: bool = True
     """False when inline style contains display:none or visibility:hidden,
     or the hidden HTML attribute is present."""
-
-    # --- Iframe ---
-    frame_content: list[ASTNode] | None = None
-    """For <iframe> elements: parsed AST of the iframe document body.
-    None when iframe HTML was not provided or is cross-origin."""
 
 
 ASTNode.model_rebuild()

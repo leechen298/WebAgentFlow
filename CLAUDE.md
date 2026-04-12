@@ -15,7 +15,7 @@ WebAgentFlow is a monorepo for an agent-driven web workflow engine with:
 
 ### A. Current Phase Goal
 
-The current phase focuses exclusively on **HTML → Full AST**: converting captured page HTML into a faithful, structure-preserving Abstract Syntax Tree. This is the foundational "fact layer" — get the page representation right before building anything on top of it.
+The current phase focuses exclusively on **HTML → Full AST**: converting captured page HTML into a faithful, structure-preserving Abstract Syntax Tree. This is the foundational "page fact layer" — get the page representation right before building anything on top of it.
 
 **Current priority: build the page fact layer correctly.** User action recording, path learning, behavior teaching, and replay execution are all future work that will build on the stable Full AST foundation. They are not part of this phase.
 
@@ -23,13 +23,15 @@ The current phase focuses exclusively on **HTML → Full AST**: converting captu
 
 The technical approach has shifted from the earlier direction.
 
-**Previous approach**: The client-side DOM walker (`initial-state.ts`) produces a semantic StateNode tree directly from the live DOM in the browser, combining HTML parsing, component classification, and semantic extraction in one pass.
+**Previous approach**: The client-side DOM walker (`initial-state.ts`) produces a semantic StateNode tree directly from the live DOM in the browser, combining HTML parsing, component classification, and semantic extraction in a single browser-side pass.
 
 **Current approach**: Split responsibilities between client and server:
 - **Client (extension)** — captures raw HTML of the page and iframe content documents, sends to server
-- **Server (API)** — parses HTML into Full AST using a mature third-party HTML parser library, with project-owned Full AST schema and mapping logic
+- **Server (API)** — parses HTML into Full AST using a mature third-party HTML parser library, then maps the parser output to the project-owned Full AST schema
 
-The parser pipeline is now: **third-party library for HTML parsing + project-owned Full AST schema and mapping logic**.
+The parser pipeline is: **third-party library for HTML parsing + project-owned Full AST schema and thin mapping logic**.
+
+The mapping layer is deliberately thin: tag normalization, attribute filtering, text node interleaving, and visibility detection. **The parser's original tree structure is preserved as-is** — no reorganization, no semantic interpretation, no structure rewriting. The Full AST should stay close to what the third-party parser produces.
 
 Reasons for this shift:
 - Server-side parsing is more stable, debuggable, and testable
@@ -45,10 +47,12 @@ Full AST schema: `apps/api/app/schemas/ast.py`
 
 **Full AST** (current focus):
 - The page fact layer — primary state representation
-- Preserves original DOM tree structure, sibling order, parent-child relationships
-- Preserves key attributes, hidden element states (`display:none`, `visibility:hidden`), iframe content
+- Preserves the third-party parser's original tree structure
+- Preserves sibling order, parent-child relationships, text node ordering
+- Preserves key attributes, iframe content (as subtree — see section D)
 - Does NOT restructure, regroup, or add semantic abstractions to the tree
-- This is the current phase's core deliverable
+- Does NOT do early semantic compression or information loss
+- Produced server-side from captured HTML
 
 **Simplified AST** (future, NOT this phase):
 - A **structure-preserving projection** of the Full AST — not a rewrite
@@ -59,16 +63,34 @@ Full AST schema: `apps/api/app/schemas/ast.py`
 
 > Simplified AST is a structure-preserving projection of the Full AST.
 
-### D. Current Priorities (ordered)
+### D. Iframe Representation
+
+The third-party HTML parser parses `<iframe>` tags from the source HTML. However, an iframe's internal document content is a separate document that the client must capture separately and pass to the server.
+
+In the Full AST, **iframe internal content is attached as a subtree of the `<iframe>` node**, not as a side-channel field:
+
+- `<iframe>` is a regular element node in the tree
+- The frame document content is parsed and attached as a child subtree
+- A synthetic `<frame-body>` wrapper node serves as the document root inside the iframe's children
+- No special `frame_content` or similar side-channel fields — the unified tree structure is used throughout
+
+> iframe is a node, and the frame document is attached as its subtree, not as a side-channel field.
+
+This approach means:
+- Tree walkers process iframe content the same way as any other subtree
+- No special-casing needed for iframe in downstream consumers
+- Multi-level iframe nesting is handled naturally via recursion
+
+### E. Current Priorities (ordered)
 
 1. **HTML → Full AST** stable generation (server-side, third-party parser + project-owned mapping)
-2. **Iframe content** included in the Full AST
-3. **Structure fidelity**: tree order, sibling order, hidden state all preserved
+2. **Iframe content** included in AST as `<iframe>` node subtree
+3. **Structure fidelity**: tree order, sibling order, text node order all preserved
 4. **Unified schema and test baselines** for the Full AST
 5. _(Future)_ Full AST → Simplified AST derivation
 6. _(Future)_ User action recording, path learning, behavior teaching
 
-### E. Explicitly Out of Scope (this phase)
+### F. Explicitly Out of Scope (this phase)
 
 The following are **not** part of the current implementation phase. Do not implement or assume these exist:
 - User action path learning
@@ -77,7 +99,7 @@ The following are **not** part of the current implementation phase. Do not imple
 - Event-driven AST incremental updates (AST from events during recording)
 - User behavior ↔ page change causal modeling
 - Historical path template caching
-- Simplified AST generation
+- Simplified AST generation or implementation
 - "Page summarizer" approaches that restructure DOM for readability
 
 ## Common Commands

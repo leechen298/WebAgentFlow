@@ -29,8 +29,6 @@ def find_by_tag(nodes: list[ASTNode], tag: str) -> list[ASTNode]:
         if n.node_type == "element" and n.tag == tag:
             found.append(n)
         found.extend(find_by_tag(n.children, tag))
-        if n.frame_content:
-            found.extend(find_by_tag(n.frame_content, tag))
     return found
 
 
@@ -51,8 +49,6 @@ def find_all_elements(nodes: list[ASTNode]) -> list[ASTNode]:
         if n.node_type == "element":
             found.append(n)
         found.extend(find_all_elements(n.children))
-        if n.frame_content:
-            found.extend(find_all_elements(n.frame_content))
     return found
 
 
@@ -321,7 +317,8 @@ class TestIframe:
         result = parse_html('<iframe src="https://example.com"></iframe>')
         iframes = find_by_tag(result.nodes, "iframe")
         assert len(iframes) == 1
-        assert iframes[0].frame_content is None
+        # No frame-body child when no iframe_html provided
+        assert find_by_tag(iframes[0].children, "frame-body") == []
 
     def test_iframe_with_content_by_src(self):
         result = parse_html(
@@ -329,8 +326,12 @@ class TestIframe:
             iframe_html={"https://example.com": "<p>iframe content</p>"},
         )
         iframe = find_by_tag(result.nodes, "iframe")[0]
-        assert iframe.frame_content is not None
-        texts = find_text_nodes(iframe.frame_content)
+        # Content attached as subtree via frame-body wrapper
+        frame_bodies = find_by_tag(iframe.children, "frame-body")
+        assert len(frame_bodies) == 1
+        fb = frame_bodies[0]
+        assert fb.attrs.get("data-frame-src") == "https://example.com"
+        texts = find_text_nodes(fb.children)
         assert "iframe content" in texts
 
     def test_iframe_with_content_by_frame_id(self):
@@ -339,8 +340,10 @@ class TestIframe:
             iframe_html={"frame1": "<div>frame data</div>"},
         )
         iframe = find_by_tag(result.nodes, "iframe")[0]
-        assert iframe.frame_content is not None
-        texts = find_text_nodes(iframe.frame_content)
+        frame_bodies = find_by_tag(iframe.children, "frame-body")
+        assert len(frame_bodies) == 1
+        assert frame_bodies[0].attrs.get("data-frame-id") == "frame1"
+        texts = find_text_nodes(frame_bodies[0].children)
         assert "frame data" in texts
 
     def test_iframe_frame_id_takes_precedence(self):
@@ -352,7 +355,8 @@ class TestIframe:
             },
         )
         iframe = find_by_tag(result.nodes, "iframe")[0]
-        texts = find_text_nodes(iframe.frame_content or [])
+        fb = find_by_tag(iframe.children, "frame-body")[0]
+        texts = find_text_nodes(fb.children)
         assert "from frame id" in texts
 
     def test_iframe_preserves_attrs(self):
@@ -362,6 +366,31 @@ class TestIframe:
         iframe = find_by_tag(result.nodes, "iframe")[0]
         assert iframe.attrs["src"] == "https://example.com"
         assert iframe.attrs["width"] == "800"
+
+    def test_iframe_content_reachable_by_generic_tree_walk(self):
+        """iframe content is in the unified tree — generic helpers find it."""
+        result = parse_html(
+            '<div><iframe src="x"></iframe></div>',
+            iframe_html={"x": "<p>deep</p>"},
+        )
+        # find_by_tag walks children recursively — should find <p> inside iframe
+        ps = find_by_tag(result.nodes, "p")
+        assert any(find_text_nodes(p.children) == ["deep"] for p in ps)
+
+    def test_nested_iframe(self):
+        """Multi-level iframe nesting via recursion."""
+        result = parse_html(
+            '<iframe data-frame-id="outer"></iframe>',
+            iframe_html={
+                "outer": '<div><iframe data-frame-id="inner"></iframe></div>',
+                "inner": "<p>nested</p>",
+            },
+        )
+        # Should find frame-body at two levels
+        all_fbs = find_by_tag(result.nodes, "frame-body")
+        assert len(all_fbs) == 2
+        texts = find_text_nodes(result.nodes)
+        assert "nested" in texts
 
 
 # ---------------------------------------------------------------------------
