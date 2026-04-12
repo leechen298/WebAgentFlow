@@ -201,9 +201,20 @@ Controlled by `VITE_USE_DEV_PROXY` in `apps/console/.env`:
 
 Built with WXT framework (`apps/extension/`):
 - `entrypoints/background.ts` — Service worker (MV3)
-- `entrypoints/content.ts` — Injected into pages for event capture
+- `entrypoints/content.ts` — Injected into pages for event capture and DOM mutation tracking
 - `entrypoints/popup/` — Vue 3 recording UI (status, name input, start/stop)
 - Recording state is persisted via extension storage
+
+### DOM Mutation Tracking
+
+During recording, the extension monitors DOM changes via `MutationObserver` on both the top-level document and same-origin iframe documents. Key files:
+
+- `src/recorder/mutation-observer.ts` — `DomMutationTracker` class: observes childList/attributes/characterData mutations, batches them at ~500ms intervals, maps to AST nodes, emits `DomMutationRecord[]`
+- Mutation records are stored in `RecorderState.domMutations` and included in `meta.domMutations` on submission
+- Each mutation carries: target element info, mutation detail (what changed), AST association (exact/ancestor/none + fallback), frame info, area context
+- Noise filtering: script/style/svg tags, framework bookkeeping attrs (_ngcontent, data-v-), extension elements
+- Iframe support: same-origin iframes are observed recursively; cross-origin silently skipped
+- Frontend: "DOM Changes" tab on RecordingDetailPage shows mutation timeline with type, target, AST match, and change details
 
 ## 初始状态解析器 — DOM 转 AST 规则（客户端，逐步被服务端取代）
 

@@ -3,6 +3,7 @@ import type {
   RecordingCreate,
   RecordingMeta,
   RecordingEvent,
+  DomMutationRecord,
   PageInitialState,
 } from '@web-agent-flow/shared-types';
 import { createApiClient } from '../utils/api';
@@ -15,6 +16,8 @@ export interface SubmitRecordingOptions {
   startTime: number | null;
   /** Page initial state snapshot (Task Pack 6.5) */
   initialState?: PageInitialState | null;
+  /** DOM mutation records captured during recording */
+  domMutations?: DomMutationRecord[];
 }
 
 /**
@@ -31,6 +34,9 @@ export function prepareRecordingData(
     endTime: now,
     eventCount: options.events.length,
     ...(options.initialState ? { initialState: options.initialState } : {}),
+    ...(options.domMutations && options.domMutations.length > 0
+      ? { domMutations: options.domMutations }
+      : {}),
   };
 
   return {

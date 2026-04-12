@@ -283,6 +283,90 @@ export interface PageInitialState {
   rawHtmlSnapshot?: string;
 }
 
+// ---------------------------------------------------------------------------
+// DOM Mutation types — captures page DOM changes during recording.
+//
+// The mutation tracker observes MutationObserver events on both the top-level
+// document and same-origin iframe documents. Each batch of DOM mutations is
+// coalesced into DomMutationRecord entries with AST node association.
+// ---------------------------------------------------------------------------
+
+/** Type of DOM mutation observed */
+export type DomMutationType = 'childList' | 'attributes' | 'characterData';
+
+/** Summary of an added or removed DOM node (childList mutations) */
+export interface MutationNodeSummary {
+  tag: string;
+  id?: string;
+  className?: string;
+  /** Truncated text content (max 200 chars) */
+  text?: string;
+  /** Number of child elements in the added/removed subtree */
+  childCount?: number;
+}
+
+/** Details specific to each mutation type, stored in the `detail` field */
+export interface ChildListDetail {
+  type: 'childList';
+  addedNodes: MutationNodeSummary[];
+  removedNodes: MutationNodeSummary[];
+}
+
+export interface AttributeDetail {
+  type: 'attributes';
+  attributeName: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface CharacterDataDetail {
+  type: 'characterData';
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export type DomMutationDetail = ChildListDetail | AttributeDetail | CharacterDataDetail;
+
+/** A single structured DOM mutation record */
+export interface DomMutationRecord {
+  /** Unique mutation ID (m0, m1, ... or fm{nonce}_0 for iframes) */
+  id: string;
+  /** Unix timestamp (ms) when the mutation was observed */
+  timestamp: number;
+  /** Mutation type */
+  mutationType: DomMutationType;
+  /** URL of the page/frame where the mutation occurred */
+  url: string;
+  /** Frame context */
+  frameInfo?: FrameInfo;
+
+  // --- Target node info ---
+  /** Tag name of the target node */
+  targetTag: string;
+  /** CSS selector of the target node (best-effort) */
+  targetSelector?: string;
+  /** Truncated text content of the target node */
+  targetText?: string;
+  /** ID attribute of the target node */
+  targetId?: string;
+  /** First class name of the target node */
+  targetClassName?: string;
+
+  // --- AST association ---
+  /** AST match for this mutation's target element */
+  astMatch?: AstMatch;
+
+  // --- Mutation detail ---
+  /** Type-specific detail of the change */
+  detail: DomMutationDetail;
+
+  // --- Context ---
+  /** Nearest identifiable area/section label (heading, card title, etc.) */
+  areaLabel?: string;
+  /** Extensible metadata for future use */
+  meta?: Record<string, unknown>;
+}
+
 // Recording Meta
 export interface RecordingMeta {
   initialUrl: string;
@@ -292,6 +376,8 @@ export interface RecordingMeta {
   eventCount: number;
   /** Page initial state captured at recording start (Task Pack 6.5) */
   initialState?: PageInitialState;
+  /** DOM mutation records captured during recording */
+  domMutations?: DomMutationRecord[];
 }
 
 export interface Recording {

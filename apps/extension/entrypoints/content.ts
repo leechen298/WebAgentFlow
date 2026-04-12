@@ -3,7 +3,8 @@ import { captureInitialState } from '../src/recorder/initial-state';
 import { getCanonicalPageUrl } from '../src/recorder/page-url';
 import { setEventIdPrefix, generateFrameEventPrefix } from '../src/recorder/events';
 import { AstIndex } from '../src/recorder/ast-index';
-import type { RecordingEvent, FrameInfo } from '@web-agent-flow/shared-types';
+import { DomMutationTracker, setMutationIdPrefix, generateMutationIdPrefix } from '../src/recorder/mutation-observer';
+import type { RecordingEvent, DomMutationRecord, FrameInfo } from '@web-agent-flow/shared-types';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -23,15 +24,18 @@ export default defineContentScript({
       frameUrl: window.location.href,
     };
 
-    // Set frame-instance-aware event ID prefix to avoid collisions across frames.
-    // Top frame: e0, e1, ...   Iframe A: fk7m_0, fk7m_1, ...   Iframe B: f2xp_0, ...
+    // Set frame-instance-aware ID prefixes to avoid collisions across frames.
+    // Events — Top: e0, e1, ...  Iframe A: fk7m_0, ...
+    // Mutations — Top: m0, m1, ...  Iframe A: fmk7m_0, ...
     setEventIdPrefix(generateFrameEventPrefix(isIframe));
+    setMutationIdPrefix(generateMutationIdPrefix(isIframe));
 
     console.info(
       `WebAgentFlow content script loaded (${isIframe ? 'iframe' : 'top frame'}): ${window.location.href}`,
     );
 
     let capturer: EventCapturer | null = null;
+    let mutationTracker: DomMutationTracker | null = null;
 
     capturer = new EventCapturer(
       {
@@ -49,6 +53,22 @@ export default defineContentScript({
       frameInfo,
     );
 
+    mutationTracker = new DomMutationTracker(
+      {
+        onMutations: (mutations: DomMutationRecord[]) => {
+          browser.runtime
+            .sendMessage({
+              type: 'RECORDING_DOM_MUTATIONS',
+              data: mutations,
+            })
+            .catch((err) => {
+              console.error('Failed to send mutations to background:', err);
+            });
+        },
+      },
+      frameInfo,
+    );
+
     // For iframes: auto-start capture if recording is already in progress
     // (the top frame receives START_CAPTURE, iframes may miss it on late injection)
     if (isIframe) {
@@ -57,6 +77,7 @@ export default defineContentScript({
         .then((response: { state?: { isRecording?: boolean } }) => {
           if (response?.state?.isRecording && capturer) {
             capturer.start();
+            mutationTracker?.start();
             console.info('WebAgentFlow iframe: auto-started capture (recording in progress)');
             // RC4 fix: iframes may contain the actual business content — capture their
             // initial state too. Two-pass to allow async data loading.
@@ -85,6 +106,7 @@ export default defineContentScript({
           if (initialState.stateTree && initialState.stateTree.length > 0) {
             astIndex.build(initialState.stateTree);
             if (capturer) capturer.setAstIndex(astIndex);
+            if (mutationTracker) mutationTracker.setAstIndex(astIndex);
             console.info(
               `WebAgentFlow: AST index built — ${astIndex.size} leaf nodes indexed`,
             );
@@ -114,6 +136,7 @@ export default defineContentScript({
         case 'START_CAPTURE': {
           if (capturer) {
             capturer.start();
+            mutationTracker?.start();
             console.info('WebAgentFlow: started event capture');
             sendResponse({ success: true });
 
@@ -143,6 +166,7 @@ export default defineContentScript({
         case 'STOP_CAPTURE': {
           if (capturer) {
             capturer.stop();
+            mutationTracker?.stop();
             console.info('WebAgentFlow: stopped event capture');
             sendResponse({ success: true });
           } else {

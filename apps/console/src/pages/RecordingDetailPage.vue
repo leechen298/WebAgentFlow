@@ -821,6 +821,137 @@
               </div>
             </a-spin>
           </a-tab-pane>
+
+          <a-tab-pane key="dom-changes" tab="DOM Changes">
+            <div v-if="domMutations.length > 0">
+              <div style="margin-bottom: 8px; color: #666; font-size: 12px; display: flex; justify-content: space-between; align-items: center">
+                <span>{{ domMutations.length }} DOM mutations</span>
+                <a-space>
+                  <a-tag color="green" style="font-size: 11px">{{ mutationTypeCounts.childList }} childList</a-tag>
+                  <a-tag color="blue" style="font-size: 11px">{{ mutationTypeCounts.attributes }} attributes</a-tag>
+                  <a-tag color="orange" style="font-size: 11px">{{ mutationTypeCounts.characterData }} text</a-tag>
+                  <span style="font-size: 11px; color: #999">
+                    AST:
+                    <a-tag color="green" style="font-size: 10px">{{ mutationAstCounts.exact }}</a-tag>
+                    <a-tag color="blue" style="font-size: 10px">{{ mutationAstCounts.ancestor }}</a-tag>
+                    <a-tag color="default" style="font-size: 10px">{{ mutationAstCounts.none }}</a-tag>
+                  </span>
+                </a-space>
+              </div>
+
+              <div class="event-timeline-container">
+                <div
+                  v-for="mut in domMutations"
+                  :key="mut.id"
+                  class="event-timeline-row"
+                >
+                  <!-- Header line: id, type, time -->
+                  <div class="event-timeline-header">
+                    <span class="event-timeline-index">{{ mut.id }}</span>
+                    <a-tag :color="mutationTypeColor(mut.mutationType)" style="font-size: 11px">{{ mut.mutationType }}</a-tag>
+                    <span style="color: #999; font-size: 11px">{{ formatEventTime(mut.timestamp) }}</span>
+                    <span style="color: #bbb; font-size: 10px; margin-left: 4px">+{{ formatRelativeTime(mut.timestamp) }}</span>
+                    <a-tag v-if="mut.frameInfo?.isIframe" color="cyan" style="font-size: 10px; margin-left: 8px">iframe</a-tag>
+                  </div>
+
+                  <!-- Target info -->
+                  <div class="event-timeline-target">
+                    <span style="color: #1677ff; font-weight: 500">&lt;{{ mut.targetTag }}&gt;</span>
+                    <span v-if="mut.targetId" style="color: #eb2f96; margin-left: 4px">#{{ mut.targetId }}</span>
+                    <span v-if="mut.targetClassName" style="color: #999; margin-left: 4px">.{{ mut.targetClassName }}</span>
+                    <span v-if="mut.targetText" style="color: #666; margin-left: 8px; font-size: 11px">{{ truncate(mut.targetText, 60) }}</span>
+                  </div>
+
+                  <!-- Mutation detail -->
+                  <div class="event-timeline-context" style="font-size: 11px">
+                    <!-- childList -->
+                    <template v-if="mut.detail.type === 'childList'">
+                      <span v-if="mut.detail.addedNodes.length > 0" style="color: #52c41a">
+                        +{{ mut.detail.addedNodes.length }} added
+                        <span v-for="(n, ni) in mut.detail.addedNodes.slice(0, 3)" :key="'a'+ni" style="margin-left: 4px; color: #666">
+                          &lt;{{ n.tag }}&gt;{{ n.text ? ' "' + truncate(n.text, 30) + '"' : '' }}
+                        </span>
+                        <span v-if="mut.detail.addedNodes.length > 3" style="color: #999"> ...</span>
+                      </span>
+                      <span v-if="mut.detail.removedNodes.length > 0" :style="{ marginLeft: mut.detail.addedNodes.length > 0 ? '12px' : '0', color: '#ff4d4f' }">
+                        -{{ mut.detail.removedNodes.length }} removed
+                        <span v-for="(n, ni) in mut.detail.removedNodes.slice(0, 3)" :key="'r'+ni" style="margin-left: 4px; color: #666">
+                          &lt;{{ n.tag }}&gt;{{ n.text ? ' "' + truncate(n.text, 30) + '"' : '' }}
+                        </span>
+                        <span v-if="mut.detail.removedNodes.length > 3" style="color: #999"> ...</span>
+                      </span>
+                    </template>
+                    <!-- attributes -->
+                    <template v-else-if="mut.detail.type === 'attributes'">
+                      <span style="font-weight: 500; color: #333">{{ mut.detail.attributeName }}</span>
+                      <span v-if="mut.detail.oldValue !== null" style="color: #ff4d4f; margin-left: 8px; text-decoration: line-through">
+                        {{ truncate(mut.detail.oldValue, 40) }}
+                      </span>
+                      <span style="margin-left: 4px; color: #999">&rarr;</span>
+                      <span v-if="mut.detail.newValue !== null" style="color: #52c41a; margin-left: 4px">
+                        {{ truncate(mut.detail.newValue, 40) }}
+                      </span>
+                      <span v-else style="color: #999; margin-left: 4px">(removed)</span>
+                    </template>
+                    <!-- characterData -->
+                    <template v-else-if="mut.detail.type === 'characterData'">
+                      <span v-if="mut.detail.oldValue" style="color: #ff4d4f; text-decoration: line-through">
+                        "{{ truncate(mut.detail.oldValue, 50) }}"
+                      </span>
+                      <span style="margin-left: 4px; color: #999">&rarr;</span>
+                      <span v-if="mut.detail.newValue" style="color: #52c41a; margin-left: 4px">
+                        "{{ truncate(mut.detail.newValue, 50) }}"
+                      </span>
+                    </template>
+                  </div>
+
+                  <!-- AST match -->
+                  <div v-if="mut.astMatch" class="event-timeline-ast">
+                    <a-tag
+                      :color="astConfidenceColor(mut.astMatch.confidence)"
+                      style="font-size: 10px"
+                    >AST: {{ mut.astMatch.confidence }}</a-tag>
+                    <template v-if="mut.astMatch.confidence !== 'none'">
+                      <span style="color: #666; font-size: 11px; margin-left: 4px">
+                        {{ mut.astMatch.nodeType }}
+                        <span v-if="mut.astMatch.nodeLabel"> — {{ truncate(mut.astMatch.nodeLabel, 40) }}</span>
+                      </span>
+                      <span style="color: #bbb; font-size: 10px; margin-left: 4px">
+                        ({{ mut.astMatch.nodeId }}, path: {{ mut.astMatch.nodePath }})
+                      </span>
+                    </template>
+                    <template v-else>
+                      <span v-if="mut.areaLabel" style="color: #999; font-size: 11px; margin-left: 4px">
+                        area: {{ mut.areaLabel }}
+                      </span>
+                      <span v-if="mut.astMatch.ancestorChain" style="color: #ccc; font-size: 10px; margin-left: 4px">
+                        {{ mut.astMatch.ancestorChain }}
+                      </span>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Raw JSON -->
+              <a-collapse style="margin-top: 12px">
+                <a-collapse-panel key="json" header="DOM Mutations JSON (raw)">
+                  <a-textarea
+                    :value="formatJsonString(domMutations)"
+                    :rows="20"
+                    readonly
+                    style="font-family: monospace; font-size: 11px"
+                  />
+                </a-collapse-panel>
+              </a-collapse>
+            </div>
+            <div v-else style="color: #999; text-align: center; padding: 32px">
+              No DOM mutations recorded.
+              <br />
+              <span style="font-size: 12px; margin-top: 8px; display: block">
+                DOM mutation tracking captures page changes during recording.
+              </span>
+            </div>
+          </a-tab-pane>
         </a-tabs>
       </a-card>
     </a-spin>
@@ -927,7 +1058,7 @@ import { safeParseJson, formatJsonString } from '@/utils';
 import { getNormalizedRecording } from '@/api/recordings';
 import { parseHtmlToAST, simplifyHtmlToAST } from '@/api/ast';
 import type { FullAST, SimplifiedAST, ASTNode } from '@/api/ast';
-import type { RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState, InitialFieldSnapshot, StateNode, RecordingEvent, AstMatch } from '@web-agent-flow/shared-types';
+import type { RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState, InitialFieldSnapshot, StateNode, RecordingEvent, AstMatch, DomMutationRecord } from '@web-agent-flow/shared-types';
 
 const route = useRoute();
 const router = useRouter();
@@ -1000,6 +1131,43 @@ const initialState = computed<PageInitialState | null>(() => {
   if (!meta?.initialState) return null;
   return meta.initialState as PageInitialState;
 });
+
+// --- DOM Mutations ---
+
+const domMutations = computed<DomMutationRecord[]>(() => {
+  const meta = recording.value?.meta as Record<string, unknown> | null;
+  if (!meta?.domMutations) return [];
+  return meta.domMutations as DomMutationRecord[];
+});
+
+const mutationTypeCounts = computed(() => {
+  const counts = { childList: 0, attributes: 0, characterData: 0 };
+  for (const m of domMutations.value) {
+    if (m.mutationType in counts) {
+      counts[m.mutationType as keyof typeof counts]++;
+    }
+  }
+  return counts;
+});
+
+const mutationAstCounts = computed(() => {
+  const counts = { exact: 0, ancestor: 0, none: 0 };
+  for (const m of domMutations.value) {
+    const c = m.astMatch?.confidence ?? 'none';
+    if (c in counts) counts[c as keyof typeof counts]++;
+    else counts.none++;
+  }
+  return counts;
+});
+
+function mutationTypeColor(type: string): string {
+  switch (type) {
+    case 'childList': return 'green';
+    case 'attributes': return 'blue';
+    case 'characterData': return 'orange';
+    default: return 'default';
+  }
+}
 
 interface FlatTreeRow {
   depth: number;

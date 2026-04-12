@@ -4,10 +4,11 @@ import {
   startRecording,
   stopRecording,
   addEvent,
+  addDomMutations,
   createInitialState,
   setInitialState,
 } from '../src/recorder/state';
-import type { RecordingEvent, PageInitialState } from '@web-agent-flow/shared-types';
+import type { RecordingEvent, PageInitialState, DomMutationRecord } from '@web-agent-flow/shared-types';
 import type { RecorderState } from '../src/recorder/state';
 
 export default defineBackground(() => {
@@ -77,6 +78,14 @@ export default defineBackground(() => {
           case 'RECORDING_EVENT': {
             const event = message.data as RecordingEvent;
             currentState = addEvent(currentState, event);
+            await saveState(currentState);
+            sendResponse({ success: true });
+            break;
+          }
+
+          case 'RECORDING_DOM_MUTATIONS': {
+            const mutations = message.data as DomMutationRecord[];
+            currentState = addDomMutations(currentState, mutations);
             await saveState(currentState);
             sendResponse({ success: true });
             break;

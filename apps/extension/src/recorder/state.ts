@@ -1,4 +1,4 @@
-import type { RecordingEvent, PageInitialState, StateNode } from '@web-agent-flow/shared-types';
+import type { RecordingEvent, PageInitialState, StateNode, DomMutationRecord } from '@web-agent-flow/shared-types';
 
 export interface InitialStateSourceInfo {
   frameId: number | null;
@@ -9,6 +9,8 @@ export interface InitialStateSourceInfo {
 export interface RecorderState {
   isRecording: boolean;
   events: RecordingEvent[];
+  /** DOM mutation records captured during recording */
+  domMutations: DomMutationRecord[];
   startTime: number | null;
   initialUrl: string | null;
   initialTitle: string | null;
@@ -27,6 +29,7 @@ export function createInitialState(): RecorderState {
   return {
     isRecording: false,
     events: [],
+    domMutations: [],
     startTime: null,
     initialUrl: null,
     initialTitle: null,
@@ -68,6 +71,7 @@ export function startRecording(
   return {
     isRecording: true,
     events: [],
+    domMutations: [],
     startTime: Date.now(),
     initialUrl: url,
     initialTitle: title,
@@ -334,6 +338,19 @@ export function addEvent(state: RecorderState, event: RecordingEvent): RecorderS
   return {
     ...state,
     events: [...state.events, event],
+  };
+}
+
+/**
+ * Add a batch of DOM mutation records to the recorder state
+ */
+export function addDomMutations(state: RecorderState, mutations: DomMutationRecord[]): RecorderState {
+  if (!state.isRecording || mutations.length === 0) {
+    return state;
+  }
+  return {
+    ...state,
+    domMutations: [...state.domMutations, ...mutations],
   };
 }
 
