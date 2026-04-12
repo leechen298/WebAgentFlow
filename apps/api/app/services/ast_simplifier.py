@@ -201,8 +201,21 @@ _KEEP_ATTRS: frozenset[str] = frozenset({
 _KEEP_ATTR_PREFIXES: tuple[str, ...] = ("aria-", "data-")
 
 
+# Attr prefixes/patterns to always remove (framework noise)
+_REMOVE_ATTR_PREFIXES: tuple[str, ...] = (
+    "data-v-",       # Vue scoped CSS (also filtered by Full AST parser)
+    "_ngcontent-",   # Angular scoped CSS
+    "_nghost-",      # Angular host binding
+    "ng-reflect-",   # Angular debug bindings
+)
+
+
 def _should_keep_attr(name: str) -> bool:
     """Decide if an attribute should be kept in Simplified AST."""
+    # Check remove-list first (framework noise)
+    for prefix in _REMOVE_ATTR_PREFIXES:
+        if name.startswith(prefix):
+            return False
     if name in _KEEP_ATTRS:
         return True
     for prefix in _KEEP_ATTR_PREFIXES:

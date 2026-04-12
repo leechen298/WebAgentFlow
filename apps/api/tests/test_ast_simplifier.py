@@ -244,13 +244,39 @@ class TestAttrFiltering:
     def test_removes_unknown_attrs(self):
         attrs = {
             "id": "main",
-            "_ngcontent-abc": "",
-            "ng-reflect-model": "value",
             "custom-runtime-hash": "xyz",
         }
         result, removed, _ = filter_attrs(attrs)
         assert result == {"id": "main"}
-        assert removed == 3
+        assert removed == 1
+
+    def test_removes_angular_ngcontent(self):
+        """_ngcontent-* is Angular scoped CSS — framework noise."""
+        attrs = {"id": "box", "_ngcontent-abc123": "", "_ngcontent-xyz": ""}
+        result, removed, _ = filter_attrs(attrs)
+        assert result == {"id": "box"}
+        assert removed == 2
+
+    def test_removes_angular_nghost(self):
+        """_nghost-* is Angular host binding — framework noise."""
+        attrs = {"role": "dialog", "_nghost-abc": "", "_nghost-xyz789": ""}
+        result, removed, _ = filter_attrs(attrs)
+        assert result == {"role": "dialog"}
+        assert removed == 2
+
+    def test_removes_angular_ng_reflect(self):
+        """ng-reflect-* is Angular debug binding — framework noise."""
+        attrs = {"name": "email", "ng-reflect-model": "value"}
+        result, removed, _ = filter_attrs(attrs)
+        assert result == {"name": "email"}
+        assert removed == 1
+
+    def test_removes_vue_data_v(self):
+        """data-v-* is Vue scoped CSS noise (also filtered by Full AST parser)."""
+        attrs = {"data-v-abc123": "", "data-v-xyz": "", "id": "x"}
+        result, removed, _ = filter_attrs(attrs)
+        assert result == {"id": "x"}
+        assert removed == 2
 
     def test_class_filtered_separately(self):
         attrs = {"class": "el-button flex mt-2", "id": "btn1"}
