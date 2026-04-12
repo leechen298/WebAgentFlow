@@ -64,3 +64,30 @@ class FullAST(BaseModel):
 
     node_count: int = 0
     """Total number of nodes in the tree (elements + text)."""
+
+
+class SimplifyStats(BaseModel):
+    """Statistics about what the simplification removed."""
+
+    node_count: int = 0
+    """Total node count (unchanged — simplification preserves structure)."""
+
+    attrs_removed: int = 0
+    """Number of attribute entries removed across all nodes."""
+
+    class_tokens_removed: int = 0
+    """Number of individual class tokens removed across all nodes."""
+
+
+class SimplifiedAST(BaseModel):
+    """Simplified AST — structure-preserving projection of the Full AST.
+
+    Same tree structure, same children order, same sibling order.
+    Only attrs and class tokens are pruned for LLM-friendliness.
+    """
+
+    nodes: list[ASTNode]
+    """Simplified AST nodes (same structure as Full AST, pruned attrs/class)."""
+
+    stats: SimplifyStats
+    """What was removed during simplification."""

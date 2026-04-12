@@ -669,6 +669,74 @@
               </div>
             </a-spin>
           </a-tab-pane>
+
+          <a-tab-pane key="simplified-ast" tab="Simplified AST">
+            <a-spin :spinning="simpLoading">
+              <a-alert
+                v-if="simpError"
+                :message="simpError"
+                type="error"
+                show-icon
+                style="margin-bottom: 12px"
+              />
+
+              <div v-if="simpResult">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px">
+                  <span style="font-weight: 600; font-size: 14px">
+                    Simplified AST
+                    <a-tag color="green" style="margin-left: 8px">{{ simpResult.stats.node_count }} nodes</a-tag>
+                    <a-tag color="orange" style="margin-left: 4px">
+                      -{{ simpResult.stats.class_tokens_removed }} class tokens
+                    </a-tag>
+                    <a-tag color="volcano" style="margin-left: 4px">
+                      -{{ simpResult.stats.attrs_removed }} attrs
+                    </a-tag>
+                  </span>
+                  <a-space>
+                    <a-button size="small" @click="expandSimpToDepth(2)">2 Levels</a-button>
+                    <a-button size="small" @click="expandSimpToDepth(4)">4 Levels</a-button>
+                    <a-button size="small" @click="simpExpandedKeys = collectKeysToDepth(simpTreeData, 99)">Expand All</a-button>
+                    <a-button size="small" @click="simpExpandedKeys = []">Collapse All</a-button>
+                  </a-space>
+                </div>
+                <a-tree
+                  v-model:expandedKeys="simpExpandedKeys"
+                  :tree-data="simpTreeData"
+                  :height="600"
+                  block-node
+                  :selectable="false"
+                  class="full-ast-tree simplified"
+                >
+                  <template #title="{ dataRef }">
+                    <!-- Text node -->
+                    <span v-if="dataRef.ast.nodeType === 'text'" class="ast-text-node">
+                      "{{ truncate(dataRef.ast.text || '', 120) }}"
+                    </span>
+                    <!-- Element node -->
+                    <span v-else :style="{ opacity: dataRef.ast.visible === false ? 0.4 : 1 }" class="ast-element-node">
+                      <span class="ast-tag">&lt;{{ dataRef.ast.tag }}&gt;</span>
+                      <span v-if="dataRef.ast.attrs?.id" class="ast-id">#{{ dataRef.ast.attrs.id }}</span>
+                      <span v-if="dataRef.ast.attrs?.class" class="ast-class">.{{ compactClass(dataRef.ast.attrs.class) }}</span>
+                      <template v-for="attr in astKeyAttrs(dataRef.ast.attrs)" :key="attr.name">
+                        <span class="ast-attr">{{ attr.name }}="{{ truncate(attr.value, 30) }}"</span>
+                      </template>
+                      <a-tag v-if="dataRef.ast.visible === false" style="font-size: 10px; margin-left: 4px">hidden</a-tag>
+                      <a-tag v-if="dataRef.ast.tag === 'frame-body'" color="cyan" style="font-size: 10px; margin-left: 4px">iframe content</a-tag>
+                    </span>
+                  </template>
+                </a-tree>
+              </div>
+
+              <div v-else-if="!simpLoading && !simpError" style="color: #999; text-align: center; padding: 32px">
+                <template v-if="rawHtmlSnapshotData">
+                  Click the tab to produce Simplified AST (structure-preserving projection).
+                </template>
+                <template v-else>
+                  No HTML snapshot available for this recording.
+                </template>
+              </div>
+            </a-spin>
+          </a-tab-pane>
         </a-tabs>
       </a-card>
     </a-spin>
@@ -773,8 +841,8 @@ import { EditOutlined, DeleteOutlined, CaretRightOutlined, CaretDownOutlined } f
 import { useRecordingsStore } from '@/stores';
 import { safeParseJson, formatJsonString } from '@/utils';
 import { getNormalizedRecording } from '@/api/recordings';
-import { parseHtmlToAST } from '@/api/ast';
-import type { FullAST, ASTNode } from '@/api/ast';
+import { parseHtmlToAST, simplifyHtmlToAST } from '@/api/ast';
+import type { FullAST, SimplifiedAST, ASTNode } from '@/api/ast';
 import type { RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState, InitialFieldSnapshot, StateNode } from '@web-agent-flow/shared-types';
 
 const route = useRoute();
@@ -795,6 +863,11 @@ const astResult = ref<FullAST | null>(null);
 const astLoading = ref(false);
 const astError = ref('');
 const astExpandedKeys = ref<string[]>([]);
+
+const simpResult = ref<SimplifiedAST | null>(null);
+const simpLoading = ref(false);
+const simpError = ref('');
+const simpExpandedKeys = ref<string[]>([]);
 
 const fieldDetailModalOpen = ref(false);
 const fieldDetailRecord = ref<InitialFieldSnapshot | null>(null);
@@ -1301,9 +1374,38 @@ async function loadFullAST(): Promise<void> {
   }
 }
 
+const simpTreeData = computed<ASTTreeNode[]>(() => {
+  if (!simpResult.value) return [];
+  return convertASTToTreeData(simpResult.value.nodes);
+});
+
+function expandSimpToDepth(depth: number): void {
+  simpExpandedKeys.value = collectKeysToDepth(simpTreeData.value, depth);
+}
+
+async function loadSimplifiedAST(): Promise<void> {
+  if (simpResult.value || simpLoading.value) return;
+  const html = rawHtmlSnapshotData.value;
+  if (!html) {
+    simpError.value = 'No HTML snapshot available for this recording.';
+    return;
+  }
+  simpLoading.value = true;
+  simpError.value = '';
+  try {
+    simpResult.value = await simplifyHtmlToAST(html);
+    expandSimpToDepth(2);
+  } catch (e) {
+    simpError.value = e instanceof Error ? e.message : 'Failed to simplify AST';
+  } finally {
+    simpLoading.value = false;
+  }
+}
+
 function handleTabChange(key: string): void {
   if (key === 'normalized') void loadNormalized();
   if (key === 'full-ast') void loadFullAST();
+  if (key === 'simplified-ast') void loadSimplifiedAST();
 }
 
 function showEditModal(): void {
@@ -1513,5 +1615,9 @@ onUnmounted(() => {
 }
 .ast-element-node {
   display: inline;
+}
+/* Simplified AST: subtle green left border to distinguish from Full */
+.full-ast-tree.simplified {
+  border-color: #b7eb8f;
 }
 </style>
