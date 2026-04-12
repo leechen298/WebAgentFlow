@@ -44,14 +44,27 @@ const IGNORE_ATTR_PATTERNS = [
   /^data-reactroot/,
 ];
 
-/** Attributes whose changes are always interesting */
+/**
+ * Attributes whose changes are always interesting for business state tracking.
+ *
+ * Focused on attributes that reflect user-visible state changes rather than
+ * visual styling or framework internals. This supports the downstream use case
+ * of "execute action → wait for expected page change" in future execution.
+ */
 const INTERESTING_ATTRS = new Set([
-  'class', 'style', 'hidden', 'disabled', 'readonly', 'checked', 'selected',
+  'class', 'hidden', 'disabled', 'readonly', 'checked', 'selected',
   'value', 'src', 'href', 'aria-hidden', 'aria-disabled', 'aria-expanded',
   'aria-selected', 'aria-checked', 'aria-label', 'aria-describedby',
-  'role', 'tabindex', 'open', 'data-state', 'data-status',
+  'role', 'tabindex', 'open',
   'placeholder', 'title', 'alt',
 ]);
+
+/**
+ * For `style` attribute changes, only these CSS properties are considered
+ * business-state-relevant. All other style changes (animation, color,
+ * transform, dimensions, etc.) are filtered as visual noise.
+ */
+const BUSINESS_STATE_STYLE_PROPS = ['display', 'visibility', 'pointer-events'];
 
 /** Maximum text content length stored in summaries */
 const MAX_TEXT_LEN = 200;
@@ -108,7 +121,58 @@ function isNoiseAttribute(name: string): boolean {
 function isInterestingAttribute(name: string): boolean {
   if (INTERESTING_ATTRS.has(name)) return true;
   if (name.startsWith('aria-')) return true;
+  // style is handled specially — see buildAttributeDetail
+  // data-* is filtered by default — framework internals, not business state
   return false;
+}
+
+/**
+ * For style attribute changes, extract only business-state-relevant properties.
+ * Returns a filtered "old → new" pair containing only display/visibility/pointer-events,
+ * or null if none of those properties changed.
+ */
+function extractBusinessStyleChange(
+  oldStyle: string | null,
+  newStyle: string | null,
+): { oldValue: string | null; newValue: string | null } | null {
+  const parseProps = (s: string | null): Map<string, string> => {
+    const map = new Map<string, string>();
+    if (!s) return map;
+    for (const decl of s.split(';')) {
+      const colon = decl.indexOf(':');
+      if (colon < 0) continue;
+      const prop = decl.slice(0, colon).trim().toLowerCase();
+      const val = decl.slice(colon + 1).trim();
+      if (BUSINESS_STATE_STYLE_PROPS.includes(prop)) {
+        map.set(prop, val);
+      }
+    }
+    return map;
+  };
+
+  const oldProps = parseProps(oldStyle);
+  const newProps = parseProps(newStyle);
+
+  // Check if any tracked property actually changed
+  let changed = false;
+  for (const prop of BUSINESS_STATE_STYLE_PROPS) {
+    if ((oldProps.get(prop) ?? '') !== (newProps.get(prop) ?? '')) {
+      changed = true;
+      break;
+    }
+  }
+  if (!changed) return null;
+
+  // Build compact representations of only the business-state properties
+  const formatProps = (m: Map<string, string>): string | null => {
+    if (m.size === 0) return null;
+    return Array.from(m.entries()).map(([k, v]) => `${k}: ${v}`).join('; ');
+  };
+
+  return {
+    oldValue: formatProps(oldProps),
+    newValue: formatProps(newProps),
+  };
 }
 
 function summarizeNode(node: Node): MutationNodeSummary | null {
@@ -378,13 +442,28 @@ export class DomMutationTracker {
     const attrName = mutation.attributeName;
     if (!attrName) return null;
 
-    // Skip noise attributes
+    // Skip framework noise attributes (_ngcontent, data-v-, data-reactid, etc.)
     if (isNoiseAttribute(attrName)) return null;
 
-    // For non-interesting attributes, only track if they seem meaningful
-    if (!isInterestingAttribute(attrName) && !attrName.startsWith('data-')) {
-      return null;
+    // Special handling for `style` — only track business-state properties
+    if (attrName === 'style') {
+      const oldValue = mutation.oldValue;
+      const newValue = targetEl.getAttribute('style');
+      const result = extractBusinessStyleChange(oldValue, newValue);
+      if (!result) return null;
+      return {
+        type: 'attributes',
+        attributeName: 'style',
+        oldValue: result.oldValue,
+        newValue: result.newValue,
+      };
     }
+
+    // Filter data-* attributes — mostly framework internals, not business state
+    if (attrName.startsWith('data-')) return null;
+
+    // Only track attributes on the interesting list
+    if (!isInterestingAttribute(attrName)) return null;
 
     const oldValue = mutation.oldValue;
     const newValue = targetEl.getAttribute(attrName);

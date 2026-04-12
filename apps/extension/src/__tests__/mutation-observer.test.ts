@@ -330,6 +330,125 @@ describe('DomMutationTracker', () => {
     expect(extMuts.length).toBe(0);
   });
 
+  // ─── 8b. Style filtering — only business-state style changes pass ─────
+
+  it('filters out general style changes (animation, color, etc.)', async () => {
+    const el = document.createElement('div');
+    el.style.cssText = 'color: red; opacity: 1; transform: none';
+    container.appendChild(el);
+
+    tracker.start();
+
+    // Change purely visual properties
+    el.style.cssText = 'color: blue; opacity: 0.5; transform: scale(1.1)';
+
+    await waitForMutationAndBatch();
+
+    const styleMuts = collected.filter(
+      (m) =>
+        m.mutationType === 'attributes' &&
+        m.detail.type === 'attributes' &&
+        m.detail.attributeName === 'style',
+    );
+    // No business-state property changed — should be filtered
+    expect(styleMuts.length).toBe(0);
+  });
+
+  it('keeps style changes that affect display property', async () => {
+    const el = document.createElement('div');
+    el.style.cssText = 'display: block; color: red';
+    container.appendChild(el);
+
+    tracker.start();
+
+    el.style.cssText = 'display: none; color: blue';
+
+    await waitForMutationAndBatch();
+
+    const styleMuts = collected.filter(
+      (m) =>
+        m.mutationType === 'attributes' &&
+        m.detail.type === 'attributes' &&
+        m.detail.attributeName === 'style',
+    );
+    expect(styleMuts.length).toBeGreaterThanOrEqual(1);
+    // Should only contain the business-state property, not color
+    const mut = styleMuts[0];
+    if (mut.detail.type === 'attributes') {
+      expect(mut.detail.newValue).toContain('display');
+      expect(mut.detail.newValue).not.toContain('color');
+    }
+  });
+
+  it('keeps style changes that affect visibility property', async () => {
+    const el = document.createElement('div');
+    el.style.cssText = 'visibility: visible';
+    container.appendChild(el);
+
+    tracker.start();
+
+    el.style.cssText = 'visibility: hidden';
+
+    await waitForMutationAndBatch();
+
+    const styleMuts = collected.filter(
+      (m) =>
+        m.mutationType === 'attributes' &&
+        m.detail.type === 'attributes' &&
+        m.detail.attributeName === 'style',
+    );
+    expect(styleMuts.length).toBeGreaterThanOrEqual(1);
+    if (styleMuts[0].detail.type === 'attributes') {
+      expect(styleMuts[0].detail.newValue).toContain('visibility');
+    }
+  });
+
+  // ─── 8c. data-* filtering ────────────────────────────────────────────
+
+  it('filters out generic data-* attribute changes', async () => {
+    const el = document.createElement('div');
+    container.appendChild(el);
+
+    tracker.start();
+
+    el.setAttribute('data-id', '123');
+    el.setAttribute('data-tracking', 'page-view');
+    el.setAttribute('data-component', 'card');
+
+    await waitForMutationAndBatch();
+
+    const dataMuts = collected.filter(
+      (m) =>
+        m.mutationType === 'attributes' &&
+        m.detail.type === 'attributes' &&
+        m.detail.attributeName.startsWith('data-'),
+    );
+    expect(dataMuts.length).toBe(0);
+  });
+
+  // ─── 8d. Key attrs still pass through ────────────────────────────────
+
+  it('still records key business attributes (disabled, value, checked)', async () => {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.setAttribute('disabled', '');
+    container.appendChild(input);
+
+    tracker.start();
+
+    input.removeAttribute('disabled');
+
+    await waitForMutationAndBatch();
+
+    const disabledMuts = collected.filter(
+      (m) =>
+        m.mutationType === 'attributes' &&
+        m.detail.type === 'attributes' &&
+        m.detail.attributeName === 'disabled',
+    );
+    expect(disabledMuts.length).toBeGreaterThanOrEqual(1);
+  });
+
   // ─── 9. Mutation ID uniqueness ─────────────────────────────────────────
 
   it('generates sequential mutation IDs', async () => {
