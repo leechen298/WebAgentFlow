@@ -599,6 +599,76 @@
               </div>
             </a-spin>
           </a-tab-pane>
+
+          <a-tab-pane key="full-ast" tab="Full AST">
+            <a-spin :spinning="astLoading">
+              <a-alert
+                v-if="astError"
+                :message="astError"
+                type="error"
+                show-icon
+                style="margin-bottom: 12px"
+              />
+
+              <div v-if="astResult">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px">
+                  <span style="font-weight: 600; font-size: 14px">
+                    Full AST
+                    <a-tag color="blue" style="margin-left: 8px">{{ astResult.node_count }} nodes</a-tag>
+                  </span>
+                  <a-space>
+                    <a-button size="small" @click="expandAstToDepth(2)">2 Levels</a-button>
+                    <a-button size="small" @click="expandAstToDepth(4)">4 Levels</a-button>
+                    <a-button size="small" @click="astExpandedKeys = collectKeysToDepth(astTreeData, 99)">Expand All</a-button>
+                    <a-button size="small" @click="astExpandedKeys = []">Collapse All</a-button>
+                  </a-space>
+                </div>
+                <a-tree
+                  v-model:expandedKeys="astExpandedKeys"
+                  :tree-data="astTreeData"
+                  :height="600"
+                  block-node
+                  :selectable="false"
+                  class="full-ast-tree"
+                >
+                  <template #title="{ dataRef }">
+                    <!-- Text node -->
+                    <span v-if="dataRef.ast.nodeType === 'text'" class="ast-text-node">
+                      "{{ truncate(dataRef.ast.text || '', 120) }}"
+                    </span>
+                    <!-- Element node -->
+                    <span v-else :style="{ opacity: dataRef.ast.visible === false ? 0.4 : 1 }" class="ast-element-node">
+                      <span class="ast-tag">&lt;{{ dataRef.ast.tag }}&gt;</span>
+                      <span v-if="dataRef.ast.attrs?.id" class="ast-id">#{{ dataRef.ast.attrs.id }}</span>
+                      <span v-if="dataRef.ast.attrs?.class" class="ast-class">.{{ compactClass(dataRef.ast.attrs.class) }}</span>
+                      <template v-for="attr in astKeyAttrs(dataRef.ast.attrs)" :key="attr.name">
+                        <span class="ast-attr">{{ attr.name }}="{{ truncate(attr.value, 30) }}"</span>
+                      </template>
+                      <a-tag v-if="dataRef.ast.visible === false" style="font-size: 10px; margin-left: 4px">hidden</a-tag>
+                      <a-tag v-if="dataRef.ast.tag === 'frame-body'" color="cyan" style="font-size: 10px; margin-left: 4px">iframe content</a-tag>
+                    </span>
+                  </template>
+                </a-tree>
+              </div>
+
+              <div v-else-if="!astLoading && !astError" style="color: #999; text-align: center; padding: 32px">
+                <template v-if="rawHtmlSnapshotData">
+                  HTML snapshot available ({{ (rawHtmlSnapshotData.length / 1024).toFixed(1) }} KB).
+                  <br />
+                  <span style="font-size: 12px; margin-top: 4px; display: block">
+                    Server-side parsing via lxml. Click the tab to load.
+                  </span>
+                </template>
+                <template v-else>
+                  No HTML snapshot available for this recording.
+                  <br />
+                  <span style="font-size: 12px; margin-top: 8px; display: block">
+                    HTML snapshot is captured by the extension (rawHtmlSnapshot).
+                  </span>
+                </template>
+              </div>
+            </a-spin>
+          </a-tab-pane>
         </a-tabs>
       </a-card>
     </a-spin>
@@ -703,6 +773,8 @@ import { EditOutlined, DeleteOutlined, CaretRightOutlined, CaretDownOutlined } f
 import { useRecordingsStore } from '@/stores';
 import { safeParseJson, formatJsonString } from '@/utils';
 import { getNormalizedRecording } from '@/api/recordings';
+import { parseHtmlToAST } from '@/api/ast';
+import type { FullAST, ASTNode } from '@/api/ast';
 import type { RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState, InitialFieldSnapshot, StateNode } from '@web-agent-flow/shared-types';
 
 const route = useRoute();
@@ -718,6 +790,11 @@ const detailOpenKeys = ref<Set<string>>(new Set());
 const normalized = ref<NormalizedRecording | null>(null);
 const normLoading = ref(false);
 const normError = ref('');
+
+const astResult = ref<FullAST | null>(null);
+const astLoading = ref(false);
+const astError = ref('');
+const astExpandedKeys = ref<string[]>([]);
 
 const fieldDetailModalOpen = ref(false);
 const fieldDetailRecord = ref<InitialFieldSnapshot | null>(null);
@@ -1126,10 +1203,107 @@ async function loadNormalized(): Promise<void> {
   }
 }
 
-function handleTabChange(key: string): void {
-  if (key === 'normalized') {
-    void loadNormalized();
+// ---------------------------------------------------------------------------
+// Full AST (server-side parsed) — displayed with a-tree
+// ---------------------------------------------------------------------------
+
+interface ASTTreeNode {
+  key: string;
+  title: string;
+  children?: ASTTreeNode[];
+  isLeaf: boolean;
+  ast: {
+    nodeType: 'element' | 'text';
+    tag?: string;
+    attrs?: Record<string, string>;
+    text?: string;
+    visible?: boolean;
+  };
+}
+
+function convertASTToTreeData(nodes: ASTNode[], prefix = ''): ASTTreeNode[] {
+  return nodes.map((node, i) => {
+    const key = `${prefix}${i}`;
+    const ch = node.children && node.children.length > 0
+      ? convertASTToTreeData(node.children, `${key}-`)
+      : undefined;
+    return {
+      key,
+      title: node.node_type === 'text'
+        ? `"${(node.text || '').slice(0, 50)}"`
+        : `<${node.tag}>`,
+      children: ch,
+      isLeaf: !ch || ch.length === 0,
+      ast: {
+        nodeType: node.node_type,
+        tag: node.tag ?? undefined,
+        attrs: node.attrs && Object.keys(node.attrs).length > 0 ? node.attrs : undefined,
+        text: node.text ?? undefined,
+        visible: node.visible,
+      },
+    };
+  });
+}
+
+function collectKeysToDepth(nodes: ASTTreeNode[], maxDepth: number, depth = 0): string[] {
+  if (depth >= maxDepth) return [];
+  const keys: string[] = [];
+  for (const nd of nodes) {
+    if (nd.children && nd.children.length > 0) {
+      keys.push(nd.key);
+      keys.push(...collectKeysToDepth(nd.children, maxDepth, depth + 1));
+    }
   }
+  return keys;
+}
+
+const astTreeData = computed<ASTTreeNode[]>(() => {
+  if (!astResult.value) return [];
+  return convertASTToTreeData(astResult.value.nodes);
+});
+
+function expandAstToDepth(depth: number): void {
+  astExpandedKeys.value = collectKeysToDepth(astTreeData.value, depth);
+}
+
+const AST_KEY_ATTRS = ['name', 'type', 'href', 'src', 'role', 'placeholder', 'value', 'alt', 'for', 'action'];
+
+function astKeyAttrs(attrs?: Record<string, string>): Array<{ name: string; value: string }> {
+  if (!attrs) return [];
+  return AST_KEY_ATTRS
+    .filter(a => attrs[a])
+    .map(a => ({ name: a, value: attrs[a] }));
+}
+
+function compactClass(cls: string): string {
+  const parts = cls.split(/\s+/).filter(Boolean);
+  if (parts.length <= 2) return parts.join('.');
+  return parts.slice(0, 2).join('.') + `+${parts.length - 2}`;
+}
+
+async function loadFullAST(): Promise<void> {
+  if (astResult.value || astLoading.value) return;
+  const html = rawHtmlSnapshotData.value;
+  if (!html) {
+    astError.value = 'No HTML snapshot available for this recording.';
+    return;
+  }
+  astLoading.value = true;
+  astError.value = '';
+  try {
+    astResult.value = await parseHtmlToAST(html);
+    // Auto-expand first 2 levels
+    expandAstToDepth(2);
+  } catch (e) {
+    astError.value = e instanceof Error ? e.message : 'Failed to parse HTML to AST';
+  } finally {
+    astLoading.value = false;
+  }
+}
+
+function handleTabChange(key: string): void {
+  if (key === 'normalized') void loadNormalized();
+  if (key === 'full-ast') void loadFullAST();
 }
 
 function showEditModal(): void {
@@ -1299,5 +1473,45 @@ onUnmounted(() => {
 .html-preview-container :deep(style),
 .html-preview-container :deep(script) {
   display: none;
+}
+/* Full AST tree styles */
+.full-ast-tree {
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  background: #fff;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  font-size: 12px;
+}
+.full-ast-tree :deep(.ant-tree-treenode) {
+  padding-bottom: 0;
+}
+.full-ast-tree :deep(.ant-tree-node-content-wrapper) {
+  min-height: 24px;
+  line-height: 24px;
+}
+.ast-tag {
+  color: #1677ff;
+  font-weight: 600;
+}
+.ast-id {
+  color: #eb2f96;
+  margin-left: 4px;
+}
+.ast-class {
+  color: #52c41a;
+  font-size: 11px;
+  margin-left: 4px;
+}
+.ast-attr {
+  color: #8c8c8c;
+  font-size: 11px;
+  margin-left: 4px;
+}
+.ast-text-node {
+  color: #8c8c8c;
+  font-style: italic;
+}
+.ast-element-node {
+  display: inline;
 }
 </style>
