@@ -11,6 +11,44 @@ export type RecordingStatus = 'draft' | 'completed' | 'archived';
 // Recording Event Types
 export type RecordingEventType = 'navigate' | 'click' | 'input' | 'change' | 'richtext-input';
 
+// ---------------------------------------------------------------------------
+// AST Match — associates a recording event with the AST node it acted on.
+//
+// At capture time the content script tries to locate the event target in the
+// current Semantic State Tree (stateTree). The result is stored on the event
+// so downstream consumers can correlate events with page structure.
+// ---------------------------------------------------------------------------
+
+/** How confidently the event target was matched to an AST node. */
+export type AstMatchConfidence = 'exact' | 'ancestor' | 'selector' | 'none';
+
+/**
+ * Association between a recording event and a node in the Semantic State Tree.
+ *
+ * - `exact`    — the event target element directly corresponds to an AST leaf node
+ * - `ancestor` — the event target is inside an AST node (matched via closest ancestor)
+ * - `selector` — matched by CSS selector heuristics (less reliable)
+ * - `none`     — no match found; fallback context is provided instead
+ */
+export interface AstMatch {
+  /** Confidence level of the match */
+  confidence: AstMatchConfidence;
+  /** AST node ID (sequential, assigned during tree building) */
+  nodeId?: string;
+  /** Dot-separated path in the tree, e.g. "0.2.1" (root index . child index ...) */
+  nodePath?: string;
+  /** The matched node's type (e.g. 'input', 'button', 'select', 'section') */
+  nodeType?: string;
+  /** The matched node's label */
+  nodeLabel?: string;
+  /** The matched node's selector (if it's a leaf node) */
+  nodeSelector?: string;
+  /** Fallback: summary of ancestor chain when no AST match (tag > tag > tag) */
+  ancestorChain?: string;
+  /** Fallback: nearest identifiable section/card/form heading */
+  areaLabel?: string;
+}
+
 export interface FrameInfo {
   isIframe: boolean;
   frameUrl: string;
@@ -58,6 +96,8 @@ export interface FieldContext {
 }
 
 export interface RecordingEvent {
+  /** Unique event identifier (monotonic counter per recording session) */
+  id: string;
   type: RecordingEventType;
   timestamp: number;
   url: string;
@@ -70,6 +110,8 @@ export interface RecordingEvent {
   htmlContent?: string;
   // Form field semantic context extracted from DOM at event time (Task Pack 5.5)
   fieldContext?: FieldContext;
+  /** Association with the Semantic State Tree node this event acted on */
+  astMatch?: AstMatch;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +195,8 @@ export interface TableCellNode {
 export type TableRowValue = string | TableCellNode;
 
 export interface StateNode {
+  /** Unique node ID assigned during tree building (e.g. "n0", "n1", ...) */
+  astNodeId?: string;
   /** Node type */
   type: string;
   /** Visible label text */

@@ -1,6 +1,7 @@
-import { createRecordingEvent, getTargetInfo } from './events';
+import { createRecordingEvent, getTargetInfo, resetEventCounter } from './events';
 import { getFieldContext } from './context';
 import type { RecordingEvent, FrameInfo } from '@web-agent-flow/shared-types';
+import type { AstIndex } from './ast-index';
 
 export interface CaptureCallbacks {
   onEvent: (event: RecordingEvent) => void;
@@ -103,6 +104,9 @@ export class EventCapturer {
   private debouncer: InputDebouncer;
   private ceManager: ContentEditableManager;
 
+  /** Optional AST index for matching events to state tree nodes. */
+  private astIndex: AstIndex | null = null;
+
   private boundHandlers: {
     click: (e: MouseEvent) => void;
     input: (e: Event) => void;
@@ -126,10 +130,16 @@ export class EventCapturer {
     this.ceManager = new ContentEditableManager((el) => this.emitRichTextInput(el));
   }
 
+  /** Set or update the AST index used for event → node matching. */
+  setAstIndex(index: AstIndex | null): void {
+    this.astIndex = index;
+  }
+
   start(): void {
     if (this.isCapturing) return;
     this.isCapturing = true;
 
+    resetEventCounter();
     this.captureNavigate();
 
     this.boundHandlers = {
@@ -190,6 +200,7 @@ export class EventCapturer {
         target: getTargetInfo(target),
         frameInfo: this.frameInfo,
         fieldContext: getFieldContext(target),
+        astMatch: this.astIndex?.matchElement(target),
       }),
     );
   }
@@ -238,6 +249,7 @@ export class EventCapturer {
         value: (element as HTMLInputElement | HTMLTextAreaElement).value || null,
         frameInfo: this.frameInfo,
         fieldContext: getFieldContext(element),
+        astMatch: this.astIndex?.matchElement(element),
       }),
     );
   }
@@ -250,6 +262,7 @@ export class EventCapturer {
         value: (element as HTMLSelectElement | HTMLInputElement).value || null,
         frameInfo: this.frameInfo,
         fieldContext: getFieldContext(element),
+        astMatch: this.astIndex?.matchElement(element),
       }),
     );
   }
@@ -277,6 +290,7 @@ export class EventCapturer {
         htmlContent: el.innerHTML?.slice(0, 2000),
         frameInfo: this.frameInfo,
         fieldContext: getFieldContext(element),
+        astMatch: this.astIndex?.matchElement(element),
       }),
     );
   }

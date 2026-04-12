@@ -1,6 +1,7 @@
 import { EventCapturer } from '../src/recorder/capture';
 import { captureInitialState } from '../src/recorder/initial-state';
 import { getCanonicalPageUrl } from '../src/recorder/page-url';
+import { AstIndex } from '../src/recorder/ast-index';
 import type { RecordingEvent, FrameInfo } from '@web-agent-flow/shared-types';
 
 export default defineContentScript({
@@ -63,6 +64,10 @@ export default defineContentScript({
         });
     }
 
+    // AST index for matching events to state tree nodes.
+    // Rebuilt after each initial state capture.
+    const astIndex = new AstIndex();
+
     // Helper: capture page initial state and send to background after a delay.
     // Returns immediately; the send happens asynchronously after `delayMs`.
     // Sending from content → background wakes the MV3 service worker if needed.
@@ -70,6 +75,16 @@ export default defineContentScript({
       setTimeout(() => {
         try {
           const initialState = captureInitialState();
+
+          // Build AST index from the state tree so events can be matched to nodes
+          if (initialState.stateTree && initialState.stateTree.length > 0) {
+            astIndex.build(initialState.stateTree);
+            if (capturer) capturer.setAstIndex(astIndex);
+            console.info(
+              `WebAgentFlow: AST index built — ${astIndex.size} leaf nodes indexed`,
+            );
+          }
+
           browser.runtime
             .sendMessage({ type: 'RECORDING_INITIAL_STATE', data: initialState })
             .catch(() => {}); // Errors silenced; background may log separately

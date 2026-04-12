@@ -4,8 +4,17 @@ import type {
   RecordingEventTarget,
   FrameInfo,
   FieldContext,
+  AstMatch,
 } from '@web-agent-flow/shared-types';
 import { getCanonicalPageUrl } from './page-url';
+
+/** Monotonic counter for generating unique event IDs within a recording session. */
+let eventCounter = 0;
+
+/** Reset the event counter (call at recording start). */
+export function resetEventCounter(): void {
+  eventCounter = 0;
+}
 
 /**
  * Create a recording event with the given properties
@@ -20,9 +29,11 @@ export function createRecordingEvent(
     frameInfo?: FrameInfo;
     htmlContent?: string;
     fieldContext?: FieldContext;
+    astMatch?: AstMatch;
   } = {},
 ): RecordingEvent {
   return {
+    id: `e${eventCounter++}`,
     type,
     timestamp: Date.now(),
     url: getCanonicalPageUrl(url),

@@ -82,6 +82,84 @@
             />
           </a-tab-pane>
 
+          <a-tab-pane key="timeline" tab="Event Timeline">
+            <div v-if="timelineEvents.length > 0">
+              <div style="margin-bottom: 8px; color: #666; font-size: 12px; display: flex; justify-content: space-between; align-items: center">
+                <span>{{ timelineEvents.length }} events</span>
+                <a-space>
+                  <span style="font-size: 11px">
+                    AST matched:
+                    <a-tag color="green" style="font-size: 11px">{{ astMatchCount.exact }} exact</a-tag>
+                    <a-tag color="blue" style="font-size: 11px">{{ astMatchCount.ancestor }} ancestor</a-tag>
+                    <a-tag color="default" style="font-size: 11px">{{ astMatchCount.none }} unmatched</a-tag>
+                  </span>
+                </a-space>
+              </div>
+              <div class="event-timeline-container">
+                <div
+                  v-for="evt in timelineEvents"
+                  :key="evt.id || evt.index"
+                  class="event-timeline-row"
+                  :class="{ 'event-navigate': evt.type === 'navigate' }"
+                >
+                  <div class="event-timeline-header">
+                    <span class="event-timeline-index">{{ evt.index }}</span>
+                    <a-tag :color="eventTypeColor(evt.type)" style="font-size: 11px">{{ evt.type }}</a-tag>
+                    <span v-if="evt.id" style="color: #bbb; font-size: 11px; margin-right: 8px">{{ evt.id }}</span>
+                    <span style="color: #999; font-size: 11px">{{ formatEventTime(evt.timestamp) }}</span>
+                    <a-tag v-if="evt.frameInfo?.isIframe" color="cyan" style="font-size: 10px; margin-left: 8px">iframe</a-tag>
+                  </div>
+                  <!-- Target summary -->
+                  <div v-if="evt.target" class="event-timeline-target">
+                    <span style="color: #1677ff; font-weight: 500">&lt;{{ evt.target.tag }}&gt;</span>
+                    <span v-if="evt.target.label" style="margin-left: 8px; font-weight: 500">{{ truncate(evt.target.label, 50) }}</span>
+                    <span v-else-if="evt.target.text" style="margin-left: 8px; color: #333">{{ truncate(evt.target.text, 50) }}</span>
+                    <span v-if="evt.target.id" style="color: #eb2f96; margin-left: 4px">#{{ evt.target.id }}</span>
+                    <span v-if="evt.target.role" style="color: #999; margin-left: 4px">[{{ evt.target.role }}]</span>
+                    <span v-if="evt.value" style="color: #1677ff; margin-left: 8px">= {{ truncate(evt.value, 50) }}</span>
+                  </div>
+                  <!-- Field context -->
+                  <div v-if="evt.fieldContext?.fieldLabel" class="event-timeline-context">
+                    <span style="color: #666">
+                      <span v-if="evt.fieldContext.fieldPath">{{ evt.fieldContext.fieldPath }}</span>
+                      <span v-else>{{ evt.fieldContext.fieldLabel }}</span>
+                    </span>
+                    <a-tag v-if="evt.fieldContext.containerType && evt.fieldContext.containerType !== 'unknown'" style="font-size: 10px; margin-left: 4px">{{ evt.fieldContext.containerType }}</a-tag>
+                    <a-tag v-if="evt.fieldContext.fieldRequired" color="red" style="font-size: 10px; margin-left: 2px">*</a-tag>
+                    <span v-if="evt.fieldContext.fieldProp" style="color: #999; font-size: 11px; margin-left: 4px">[{{ evt.fieldContext.fieldProp }}]</span>
+                  </div>
+                  <!-- AST match -->
+                  <div v-if="evt.astMatch" class="event-timeline-ast">
+                    <a-tag
+                      :color="astConfidenceColor(evt.astMatch.confidence)"
+                      style="font-size: 10px"
+                    >AST: {{ evt.astMatch.confidence }}</a-tag>
+                    <template v-if="evt.astMatch.confidence !== 'none'">
+                      <span style="color: #666; font-size: 11px; margin-left: 4px">
+                        {{ evt.astMatch.nodeType }}
+                        <span v-if="evt.astMatch.nodeLabel"> — {{ truncate(evt.astMatch.nodeLabel, 40) }}</span>
+                      </span>
+                      <span style="color: #bbb; font-size: 10px; margin-left: 4px">
+                        ({{ evt.astMatch.nodeId }}, path: {{ evt.astMatch.nodePath }})
+                      </span>
+                    </template>
+                    <template v-else>
+                      <span v-if="evt.astMatch.areaLabel" style="color: #999; font-size: 11px; margin-left: 4px">
+                        area: {{ evt.astMatch.areaLabel }}
+                      </span>
+                      <span v-if="evt.astMatch.ancestorChain" style="color: #ccc; font-size: 10px; margin-left: 4px">
+                        {{ evt.astMatch.ancestorChain }}
+                      </span>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else style="color: #999; text-align: center; padding: 32px">
+              No events recorded.
+            </div>
+          </a-tab-pane>
+
           <a-tab-pane key="initial-state" tab="Initial State">
             <div v-if="initialState">
               <a-descriptions :column="3" size="small" bordered style="margin-bottom: 16px">
@@ -843,7 +921,7 @@ import { safeParseJson, formatJsonString } from '@/utils';
 import { getNormalizedRecording } from '@/api/recordings';
 import { parseHtmlToAST, simplifyHtmlToAST } from '@/api/ast';
 import type { FullAST, SimplifiedAST, ASTNode } from '@/api/ast';
-import type { RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState, InitialFieldSnapshot, StateNode } from '@web-agent-flow/shared-types';
+import type { RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState, InitialFieldSnapshot, StateNode, RecordingEvent, AstMatch } from '@web-agent-flow/shared-types';
 
 const route = useRoute();
 const router = useRouter();
@@ -1241,6 +1319,61 @@ function actionColor(at: string): string {
   return map[at] || 'default';
 }
 
+// ---------------------------------------------------------------------------
+// Event Timeline helpers
+// ---------------------------------------------------------------------------
+
+interface TimelineEvent extends RecordingEvent {
+  index: number;
+}
+
+const timelineEvents = computed<TimelineEvent[]>(() => {
+  if (!recording.value) return [];
+  return (recording.value.events as unknown as RecordingEvent[]).map((evt, i) => ({
+    ...evt,
+    index: i,
+  }));
+});
+
+const astMatchCount = computed(() => {
+  const counts = { exact: 0, ancestor: 0, selector: 0, none: 0 };
+  for (const evt of timelineEvents.value) {
+    if (evt.type === 'navigate') continue;
+    const confidence = (evt.astMatch as AstMatch | undefined)?.confidence ?? 'none';
+    if (confidence === 'exact') counts.exact++;
+    else if (confidence === 'ancestor') counts.ancestor++;
+    else if (confidence === 'selector') counts.selector++;
+    else counts.none++;
+  }
+  return counts;
+});
+
+function eventTypeColor(type: string): string {
+  const map: Record<string, string> = {
+    navigate: 'geekblue',
+    click: 'orange',
+    input: 'green',
+    change: 'cyan',
+    'richtext-input': 'purple',
+  };
+  return map[type] || 'default';
+}
+
+function astConfidenceColor(confidence: string): string {
+  const map: Record<string, string> = {
+    exact: 'green',
+    ancestor: 'blue',
+    selector: 'gold',
+    none: 'default',
+  };
+  return map[confidence] || 'default';
+}
+
+function formatEventTime(timestamp: number): string {
+  const d = new Date(timestamp);
+  return d.toLocaleTimeString(undefined, { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+}
+
 function segmentHeaderStyle(type: string): Record<string, string> {
   const bg: Record<string, string> = {
     navigation: '#e6f4ff',
@@ -1619,5 +1752,56 @@ onUnmounted(() => {
 /* Simplified AST: subtle green left border to distinguish from Full */
 .full-ast-tree.simplified {
   border-color: #b7eb8f;
+}
+/* Event Timeline styles */
+.event-timeline-container {
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+  max-height: 700px;
+  overflow-y: auto;
+}
+.event-timeline-row {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 12px;
+}
+.event-timeline-row:last-child {
+  border-bottom: none;
+}
+.event-timeline-row:hover {
+  background: #fafafa;
+}
+.event-timeline-row.event-navigate {
+  background: #f0f5ff;
+  border-bottom-color: #d6e4ff;
+}
+.event-timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.event-timeline-index {
+  color: #bbb;
+  font-size: 10px;
+  min-width: 24px;
+  text-align: right;
+  font-family: monospace;
+}
+.event-timeline-target {
+  margin-top: 2px;
+  padding-left: 30px;
+  font-size: 12px;
+}
+.event-timeline-context {
+  margin-top: 2px;
+  padding-left: 30px;
+  font-size: 11px;
+}
+.event-timeline-ast {
+  margin-top: 2px;
+  padding-left: 30px;
+  font-size: 11px;
 }
 </style>
