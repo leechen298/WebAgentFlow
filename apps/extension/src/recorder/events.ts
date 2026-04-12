@@ -13,8 +13,15 @@ let eventCounter = 0;
 
 /**
  * Prefix for event IDs — disambiguates events from different frames.
- * Top frame: 'e' → e0, e1, ...
- * Iframe:    'f' → f0, f1, ...
+ *
+ * Each content script instance (one per frame) gets a unique prefix:
+ *   - Top frame: 'e'           → e0, e1, e2, ...
+ *   - Iframe A:  'f{nonce}_'   → fk7m_0, fk7m_1, ...
+ *   - Iframe B:  'f{nonce}_'   → f2xp_0, f2xp_1, ...
+ *
+ * The nonce is a random 3-char alphanumeric string generated once per
+ * content script load. With 46656 possible nonces, collision across a
+ * handful of iframes in one recording is negligible.
  */
 let eventIdPrefix = 'e';
 
@@ -29,6 +36,21 @@ export function resetEventCounter(): void {
  */
 export function setEventIdPrefix(prefix: string): void {
   eventIdPrefix = prefix;
+}
+
+/**
+ * Generate a frame-instance-aware event ID prefix.
+ *
+ * - Top frame (`isIframe=false`): returns `'e'` — always one per page.
+ * - Iframe (`isIframe=true`): returns `'f{nonce}_'` where nonce is a
+ *   random 3-char alphanumeric string unique to this content script instance.
+ *
+ * Call once per content script at load time, then pass to `setEventIdPrefix()`.
+ */
+export function generateFrameEventPrefix(isIframe: boolean): string {
+  if (!isIframe) return 'e';
+  const nonce = Math.random().toString(36).slice(2, 5);
+  return `f${nonce}_`;
 }
 
 /**

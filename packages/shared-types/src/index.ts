@@ -19,16 +19,18 @@ export type RecordingEventType = 'navigate' | 'click' | 'input' | 'change' | 'ri
 // so downstream consumers can correlate events with page structure.
 // ---------------------------------------------------------------------------
 
-/** How confidently the event target was matched to an AST node. */
-export type AstMatchConfidence = 'exact' | 'ancestor' | 'selector' | 'none';
+/**
+ * How confidently the event target was matched to an AST node.
+ *
+ * Current matching semantics (produced by AstIndex.matchElement):
+ *   - `exact`    — the event target element directly matches an AST leaf node's CSS selector
+ *   - `ancestor` — the event target is a descendant of an element matching an AST leaf node
+ *   - `none`     — no match found; fallback context (ancestorChain, areaLabel) is provided
+ */
+export type AstMatchConfidence = 'exact' | 'ancestor' | 'none';
 
 /**
  * Association between a recording event and a node in the Semantic State Tree.
- *
- * - `exact`    — the event target element directly corresponds to an AST leaf node
- * - `ancestor` — the event target is inside an AST node (matched via closest ancestor)
- * - `selector` — matched by CSS selector heuristics (less reliable)
- * - `none`     — no match found; fallback context is provided instead
  */
 export interface AstMatch {
   /** Confidence level of the match */

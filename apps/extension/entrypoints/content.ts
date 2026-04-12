@@ -1,7 +1,7 @@
 import { EventCapturer } from '../src/recorder/capture';
 import { captureInitialState } from '../src/recorder/initial-state';
 import { getCanonicalPageUrl } from '../src/recorder/page-url';
-import { setEventIdPrefix } from '../src/recorder/events';
+import { setEventIdPrefix, generateFrameEventPrefix } from '../src/recorder/events';
 import { AstIndex } from '../src/recorder/ast-index';
 import type { RecordingEvent, FrameInfo } from '@web-agent-flow/shared-types';
 
@@ -23,9 +23,9 @@ export default defineContentScript({
       frameUrl: window.location.href,
     };
 
-    // Set frame-aware event ID prefix to avoid collisions across frames
-    // Top frame: e0, e1, ...   Iframe: f0, f1, ...
-    setEventIdPrefix(isIframe ? 'f' : 'e');
+    // Set frame-instance-aware event ID prefix to avoid collisions across frames.
+    // Top frame: e0, e1, ...   Iframe A: fk7m_0, fk7m_1, ...   Iframe B: f2xp_0, ...
+    setEventIdPrefix(generateFrameEventPrefix(isIframe));
 
     console.info(
       `WebAgentFlow content script loaded (${isIframe ? 'iframe' : 'top frame'}): ${window.location.href}`,

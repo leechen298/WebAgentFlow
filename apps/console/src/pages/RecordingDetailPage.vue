@@ -1342,13 +1342,12 @@ const timelineEvents = computed<TimelineEvent[]>(() => {
 });
 
 const astMatchCount = computed(() => {
-  const counts = { exact: 0, ancestor: 0, selector: 0, none: 0 };
+  const counts = { exact: 0, ancestor: 0, none: 0 };
   for (const evt of timelineEvents.value) {
     if (evt.type === 'navigate') continue;
     const confidence = (evt.astMatch as AstMatch | undefined)?.confidence ?? 'none';
     if (confidence === 'exact') counts.exact++;
     else if (confidence === 'ancestor') counts.ancestor++;
-    else if (confidence === 'selector') counts.selector++;
     else counts.none++;
   }
   return counts;
@@ -1369,7 +1368,6 @@ function astConfidenceColor(confidence: string): string {
   const map: Record<string, string> = {
     exact: 'green',
     ancestor: 'blue',
-    selector: 'gold',
     none: 'default',
   };
   return map[confidence] || 'default';

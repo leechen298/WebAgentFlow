@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createRecordingEvent, resetEventCounter, setEventIdPrefix } from '../recorder/events';
+import { createRecordingEvent, resetEventCounter, setEventIdPrefix, generateFrameEventPrefix } from '../recorder/events';
 import type { AstMatch } from '@web-agent-flow/shared-types';
 
 describe('createRecordingEvent — event IDs', () => {
@@ -131,45 +131,111 @@ describe('createRecordingEvent — event IDs', () => {
   });
 });
 
-describe('frame-aware event IDs', () => {
+describe('generateFrameEventPrefix', () => {
+  it('returns "e" for top frame', () => {
+    expect(generateFrameEventPrefix(false)).toBe('e');
+  });
+
+  it('returns "f{nonce}_" format for iframe', () => {
+    const prefix = generateFrameEventPrefix(true);
+    // Format: f + 3 alphanumeric chars + underscore
+    expect(prefix).toMatch(/^f[a-z0-9]{3}_$/);
+  });
+
+  it('generates different nonces across calls', () => {
+    // With 46656 possibilities, two consecutive calls should almost always differ
+    const prefixes = new Set<string>();
+    for (let i = 0; i < 20; i++) {
+      prefixes.add(generateFrameEventPrefix(true));
+    }
+    // At least some should be different (probabilistic, but extremely likely)
+    expect(prefixes.size).toBeGreaterThan(1);
+  });
+});
+
+describe('frame-instance-aware event IDs', () => {
   beforeEach(() => {
     resetEventCounter();
     setEventIdPrefix('e'); // reset to default
   });
 
-  it('uses "f" prefix for iframe events', () => {
-    setEventIdPrefix('f');
+  it('top frame events use "e" prefix', () => {
+    setEventIdPrefix(generateFrameEventPrefix(false));
     const e1 = createRecordingEvent('click', 'http://example.com');
     const e2 = createRecordingEvent('input', 'http://example.com');
 
-    expect(e1.id).toBe('f0');
-    expect(e2.id).toBe('f1');
+    expect(e1.id).toBe('e0');
+    expect(e2.id).toBe('e1');
+  });
+
+  it('iframe events use "f{nonce}_" prefix', () => {
+    const prefix = generateFrameEventPrefix(true);
+    setEventIdPrefix(prefix);
+    const e1 = createRecordingEvent('click', 'http://example.com');
+    const e2 = createRecordingEvent('input', 'http://example.com');
+
+    expect(e1.id).toBe(`${prefix}0`);
+    expect(e2.id).toBe(`${prefix}1`);
+    expect(e1.id).toMatch(/^f[a-z0-9]{3}_0$/);
   });
 
   it('top frame and iframe produce non-colliding IDs', () => {
     // Simulate top frame
-    setEventIdPrefix('e');
+    setEventIdPrefix(generateFrameEventPrefix(false));
     const top1 = createRecordingEvent('click', 'http://example.com');
     const top2 = createRecordingEvent('click', 'http://example.com');
 
     // Simulate iframe (separate counter in real code, but test prefix)
-    setEventIdPrefix('f');
+    setEventIdPrefix(generateFrameEventPrefix(true));
     resetEventCounter();
     const iframe1 = createRecordingEvent('click', 'http://example.com');
     const iframe2 = createRecordingEvent('click', 'http://example.com');
 
-    // All IDs are unique
+    // All IDs are unique — top uses 'e', iframe uses 'f{nonce}_'
     const ids = [top1.id, top2.id, iframe1.id, iframe2.id];
     expect(new Set(ids).size).toBe(4);
-    expect(ids).toEqual(['e0', 'e1', 'f0', 'f1']);
+    expect(top1.id).toBe('e0');
+    expect(top2.id).toBe('e1');
+    expect(iframe1.id).toMatch(/^f[a-z0-9]{3}_0$/);
+    expect(iframe2.id).toMatch(/^f[a-z0-9]{3}_1$/);
+  });
+
+  it('two separate iframe instances produce non-colliding IDs', () => {
+    // Simulate iframe A
+    const prefixA = generateFrameEventPrefix(true);
+    setEventIdPrefix(prefixA);
+    const a1 = createRecordingEvent('click', 'http://example.com');
+    const a2 = createRecordingEvent('click', 'http://example.com');
+
+    // Simulate iframe B (different nonce, separate counter)
+    const prefixB = generateFrameEventPrefix(true);
+    setEventIdPrefix(prefixB);
+    resetEventCounter();
+    const b1 = createRecordingEvent('click', 'http://example.com');
+    const b2 = createRecordingEvent('click', 'http://example.com');
+
+    // Even if counters overlap (0, 1), prefixes differ
+    const ids = [a1.id, a2.id, b1.id, b2.id];
+    expect(new Set(ids).size).toBe(4);
+
+    // Both are f-prefixed but with different nonces
+    expect(a1.id.startsWith('f')).toBe(true);
+    expect(b1.id.startsWith('f')).toBe(true);
+    // Nonces should differ (extremely high probability)
+    if (prefixA !== prefixB) {
+      // Normal case: different nonces
+      expect(a1.id).not.toBe(b1.id);
+      expect(a2.id).not.toBe(b2.id);
+    }
   });
 
   it('resetEventCounter does not change prefix', () => {
-    setEventIdPrefix('f');
+    const prefix = generateFrameEventPrefix(true);
+    setEventIdPrefix(prefix);
     createRecordingEvent('click', 'http://example.com');
     resetEventCounter();
     const e = createRecordingEvent('click', 'http://example.com');
-    expect(e.id).toBe('f0'); // prefix preserved after reset
+    expect(e.id).toBe(`${prefix}0`); // prefix preserved after reset
   });
 });
 
