@@ -382,13 +382,13 @@ describe('captureInitialState — lottery activity page', () => {
       const prizeGroup = findByLabel('奖品配置');
       expect(prizeGroup).toBeDefined();
       const subtree = findNodes([prizeGroup!], () => true);
-      const tableWrapperIdx = subtree.findIndex((n) => n.type === 'table-wrapper');
+      const tableIdx = subtree.findIndex((n) => n.type === 'table');
       const footerTipIdx = subtree.findIndex((n) =>
         (n.type === 'alert' || n.type === 'text') &&
         (n.label?.includes('说明：1') || n.description?.includes('说明：1')),
       );
-      expect(tableWrapperIdx).toBeGreaterThanOrEqual(0);
-      expect(footerTipIdx).toBeGreaterThan(tableWrapperIdx);
+      expect(tableIdx).toBeGreaterThanOrEqual(0);
+      expect(footerTipIdx).toBeGreaterThan(tableIdx);
     });
   });
 
@@ -397,8 +397,11 @@ describe('captureInitialState — lottery activity page', () => {
       const section = findByLabel('🎯 全局中奖概率配置');
       expect(section).toBeDefined();
       expect(section!.children).toBeDefined();
-      const directTypes = section!.children!.map((c) => c.type);
-      expect(directTypes.slice(0, 4)).toEqual(['heading', 'alert', 'table', 'button-group']);
+      const directChildren = section!.children!;
+      expect(directChildren[0]?.type).toBe('heading');
+      expect(directChildren[1]?.type).toBe('alert');
+      expect(directChildren[2]?.type).toBe('table');
+      expect(findNodes([directChildren[3]], (n) => n.type === 'button' && n.label === '批量设置概率').length).toBeGreaterThan(0);
     });
   });
 
@@ -424,12 +427,16 @@ describe('captureInitialState — lottery activity page', () => {
   });
 
   describe('DOM fidelity — no hard regroup / no list compression', () => {
-    it('should preserve all task-card siblings instead of collapsing to "其他 N 项"', () => {
-      const taskCards = findNodes(tree, (n) => n.type === 'task-card');
-      const titledTaskCards = taskCards.filter((n) =>
-        findNodes([n], (child) => child.label?.includes('任务')).length > 0,
-      );
-      expect(titledTaskCards.length).toBeGreaterThanOrEqual(8);
+    it('should preserve all task-like sibling containers instead of collapsing to "其他 N 项"', () => {
+      const taskLikeContainers = findNodes(tree, (n) => {
+        if (!n.children || n.children.length === 0) return false;
+        const buttons = findNodes([n], (child) => child.type === 'button');
+        const labels = buttons.map((child) => child.label);
+        if (labels.filter((label) => label === '编辑任务').length !== 1) return false;
+        if (!labels.includes('自定义概率')) return false;
+        return findNodes([n], (child) => child.label?.includes('任务')).length > 0;
+      });
+      expect(taskLikeContainers.length).toBeGreaterThanOrEqual(8);
       expect(findNodes(tree, (n) => n.label?.startsWith('其他 ')).length).toBe(0);
     });
   });
@@ -455,27 +462,36 @@ describe('captureInitialState — lottery activity page', () => {
   });
 
   describe('DOM fidelity — hidden blocks and status text', () => {
-    it('should preserve hidden custom-config blocks with hidden state', () => {
-      const configs = findNodes(tree, (n) => n.type === 'custom-config');
+    it('should preserve hidden custom probability config containers with hidden state', () => {
+      const configs = findNodes(tree, (n) => {
+        if (!(n.cssState === 'display:none' || n.visible === false) || !n.children) return false;
+        return findNodes([n], (child) =>
+          child.type === 'table' &&
+          !!child.headers &&
+          child.headers.includes('自定义概率（留空=0%）'),
+        ).length > 0;
+      });
       expect(configs.length).toBeGreaterThan(0);
-      expect(configs.every((n) => n.cssState === 'display:none' || n.visible === false)).toBe(true);
     });
 
-    it('should preserve probability-sum status text together with save button', () => {
-      const statusBlocks = findNodes(tree, (n) => n.type === 'status-block');
-      expect(statusBlocks.length).toBeGreaterThan(0);
-      const status = statusBlocks.find((n) =>
-        n.statusText?.includes('概率总和：100%') ||
-        findNodes([n], (child) => child.label?.includes('概率总和：100%')).length > 0,
-      );
+    it('should preserve probability status text together with save button', () => {
+      const status = findNodes(tree, (n) => {
+        if (!n.children || n.children.length === 0) return false;
+        const hasStatusText = findNodes([n], (child) => child.label?.includes('概率总和：100%')).length > 0;
+        const hasSaveButton = findNodes([n], (child) => child.type === 'button' && child.label === '保存自定义概率').length > 0;
+        return hasStatusText && hasSaveButton;
+      })[0];
       expect(status).toBeDefined();
       expect(findNodes([status!], (n) => n.type === 'button' && n.label === '保存自定义概率').length).toBeGreaterThan(0);
     });
 
-    it('should preserve hidden batch dialog footer with hidden state', () => {
-      const hiddenFooters = findNodes(tree, (n) =>
-        n.type === 'dialog-footer' && (n.cssState === 'display:none' || n.visible === false),
-      );
+    it('should preserve hidden batch dialog footer content with hidden state', () => {
+      const hiddenFooters = findNodes(tree, (n) => {
+        if (!(n.cssState === 'display:none' || n.visible === false) || !n.children) return false;
+        const buttons = findNodes([n], (child) => child.type === 'button');
+        const labels = buttons.map((child) => child.label);
+        return labels.includes('取 消') && labels.includes('确 定');
+      });
       expect(hiddenFooters.length).toBeGreaterThan(0);
       const footer = hiddenFooters[0];
       expect(findNodes([footer], (n) => n.type === 'button' && n.label === '取 消').length).toBeGreaterThan(0);

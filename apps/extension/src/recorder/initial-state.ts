@@ -32,7 +32,7 @@ import {
 } from './label-extractor';
 import { cleanLabel, isVisible, extractItemTitle } from './dom-utils';
 
-const MAX_NODES = 1000;
+const MAX_NODES = 600;
 const MAX_DEPTH = 30;
 const SELECTOR_MAX_DEPTH = 5;
 
@@ -227,16 +227,16 @@ function inferPreservedContainerType(node: Element): string {
 
   if (role === 'alert' || /\bel-alert\b|\balert\b|\btip\b/.test(cls)) return 'alert';
   if (/\bsection-title\b/.test(cls) || isHeadingElement(node) || extractInlineTitle(node)) return 'heading';
-  if (/\btask-card\b/.test(cls)) return 'task-card';
-  if (/\btask-header\b/.test(cls)) return 'task-header';
-  if (/\btask-actions\b/.test(cls) || /\bmove-buttons\b/.test(cls) || /\bbatch-actions\b/.test(cls)) {
-    return 'button-group';
+  if (/\b(card|panel|task-card)\b/.test(cls) && !/\b(card-body|panel-body|card-content|task-card-content)\b/.test(cls)) {
+    return 'group';
   }
-  if (/\bprobability-sum\b|\bstatus\b/.test(cls)) return 'status-block';
-  if (/\bcustom-config\b/.test(cls)) return 'custom-config';
-  if (/\bel-dialog__footer\b|\bdialog-footer\b|\bcomplex-footer\b/.test(cls)) return 'dialog-footer';
-  if (/\baction-wrapper\b/.test(cls)) return 'button-group';
-  if (/\btable-wrapper\b/.test(cls)) return 'table-wrapper';
+  if (
+    /\b(task-header|task-actions|move-buttons|batch-actions|action-wrapper|custom-config|table-wrapper|dialog-footer|complex-footer|probability-sum)\b/.test(
+      cls,
+    )
+  ) {
+    return 'group';
+  }
   if (/\bitem-container\b|\bcontent\b|\bwrapper\b|\bcontainer\b/.test(cls)) return 'group';
   if (/\bitem\b|\bsection\b/.test(cls)) return 'section';
   if (role === 'group' || role === 'region') return 'group';
@@ -287,6 +287,33 @@ function buildTextNode(
     label: text,
     selector: `${buildSelector(parent)} ::text(${index})`,
   }, hiddenCss);
+}
+
+function shouldPreserveDirectTextNode(parent: Element, text: string): boolean {
+  if (!text || text.length < 2) return false;
+  if (parent.children.length === 0) return true;
+
+  const cls = (parent.className || '').toLowerCase();
+  const role = (parent.getAttribute('role') || '').toLowerCase();
+  if (role === 'alert' || /\b(alert|tip|hint|help|description|status|summary|sum)\b/.test(cls)) {
+    return true;
+  }
+
+  for (const child of Array.from(parent.children)) {
+    const tag = child.tagName.toLowerCase();
+    if (
+      tag === 'button' ||
+      tag === 'input' ||
+      tag === 'select' ||
+      tag === 'textarea' ||
+      tag === 'table' ||
+      child.getAttribute('role') === 'button'
+    ) {
+      return true;
+    }
+  }
+
+  return parent.children.length <= 1;
 }
 
 /* ── Structural content inside form items ────────────────────────────────── */
@@ -1011,9 +1038,7 @@ function processFormItem(
       if (!child.required && required) child.required = true;
       if (prop && !child.fieldProp) child.fieldProp = prop;
       if (hint) {
-        child.hint = hint;
         child.helpText = hint;
-        child.tips = [hint];
       }
       // Extract options if applicable
       const OPTION_TYPES = new Set(['select', 'radio', 'checkbox', 'cascader']);
@@ -1032,7 +1057,7 @@ function processFormItem(
       ...(label ? { label } : {}),
       ...(required ? { required: true } : {}),
       ...(prop ? { fieldProp: prop } : {}),
-      ...(hint ? { hint, helpText: hint, tips: [hint] } : {}),
+      ...(hint ? { helpText: hint } : {}),
       children: walkedChildren,
     }];
   }
@@ -1278,9 +1303,7 @@ function processFormItem(
   // Extract hint/tip/description text from the form-item container
   const hint = extractHintOrError(container);
   if (hint) {
-    node.hint = hint;
     node.helpText = hint;
-    node.tips = [hint];
   }
 
   return [node];
@@ -1323,7 +1346,7 @@ function walkChildren(
 
     if (childNode.nodeType === Node.TEXT_NODE) {
       const text = cleanTextNodeValue(childNode);
-      if (!text) continue;
+      if (!text || !shouldPreserveDirectTextNode(parent, text)) continue;
       counter.n++;
       results.push(buildTextNode(text, parent, textIndex++, hiddenCss));
       continue;
@@ -1390,7 +1413,7 @@ function classifyNode(node: Element): NodeClassification {
   const nodeCls = (node.className || '').toLowerCase();
   if (
     /(?:^|[\s_-])(?:card|panel)(?:$|[\s_-])/.test(nodeCls) &&
-    !/(card-body|panel-body|card-content|task-card)/.test(nodeCls)
+    !/(card-body|panel-body|card-content)/.test(nodeCls)
   ) {
     return 'card';
   }
@@ -1634,11 +1657,8 @@ function walkNode(
     };
 
     if (directText) {
-      if (containerNode.type === 'status-block') {
-        containerNode.statusText = directText;
-      } else if (containerNode.type === 'alert') {
+      if (containerNode.type === 'alert') {
         containerNode.description = directText;
-        containerNode.tips = [directText];
       }
     }
 
