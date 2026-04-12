@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createRecordingEvent, resetEventCounter } from '../recorder/events';
+import { createRecordingEvent, resetEventCounter, setEventIdPrefix } from '../recorder/events';
 import type { AstMatch } from '@web-agent-flow/shared-types';
 
 describe('createRecordingEvent — event IDs', () => {
@@ -128,5 +128,98 @@ describe('createRecordingEvent — event IDs', () => {
     expect(e.type).toBe('richtext-input');
     expect(e.astMatch?.confidence).toBe('ancestor');
     expect(e.astMatch?.nodeType).toBe('richtext');
+  });
+});
+
+describe('frame-aware event IDs', () => {
+  beforeEach(() => {
+    resetEventCounter();
+    setEventIdPrefix('e'); // reset to default
+  });
+
+  it('uses "f" prefix for iframe events', () => {
+    setEventIdPrefix('f');
+    const e1 = createRecordingEvent('click', 'http://example.com');
+    const e2 = createRecordingEvent('input', 'http://example.com');
+
+    expect(e1.id).toBe('f0');
+    expect(e2.id).toBe('f1');
+  });
+
+  it('top frame and iframe produce non-colliding IDs', () => {
+    // Simulate top frame
+    setEventIdPrefix('e');
+    const top1 = createRecordingEvent('click', 'http://example.com');
+    const top2 = createRecordingEvent('click', 'http://example.com');
+
+    // Simulate iframe (separate counter in real code, but test prefix)
+    setEventIdPrefix('f');
+    resetEventCounter();
+    const iframe1 = createRecordingEvent('click', 'http://example.com');
+    const iframe2 = createRecordingEvent('click', 'http://example.com');
+
+    // All IDs are unique
+    const ids = [top1.id, top2.id, iframe1.id, iframe2.id];
+    expect(new Set(ids).size).toBe(4);
+    expect(ids).toEqual(['e0', 'e1', 'f0', 'f1']);
+  });
+
+  it('resetEventCounter does not change prefix', () => {
+    setEventIdPrefix('f');
+    createRecordingEvent('click', 'http://example.com');
+    resetEventCounter();
+    const e = createRecordingEvent('click', 'http://example.com');
+    expect(e.id).toBe('f0'); // prefix preserved after reset
+  });
+});
+
+describe('event never lost on astMatch failure', () => {
+  beforeEach(() => {
+    resetEventCounter();
+    setEventIdPrefix('e');
+  });
+
+  it('event with confidence:none still has all core fields', () => {
+    const match: AstMatch = {
+      confidence: 'none',
+      ancestorChain: 'span.icon > button.unknown > div.container',
+      areaLabel: 'Settings Panel',
+    };
+
+    const e = createRecordingEvent('click', 'http://example.com/settings', {
+      title: 'Settings',
+      target: { tag: 'span' },
+      fieldContext: { containerType: 'unknown' },
+      astMatch: match,
+    });
+
+    // Core fields intact
+    expect(e.id).toBe('e0');
+    expect(e.type).toBe('click');
+    expect(e.url).toBe('http://example.com/settings');
+    expect(e.timestamp).toBeGreaterThan(0);
+    expect(e.target?.tag).toBe('span');
+
+    // AST fallback info present
+    expect(e.astMatch?.confidence).toBe('none');
+    expect(e.astMatch?.ancestorChain).toContain('span.icon');
+    expect(e.astMatch?.areaLabel).toBe('Settings Panel');
+
+    // No node fields
+    expect(e.astMatch?.nodeId).toBeUndefined();
+    expect(e.astMatch?.nodePath).toBeUndefined();
+  });
+
+  it('event without astMatch at all still has all core fields', () => {
+    const e = createRecordingEvent('input', 'http://example.com', {
+      value: 'test',
+      target: { tag: 'input' },
+    });
+
+    expect(e.id).toBe('e0');
+    expect(e.type).toBe('input');
+    expect(e.value).toBe('test');
+    expect(e.target?.tag).toBe('input');
+    expect(e.astMatch).toBeUndefined();
   });
 });

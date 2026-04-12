@@ -107,10 +107,16 @@
                     <a-tag :color="eventTypeColor(evt.type)" style="font-size: 11px">{{ evt.type }}</a-tag>
                     <span v-if="evt.id" style="color: #bbb; font-size: 11px; margin-right: 8px">{{ evt.id }}</span>
                     <span style="color: #999; font-size: 11px">{{ formatEventTime(evt.timestamp) }}</span>
+                    <span style="color: #bbb; font-size: 10px; margin-left: 4px">+{{ formatRelativeTime(evt.timestamp) }}</span>
                     <a-tag v-if="evt.frameInfo?.isIframe" color="cyan" style="font-size: 10px; margin-left: 8px">iframe</a-tag>
                   </div>
+                  <!-- Navigate: show URL -->
+                  <div v-if="evt.type === 'navigate'" class="event-timeline-target">
+                    <span style="color: #1677ff">{{ evt.url }}</span>
+                    <span v-if="evt.title" style="color: #666; margin-left: 8px">{{ truncate(evt.title, 60) }}</span>
+                  </div>
                   <!-- Target summary -->
-                  <div v-if="evt.target" class="event-timeline-target">
+                  <div v-else-if="evt.target" class="event-timeline-target">
                     <span style="color: #1677ff; font-weight: 500">&lt;{{ evt.target.tag }}&gt;</span>
                     <span v-if="evt.target.label" style="margin-left: 8px; font-weight: 500">{{ truncate(evt.target.label, 50) }}</span>
                     <span v-else-if="evt.target.text" style="margin-left: 8px; color: #333">{{ truncate(evt.target.text, 50) }}</span>
@@ -1372,6 +1378,18 @@ function astConfidenceColor(confidence: string): string {
 function formatEventTime(timestamp: number): string {
   const d = new Date(timestamp);
   return d.toLocaleTimeString(undefined, { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const events = timelineEvents.value;
+  if (events.length === 0) return '0s';
+  const first = events[0].timestamp;
+  const delta = timestamp - first;
+  if (delta < 1000) return `${delta}ms`;
+  if (delta < 60000) return `${(delta / 1000).toFixed(1)}s`;
+  const min = Math.floor(delta / 60000);
+  const sec = ((delta % 60000) / 1000).toFixed(0);
+  return `${min}m${sec}s`;
 }
 
 function segmentHeaderStyle(type: string): Record<string, string> {

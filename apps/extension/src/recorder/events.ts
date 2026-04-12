@@ -11,9 +11,24 @@ import { getCanonicalPageUrl } from './page-url';
 /** Monotonic counter for generating unique event IDs within a recording session. */
 let eventCounter = 0;
 
+/**
+ * Prefix for event IDs — disambiguates events from different frames.
+ * Top frame: 'e' → e0, e1, ...
+ * Iframe:    'f' → f0, f1, ...
+ */
+let eventIdPrefix = 'e';
+
 /** Reset the event counter (call at recording start). */
 export function resetEventCounter(): void {
   eventCounter = 0;
+}
+
+/**
+ * Set the prefix used for event IDs.
+ * Call once per content script to avoid ID collisions across frames.
+ */
+export function setEventIdPrefix(prefix: string): void {
+  eventIdPrefix = prefix;
 }
 
 /**
@@ -33,7 +48,7 @@ export function createRecordingEvent(
   } = {},
 ): RecordingEvent {
   return {
-    id: `e${eventCounter++}`,
+    id: `${eventIdPrefix}${eventCounter++}`,
     type,
     timestamp: Date.now(),
     url: getCanonicalPageUrl(url),

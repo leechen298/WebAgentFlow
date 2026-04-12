@@ -10,7 +10,7 @@
  * navigation or two-pass scoring replacement).
  */
 
-import type { StateNode, AstMatch, AstMatchConfidence } from '@web-agent-flow/shared-types';
+import type { StateNode, AstMatch } from '@web-agent-flow/shared-types';
 
 export interface AstNodeInfo {
   nodeId: string;
@@ -18,42 +18,6 @@ export interface AstNodeInfo {
   nodeType: string;
   nodeLabel?: string;
   nodeSelector?: string;
-}
-
-/**
- * Walk the StateNode tree, assign `astNodeId` to every node,
- * and collect leaf-node entries with selectors for lookup.
- */
-function indexTree(
-  nodes: StateNode[],
-  parentPath: string,
-  counter: { n: number },
-  entries: AstNodeInfo[],
-): void {
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    const id = `n${counter.n++}`;
-    const path = parentPath ? `${parentPath}.${i}` : `${i}`;
-
-    node.astNodeId = id;
-
-    const info: AstNodeInfo = {
-      nodeId: id,
-      nodePath: path,
-      nodeType: node.type,
-      nodeLabel: node.label,
-      nodeSelector: node.selector,
-    };
-
-    // Only leaf nodes with selectors are useful for DOM matching
-    if (node.selector) {
-      entries.push(info);
-    }
-
-    if (node.children) {
-      indexTree(node.children, path, counter, entries);
-    }
-  }
 }
 
 export class AstIndex {
@@ -224,26 +188,29 @@ function buildAncestorChain(element: Element, maxDepth = 4): string {
 
 /**
  * Walk up the DOM to find the nearest heading / label that identifies the area.
- * Looks for: section headings, card titles, form-item labels, dialog titles.
+ * Starts from the element's parent to avoid returning the clicked element's own text.
+ * Also skips any querySelector result that IS the original target or contains it,
+ * to avoid "labeling" the event with the thing the user actually clicked.
  */
 function findNearestAreaLabel(element: Element): string | undefined {
-  let el: Element | null = element;
+  // Start from parent — the element itself is not its own "area label"
+  let el: Element | null = element.parentElement;
   for (let i = 0; i < 15 && el && el !== document.body; i++) {
     // Check for heading children in this container
     const heading = el.querySelector('h1, h2, h3, h4, [class*="title"], [class*="header"]');
-    if (heading) {
+    if (heading && !heading.contains(element)) {
       const text = heading.textContent?.trim();
       if (text && text.length <= 80) return text;
     }
 
     // Check for form-item label
     const label = el.querySelector('[class*="label"]');
-    if (label) {
+    if (label && !label.contains(element)) {
       const text = label.textContent?.trim();
       if (text && text.length <= 60 && text.length > 0) return text;
     }
 
-    // Check aria-label
+    // Check aria-label on the container itself
     const ariaLabel = el.getAttribute('aria-label');
     if (ariaLabel) return ariaLabel.slice(0, 80);
 
