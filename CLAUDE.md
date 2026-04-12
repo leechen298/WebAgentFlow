@@ -216,107 +216,107 @@ During recording, the extension monitors DOM changes via `MutationObserver` on b
 - Iframe support: same-origin iframes are observed recursively; cross-origin silently skipped
 - Frontend: "DOM Changes" tab on RecordingDetailPage shows mutation timeline with type, target, AST match, and change details
 
-## 初始状态解析器 — DOM 转 AST 规则（客户端，逐步被服务端取代）
+## Initial State Parser — DOM-to-AST Rules (client-side, gradually being replaced by server-side)
 
 > **Note**: This section documents the existing client-side DOM walker (`initial-state.ts`). The primary AST pipeline is migrating to server-side HTML → Full AST (see "Current Project Direction" above). These client-side rules remain in effect for the extension code but new AST capabilities should be built server-side in `apps/api/app/services/html_ast_parser.py`.
 
-扩展的 `initial-state.ts` 将实时 DOM 构建为简化 AST（StateNode 树）。修改或扩展解析器时，以下规则为**强制约束**。
+The extension's `initial-state.ts` builds a simplified AST (StateNode tree) from the live DOM. When modifying or extending the parser, the following rules are **mandatory constraints**.
 
-### 核心原则：统一递归 + 回溯
+### Core Principle: Unified Recursion + Fallback
 
-解析器以统一的流程递归处理每个 DOM 节点：
+The parser processes each DOM node through a unified recursive flow:
 
 ```
 walkNode(el):
-  1. classifyNode(el)     → 统一分类（已知组件 > class/tag/id > 原生HTML > null）
-  2. tryProcess(el, type) → 用对应处理器尝试提取
-  3. 处理器返回空 → 回溯到 walkChildren 通用递归
-  4. walkChildren 也为空 + 有可见内容 → localHtml 兜底（type: 'custom'）
+  1. classifyNode(el)     → unified classification (known component > class/tag/id > native HTML > null)
+  2. tryProcess(el, type) → attempt extraction with the matched processor
+  3. processor returns empty → fall back to walkChildren generic recursion
+  4. walkChildren also empty + visible content exists → localHtml fallback (type: 'custom')
 ```
 
-**任何分支失败都不能静默丢弃内容**。处理器返回 `[]` 意味着"我处理不了，请回溯"，不意味着"这个元素没有内容"。
+**No branch failure may silently discard content**. A processor returning `[]` means "I cannot handle this, please fall back" — not "this element has no content".
 
-### 最高原则：DOM 保真优先
+### Top Principle: DOM Fidelity First
 
-解析器不是在"理解页面后重写页面"，而是在"忠实转录页面为结构化中间表示"。
+The parser does not "understand the page then rewrite it" — it "faithfully transcribes the page into a structured intermediate representation".
 
-1. **DOM 原始树形关系优先** — 输出 JSON 的 children 顺序必须和原始 DOM 顺序一致
-2. **sibling 顺序优先** — 不允许为了抽象语义重组 sibling 顺序
-3. **节点类型优先** — 每个 DOM 节点应该按其实际类型保留
-4. **hidden 节点也必须保留** — 通过 `cssState` 标注，不跳过
-5. **复杂节点保留 localHtml fallback** — 语义提取不充分时必须兜底
-6. **绝对不要为了形成"标题 + 内容""分组 + 明细"这类更抽象的结构，去硬重组页面原始结构**
+1. **Original DOM tree relationships first** — output JSON `children` order must match original DOM order
+2. **Sibling order first** — never reorder siblings for semantic abstraction
+3. **Node type first** — each DOM node should be preserved according to its actual type
+4. **Hidden nodes must be kept** — annotated via `cssState`, never skipped
+5. **Complex nodes must keep localHtml fallback** — when semantic extraction is insufficient
+6. **Never restructure original page structure** to form abstractions like "title + content" or "group + detail"
 
-### 分类优先级（从高到低，首次匹配生效）
+### Classification Priority (highest to lowest, first match wins)
 
-1. **已知组件库元素** — 如 `el-select`、`ant-cascader`、`van-cell`、`n-date-picker`，按组件整体类型处理，**不拆解其内部 DOM 结构**（如 el-select 内部有 input，仍作为 select 处理）。组件分类器（`component-classifier.ts`）使用前缀无关检测，覆盖 12+ 组件库。
+1. **Known component library elements** — e.g. `el-select`, `ant-cascader`, `van-cell`, `n-date-picker`. Processed as a whole component type, **never decomposed into internal DOM structure** (e.g. el-select with an internal input is still treated as a select). The component classifier (`component-classifier.ts`) uses prefix-agnostic detection, covering 12+ UI libraries.
 
-2. **class/tag/id 可识别的自定义结构** — 如 `class="xx-select"`、`role="listbox"` 等开发者命名的组件，按模式匹配分类。
+2. **Identifiable custom structures via class/tag/id** — e.g. `class="xx-select"`, `role="listbox"` and other developer-named components, classified by pattern matching.
 
-3. **标准 HTML 语义元素** — `<table>`、`<input>`、`<select>`、`<button>`、`<a>` 等，按原生语义处理。
+3. **Standard HTML semantic elements** — `<table>`, `<input>`, `<select>`, `<button>`, `<a>`, etc., processed according to native semantics.
 
-4. **无法分类的元素** — 递归 walkChildren 尝试提取子节点结构。如有可见内容但无法提取，产生 `type: 'custom'` 节点并附带 `localHtml`（最大 500 字符）。
+4. **Unclassifiable elements** — recursively walkChildren to extract child node structure. If visible content exists but cannot be extracted, produces a `type: 'custom'` node with `localHtml` (max 500 characters).
 
-### 各类型元素规则
+### Element Type Rules
 
-**表格**：提取表头和行数据。每行的每个单元格都通过 `walkNode` 走统一的处理路径（而非纯文本提取）。`table` 节点同时有 `rows`（文本摘要，用于前端展示）和 `children`（walkNode 产出的完整结构，用于 Agent 分析）。
+**Tables**: Extract headers and row data. Each cell in each row goes through the unified `walkNode` processing path (not plain text extraction). A `table` node has both `rows` (text summary for frontend display) and `children` (full structure from walkNode for Agent analysis).
 
-**Iframe**：同源 iframe 通过 `contentDocument` 递归解析（遵循相同规则），跨域静默跳过。产生 `blockType: 'iframe-content'` 的 section 节点。支持多层嵌套 iframe。
+**Iframes**: Same-origin iframes are recursively parsed via `contentDocument` (following the same rules); cross-origin iframes are silently skipped. Produces a section node with `blockType: 'iframe-content'`. Multi-level nested iframes are supported.
 
-**导航区域**：通过 HTML5 语义标签（`nav`、`aside`、`header`、`footer`）和 ARIA 角色（`role="navigation"` 等）检测 main content root **外部**的导航区域。支持嵌套子菜单（如 `el-submenu` + `aria-haspopup`）。叶子节点为 `link` 或 `button` 类型，带 `href`、`active` 状态和 `selector`。**导航、菜单栏等内容不得被跳过或丢弃**，它们对跨系统操作场景有重要价值。
+**Navigation areas**: Detected via HTML5 semantic tags (`nav`, `aside`, `header`, `footer`) and ARIA roles (`role="navigation"`, etc.) **outside** the main content root. Supports nested submenus (e.g. `el-submenu` + `aria-haspopup`). Leaf nodes are `link` or `button` types with `href`, `active` state, and `selector`. **Navigation and menu content must never be skipped or discarded** — they are essential for cross-system operation scenarios.
 
-**表单容器**：通过已知 form-item 模式检测（`.el-form-item`、`.ant-form-item` 等），作为 label + control 对处理。如果内容区包含多个可操作元素（非简单控件 ≥2 个，或简单控件 ≥3 个），递归展开为 `group` + `children`，而非压扁成单个 leaf 节点。如果 processFormItem 返回空（如 `el-form-item__actions` 实际是按钮容器），**回溯**到通用 walkChildren。
+**Form containers**: Detected via known form-item patterns (`.el-form-item`, `.ant-form-item`, etc.), processed as label + control pairs. If the content area contains multiple interactive elements (≥2 non-simple controls, or ≥3 simple controls), recursively expanded as `group` + `children` rather than flattened into a single leaf node. If processFormItem returns empty (e.g. `el-form-item__actions` is actually a button container), **falls back** to generic walkChildren.
 
-### 多 frame 初始状态合并
+### Multi-Frame Initial State Merging
 
-页面可能包含多个 frame（顶层 + 一个或多个 iframe，iframe 可嵌套）。每个 frame 独立运行 content script，独立发送 `RECORDING_INITIAL_STATE`。background 的 `setInitialState`（`state.ts`）按以下规则处理：
+A page may contain multiple frames (top-level + one or more iframes, iframes may be nested). Each frame independently runs a content script and sends `RECORDING_INITIAL_STATE`. The background's `setInitialState` (`state.ts`) handles this as follows:
 
-- **同一 frameId 的重复发送**（如 content.ts 的两次 pass）→ 分数竞争替换（取高分的）
-- **不同 frameId** → **一律合并**。iframe 的 stateTree 作为 `iframe-content` section 追加到已有状态中。不管嵌套几层、有几个 iframe，每个 frame 的内容都会被保留
-- **不得用替换代替合并** — 顶层 frame 的导航/菜单 和 iframe 的业务内容同等重要，不能因为 iframe 节点多/分数高就覆盖顶层
+- **Duplicate sends from the same frameId** (e.g. content.ts two-pass) → score-based competitive replacement (keep the higher-scoring one)
+- **Different frameIds** → **always merge**. The iframe's stateTree is appended as an `iframe-content` section to the existing state. Regardless of nesting depth or iframe count, every frame's content is preserved
+- **Never replace instead of merge** — top-level frame navigation/menus and iframe business content are equally important; a higher node count or score in an iframe must not overwrite the top-level content
 
-### 可见性处理
+### Visibility Handling
 
-所有 walk 逻辑统一处理可见性，**不跳过不可见元素**。`shouldSkip` 只过滤 `SKIP_TAGS`（script/style/svg 等纯技术标签），不检查 `isVisible`。不可见元素（`display:none`、`visibility:hidden`）仍然被解析，通过 `cssState` 字段标注状态。`display:none` 表示不渲染不可点击（如折叠菜单），`visibility:hidden` 表示占位但仍可接收交互。
+All walk logic uses unified visibility handling — **never skip invisible elements**. `shouldSkip` only filters `SKIP_TAGS` (script/style/svg and other purely technical tags) and does not check `isVisible`. Invisible elements (`display:none`, `visibility:hidden`) are still parsed and annotated via the `cssState` field. `display:none` means not rendered and not clickable (e.g. collapsed menus); `visibility:hidden` means occupies space but still receives interaction.
 
-**不得对不同类型的 walk（导航 vs 内容）做不同的可见性处理** — 所有 walk 共享同一套规则。
+**Different walk types (navigation vs content) must not use different visibility handling** — all walks share the same rules.
 
-### 超限兜底
+### Truncation Fallback
 
-当 `MAX_NODES`（300）或 `MAX_NAV_ITEMS`（100）导致采集被截断时，**剩余内容不得静默丢弃**。被截断的导航区域在 section 节点上附带 `localHtml`，保存原始 HTML 以便后续扩展。
+When `MAX_NODES` (300) or `MAX_NAV_ITEMS` (100) cause collection to be truncated, **remaining content must not be silently discarded**. Truncated navigation areas get `localHtml` attached to the section node, preserving the original HTML for future expansion.
 
-### 信息保留原则
+### Information Retention Principle
 
-优先保留对 Agent 理解页面功能有分析价值的信息：页面是做什么的、有哪些可操作元素、当前状态是什么。暂时无直接分析价值但后续可能需要的信息（如完整导航菜单的原始 HTML），用 `localHtml` 暂存，不进入 Agent 的主分析管线。
+Prioritize information with analytical value for the Agent to understand page functionality: what the page does, what interactive elements exist, what the current state is. Information with no immediate analytical value but potentially needed later (e.g. complete navigation menu raw HTML) is stored in `localHtml`, outside the Agent's primary analysis pipeline.
 
-### 禁止事项
+### Prohibited Practices
 
-- **不得基于假设跳过元素** — 不设硬编码的跳过列表（`SKIP_TAGS` 除外）。所有元素均需处理（包括不可见元素）。不假设开发者遵循语义化 HTML 规范。
-- **不得拆解已知复合组件** — `el-select` 是一个 `select` 节点，不是 `input` + `div` + `ul`。组件边界就是分类边界。
-- **不得产生空容器** — section/group 节点如果 children 为空，丢弃该节点。
-- **不得静默丢弃内容** — 任何分类失败必须回溯到通用递归，通用递归也失败且有可见内容时必须产生 localHtml 兜底。超限截断时必须保留 localHtml。
-- **不得压扁复杂结构** — 如果一个容器内有多个可操作子元素，必须递归展开为子树，不能压成单个 leaf + localHtml。
-- **不得添加特化逻辑** — 所有处理规则必须通用，不针对特定组件库或页面结构做 if-else 分支。不同类型的 walk 共享同一套过滤和处理规则。
-- **不得为了语义整理去硬重组页面结构** — 不把多个并列 sibling 合并成"标题+内容"块，不为了"更清晰"改变节点边界，不为了"更整洁"重排节点顺序，不为了"标题+内容"格式吞掉中间的 tip/alert/button group/status text。
-- **不得把复杂 cell 退化成纯文本** — 表格图片列保留 `src`，操作列保留真实按钮，input-number 保留为结构化控件。
-- **不得把多个按钮拼成一个字符串** — 按钮必须作为独立节点保留。
-- **不得只保留主控件忽略同容器辅助信息** — form-item 内的 tip/description/status text 必须保留。
+- **Never skip elements based on assumptions** — no hardcoded skip lists (except `SKIP_TAGS`). All elements must be processed (including invisible ones). Never assume developers follow semantic HTML conventions.
+- **Never decompose known compound components** — `el-select` is one `select` node, not `input` + `div` + `ul`. Component boundaries are classification boundaries.
+- **Never produce empty containers** — section/group nodes with empty children must be discarded.
+- **Never silently discard content** — any classification failure must fall back to generic recursion; if generic recursion also fails and visible content exists, must produce localHtml fallback. Truncated content must preserve localHtml.
+- **Never flatten complex structures** — if a container has multiple interactive child elements, must recursively expand into a subtree, not flatten into a single leaf + localHtml.
+- **Never add specialized logic** — all processing rules must be generic, no if-else branches targeting specific component libraries or page structures. All walk types share the same filtering and processing rules.
+- **Never restructure page structure for semantic tidiness** — do not merge parallel siblings into "title + content" blocks, do not alter node boundaries for "clarity", do not reorder nodes for "neatness", do not swallow intermediate tip/alert/button group/status text to form "title + content" patterns.
+- **Never degrade complex cells to plain text** — table image columns must preserve `src`, action columns must preserve real buttons, input-number must be preserved as structured controls.
+- **Never concatenate multiple buttons into a single string** — buttons must be preserved as individual nodes.
+- **Never keep only the primary control while ignoring sibling auxiliary information** — tip/description/status text within a form-item must be preserved.
 
-### 输出结构
+### Output Structure
 
-- **容器节点**（`section`、`group`）：带 `children[]`、`blockType`、`label`。**无 `selector`**。截断时可带 `localHtml`。
-- **叶子节点**（`input`、`select`、`button`、`link`、`custom` 等）：带 `selector`、`value`、`label`。**无 `children`**。
-- **`table` 节点**：可以是叶子（`rows[][]`）或容器（`children[]`），取决于单元格复杂度。
-- **`localHtml`**：仅用于语义提取不充分的叶子节点，最大 500 字符。
-- **`rawHtmlSnapshot`**：独立的调试用完整 HTML 快照，不属于 AST。
+- **Container nodes** (`section`, `group`): have `children[]`, `blockType`, `label`. **No `selector`**. May carry `localHtml` when truncated.
+- **Leaf nodes** (`input`, `select`, `button`, `link`, `custom`, etc.): have `selector`, `value`, `label`. **No `children`**.
+- **`table` nodes**: can be leaf (`rows[][]`) or container (`children[]`), depending on cell complexity.
+- **`localHtml`**: only on leaf nodes where semantic extraction is insufficient, max 500 characters.
+- **`rawHtmlSnapshot`**: standalone debug-only full HTML snapshot, not part of the AST.
 
-### 测试
+### Tests
 
-多场景测试（`apps/extension/src/__tests__/multi-scenario.test.ts`）覆盖 8 种 fixture：企业官网、后台管理、H5 移动端、多导航文档页、无语义标签页面、数据大盘、Element UI 嵌套菜单+iframe、复杂嵌套结构（form-item 内嵌表格/子表单、表格操作列）。**任何解析器改动必须通过所有现有 fixture 测试。新增解析行为必须同时新增对应 fixture 和测试。**
+Multi-scenario tests (`apps/extension/src/__tests__/multi-scenario.test.ts`) cover 8 fixture types: corporate website, admin panel, H5 mobile, multi-nav docs page, no-semantic-tags page, data dashboard, Element UI nested menu + iframe, and complex nested structures (form-item with embedded tables/sub-forms, table action columns). **Any parser change must pass all existing fixture tests. New parsing behavior must include corresponding fixtures and tests.**
 
-### 参考测试用例
+### Reference Test Case
 
-`apps/extension/src/__tests__/fixtures/lottery-page.html` 是用户实际页面的完整 HTML fixture。`apps/extension/src/__tests__/fixtures/lottery-page-expected.jsonc` 是**当前有问题的解析器输出**，其中用户通过 `//` 和 `/* */` 注释标注了具体问题点。这不是正确的预期输出，而是需要修复的问题清单。新的解析器改动必须解决所有标注的问题。
+`apps/extension/src/__tests__/fixtures/lottery-page.html` is a full HTML fixture from an actual user page. `apps/extension/src/__tests__/fixtures/lottery-page-expected.jsonc` is the **current (problematic) parser output**, with specific issues annotated via `//` and `/* */` comments. This is NOT the correct expected output — it is a problem checklist. New parser changes must address all annotated issues.
 
 ## Infrastructure
 
