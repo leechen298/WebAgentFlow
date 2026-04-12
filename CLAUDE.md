@@ -11,6 +11,75 @@ WebAgentFlow is a monorepo for an agent-driven web workflow engine with:
 - Chrome MV3 browser extension recorder (`apps/extension`, built with WXT)
 - Shared TypeScript packages (`packages/`)
 
+## Current Project Direction
+
+### A. Current Phase Goal
+
+The current phase focuses exclusively on **HTML → Full AST**: converting captured page HTML into a faithful, structure-preserving Abstract Syntax Tree. This is the foundational "fact layer" — get the page representation right before building anything on top of it.
+
+**Current priority: build the page fact layer correctly.** User action recording, path learning, behavior teaching, and replay execution are all future work that will build on the stable Full AST foundation. They are not part of this phase.
+
+### B. Technical Route Change
+
+The technical approach has shifted from the earlier direction.
+
+**Previous approach**: The client-side DOM walker (`initial-state.ts`) produces a semantic StateNode tree directly from the live DOM in the browser, combining HTML parsing, component classification, and semantic extraction in one pass.
+
+**Current approach**: Split responsibilities between client and server:
+- **Client (extension)** — captures raw HTML of the page and iframe content documents, sends to server
+- **Server (API)** — parses HTML into Full AST using a mature third-party HTML parser library, with project-owned Full AST schema and mapping logic
+
+The parser pipeline is now: **third-party library for HTML parsing + project-owned Full AST schema and mapping logic**.
+
+Reasons for this shift:
+- Server-side parsing is more stable, debuggable, and testable
+- Proper logging, error handling, and regression testing are straightforward
+- Decoupled from browser DOM API — can reprocess stored HTML with improved parser without re-visiting pages
+- Third-party HTML parsers (`lxml`, etc.) handle malformed real-world HTML robustly
+- The existing client-side parser (`initial-state.ts`) remains functional but the primary AST pipeline is moving server-side
+
+Server-side parser: `apps/api/app/services/html_ast_parser.py` (uses `lxml.html`)
+Full AST schema: `apps/api/app/schemas/ast.py`
+
+### C. Full AST vs Simplified AST
+
+**Full AST** (current focus):
+- The page fact layer — primary state representation
+- Preserves original DOM tree structure, sibling order, parent-child relationships
+- Preserves key attributes, hidden element states (`display:none`, `visibility:hidden`), iframe content
+- Does NOT restructure, regroup, or add semantic abstractions to the tree
+- This is the current phase's core deliverable
+
+**Simplified AST** (future, NOT this phase):
+- A **structure-preserving projection** of the Full AST — not a rewrite
+- Keeps the same tree shape as the Full AST
+- Does NOT reorganize siblings, invent "title + content" containers, or reorder nodes
+- Primarily performs **attribute pruning**, not structural transformation
+- Intended as an LLM-friendly view derived deterministically from the Full AST
+
+> Simplified AST is a structure-preserving projection of the Full AST.
+
+### D. Current Priorities (ordered)
+
+1. **HTML → Full AST** stable generation (server-side, third-party parser + project-owned mapping)
+2. **Iframe content** included in the Full AST
+3. **Structure fidelity**: tree order, sibling order, hidden state all preserved
+4. **Unified schema and test baselines** for the Full AST
+5. _(Future)_ Full AST → Simplified AST derivation
+6. _(Future)_ User action recording, path learning, behavior teaching
+
+### E. Explicitly Out of Scope (this phase)
+
+The following are **not** part of the current implementation phase. Do not implement or assume these exist:
+- User action path learning
+- Behavior demonstration / teaching
+- Replay execution strategies
+- Event-driven AST incremental updates (AST from events during recording)
+- User behavior ↔ page change causal modeling
+- Historical path template caching
+- Simplified AST generation
+- "Page summarizer" approaches that restructure DOM for readability
+
 ## Common Commands
 
 ### Setup & Development
@@ -114,7 +183,9 @@ Built with WXT framework (`apps/extension/`):
 - `entrypoints/popup/` — Vue 3 recording UI (status, name input, start/stop)
 - Recording state is persisted via extension storage
 
-## 初始状态解析器 — DOM 转 AST 规则
+## 初始状态解析器 — DOM 转 AST 规则（客户端，逐步被服务端取代）
+
+> **Note**: This section documents the existing client-side DOM walker (`initial-state.ts`). The primary AST pipeline is migrating to server-side HTML → Full AST (see "Current Project Direction" above). These client-side rules remain in effect for the extension code but new AST capabilities should be built server-side in `apps/api/app/services/html_ast_parser.py`.
 
 扩展的 `initial-state.ts` 将实时 DOM 构建为简化 AST（StateNode 树）。修改或扩展解析器时，以下规则为**强制约束**。
 
