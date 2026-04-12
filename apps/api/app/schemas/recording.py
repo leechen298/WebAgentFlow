@@ -99,6 +99,45 @@ class NormalizationSummary(BaseModel):
     contains_richtext: bool
 
 
+# ---------------------------------------------------------------------------
+# Operation Step schemas — event → mutation correlation
+# ---------------------------------------------------------------------------
+
+class StepMutationSummary(BaseModel):
+    total: int = 0
+    by_type: dict[str, int] = Field(default_factory=lambda: {"childList": 0, "attributes": 0, "characterData": 0})
+    mutation_ids: list[str] = Field(default_factory=list)
+    highlights: list[str] = Field(default_factory=list)
+
+
+class OperationStep(BaseModel):
+    id: str
+    timestamp: int
+    end_timestamp: int
+    url: str
+    frame_info: dict[str, Any] | None = None
+
+    event_index: int
+    event_type: str
+    event_target_summary: str
+    event_ast_match: dict[str, Any] | None = None
+
+    mutations: StepMutationSummary = Field(default_factory=StepMutationSummary)
+
+    has_changes: bool = False
+    change_area: str | None = None
+    summary: str = ""
+
+
+class OperationStepResult(BaseModel):
+    recording_id: str
+    steps: list[OperationStep] = Field(default_factory=list)
+    event_count: int = 0
+    mutation_count: int = 0
+    mutations_correlated: int = 0
+    mutations_uncorrelated: int = 0
+
+
 class NormalizedRecordingRead(BaseModel):
     recording_id: str
     summary: NormalizationSummary

@@ -9,12 +9,14 @@ from app.repos.recording_repo import RecordingRepository
 from app.schemas.common import ApiResponse, CursorPage, decode_cursor, encode_cursor
 from app.schemas.recording import (
     NormalizedRecordingRead,
+    OperationStepResult,
     RecordingCreate,
     RecordingRead,
     RecordingUpdate,
 )
 from app.services.recording_normalizer import normalize_recording, normalized_recording_to_dict
 from app.services.recording_service import RecordingService
+from app.services.step_builder import build_steps
 
 router = APIRouter(prefix="/recordings", tags=["recordings"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -96,3 +98,18 @@ def get_normalized_recording(
         initial_state=initial_state,
     )
     return ApiResponse(data=NormalizedRecordingRead(**normalized_recording_to_dict(nr)))
+
+
+@router.get("/get_steps", response_model=ApiResponse[OperationStepResult])
+def get_recording_steps(
+    recording_id: Annotated[str, Query(...)],
+    db: DbSession,
+) -> ApiResponse[OperationStepResult]:
+    recording = get_service(db).get_recording(recording_id)
+    dom_mutations = (recording.meta or {}).get("domMutations", []) if recording.meta else []
+    result = build_steps(
+        recording_id,
+        recording.events or [],
+        dom_mutations,
+    )
+    return ApiResponse(data=OperationStepResult(**result))

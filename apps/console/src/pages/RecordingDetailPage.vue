@@ -952,6 +952,119 @@
               </span>
             </div>
           </a-tab-pane>
+
+          <a-tab-pane key="steps" tab="Operation Steps">
+            <a-spin :spinning="stepsLoading">
+              <a-alert
+                v-if="stepsError"
+                message="Error"
+                :description="stepsError"
+                type="error"
+                show-icon
+                style="margin-bottom: 12px"
+              />
+
+              <div v-if="stepsResult">
+                <!-- Summary banner -->
+                <div style="margin-bottom: 12px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center">
+                  <a-tag color="blue">{{ stepsResult.steps.length }} steps</a-tag>
+                  <a-tag color="green">{{ stepsResult.event_count }} events</a-tag>
+                  <a-tag color="orange">{{ stepsResult.mutation_count }} mutations</a-tag>
+                  <span style="font-size: 11px; color: #999">
+                    Correlated: {{ stepsResult.mutations_correlated }} |
+                    Uncorrelated: {{ stepsResult.mutations_uncorrelated }}
+                  </span>
+                </div>
+
+                <!-- Steps list -->
+                <div class="event-timeline-container" v-if="stepsResult.steps.length > 0">
+                  <div
+                    v-for="step in stepsResult.steps"
+                    :key="step.id"
+                    class="event-timeline-row"
+                    :class="{ 'event-navigate': step.event_type === 'navigate' }"
+                  >
+                    <!-- Header: step id, event type, time -->
+                    <div class="event-timeline-header">
+                      <span class="event-timeline-index">{{ step.id }}</span>
+                      <a-tag :color="eventTypeColor(step.event_type)" style="font-size: 11px">{{ step.event_type }}</a-tag>
+                      <span style="color: #999; font-size: 11px">{{ formatEventTime(step.timestamp) }}</span>
+                      <span style="color: #bbb; font-size: 10px; margin-left: 4px">+{{ formatStepRelativeTime(step.timestamp) }}</span>
+                      <a-tag v-if="step.frame_info" color="cyan" style="font-size: 10px; margin-left: 8px">iframe</a-tag>
+                      <a-tag
+                        :color="step.has_changes ? 'green' : 'default'"
+                        style="font-size: 10px; margin-left: auto"
+                      >{{ step.has_changes ? `${step.mutations.total} change${step.mutations.total !== 1 ? 's' : ''}` : 'no changes' }}</a-tag>
+                    </div>
+
+                    <!-- Event target summary -->
+                    <div class="event-timeline-target">
+                      <span style="font-size: 12px">{{ step.event_target_summary }}</span>
+                    </div>
+
+                    <!-- AST match -->
+                    <div v-if="step.event_ast_match" class="event-timeline-ast">
+                      <a-tag
+                        :color="astConfidenceColor(step.event_ast_match.confidence)"
+                        style="font-size: 10px"
+                      >AST: {{ step.event_ast_match.confidence }}</a-tag>
+                      <span v-if="step.event_ast_match.nodeLabel" style="color: #666; font-size: 11px; margin-left: 4px">
+                        {{ step.event_ast_match.nodeType }} — {{ truncate(step.event_ast_match.nodeLabel, 40) }}
+                      </span>
+                    </div>
+
+                    <!-- Mutation summary -->
+                    <div v-if="step.has_changes" class="event-timeline-context" style="margin-top: 4px">
+                      <a-space size="small" style="margin-bottom: 4px">
+                        <a-tag v-if="step.mutations.by_type.childList" color="green" style="font-size: 10px">{{ step.mutations.by_type.childList }} childList</a-tag>
+                        <a-tag v-if="step.mutations.by_type.attributes" color="blue" style="font-size: 10px">{{ step.mutations.by_type.attributes }} attributes</a-tag>
+                        <a-tag v-if="step.mutations.by_type.characterData" color="orange" style="font-size: 10px">{{ step.mutations.by_type.characterData }} text</a-tag>
+                        <span v-if="step.change_area" style="font-size: 11px; color: #8c8c8c; margin-left: 4px">
+                          area: {{ step.change_area }}
+                        </span>
+                      </a-space>
+                      <div
+                        v-for="(hl, hi) in step.mutations.highlights.slice(0, 3)"
+                        :key="hi"
+                        style="font-size: 11px; color: #595959; padding-left: 4px; line-height: 1.6"
+                      >
+                        <span style="color: #bbb; margin-right: 4px">&#x25B8;</span>{{ hl }}
+                      </div>
+                      <div v-if="step.mutations.highlights.length > 3" style="font-size: 10px; color: #bbb; padding-left: 4px">
+                        ... +{{ step.mutations.highlights.length - 3 }} more
+                      </div>
+                    </div>
+
+                    <!-- Step summary -->
+                    <div style="margin-top: 4px; padding-left: 30px; font-size: 11px; color: #8c8c8c; font-style: italic">
+                      {{ step.summary }}
+                    </div>
+
+                    <!-- Duration -->
+                    <div v-if="step.has_changes && step.end_timestamp > step.timestamp" style="padding-left: 30px; font-size: 10px; color: #bbb; margin-top: 2px">
+                      duration: {{ step.end_timestamp - step.timestamp }}ms
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Raw JSON -->
+                <a-collapse style="margin-top: 12px">
+                  <a-collapse-panel key="json" header="Operation Steps JSON (raw)">
+                    <a-textarea
+                      :value="formatJsonString(stepsResult)"
+                      :rows="20"
+                      readonly
+                      style="font-family: monospace; font-size: 11px"
+                    />
+                  </a-collapse-panel>
+                </a-collapse>
+              </div>
+
+              <div v-else-if="!stepsLoading && !stepsError" style="color: #999; text-align: center; padding: 32px">
+                Click this tab to load operation steps.
+              </div>
+            </a-spin>
+          </a-tab-pane>
         </a-tabs>
       </a-card>
     </a-spin>
@@ -1055,10 +1168,10 @@ import { message, type FormInstance } from 'ant-design-vue';
 import { EditOutlined, DeleteOutlined, CaretRightOutlined, CaretDownOutlined } from '@ant-design/icons-vue';
 import { useRecordingsStore } from '@/stores';
 import { safeParseJson, formatJsonString } from '@/utils';
-import { getNormalizedRecording } from '@/api/recordings';
+import { getNormalizedRecording, getRecordingSteps } from '@/api/recordings';
 import { parseHtmlToAST, simplifyHtmlToAST } from '@/api/ast';
 import type { FullAST, SimplifiedAST, ASTNode } from '@/api/ast';
-import type { RecordingUpdate, RecordingStatus, NormalizedRecording, PageInitialState, InitialFieldSnapshot, StateNode, RecordingEvent, AstMatch, DomMutationRecord } from '@web-agent-flow/shared-types';
+import type { RecordingUpdate, RecordingStatus, NormalizedRecording, OperationStepResult, PageInitialState, InitialFieldSnapshot, StateNode, RecordingEvent, AstMatch, DomMutationRecord } from '@web-agent-flow/shared-types';
 
 const route = useRoute();
 const router = useRouter();
@@ -1083,6 +1196,10 @@ const simpResult = ref<SimplifiedAST | null>(null);
 const simpLoading = ref(false);
 const simpError = ref('');
 const simpExpandedKeys = ref<string[]>([]);
+
+const stepsResult = ref<OperationStepResult | null>(null);
+const stepsLoading = ref(false);
+const stepsError = ref('');
 
 const fieldDetailModalOpen = ref(false);
 const fieldDetailRecord = ref<InitialFieldSnapshot | null>(null);
@@ -1719,10 +1836,37 @@ async function loadSimplifiedAST(): Promise<void> {
   }
 }
 
+async function loadSteps(): Promise<void> {
+  const id = route.params.id as string;
+  if (!id || stepsResult.value) return;
+  stepsLoading.value = true;
+  stepsError.value = '';
+  try {
+    stepsResult.value = await getRecordingSteps(id);
+  } catch (e) {
+    stepsError.value = e instanceof Error ? e.message : 'Failed to load operation steps';
+  } finally {
+    stepsLoading.value = false;
+  }
+}
+
+function formatStepRelativeTime(timestamp: number): string {
+  const steps = stepsResult.value?.steps;
+  if (!steps || steps.length === 0) return '0s';
+  const first = steps[0].timestamp;
+  const delta = timestamp - first;
+  if (delta < 1000) return `${delta}ms`;
+  if (delta < 60000) return `${(delta / 1000).toFixed(1)}s`;
+  const min = Math.floor(delta / 60000);
+  const sec = ((delta % 60000) / 1000).toFixed(0);
+  return `${min}m${sec}s`;
+}
+
 function handleTabChange(key: string): void {
   if (key === 'normalized') void loadNormalized();
   if (key === 'full-ast') void loadFullAST();
   if (key === 'simplified-ast') void loadSimplifiedAST();
+  if (key === 'steps') void loadSteps();
 }
 
 function showEditModal(): void {
@@ -1773,8 +1917,9 @@ async function handleSave(): Promise<void> {
     };
 
     await recordingsStore.updateRecording(route.params.id as string, updateData);
-    // Invalidate cached normalized result so it's re-fetched after edit
+    // Invalidate cached results so they're re-fetched after edit
     normalized.value = null;
+    stepsResult.value = null;
     message.success('Recording updated');
     editModalOpen.value = false;
   } catch (e) {

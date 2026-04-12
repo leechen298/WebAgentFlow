@@ -453,6 +453,72 @@ export interface NormalizedRecording {
   initial_state?: PageInitialState | null;
 }
 
+// ---------------------------------------------------------------------------
+// Operation Step types — correlates user events with subsequent DOM mutations
+// ---------------------------------------------------------------------------
+
+/** Summary of mutations associated with a step */
+export interface StepMutationSummary {
+  /** Total number of correlated mutations */
+  total: number;
+  /** Breakdown by mutation type */
+  by_type: { childList: number; attributes: number; characterData: number };
+  /** IDs of the correlated mutation records */
+  mutation_ids: string[];
+  /** Human-readable one-line descriptions of the most significant changes */
+  highlights: string[];
+}
+
+/** A single operation step: one user event + its correlated DOM mutations */
+export interface OperationStep {
+  /** Sequential step ID (s0, s1, ...) */
+  id: string;
+  /** Timestamp of the primary event (Unix ms) */
+  timestamp: number;
+  /** End timestamp — latest mutation timestamp, or same as timestamp if no mutations */
+  end_timestamp: number;
+  /** URL where the event occurred */
+  url: string;
+  /** Frame context */
+  frame_info?: FrameInfo | null;
+
+  // --- Primary event ---
+  /** Index of the primary event in recording.events */
+  event_index: number;
+  /** The event type (click, input, navigate, etc.) */
+  event_type: RecordingEventType;
+  /** Short description of the event target */
+  event_target_summary: string;
+  /** AST match for the event (if available) */
+  event_ast_match?: AstMatch | null;
+
+  // --- Correlated mutations ---
+  /** Summary of DOM mutations correlated with this event */
+  mutations: StepMutationSummary;
+
+  // --- Step summary ---
+  /** Whether this step produced observable DOM changes */
+  has_changes: boolean;
+  /** Primary area where changes occurred (from areaLabel or astMatch) */
+  change_area?: string | null;
+  /** Brief human-readable summary of what this step did */
+  summary: string;
+}
+
+/** Result of building steps for a recording */
+export interface OperationStepResult {
+  recording_id: string;
+  steps: OperationStep[];
+  /** Total events processed */
+  event_count: number;
+  /** Total mutations processed */
+  mutation_count: number;
+  /** Number of mutations that were correlated to at least one step */
+  mutations_correlated: number;
+  /** Number of mutations that were not correlated to any step */
+  mutations_uncorrelated: number;
+}
+
 // Skill types
 export type SkillStatus = 'draft' | 'published' | 'archived';
 
