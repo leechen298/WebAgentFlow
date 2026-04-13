@@ -17,8 +17,9 @@ from app.schemas.recording import (
 )
 from app.services.ast_simplifier import simplify_ast
 from app.services.html_ast_parser import parse_html
-from app.services.agent_input_builder import build_page_context
+from app.services.agent_input_builder import build_page_context, build_steps_context
 from app.services.page_understanding import generate_page_understanding
+from app.services.step_understanding import generate_step_understanding
 from app.services.recording_normalizer import normalize_recording, normalized_recording_to_dict
 from app.services.recording_service import RecordingService
 from app.services.step_builder import build_steps, to_agent_steps
@@ -167,4 +168,29 @@ def get_page_understanding(
 
     # Generate understanding
     result = generate_page_understanding(page_ctx)
+    return ApiResponse(data=result)
+
+
+@router.get("/get_step_understanding", response_model=ApiResponse[dict])
+def get_step_understanding(
+    recording_id: Annotated[str, Query(...)],
+    db: DbSession,
+) -> ApiResponse[dict]:
+    """LLM-based step understanding — how the page was used, key steps, change patterns.
+
+    Builds operation steps from the recording, converts to AgentStepListView,
+    then calls the LLM to produce a structured StepUnderstanding.
+    """
+    recording = get_service(db).get_recording(recording_id)
+    dom_mutations = (recording.meta or {}).get("domMutations", []) if recording.meta else []
+
+    raw_result = build_steps(
+        recording_id,
+        recording.events or [],
+        dom_mutations,
+    )
+    agent_view = to_agent_steps(raw_result)
+    steps_ctx = build_steps_context(recording_id, agent_view)
+
+    result = generate_step_understanding(steps_ctx)
     return ApiResponse(data=result)
