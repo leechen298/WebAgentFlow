@@ -27,8 +27,11 @@ The project follows a 12-phase development timeline. Phases 1–5 are completed;
 5. **Operation Step building** — correlating a primary event with subsequent DOM mutations into a Step
 
 **Current phase (6): Agent initial understanding of pages and steps**
-- 6.1: Page understanding based on Simplified AST — what the page is, core blocks, main controls
-- 6.2: Step understanding — usage patterns, key vs noise steps, frequently operated areas
+- 6A: LLM Provider layer — thin adapter for structured/text generation, unified interface
+- 6B: Agent input contract — define page_context + steps_context schemas, adapters from existing data
+- 6C: Page understanding — Simplified AST → page kind, goal, primary regions/actions (LLM-based)
+- 6D: Step understanding — AgentStepListView → key steps, patterns, change observations (LLM-based)
+- 6E: Combined output — merge page + step understanding into unified AgentPageUnderstanding for Phase 7
 
 **Next phase (7): Full execution capability via Playwright** — real browser automation, not abstract action definitions
 

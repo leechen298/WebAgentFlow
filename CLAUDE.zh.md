@@ -27,8 +27,11 @@ WebAgentFlow 是一个面向 Agent 驱动的 Web 工作流引擎的 monorepo，�
 5. **操作步骤（Step）构建** — 将主事件与后续 DOM 变更关联为一个 Step
 
 **当前阶段（6）：Agent 初步理解页面与步骤**
-- 6.1：基于 Simplified AST 的页面理解 — 这是什么页面、核心区块、主要控件
-- 6.2：基于 Step 的操作理解 — 使用模式、关键步骤 vs 噪声步骤、高频操作区域
+- 6A：LLM Provider 层 — 结构化/文本生成的薄适配层，统一接口
+- 6B：Agent 输入契约 — 定义 page_context + steps_context schema，从现有数据转换的 adapter
+- 6C：页面理解 — Simplified AST → 页面类型、目标、主要区域/操作（LLM 驱动）
+- 6D：步骤理解 — AgentStepListView → 关键步骤、模式、变更观察（LLM 驱动）
+- 6E：综合输出 — 合并页面 + 步骤理解为统一的 AgentPageUnderstanding，供阶段 7 消费
 
 **下一阶段（7）：接入完整执行能力（Playwright）** — 真实浏览器自动化，而非抽象动作定义
 

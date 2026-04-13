@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     redis_host: str = "localhost"
     redis_port: int = 6379
 
+    # LLM provider settings
+    llm_api_key: str = ""
+    llm_base_url: str = "https://api.minimax.io/v1"
+    llm_default_model: str = "MiniMax-M2.7"
+    llm_temperature: float = 0.0
+    llm_max_tokens: int = 4096
+    llm_timeout: int = 60
+
     model_config = SettingsConfigDict(
         env_file=REPO_ROOT / ".env",
         env_file_encoding="utf-8",
