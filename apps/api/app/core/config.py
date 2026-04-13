@@ -28,9 +28,9 @@ class Settings(BaseSettings):
 
     # LLM provider settings
     llm_api_key: str = ""
-    llm_base_url: str = "https://api.minimax.io/v1"
+    llm_base_url: str = "https://api.minimaxi.com/v1"
     llm_default_model: str = "MiniMax-M2.7"
-    llm_temperature: float = 0.0
+    llm_temperature: float = 0.1
     llm_max_tokens: int = 4096
     llm_timeout: int = 60
 

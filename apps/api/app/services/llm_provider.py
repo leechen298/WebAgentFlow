@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
@@ -69,16 +70,32 @@ def _resolve(request: LlmRequest) -> dict[str, Any]:
     }
 
     if request.response_schema is not None:
-        kwargs["response_format"] = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": request.response_schema.get("title", "response"),
-                "strict": True,
-                "schema": request.response_schema,
-            },
-        }
+        # Use json_object mode (broad provider compatibility) + schema in prompt.
+        # json_schema strict mode is OpenAI-specific; many providers (MiniMax,
+        # DeepSeek, etc.) support json_object but not json_schema.
+        kwargs["response_format"] = {"type": "json_object"}
+
+        schema_str = json.dumps(request.response_schema, ensure_ascii=False, indent=2)
+        schema_instruction = (
+            "You MUST respond with a JSON object conforming to this schema. "
+            "Output ONLY valid JSON, no extra text.\n\n"
+            f"JSON Schema:\n```json\n{schema_str}\n```"
+        )
+        # Prepend schema instruction to system prompt
+        if messages and messages[0]["role"] == "system":
+            messages[0]["content"] = schema_instruction + "\n\n" + messages[0]["content"]
+        else:
+            messages.insert(0, {"role": "system", "content": schema_instruction})
 
     return kwargs
+
+
+_THINK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
+
+
+def _strip_thinking(text: str) -> str:
+    """Remove <think>...</think> blocks that some models emit."""
+    return _THINK_RE.sub("", text).strip()
 
 
 def _extract_usage(raw_usage: Any) -> LlmUsage:
@@ -120,6 +137,8 @@ def generate_text(request: LlmRequest) -> LlmResponse:
         completion = client.chat.completions.create(**kwargs)
         choice = completion.choices[0] if completion.choices else None
         text = choice.message.content if choice else None
+        if text:
+            text = _strip_thinking(text)
 
         return LlmResponse(
             ok=True,
@@ -168,6 +187,8 @@ def generate_structured(request: LlmRequest) -> LlmResponse:
         completion = client.chat.completions.create(**kwargs)
         choice = completion.choices[0] if completion.choices else None
         raw_text = choice.message.content if choice else None
+        if raw_text:
+            raw_text = _strip_thinking(raw_text)
 
         if not raw_text:
             return LlmResponse(

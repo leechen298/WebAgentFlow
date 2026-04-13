@@ -186,9 +186,11 @@ class TestGenerateStructured:
         # Verify response_format was passed
         call_kwargs = client.chat.completions.create.call_args[1]
         rf = call_kwargs["response_format"]
-        assert rf["type"] == "json_schema"
-        assert rf["json_schema"]["name"] == "greeting"
-        assert rf["json_schema"]["schema"] == SIMPLE_SCHEMA
+        assert rf["type"] == "json_object"
+        # Schema is injected into system prompt, not response_format
+        system_msg = call_kwargs["messages"][0]
+        assert system_msg["role"] == "system"
+        assert "JSON Schema" in system_msg["content"]
 
     @patch("app.services.llm_provider._get_client")
     def test_json_parse_failure(self, mock_get_client: MagicMock):
