@@ -4,6 +4,27 @@ Step Builder — correlates recording events with subsequent DOM mutations.
 Produces a list of OperationStep records, each binding one user event to
 the DOM mutations that likely resulted from it.
 
+==========================================================================
+Phase 5 Boundary Statement
+==========================================================================
+
+This module is the **lightweight event → DOM-change organizer**. Its job is
+to take raw recording events and raw DOM mutation records and produce a
+structured list of steps, each pairing one event with its time-correlated
+mutations.
+
+What this module IS:
+  - A time-window based event → mutation correlator
+  - A stable input layer for downstream Agent consumption (Phase 6+)
+  - A provider of structured, predictable summaries
+
+What this module is NOT (and must not become):
+  - A causal inference engine (no "did this click *cause* that mutation?")
+  - An execution decision layer (no "should the Agent retry?")
+  - A path template or replay strategy layer
+  - A semantic understanding layer (no NLP, no LLM calls)
+  - An AST proximity scorer
+
 Correlation rules (intentionally simple and explainable):
 
 1. **Time window**: After each event, mutations within a configurable window
@@ -14,17 +35,23 @@ Correlation rules (intentionally simple and explainable):
    closest preceding event. If a mutation falls in the window of multiple
    events, the latest event wins.
 4. **No-mutation steps**: Events with zero correlated mutations are kept as
-   steps (hasChanges=False). These are valuable for detecting no-ops.
+   steps (has_changes=False). These are valuable — see no-change semantics
+   below.
 
-This module is deliberately lightweight. It does NOT attempt:
-- Complex causal inference
-- AST-area proximity scoring
-- Multi-event merge or hover prerequisite detection
+No-change step semantics:
+  A step with has_changes=False does NOT mean the action failed. It means
+  no DOM mutations were observed in the correlation window. Possible causes:
+    - The change happened outside the observation window (async server call)
+    - The change is in a cross-origin frame (not observable)
+    - A precondition was not met (e.g. form validation blocked submit)
+    - The action is genuinely a no-op (e.g. clicking an already-selected tab)
+    - The page uses non-DOM state (canvas, WebGL, etc.)
+  Downstream consumers must NOT treat no-change as automatic failure.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -71,7 +98,13 @@ class _MutationEntry:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Summary helpers — stable, structured, action→result format
+#
+# Design goals:
+#   - Predictable format: verb + target [→ change description]
+#   - Short: one line, typically under 100 chars
+#   - No NLP, no natural language generation
+#   - Stable across runs for the same input
 # ---------------------------------------------------------------------------
 
 def _frame_url(obj: dict[str, Any]) -> str:
@@ -82,7 +115,11 @@ def _frame_url(obj: dict[str, Any]) -> str:
 
 
 def _event_target_summary(ev: dict[str, Any]) -> str:
-    """Produce a short human-readable summary of the event target."""
+    """Produce a short human-readable summary of the event target.
+
+    Format: <tag> "text" | <tag> selector | <tag>
+    Always starts with the tag in angle brackets for consistency.
+    """
     t = ev.get("target") or {}
     tag = t.get("tag") or "?"
     text = t.get("text") or t.get("label") or t.get("nearbyText") or ""
@@ -96,7 +133,15 @@ def _event_target_summary(ev: dict[str, Any]) -> str:
 
 
 def _mutation_highlight(mut: dict[str, Any]) -> str:
-    """Produce a short human-readable description of a mutation."""
+    """Produce a structured one-line description of a mutation.
+
+    Format by type:
+      childList:     <tag>: +N nodes (<child_tags>) / -N nodes (<child_tags>)
+      attributes:    <tag>.attr: "old" → "new"
+      characterData: <tag>: text → "new_text"
+
+    These formats are stable and parseable. Do not add natural language.
+    """
     mt = mut.get("mutationType", "")
     detail = mut.get("detail") or {}
     tag = mut.get("targetTag") or "?"
@@ -107,11 +152,11 @@ def _mutation_highlight(mut: dict[str, Any]) -> str:
         parts = []
         if added:
             tags = ", ".join(f"<{n.get('tag', '?')}>" for n in added[:3])
-            parts.append(f"+{len(added)} node{'s' if len(added) != 1 else ''} ({tags})")
+            parts.append(f"+{len(added)} nodes ({tags})" if len(added) != 1 else f"+1 node ({tags})")
         if removed:
             tags = ", ".join(f"<{n.get('tag', '?')}>" for n in removed[:3])
-            parts.append(f"-{len(removed)} node{'s' if len(removed) != 1 else ''} ({tags})")
-        return f"<{tag}>: {'; '.join(parts)}" if parts else f"<{tag}>: childList"
+            parts.append(f"-{len(removed)} nodes ({tags})" if len(removed) != 1 else f"-1 node ({tags})")
+        return f"<{tag}>: {'; '.join(parts)}" if parts else f"<{tag}>: childList (empty)"
 
     if mt == "attributes":
         attr = detail.get("attributeName") or "?"
@@ -123,33 +168,53 @@ def _mutation_highlight(mut: dict[str, Any]) -> str:
 
     if mt == "characterData":
         new_text = (detail.get("newValue") or "")[:40]
-        return f"<{tag}>: text → \"{new_text}\""
+        return f'<{tag}>: text → "{new_text}"'
 
     return f"<{tag}>: {mt}"
 
 
+# Verb mapping — fixed, no dynamic generation
+_EVENT_VERBS: dict[str, str] = {
+    "click": "Click",
+    "input": "Input",
+    "change": "Change",
+    "richtext-input": "Edit",
+    "navigate": "Navigate",
+}
+
+
 def _step_summary(ev: dict[str, Any], mutation_count: int, highlights: list[str]) -> str:
-    """Generate a brief human-readable summary for a step."""
+    """Generate a structured step summary.
+
+    Format:
+      Navigate → "Page Title"
+      Click <tag> "text" → +N nodes (<tags>)
+      Click <tag> "text" → no observable changes
+      Input <tag> "text" → N mutations
+      Edit <tag> "text" → text → "new content"
+
+    The format is: Verb Target [→ Change]. Stable and predictable.
+    """
     ev_type = ev.get("type", "?")
-    target = _event_target_summary(ev)
+    verb = _EVENT_VERBS.get(ev_type, ev_type.capitalize())
 
     if ev_type == "navigate":
         title = ev.get("title") or ev.get("url") or ""
-        return f"Navigate to {title}"
+        if title:
+            return f'Navigate → "{title[:80]}"'
+        return "Navigate → (unknown page)"
 
-    verb = {
-        "click": "Click",
-        "input": "Input into",
-        "change": "Change",
-        "richtext-input": "Edit rich text in",
-    }.get(ev_type, ev_type.capitalize())
+    target = _event_target_summary(ev)
 
     if mutation_count == 0:
-        return f"{verb} {target} — no observable changes"
+        return f"{verb} {target} → no observable changes"
 
-    # Pick the most informative highlight
-    change_hint = highlights[0] if highlights else f"{mutation_count} mutation(s)"
-    return f"{verb} {target} → {change_hint}"
+    # Use the first highlight as the change description
+    if highlights:
+        # Extract just the change part (after the tag prefix) for brevity
+        return f"{verb} {target} → {highlights[0]}"
+
+    return f"{verb} {target} → {mutation_count} mutation(s)"
 
 
 def _determine_change_area(
@@ -326,4 +391,65 @@ def build_steps(
         "mutation_count": len(mutations),
         "mutations_correlated": len(correlated_ids),
         "mutations_uncorrelated": len(mutations) - len(correlated_ids),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Agent-ready view adapter
+#
+# Converts OperationStepResult into a minimal, stable projection suitable
+# for Agent consumption. Strips debug fields, flattens mutation stats.
+#
+# This is the recommended entry point for Phase 6+ Agent consumers.
+# ---------------------------------------------------------------------------
+
+def to_agent_steps(step_result: dict[str, Any]) -> dict[str, Any]:
+    """Convert a build_steps() result into an Agent-ready step list.
+
+    The output matches the AgentStepListView schema. Each step is a flat
+    dict with only the fields an Agent needs to understand the operation.
+
+    Parameters
+    ----------
+    step_result : dict
+        Output of build_steps().
+
+    Returns
+    -------
+    dict matching AgentStepListView schema.
+    """
+    agent_steps: list[dict[str, Any]] = []
+    any_mutations = False
+
+    for step in step_result.get("steps", []):
+        mutations = step.get("mutations", {})
+        has_changes = step.get("has_changes", False)
+
+        if has_changes:
+            any_mutations = True
+
+        # Determine no_change_reason
+        no_change_reason: str | None = None
+        if not has_changes:
+            if step.get("event_type") == "navigate":
+                no_change_reason = "navigate"
+            else:
+                no_change_reason = "no_mutations_observed"
+
+        agent_steps.append({
+            "event_type": step.get("event_type", ""),
+            "target": step.get("event_target_summary", ""),
+            "has_changes": has_changes,
+            "mutation_total": mutations.get("total", 0),
+            "mutation_types": mutations.get("by_type", {"childList": 0, "attributes": 0, "characterData": 0}),
+            "change_area": step.get("change_area"),
+            "summary": step.get("summary", ""),
+            "no_change_reason": no_change_reason,
+        })
+
+    return {
+        "recording_id": step_result.get("recording_id", ""),
+        "steps": agent_steps,
+        "step_count": len(agent_steps),
+        "has_mutations": any_mutations,
     }

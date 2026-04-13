@@ -9,11 +9,14 @@ Covers:
 5. Time window respects event type (click=2000ms, input=500ms)
 6. Step ordering is stable (follows event order)
 7. Empty events / empty mutations edge cases
+8. Summary format stability and predictability
+9. Agent-ready view output structure
+10. No-change step semantics (no-change ≠ failure)
 """
 
 import pytest
 
-from app.services.step_builder import build_steps
+from app.services.step_builder import build_steps, to_agent_steps
 
 
 def _ev(
@@ -267,6 +270,89 @@ class TestSummaryAndHighlights:
         assert result["steps"][0]["change_area"] == "Prize Config"
 
 
+class TestSummaryFormatStability:
+    """Summary format is predictable and follows the Verb Target → Change pattern."""
+
+    def test_click_with_changes_format(self):
+        """Click with mutations: 'Click <tag> "text" → <highlight>'"""
+        events = [_ev(0, "click", ts=1000, target_text="Save")]
+        mutations = [_mut("m0", ts=1200, mut_type="childList")]
+        result = build_steps("rec1", events, mutations)
+        summary = result["steps"][0]["summary"]
+        assert summary.startswith("Click ")
+        assert "→" in summary
+        assert "Save" in summary
+
+    def test_click_no_changes_format(self):
+        """Click without mutations: 'Click <tag> "text" → no observable changes'"""
+        events = [_ev(0, "click", ts=1000, target_text="Cancel")]
+        result = build_steps("rec1", events, [])
+        summary = result["steps"][0]["summary"]
+        assert summary.startswith("Click ")
+        assert summary.endswith("→ no observable changes")
+
+    def test_input_format(self):
+        """Input: 'Input <tag> "text" → ...'"""
+        events = [_ev(0, "input", ts=1000, target_tag="input", target_text="username")]
+        mutations = [_mut("m0", ts=1200, mut_type="attributes")]
+        result = build_steps("rec1", events, mutations)
+        summary = result["steps"][0]["summary"]
+        assert summary.startswith("Input ")
+
+    def test_navigate_format(self):
+        """Navigate: 'Navigate → "Page Title"'"""
+        events = [{
+            "id": "e0",
+            "type": "navigate",
+            "timestamp": 1000,
+            "url": "https://example.com",
+            "title": "Dashboard",
+        }]
+        result = build_steps("rec1", events, [])
+        summary = result["steps"][0]["summary"]
+        assert summary == 'Navigate → "Dashboard"'
+
+    def test_navigate_no_title_uses_url(self):
+        events = [{
+            "id": "e0",
+            "type": "navigate",
+            "timestamp": 1000,
+            "url": "https://example.com/page",
+        }]
+        result = build_steps("rec1", events, [])
+        summary = result["steps"][0]["summary"]
+        assert summary == 'Navigate → "https://example.com/page"'
+
+    def test_highlight_format_childlist(self):
+        """childList highlight: '<tag>: +N nodes (<child_tags>)'"""
+        mutations = [_mut("m0", ts=1200, mut_type="childList", target_tag="div")]
+        events = [_ev(0, "click", ts=1000)]
+        result = build_steps("rec1", events, mutations)
+        highlights = result["steps"][0]["mutations"]["highlights"]
+        assert len(highlights) == 1
+        assert highlights[0].startswith("<div>:")
+        assert "+1 node" in highlights[0]
+
+    def test_highlight_format_attributes(self):
+        """attributes highlight: '<tag>.attr: "old" → "new"'"""
+        mutations = [_mut("m0", ts=1200, mut_type="attributes", target_tag="span")]
+        events = [_ev(0, "click", ts=1000)]
+        result = build_steps("rec1", events, mutations)
+        highlights = result["steps"][0]["mutations"]["highlights"]
+        assert len(highlights) == 1
+        assert "<span>.class:" in highlights[0]
+        assert "→" in highlights[0]
+
+    def test_highlight_format_character_data(self):
+        """characterData highlight: '<tag>: text → "new"'"""
+        mutations = [_mut("m0", ts=1200, mut_type="characterData", target_tag="p")]
+        events = [_ev(0, "click", ts=1000)]
+        result = build_steps("rec1", events, mutations)
+        highlights = result["steps"][0]["mutations"]["highlights"]
+        assert len(highlights) == 1
+        assert '<p>: text → "new text"' == highlights[0]
+
+
 class TestEndTimestamp:
     """end_timestamp reflects the latest mutation or event timestamp."""
 
@@ -283,3 +369,195 @@ class TestEndTimestamp:
         events = [_ev(0, "click", ts=1000)]
         result = build_steps("rec1", events, [])
         assert result["steps"][0]["end_timestamp"] == 1000
+
+
+# =========================================================================
+# Phase 5.5: Agent-ready view tests
+# =========================================================================
+
+class TestAgentStepView:
+    """to_agent_steps() produces a stable, minimal Agent-ready projection."""
+
+    def test_basic_structure(self):
+        events = [_ev(0, "click", ts=1000, target_text="Submit")]
+        mutations = [_mut("m0", ts=1200)]
+        raw = build_steps("rec1", events, mutations)
+        agent = to_agent_steps(raw)
+
+        assert agent["recording_id"] == "rec1"
+        assert agent["step_count"] == 1
+        assert agent["has_mutations"] is True
+        assert len(agent["steps"]) == 1
+
+    def test_agent_step_fields(self):
+        """Each agent step has exactly the expected fields."""
+        events = [_ev(0, "click", ts=1000, target_text="OK")]
+        mutations = [_mut("m0", ts=1200, mut_type="childList")]
+        raw = build_steps("rec1", events, mutations)
+        agent = to_agent_steps(raw)
+        step = agent["steps"][0]
+
+        expected_keys = {
+            "event_type", "target", "has_changes",
+            "mutation_total", "mutation_types",
+            "change_area", "summary", "no_change_reason",
+        }
+        assert set(step.keys()) == expected_keys
+
+    def test_agent_step_no_debug_fields(self):
+        """Agent view must NOT include debug/context fields."""
+        events = [_ev(0, "click", ts=1000)]
+        mutations = [_mut("m0", ts=1200)]
+        raw = build_steps("rec1", events, mutations)
+        agent = to_agent_steps(raw)
+        step = agent["steps"][0]
+
+        debug_fields = {"id", "timestamp", "end_timestamp", "url",
+                        "frame_info", "event_index", "event_ast_match",
+                        "mutation_ids", "highlights"}
+        for field in debug_fields:
+            assert field not in step, f"Debug field '{field}' should not be in agent view"
+
+    def test_agent_step_with_changes(self):
+        events = [_ev(0, "click", ts=1000, target_text="Save")]
+        mutations = [
+            _mut("m0", ts=1200, mut_type="childList"),
+            _mut("m1", ts=1300, mut_type="attributes"),
+        ]
+        raw = build_steps("rec1", events, mutations)
+        agent = to_agent_steps(raw)
+        step = agent["steps"][0]
+
+        assert step["event_type"] == "click"
+        assert "Save" in step["target"]
+        assert step["has_changes"] is True
+        assert step["mutation_total"] == 2
+        assert step["mutation_types"]["childList"] == 1
+        assert step["mutation_types"]["attributes"] == 1
+        assert step["no_change_reason"] is None
+
+    def test_agent_step_no_changes(self):
+        events = [_ev(0, "click", ts=1000, target_text="Nothing")]
+        raw = build_steps("rec1", events, [])
+        agent = to_agent_steps(raw)
+        step = agent["steps"][0]
+
+        assert step["has_changes"] is False
+        assert step["mutation_total"] == 0
+        assert step["no_change_reason"] == "no_mutations_observed"
+
+    def test_agent_step_navigate_no_change_reason(self):
+        """Navigate events get a specific no_change_reason."""
+        events = [{
+            "id": "e0",
+            "type": "navigate",
+            "timestamp": 1000,
+            "url": "https://example.com",
+            "title": "Page",
+        }]
+        raw = build_steps("rec1", events, [])
+        agent = to_agent_steps(raw)
+        step = agent["steps"][0]
+
+        assert step["has_changes"] is False
+        assert step["no_change_reason"] == "navigate"
+
+    def test_agent_view_empty_recording(self):
+        raw = build_steps("rec1", [], [])
+        agent = to_agent_steps(raw)
+
+        assert agent["recording_id"] == "rec1"
+        assert agent["steps"] == []
+        assert agent["step_count"] == 0
+        assert agent["has_mutations"] is False
+
+    def test_agent_view_has_mutations_flag(self):
+        """has_mutations is True if any step has changes."""
+        events = [
+            _ev(0, "click", ts=1000),
+            _ev(1, "click", ts=2000),
+        ]
+        mutations = [_mut("m0", ts=2200)]
+        raw = build_steps("rec1", events, mutations)
+        agent = to_agent_steps(raw)
+
+        assert agent["has_mutations"] is True
+        # First step has no changes, second does
+        assert agent["steps"][0]["has_changes"] is False
+        assert agent["steps"][1]["has_changes"] is True
+
+    def test_agent_view_multi_step(self):
+        """Agent view preserves step order and count."""
+        events = [
+            _ev(0, "navigate", ts=1000),
+            _ev(1, "click", ts=2000, target_text="Add"),
+            _ev(2, "input", ts=3000, target_tag="input"),
+        ]
+        mutations = [_mut("m0", ts=2200)]
+        raw = build_steps("rec1", events, mutations)
+        agent = to_agent_steps(raw)
+
+        assert agent["step_count"] == 3
+        assert [s["event_type"] for s in agent["steps"]] == ["navigate", "click", "input"]
+
+
+class TestNoChangeSemantics:
+    """No-change steps are preserved and do NOT imply failure."""
+
+    def test_no_change_step_preserved(self):
+        """A click with no mutations still produces a step."""
+        events = [_ev(0, "click", ts=1000, target_text="Toggle")]
+        result = build_steps("rec1", events, [])
+        assert len(result["steps"]) == 1
+        assert result["steps"][0]["has_changes"] is False
+
+    def test_no_change_summary_is_neutral(self):
+        """The summary says 'no observable changes', not 'failed' or 'error'."""
+        events = [_ev(0, "click", ts=1000, target_text="Toggle")]
+        result = build_steps("rec1", events, [])
+        summary = result["steps"][0]["summary"]
+        assert "no observable changes" in summary
+        # Must NOT contain failure-implying language
+        assert "fail" not in summary.lower()
+        assert "error" not in summary.lower()
+
+    def test_no_change_agent_view_reason(self):
+        """Agent view provides a reason, not a verdict."""
+        events = [_ev(0, "click", ts=1000)]
+        raw = build_steps("rec1", events, [])
+        agent = to_agent_steps(raw)
+        step = agent["steps"][0]
+
+        assert step["no_change_reason"] == "no_mutations_observed"
+        # The reason is descriptive, not judgmental
+        assert "fail" not in step["no_change_reason"]
+
+    def test_no_change_mixed_with_change_steps(self):
+        """No-change steps coexist with change steps in the same recording."""
+        events = [
+            _ev(0, "click", ts=1000, target_text="Tab A"),  # no mutations
+            _ev(1, "click", ts=2000, target_text="Submit"),  # with mutations
+        ]
+        mutations = [_mut("m0", ts=2200)]
+        result = build_steps("rec1", events, mutations)
+        agent = to_agent_steps(result)
+
+        assert agent["steps"][0]["has_changes"] is False
+        assert agent["steps"][0]["no_change_reason"] == "no_mutations_observed"
+        assert agent["steps"][1]["has_changes"] is True
+        assert agent["steps"][1]["no_change_reason"] is None
+
+    def test_navigate_no_change_is_not_failure(self):
+        """Navigate without mutations is normal — it's a page transition."""
+        events = [{
+            "id": "e0",
+            "type": "navigate",
+            "timestamp": 1000,
+            "url": "https://example.com",
+            "title": "Home",
+        }]
+        raw = build_steps("rec1", events, [])
+        agent = to_agent_steps(raw)
+
+        assert agent["steps"][0]["no_change_reason"] == "navigate"
+        assert agent["steps"][0]["has_changes"] is False

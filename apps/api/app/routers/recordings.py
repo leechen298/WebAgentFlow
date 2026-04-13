@@ -8,6 +8,7 @@ from app.core.db import get_db
 from app.repos.recording_repo import RecordingRepository
 from app.schemas.common import ApiResponse, CursorPage, decode_cursor, encode_cursor
 from app.schemas.recording import (
+    AgentStepListView,
     NormalizedRecordingRead,
     OperationStepResult,
     RecordingCreate,
@@ -16,7 +17,7 @@ from app.schemas.recording import (
 )
 from app.services.recording_normalizer import normalize_recording, normalized_recording_to_dict
 from app.services.recording_service import RecordingService
-from app.services.step_builder import build_steps
+from app.services.step_builder import build_steps, to_agent_steps
 
 router = APIRouter(prefix="/recordings", tags=["recordings"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -113,3 +114,20 @@ def get_recording_steps(
         dom_mutations,
     )
     return ApiResponse(data=OperationStepResult(**result))
+
+
+@router.get("/get_agent_steps", response_model=ApiResponse[AgentStepListView])
+def get_agent_steps(
+    recording_id: Annotated[str, Query(...)],
+    db: DbSession,
+) -> ApiResponse[AgentStepListView]:
+    """Agent-ready step view — minimal, stable projection for Agent consumption."""
+    recording = get_service(db).get_recording(recording_id)
+    dom_mutations = (recording.meta or {}).get("domMutations", []) if recording.meta else []
+    result = build_steps(
+        recording_id,
+        recording.events or [],
+        dom_mutations,
+    )
+    agent_view = to_agent_steps(result)
+    return ApiResponse(data=AgentStepListView(**agent_view))

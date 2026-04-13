@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Recording, RecordingCreate, RecordingUpdate, DeleteResponse, NormalizedRecording, OperationStepResult, CursorPage } from '@web-agent-flow/shared-types';
+import type { Recording, RecordingCreate, RecordingUpdate, DeleteResponse, NormalizedRecording, OperationStepResult, AgentStepListView, CursorPage } from '@web-agent-flow/shared-types';
 
 export async function getRecordingsList(params?: { limit?: number; cursor?: string }): Promise<CursorPage<Recording>> {
   return await apiClient.get('/recordings/list', { params }) as unknown as CursorPage<Recording>;
@@ -38,4 +38,10 @@ export async function getRecordingSteps(recordingId: string): Promise<OperationS
   return await apiClient.get('/recordings/get_steps', {
     params: { recording_id: recordingId }
   }) as unknown as OperationStepResult;
+}
+
+export async function getAgentSteps(recordingId: string): Promise<AgentStepListView> {
+  return await apiClient.get('/recordings/get_agent_steps', {
+    params: { recording_id: recordingId }
+  }) as unknown as AgentStepListView;
 }

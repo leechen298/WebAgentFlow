@@ -101,29 +101,66 @@ class NormalizationSummary(BaseModel):
 
 # ---------------------------------------------------------------------------
 # Operation Step schemas — event → mutation correlation
+#
+# Phase 5 boundary: The Step layer is a lightweight event → DOM-change
+# organizer. It correlates user events with subsequent mutations using
+# simple time-window rules. It is NOT:
+#   - A causal inference engine
+#   - An execution decision layer
+#   - A path template or replay strategy layer
+# See step_builder.py module docstring for the full boundary statement.
 # ---------------------------------------------------------------------------
 
 class StepMutationSummary(BaseModel):
+    """Mutation summary for a single step.
+
+    Agent-core fields: total, by_type
+    Debug/context fields: mutation_ids, highlights
+    """
+
     total: int = 0
     by_type: dict[str, int] = Field(default_factory=lambda: {"childList": 0, "attributes": 0, "characterData": 0})
+    # --- Debug / context ---
     mutation_ids: list[str] = Field(default_factory=list)
     highlights: list[str] = Field(default_factory=list)
 
 
 class OperationStep(BaseModel):
+    """A single operation step: one user event + its correlated DOM mutations.
+
+    Field classification for downstream consumers:
+
+    **Agent-core** — fields an Agent should rely on to understand what
+    happened and decide what to do next:
+      - event_type, event_target_summary, has_changes,
+        mutations.total, mutations.by_type, change_area, summary
+
+    **Debug / context** — useful for visualization, tracing, and debugging
+    but not part of the stable Agent input contract:
+      - id, timestamp, end_timestamp, url, frame_info,
+        event_index, event_ast_match, mutations.mutation_ids,
+        mutations.highlights
+    """
+
+    # --- Debug / context ---
     id: str
     timestamp: int
     end_timestamp: int
     url: str
     frame_info: dict[str, Any] | None = None
 
-    event_index: int
+    # --- Agent-core: event ---
+    event_index: int  # debug, but needed for cross-referencing raw events
     event_type: str
     event_target_summary: str
+
+    # --- Debug / context ---
     event_ast_match: dict[str, Any] | None = None
 
+    # --- Agent-core: mutations ---
     mutations: StepMutationSummary = Field(default_factory=StepMutationSummary)
 
+    # --- Agent-core: outcome ---
     has_changes: bool = False
     change_area: str | None = None
     summary: str = ""
@@ -136,6 +173,57 @@ class OperationStepResult(BaseModel):
     mutation_count: int = 0
     mutations_correlated: int = 0
     mutations_uncorrelated: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Agent-ready Step view — lightweight projection for Agent consumption
+#
+# Strips debug fields, flattens mutation stats, and provides a stable
+# contract that downstream Agent phases (6+) can depend on.
+# ---------------------------------------------------------------------------
+
+class AgentStepView(BaseModel):
+    """Stable, minimal representation of one step for Agent consumption.
+
+    This is the primary input an Agent should use to understand a recorded
+    user operation. All fields are considered part of the stable contract.
+    """
+
+    # What the user did
+    event_type: str
+    target: str  # human-readable target summary
+    # What changed
+    has_changes: bool
+    mutation_total: int = 0
+    mutation_types: dict[str, int] = Field(
+        default_factory=lambda: {"childList": 0, "attributes": 0, "characterData": 0},
+    )
+    change_area: str | None = None
+    # Human-readable summary (action → result format)
+    summary: str = ""
+    # No-change semantics: when has_changes is False, this field explains why.
+    # Possible values:
+    #   "no_mutations_observed" — default, no DOM mutations in the time window
+    #   "navigate"             — navigation events are not expected to produce
+    #                            mutations in the same document
+    #
+    # IMPORTANT: no-change does NOT mean failure. It may indicate:
+    #   - The change happened outside the observation window
+    #   - The change is in a different frame (cross-origin)
+    #   - The action requires an async server round-trip
+    #   - A precondition was not met (e.g. form validation blocked submit)
+    #   - The action is genuinely a no-op (e.g. clicking an already-selected tab)
+    # Downstream consumers must NOT treat no-change as an automatic failure.
+    no_change_reason: str | None = None
+
+
+class AgentStepListView(BaseModel):
+    """Agent-ready projection of an entire recording's steps."""
+
+    recording_id: str
+    steps: list[AgentStepView] = Field(default_factory=list)
+    step_count: int = 0
+    has_mutations: bool = False
 
 
 class NormalizedRecordingRead(BaseModel):

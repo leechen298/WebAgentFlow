@@ -455,53 +455,60 @@ export interface NormalizedRecording {
 
 // ---------------------------------------------------------------------------
 // Operation Step types — correlates user events with subsequent DOM mutations
+//
+// Phase 5 boundary: The Step layer is a lightweight event → DOM-change
+// organizer. It is NOT a causal inference engine, execution decision layer,
+// or path template layer. See step_builder.py for the full boundary statement.
+//
+// Field classification:
+//   Agent-core: event_type, event_target_summary, has_changes,
+//     mutations.total, mutations.by_type, change_area, summary
+//   Debug/context: id, timestamp, end_timestamp, url, frame_info,
+//     event_index, event_ast_match, mutation_ids, highlights
 // ---------------------------------------------------------------------------
 
 /** Summary of mutations associated with a step */
 export interface StepMutationSummary {
-  /** Total number of correlated mutations */
+  /** [Agent-core] Total number of correlated mutations */
   total: number;
-  /** Breakdown by mutation type */
+  /** [Agent-core] Breakdown by mutation type */
   by_type: { childList: number; attributes: number; characterData: number };
-  /** IDs of the correlated mutation records */
+  /** [Debug] IDs of the correlated mutation records */
   mutation_ids: string[];
-  /** Human-readable one-line descriptions of the most significant changes */
+  /** [Debug] Human-readable one-line descriptions of the most significant changes */
   highlights: string[];
 }
 
 /** A single operation step: one user event + its correlated DOM mutations */
 export interface OperationStep {
-  /** Sequential step ID (s0, s1, ...) */
+  // --- Debug / context fields ---
+  /** [Debug] Sequential step ID (s0, s1, ...) */
   id: string;
-  /** Timestamp of the primary event (Unix ms) */
+  /** [Debug] Timestamp of the primary event (Unix ms) */
   timestamp: number;
-  /** End timestamp — latest mutation timestamp, or same as timestamp if no mutations */
+  /** [Debug] End timestamp — latest mutation timestamp, or same as timestamp if no mutations */
   end_timestamp: number;
-  /** URL where the event occurred */
+  /** [Debug] URL where the event occurred */
   url: string;
-  /** Frame context */
+  /** [Debug] Frame context */
   frame_info?: FrameInfo | null;
-
-  // --- Primary event ---
-  /** Index of the primary event in recording.events */
+  /** [Debug] Index of the primary event in recording.events */
   event_index: number;
-  /** The event type (click, input, navigate, etc.) */
-  event_type: RecordingEventType;
-  /** Short description of the event target */
-  event_target_summary: string;
-  /** AST match for the event (if available) */
+  /** [Debug] AST match for the event (if available) */
   event_ast_match?: AstMatch | null;
 
-  // --- Correlated mutations ---
-  /** Summary of DOM mutations correlated with this event */
+  // --- Agent-core fields ---
+  /** [Agent-core] The event type (click, input, navigate, etc.) */
+  event_type: RecordingEventType;
+  /** [Agent-core] Short description of the event target */
+  event_target_summary: string;
+  /** [Agent-core] Summary of DOM mutations correlated with this event */
   mutations: StepMutationSummary;
-
-  // --- Step summary ---
-  /** Whether this step produced observable DOM changes */
+  /** [Agent-core] Whether this step produced observable DOM changes */
   has_changes: boolean;
-  /** Primary area where changes occurred (from areaLabel or astMatch) */
+  /** [Agent-core] Primary area where changes occurred (from areaLabel or astMatch) */
   change_area?: string | null;
-  /** Brief human-readable summary of what this step did */
+  /** [Agent-core] Brief human-readable summary: Verb Target → Change */
   summary: string;
 }
 
@@ -517,6 +524,50 @@ export interface OperationStepResult {
   mutations_correlated: number;
   /** Number of mutations that were not correlated to any step */
   mutations_uncorrelated: number;
+}
+
+// ---------------------------------------------------------------------------
+// Agent-ready Step view — stable, minimal projection for Agent consumption
+//
+// Use this instead of OperationStep when feeding steps to an Agent.
+// All fields are part of the stable contract.
+// ---------------------------------------------------------------------------
+
+/**
+ * Stable, minimal representation of one step for Agent consumption.
+ *
+ * No-change semantics: has_changes=false does NOT mean the action failed.
+ * Check no_change_reason for context. Possible reasons:
+ *   - "no_mutations_observed" — no DOM mutations in the time window
+ *   - "navigate" — navigation events don't produce same-document mutations
+ *
+ * Downstream consumers must NOT treat no-change as automatic failure.
+ */
+export interface AgentStepView {
+  /** What event the user performed */
+  event_type: RecordingEventType;
+  /** Human-readable target description */
+  target: string;
+  /** Whether DOM changes were observed */
+  has_changes: boolean;
+  /** Total number of correlated mutations */
+  mutation_total: number;
+  /** Mutation breakdown by type */
+  mutation_types: { childList: number; attributes: number; characterData: number };
+  /** Primary area where changes occurred */
+  change_area?: string | null;
+  /** Structured summary: Verb Target → Change */
+  summary: string;
+  /** Why no changes were observed (null when has_changes is true) */
+  no_change_reason?: string | null;
+}
+
+/** Agent-ready projection of an entire recording's steps */
+export interface AgentStepListView {
+  recording_id: string;
+  steps: AgentStepView[];
+  step_count: number;
+  has_mutations: boolean;
 }
 
 // Skill types
