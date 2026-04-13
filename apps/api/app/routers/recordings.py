@@ -18,8 +18,11 @@ from app.schemas.recording import (
 from app.services.ast_simplifier import simplify_ast
 from app.services.html_ast_parser import parse_html
 from app.services.agent_input_builder import build_page_context, build_steps_context
+from app.services.combined_understanding import build_agent_page_understanding
 from app.services.page_understanding import generate_page_understanding
 from app.services.step_understanding import generate_step_understanding
+from app.schemas.page_understanding import PageUnderstanding
+from app.schemas.step_understanding import StepUnderstanding
 from app.services.recording_normalizer import normalize_recording, normalized_recording_to_dict
 from app.services.recording_service import RecordingService
 from app.services.step_builder import build_steps, to_agent_steps
@@ -194,3 +197,67 @@ def get_step_understanding(
 
     result = generate_step_understanding(steps_ctx)
     return ApiResponse(data=result)
+
+
+@router.get("/get_understanding", response_model=ApiResponse[dict])
+def get_combined_understanding(
+    recording_id: Annotated[str, Query(...)],
+    db: DbSession,
+) -> ApiResponse[dict]:
+    """Combined Agent understanding — merges page understanding (6C) and step
+    understanding (6D) into a unified AgentPageUnderstanding (6E).
+
+    Calls the LLM twice (page + step), then rule-synthesizes the combined result.
+    """
+    recording = get_service(db).get_recording(recording_id)
+    meta = recording.meta or {}
+    events = recording.events or []
+
+    # --- Page understanding (6C) ---
+    simplified_ast = None
+    captured_html = meta.get("capturedHtml") or meta.get("captured_html")
+    if captured_html:
+        iframe_html = meta.get("iframeHtml") or meta.get("iframe_html")
+        full_ast = parse_html(captured_html, iframe_html=iframe_html)
+        simplified_ast = simplify_ast(full_ast)
+
+    page_ctx = build_page_context(recording_id, events, simplified_ast)
+    page_result = generate_page_understanding(page_ctx)
+
+    if not page_result["ok"]:
+        return ApiResponse(data={
+            "ok": False,
+            "understanding": None,
+            "error": page_result["error"],
+            "phase": "page_understanding",
+        })
+
+    # --- Step understanding (6D) ---
+    dom_mutations = meta.get("domMutations", [])
+    raw_steps = build_steps(recording_id, events, dom_mutations)
+    agent_view = to_agent_steps(raw_steps)
+    steps_ctx = build_steps_context(recording_id, agent_view)
+    step_result = generate_step_understanding(steps_ctx)
+
+    if not step_result["ok"]:
+        return ApiResponse(data={
+            "ok": False,
+            "understanding": None,
+            "error": step_result["error"],
+            "phase": "step_understanding",
+        })
+
+    # --- Combined synthesis (6E) — no LLM, pure rules ---
+    page_u = PageUnderstanding.model_validate(page_result["understanding"])
+    step_u = StepUnderstanding.model_validate(step_result["understanding"])
+    combined = build_agent_page_understanding(page_u, step_u)
+
+    return ApiResponse(data={
+        "ok": True,
+        "understanding": combined.model_dump(),
+        "error": None,
+        "usage": {
+            "page": page_result["usage"],
+            "step": step_result["usage"],
+        },
+    })
