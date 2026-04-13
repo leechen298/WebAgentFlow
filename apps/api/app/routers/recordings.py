@@ -15,6 +15,10 @@ from app.schemas.recording import (
     RecordingRead,
     RecordingUpdate,
 )
+from app.services.ast_simplifier import simplify_ast
+from app.services.html_ast_parser import parse_html
+from app.services.agent_input_builder import build_page_context
+from app.services.page_understanding import generate_page_understanding
 from app.services.recording_normalizer import normalize_recording, normalized_recording_to_dict
 from app.services.recording_service import RecordingService
 from app.services.step_builder import build_steps, to_agent_steps
@@ -131,3 +135,36 @@ def get_agent_steps(
     )
     agent_view = to_agent_steps(result)
     return ApiResponse(data=AgentStepListView(**agent_view))
+
+
+@router.get("/get_page_understanding", response_model=ApiResponse[dict])
+def get_page_understanding(
+    recording_id: Annotated[str, Query(...)],
+    db: DbSession,
+) -> ApiResponse[dict]:
+    """LLM-based page understanding — what the page is, its regions and actions.
+
+    Parses the recording's captured HTML into a Simplified AST, builds a
+    PageContext, and calls the LLM to produce a structured PageUnderstanding.
+    """
+    recording = get_service(db).get_recording(recording_id)
+
+    # Build Simplified AST from captured HTML in meta
+    simplified_ast = None
+    meta = recording.meta or {}
+    captured_html = meta.get("capturedHtml") or meta.get("captured_html")
+    if captured_html:
+        iframe_html = meta.get("iframeHtml") or meta.get("iframe_html")
+        full_ast = parse_html(captured_html, iframe_html=iframe_html)
+        simplified_ast = simplify_ast(full_ast)
+
+    # Build PageContext
+    page_ctx = build_page_context(
+        recording_id,
+        recording.events or [],
+        simplified_ast,
+    )
+
+    # Generate understanding
+    result = generate_page_understanding(page_ctx)
+    return ApiResponse(data=result)
