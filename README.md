@@ -2,18 +2,31 @@
 
 WebAgentFlow is a monorepo for an agent-driven web workflow engine with a Vue console, FastAPI backend, Python worker, and Chrome extension recorder.
 
-## Scope
+## Current Status
 
-This repository currently contains Task Pack 2 backend CRUD foundation on top of the initial engineering setup. The API exposes action-based CRUD routes for `recordings`, `skills`, and `runs`, while larger workflow features such as extension recording, recording-to-skill compilation, and worker execution remain out of scope.
+Phases 1–6 of the 12-phase development timeline are complete:
 
-## Tech Choices
+1. **Page fact foundation** — raw HTML capture, server-side HTML → Full AST (lxml), Full AST schema
+2. **User event recording** — click, input, change, navigate, richtext-input with full context
+3. **Event–AST association** — events mapped to AST nodes via CSS selector matching
+4. **DOM mutation recording** — MutationObserver on top-level + same-origin iframes, batching, noise filtering
+5. **Operation Step building** — correlating events with subsequent DOM mutations into Steps
+6. **Agent initial understanding** — LLM-based page/step understanding, combined output
 
-- `pnpm workspace` manages the JavaScript/TypeScript monorepo.
-- Vue 3 + Vite + Pinia + Vue Router + Naive UI power the console.
-- FastAPI + SQLAlchemy 2.x + Alembic provide the API skeleton.
-- The worker is a separate Python package with a minimal long-running runner.
-- WXT is used for the Chrome MV3 extension to keep the extension scaffold simple and mainstream.
-- Python dependency management stays on plain `venv + pip` in this phase to avoid adding a second package manager such as Poetry or uv before runtime needs are clear.
+Next up: **Phase 7 — Full execution capability via Playwright.**
+
+See `CLAUDE.md` for the complete 12-phase roadmap and architectural details.
+
+## Tech Stack
+
+- **Monorepo**: pnpm workspace
+- **Frontend**: Vue 3 + Vite + Pinia + Naive UI
+- **Backend**: FastAPI + SQLAlchemy 2.x + Alembic
+- **Worker**: Python polling runner (scaffold)
+- **Extension**: Chrome MV3 via WXT — event recording, DOM mutation tracking, HTML capture
+- **AST pipeline**: Server-side HTML → Full AST (lxml) → Simplified AST → LLM understanding
+- **Infra**: PostgreSQL 16, Redis 7.4, MinIO (Docker Compose)
+- **Python deps**: plain venv + pip
 
 ## Repository Layout
 

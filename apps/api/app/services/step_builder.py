@@ -29,8 +29,9 @@ Correlation rules (intentionally simple and explainable):
 
 1. **Time window**: After each event, mutations within a configurable window
    (default 2000ms for click/navigate, 500ms for input/change) are candidates.
-2. **Same frame**: Mutations in the same frame as the event are preferred.
-   Cross-frame mutations are still included but noted.
+2. **Frame awareness**: Each event and mutation records its frame_url for
+   traceability. Currently all in-window mutations are assigned regardless
+   of frame — same-frame preference is not yet implemented.
 3. **Non-overlapping**: Each mutation is assigned to at most one step — the
    closest preceding event. If a mutation falls in the window of multiple
    events, the latest event wins.

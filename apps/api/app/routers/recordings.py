@@ -6,7 +6,14 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.repos.recording_repo import RecordingRepository
-from app.schemas.common import ApiResponse, CursorPage, decode_cursor, encode_cursor
+from app.schemas.common import (
+    ApiResponse,
+    CombinedUnderstandingResponse,
+    CursorPage,
+    UnderstandingResponse,
+    decode_cursor,
+    encode_cursor,
+)
 from app.schemas.recording import (
     AgentStepListView,
     NormalizedRecordingRead,
@@ -141,11 +148,11 @@ def get_agent_steps(
     return ApiResponse(data=AgentStepListView(**agent_view))
 
 
-@router.get("/get_page_understanding", response_model=ApiResponse[dict])
+@router.get("/get_page_understanding", response_model=ApiResponse[UnderstandingResponse[dict]])
 def get_page_understanding(
     recording_id: Annotated[str, Query(...)],
     db: DbSession,
-) -> ApiResponse[dict]:
+) -> ApiResponse[UnderstandingResponse[dict]]:
     """LLM-based page understanding — what the page is, its regions and actions.
 
     Parses the recording's captured HTML into a Simplified AST, builds a
@@ -174,11 +181,11 @@ def get_page_understanding(
     return ApiResponse(data=result)
 
 
-@router.get("/get_step_understanding", response_model=ApiResponse[dict])
+@router.get("/get_step_understanding", response_model=ApiResponse[UnderstandingResponse[dict]])
 def get_step_understanding(
     recording_id: Annotated[str, Query(...)],
     db: DbSession,
-) -> ApiResponse[dict]:
+) -> ApiResponse[UnderstandingResponse[dict]]:
     """LLM-based step understanding — how the page was used, key steps, change patterns.
 
     Builds operation steps from the recording, converts to AgentStepListView,
@@ -199,11 +206,11 @@ def get_step_understanding(
     return ApiResponse(data=result)
 
 
-@router.get("/get_understanding", response_model=ApiResponse[dict])
+@router.get("/get_understanding", response_model=ApiResponse[CombinedUnderstandingResponse])
 def get_combined_understanding(
     recording_id: Annotated[str, Query(...)],
     db: DbSession,
-) -> ApiResponse[dict]:
+) -> ApiResponse[CombinedUnderstandingResponse]:
     """Combined Agent understanding — merges page understanding (6C) and step
     understanding (6D) into a unified AgentPageUnderstanding (6E).
 
