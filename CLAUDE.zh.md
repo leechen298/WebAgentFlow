@@ -58,6 +58,31 @@ WebAgentFlow 是一个面向 Agent 驱动的 Web 工作流引擎的 monorepo，�
 
 服务端解析器：`apps/api/app/services/html_ast_parser.py`（使用 `lxml.html`）
 Full AST schema：`apps/api/app/schemas/ast.py`
+服务端事件匹配器：`apps/api/app/services/server_ast_matcher.py`
+
+#### 双轨 AST：客户端与服务端职责
+
+项目当前维护两套 AST 相关系统。它们服务于不同目的，**不互相冲突**，但必须遵守各自边界：
+
+**客户端 AstIndex**（`apps/extension/src/recorder/ast-index.ts`）：
+- 录制期实时匹配工具
+- 在浏览器中运行，即时将事件/mutation 关联到 stateTree 节点
+- 为每个事件生成 `astMatch`（confidence、nodeId、nodeLabel、areaLabel）
+- **不是**页面结构或执行层定位的权威来源
+
+**服务端 FullAST**（`html_ast_parser.py` → `ast_simplifier.py` → `server_ast_matcher.py`）：
+- 页面事实层的权威表示
+- 页面理解（6C）、步骤理解（6D）、组合理解（6E）均基于服务端 AST
+- `server_ast_matcher.py` 提供 `server_ast_match`——事件在权威 AST 上的定位
+- Phase 7 执行层应消费服务端 AST 和 `server_ast_match`，而非客户端 stateTree
+
+**关系与消费优先级：**
+- 客户端 `astMatch` 作为录制期辅助信息保留
+- `server_ast_match` 是事件的服务端权威定位
+- 下游消费者（step_builder、agent_input）优先使用 `server_ast_match`，无可用时 fallback 到客户端 `astMatch`
+- Mutation 的服务端重定位**尚未实现**——mutation 当前仍仅使用客户端 `astMatch`
+
+> 目标不是"立刻将所有 AST 统一到服务端"。客户端 AstIndex 保留用于实时录制。服务端 AST 是理解层和执行层的权威来源。
 
 ### C. Full AST 与 Simplified AST
 

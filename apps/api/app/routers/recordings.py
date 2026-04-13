@@ -24,6 +24,7 @@ from app.schemas.recording import (
 )
 from app.services.ast_simplifier import simplify_ast
 from app.services.html_ast_parser import parse_html
+from app.services.server_ast_matcher import match_events_to_ast
 from app.services.agent_input_builder import build_page_context, build_steps_context
 from app.services.combined_understanding import build_agent_page_understanding
 from app.services.page_understanding import generate_page_understanding
@@ -36,6 +37,22 @@ from app.services.step_builder import build_steps, to_agent_steps
 
 router = APIRouter(prefix="/recordings", tags=["recordings"])
 DbSession = Annotated[Session, Depends(get_db)]
+
+
+def _enhance_events_with_server_ast(
+    events: list[dict], meta: dict,
+) -> list[dict]:
+    """Enhance events with server_ast_match if captured HTML is available.
+
+    Parses HTML → FullAST, then matches each event to the AST.
+    Returns the enhanced events list, or original events if no HTML.
+    """
+    captured_html = meta.get("capturedHtml") or meta.get("captured_html")
+    if not captured_html:
+        return events
+    iframe_html = meta.get("iframeHtml") or meta.get("iframe_html")
+    full_ast = parse_html(captured_html, iframe_html=iframe_html)
+    return match_events_to_ast(events, full_ast)
 
 
 def get_service(db: Session) -> RecordingService:
@@ -122,10 +139,12 @@ def get_recording_steps(
     db: DbSession,
 ) -> ApiResponse[OperationStepResult]:
     recording = get_service(db).get_recording(recording_id)
-    dom_mutations = (recording.meta or {}).get("domMutations", []) if recording.meta else []
+    meta = recording.meta or {}
+    events = _enhance_events_with_server_ast(recording.events or [], meta)
+    dom_mutations = meta.get("domMutations", [])
     result = build_steps(
         recording_id,
-        recording.events or [],
+        events,
         dom_mutations,
     )
     return ApiResponse(data=OperationStepResult(**result))
@@ -138,10 +157,12 @@ def get_agent_steps(
 ) -> ApiResponse[AgentStepListView]:
     """Agent-ready step view — minimal, stable projection for Agent consumption."""
     recording = get_service(db).get_recording(recording_id)
-    dom_mutations = (recording.meta or {}).get("domMutations", []) if recording.meta else []
+    meta = recording.meta or {}
+    events = _enhance_events_with_server_ast(recording.events or [], meta)
+    dom_mutations = meta.get("domMutations", [])
     result = build_steps(
         recording_id,
-        recording.events or [],
+        events,
         dom_mutations,
     )
     agent_view = to_agent_steps(result)
@@ -192,11 +213,13 @@ def get_step_understanding(
     then calls the LLM to produce a structured StepUnderstanding.
     """
     recording = get_service(db).get_recording(recording_id)
-    dom_mutations = (recording.meta or {}).get("domMutations", []) if recording.meta else []
+    meta = recording.meta or {}
+    events = _enhance_events_with_server_ast(recording.events or [], meta)
+    dom_mutations = meta.get("domMutations", [])
 
     raw_result = build_steps(
         recording_id,
-        recording.events or [],
+        events,
         dom_mutations,
     )
     agent_view = to_agent_steps(raw_result)
@@ -218,16 +241,20 @@ def get_combined_understanding(
     """
     recording = get_service(db).get_recording(recording_id)
     meta = recording.meta or {}
-    events = recording.events or []
+    raw_events = recording.events or []
 
-    # --- Page understanding (6C) ---
+    # --- Parse HTML and enhance events with server AST matching ---
     simplified_ast = None
+    full_ast = None
     captured_html = meta.get("capturedHtml") or meta.get("captured_html")
     if captured_html:
         iframe_html = meta.get("iframeHtml") or meta.get("iframe_html")
         full_ast = parse_html(captured_html, iframe_html=iframe_html)
         simplified_ast = simplify_ast(full_ast)
 
+    events = match_events_to_ast(raw_events, full_ast) if full_ast else raw_events
+
+    # --- Page understanding (6C) ---
     page_ctx = build_page_context(recording_id, events, simplified_ast)
     page_result = generate_page_understanding(page_ctx)
 

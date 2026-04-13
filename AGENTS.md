@@ -58,6 +58,31 @@ Reasons for this shift:
 
 Server-side parser: `apps/api/app/services/html_ast_parser.py` (uses `lxml.html`)
 Full AST schema: `apps/api/app/schemas/ast.py`
+Server-side event matcher: `apps/api/app/services/server_ast_matcher.py`
+
+#### Dual-Track AST: Client vs Server Responsibilities
+
+The project currently maintains two AST-related systems. They serve different purposes and are **not in conflict**, but their boundaries must be respected:
+
+**Client-side AstIndex** (`apps/extension/src/recorder/ast-index.ts`):
+- A recording-time real-time matching tool
+- Runs in the browser during recording to immediately associate events/mutations with stateTree nodes
+- Produces `astMatch` on each event (confidence, nodeId, nodeLabel, areaLabel)
+- **Not** the authoritative source for page structure or execution-layer positioning
+
+**Server-side FullAST** (`html_ast_parser.py` → `ast_simplifier.py` → `server_ast_matcher.py`):
+- The authoritative page fact representation
+- Page understanding (6C), step understanding (6D), combined understanding (6E) all consume server-side AST
+- `server_ast_matcher.py` provides `server_ast_match` — event positioning within the authoritative AST
+- Phase 7 execution layer should consume server-side AST and `server_ast_match`, not client stateTree
+
+**Relationship and consumption priority:**
+- Client `astMatch` is preserved as recording-time auxiliary information
+- `server_ast_match` is the server-side authoritative positioning for events
+- Downstream consumers (step_builder, agent_input) prefer `server_ast_match` when available, fall back to client `astMatch`
+- Mutation server-side re-matching is **not yet implemented** — mutations still use client `astMatch` only
+
+> The goal is not "immediately unify all AST to the server". The client-side AstIndex stays for real-time recording. The server-side AST is the authoritative source for understanding and execution.
 
 ### C. Full AST vs Simplified AST
 

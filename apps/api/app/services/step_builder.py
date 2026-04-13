@@ -221,8 +221,13 @@ def _step_summary(ev: dict[str, Any], mutation_count: int, highlights: list[str]
 def _determine_change_area(
     mutations: list[dict[str, Any]],
     event_ast: dict[str, Any] | None,
+    event_server_ast: dict[str, Any] | None = None,
 ) -> str | None:
-    """Determine the primary area where changes occurred."""
+    """Determine the primary area where changes occurred.
+
+    Prefers server_ast_match (region_hint / label) over client astMatch
+    when available.
+    """
     # Try area labels from mutations
     areas: dict[str, int] = {}
     for m in mutations:
@@ -237,7 +242,13 @@ def _determine_change_area(
         # Return the most frequent area
         return max(areas, key=lambda k: areas[k])
 
-    # Fall back to event's AST area
+    # Prefer server AST region_hint / label over client astMatch
+    if event_server_ast:
+        area = event_server_ast.get("region_hint") or event_server_ast.get("label") or ""
+        if area:
+            return area
+
+    # Fall back to client-side event AST area
     if event_ast:
         return event_ast.get("areaLabel") or event_ast.get("nodeLabel") or None
 
@@ -352,9 +363,11 @@ def build_steps(
                 highlights.append(_mutation_highlight(me.mutation))
 
         event_ast = ev.get("astMatch")
+        event_server_ast = ev.get("server_ast_match")
         change_area = _determine_change_area(
             [me.mutation for me in assigned],
             event_ast,
+            event_server_ast,
         ) if assigned else None
 
         end_ts = max(me.timestamp for me in assigned) if assigned else ev_entry.timestamp
@@ -371,6 +384,7 @@ def build_steps(
             "event_type": ev_entry.event_type,
             "event_target_summary": _event_target_summary(ev),
             "event_ast_match": event_ast,
+            "event_server_ast_match": event_server_ast,
             "mutations": {
                 "total": len(assigned),
                 "by_type": by_type,
