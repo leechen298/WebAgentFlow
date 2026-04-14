@@ -658,3 +658,226 @@ export interface DeleteResponse {
   skill_id?: string;
   run_id?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Autonomous Learning Mode types
+//
+// Core entities for the learning subsystem: success criteria definition,
+// learned execution paths, exploration run records, and inline constraints.
+// LearnedConstraint is stored inside LearnedPath.constraints_json (not a
+// standalone DB table in v0.1).
+// ---------------------------------------------------------------------------
+
+// --- Success Criteria ---
+
+export type SuccessCriteriaCategory =
+  | 'submit_success'
+  | 'search_success'
+  | 'open_success'
+  | 'save_success'
+  | 'filter_success'
+  | 'weak_success_no_error'
+  | 'custom';
+
+export type SuccessCriteriaStrength = 'strong' | 'weak';
+
+export type SuccessCriteriaCreatedBy = 'system' | 'user';
+
+export interface SuccessCondition {
+  type: string;
+  target?: string;
+  value?: string;
+  description?: string;
+}
+
+export interface SuccessCriteria {
+  id: string;
+  name: string;
+  category: SuccessCriteriaCategory;
+  strength: SuccessCriteriaStrength;
+  description: string | null;
+  conditions_json: SuccessCondition[];
+  created_by: SuccessCriteriaCreatedBy;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SuccessCriteriaCreate {
+  name: string;
+  category?: SuccessCriteriaCategory;
+  strength?: SuccessCriteriaStrength;
+  description?: string | null;
+  conditions_json?: SuccessCondition[];
+  created_by?: SuccessCriteriaCreatedBy;
+  enabled?: boolean;
+}
+
+export interface SuccessCriteriaUpdate {
+  name?: string;
+  category?: SuccessCriteriaCategory;
+  strength?: SuccessCriteriaStrength;
+  description?: string | null;
+  conditions_json?: SuccessCondition[];
+  created_by?: SuccessCriteriaCreatedBy;
+  enabled?: boolean;
+}
+
+// --- Learned Constraint (inline JSON structure, not a standalone table) ---
+
+export type LearnedConstraintType =
+  | 'required'
+  | 'format'
+  | 'range'
+  | 'dependency'
+  | 'visibility'
+  | 'backend_validation'
+  | 'unknown';
+
+export interface LearnedConstraint {
+  id?: string;
+  field_key?: string;
+  type: LearnedConstraintType;
+  description: string;
+  trigger?: string;
+  evidence?: string[];
+}
+
+// --- Learned Path ---
+
+export type LearnedPathStatus = 'candidate' | 'approved' | 'rejected';
+
+export interface LearnedPath {
+  id: string;
+  page_signature: string | null;
+  goal_type: string | null;
+  success_criteria_id: string | null;
+  steps_json: Record<string, unknown>[];
+  variable_slots_json: Record<string, unknown>[];
+  observed_effects_json: Record<string, unknown>[];
+  constraints_json: LearnedConstraint[];
+  user_labels_json: string[];
+  recommended: boolean;
+  confidence: number;
+  status: LearnedPathStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LearnedPathCreate {
+  page_signature?: string | null;
+  goal_type?: string | null;
+  success_criteria_id?: string | null;
+  steps_json?: Record<string, unknown>[];
+  variable_slots_json?: Record<string, unknown>[];
+  observed_effects_json?: Record<string, unknown>[];
+  constraints_json?: LearnedConstraint[];
+  user_labels_json?: string[];
+  recommended?: boolean;
+  confidence?: number;
+  status?: LearnedPathStatus;
+}
+
+export interface LearnedPathUpdate {
+  page_signature?: string | null;
+  goal_type?: string | null;
+  success_criteria_id?: string | null;
+  steps_json?: Record<string, unknown>[];
+  variable_slots_json?: Record<string, unknown>[];
+  observed_effects_json?: Record<string, unknown>[];
+  constraints_json?: LearnedConstraint[];
+  user_labels_json?: string[];
+  recommended?: boolean;
+  confidence?: number;
+  status?: LearnedPathStatus;
+}
+
+// --- Exploration Run ---
+
+export type ExplorationMode = 'form' | 'search' | 'filter' | 'modal';
+
+export type ExplorationRunStatus = 'pending' | 'running' | 'paused' | 'completed' | 'failed';
+
+/**
+ * A candidate interactive element identified from AST + mutation history.
+ * Reserved for Phase 2 "interactive candidate element inference" layer.
+ * The inference layer will extract elements likely to be clickable, inputtable,
+ * or hoverable, score them by structural/class/aria/mutation signals, and
+ * prioritize them for guided exploration instead of blind trial.
+ */
+export interface CandidateElement {
+  /** Element identifier — AST node ID or locator */
+  element_key: string;
+  /** Inferred possible actions */
+  inferred_actions: ('click' | 'input' | 'hover' | 'select' | 'toggle')[];
+  /** Interaction likelihood score (0-1) */
+  score: number;
+  /** Signals that contributed to the score */
+  evidence: {
+    tag?: string;
+    class_hints?: string[];
+    role?: string;
+    aria?: Record<string, string>;
+    mutation_linkage?: boolean;
+  };
+  /** Exploration priority rank (lower = try first) */
+  priority?: number;
+}
+
+/**
+ * An interaction hint derived from candidate inference.
+ * Suggests what to try and why during guided exploration.
+ */
+export interface InteractionHint {
+  /** Target element key */
+  element_key: string;
+  /** Suggested action */
+  action: 'click' | 'input' | 'hover' | 'select' | 'toggle';
+  /** Why this interaction is suggested */
+  reason: string;
+  /** Expected effect based on historical mutations */
+  expected_effect?: string;
+  /** Priority rank */
+  priority?: number;
+}
+
+export interface ExplorationRun {
+  id: string;
+  page_signature: string | null;
+  mode: ExplorationMode;
+  status: ExplorationRunStatus;
+  success_criteria_ids_json: string[];
+  strategy_json: Record<string, unknown>;
+  summary: string | null;
+  result_snapshot_json: Record<string, unknown> | null;
+  /** Candidate interactive elements inferred from AST + mutation history */
+  candidate_elements_json: CandidateElement[] | null;
+  /** Prioritized exploration suggestions */
+  interaction_hints_json: InteractionHint[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExplorationRunCreate {
+  page_signature?: string | null;
+  mode?: ExplorationMode;
+  status?: ExplorationRunStatus;
+  success_criteria_ids_json?: string[];
+  strategy_json?: Record<string, unknown>;
+  summary?: string | null;
+  result_snapshot_json?: Record<string, unknown> | null;
+  candidate_elements_json?: CandidateElement[] | null;
+  interaction_hints_json?: InteractionHint[] | null;
+}
+
+export interface ExplorationRunUpdate {
+  page_signature?: string | null;
+  mode?: ExplorationMode;
+  status?: ExplorationRunStatus;
+  success_criteria_ids_json?: string[];
+  strategy_json?: Record<string, unknown>;
+  summary?: string | null;
+  result_snapshot_json?: Record<string, unknown> | null;
+  candidate_elements_json?: CandidateElement[] | null;
+  interaction_hints_json?: InteractionHint[] | null;
+}
