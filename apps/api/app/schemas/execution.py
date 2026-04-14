@@ -276,3 +276,10 @@ class ExecutionResult(BaseModel):
         default=None,
         description="Wall-clock time for the action in milliseconds.",
     )
+
+    # --- E. Post-action observation (populated by 7E) ---
+    observation: dict[str, Any] | None = Field(
+        default=None,
+        description="Serialized PostActionObservation from Phase 7E.  "
+        "None when observation has not been performed.",
+    )

@@ -30,8 +30,9 @@ The project follows a 12-phase development timeline. Phases 1–6 are completed;
 7B. **Execution runtime** — Playwright browser/context/page lifecycle, navigation, page observation (URL/title/HTML/screenshot), unified error handling, `create_execution_runtime` factory
 7C. **Locator resolution** — 6-level priority resolver (`resolve_locator`), SelectorDescriptor for Playwright consumption, region-scoped disambiguation, structured failure reporting
 7D. **Action executor** — `execute_action()` single-step executor for click/fill/select/check/uncheck/hover/press/navigate, before/after state capture, structured error handling
+7E. **Post-action observation** — `observe_post_action()` / `execute_and_observe()`, screenshot + HTML snapshot, URL/title/HTML change detection, target post-state (present/visible), observation attached to ExecutionResult
 
-**Current phase (7): Full execution capability via Playwright** — real browser automation (7A–7D done → 7E post-action observation next)
+**Phase 7 complete** — full single-step execution capability: contract → runtime → locator → action → observation
 
 ### B. Technical Route Change
 
@@ -63,6 +64,8 @@ Execution runtime: `apps/api/app/services/execution_runtime.py`
 Locator resolver: `apps/api/app/services/locator_resolver.py`
 Locator schema: `apps/api/app/schemas/locator.py`
 Action executor: `apps/api/app/services/action_executor.py`
+Post-action observer: `apps/api/app/services/post_action_observer.py`
+Observation schema: `apps/api/app/schemas/observation.py`
 
 #### Dual-Track AST: Client vs Server Responsibilities
 

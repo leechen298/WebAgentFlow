@@ -124,6 +124,8 @@ def _capture_page_state(runtime: ExecutionRuntime) -> tuple[str, str]:
 def execute_action(
     request: ExecutionRequest,
     runtime: ExecutionRuntime,
+    *,
+    _resolved_locator=None,
 ) -> ExecutionResult:
     """Execute a single atomic action on the Playwright page.
 
@@ -156,7 +158,7 @@ def execute_action(
         resolved = None
         locator_result = LocatorResult()
     else:
-        resolved = resolve_locator(request, runtime)
+        resolved = _resolved_locator or resolve_locator(request, runtime)
         trace.extend(resolved.trace)
 
         locator_result = LocatorResult(
