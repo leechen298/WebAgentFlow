@@ -1,24 +1,24 @@
 <template>
   <div>
     <a-page-header
-      title="Recording Detail"
+      :title="$t('nav.recordingDetail')"
       @back="goBack"
     >
       <template #extra>
         <a-space>
           <a-button @click="showEditModal">
             <template #icon><edit-outlined /></template>
-            Edit
+            {{ $t('common.edit') }}
           </a-button>
           <a-popconfirm
-            title="Delete this recording?"
-            ok-text="Yes"
-            cancel-text="No"
+            :title="$t('recordings.deleteConfirm')"
+            :ok-text="$t('common.yes')"
+            :cancel-text="$t('common.no')"
             @confirm="handleDelete"
           >
             <a-button danger>
               <template #icon><delete-outlined /></template>
-              Delete
+              {{ $t('common.delete') }}
             </a-button>
           </a-popconfirm>
         </a-space>
@@ -37,24 +37,24 @@
 
       <a-card v-if="recording" :bordered="false" style="margin-top: 16px">
         <a-descriptions :column="2" bordered>
-          <a-descriptions-item label="ID">
+          <a-descriptions-item :label="$t('common.id')">
             {{ recording.id }}
           </a-descriptions-item>
-          <a-descriptions-item label="Name">
+          <a-descriptions-item :label="$t('common.name')">
             {{ recording.name }}
           </a-descriptions-item>
-          <a-descriptions-item label="Status">
+          <a-descriptions-item :label="$t('common.status')">
             <a-tag :color="getStatusColor(recording.status)">
               {{ recording.status }}
             </a-tag>
           </a-descriptions-item>
-          <a-descriptions-item label="Source">
+          <a-descriptions-item :label="$t('common.source')">
             {{ recording.source }}
           </a-descriptions-item>
-          <a-descriptions-item label="Created At">
+          <a-descriptions-item :label="$t('common.createdAt')">
             {{ formatDate(recording.created_at) }}
           </a-descriptions-item>
-          <a-descriptions-item label="Updated At">
+          <a-descriptions-item :label="$t('common.updatedAt')">
             {{ formatDate(recording.updated_at) }}
           </a-descriptions-item>
           <a-descriptions-item label="Meta" :span="2">
@@ -1110,9 +1110,9 @@
     <!-- Edit Modal -->
     <a-modal
       v-model:open="editModalOpen"
-      title="Edit Recording"
-      ok-text="Save"
-      cancel-text="Cancel"
+      :title="$t('recordings.editTitle')"
+      :ok-text="$t('common.save')"
+      :cancel-text="$t('common.cancel')"
       :confirm-loading="loading"
       @ok="handleSave"
     >
@@ -1122,20 +1122,20 @@
         :rules="rules"
         layout="vertical"
       >
-        <a-form-item label="Name" name="name">
+        <a-form-item :label="$t('common.name')" name="name">
           <a-input v-model:value="formData.name" />
         </a-form-item>
-        <a-form-item label="Status" name="status">
+        <a-form-item :label="$t('common.status')" name="status">
           <a-select v-model:value="formData.status" style="width: 100%">
-            <a-select-option value="draft">Draft</a-select-option>
-            <a-select-option value="active">Active</a-select-option>
-            <a-select-option value="archived">Archived</a-select-option>
+            <a-select-option value="draft">{{ $t('status.draft') }}</a-select-option>
+            <a-select-option value="active">{{ $t('status.active') }}</a-select-option>
+            <a-select-option value="archived">{{ $t('status.archived') }}</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="Source" name="source">
+        <a-form-item :label="$t('common.source')" name="source">
           <a-input v-model:value="formData.source" />
         </a-form-item>
-        <a-form-item label="Events (JSON)" name="events">
+        <a-form-item :label="$t('recordings.eventsJson')" name="events">
           <a-textarea
             v-model:value="formData.eventsStr"
             :rows="4"
@@ -1145,7 +1145,7 @@
             {{ formErrors.events }}
           </div>
         </a-form-item>
-        <a-form-item label="Meta (JSON)" name="meta">
+        <a-form-item :label="$t('recordings.metaJson')" name="meta">
           <a-textarea
             v-model:value="formData.metaStr"
             :rows="3"
@@ -1164,6 +1164,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { message, type FormInstance } from 'ant-design-vue';
 import { EditOutlined, DeleteOutlined, CaretRightOutlined, CaretDownOutlined } from '@ant-design/icons-vue';
 import { useRecordingsStore } from '@/stores';
@@ -1175,6 +1176,7 @@ import type { RecordingUpdate, RecordingStatus, NormalizedRecording, OperationSt
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const recordingsStore = useRecordingsStore();
 
 const formRef = ref<FormInstance>();
@@ -1218,10 +1220,10 @@ const formErrors = reactive({
   meta: ''
 });
 
-const rules = {
-  name: [{ required: true, message: 'Name is required' }],
-  source: [{ required: true, message: 'Source is required' }]
-};
+const rules = computed(() => ({
+  name: [{ required: true, message: t('common.nameRequired') }],
+  source: [{ required: true, message: t('recordings.sourceRequired') }]
+}));
 
 const recording = computed(() => recordingsStore.currentRecording);
 const loading = computed(() => recordingsStore.loading);
@@ -1692,7 +1694,7 @@ async function fetchRecording(): Promise<void> {
   try {
     await recordingsStore.fetchRecording(id);
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to load recording');
+    message.error(e instanceof Error ? e.message : t('recordings.loadFailed'));
   }
 }
 
@@ -1920,20 +1922,20 @@ async function handleSave(): Promise<void> {
     // Invalidate cached results so they're re-fetched after edit
     normalized.value = null;
     stepsResult.value = null;
-    message.success('Recording updated');
+    message.success(t('recordings.updated'));
     editModalOpen.value = false;
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to update recording');
+    message.error(e instanceof Error ? e.message : t('recordings.updateFailed'));
   }
 }
 
 async function handleDelete(): Promise<void> {
   try {
     await recordingsStore.deleteRecording(route.params.id as string);
-    message.success('Recording deleted');
+    message.success(t('recordings.deleted'));
     goBack();
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to delete recording');
+    message.error(e instanceof Error ? e.message : t('recordings.deleteFailed'));
   }
 }
 

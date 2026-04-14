@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
+import i18n from '@/i18n';
 
 // Get API base URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -91,17 +92,18 @@ apiClient.interceptors.response.use(
   },
   (error: AxiosError) => {
     // Handle HTTP errors
-    let message = 'Network error';
+    const t = i18n.global.t;
+    let message = t('error.network');
     if (error.response) {
       const status = error.response.status;
       if (status === 400) {
-        message = 'Bad request';
+        message = t('error.badRequest');
       } else if (status === 404) {
-        message = 'Resource not found';
+        message = t('error.notFound');
       } else if (status === 500) {
-        message = 'Server error';
+        message = t('error.serverError');
       } else {
-        message = `HTTP error: ${status}`;
+        message = t('error.httpError', { status });
       }
       // Try to extract message from error response
       const errorData = error.response.data as { msg?: string };
@@ -109,7 +111,7 @@ apiClient.interceptors.response.use(
         message = errorData.msg;
       }
     } else if (error.request) {
-      message = 'No response from server';
+      message = t('error.noResponse');
     }
     const apiError = new Error(message);
     (apiError as unknown as Record<string, unknown>).original = error;

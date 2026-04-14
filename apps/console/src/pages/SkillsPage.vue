@@ -3,10 +3,10 @@
     <a-card :bordered="false">
       <template #title>
         <div style="display: flex; justify-content: space-between; align-items: center">
-          <span>Skills</span>
+          <span>{{ $t('skills.title') }}</span>
           <a-button type="primary" @click="showCreateModal">
             <template #icon><plus-outlined /></template>
-            New Skill
+            {{ $t('skills.new') }}
           </a-button>
         </div>
       </template>
@@ -31,19 +31,19 @@
             <template v-else-if="column.key === 'actions'">
               <a-space>
                 <a-button type="link" size="small" @click="viewDetail(record.id)">
-                  View
+                  {{ $t('common.view') }}
                 </a-button>
                 <a-button type="link" size="small" @click="editSkill(record)">
-                  Edit
+                  {{ $t('common.edit') }}
                 </a-button>
                 <a-popconfirm
-                  title="Delete this skill?"
-                  ok-text="Yes"
-                  cancel-text="No"
+                  :title="$t('skills.deleteConfirm')"
+                  :ok-text="$t('common.yes')"
+                  :cancel-text="$t('common.no')"
                   @confirm="deleteSkill(record.id)"
                 >
                   <a-button type="link" size="small" danger>
-                    Delete
+                    {{ $t('common.delete') }}
                   </a-button>
                 </a-popconfirm>
               </a-space>
@@ -51,19 +51,19 @@
           </template>
 
           <template #emptyText>
-            <a-empty description="No skills yet">
+            <a-empty :description="$t('skills.empty')">
               <a-button type="primary" @click="showCreateModal">
                 <template #icon><plus-outlined /></template>
-                Create Skill
+                {{ $t('skills.createTitle') }}
               </a-button>
             </a-empty>
           </template>
         </a-table>
 
         <div v-if="skills.length > 0" style="display: flex; justify-content: flex-end; margin-top: 16px; gap: 8px">
-          <a-button size="small" :disabled="!skillsStore.hasPrev" @click="goFirstPage">First</a-button>
-          <a-button size="small" :disabled="!skillsStore.hasPrev" @click="goPrevPage">Prev</a-button>
-          <a-button size="small" :disabled="!skillsStore.hasNext" @click="goNextPage">Next</a-button>
+          <a-button size="small" :disabled="!skillsStore.hasPrev" @click="goFirstPage">{{ $t('common.first') }}</a-button>
+          <a-button size="small" :disabled="!skillsStore.hasPrev" @click="goPrevPage">{{ $t('common.prev') }}</a-button>
+          <a-button size="small" :disabled="!skillsStore.hasNext" @click="goNextPage">{{ $t('common.next') }}</a-button>
         </div>
       </a-spin>
     </a-card>
@@ -71,9 +71,9 @@
     <!-- Create/Edit Modal -->
     <a-modal
       v-model:open="modalOpen"
-      :title="isEditing ? 'Edit Skill' : 'Create Skill'"
-      ok-text="Save"
-      cancel-text="Cancel"
+      :title="isEditing ? $t('skills.editTitle') : $t('skills.createTitle')"
+      :ok-text="$t('common.save')"
+      :cancel-text="$t('common.cancel')"
       :confirm-loading="loading"
       @ok="handleSave"
       width="600px"
@@ -86,36 +86,36 @@
       >
         <a-row :gutter="16">
           <a-col :span="16">
-            <a-form-item label="Name" name="name">
-              <a-input v-model:value="formData.name" placeholder="Enter skill name" />
+            <a-form-item :label="$t('common.name')" name="name">
+              <a-input v-model:value="formData.name" :placeholder="$t('skills.enterName')" />
             </a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="Version" name="version">
+            <a-form-item :label="$t('common.version')" name="version">
               <a-input v-model:value="formData.version" placeholder="1.0.0" />
             </a-form-item>
           </a-col>
         </a-row>
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="Status" name="status">
+            <a-form-item :label="$t('common.status')" name="status">
               <a-select v-model:value="formData.status" style="width: 100%">
-                <a-select-option value="draft">Draft</a-select-option>
-                <a-select-option value="published">Published</a-select-option>
-                <a-select-option value="archived">Archived</a-select-option>
+                <a-select-option value="draft">{{ $t('status.draft') }}</a-select-option>
+                <a-select-option value="published">{{ $t('status.published') }}</a-select-option>
+                <a-select-option value="archived">{{ $t('status.archived') }}</a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="Recording ID" name="recording_id">
-              <a-input v-model:value="formData.recording_id" placeholder="Optional recording ID" allow-clear />
+            <a-form-item :label="$t('skills.recordingId')" name="recording_id">
+              <a-input v-model:value="formData.recording_id" :placeholder="$t('skills.optionalRecordingId')" allow-clear />
             </a-form-item>
           </a-col>
         </a-row>
-        <a-form-item label="Description" name="description">
-          <a-textarea v-model:value="formData.description" placeholder="Enter description" :rows="2" />
+        <a-form-item :label="$t('common.description')" name="description">
+          <a-textarea v-model:value="formData.description" :placeholder="$t('skills.enterDescription')" :rows="2" />
         </a-form-item>
-        <a-form-item label="Definition (JSON)" name="definition">
+        <a-form-item :label="$t('skills.definitionJson')" name="definition">
           <a-textarea
             v-model:value="formData.definitionStr"
             placeholder='{}'
@@ -134,6 +134,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { message, type FormInstance } from 'ant-design-vue';
 import { PlusOutlined } from '@ant-design/icons-vue';
 import { useSkillsStore } from '@/stores';
@@ -141,6 +142,7 @@ import { safeParseJson, formatJsonString } from '@/utils';
 import type { Skill, SkillCreate, SkillUpdate, SkillStatus } from '@web-agent-flow/shared-types';
 
 const router = useRouter();
+const { t } = useI18n();
 const skillsStore = useSkillsStore();
 
 const formRef = ref<FormInstance>();
@@ -161,19 +163,19 @@ const formErrors = reactive({
   definition: ''
 });
 
-const rules = {
-  name: [{ required: true, message: 'Name is required' }],
-  version: [{ required: true, message: 'Version is required' }]
-};
+const rules = computed(() => ({
+  name: [{ required: true, message: t('common.nameRequired') }],
+  version: [{ required: true, message: t('skills.versionRequired') }]
+}));
 
-const columns = [
-  { title: 'Name', dataIndex: 'name', key: 'name' },
-  { title: 'Version', dataIndex: 'version', key: 'version', width: 100 },
-  { title: 'Status', dataIndex: 'status', key: 'status', width: 100 },
-  { title: 'Recording ID', dataIndex: 'recording_id', key: 'recording_id', width: 200 },
-  { title: 'Created At', dataIndex: 'created_at', key: 'created_at', width: 180 },
-  { title: 'Actions', key: 'actions', width: 200, fixed: 'right' as const }
-];
+const columns = computed(() => [
+  { title: t('common.name'), dataIndex: 'name', key: 'name' },
+  { title: t('common.version'), dataIndex: 'version', key: 'version', width: 100 },
+  { title: t('common.status'), dataIndex: 'status', key: 'status', width: 100 },
+  { title: t('skills.recordingId'), dataIndex: 'recording_id', key: 'recording_id', width: 200 },
+  { title: t('common.createdAt'), dataIndex: 'created_at', key: 'created_at', width: 180 },
+  { title: t('common.actions'), key: 'actions', width: 200, fixed: 'right' as const }
+]);
 
 const skills = ref<Skill[]>([]);
 const loadingList = computed(() => skillsStore.loadingList);
@@ -198,7 +200,7 @@ async function fetchSkills(): Promise<void> {
     await skillsStore.fetchFirstPage();
     skills.value = skillsStore.skills;
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to load skills');
+    message.error(e instanceof Error ? e.message : t('skills.loadFailed'));
   }
 }
 
@@ -207,7 +209,7 @@ async function goNextPage(): Promise<void> {
     await skillsStore.fetchNextPage();
     skills.value = skillsStore.skills;
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to load skills');
+    message.error(e instanceof Error ? e.message : t('skills.loadFailed'));
   }
 }
 
@@ -216,7 +218,7 @@ async function goPrevPage(): Promise<void> {
     await skillsStore.fetchPrevPage();
     skills.value = skillsStore.skills;
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to load skills');
+    message.error(e instanceof Error ? e.message : t('skills.loadFailed'));
   }
 }
 
@@ -289,7 +291,7 @@ async function handleSave(): Promise<void> {
         definition: definitionResult.success ? (definitionResult.data as Record<string, unknown>) : undefined
       };
       await skillsStore.updateSkill(editingId.value, updateData);
-      message.success('Skill updated');
+      message.success(t('skills.updated'));
     } else {
       const createData: SkillCreate = {
         name: formData.name,
@@ -300,7 +302,7 @@ async function handleSave(): Promise<void> {
         definition: definitionResult.success ? (definitionResult.data as Record<string, unknown>) : {}
       };
       await skillsStore.createSkill(createData);
-      message.success('Skill created');
+      message.success(t('skills.created'));
     }
 
     modalOpen.value = false;
@@ -315,10 +317,10 @@ async function handleSave(): Promise<void> {
 async function deleteSkill(id: string): Promise<void> {
   try {
     await skillsStore.deleteSkill(id);
-    message.success('Skill deleted');
+    message.success(t('skills.deleted'));
     await fetchSkills();
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to delete skill');
+    message.error(e instanceof Error ? e.message : t('skills.deleteFailed'));
   }
 }
 

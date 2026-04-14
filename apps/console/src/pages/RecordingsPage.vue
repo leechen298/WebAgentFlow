@@ -3,10 +3,10 @@
     <a-card :bordered="false">
       <template #title>
         <div style="display: flex; justify-content: space-between; align-items: center">
-          <span>Recordings</span>
+          <span>{{ $t('recordings.title') }}</span>
           <a-button type="primary" @click="showCreateModal">
             <template #icon><plus-outlined /></template>
-            New Recording
+            {{ $t('recordings.new') }}
           </a-button>
         </div>
       </template>
@@ -31,19 +31,19 @@
             <template v-else-if="column.key === 'actions'">
               <a-space>
                 <a-button type="link" size="small" @click="viewDetail(record.id)">
-                  View
+                  {{ $t('common.view') }}
                 </a-button>
                 <a-button type="link" size="small" @click="editRecording(record)">
-                  Edit
+                  {{ $t('common.edit') }}
                 </a-button>
                 <a-popconfirm
-                  title="Delete this recording?"
-                  ok-text="Yes"
-                  cancel-text="No"
+                  :title="$t('recordings.deleteConfirm')"
+                  :ok-text="$t('common.yes')"
+                  :cancel-text="$t('common.no')"
                   @confirm="deleteRecording(record.id)"
                 >
                   <a-button type="link" size="small" danger>
-                    Delete
+                    {{ $t('common.delete') }}
                   </a-button>
                 </a-popconfirm>
               </a-space>
@@ -51,19 +51,19 @@
           </template>
 
           <template #emptyText>
-            <a-empty description="No recordings yet">
+            <a-empty :description="$t('recordings.empty')">
               <a-button type="primary" @click="showCreateModal">
                 <template #icon><plus-outlined /></template>
-                Create Recording
+                {{ $t('recordings.createTitle') }}
               </a-button>
             </a-empty>
           </template>
         </a-table>
 
         <div v-if="recordings.length > 0" style="display: flex; justify-content: flex-end; margin-top: 16px; gap: 8px">
-          <a-button size="small" :disabled="!recordingsStore.hasPrev" @click="goFirstPage">First</a-button>
-          <a-button size="small" :disabled="!recordingsStore.hasPrev" @click="goPrevPage">Prev</a-button>
-          <a-button size="small" :disabled="!recordingsStore.hasNext" @click="goNextPage">Next</a-button>
+          <a-button size="small" :disabled="!recordingsStore.hasPrev" @click="goFirstPage">{{ $t('common.first') }}</a-button>
+          <a-button size="small" :disabled="!recordingsStore.hasPrev" @click="goPrevPage">{{ $t('common.prev') }}</a-button>
+          <a-button size="small" :disabled="!recordingsStore.hasNext" @click="goNextPage">{{ $t('common.next') }}</a-button>
         </div>
       </a-spin>
     </a-card>
@@ -71,9 +71,9 @@
     <!-- Create/Edit Modal -->
     <a-modal
       v-model:open="modalOpen"
-      :title="isEditing ? 'Edit Recording' : 'Create Recording'"
-      ok-text="Save"
-      cancel-text="Cancel"
+      :title="isEditing ? $t('recordings.editTitle') : $t('recordings.createTitle')"
+      :ok-text="$t('common.save')"
+      :cancel-text="$t('common.cancel')"
       :confirm-loading="loading"
       @ok="handleSave"
     >
@@ -83,20 +83,20 @@
         :rules="rules"
         layout="vertical"
       >
-        <a-form-item label="Name" name="name">
-          <a-input v-model:value="formData.name" placeholder="Enter recording name" />
+        <a-form-item :label="$t('common.name')" name="name">
+          <a-input v-model:value="formData.name" :placeholder="$t('recordings.enterName')" />
         </a-form-item>
-        <a-form-item label="Status" name="status">
+        <a-form-item :label="$t('common.status')" name="status">
           <a-select v-model:value="formData.status" style="width: 100%">
-            <a-select-option value="draft">Draft</a-select-option>
-            <a-select-option value="active">Active</a-select-option>
-            <a-select-option value="archived">Archived</a-select-option>
+            <a-select-option value="draft">{{ $t('status.draft') }}</a-select-option>
+            <a-select-option value="active">{{ $t('status.active') }}</a-select-option>
+            <a-select-option value="archived">{{ $t('status.archived') }}</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="Source" name="source">
-          <a-input v-model:value="formData.source" placeholder="Enter source (e.g., extension)" />
+        <a-form-item :label="$t('common.source')" name="source">
+          <a-input v-model:value="formData.source" :placeholder="$t('recordings.enterSource')" />
         </a-form-item>
-        <a-form-item label="Events (JSON)" name="events">
+        <a-form-item :label="$t('recordings.eventsJson')" name="events">
           <a-textarea
             v-model:value="formData.eventsStr"
             placeholder='[]'
@@ -107,7 +107,7 @@
             {{ formErrors.events }}
           </div>
         </a-form-item>
-        <a-form-item label="Meta (JSON)" name="meta">
+        <a-form-item :label="$t('recordings.metaJson')" name="meta">
           <a-textarea
             v-model:value="formData.metaStr"
             placeholder='{}'
@@ -126,12 +126,14 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { message, type FormInstance } from 'ant-design-vue';
 import { PlusOutlined } from '@ant-design/icons-vue';
 import { useRecordingsStore } from '@/stores';
 import { safeParseJson, formatJsonString } from '@/utils';
 import type { Recording, RecordingCreate, RecordingUpdate, RecordingStatus } from '@web-agent-flow/shared-types';
 
+const { t } = useI18n();
 const router = useRouter();
 const recordingsStore = useRecordingsStore();
 
@@ -153,18 +155,18 @@ const formErrors = reactive({
   meta: ''
 });
 
-const rules = {
-  name: [{ required: true, message: 'Name is required' }],
-  source: [{ required: true, message: 'Source is required' }]
-};
+const rules = computed(() => ({
+  name: [{ required: true, message: t('common.nameRequired') }],
+  source: [{ required: true, message: t('recordings.sourceRequired') }],
+}));
 
-const columns = [
-  { title: 'Name', dataIndex: 'name', key: 'name' },
-  { title: 'Status', dataIndex: 'status', key: 'status', width: 120 },
-  { title: 'Source', dataIndex: 'source', key: 'source', width: 150 },
-  { title: 'Created At', dataIndex: 'created_at', key: 'created_at', width: 180 },
-  { title: 'Actions', key: 'actions', width: 200, fixed: 'right' as const }
-];
+const columns = computed(() => [
+  { title: t('common.name'), dataIndex: 'name', key: 'name' },
+  { title: t('common.status'), dataIndex: 'status', key: 'status', width: 120 },
+  { title: t('common.source'), dataIndex: 'source', key: 'source', width: 150 },
+  { title: t('common.createdAt'), dataIndex: 'created_at', key: 'created_at', width: 180 },
+  { title: t('common.actions'), key: 'actions', width: 200, fixed: 'right' as const },
+]);
 
 const recordings = ref<Recording[]>([]);
 const loadingList = computed(() => recordingsStore.loadingList);
@@ -189,7 +191,7 @@ async function fetchRecordings(): Promise<void> {
     await recordingsStore.fetchFirstPage();
     recordings.value = recordingsStore.recordings;
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to load recordings');
+    message.error(e instanceof Error ? e.message : t('recordings.loadFailed'));
   }
 }
 
@@ -198,7 +200,7 @@ async function goNextPage(): Promise<void> {
     await recordingsStore.fetchNextPage();
     recordings.value = recordingsStore.recordings;
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to load recordings');
+    message.error(e instanceof Error ? e.message : t('recordings.loadFailed'));
   }
 }
 
@@ -207,7 +209,7 @@ async function goPrevPage(): Promise<void> {
     await recordingsStore.fetchPrevPage();
     recordings.value = recordingsStore.recordings;
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to load recordings');
+    message.error(e instanceof Error ? e.message : t('recordings.loadFailed'));
   }
 }
 
@@ -280,7 +282,7 @@ async function handleSave(): Promise<void> {
         meta: metaResult.success ? (metaResult.data as Record<string, unknown>) : null
       };
       await recordingsStore.updateRecording(editingId.value, updateData);
-      message.success('Recording updated');
+      message.success(t('recordings.updated'));
     } else {
       const createData: RecordingCreate = {
         name: formData.name,
@@ -290,7 +292,7 @@ async function handleSave(): Promise<void> {
         meta: metaResult.success ? (metaResult.data as Record<string, unknown>) : null
       };
       await recordingsStore.createRecording(createData);
-      message.success('Recording created');
+      message.success(t('recordings.created'));
     }
 
     modalOpen.value = false;
@@ -305,10 +307,10 @@ async function handleSave(): Promise<void> {
 async function deleteRecording(id: string): Promise<void> {
   try {
     await recordingsStore.deleteRecording(id);
-    message.success('Recording deleted');
+    message.success(t('recordings.deleted'));
     await fetchRecordings();
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to delete recording');
+    message.error(e instanceof Error ? e.message : t('recordings.deleteFailed'));
   }
 }
 

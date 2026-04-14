@@ -5,7 +5,7 @@
         <span class="brand-mark">WF</span>
         <div v-if="!collapsed" class="brand-copy">
           <strong>WebAgentFlow</strong>
-          <span>Task Pack 3</span>
+          <span>v0.1</span>
         </div>
       </div>
       <a-menu
@@ -16,19 +16,19 @@
       >
         <a-menu-item key="/">
           <dashboard-outlined />
-          <span>Overview</span>
+          <span>{{ $t('nav.overview') }}</span>
         </a-menu-item>
         <a-menu-item key="/recordings">
           <video-camera-outlined />
-          <span>Recordings</span>
+          <span>{{ $t('nav.recordings') }}</span>
         </a-menu-item>
         <a-menu-item key="/skills">
           <tool-outlined />
-          <span>Skills</span>
+          <span>{{ $t('nav.skills') }}</span>
         </a-menu-item>
         <a-menu-item key="/runs">
           <play-circle-outlined />
-          <span>Runs</span>
+          <span>{{ $t('nav.runs') }}</span>
         </a-menu-item>
       </a-menu>
     </a-layout-sider>
@@ -36,7 +36,7 @@
     <a-layout>
       <a-layout-header style="background: #fff; padding: 0 24px; border-bottom: 1px solid #f0f0f0">
         <div class="header-left">
-          <div class="eyebrow">Backend Integration</div>
+          <div class="eyebrow">{{ $t('header.eyebrow') }}</div>
           <h1>{{ pageTitle }}</h1>
         </div>
         <div class="header-right">
@@ -53,6 +53,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
   DashboardOutlined,
@@ -63,6 +64,7 @@ import {
 import { useAppStore } from '@/stores';
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
@@ -72,7 +74,10 @@ const selectedKeys = ref<string[]>([String(route.meta.menuKey ?? route.path)]);
 
 const BREAKPOINT = 768;
 
-const pageTitle = computed(() => String(route.meta.title ?? 'WebAgentFlow Console'));
+const pageTitle = computed(() => {
+  const key = String(route.meta.titleKey ?? '');
+  return key ? t(key) : 'WebAgentFlow Console';
+});
 
 const apiStatus = computed(() => {
   if (appStore.loading) return 'processing';
@@ -80,8 +85,8 @@ const apiStatus = computed(() => {
 });
 
 const apiStatusText = computed(() => {
-  if (appStore.loading) return 'Checking...';
-  return appStore.apiConnected ? 'API Connected' : 'API Disconnected';
+  if (appStore.loading) return t('status.checking');
+  return appStore.apiConnected ? t('status.apiConnected') : t('status.apiDisconnected');
 });
 
 function handleMenuClick({ key }: { key: string }) {

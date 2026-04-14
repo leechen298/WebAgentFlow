@@ -1,24 +1,24 @@
 <template>
   <div>
     <a-page-header
-      title="Run Detail"
+      :title="$t('nav.runDetail')"
       @back="goBack"
     >
       <template #extra>
         <a-space>
           <a-button @click="showEditModal">
             <template #icon><edit-outlined /></template>
-            Edit
+            {{ $t('common.edit') }}
           </a-button>
           <a-popconfirm
-            title="Delete this run?"
-            ok-text="Yes"
-            cancel-text="No"
+            :title="$t('runs.deleteConfirm')"
+            :ok-text="$t('common.yes')"
+            :cancel-text="$t('common.no')"
             @confirm="handleDelete"
           >
             <a-button danger>
               <template #icon><delete-outlined /></template>
-              Delete
+              {{ $t('common.delete') }}
             </a-button>
           </a-popconfirm>
         </a-space>
@@ -37,41 +37,41 @@
 
       <a-card v-if="run" :bordered="false" style="margin-top: 16px">
         <a-descriptions :column="2" bordered>
-          <a-descriptions-item label="ID">
+          <a-descriptions-item :label="$t('common.id')">
             {{ run.id }}
           </a-descriptions-item>
-          <a-descriptions-item label="Skill ID">
+          <a-descriptions-item :label="$t('runs.skillId')">
             {{ run.skill_id }}
           </a-descriptions-item>
-          <a-descriptions-item label="Status">
+          <a-descriptions-item :label="$t('common.status')">
             <a-tag :color="getStatusColor(run.status)">
               {{ run.status }}
             </a-tag>
           </a-descriptions-item>
-          <a-descriptions-item label="Created At">
+          <a-descriptions-item :label="$t('common.createdAt')">
             {{ formatDate(run.created_at) }}
           </a-descriptions-item>
-          <a-descriptions-item label="Started At">
+          <a-descriptions-item :label="$t('common.startedAt')">
             {{ run.started_at ? formatDate(run.started_at) : '-' }}
           </a-descriptions-item>
-          <a-descriptions-item label="Finished At">
+          <a-descriptions-item :label="$t('common.finishedAt')">
             {{ run.finished_at ? formatDate(run.finished_at) : '-' }}
           </a-descriptions-item>
-          <a-descriptions-item label="Input Payload" :span="2">
+          <a-descriptions-item :label="$t('runs.inputPayloadJson')" :span="2">
             <a-textarea
               :value="formatJsonString(run.input_payload)"
               :rows="4"
               readonly
             />
           </a-descriptions-item>
-          <a-descriptions-item label="Result Payload" :span="2">
+          <a-descriptions-item :label="$t('runs.resultPayloadJson')" :span="2">
             <a-textarea
               :value="formatJsonString(run.result_payload)"
               :rows="4"
               readonly
             />
           </a-descriptions-item>
-          <a-descriptions-item label="Logs" :span="2">
+          <a-descriptions-item :label="$t('runs.logsJsonArray')" :span="2">
             <a-textarea
               :value="formatJsonString(run.logs)"
               :rows="4"
@@ -85,9 +85,9 @@
     <!-- Edit Modal -->
     <a-modal
       v-model:open="editModalOpen"
-      title="Edit Run"
-      ok-text="Save"
-      cancel-text="Cancel"
+      :title="$t('runs.editTitle')"
+      :ok-text="$t('common.save')"
+      :cancel-text="$t('common.cancel')"
       :confirm-loading="loading"
       @ok="handleSave"
       width="600px"
@@ -98,21 +98,21 @@
         :rules="rules"
         layout="vertical"
       >
-        <a-form-item label="Skill ID" name="skill_id">
+        <a-form-item :label="$t('runs.skillId')" name="skill_id">
           <a-input v-model:value="formData.skill_id" />
         </a-form-item>
-        <a-form-item label="Status" name="status">
+        <a-form-item :label="$t('common.status')" name="status">
           <a-select v-model:value="formData.status" style="width: 100%">
-            <a-select-option value="pending">Pending</a-select-option>
-            <a-select-option value="queued">Queued</a-select-option>
-            <a-select-option value="running">Running</a-select-option>
-            <a-select-option value="succeeded">Succeeded</a-select-option>
-            <a-select-option value="failed">Failed</a-select-option>
+            <a-select-option value="pending">{{ $t('status.pending') }}</a-select-option>
+            <a-select-option value="queued">{{ $t('status.queued') }}</a-select-option>
+            <a-select-option value="running">{{ $t('status.running') }}</a-select-option>
+            <a-select-option value="succeeded">{{ $t('status.succeeded') }}</a-select-option>
+            <a-select-option value="failed">{{ $t('status.failed') }}</a-select-option>
           </a-select>
         </a-form-item>
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="Started At" name="started_at">
+            <a-form-item :label="$t('common.startedAt')" name="started_at">
               <a-date-picker
                 v-model:value="formData.started_at"
                 show-time
@@ -123,7 +123,7 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="Finished At" name="finished_at">
+            <a-form-item :label="$t('common.finishedAt')" name="finished_at">
               <a-date-picker
                 v-model:value="formData.finished_at"
                 show-time
@@ -134,7 +134,7 @@
             </a-form-item>
           </a-col>
         </a-row>
-        <a-form-item label="Input Payload (JSON)" name="input_payload">
+        <a-form-item :label="$t('runs.inputPayloadJson')" name="input_payload">
           <a-textarea
             v-model:value="formData.inputPayloadStr"
             :rows="3"
@@ -144,7 +144,7 @@
             {{ formErrors.input_payload }}
           </div>
         </a-form-item>
-        <a-form-item label="Result Payload (JSON)" name="result_payload">
+        <a-form-item :label="$t('runs.resultPayloadJson')" name="result_payload">
           <a-textarea
             v-model:value="formData.resultPayloadStr"
             :rows="3"
@@ -154,7 +154,7 @@
             {{ formErrors.result_payload }}
           </div>
         </a-form-item>
-        <a-form-item label="Logs (JSON Array)" name="logs">
+        <a-form-item :label="$t('runs.logsJsonArray')" name="logs">
           <a-textarea
             v-model:value="formData.logsStr"
             :rows="3"
@@ -172,6 +172,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { message, type FormInstance } from 'ant-design-vue';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons-vue';
 import { useRunsStore } from '@/stores';
@@ -180,6 +181,7 @@ import type { Run, RunUpdate, RunStatus } from '@web-agent-flow/shared-types';
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const runsStore = useRunsStore();
 
 const formRef = ref<FormInstance>();
@@ -201,9 +203,9 @@ const formErrors = reactive({
   logs: ''
 });
 
-const rules = {
-  skill_id: [{ required: true, message: 'Skill ID is required' }]
-};
+const rules = computed(() => ({
+  skill_id: [{ required: true, message: t('runs.skillIdRequired') }]
+}));
 
 const run = computed(() => runsStore.currentRun);
 const loading = computed(() => runsStore.loading);
@@ -231,7 +233,7 @@ async function fetchRun(): Promise<void> {
   try {
     await runsStore.fetchRun(id);
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to load run');
+    message.error(e instanceof Error ? e.message : t('runs.loadFailed'));
   }
 }
 
@@ -301,20 +303,20 @@ async function handleSave(): Promise<void> {
     };
 
     await runsStore.updateRun(route.params.id as string, updateData);
-    message.success('Run updated');
+    message.success(t('runs.updated'));
     editModalOpen.value = false;
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to update run');
+    message.error(e instanceof Error ? e.message : t('runs.updateFailed'));
   }
 }
 
 async function handleDelete(): Promise<void> {
   try {
     await runsStore.deleteRun(route.params.id as string);
-    message.success('Run deleted');
+    message.success(t('runs.deleted'));
     goBack();
   } catch (e) {
-    message.error(e instanceof Error ? e.message : 'Failed to delete run');
+    message.error(e instanceof Error ? e.message : t('runs.deleteFailed'));
   }
 }
 

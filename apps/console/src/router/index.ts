@@ -7,6 +7,7 @@ import RunDetailPage from '@/pages/RunDetailPage.vue';
 import RunsPage from '@/pages/RunsPage.vue';
 import SkillDetailPage from '@/pages/SkillDetailPage.vue';
 import SkillsPage from '@/pages/SkillsPage.vue';
+import i18n from '@/i18n';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -19,43 +20,43 @@ const router = createRouter({
           path: '',
           name: 'home',
           component: HomePage,
-          meta: { title: 'Overview', menuKey: '/' },
+          meta: { titleKey: 'nav.overview', menuKey: '/' },
         },
         {
           path: 'recordings',
           name: 'recordings',
           component: RecordingsPage,
-          meta: { title: 'Recordings', menuKey: '/recordings' },
+          meta: { titleKey: 'nav.recordings', menuKey: '/recordings' },
         },
         {
           path: 'recordings/:id',
           name: 'recording-detail',
           component: RecordingDetailPage,
-          meta: { title: 'Recording Detail', menuKey: '/recordings' },
+          meta: { titleKey: 'nav.recordingDetail', menuKey: '/recordings' },
         },
         {
           path: 'skills',
           name: 'skills',
           component: SkillsPage,
-          meta: { title: 'Skills', menuKey: '/skills' },
+          meta: { titleKey: 'nav.skills', menuKey: '/skills' },
         },
         {
           path: 'skills/:id',
           name: 'skill-detail',
           component: SkillDetailPage,
-          meta: { title: 'Skill Detail', menuKey: '/skills' },
+          meta: { titleKey: 'nav.skillDetail', menuKey: '/skills' },
         },
         {
           path: 'runs',
           name: 'runs',
           component: RunsPage,
-          meta: { title: 'Runs', menuKey: '/runs' },
+          meta: { titleKey: 'nav.runs', menuKey: '/runs' },
         },
         {
           path: 'runs/:id',
           name: 'run-detail',
           component: RunDetailPage,
-          meta: { title: 'Run Detail', menuKey: '/runs' },
+          meta: { titleKey: 'nav.runDetail', menuKey: '/runs' },
         },
       ],
     },
@@ -63,7 +64,9 @@ const router = createRouter({
 });
 
 router.afterEach((to) => {
-  const title = String(to.meta.title ?? 'WebAgentFlow Console');
+  const t = i18n.global.t;
+  const titleKey = String(to.meta.titleKey ?? '');
+  const title = titleKey ? t(titleKey) : 'WebAgentFlow Console';
   document.title = `${title} | WebAgentFlow`;
 });
 
