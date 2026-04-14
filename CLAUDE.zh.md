@@ -17,7 +17,7 @@ WebAgentFlow 是一个面向 Agent 驱动的 Web 工作流引擎的 monorepo，�
 
 ### A. 当前阶段与进展
 
-项目按 12 阶段开发时间线推进。阶段 1–6 已完成，正在进入阶段 7。
+项目按 12 阶段开发时间线推进。阶段 1–6 已完成，阶段 7 进行中（7A 已完成）。
 
 **已完成的阶段：**
 1. **页面事实基础** — 原始 HTML 抓取、HTML → Full AST（服务端，lxml）、Full AST schema
@@ -26,8 +26,9 @@ WebAgentFlow 是一个面向 Agent 驱动的 Web 工作流引擎的 monorepo，�
 4. **DOM 变更录制** — 顶层文档及同源 iframe 的 MutationObserver，批量处理，降噪，AST 关联
 5. **操作步骤（Step）构建** — 将主事件与后续 DOM 变更关联为一个 Step
 6. **Agent 初步理解页面与步骤** — LLM Provider 层、Agent 输入契约、页面理解（6C）、步骤理解（6D）、综合输出（6E）、服务端事件 AST 匹配
+7A. **执行契约** — ExecutionRequest/ExecutionResult schema、定位优先级（6 级）、数据消费边界、`build_execution_request` 统一入口
 
-**当前阶段（7）：接入完整执行能力（Playwright）** — 真实浏览器自动化，而非抽象动作定义
+**当前阶段（7）：接入完整执行能力（Playwright）** — 真实浏览器自动化，而非抽象动作定义（7A 契约已完成 → 下一步 7B 运行时）
 
 ### B. 技术路线变更
 
@@ -53,6 +54,8 @@ WebAgentFlow 是一个面向 Agent 驱动的 Web 工作流引擎的 monorepo，�
 服务端解析器：`apps/api/app/services/html_ast_parser.py`（使用 `lxml.html`）
 Full AST schema：`apps/api/app/schemas/ast.py`
 服务端事件匹配器：`apps/api/app/services/server_ast_matcher.py`
+执行契约 schema：`apps/api/app/schemas/execution.py`
+执行契约构建器：`apps/api/app/services/execution_contract.py`
 
 #### 双轨 AST：客户端与服务端职责
 

@@ -17,7 +17,7 @@ WebAgentFlow is a monorepo for an agent-driven web workflow engine with:
 
 ### A. Current Phase & Progress
 
-The project follows a 12-phase development timeline. Phases 1–6 are completed; the project is entering Phase 7.
+The project follows a 12-phase development timeline. Phases 1–6 are completed; Phase 7 is in progress (7A done).
 
 **Completed phases:**
 1. **Page fact foundation** — raw HTML capture, HTML → Full AST (server-side, lxml), Full AST schema
@@ -26,8 +26,9 @@ The project follows a 12-phase development timeline. Phases 1–6 are completed;
 4. **DOM mutation recording** — MutationObserver on top-level + same-origin iframes, batching, noise filtering, AST association
 5. **Operation Step building** — correlating a primary event with subsequent DOM mutations into a Step
 6. **Agent initial understanding of pages and steps** — LLM provider layer, agent input contract, page understanding (6C), step understanding (6D), combined output (6E), server-side event AST matching
+7A. **Execution contract** — ExecutionRequest/ExecutionResult schemas, locator priority (6-level), data consumption boundary, `build_execution_request` entry point
 
-**Current phase (7): Full execution capability via Playwright** — real browser automation, not abstract action definitions
+**Current phase (7): Full execution capability via Playwright** — real browser automation, not abstract action definitions (7A contract done → 7B runtime next)
 
 ### B. Technical Route Change
 
@@ -53,6 +54,8 @@ Reasons for this shift:
 Server-side parser: `apps/api/app/services/html_ast_parser.py` (uses `lxml.html`)
 Full AST schema: `apps/api/app/schemas/ast.py`
 Server-side event matcher: `apps/api/app/services/server_ast_matcher.py`
+Execution contract schema: `apps/api/app/schemas/execution.py`
+Execution contract builder: `apps/api/app/services/execution_contract.py`
 
 #### Dual-Track AST: Client vs Server Responsibilities
 
