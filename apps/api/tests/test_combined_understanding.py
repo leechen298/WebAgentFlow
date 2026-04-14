@@ -159,6 +159,30 @@ class TestBuildAgentPageUnderstanding:
         assert "页面结构较典型" in result.confidence_notes
         assert "保存步骤可能需要等待异步响应" in result.confidence_notes
 
+    def test_page_description_generated(self):
+        result = build_agent_page_understanding(
+            _make_page_understanding(), _make_step_understanding(),
+        )
+
+        assert result.page_description != ""
+        # Should mention page type (Chinese label) or goal
+        assert "表单" in result.page_description or "活动" in result.page_description
+        # Should mention regions
+        assert "基础信息" in result.page_description or "高级配置" in result.page_description
+        # Should mention actions
+        assert "保存" in result.page_description or "取消" in result.page_description
+
+    def test_operation_description_generated(self):
+        result = build_agent_page_understanding(
+            _make_page_understanding(), _make_step_understanding(),
+        )
+
+        assert result.operation_description != ""
+        # Should reflect the common patterns
+        assert "填写" in result.operation_description or "保存" in result.operation_description
+        # Should mention no-change observation (step 6 async_pending)
+        assert "变化" in result.operation_description or "异步" in result.operation_description
+
     def test_output_is_serializable(self):
         result = build_agent_page_understanding(
             _make_page_understanding(), _make_step_understanding(),
@@ -169,6 +193,8 @@ class TestBuildAgentPageUnderstanding:
         assert data["page_kind"] == "form"
         assert isinstance(data["key_steps"], list)
         assert isinstance(data["execution_notes"], list)
+        assert isinstance(data["page_description"], str)
+        assert isinstance(data["operation_description"], str)
 
 
 # ---------------------------------------------------------------------------
@@ -187,6 +213,10 @@ class TestEdgeCases:
         assert result.primary_actions == []
         # Steps still produce key_steps
         assert len(result.key_steps) >= 1
+        # page_description empty when no page info
+        assert result.page_description == ""
+        # operation_description still generated from steps
+        assert result.operation_description != ""
 
     def test_empty_step_understanding(self):
         result = build_agent_page_understanding(
@@ -201,6 +231,10 @@ class TestEdgeCases:
         assert result.key_steps == []
         assert result.interaction_patterns == []
         assert result.execution_notes == []
+        # page_description still generated from page info
+        assert result.page_description != ""
+        # operation_description empty when no steps
+        assert result.operation_description == ""
 
     def test_both_empty(self):
         result = build_agent_page_understanding(
@@ -213,6 +247,8 @@ class TestEdgeCases:
         assert result.interaction_patterns == []
         assert result.execution_notes == []
         assert result.confidence_notes == []
+        assert result.page_description == ""
+        assert result.operation_description == ""
 
     def test_no_execution_planning_in_output(self):
         """Verify the output doesn't contain execution-planner fields."""
@@ -226,6 +262,24 @@ class TestEdgeCases:
         assert "action_plan" not in data
         assert "wait_condition" not in data
         assert "retry_strategy" not in data
+
+    def test_all_no_change_steps_operation_description(self):
+        """When all steps are no-change, operation_description still works."""
+        steps = StepUnderstanding(
+            common_step_patterns=["所有操作均未产生可观察变化。"],
+            likely_no_change_steps=[
+                NoChangeStepInfo(step_index=0, event_type="click",
+                                 target='<button> "X"', likely_reason="unknown"),
+                NoChangeStepInfo(step_index=1, event_type="click",
+                                 target='<button> "Y"', likely_reason="genuine_noop"),
+            ],
+        )
+        result = build_agent_page_understanding(PageUnderstanding(), steps)
+
+        assert result.operation_description != ""
+        # Should not contain "failure" language
+        assert "失败" not in result.operation_description
+        assert "错误" not in result.operation_description
 
     def test_interaction_patterns_capped_at_5(self):
         steps = StepUnderstanding(

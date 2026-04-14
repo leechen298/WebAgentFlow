@@ -39,6 +39,17 @@ class NoChangeStepInfo(BaseModel):
     )
 
 
+class StepDescription(BaseModel):
+    """One-sentence description of what the user did in a single step."""
+
+    step_index: int = Field(description="0-based index in the steps list.")
+    description: str = Field(
+        description="One sentence describing what the user did in this step. "
+        "Be objective and behavior-focused. For no-change steps, describe the "
+        "action and note that no visible change was observed — do not call it a failure.",
+    )
+
+
 class StepUnderstanding(BaseModel):
     """Structured step understanding result.
 
@@ -63,6 +74,11 @@ class StepUnderstanding(BaseModel):
     observed_change_patterns: list[str] = Field(
         default_factory=list,
         description="1-3 short sentences summarizing the most common change patterns.",
+    )
+    step_descriptions: list[StepDescription] = Field(
+        default_factory=list,
+        description="One-sentence description for EVERY step in the recording. "
+        "Must cover all steps, not just key/categorized ones.",
     )
     confidence_notes: list[str] = Field(
         default_factory=list,

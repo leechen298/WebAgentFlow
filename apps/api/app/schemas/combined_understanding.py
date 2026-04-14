@@ -78,5 +78,19 @@ class AgentPageUnderstanding(BaseModel):
     # --- Key entities (from 6C) ---
     key_entities: list[str] = Field(default_factory=list)
 
+    # --- Human-readable descriptions (for review and evaluation) ---
+    page_description: str = Field(
+        default="",
+        description="2-4 sentence description of what this page is, its core regions, "
+        "and main operations. More complete than page_goal. Not a mechanical "
+        "concatenation of structured fields.",
+    )
+    operation_description: str = Field(
+        default="",
+        description="2-5 sentence description of what the user did in this recording. "
+        "Covers the overall flow, key actions, and any noteworthy observations "
+        "(e.g. no-change steps, async risks). Not an execution plan.",
+    )
+
     # --- Confidence (merged from both) ---
     confidence_notes: list[str] = Field(default_factory=list)

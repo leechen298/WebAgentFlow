@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from app.schemas.agent_input import StepsContext, StepsSummaryStats
 from app.schemas.llm import LlmError, LlmResponse, LlmUsage
-from app.schemas.step_understanding import STEP_UNDERSTANDING_SCHEMA, StepUnderstanding
+from app.schemas.step_understanding import STEP_UNDERSTANDING_SCHEMA, StepDescription, StepUnderstanding
 from app.services.step_understanding import (
     build_step_understanding_prompt,
     generate_step_understanding,
@@ -89,6 +89,13 @@ def _make_steps_context() -> StepsContext:
 
 def _make_good_llm_response() -> LlmResponse:
     parsed = {
+        "step_descriptions": [
+            {"step_index": 0, "description": "导航到活动创建页面。"},
+            {"step_index": 1, "description": "点击活动名称输入框，准备填写。"},
+            {"step_index": 2, "description": "在活动名称输入框中输入活动名称。"},
+            {"step_index": 3, "description": "点击「展开高级配置」按钮，展开更多设置项。"},
+            {"step_index": 4, "description": "点击保存按钮，但当前观察窗口内没有看到明显页面变化。"},
+        ],
         "common_step_patterns": [
             "用户先导航到活动创建页面，填写表单字段，展开高级配置后尝试保存。",
         ],
@@ -209,6 +216,7 @@ class TestStepUnderstandingSchema:
         assert "likely_submit_steps" in props
         assert "likely_no_change_steps" in props
         assert "observed_change_patterns" in props
+        assert "step_descriptions" in props
 
     def test_default_values(self):
         su = StepUnderstanding()
@@ -218,6 +226,7 @@ class TestStepUnderstandingSchema:
         assert su.likely_submit_steps == []
         assert su.likely_no_change_steps == []
         assert su.observed_change_patterns == []
+        assert su.step_descriptions == []
         assert su.confidence_notes == []
 
     def test_full_construction(self):
@@ -235,10 +244,22 @@ class TestStepUnderstandingSchema:
                 "step_index": 1, "event_type": "click",
                 "target": "link", "likely_reason": "async_pending",
             }],
+            step_descriptions=[
+                {"step_index": 0, "description": "点击保存按钮提交表单。"},
+                {"step_index": 1, "description": "点击链接，但当前观察窗口内没有明显变化。"},
+            ],
         )
         assert len(su.likely_key_steps) == 1
         assert su.likely_key_steps[0].step_index == 0
         assert su.likely_no_change_steps[0].likely_reason == "async_pending"
+        assert len(su.step_descriptions) == 2
+        assert su.step_descriptions[0].step_index == 0
+        assert su.step_descriptions[1].description == "点击链接，但当前观察窗口内没有明显变化。"
+
+    def test_step_description_model(self):
+        sd = StepDescription(step_index=0, description="导航到页面。")
+        assert sd.step_index == 0
+        assert sd.description == "导航到页面。"
 
 
 # ---------------------------------------------------------------------------
@@ -312,6 +333,36 @@ class TestGenerateStepUnderstanding:
         assert len(u["likely_no_change_steps"]) == 2
         assert len(u["observed_change_patterns"]) >= 1
         assert result["usage"]["total_tokens"] == 300
+
+    @patch("app.services.step_understanding.generate_structured")
+    def test_step_descriptions_cover_all_steps(self, mock_gen):
+        mock_gen.return_value = _make_good_llm_response()
+
+        result = generate_step_understanding(_make_steps_context())
+
+        assert result["ok"] is True
+        u = result["understanding"]
+        descs = u["step_descriptions"]
+        assert len(descs) == 5  # matches step_count
+        indices = [d["step_index"] for d in descs]
+        assert indices == [0, 1, 2, 3, 4]
+        # Each description is non-empty
+        assert all(d["description"] for d in descs)
+
+    @patch("app.services.step_understanding.generate_structured")
+    def test_no_change_step_description_not_failure(self, mock_gen):
+        mock_gen.return_value = _make_good_llm_response()
+
+        result = generate_step_understanding(_make_steps_context())
+
+        u = result["understanding"]
+        # Step 4 is a no-change step (save button)
+        save_desc = next(d for d in u["step_descriptions"] if d["step_index"] == 4)
+        desc_lower = save_desc["description"].lower()
+        assert "失败" not in desc_lower
+        assert "错误" not in desc_lower
+        assert "error" not in desc_lower
+        assert "fail" not in desc_lower
 
     @patch("app.services.step_understanding.generate_structured")
     def test_provider_error(self, mock_gen):
@@ -412,4 +463,5 @@ class TestGenerateStepUnderstanding:
         request = mock_gen.call_args[0][0]
         assert request.response_schema is not None
         assert "likely_key_steps" in str(request.response_schema)
+        assert "step_descriptions" in str(request.response_schema)
         assert request.system is not None

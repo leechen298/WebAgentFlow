@@ -193,6 +193,110 @@ def _build_execution_notes(
     return notes
 
 
+_PAGE_KIND_LABELS: dict[str, str] = {
+    "list": "列表",
+    "form": "表单",
+    "detail": "详情",
+    "dashboard": "仪表盘",
+    "config": "配置",
+    "modal": "弹窗",
+    "login": "登录",
+    "mixed": "混合",
+}
+
+
+def _build_page_description(page: PageUnderstanding) -> str:
+    """Build a 2-4 sentence human-readable page description from 6C fields."""
+    if not page.page_goal and page.page_kind == "unknown":
+        return ""
+
+    parts: list[str] = []
+
+    # Sentence 1: what this page is
+    kind_label = _PAGE_KIND_LABELS.get(page.page_kind, "") if page.page_kind != "unknown" else ""
+    if page.page_goal:
+        if kind_label:
+            parts.append(f"这是一个{kind_label}类型的页面，{page.page_goal}。")
+        else:
+            parts.append(f"{page.page_goal}。")
+    elif kind_label:
+        parts.append(f"这是一个{kind_label}类型的页面。")
+
+    # Sentence 2: core regions
+    if page.primary_regions:
+        region_names = [r.name for r in page.primary_regions]
+        parts.append(f"页面包含{_join_list(region_names)}等区域。")
+
+    # Sentence 3: main actions
+    if page.primary_actions:
+        action_names = [a.name for a in page.primary_actions]
+        parts.append(f"主要操作包括{_join_list(action_names)}。")
+
+    return "".join(parts)
+
+
+def _build_operation_description(
+    steps: StepUnderstanding,
+    page: PageUnderstanding,
+) -> str:
+    """Build a 2-5 sentence human-readable operation description from 6D fields."""
+    parts: list[str] = []
+
+    # Overall flow from common_step_patterns
+    if steps.common_step_patterns:
+        parts.append(steps.common_step_patterns[0])
+
+    # Key actions summary
+    action_mentions: list[str] = []
+    for s in steps.likely_expand_steps:
+        desc = s.description or s.target
+        action_mentions.append(f"展开操作（{desc}）")
+    for s in steps.likely_submit_steps:
+        desc = s.description or s.target
+        action_mentions.append(f"提交操作（{desc}）")
+    if action_mentions:
+        parts.append(f"操作过程中包含{_join_list(action_mentions)}。")
+
+    # No-change observations
+    no_change_notable = [
+        s for s in steps.likely_no_change_steps
+        if s.likely_reason != "navigation"
+    ]
+    if no_change_notable:
+        nc_descs: list[str] = []
+        for s in no_change_notable:
+            reason_text = _no_change_reason_text(s.likely_reason)
+            nc_descs.append(
+                f"步骤[{s.step_index}]（{s.target}）在当前观察窗口内没有明显页面变化，{reason_text}"
+            )
+        parts.append("。".join(nc_descs) + "。")
+
+    if not parts:
+        return ""
+
+    return "".join(parts)
+
+
+def _join_list(items: list[str]) -> str:
+    """Join a list of items in Chinese style: A、B、C."""
+    if not items:
+        return ""
+    return "、".join(items)
+
+
+def _no_change_reason_text(reason: str) -> str:
+    """Convert a no-change reason enum to a human-readable phrase."""
+    mapping = {
+        "async_pending": "可能在等待异步响应",
+        "precondition_unmet": "可能前置条件未满足",
+        "already_active": "可能该状态已处于激活状态",
+        "cross_frame": "变化可能发生在其他框架中",
+        "genuine_noop": "该操作可能本身不产生变化",
+        "unknown": "原因未知",
+    }
+    return mapping.get(reason, "原因未知")
+
+
 def _merge_confidence_notes(
     page: PageUnderstanding,
     steps: StepUnderstanding,
@@ -229,5 +333,7 @@ def build_agent_page_understanding(
         interaction_patterns=_build_interaction_patterns(page, steps),
         execution_notes=_build_execution_notes(steps, page),
         key_entities=list(page.key_entities),
+        page_description=_build_page_description(page),
+        operation_description=_build_operation_description(steps, page),
         confidence_notes=_merge_confidence_notes(page, steps),
     )

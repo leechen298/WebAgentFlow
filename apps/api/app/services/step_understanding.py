@@ -36,6 +36,14 @@ whether DOM changes were observed, mutation counts, and a human-readable summary
 Your job is to produce a structured understanding of how the page was used.
 
 Rules:
+- step_descriptions: provide ONE sentence for EVERY step (not just key steps). \
+  Each entry has step_index and description. Be objective and behavior-focused. \
+  For no-change steps, describe what the user did and note that no visible page \
+  change was observed within the current observation window — never call it a \
+  failure or error. Style examples: \
+  "进入活动创建页面，开始填写活动信息。" / \
+  "在活动名称输入框中输入活动名称。" / \
+  "点击保存按钮，但当前观察窗口内没有看到明显页面变化。"
 - common_step_patterns: 1-3 short sentences describing the overall usage flow.
 - likely_key_steps: the 1-5 most important steps. Include step_index (0-based).
 - likely_expand_steps: steps that look like expand/toggle/open/switch actions. \
