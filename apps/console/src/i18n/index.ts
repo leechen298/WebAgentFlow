@@ -1,8 +1,9 @@
 import { createI18n } from 'vue-i18n'
 import en from './locales/en'
 import zh from './locales/zh'
+import ja from './locales/ja'
 
-const SUPPORTED_LOCALES = ['en', 'zh'] as const
+const SUPPORTED_LOCALES = ['en', 'zh', 'ja'] as const
 type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 
 function normalizeLocale(raw: string): SupportedLocale {
@@ -22,7 +23,7 @@ const i18n = createI18n({
   legacy: false,
   locale: detectLocale(),
   fallbackLocale: 'en',
-  messages: { en, zh },
+  messages: { en, zh, ja },
 })
 
 export { normalizeLocale, SUPPORTED_LOCALES }
