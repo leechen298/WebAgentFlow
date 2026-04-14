@@ -23,6 +23,7 @@ import pytest
 
 from app.services.execution_runtime import (
     ExecutionRuntime,
+    ExecutionRuntimeError,
     PageNavigationError,
     PageObservationError,
     RuntimeConfig,
@@ -225,7 +226,7 @@ class TestErrorHandling:
 
     def test_navigate_before_start(self):
         rt = create_execution_runtime()
-        with pytest.raises(PageObservationError):
+        with pytest.raises(PageNavigationError):
             rt.navigate("about:blank")
 
     def test_invalid_browser_type(self):

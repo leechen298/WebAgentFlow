@@ -45,19 +45,19 @@ logger = logging.getLogger(__name__)
 # Error types
 # ───────────────────────────────────────────────────────────────────
 
-class RuntimeError_(Exception):
+class ExecutionRuntimeError(Exception):
     """Base for all execution-runtime errors."""
 
 
-class RuntimeInitError(RuntimeError_):
+class RuntimeInitError(ExecutionRuntimeError):
     """Browser or context failed to initialise."""
 
 
-class PageNavigationError(RuntimeError_):
+class PageNavigationError(ExecutionRuntimeError):
     """Page navigation failed."""
 
 
-class PageObservationError(RuntimeError_):
+class PageObservationError(ExecutionRuntimeError):
     """Failed to observe page state (URL, title, HTML, screenshot)."""
 
 
@@ -252,9 +252,13 @@ class ExecutionRuntime:
     def navigate(self, url: str, *, wait_until: str = "load") -> None:
         """Navigate the active page to *url*.
 
-        Raises ``PageNavigationError`` on failure.
+        Raises ``PageNavigationError`` on failure or if no usable page.
         """
-        page = self._ensure_page()
+        if self._page is None or self._page.is_closed():
+            raise PageNavigationError(
+                "No usable page — runtime not started or page was closed."
+            )
+        page = self._page
         try:
             page.goto(url, wait_until=wait_until)
         except PlaywrightError as exc:
