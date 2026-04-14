@@ -27,8 +27,9 @@ The project follows a 12-phase development timeline. Phases 1–6 are completed;
 5. **Operation Step building** — correlating a primary event with subsequent DOM mutations into a Step
 6. **Agent initial understanding of pages and steps** — LLM provider layer, agent input contract, page understanding (6C), step understanding (6D), combined output (6E), server-side event AST matching
 7A. **Execution contract** — ExecutionRequest/ExecutionResult schemas, locator priority (6-level), data consumption boundary, `build_execution_request` entry point
+7B. **Execution runtime** — Playwright browser/context/page lifecycle, navigation, page observation (URL/title/HTML/screenshot), unified error handling, `create_execution_runtime` factory
 
-**Current phase (7): Full execution capability via Playwright** — real browser automation, not abstract action definitions (7A contract done → 7B runtime next)
+**Current phase (7): Full execution capability via Playwright** — real browser automation (7A contract + 7B runtime done → 7C locator next)
 
 ### B. Technical Route Change
 
@@ -56,6 +57,7 @@ Full AST schema: `apps/api/app/schemas/ast.py`
 Server-side event matcher: `apps/api/app/services/server_ast_matcher.py`
 Execution contract schema: `apps/api/app/schemas/execution.py`
 Execution contract builder: `apps/api/app/services/execution_contract.py`
+Execution runtime: `apps/api/app/services/execution_runtime.py`
 
 #### Dual-Track AST: Client vs Server Responsibilities
 

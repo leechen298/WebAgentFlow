@@ -27,8 +27,9 @@ WebAgentFlow 是一个面向 Agent 驱动的 Web 工作流引擎的 monorepo，�
 5. **操作步骤（Step）构建** — 将主事件与后续 DOM 变更关联为一个 Step
 6. **Agent 初步理解页面与步骤** — LLM Provider 层、Agent 输入契约、页面理解（6C）、步骤理解（6D）、综合输出（6E）、服务端事件 AST 匹配
 7A. **执行契约** — ExecutionRequest/ExecutionResult schema、定位优先级（6 级）、数据消费边界、`build_execution_request` 统一入口
+7B. **执行运行时** — Playwright browser/context/page 生命周期、导航、页面观测（URL/title/HTML/截图）、统一错误处理、`create_execution_runtime` 工厂
 
-**当前阶段（7）：接入完整执行能力（Playwright）** — 真实浏览器自动化，而非抽象动作定义（7A 契约已完成 → 下一步 7B 运行时）
+**当前阶段（7）：接入完整执行能力（Playwright）** — 真实浏览器自动化（7A 契约 + 7B 运行时已完成 → 下一步 7C 定位器）
 
 ### B. 技术路线变更
 
@@ -56,6 +57,7 @@ Full AST schema：`apps/api/app/schemas/ast.py`
 服务端事件匹配器：`apps/api/app/services/server_ast_matcher.py`
 执行契约 schema：`apps/api/app/schemas/execution.py`
 执行契约构建器：`apps/api/app/services/execution_contract.py`
+执行运行时：`apps/api/app/services/execution_runtime.py`
 
 #### 双轨 AST：客户端与服务端职责
 
