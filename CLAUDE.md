@@ -17,7 +17,7 @@ WebAgentFlow is a monorepo for an agent-driven web workflow engine with:
 
 ### A. Current Phase & Progress
 
-The project follows a 12-phase development timeline. Phases 1–5 are completed; the project is entering Phase 6.
+The project follows a 12-phase development timeline. Phases 1–6 are completed; the project is entering Phase 7.
 
 **Completed phases:**
 1. **Page fact foundation** — raw HTML capture, HTML → Full AST (server-side, lxml), Full AST schema
@@ -25,15 +25,9 @@ The project follows a 12-phase development timeline. Phases 1–5 are completed;
 3. **Event–AST association** — events mapped to AST nodes (exact/ancestor/none + fallback)
 4. **DOM mutation recording** — MutationObserver on top-level + same-origin iframes, batching, noise filtering, AST association
 5. **Operation Step building** — correlating a primary event with subsequent DOM mutations into a Step
+6. **Agent initial understanding of pages and steps** — LLM provider layer, agent input contract, page understanding (6C), step understanding (6D), combined output (6E), server-side event AST matching
 
-**Current phase (6): Agent initial understanding of pages and steps**
-- 6A: LLM Provider layer — thin adapter for structured/text generation, unified interface
-- 6B: Agent input contract — define page_context + steps_context schemas, adapters from existing data
-- 6C: Page understanding — Simplified AST → page kind, goal, primary regions/actions (LLM-based)
-- 6D: Step understanding — AgentStepListView → key steps, patterns, change observations (LLM-based)
-- 6E: Combined output — merge page + step understanding into unified AgentPageUnderstanding for Phase 7
-
-**Next phase (7): Full execution capability via Playwright** — real browser automation, not abstract action definitions
+**Current phase (7): Full execution capability via Playwright** — real browser automation, not abstract action definitions
 
 ### B. Technical Route Change
 
@@ -129,8 +123,8 @@ This approach means:
 3. ~~Event–AST association~~ ✅
 4. ~~DOM mutation recording~~ ✅
 5. ~~Operation Step building~~ ✅
-6. **Agent initial understanding of pages and steps** ← current
-7. Full execution capability (Playwright) — real browser automation with complete action coverage
+6. ~~Agent initial understanding of pages and steps~~ ✅
+7. **Full execution capability (Playwright)** ← current — real browser automation with complete action coverage
 8. Wait-for-expected-change mechanism + automated testing (parallel tracks, start together with Phase 7)
 9. Execution loop stabilization — action → wait → judge → next step
 10. Path abstraction & experience accumulation (starts after Phase 7, grows continuously)
@@ -138,7 +132,7 @@ This approach means:
 12. Automated evaluation & continuous optimization system
 
 **Key parallel relationships:**
-- **Agent understanding (Phase 6)** can start now — Simplified AST for "what the page is", Steps for "how the page is used"
+- **Agent understanding (Phase 6)** is complete — provides page/step/combined understanding for execution layer
 - **Automated testing (Phase 8B)** must start as soon as execution capability exists, not after — execution and testing grow together
 - **Path abstraction (Phase 10)** is not a final summary module — it starts after execution begins and grows with the system
 
