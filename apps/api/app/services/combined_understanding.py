@@ -3,9 +3,9 @@
 Rule-based synthesis of PageUnderstanding (6C) + StepUnderstanding (6D)
 into a unified AgentPageUnderstanding.
 
-No LLM call — both inputs are already structured results. This layer
-does deterministic merging: enrich regions with step activity, assign
-roles to key steps, surface execution notes from no-change observations.
+Structural fields are deterministic merges — no LLM call needed.
+Description fields (page_description, operation_description) use a
+lightweight LLM call to produce locale-aware natural language.
 
 Usage:
     from app.services.combined_understanding import build_agent_page_understanding
@@ -15,6 +15,10 @@ Usage:
 
 from __future__ import annotations
 
+import json
+import logging
+
+from app.core.locale import get_locale
 from app.schemas.combined_understanding import (
     AgentPageUnderstanding,
     ExecutionNote,
@@ -22,6 +26,9 @@ from app.schemas.combined_understanding import (
 )
 from app.schemas.page_understanding import PageUnderstanding
 from app.schemas.step_understanding import StepUnderstanding
+from app.services.llm_provider import build_request, generate_structured
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -193,108 +200,132 @@ def _build_execution_notes(
     return notes
 
 
-_PAGE_KIND_LABELS: dict[str, str] = {
-    "list": "列表",
-    "form": "表单",
-    "detail": "详情",
-    "dashboard": "仪表盘",
-    "config": "配置",
-    "modal": "弹窗",
-    "login": "登录",
-    "mixed": "混合",
+# ---------------------------------------------------------------------------
+# Description generation via lightweight LLM call
+# ---------------------------------------------------------------------------
+
+_LOCALE_LABELS: dict[str, str] = {
+    "zh": "Chinese (简体中文)",
+    "en": "English",
+    "ja": "Japanese (日本語)",
+}
+
+_DESCRIPTION_SYSTEM_PROMPT = """\
+You are a concise technical writer. Given structured analysis results of a web \
+page and recorded user operations, produce two short descriptions.
+
+Rules:
+- page_description: 2-4 sentences. What this page is, its core regions, and \
+  main operations. Not a mechanical list — write naturally.
+- operation_description: 2-5 sentences. What the user did in this recording. \
+  Cover the overall flow, key actions, and noteworthy observations (e.g. \
+  no-change steps, async risks). Do NOT write execution plans or suggestions.
+- For no-change steps: describe what the user did and note that no visible \
+  change was observed — never call it a failure.
+- If there is insufficient information, return an empty string for that field.\
+"""
+
+_DESCRIPTION_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "page_description": {"type": "string"},
+        "operation_description": {"type": "string"},
+    },
+    "required": ["page_description", "operation_description"],
 }
 
 
-def _build_page_description(page: PageUnderstanding) -> str:
-    """Build a 2-4 sentence human-readable page description from 6C fields."""
-    if not page.page_goal and page.page_kind == "unknown":
-        return ""
-
-    parts: list[str] = []
-
-    # Sentence 1: what this page is
-    kind_label = _PAGE_KIND_LABELS.get(page.page_kind, "") if page.page_kind != "unknown" else ""
-    if page.page_goal:
-        if kind_label:
-            parts.append(f"这是一个{kind_label}类型的页面，{page.page_goal}。")
-        else:
-            parts.append(f"{page.page_goal}。")
-    elif kind_label:
-        parts.append(f"这是一个{kind_label}类型的页面。")
-
-    # Sentence 2: core regions
-    if page.primary_regions:
-        region_names = [r.name for r in page.primary_regions]
-        parts.append(f"页面包含{_join_list(region_names)}等区域。")
-
-    # Sentence 3: main actions
-    if page.primary_actions:
-        action_names = [a.name for a in page.primary_actions]
-        parts.append(f"主要操作包括{_join_list(action_names)}。")
-
-    return "".join(parts)
-
-
-def _build_operation_description(
-    steps: StepUnderstanding,
+def _build_description_input(
     page: PageUnderstanding,
+    steps: StepUnderstanding,
 ) -> str:
-    """Build a 2-5 sentence human-readable operation description from 6D fields."""
-    parts: list[str] = []
+    """Build a compact JSON summary for the description LLM call."""
+    data: dict = {}
 
-    # Overall flow from common_step_patterns
+    # Page info
+    if page.page_kind != "unknown" or page.page_goal:
+        data["page_kind"] = page.page_kind
+    if page.page_goal:
+        data["page_goal"] = page.page_goal
+    if page.primary_regions:
+        data["regions"] = [{"name": r.name, "role": r.role} for r in page.primary_regions]
+    if page.primary_actions:
+        data["actions"] = [{"name": a.name, "type": a.action_type} for a in page.primary_actions]
+    if page.key_entities:
+        data["entities"] = page.key_entities
+
+    # Step info
     if steps.common_step_patterns:
-        parts.append(steps.common_step_patterns[0])
-
-    # Key actions summary
-    action_mentions: list[str] = []
-    for s in steps.likely_expand_steps:
-        desc = s.description or s.target
-        action_mentions.append(f"展开操作（{desc}）")
-    for s in steps.likely_submit_steps:
-        desc = s.description or s.target
-        action_mentions.append(f"提交操作（{desc}）")
-    if action_mentions:
-        parts.append(f"操作过程中包含{_join_list(action_mentions)}。")
-
-    # No-change observations
+        data["step_patterns"] = steps.common_step_patterns
+    if steps.likely_key_steps:
+        data["key_steps"] = [
+            {"index": s.step_index, "event": s.event_type, "target": s.target, "reason": s.reason}
+            for s in steps.likely_key_steps
+        ]
+    if steps.likely_expand_steps:
+        data["expand_steps"] = [
+            {"index": s.step_index, "target": s.target, "desc": s.description}
+            for s in steps.likely_expand_steps
+        ]
+    if steps.likely_submit_steps:
+        data["submit_steps"] = [
+            {"index": s.step_index, "target": s.target, "desc": s.description}
+            for s in steps.likely_submit_steps
+        ]
     no_change_notable = [
-        s for s in steps.likely_no_change_steps
-        if s.likely_reason != "navigation"
+        s for s in steps.likely_no_change_steps if s.likely_reason != "navigation"
     ]
     if no_change_notable:
-        nc_descs: list[str] = []
-        for s in no_change_notable:
-            reason_text = _no_change_reason_text(s.likely_reason)
-            nc_descs.append(
-                f"步骤[{s.step_index}]（{s.target}）在当前观察窗口内没有明显页面变化，{reason_text}"
+        data["no_change_steps"] = [
+            {"index": s.step_index, "target": s.target, "reason": s.likely_reason}
+            for s in no_change_notable
+        ]
+    if steps.step_descriptions:
+        data["step_descriptions"] = [
+            {"index": sd.step_index, "desc": sd.description}
+            for sd in steps.step_descriptions
+        ]
+
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+
+
+def _generate_descriptions(
+    page: PageUnderstanding,
+    steps: StepUnderstanding,
+    locale: str = "en",
+) -> tuple[str, str]:
+    """Generate page_description and operation_description via lightweight LLM call.
+
+    Returns (page_description, operation_description). Falls back to ("", "")
+    on any failure — these descriptions are non-critical.
+    """
+    # Skip if nothing to describe
+    if page.page_kind == "unknown" and not page.page_goal and not steps.common_step_patterns:
+        return "", ""
+
+    lang_label = _LOCALE_LABELS.get(locale, "English")
+    prompt = (
+        f"Output language: {lang_label}\n\n"
+        f"Structured analysis:\n{_build_description_input(page, steps)}"
+    )
+
+    request = build_request(
+        prompt,
+        system=_DESCRIPTION_SYSTEM_PROMPT,
+        response_schema=_DESCRIPTION_SCHEMA,
+    )
+
+    try:
+        resp = generate_structured(request)
+        if resp.ok and resp.parsed:
+            return (
+                resp.parsed.get("page_description", ""),
+                resp.parsed.get("operation_description", ""),
             )
-        parts.append("。".join(nc_descs) + "。")
+    except Exception as exc:
+        logger.warning("Description generation failed (non-critical): %s", exc)
 
-    if not parts:
-        return ""
-
-    return "".join(parts)
-
-
-def _join_list(items: list[str]) -> str:
-    """Join a list of items in Chinese style: A、B、C."""
-    if not items:
-        return ""
-    return "、".join(items)
-
-
-def _no_change_reason_text(reason: str) -> str:
-    """Convert a no-change reason enum to a human-readable phrase."""
-    mapping = {
-        "async_pending": "可能在等待异步响应",
-        "precondition_unmet": "可能前置条件未满足",
-        "already_active": "可能该状态已处于激活状态",
-        "cross_frame": "变化可能发生在其他框架中",
-        "genuine_noop": "该操作可能本身不产生变化",
-        "unknown": "原因未知",
-    }
-    return mapping.get(reason, "原因未知")
+    return "", ""
 
 
 def _merge_confidence_notes(
@@ -318,12 +349,17 @@ def _merge_confidence_notes(
 def build_agent_page_understanding(
     page: PageUnderstanding,
     steps: StepUnderstanding,
+    *,
+    locale: str | None = None,
 ) -> AgentPageUnderstanding:
     """Synthesize PageUnderstanding + StepUnderstanding into a unified result.
 
-    Pure rule-based — no LLM call. Both inputs are already structured
-    LLM outputs from 6C and 6D.
+    Structural fields are rule-based merges. Description fields use a
+    lightweight LLM call for locale-aware natural language.
     """
+    resolved_locale = locale or get_locale()
+    page_desc, op_desc = _generate_descriptions(page, steps, resolved_locale)
+
     return AgentPageUnderstanding(
         page_kind=page.page_kind,
         page_goal=page.page_goal,
@@ -333,7 +369,7 @@ def build_agent_page_understanding(
         interaction_patterns=_build_interaction_patterns(page, steps),
         execution_notes=_build_execution_notes(steps, page),
         key_entities=list(page.key_entities),
-        page_description=_build_page_description(page),
-        operation_description=_build_operation_description(steps, page),
+        page_description=page_desc,
+        operation_description=op_desc,
         confidence_notes=_merge_confidence_notes(page, steps),
     )

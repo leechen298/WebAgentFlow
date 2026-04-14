@@ -68,7 +68,7 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // You can add auth tokens here later
+    config.headers['X-Locale'] = localStorage.getItem('locale') || navigator.language;
     return config;
   },
   (error: AxiosError) => {

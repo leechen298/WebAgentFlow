@@ -281,10 +281,10 @@ def get_combined_understanding(
             "phase": "step_understanding",
         })
 
-    # --- Combined synthesis (6E) — no LLM, pure rules ---
+    # --- Combined synthesis (6E) — structural merge + lightweight LLM for descriptions ---
     page_u = PageUnderstanding.model_validate(page_result["understanding"])
     step_u = StepUnderstanding.model_validate(step_result["understanding"])
-    combined = build_agent_page_understanding(page_u, step_u)
+    combined = build_agent_page_understanding(page_u, step_u)  # locale from middleware context
 
     return ApiResponse(data={
         "ok": True,

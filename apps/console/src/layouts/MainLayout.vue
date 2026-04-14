@@ -40,6 +40,7 @@
           <h1>{{ pageTitle }}</h1>
         </div>
         <div class="header-right">
+          <LocaleSwitcher />
           <a-badge :status="apiStatus" :text="apiStatusText" />
         </div>
       </a-layout-header>
@@ -60,6 +61,7 @@ import {
   PlayCircleOutlined
 } from '@ant-design/icons-vue';
 import { useAppStore } from '@/stores';
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -149,6 +151,12 @@ onUnmounted(() => {
   justify-content: space-between;
   height: auto;
   padding: 18px 24px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .header-left {

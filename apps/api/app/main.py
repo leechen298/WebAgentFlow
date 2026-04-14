@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.exceptions import AppError
+from app.core.locale import normalize_locale, set_locale
 from app.core.logging import configure_logging
 from app.routers import api_router
 from app.schemas.common import ApiErrorResponse
@@ -43,6 +44,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def locale_middleware(request: Request, call_next):
+    """Extract locale from request headers and set it for the request context."""
+    raw = request.headers.get("x-locale") or request.headers.get("accept-language", "")
+    # Accept-Language can be complex ("en-US,en;q=0.9,zh;q=0.8"), take the first tag
+    first_tag = raw.split(",")[0].split(";")[0] if raw else ""
+    set_locale(normalize_locale(first_tag))
+    return await call_next(request)
+
 
 app.include_router(api_router)
 

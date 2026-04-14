@@ -17,6 +17,7 @@ import json
 import logging
 from typing import Any
 
+from app.core.locale import get_locale
 from app.schemas.agent_input import StepsContext
 from app.schemas.step_understanding import STEP_UNDERSTANDING_SCHEMA, StepUnderstanding
 from app.services.llm_provider import build_request, generate_structured
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 # Prompt construction
 # ---------------------------------------------------------------------------
 
-_SYSTEM_PROMPT = """\
+_SYSTEM_PROMPT_BASE = """\
 You are a user-behavior analyst. You receive a sequence of recorded user \
 operation steps on a web page. Each step has an event type, target description, \
 whether DOM changes were observed, mutation counts, and a human-readable summary.
@@ -40,10 +41,11 @@ Rules:
   Each entry has step_index and description. Be objective and behavior-focused. \
   For no-change steps, describe what the user did and note that no visible page \
   change was observed within the current observation window — never call it a \
-  failure or error. Style examples: \
-  "进入活动创建页面，开始填写活动信息。" / \
-  "在活动名称输入框中输入活动名称。" / \
-  "点击保存按钮，但当前观察窗口内没有看到明显页面变化。"
+  failure or error. Style reference (these examples show the expected tone and \
+  detail level — your actual output must follow the language instruction below): \
+  "Navigate to the activity creation page." / \
+  "Enter the activity name in the name input field." / \
+  "Click the save button, but no visible page change was observed."
 - common_step_patterns: 1-3 short sentences describing the overall usage flow.
 - likely_key_steps: the 1-5 most important steps. Include step_index (0-based).
 - likely_expand_steps: steps that look like expand/toggle/open/switch actions. \
@@ -57,9 +59,19 @@ Rules:
   happened outside the observation window or in a different frame.
 - observed_change_patterns: 1-3 sentences on the most common change patterns \
   (e.g. "input events cause attribute changes", "clicks add child nodes").
-- confidence_notes: only add when genuinely uncertain. Usually empty.
-- All text output in the same language as the step content.\
+- confidence_notes: only add when genuinely uncertain. Usually empty.\
 """
+
+_LOCALE_INSTRUCTIONS: dict[str, str] = {
+    "zh": "All text output MUST be in Chinese (简体中文).",
+    "en": "All text output MUST be in English.",
+    "ja": "All text output MUST be in Japanese (日本語).",
+}
+
+
+def _build_system_prompt(locale: str = "en") -> str:
+    lang_line = _LOCALE_INSTRUCTIONS.get(locale, _LOCALE_INSTRUCTIONS["en"])
+    return f"{_SYSTEM_PROMPT_BASE}\n- {lang_line}"
 
 
 def build_step_understanding_prompt(steps_ctx: StepsContext) -> str:
@@ -116,7 +128,11 @@ def build_step_understanding_prompt(steps_ctx: StepsContext) -> str:
 # Public API
 # ---------------------------------------------------------------------------
 
-def generate_step_understanding(steps_ctx: StepsContext) -> dict[str, Any]:
+def generate_step_understanding(
+    steps_ctx: StepsContext,
+    *,
+    locale: str | None = None,
+) -> dict[str, Any]:
     """Generate a structured step understanding from a StepsContext.
 
     Returns a dict with:
@@ -125,11 +141,12 @@ def generate_step_understanding(steps_ctx: StepsContext) -> dict[str, Any]:
         - "error": error info (when ok=False)
         - "usage": token usage info
     """
+    resolved_locale = locale or get_locale()
     prompt = build_step_understanding_prompt(steps_ctx)
 
     request = build_request(
         prompt,
-        system=_SYSTEM_PROMPT,
+        system=_build_system_prompt(resolved_locale),
         response_schema=STEP_UNDERSTANDING_SCHEMA,
     )
 

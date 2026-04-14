@@ -17,6 +17,7 @@ import json
 import logging
 from typing import Any
 
+from app.core.locale import get_locale
 from app.schemas.agent_input import PageContext
 from app.schemas.page_understanding import PAGE_UNDERSTANDING_SCHEMA, PageUnderstanding
 from app.services.llm_provider import build_request, generate_structured
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 # Prompt construction
 # ---------------------------------------------------------------------------
 
-_SYSTEM_PROMPT = """\
+_SYSTEM_PROMPT_BASE = """\
 You are a page structure analyst. Your job is to look at a web page's DOM \
 structure (provided as a simplified AST) and produce a structured understanding \
 of what the page is, what it does, and what its key parts are.
@@ -41,9 +42,19 @@ Rules:
   Do not exhaustively list every clickable element.
 - key_entities: extract the core business objects that appear on the page (e.g. "order", "product"). \
   Keep to 1-5 items. Output empty list if unclear.
-- confidence_notes: only add notes when a judgment is genuinely uncertain. Usually empty.
-- All text output in the same language as the page content.\
+- confidence_notes: only add notes when a judgment is genuinely uncertain. Usually empty.\
 """
+
+_LOCALE_INSTRUCTIONS: dict[str, str] = {
+    "zh": "All text output MUST be in Chinese (简体中文).",
+    "en": "All text output MUST be in English.",
+    "ja": "All text output MUST be in Japanese (日本語).",
+}
+
+
+def _build_system_prompt(locale: str = "en") -> str:
+    lang_line = _LOCALE_INSTRUCTIONS.get(locale, _LOCALE_INSTRUCTIONS["en"])
+    return f"{_SYSTEM_PROMPT_BASE}\n- {lang_line}"
 
 
 def _build_ast_summary(page: PageContext) -> str:
@@ -95,7 +106,11 @@ def build_page_understanding_prompt(page: PageContext) -> str:
 # Public API
 # ---------------------------------------------------------------------------
 
-def generate_page_understanding(page: PageContext) -> dict[str, Any]:
+def generate_page_understanding(
+    page: PageContext,
+    *,
+    locale: str | None = None,
+) -> dict[str, Any]:
     """Generate a structured page understanding from a PageContext.
 
     Returns a dict with:
@@ -104,11 +119,12 @@ def generate_page_understanding(page: PageContext) -> dict[str, Any]:
         - "error": error info (when ok=False)
         - "usage": token usage info
     """
+    resolved_locale = locale or get_locale()
     prompt = build_page_understanding_prompt(page)
 
     request = build_request(
         prompt,
-        system=_SYSTEM_PROMPT,
+        system=_build_system_prompt(resolved_locale),
         response_schema=PAGE_UNDERSTANDING_SCHEMA,
     )
 
