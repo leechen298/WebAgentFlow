@@ -29,8 +29,9 @@ WebAgentFlow 是一个面向 Agent 驱动的 Web 工作流引擎的 monorepo，�
 7A. **执行契约** — ExecutionRequest/ExecutionResult schema、定位优先级（6 级）、数据消费边界、`build_execution_request` 统一入口
 7B. **执行运行时** — Playwright browser/context/page 生命周期、导航、页面观测（URL/title/HTML/截图）、统一错误处理、`create_execution_runtime` 工厂
 7C. **定位解析** — 6 级优先级解析器（`resolve_locator`）、SelectorDescriptor 供 Playwright 消费、区域范围消歧、结构化失败报告
+7D. **动作执行器** — `execute_action()` 单步执行器，支持 click/fill/select/check/uncheck/hover/press/navigate，前后状态捕获，结构化错误处理
 
-**当前阶段（7）：接入完整执行能力（Playwright）** — 真实浏览器自动化（7A–7C 已完成 → 下一步 7D 动作执行器）
+**当前阶段（7）：接入完整执行能力（Playwright）** — 真实浏览器自动化（7A–7D 已完成 → 下一步 7E 执行后观测）
 
 ### B. 技术路线变更
 
@@ -61,6 +62,7 @@ Full AST schema：`apps/api/app/schemas/ast.py`
 执行运行时：`apps/api/app/services/execution_runtime.py`
 定位解析器：`apps/api/app/services/locator_resolver.py`
 定位 schema：`apps/api/app/schemas/locator.py`
+动作执行器：`apps/api/app/services/action_executor.py`
 
 #### 双轨 AST：客户端与服务端职责
 

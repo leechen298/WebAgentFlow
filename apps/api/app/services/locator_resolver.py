@@ -321,13 +321,13 @@ def _css_tag_has_text(tag: str, text: str) -> SelectorDescriptor:
 def _count_matches(page: Page, desc: SelectorDescriptor) -> int:
     """Count how many elements match a descriptor on the page."""
     try:
-        loc = _to_playwright_locator(page, desc)
+        loc = to_playwright_locator(page, desc)
         return loc.count()
     except Exception:
         return 0
 
 
-def _to_playwright_locator(page: Page, desc: SelectorDescriptor):
+def to_playwright_locator(page: Page, desc: SelectorDescriptor):
     """Convert a SelectorDescriptor to a Playwright Locator object."""
     if desc.selector_type == "css":
         loc = page.locator(desc.selector)
@@ -413,7 +413,7 @@ def _parse_target_description(desc: str) -> tuple[str, str]:
 def _get_element_info(page: Page, desc: SelectorDescriptor) -> tuple[str, str]:
     """Get tag and text of the first matched element."""
     try:
-        loc = _to_playwright_locator(page, desc)
+        loc = to_playwright_locator(page, desc)
         if loc.count() == 0:
             return "", ""
         tag = loc.first.evaluate("el => el.tagName.toLowerCase()") or ""
