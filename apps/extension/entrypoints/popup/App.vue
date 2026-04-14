@@ -2,7 +2,7 @@
   <main class="popup">
     <div class="header">
       <div class="badge" :class="{ 'badge-recording': state.isRecording }">
-        {{ state.isRecording ? 'REC' : 'MV3' }}
+        {{ state.isRecording ? msg('badgeRecording') : msg('badgeReady') }}
       </div>
       <h1>WebAgentFlow</h1>
     </div>
@@ -10,25 +10,25 @@
     <!-- Status Section -->
     <div class="status-section">
       <div class="status-item">
-        <span class="status-label">Status:</span>
+        <span class="status-label">{{ msg('statusLabel') }}</span>
         <span class="status-value" :class="{ 'recording': state.isRecording }">
-          {{ state.isRecording ? 'Recording...' : 'Ready' }}
+          {{ state.isRecording ? msg('statusRecording') : msg('statusReady') }}
         </span>
       </div>
       <div class="status-item">
-        <span class="status-label">Events:</span>
+        <span class="status-label">{{ msg('eventsLabel') }}</span>
         <span class="status-value">{{ state.events.length }}</span>
       </div>
     </div>
 
     <!-- Recording Name Input -->
     <div class="input-section" v-if="!state.isRecording && state.events.length > 0">
-      <label for="recording-name">Recording Name:</label>
+      <label for="recording-name">{{ msg('recordingNameLabel') }}</label>
       <input
         id="recording-name"
         v-model="recordingName"
         type="text"
-        placeholder="Enter a name for this recording"
+        :placeholder="msg('recordingNamePlaceholder')"
         class="name-input"
       />
     </div>
@@ -41,7 +41,7 @@
         @click="handleStart"
         :disabled="isLoading"
       >
-        {{ isLoading ? 'Starting...' : 'Start Recording' }}
+        {{ isLoading ? msg('btnStarting') : msg('btnStartRecording') }}
       </button>
 
       <button
@@ -50,7 +50,7 @@
         @click="handleStop"
         :disabled="isLoading"
       >
-        {{ isLoading ? 'Stopping...' : 'Stop Recording' }}
+        {{ isLoading ? msg('btnStopping') : msg('btnStopRecording') }}
       </button>
 
       <div class="secondary-controls" v-if="!state.isRecording">
@@ -59,7 +59,7 @@
           @click="handleClear"
           :disabled="state.events.length === 0 || isLoading"
         >
-          Clear
+          {{ msg('btnClear') }}
         </button>
 
         <button
@@ -67,7 +67,7 @@
           @click="handleSubmit"
           :disabled="state.events.length === 0 || isLoading"
         >
-          {{ isSubmitting ? 'Submitting...' : 'Submit' }}
+          {{ isSubmitting ? msg('btnSubmitting') : msg('btnSubmit') }}
         </button>
       </div>
     </div>
@@ -79,7 +79,7 @@
 
     <!-- Event Preview (first few events) -->
     <div v-if="state.events.length > 0 && !state.isRecording" class="events-preview">
-      <h3>Events ({{ state.events.length }})</h3>
+      <h3>{{ msg('eventsPreviewTitle', [String(state.events.length)]) }}</h3>
       <div class="event-list">
         <div v-for="(event, index) in previewEvents" :key="index" class="event-item">
           <span class="event-type">{{ event.type }}</span>
@@ -88,7 +88,7 @@
           </span>
         </div>
         <div v-if="state.events.length > 5" class="event-more">
-          ... and {{ state.events.length - 5 }} more
+          {{ msg('eventsMore', [String(state.events.length - 5)]) }}
         </div>
       </div>
     </div>
@@ -115,6 +115,10 @@ const isSubmitting = ref(false);
 const recordingName = ref('');
 const message = ref('');
 const messageType = ref<'success' | 'error' | 'info'>('info');
+
+// i18n helper
+const msg = (key: string, substitutions?: string | string[]) =>
+  browser.i18n.getMessage(key, substitutions) || key;
 
 // Computed
 const previewEvents = computed(() => state.value.events.slice(0, 5));
@@ -162,12 +166,12 @@ async function handleStart() {
     if (response.success) {
       state.value = response.state;
       recordingName.value = '';
-      showMessage('Recording started!', 'success');
+      showMessage(msg('msgRecordingStarted'), 'success');
     } else {
-      showMessage(response.error || 'Failed to start recording', 'error');
+      showMessage(response.error || msg('msgFailedToStart'), 'error');
     }
   } catch (error) {
-    showMessage(`Error: ${String(error)}`, 'error');
+    showMessage(msg('msgError', [String(error)]), 'error');
   } finally {
     isLoading.value = false;
   }
@@ -182,12 +186,12 @@ async function handleStop() {
     if (response.success) {
       state.value = response.state;
       recordingName.value = generateRecordingName(state.value.initialUrl);
-      showMessage(`Recording stopped! Captured ${state.value.events.length} events.`, 'success');
+      showMessage(msg('msgRecordingStopped', [String(state.value.events.length)]), 'success');
     } else {
-      showMessage(response.error || 'Failed to stop recording', 'error');
+      showMessage(response.error || msg('msgFailedToStop'), 'error');
     }
   } catch (error) {
-    showMessage(`Error: ${String(error)}`, 'error');
+    showMessage(msg('msgError', [String(error)]), 'error');
   } finally {
     isLoading.value = false;
   }
@@ -202,12 +206,12 @@ async function handleClear() {
     if (response.success) {
       state.value = response.state;
       recordingName.value = '';
-      showMessage('Recording cleared!', 'info');
+      showMessage(msg('msgRecordingCleared'), 'info');
     } else {
-      showMessage(response.error || 'Failed to clear recording', 'error');
+      showMessage(response.error || msg('msgFailedToClear'), 'error');
     }
   } catch (error) {
-    showMessage(`Error: ${String(error)}`, 'error');
+    showMessage(msg('msgError', [String(error)]), 'error');
   } finally {
     isLoading.value = false;
   }
@@ -215,7 +219,7 @@ async function handleClear() {
 
 async function handleSubmit() {
   if (!recordingName.value.trim()) {
-    showMessage('Please enter a recording name', 'error');
+    showMessage(msg('msgEnterName'), 'error');
     return;
   }
 
@@ -232,7 +236,7 @@ async function handleSubmit() {
       initialState: state.value.initialState,
     });
 
-    showMessage(`Successfully submitted recording: ${result.name}`, 'success');
+    showMessage(msg('msgSubmitSuccess', [result.name]), 'success');
 
     // Clear after successful submit
     setTimeout(async () => {
@@ -243,7 +247,7 @@ async function handleSubmit() {
       }
     }, 1500);
   } catch (error) {
-    showMessage(`Submit failed: ${String(error)}`, 'error');
+    showMessage(msg('msgSubmitFailed', [String(error)]), 'error');
   } finally {
     isSubmitting.value = false;
   }

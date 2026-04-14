@@ -1,0 +1,119 @@
+{
+  "badgeRecording": {
+    "message": "REC"
+  },
+  "badgeReady": {
+    "message": "MV3"
+  },
+  "statusLabel": {
+    "message": "Status:"
+  },
+  "statusRecording": {
+    "message": "Recording..."
+  },
+  "statusReady": {
+    "message": "Ready"
+  },
+  "eventsLabel": {
+    "message": "Events:"
+  },
+  "recordingNameLabel": {
+    "message": "Recording Name:"
+  },
+  "recordingNamePlaceholder": {
+    "message": "Enter a name for this recording"
+  },
+  "btnStarting": {
+    "message": "Starting..."
+  },
+  "btnStartRecording": {
+    "message": "Start Recording"
+  },
+  "btnStopping": {
+    "message": "Stopping..."
+  },
+  "btnStopRecording": {
+    "message": "Stop Recording"
+  },
+  "btnClear": {
+    "message": "Clear"
+  },
+  "btnSubmitting": {
+    "message": "Submitting..."
+  },
+  "btnSubmit": {
+    "message": "Submit"
+  },
+  "eventsPreviewTitle": {
+    "message": "Events ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "eventsMore": {
+    "message": "... and $COUNT$ more",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "msgRecordingStarted": {
+    "message": "Recording started!"
+  },
+  "msgFailedToStart": {
+    "message": "Failed to start recording"
+  },
+  "msgRecordingStopped": {
+    "message": "Recording stopped! Captured $COUNT$ events.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "msgFailedToStop": {
+    "message": "Failed to stop recording"
+  },
+  "msgRecordingCleared": {
+    "message": "Recording cleared!"
+  },
+  "msgFailedToClear": {
+    "message": "Failed to clear recording"
+  },
+  "msgEnterName": {
+    "message": "Please enter a recording name"
+  },
+  "msgSubmitSuccess": {
+    "message": "Successfully submitted recording: $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "My Recording"
+      }
+    }
+  },
+  "msgSubmitFailed": {
+    "message": "Submit failed: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Network error"
+      }
+    }
+  },
+  "msgError": {
+    "message": "Error: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Unknown error"
+      }
+    }
+  }
+}

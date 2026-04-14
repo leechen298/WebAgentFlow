@@ -344,8 +344,8 @@ async function handleSave(): Promise<void> {
         started_at: formData.started_at || null,
         finished_at: formData.finished_at || null,
         input_payload: inputResult.success ? inputResult.data as Record<string, unknown> : undefined,
-        result_payload: resultResult.success ? resultResult.data as Record<string, unknown> : null,
-        logs: logsResult.success ? logsResult.data as Array<Record<string, unknown>> : null
+        result_payload: resultResult.success ? (resultResult.data as unknown as Record<string, unknown>) : null,
+        logs: logsResult.success ? (logsResult.data as unknown as Array<Record<string, unknown>>) : null
       };
       await runsStore.updateRun(editingId.value, updateData);
       message.success(t('runs.updated'));
@@ -355,9 +355,9 @@ async function handleSave(): Promise<void> {
         status: formData.status,
         started_at: formData.started_at || null,
         finished_at: formData.finished_at || null,
-        input_payload: inputResult.success ? inputResult.data as Record<string, unknown> : {},
-        result_payload: resultResult.success ? resultResult.data as Record<string, unknown> : null,
-        logs: logsResult.success ? logsResult.data as Array<Record<string, unknown>> : null
+        input_payload: inputResult.success ? (inputResult.data as unknown as Record<string, unknown>) : {},
+        result_payload: resultResult.success ? (resultResult.data as unknown as Record<string, unknown>) : null,
+        logs: logsResult.success ? (logsResult.data as unknown as Array<Record<string, unknown>>) : null
       };
       await runsStore.createRun(createData);
       message.success(t('runs.created'));

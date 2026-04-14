@@ -279,7 +279,7 @@ async function handleSave(): Promise<void> {
         status: formData.status,
         source: formData.source,
         events: eventsResult.success ? eventsResult.data as Array<Record<string, unknown>> : undefined,
-        meta: metaResult.success ? (metaResult.data as Record<string, unknown>) : null
+        meta: metaResult.success ? (metaResult.data as unknown as Record<string, unknown>) : null
       };
       await recordingsStore.updateRecording(editingId.value, updateData);
       message.success(t('recordings.updated'));
@@ -289,7 +289,7 @@ async function handleSave(): Promise<void> {
         status: formData.status,
         source: formData.source,
         events: eventsResult.success ? eventsResult.data as Array<Record<string, unknown>> : [],
-        meta: metaResult.success ? (metaResult.data as Record<string, unknown>) : null
+        meta: metaResult.success ? (metaResult.data as unknown as Record<string, unknown>) : null
       };
       await recordingsStore.createRecording(createData);
       message.success(t('recordings.created'));

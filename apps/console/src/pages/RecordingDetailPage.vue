@@ -28,7 +28,7 @@
     <a-spin :spinning="loading">
       <a-alert
         v-if="error"
-        message="Error"
+        :message="$t('recordingDetail.error')"
         :description="error"
         type="error"
         show-icon
@@ -57,7 +57,7 @@
           <a-descriptions-item :label="$t('common.updatedAt')">
             {{ formatDate(recording.updated_at) }}
           </a-descriptions-item>
-          <a-descriptions-item label="Meta" :span="2">
+          <a-descriptions-item :label="$t('recordingDetail.meta')" :span="2">
             <a-textarea
               :value="formatJsonString(recording.meta)"
               :rows="4"
@@ -70,9 +70,9 @@
       <!-- Events Tabs -->
       <a-card v-if="recording" :bordered="false" style="margin-top: 16px">
         <a-tabs v-model:activeKey="activeTab" @change="handleTabChange">
-          <a-tab-pane key="raw" tab="Raw Events">
+          <a-tab-pane key="raw" :tab="$t('recordingDetail.tabRawEvents')">
             <div style="margin-bottom: 8px; color: #666; font-size: 12px">
-              {{ recording.events.length }} raw events
+              {{ $t('recordingDetail.rawEventsCount', { count: recording.events.length }) }}
             </div>
             <a-textarea
               :value="formatJsonString(recording.events)"
@@ -82,16 +82,16 @@
             />
           </a-tab-pane>
 
-          <a-tab-pane key="timeline" tab="Event Timeline">
+          <a-tab-pane key="timeline" :tab="$t('recordingDetail.tabEventTimeline')">
             <div v-if="timelineEvents.length > 0">
               <div style="margin-bottom: 8px; color: #666; font-size: 12px; display: flex; justify-content: space-between; align-items: center">
-                <span>{{ timelineEvents.length }} events</span>
+                <span>{{ $t('recordingDetail.eventsCount', { count: timelineEvents.length }) }}</span>
                 <a-space>
                   <span style="font-size: 11px">
-                    AST matched:
-                    <a-tag color="green" style="font-size: 11px">{{ astMatchCount.exact }} exact</a-tag>
-                    <a-tag color="blue" style="font-size: 11px">{{ astMatchCount.ancestor }} ancestor</a-tag>
-                    <a-tag color="default" style="font-size: 11px">{{ astMatchCount.none }} unmatched</a-tag>
+                    {{ $t('recordingDetail.astMatched') }}
+                    <a-tag color="green" style="font-size: 11px">{{ $t('recordingDetail.astExact', { count: astMatchCount.exact }) }}</a-tag>
+                    <a-tag color="blue" style="font-size: 11px">{{ $t('recordingDetail.astAncestor', { count: astMatchCount.ancestor }) }}</a-tag>
+                    <a-tag color="default" style="font-size: 11px">{{ $t('recordingDetail.astUnmatched', { count: astMatchCount.none }) }}</a-tag>
                   </span>
                 </a-space>
               </div>
@@ -162,31 +162,31 @@
               </div>
             </div>
             <div v-else style="color: #999; text-align: center; padding: 32px">
-              No events recorded.
+              {{ $t('recordingDetail.noEventsRecorded') }}
             </div>
           </a-tab-pane>
 
-          <a-tab-pane key="initial-state" tab="Initial State">
+          <a-tab-pane key="initial-state" :tab="$t('recordingDetail.tabInitialState')">
             <div v-if="initialState">
               <a-descriptions :column="3" size="small" bordered style="margin-bottom: 16px">
-                <a-descriptions-item label="Page URL" :span="2">
+                <a-descriptions-item :label="$t('recordingDetail.pageUrl')" :span="2">
                   <a :href="initialState.pageUrl" target="_blank" rel="noopener">
                     {{ initialState.pageUrl }}
                   </a>
                 </a-descriptions-item>
-                <a-descriptions-item label="Page Title">
+                <a-descriptions-item :label="$t('recordingDetail.pageTitle')">
                   {{ initialState.pageTitle }}
                 </a-descriptions-item>
-                <a-descriptions-item label="Captured At">
+                <a-descriptions-item :label="$t('recordingDetail.capturedAt')">
                   {{ new Date(initialState.capturedAt).toLocaleString() }}
                 </a-descriptions-item>
-                <a-descriptions-item label="Nodes">
+                <a-descriptions-item :label="$t('recordingDetail.nodes')">
                   <a-tag color="blue">{{ stateTreeNodeCount }}</a-tag>
                 </a-descriptions-item>
-                <a-descriptions-item v-if="initialState.pageHeading" label="Page Heading">
+                <a-descriptions-item v-if="initialState.pageHeading" :label="$t('recordingDetail.pageHeading')">
                   <span style="font-weight: 600">{{ initialState.pageHeading }}</span>
                 </a-descriptions-item>
-                <a-descriptions-item v-if="initialState.primaryActions && initialState.primaryActions.length > 0" label="Primary Actions" :span="2">
+                <a-descriptions-item v-if="initialState.primaryActions && initialState.primaryActions.length > 0" :label="$t('recordingDetail.primaryActions')" :span="2">
                   <a-space>
                     <a-tag v-for="action in initialState.primaryActions" :key="action" color="orange">
                       {{ action }}
@@ -199,12 +199,12 @@
               <div v-if="flatTreeRows.length > 0" style="margin-bottom: 12px">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px">
                   <span style="font-weight: 600; font-size: 14px">
-                    Semantic State Tree
-                    <a-tag color="blue" style="margin-left: 8px">{{ stateTreeNodeCount }} nodes</a-tag>
+                    {{ $t('recordingDetail.semanticStateTree') }}
+                    <a-tag color="blue" style="margin-left: 8px">{{ $t('recordingDetail.nodesCount', { count: stateTreeNodeCount }) }}</a-tag>
                   </span>
                   <a-space>
-                    <a-button size="small" @click="expandAllNodes">Expand All</a-button>
-                    <a-button size="small" @click="collapseAllNodes">Collapse All</a-button>
+                    <a-button size="small" @click="expandAllNodes">{{ $t('recordingDetail.expandAll') }}</a-button>
+                    <a-button size="small" @click="collapseAllNodes">{{ $t('recordingDetail.collapseAll') }}</a-button>
                   </a-space>
                 </div>
                 <div class="state-tree-container">
@@ -233,9 +233,9 @@
                           <a-tag v-if="row.node.blockType" :color="blockTypeColor(row.node.blockType)" style="font-size: 10px">
                             {{ row.node.blockType }}
                           </a-tag>
-                          {{ row.node.label || '(unnamed)' }}
+                          {{ row.node.label || $t('recordingDetail.unnamed') }}
                         </span>
-                        <a-tag v-if="row.node.required" color="red" style="font-size: 10px; margin-left: 4px">required</a-tag>
+                        <a-tag v-if="row.node.required" color="red" style="font-size: 10px; margin-left: 4px">{{ $t('recordingDetail.required') }}</a-tag>
                         <span v-if="row.node.fieldProp" style="color: #999; font-size: 11px; margin-left: 8px">
                           prop={{ row.node.fieldProp }}
                         </span>
@@ -260,7 +260,7 @@
                         <a-tag color="volcano" style="font-size: 11px; cursor: pointer" @click.stop="showNodeJson(row.key)">table</a-tag>
                         <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
                         <span v-if="row.node.itemCount" style="color: #999; margin-left: 8px">
-                          {{ row.node.itemCount }} rows
+                          {{ $t('recordingDetail.rowsCount', { count: row.node.itemCount }) }}
                         </span>
                         <a-tag
                           v-if="row.node.headers && row.node.headers.length > 0 || row.node.rows && row.node.rows.length > 0"
@@ -268,7 +268,7 @@
                           style="font-size: 10px; margin-left: 8px; cursor: pointer"
                           @click="toggleDetail(row.key)"
                         >
-                          {{ detailOpenKeys.has(row.key) ? '收起表格' : '展开表格' }}
+                          {{ detailOpenKeys.has(row.key) ? $t('recordingDetail.collapseTable') : $t('recordingDetail.expandTable') }}
                         </a-tag>
                         <a-tag
                           v-if="nodeHasLocalHtml(row.node)"
@@ -285,7 +285,7 @@
                         <a-tag color="lime" style="font-size: 11px; cursor: pointer" @click.stop="showNodeJson(row.key)">list</a-tag>
                         <span v-if="row.node.label" style="font-weight: 500">{{ row.node.label }}</span>
                         <span v-if="row.node.itemCount" style="color: #999; margin-left: 4px">
-                          {{ row.node.itemCount }} items
+                          {{ $t('recordingDetail.itemsCount', { count: row.node.itemCount }) }}
                         </span>
                         <a-tag
                           v-if="row.node.value"
@@ -293,7 +293,7 @@
                           style="font-size: 10px; margin-left: 8px; cursor: pointer"
                           @click="toggleDetail(row.key)"
                         >
-                          {{ detailOpenKeys.has(row.key) ? '收起列表' : '展开列表' }}
+                          {{ detailOpenKeys.has(row.key) ? $t('recordingDetail.collapseList') : $t('recordingDetail.expandList') }}
                         </a-tag>
                         <a-tag
                           v-if="nodeHasLocalHtml(row.node)"
@@ -422,10 +422,10 @@
                       :style="{ paddingLeft: (row.depth * 20 + 30) + 'px', paddingRight: '12px' }"
                       class="inline-detail-panel"
                     >
-                      <div style="margin-bottom: 4px; color: #999; font-size: 11px">HTML Preview</div>
+                      <div style="margin-bottom: 4px; color: #999; font-size: 11px">{{ $t('recordingDetail.htmlPreview') }}</div>
                       <div class="html-preview-inline" v-html="getNodeLocalHtml(row.node)" />
                       <a-collapse size="small" style="margin-top: 8px">
-                        <a-collapse-panel key="raw" header="Raw HTML">
+                        <a-collapse-panel key="raw" :header="$t('recordingDetail.rawHtml')">
                           <pre style="font-size: 11px; margin: 0; white-space: pre-wrap; word-break: break-all">{{ getNodeLocalHtml(row.node) }}</pre>
                         </a-collapse-panel>
                       </a-collapse>
@@ -496,7 +496,7 @@
               </a-table>
 
               <a-collapse style="margin-top: 12px">
-                <a-collapse-panel key="json" header="Semantic State Tree (JSON)">
+                <a-collapse-panel key="json" :header="$t('recordingDetail.semanticStateTreeJson')">
                   <a-textarea
                     :value="formatJsonString({ stateTree: initialState.stateTree, pageHeading: initialState.pageHeading, primaryActions: initialState.primaryActions })"
                     :rows="16"
@@ -504,9 +504,9 @@
                     style="font-family: monospace; font-size: 11px"
                   />
                 </a-collapse-panel>
-                <a-collapse-panel v-if="leafHtmlCount > 0" key="leaf-html" :header="`Leaf-level Local HTML (${leafHtmlCount} nodes)`">
+                <a-collapse-panel v-if="leafHtmlCount > 0" key="leaf-html" :header="$t('recordingDetail.leafLocalHtmlHeader', { count: leafHtmlCount })">
                   <div style="color: #666; font-size: 12px; margin-bottom: 8px">
-                    Small HTML snippets on complex leaf nodes where semantic extraction alone is insufficient.
+                    {{ $t('recordingDetail.leafLocalHtmlDesc') }}
                   </div>
                   <a-textarea
                     :value="formatJsonString(leafHtmlNodes)"
@@ -515,10 +515,9 @@
                     style="font-family: monospace; font-size: 11px"
                   />
                 </a-collapse-panel>
-                <a-collapse-panel v-if="rawHtmlSnapshotData" key="html" header="Raw HTML Snapshot (debug/fallback)">
+                <a-collapse-panel v-if="rawHtmlSnapshotData" key="html" :header="$t('recordingDetail.rawHtmlSnapshotHeader')">
                   <div style="margin-bottom: 8px; color: #999; font-size: 12px">
-                    Debug/fallback layer — {{ (rawHtmlSnapshotData.length / 1024).toFixed(1) }} KB.
-                    Not used in primary analysis pipeline.
+                    {{ $t('recordingDetail.rawHtmlSnapshotDesc', { size: (rawHtmlSnapshotData.length / 1024).toFixed(1) }) }}
                   </div>
                   <a-textarea
                     :value="rawHtmlSnapshotData"
@@ -527,7 +526,7 @@
                     style="font-family: monospace; font-size: 11px"
                   />
                 </a-collapse-panel>
-                <a-collapse-panel key="full-json" header="Full Initial State JSON">
+                <a-collapse-panel key="full-json" :header="$t('recordingDetail.fullInitialStateJson')">
                   <a-textarea
                     :value="formatJsonString(initialState)"
                     :rows="16"
@@ -539,15 +538,15 @@
             </div>
 
             <div v-else style="color: #999; text-align: center; padding: 32px">
-              No initial state captured for this recording.
+              {{ $t('recordingDetail.noInitialState') }}
               <br />
               <span style="font-size: 12px; margin-top: 8px; display: block">
-                Initial state is captured automatically by the extension (Task Pack 6.5+).
+                {{ $t('recordingDetail.noInitialStateHint') }}
               </span>
             </div>
           </a-tab-pane>
 
-          <a-tab-pane key="normalized" tab="Normalized Recording">
+          <a-tab-pane key="normalized" :tab="$t('recordingDetail.tabNormalized')">
             <a-spin :spinning="normLoading">
               <a-alert
                 v-if="normError"
@@ -565,34 +564,34 @@
                   bordered
                   style="margin-bottom: 16px"
                 >
-                  <a-descriptions-item label="Raw events">
+                  <a-descriptions-item :label="$t('recordingDetail.rawEventsLabel')">
                     {{ normalized.summary.event_count_raw }}
                   </a-descriptions-item>
-                  <a-descriptions-item label="Normalized steps">
+                  <a-descriptions-item :label="$t('recordingDetail.normalizedSteps')">
                     {{ normalized.summary.event_count_normalized }}
                   </a-descriptions-item>
-                  <a-descriptions-item label="Segments">
+                  <a-descriptions-item :label="$t('recordingDetail.segments')">
                     {{ normalized.summary.segment_count }}
                   </a-descriptions-item>
-                  <a-descriptions-item label="Pages">
+                  <a-descriptions-item :label="$t('recordingDetail.pages')">
                     {{ normalized.summary.page_count }}
                   </a-descriptions-item>
-                  <a-descriptions-item label="iFrame">
+                  <a-descriptions-item :label="$t('recordingDetail.iframe')">
                     <a-tag :color="normalized.summary.contains_iframe ? 'blue' : 'default'">
-                      {{ normalized.summary.contains_iframe ? 'Yes' : 'No' }}
+                      {{ normalized.summary.contains_iframe ? $t('common.yes') : $t('common.no') }}
                     </a-tag>
                   </a-descriptions-item>
-                  <a-descriptions-item label="Rich text">
+                  <a-descriptions-item :label="$t('recordingDetail.richText')">
                     <a-tag :color="normalized.summary.contains_richtext ? 'purple' : 'default'">
-                      {{ normalized.summary.contains_richtext ? 'Yes' : 'No' }}
+                      {{ normalized.summary.contains_richtext ? $t('common.yes') : $t('common.no') }}
                     </a-tag>
                   </a-descriptions-item>
                 </a-descriptions>
 
                 <!-- Key actions -->
-                <a-card size="small" title="Key Actions" style="margin-bottom: 16px">
+                <a-card size="small" :title="$t('recordingDetail.keyActions')" style="margin-bottom: 16px">
                   <div v-if="normalized.key_actions.length === 0" style="color: #999">
-                    No key actions detected.
+                    {{ $t('recordingDetail.noKeyActions') }}
                   </div>
                   <a-list
                     v-else
@@ -633,7 +632,7 @@
                     :title="`[${seg.type}] ${seg.title}`"
                     :headStyle="segmentHeaderStyle(seg.type)"
                   >
-                    <div v-if="seg.steps.length === 0" style="color: #999">Empty segment.</div>
+                    <div v-if="seg.steps.length === 0" style="color: #999">{{ $t('recordingDetail.emptySegment') }}</div>
                     <a-table
                       v-else
                       :columns="stepColumns"
@@ -667,7 +666,7 @@
 
                 <!-- Raw JSON toggle -->
                 <a-collapse style="margin-top: 12px">
-                  <a-collapse-panel key="json" header="Normalized JSON (raw)">
+                  <a-collapse-panel key="json" :header="$t('recordingDetail.normalizedJsonRaw')">
                     <a-textarea
                       :value="formatJsonString(normalized)"
                       :rows="20"
@@ -679,12 +678,12 @@
               </div>
 
               <div v-else-if="!normLoading && !normError" style="color: #999; text-align: center; padding: 24px">
-                Click the tab to load normalized recording.
+                {{ $t('recordingDetail.clickToLoadNormalized') }}
               </div>
             </a-spin>
           </a-tab-pane>
 
-          <a-tab-pane key="full-ast" tab="Full AST">
+          <a-tab-pane key="full-ast" :tab="$t('recordingDetail.tabFullAst')">
             <a-spin :spinning="astLoading">
               <a-alert
                 v-if="astError"
@@ -697,14 +696,14 @@
               <div v-if="astResult">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px">
                   <span style="font-weight: 600; font-size: 14px">
-                    Full AST
-                    <a-tag color="blue" style="margin-left: 8px">{{ astResult.node_count }} nodes</a-tag>
+                    {{ $t('recordingDetail.fullAstTitle') }}
+                    <a-tag color="blue" style="margin-left: 8px">{{ $t('recordingDetail.nodesCount', { count: astResult.node_count }) }}</a-tag>
                   </span>
                   <a-space>
-                    <a-button size="small" @click="expandAstToDepth(2)">2 Levels</a-button>
-                    <a-button size="small" @click="expandAstToDepth(4)">4 Levels</a-button>
-                    <a-button size="small" @click="astExpandedKeys = collectKeysToDepth(astTreeData, 99)">Expand All</a-button>
-                    <a-button size="small" @click="astExpandedKeys = []">Collapse All</a-button>
+                    <a-button size="small" @click="expandAstToDepth(2)">{{ $t('recordingDetail.levels2') }}</a-button>
+                    <a-button size="small" @click="expandAstToDepth(4)">{{ $t('recordingDetail.levels4') }}</a-button>
+                    <a-button size="small" @click="astExpandedKeys = collectKeysToDepth(astTreeData, 99)">{{ $t('recordingDetail.expandAll') }}</a-button>
+                    <a-button size="small" @click="astExpandedKeys = []">{{ $t('recordingDetail.collapseAll') }}</a-button>
                   </a-space>
                 </div>
                 <a-tree
@@ -728,8 +727,8 @@
                       <template v-for="attr in astKeyAttrs(dataRef.ast.attrs)" :key="attr.name">
                         <span class="ast-attr">{{ attr.name }}="{{ truncate(attr.value, 30) }}"</span>
                       </template>
-                      <a-tag v-if="dataRef.ast.visible === false" style="font-size: 10px; margin-left: 4px">hidden</a-tag>
-                      <a-tag v-if="dataRef.ast.tag === 'frame-body'" color="cyan" style="font-size: 10px; margin-left: 4px">iframe content</a-tag>
+                      <a-tag v-if="dataRef.ast.visible === false" style="font-size: 10px; margin-left: 4px">{{ $t('recordingDetail.hidden') }}</a-tag>
+                      <a-tag v-if="dataRef.ast.tag === 'frame-body'" color="cyan" style="font-size: 10px; margin-left: 4px">{{ $t('recordingDetail.iframeContent') }}</a-tag>
                     </span>
                   </template>
                 </a-tree>
@@ -737,24 +736,24 @@
 
               <div v-else-if="!astLoading && !astError" style="color: #999; text-align: center; padding: 32px">
                 <template v-if="rawHtmlSnapshotData">
-                  HTML snapshot available ({{ (rawHtmlSnapshotData.length / 1024).toFixed(1) }} KB).
+                  {{ $t('recordingDetail.htmlSnapshotAvailable', { size: (rawHtmlSnapshotData.length / 1024).toFixed(1) }) }}
                   <br />
                   <span style="font-size: 12px; margin-top: 4px; display: block">
-                    Server-side parsing via lxml. Click the tab to load.
+                    {{ $t('recordingDetail.serverSideParsingHint') }}
                   </span>
                 </template>
                 <template v-else>
-                  No HTML snapshot available for this recording.
+                  {{ $t('recordingDetail.noHtmlSnapshot') }}
                   <br />
                   <span style="font-size: 12px; margin-top: 8px; display: block">
-                    HTML snapshot is captured by the extension (rawHtmlSnapshot).
+                    {{ $t('recordingDetail.htmlSnapshotHint') }}
                   </span>
                 </template>
               </div>
             </a-spin>
           </a-tab-pane>
 
-          <a-tab-pane key="simplified-ast" tab="Simplified AST">
+          <a-tab-pane key="simplified-ast" :tab="$t('recordingDetail.tabSimplifiedAst')">
             <a-spin :spinning="simpLoading">
               <a-alert
                 v-if="simpError"
@@ -767,20 +766,20 @@
               <div v-if="simpResult">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px">
                   <span style="font-weight: 600; font-size: 14px">
-                    Simplified AST
-                    <a-tag color="green" style="margin-left: 8px">{{ simpResult.stats.node_count }} nodes</a-tag>
+                    {{ $t('recordingDetail.simplifiedAstTitle') }}
+                    <a-tag color="green" style="margin-left: 8px">{{ $t('recordingDetail.nodesCount', { count: simpResult.stats.node_count }) }}</a-tag>
                     <a-tag color="orange" style="margin-left: 4px">
-                      -{{ simpResult.stats.class_tokens_removed }} class tokens
+                      {{ $t('recordingDetail.classTokensRemoved', { count: simpResult.stats.class_tokens_removed }) }}
                     </a-tag>
                     <a-tag color="volcano" style="margin-left: 4px">
-                      -{{ simpResult.stats.attrs_removed }} attrs
+                      {{ $t('recordingDetail.attrsRemoved', { count: simpResult.stats.attrs_removed }) }}
                     </a-tag>
                   </span>
                   <a-space>
-                    <a-button size="small" @click="expandSimpToDepth(2)">2 Levels</a-button>
-                    <a-button size="small" @click="expandSimpToDepth(4)">4 Levels</a-button>
-                    <a-button size="small" @click="simpExpandedKeys = collectKeysToDepth(simpTreeData, 99)">Expand All</a-button>
-                    <a-button size="small" @click="simpExpandedKeys = []">Collapse All</a-button>
+                    <a-button size="small" @click="expandSimpToDepth(2)">{{ $t('recordingDetail.levels2') }}</a-button>
+                    <a-button size="small" @click="expandSimpToDepth(4)">{{ $t('recordingDetail.levels4') }}</a-button>
+                    <a-button size="small" @click="simpExpandedKeys = collectKeysToDepth(simpTreeData, 99)">{{ $t('recordingDetail.expandAll') }}</a-button>
+                    <a-button size="small" @click="simpExpandedKeys = []">{{ $t('recordingDetail.collapseAll') }}</a-button>
                   </a-space>
                 </div>
                 <a-tree
@@ -804,8 +803,8 @@
                       <template v-for="attr in astKeyAttrs(dataRef.ast.attrs)" :key="attr.name">
                         <span class="ast-attr">{{ attr.name }}="{{ truncate(attr.value, 30) }}"</span>
                       </template>
-                      <a-tag v-if="dataRef.ast.visible === false" style="font-size: 10px; margin-left: 4px">hidden</a-tag>
-                      <a-tag v-if="dataRef.ast.tag === 'frame-body'" color="cyan" style="font-size: 10px; margin-left: 4px">iframe content</a-tag>
+                      <a-tag v-if="dataRef.ast.visible === false" style="font-size: 10px; margin-left: 4px">{{ $t('recordingDetail.hidden') }}</a-tag>
+                      <a-tag v-if="dataRef.ast.tag === 'frame-body'" color="cyan" style="font-size: 10px; margin-left: 4px">{{ $t('recordingDetail.iframeContent') }}</a-tag>
                     </span>
                   </template>
                 </a-tree>
@@ -813,23 +812,23 @@
 
               <div v-else-if="!simpLoading && !simpError" style="color: #999; text-align: center; padding: 32px">
                 <template v-if="rawHtmlSnapshotData">
-                  Click the tab to produce Simplified AST (structure-preserving projection).
+                  {{ $t('recordingDetail.clickToLoadSimplified') }}
                 </template>
                 <template v-else>
-                  No HTML snapshot available for this recording.
+                  {{ $t('recordingDetail.noHtmlSnapshot') }}
                 </template>
               </div>
             </a-spin>
           </a-tab-pane>
 
-          <a-tab-pane key="dom-changes" tab="DOM Changes">
+          <a-tab-pane key="dom-changes" :tab="$t('recordingDetail.tabDomChanges')">
             <div v-if="domMutations.length > 0">
               <div style="margin-bottom: 8px; color: #666; font-size: 12px; display: flex; justify-content: space-between; align-items: center">
-                <span>{{ domMutations.length }} DOM mutations</span>
+                <span>{{ $t('recordingDetail.domMutationsCount', { count: domMutations.length }) }}</span>
                 <a-space>
-                  <a-tag color="green" style="font-size: 11px">{{ mutationTypeCounts.childList }} childList</a-tag>
-                  <a-tag color="blue" style="font-size: 11px">{{ mutationTypeCounts.attributes }} attributes</a-tag>
-                  <a-tag color="orange" style="font-size: 11px">{{ mutationTypeCounts.characterData }} text</a-tag>
+                  <a-tag color="green" style="font-size: 11px">{{ mutationTypeCounts.childList }} {{ $t('recordingDetail.childList') }}</a-tag>
+                  <a-tag color="blue" style="font-size: 11px">{{ mutationTypeCounts.attributes }} {{ $t('recordingDetail.attributes') }}</a-tag>
+                  <a-tag color="orange" style="font-size: 11px">{{ mutationTypeCounts.characterData }} {{ $t('recordingDetail.textMutation') }}</a-tag>
                   <span style="font-size: 11px; color: #999">
                     AST:
                     <a-tag color="green" style="font-size: 10px">{{ mutationAstCounts.exact }}</a-tag>
@@ -867,14 +866,14 @@
                     <!-- childList -->
                     <template v-if="mut.detail.type === 'childList'">
                       <span v-if="mut.detail.addedNodes.length > 0" style="color: #52c41a">
-                        +{{ mut.detail.addedNodes.length }} added
+                        {{ $t('recordingDetail.addedCount', { count: mut.detail.addedNodes.length }) }}
                         <span v-for="(n, ni) in mut.detail.addedNodes.slice(0, 3)" :key="'a'+ni" style="margin-left: 4px; color: #666">
                           &lt;{{ n.tag }}&gt;{{ n.text ? ' "' + truncate(n.text, 30) + '"' : '' }}
                         </span>
                         <span v-if="mut.detail.addedNodes.length > 3" style="color: #999"> ...</span>
                       </span>
                       <span v-if="mut.detail.removedNodes.length > 0" :style="{ marginLeft: mut.detail.addedNodes.length > 0 ? '12px' : '0', color: '#ff4d4f' }">
-                        -{{ mut.detail.removedNodes.length }} removed
+                        {{ $t('recordingDetail.removedCount', { count: mut.detail.removedNodes.length }) }}
                         <span v-for="(n, ni) in mut.detail.removedNodes.slice(0, 3)" :key="'r'+ni" style="margin-left: 4px; color: #666">
                           &lt;{{ n.tag }}&gt;{{ n.text ? ' "' + truncate(n.text, 30) + '"' : '' }}
                         </span>
@@ -891,7 +890,7 @@
                       <span v-if="mut.detail.newValue !== null" style="color: #52c41a; margin-left: 4px">
                         {{ truncate(mut.detail.newValue, 40) }}
                       </span>
-                      <span v-else style="color: #999; margin-left: 4px">(removed)</span>
+                      <span v-else style="color: #999; margin-left: 4px">{{ $t('recordingDetail.attrRemoved') }}</span>
                     </template>
                     <!-- characterData -->
                     <template v-else-if="mut.detail.type === 'characterData'">
@@ -934,7 +933,7 @@
 
               <!-- Raw JSON -->
               <a-collapse style="margin-top: 12px">
-                <a-collapse-panel key="json" header="DOM Mutations JSON (raw)">
+                <a-collapse-panel key="json" :header="$t('recordingDetail.domMutationsJsonRaw')">
                   <a-textarea
                     :value="formatJsonString(domMutations)"
                     :rows="20"
@@ -945,19 +944,19 @@
               </a-collapse>
             </div>
             <div v-else style="color: #999; text-align: center; padding: 32px">
-              No DOM mutations recorded.
+              {{ $t('recordingDetail.noDomMutations') }}
               <br />
               <span style="font-size: 12px; margin-top: 8px; display: block">
-                DOM mutation tracking captures page changes during recording.
+                {{ $t('recordingDetail.noDomMutationsHint') }}
               </span>
             </div>
           </a-tab-pane>
 
-          <a-tab-pane key="steps" tab="Operation Steps">
+          <a-tab-pane key="steps" :tab="$t('recordingDetail.tabOperationSteps')">
             <a-spin :spinning="stepsLoading">
               <a-alert
                 v-if="stepsError"
-                message="Error"
+                :message="$t('recordingDetail.error')"
                 :description="stepsError"
                 type="error"
                 show-icon
@@ -967,12 +966,12 @@
               <div v-if="stepsResult">
                 <!-- Summary banner -->
                 <div style="margin-bottom: 12px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center">
-                  <a-tag color="blue">{{ stepsResult.steps.length }} steps</a-tag>
-                  <a-tag color="green">{{ stepsResult.event_count }} events</a-tag>
-                  <a-tag color="orange">{{ stepsResult.mutation_count }} mutations</a-tag>
+                  <a-tag color="blue">{{ $t('recordingDetail.stepsCount', { count: stepsResult.steps.length }) }}</a-tag>
+                  <a-tag color="green">{{ $t('recordingDetail.eventsCountTag', { count: stepsResult.event_count }) }}</a-tag>
+                  <a-tag color="orange">{{ $t('recordingDetail.mutationsCount', { count: stepsResult.mutation_count }) }}</a-tag>
                   <span style="font-size: 11px; color: #999">
-                    Correlated: {{ stepsResult.mutations_correlated }} |
-                    Uncorrelated: {{ stepsResult.mutations_uncorrelated }}
+                    {{ $t('recordingDetail.correlated', { count: stepsResult.mutations_correlated }) }} |
+                    {{ $t('recordingDetail.uncorrelated', { count: stepsResult.mutations_uncorrelated }) }}
                   </span>
                 </div>
 
@@ -994,7 +993,7 @@
                       <a-tag
                         :color="step.has_changes ? 'green' : 'default'"
                         style="font-size: 10px; margin-left: auto"
-                      >{{ step.has_changes ? `${step.mutations.total} change${step.mutations.total !== 1 ? 's' : ''}` : 'no changes' }}</a-tag>
+                      >{{ step.has_changes ? $t('recordingDetail.changesCount', { count: step.mutations.total }, step.mutations.total) : $t('recordingDetail.noChanges') }}</a-tag>
                     </div>
 
                     <!-- Event target summary -->
@@ -1016,9 +1015,9 @@
                     <!-- Mutation summary -->
                     <div v-if="step.has_changes" class="event-timeline-context" style="margin-top: 4px">
                       <a-space size="small" style="margin-bottom: 4px">
-                        <a-tag v-if="step.mutations.by_type.childList" color="green" style="font-size: 10px">{{ step.mutations.by_type.childList }} childList</a-tag>
-                        <a-tag v-if="step.mutations.by_type.attributes" color="blue" style="font-size: 10px">{{ step.mutations.by_type.attributes }} attributes</a-tag>
-                        <a-tag v-if="step.mutations.by_type.characterData" color="orange" style="font-size: 10px">{{ step.mutations.by_type.characterData }} text</a-tag>
+                        <a-tag v-if="step.mutations.by_type.childList" color="green" style="font-size: 10px">{{ step.mutations.by_type.childList }} {{ $t('recordingDetail.childList') }}</a-tag>
+                        <a-tag v-if="step.mutations.by_type.attributes" color="blue" style="font-size: 10px">{{ step.mutations.by_type.attributes }} {{ $t('recordingDetail.attributes') }}</a-tag>
+                        <a-tag v-if="step.mutations.by_type.characterData" color="orange" style="font-size: 10px">{{ step.mutations.by_type.characterData }} {{ $t('recordingDetail.textMutation') }}</a-tag>
                         <span v-if="step.change_area" style="font-size: 11px; color: #8c8c8c; margin-left: 4px">
                           area: {{ step.change_area }}
                         </span>
@@ -1031,7 +1030,7 @@
                         <span style="color: #bbb; margin-right: 4px">&#x25B8;</span>{{ hl }}
                       </div>
                       <div v-if="step.mutations.highlights.length > 3" style="font-size: 10px; color: #bbb; padding-left: 4px">
-                        ... +{{ step.mutations.highlights.length - 3 }} more
+                        {{ $t('recordingDetail.moreHighlights', { count: step.mutations.highlights.length - 3 }) }}
                       </div>
                     </div>
 
@@ -1042,14 +1041,14 @@
 
                     <!-- Duration -->
                     <div v-if="step.has_changes && step.end_timestamp > step.timestamp" style="padding-left: 30px; font-size: 10px; color: #bbb; margin-top: 2px">
-                      duration: {{ step.end_timestamp - step.timestamp }}ms
+                      {{ $t('recordingDetail.duration', { ms: step.end_timestamp - step.timestamp }) }}
                     </div>
                   </div>
                 </div>
 
                 <!-- Raw JSON -->
                 <a-collapse style="margin-top: 12px">
-                  <a-collapse-panel key="json" header="Operation Steps JSON (raw)">
+                  <a-collapse-panel key="json" :header="$t('recordingDetail.operationStepsJsonRaw')">
                     <a-textarea
                       :value="formatJsonString(stepsResult)"
                       :rows="20"
@@ -1061,7 +1060,7 @@
               </div>
 
               <div v-else-if="!stepsLoading && !stepsError" style="color: #999; text-align: center; padding: 32px">
-                Click this tab to load operation steps.
+                {{ $t('recordingDetail.clickToLoadSteps') }}
               </div>
             </a-spin>
           </a-tab-pane>
@@ -1229,21 +1228,21 @@ const recording = computed(() => recordingsStore.currentRecording);
 const loading = computed(() => recordingsStore.loading);
 const error = computed(() => recordingsStore.error);
 
-const stepColumns = [
-  { title: 'Action', key: 'action_type', width: 160 },
-  { title: 'Field / Button', key: 'field_label' },
-  { title: 'Value', key: 'value' },
-  { title: 'Flags', key: 'flags', width: 100 },
-];
+const stepColumns = computed(() => [
+  { title: t('recordingDetail.colAction'), key: 'action_type', width: 160 },
+  { title: t('recordingDetail.colFieldButton'), key: 'field_label' },
+  { title: t('recordingDetail.colValue'), key: 'value' },
+  { title: t('recordingDetail.colFlags'), key: 'flags', width: 100 },
+]);
 
-const initialStateColumns = [
-  { title: 'Label / Path', dataIndex: 'fieldLabel', key: 'fieldLabel', width: 240 },
-  { title: 'Prop', dataIndex: 'fieldProp', key: 'fieldProp', width: 120 },
-  { title: 'Type', key: 'fieldType', width: 100 },
-  { title: 'Count', key: 'itemCount', width: 80 },
-  { title: 'Req', key: 'required', width: 60 },
-  { title: 'Default / Current Value', key: 'defaultValueText' },
-];
+const initialStateColumns = computed(() => [
+  { title: t('recordingDetail.colLabelPath'), dataIndex: 'fieldLabel', key: 'fieldLabel', width: 240 },
+  { title: t('recordingDetail.colProp'), dataIndex: 'fieldProp', key: 'fieldProp', width: 120 },
+  { title: t('recordingDetail.colType'), key: 'fieldType', width: 100 },
+  { title: t('recordingDetail.colCount'), key: 'itemCount', width: 80 },
+  { title: t('recordingDetail.colReq'), key: 'required', width: 60 },
+  { title: t('recordingDetail.colDefaultValue'), key: 'defaultValueText' },
+]);
 
 const initialState = computed<PageInitialState | null>(() => {
   const meta = recording.value?.meta as Record<string, unknown> | null;
@@ -1706,7 +1705,7 @@ async function loadNormalized(): Promise<void> {
   try {
     normalized.value = await getNormalizedRecording(id);
   } catch (e) {
-    normError.value = e instanceof Error ? e.message : 'Failed to load normalized recording';
+    normError.value = e instanceof Error ? e.message : t('recordingDetail.loadNormalizedFailed');
   } finally {
     normLoading.value = false;
   }
@@ -1794,7 +1793,7 @@ async function loadFullAST(): Promise<void> {
   if (astResult.value || astLoading.value) return;
   const html = rawHtmlSnapshotData.value;
   if (!html) {
-    astError.value = 'No HTML snapshot available for this recording.';
+    astError.value = t('recordingDetail.noHtmlSnapshotError');
     return;
   }
   astLoading.value = true;
@@ -1804,7 +1803,7 @@ async function loadFullAST(): Promise<void> {
     // Auto-expand first 2 levels
     expandAstToDepth(2);
   } catch (e) {
-    astError.value = e instanceof Error ? e.message : 'Failed to parse HTML to AST';
+    astError.value = e instanceof Error ? e.message : t('recordingDetail.parseAstFailed');
   } finally {
     astLoading.value = false;
   }
@@ -1823,7 +1822,7 @@ async function loadSimplifiedAST(): Promise<void> {
   if (simpResult.value || simpLoading.value) return;
   const html = rawHtmlSnapshotData.value;
   if (!html) {
-    simpError.value = 'No HTML snapshot available for this recording.';
+    simpError.value = t('recordingDetail.noHtmlSnapshotError');
     return;
   }
   simpLoading.value = true;
@@ -1832,7 +1831,7 @@ async function loadSimplifiedAST(): Promise<void> {
     simpResult.value = await simplifyHtmlToAST(html);
     expandSimpToDepth(2);
   } catch (e) {
-    simpError.value = e instanceof Error ? e.message : 'Failed to simplify AST';
+    simpError.value = e instanceof Error ? e.message : t('recordingDetail.simplifyAstFailed');
   } finally {
     simpLoading.value = false;
   }
@@ -1846,7 +1845,7 @@ async function loadSteps(): Promise<void> {
   try {
     stepsResult.value = await getRecordingSteps(id);
   } catch (e) {
-    stepsError.value = e instanceof Error ? e.message : 'Failed to load operation steps';
+    stepsError.value = e instanceof Error ? e.message : t('recordingDetail.loadStepsFailed');
   } finally {
     stepsLoading.value = false;
   }
