@@ -818,6 +818,10 @@ export interface CandidateElement {
     class_hints?: string[];
     role?: string;
     aria?: Record<string, string>;
+    /** Matched action word from visible text / aria-label / title */
+    text_intent?: string;
+    /** Matched icon keywords from class tokens / attributes */
+    icon_intent?: string[];
     mutation_linkage?: boolean;
   };
   /** Exploration priority rank (lower = try first) */

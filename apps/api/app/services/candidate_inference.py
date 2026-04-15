@@ -1,15 +1,20 @@
 """Interactive candidate element inference — rule-based MVP.
 
 Walks a Full AST and scores each element node by structural, attribute,
-and mutation-linkage signals to identify likely interactive elements.
-Produces CandidateElement and InteractionHint lists for guided exploration.
+semantic, and mutation-linkage signals to identify likely interactive
+elements. Produces CandidateElement and InteractionHint lists for guided
+exploration.
 
 Phase 2 MVP: rule-driven only, no LLM, no execution.
 
-Signal sources:
+Signal sources (9 layers):
   - AST structural: tag, role, aria-*, type, tabindex, contenteditable
   - AST class hints: btn, button, submit, tab, dropdown, menu, item, etc.
   - AST state: disabled, readonly, visible
+  - Text intent: visible text / aria-label / title containing action words
+    (提交, 保存, 搜索, submit, save, search, etc.)
+  - Icon intent: class tokens / aria-label / alt containing icon keywords
+    (search, add, edit, delete, close, download, etc.)
   - Mutation linkage: whether the element (or nearby ancestors) appeared
     as mutation targets during recording
 """
@@ -102,6 +107,171 @@ _ARIA_INTERACTIVE_ATTRS = frozenset({
     "aria-selected",
 })
 
+# ---------------------------------------------------------------------------
+# Text intent — action words that imply the element is an operation entry
+# ---------------------------------------------------------------------------
+
+# Chinese action keywords → inferred action
+_TEXT_INTENT_ZH: dict[str, str] = {
+    "提交": "click",
+    "保存": "click",
+    "确定": "click",
+    "确认": "click",
+    "下一步": "click",
+    "上一步": "click",
+    "查询": "click",
+    "搜索": "click",
+    "重置": "click",
+    "导出": "click",
+    "导入": "click",
+    "新建": "click",
+    "新增": "click",
+    "添加": "click",
+    "删除": "click",
+    "移除": "click",
+    "编辑": "click",
+    "修改": "click",
+    "返回": "click",
+    "取消": "click",
+    "关闭": "click",
+    "更多": "click",
+    "展开": "toggle",
+    "收起": "toggle",
+    "折叠": "toggle",
+    "刷新": "click",
+    "登录": "click",
+    "注册": "click",
+    "发送": "click",
+    "上传": "click",
+    "下载": "click",
+    "复制": "click",
+    "粘贴": "click",
+    "筛选": "click",
+    "过滤": "click",
+    "排序": "click",
+    "审批": "click",
+    "同意": "click",
+    "拒绝": "click",
+    "撤回": "click",
+}
+
+# English action keywords → inferred action
+_TEXT_INTENT_EN: dict[str, str] = {
+    "submit": "click",
+    "save": "click",
+    "confirm": "click",
+    "ok": "click",
+    "next": "click",
+    "previous": "click",
+    "back": "click",
+    "search": "click",
+    "query": "click",
+    "reset": "click",
+    "export": "click",
+    "import": "click",
+    "create": "click",
+    "add": "click",
+    "new": "click",
+    "delete": "click",
+    "remove": "click",
+    "edit": "click",
+    "modify": "click",
+    "update": "click",
+    "cancel": "click",
+    "close": "click",
+    "more": "click",
+    "expand": "toggle",
+    "collapse": "toggle",
+    "toggle": "toggle",
+    "refresh": "click",
+    "login": "click",
+    "sign in": "click",
+    "sign up": "click",
+    "register": "click",
+    "send": "click",
+    "upload": "click",
+    "download": "click",
+    "copy": "click",
+    "filter": "click",
+    "sort": "click",
+    "approve": "click",
+    "reject": "click",
+    "apply": "click",
+}
+
+# Attributes to check for text intent (in priority order)
+_TEXT_INTENT_ATTRS = ("aria-label", "title", "alt", "name", "data-tooltip", "placeholder")
+
+# ---------------------------------------------------------------------------
+# Icon intent — class/attribute patterns that indicate icon-based actions
+# ---------------------------------------------------------------------------
+
+# Icon keywords found in class tokens, aria-label, alt, or filenames
+_ICON_INTENT_KEYWORDS: dict[str, str] = {
+    "search": "click",
+    "add": "click",
+    "plus": "click",
+    "create": "click",
+    "edit": "click",
+    "pencil": "click",
+    "pen": "click",
+    "delete": "click",
+    "trash": "click",
+    "remove": "click",
+    "close": "click",
+    "times": "click",
+    "download": "click",
+    "upload": "click",
+    "more": "click",
+    "ellipsis": "click",
+    "dots": "click",
+    "next": "click",
+    "prev": "click",
+    "arrow": "click",
+    "chevron": "click",
+    "caret": "click",
+    "back": "click",
+    "forward": "click",
+    "refresh": "click",
+    "reload": "click",
+    "sync": "click",
+    "copy": "click",
+    "clipboard": "click",
+    "share": "click",
+    "link": "click",
+    "expand": "toggle",
+    "collapse": "toggle",
+    "eye": "toggle",
+    "visibility": "toggle",
+    "star": "toggle",
+    "favorite": "toggle",
+    "heart": "toggle",
+    "like": "toggle",
+    "bookmark": "toggle",
+    "pin": "toggle",
+    "lock": "toggle",
+    "unlock": "toggle",
+    "setting": "click",
+    "gear": "click",
+    "cog": "click",
+    "config": "click",
+    "filter": "click",
+    "sort": "click",
+    "menu": "click",
+    "hamburger": "click",
+    "drag": "click",
+    "grip": "click",
+    "handle": "click",
+}
+
+# Regex to match icon keywords in class tokens (word-boundary aware)
+_ICON_KEYWORD_RE = re.compile(
+    r"(?:^|[-_])("
+    + "|".join(re.escape(k) for k in _ICON_INTENT_KEYWORDS)
+    + r")(?:$|[-_])",
+    re.I,
+)
+
 
 # ---------------------------------------------------------------------------
 # Scoring weights
@@ -113,6 +283,8 @@ _SCORE_CLASS_HINT = 0.10
 _SCORE_ARIA = 0.10
 _SCORE_TABINDEX = 0.05
 _SCORE_CONTENTEDITABLE = 0.15
+_SCORE_TEXT_INTENT = 0.30
+_SCORE_ICON_INTENT = 0.15
 _SCORE_MUTATION_LINKAGE = 0.20
 
 _PENALTY_DISABLED = -0.30
@@ -137,6 +309,8 @@ class _CandidateRaw:
     evidence_class_hints: list[str] = field(default_factory=list)
     evidence_role: str | None = None
     evidence_aria: dict[str, str] = field(default_factory=dict)
+    evidence_text_intent: str | None = None
+    evidence_icon_intent: list[str] = field(default_factory=list)
     evidence_mutation_linkage: bool = False
 
 
@@ -286,7 +460,23 @@ def _score_node(
             score += _SCORE_CONTENTEDITABLE
             actions.add("input")
 
-    # --- Signal 7: Mutation linkage ---
+    # --- Signal 7: Text intent ---
+    text_intent = _extract_text_intent(node)
+    if text_intent:
+        word, action = text_intent
+        score += _SCORE_TEXT_INTENT
+        actions.add(action)
+        candidate.evidence_text_intent = word
+
+    # --- Signal 8: Icon intent ---
+    icon_hits = _extract_icon_intent(node)
+    if icon_hits:
+        score += _SCORE_ICON_INTENT * min(len(icon_hits), 2)
+        for _kw, icon_action in icon_hits:
+            actions.add(icon_action)
+        candidate.evidence_icon_intent = [kw for kw, _ in icon_hits]
+
+    # --- Signal 9: Mutation linkage ---
     node_key = _node_key(node, path)
     if node_key in mutation_targets:
         score += _SCORE_MUTATION_LINKAGE
@@ -305,6 +495,126 @@ def _score_node(
     candidate.score = max(0.0, min(1.0, score))
     candidate.actions = actions
     return candidate
+
+
+# ---------------------------------------------------------------------------
+# Text intent extraction
+# ---------------------------------------------------------------------------
+
+def _extract_text_intent(node: ASTNode) -> tuple[str, str] | None:
+    """Extract action-word intent from element text and attributes.
+
+    Checks (in order): aria-label, title, alt, name, data-tooltip,
+    placeholder, then visible child text. Returns (matched_word, action)
+    or None.
+    """
+    attrs = node.attrs
+
+    # 1. Check label-like attributes first (most intentional)
+    for attr_name in _TEXT_INTENT_ATTRS:
+        val = attrs.get(attr_name, "").strip()
+        if val:
+            hit = _match_text_intent(val)
+            if hit:
+                return hit
+
+    # 2. Check shallow visible text (direct text children only, not deep)
+    text = _get_shallow_text(node)
+    if text:
+        hit = _match_text_intent(text)
+        if hit:
+            return hit
+
+    return None
+
+
+def _match_text_intent(text: str) -> tuple[str, str] | None:
+    """Match text against known action words. Returns (word, action) or None."""
+    normalized = text.strip().lower()
+    if not normalized or len(normalized) > 50:
+        return None
+
+    # Chinese keywords — exact substring match
+    for word, action in _TEXT_INTENT_ZH.items():
+        if word in text:
+            return word, action
+
+    # English keywords — word-boundary match
+    for word, action in _TEXT_INTENT_EN.items():
+        if re.search(r"(?:^|\s|[-_])" + re.escape(word) + r"(?:$|\s|[-_])", normalized):
+            return word, action
+
+    return None
+
+
+def _get_shallow_text(node: ASTNode, max_depth: int = 2) -> str:
+    """Extract visible text from a node and its immediate children.
+
+    Only goes max_depth levels deep to avoid pulling in huge subtree text.
+    Limits total length to avoid noise from large containers.
+    """
+    parts: list[str] = []
+    _collect_text(node, parts, 0, max_depth)
+    result = " ".join(parts).strip()
+    return result[:200] if result else ""
+
+
+def _collect_text(
+    node: ASTNode, parts: list[str], depth: int, max_depth: int,
+) -> None:
+    """Recursively collect text nodes up to max_depth."""
+    if depth > max_depth:
+        return
+    for child in node.children:
+        if child.node_type == "text" and child.text:
+            stripped = child.text.strip()
+            if stripped:
+                parts.append(stripped)
+        elif child.node_type == "element" and child.tag not in ("script", "style", "svg"):
+            _collect_text(child, parts, depth + 1, max_depth)
+
+
+# ---------------------------------------------------------------------------
+# Icon intent extraction
+# ---------------------------------------------------------------------------
+
+def _extract_icon_intent(node: ASTNode) -> list[tuple[str, str]]:
+    """Extract icon-based intent from class tokens and attributes.
+
+    Returns list of (keyword, action) tuples.
+    """
+    hits: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    attrs = node.attrs
+
+    # 1. Check class tokens for icon keywords
+    class_str = attrs.get("class", "")
+    if class_str:
+        for m in _ICON_KEYWORD_RE.finditer(class_str):
+            kw = m.group(1).lower()
+            if kw not in seen and kw in _ICON_INTENT_KEYWORDS:
+                seen.add(kw)
+                hits.append((kw, _ICON_INTENT_KEYWORDS[kw]))
+
+    # 2. Check icon-related attributes
+    for attr_name in ("aria-label", "title", "alt", "data-tooltip"):
+        val = attrs.get(attr_name, "").strip().lower()
+        if val:
+            for kw, action in _ICON_INTENT_KEYWORDS.items():
+                if kw in val and kw not in seen:
+                    seen.add(kw)
+                    hits.append((kw, action))
+
+    # 3. Check src/href for icon filenames (img/svg use patterns)
+    for src_attr in ("src", "href"):
+        src = attrs.get(src_attr, "").lower()
+        if src:
+            for kw, action in _ICON_INTENT_KEYWORDS.items():
+                if kw in src and kw not in seen:
+                    seen.add(kw)
+                    hits.append((kw, action))
+
+    return hits[:5]
 
 
 # ---------------------------------------------------------------------------
@@ -382,6 +692,10 @@ def _to_candidate_element(raw: _CandidateRaw, priority: int) -> dict[str, Any]:
         evidence["role"] = raw.evidence_role
     if raw.evidence_aria:
         evidence["aria"] = raw.evidence_aria
+    if raw.evidence_text_intent:
+        evidence["text_intent"] = raw.evidence_text_intent
+    if raw.evidence_icon_intent:
+        evidence["icon_intent"] = raw.evidence_icon_intent
     if raw.evidence_mutation_linkage:
         evidence["mutation_linkage"] = True
 
@@ -472,6 +786,10 @@ def _build_reason(raw: _CandidateRaw) -> str:
         parts.append(f"class hints: {', '.join(raw.evidence_class_hints[:3])}")
     if raw.evidence_aria:
         parts.append(f"aria attrs: {', '.join(raw.evidence_aria.keys())}")
+    if raw.evidence_text_intent:
+        parts.append(f"text intent: \"{raw.evidence_text_intent}\"")
+    if raw.evidence_icon_intent:
+        parts.append(f"icon intent: {', '.join(raw.evidence_icon_intent[:3])}")
     if raw.evidence_mutation_linkage:
         parts.append("linked to observed mutations")
     if not parts:
@@ -480,10 +798,29 @@ def _build_reason(raw: _CandidateRaw) -> str:
 
 
 def _guess_expected_effect(raw: _CandidateRaw) -> str | None:
-    """Guess expected effect based on element type — rough heuristic."""
+    """Guess expected effect based on element type and intent — rough heuristic."""
     tag = raw.tag
     attrs = raw.attrs
     role = attrs.get("role", "")
+
+    # Text intent gives strong effect hints
+    ti = raw.evidence_text_intent
+    if ti:
+        _SUBMIT_WORDS = {"提交", "保存", "确定", "确认", "submit", "save", "confirm", "ok", "apply"}
+        _SEARCH_WORDS = {"搜索", "查询", "筛选", "过滤", "search", "query", "filter"}
+        _NAV_WORDS = {"返回", "下一步", "上一步", "back", "next", "previous"}
+        _DELETE_WORDS = {"删除", "移除", "delete", "remove"}
+        _TOGGLE_WORDS = {"展开", "收起", "折叠", "expand", "collapse", "toggle"}
+        if ti in _SUBMIT_WORDS:
+            return "form submission"
+        if ti in _SEARCH_WORDS:
+            return "triggers search/filter"
+        if ti in _NAV_WORDS:
+            return "page navigation"
+        if ti in _DELETE_WORDS:
+            return "deletes item"
+        if ti in _TOGGLE_WORDS:
+            return "section expands/collapses"
 
     if tag == "a" and attrs.get("href"):
         return "navigation"
@@ -499,6 +836,38 @@ def _guess_expected_effect(raw: _CandidateRaw) -> str | None:
         return "dropdown options appear"
     if tag in ("input", "textarea"):
         return "accepts text input"
+
+    # Icon intent effect hints
+    if raw.evidence_icon_intent:
+        icon = raw.evidence_icon_intent[0]
+        _ICON_EFFECTS: dict[str, str] = {
+            "search": "triggers search",
+            "add": "creates new item",
+            "plus": "creates new item",
+            "create": "creates new item",
+            "edit": "opens editor",
+            "pencil": "opens editor",
+            "delete": "deletes item",
+            "trash": "deletes item",
+            "close": "closes current view",
+            "times": "closes current view",
+            "download": "downloads file",
+            "upload": "opens file picker",
+            "more": "shows more options",
+            "ellipsis": "shows more options",
+            "expand": "section expands",
+            "collapse": "section collapses",
+            "eye": "toggles visibility",
+            "filter": "opens filter panel",
+            "sort": "changes sort order",
+            "refresh": "refreshes content",
+            "copy": "copies to clipboard",
+            "setting": "opens settings",
+            "gear": "opens settings",
+        }
+        if icon in _ICON_EFFECTS:
+            return _ICON_EFFECTS[icon]
+
     if raw.evidence_mutation_linkage:
         return "DOM changes observed in previous recording"
     return None
