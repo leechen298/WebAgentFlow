@@ -263,8 +263,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { inferCandidates } from '@/api/learning';
-import type { InferCandidatesResult, CandidateElement } from '@/api/learning';
+import {
+  inferCandidates,
+  upsertFeedback,
+  listFeedbackByRecording,
+} from '@/api/learning';
+import type {
+  InferCandidatesResult,
+  CandidateElement,
+  FeedbackJudgment,
+} from '@/api/learning';
 
 const { t } = useI18n();
 
@@ -283,8 +291,9 @@ const result = ref<InferCandidatesResult | null>(null);
 const filterAction = ref<string | null>(null);
 const filterSignal = ref<string | null>(null);
 
-// --- Judgment (local only) ---
-const judgments = ref<Record<string, 'reasonable' | 'unreasonable'>>({});
+// --- Judgment (persisted via API) ---
+const judgments = ref<Record<string, FeedbackJudgment>>({});
+const savingKeys = ref<Set<string>>(new Set());
 
 // --- Expanded evidence ---
 const expandedKey = ref<string | null>(null);
@@ -391,6 +400,8 @@ async function runInference() {
       score_threshold: scoreThreshold.value,
       max_candidates: maxCandidates.value,
     });
+    // Load existing feedback for this recording
+    await loadExistingFeedback();
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -398,12 +409,56 @@ async function runInference() {
   }
 }
 
-function markJudgment(key: string, value: 'reasonable' | 'unreasonable') {
+async function loadExistingFeedback() {
+  try {
+    const rid = recordingId.value.trim();
+    const ruid = runId.value.trim() || undefined;
+    const items = await listFeedbackByRecording(rid, ruid);
+    const map: Record<string, FeedbackJudgment> = {};
+    for (const item of items) {
+      map[item.element_key] = item.judgment;
+    }
+    judgments.value = map;
+  } catch {
+    // Non-critical — keep going without pre-loaded judgments
+  }
+}
+
+async function markJudgment(key: string, value: FeedbackJudgment) {
+  // Toggle off if same value clicked again
   if (judgments.value[key] === value) {
-    delete judgments.value[key];
-    judgments.value = { ...judgments.value };
-  } else {
-    judgments.value = { ...judgments.value, [key]: value };
+    // For now, toggling off just sets to the other value is not ideal.
+    // We remove from local state but keep backend record (next upsert overwrites).
+    const updated = { ...judgments.value };
+    delete updated[key];
+    judgments.value = updated;
+    return;
+  }
+
+  // Optimistic update
+  judgments.value = { ...judgments.value, [key]: value };
+  savingKeys.value.add(key);
+
+  try {
+    // Find the candidate to snapshot its data
+    const candidate = result.value?.candidate_elements.find(c => c.element_key === key);
+    await upsertFeedback({
+      recording_id: recordingId.value.trim(),
+      run_id: runId.value.trim() || undefined,
+      element_key: key,
+      judgment: value,
+      candidate_score: candidate?.score ?? null,
+      inferred_actions_json: candidate?.inferred_actions ?? null,
+      evidence_json: candidate?.evidence as Record<string, unknown> ?? null,
+    });
+  } catch {
+    // Revert on failure
+    const reverted = { ...judgments.value };
+    delete reverted[key];
+    judgments.value = reverted;
+  } finally {
+    savingKeys.value.delete(key);
+    savingKeys.value = new Set(savingKeys.value);
   }
 }
 

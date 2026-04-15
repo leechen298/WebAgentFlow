@@ -51,3 +51,53 @@ export async function inferCandidates(
     params,
   )) as unknown as InferCandidatesResult;
 }
+
+// --- Candidate Feedback ---
+
+export type FeedbackJudgment = 'reasonable' | 'unreasonable';
+
+export interface CandidateFeedbackItem {
+  id: string;
+  recording_id: string;
+  run_id: string | null;
+  element_key: string;
+  judgment: FeedbackJudgment;
+  comment: string | null;
+  candidate_score: number | null;
+  inferred_actions_json: string[] | null;
+  evidence_json: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CandidateFeedbackCreateParams {
+  recording_id: string;
+  run_id?: string | null;
+  element_key: string;
+  judgment: FeedbackJudgment;
+  comment?: string | null;
+  candidate_score?: number | null;
+  inferred_actions_json?: string[] | null;
+  evidence_json?: Record<string, unknown> | null;
+}
+
+export async function upsertFeedback(
+  params: CandidateFeedbackCreateParams,
+): Promise<CandidateFeedbackItem> {
+  return (await apiClient.post(
+    '/learning/feedback/upsert',
+    params,
+  )) as unknown as CandidateFeedbackItem;
+}
+
+export async function listFeedbackByRecording(
+  recordingId: string,
+  runId?: string | null,
+): Promise<CandidateFeedbackItem[]> {
+  const params: Record<string, string> = { recording_id: recordingId };
+  if (runId) params.run_id = runId;
+  return (await apiClient.get(
+    '/learning/feedback/list-by-recording',
+    { params },
+  )) as unknown as CandidateFeedbackItem[];
+}

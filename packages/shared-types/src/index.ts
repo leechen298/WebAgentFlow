@@ -887,3 +887,40 @@ export interface ExplorationRunUpdate {
   candidate_elements_json?: CandidateElement[] | null;
   interaction_hints_json?: InteractionHint[] | null;
 }
+
+// --- Candidate Feedback ---
+
+export type FeedbackJudgment = 'reasonable' | 'unreasonable';
+
+export interface CandidateFeedback {
+  id: string;
+  recording_id: string;
+  run_id: string | null;
+  element_key: string;
+  judgment: FeedbackJudgment;
+  comment: string | null;
+  candidate_score: number | null;
+  inferred_actions_json: string[] | null;
+  evidence_json: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CandidateFeedbackCreate {
+  recording_id: string;
+  run_id?: string | null;
+  element_key: string;
+  judgment: FeedbackJudgment;
+  comment?: string | null;
+  candidate_score?: number | null;
+  inferred_actions_json?: string[] | null;
+  evidence_json?: Record<string, unknown> | null;
+}
+
+export interface CandidateFeedbackUpdate {
+  judgment?: FeedbackJudgment;
+  comment?: string | null;
+  candidate_score?: number | null;
+  inferred_actions_json?: string[] | null;
+  evidence_json?: Record<string, unknown> | null;
+}

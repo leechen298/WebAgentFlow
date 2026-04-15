@@ -1,3 +1,4 @@
+from app.models.candidate_feedback import CandidateFeedback, FeedbackJudgment
 from app.models.exploration_run import ExplorationMode, ExplorationRun, ExplorationRunStatus
 from app.models.learned_path import LearnedPath, LearnedPathStatus
 from app.models.recording import Recording, RecordingStatus
@@ -11,8 +12,10 @@ from app.models.success_criteria import (
 )
 
 __all__ = [
+    "CandidateFeedback",
     "ExplorationMode",
     "ExplorationRun",
+    "FeedbackJudgment",
     "ExplorationRunStatus",
     "LearnedPath",
     "LearnedPathStatus",
