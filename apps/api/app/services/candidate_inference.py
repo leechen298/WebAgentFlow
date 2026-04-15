@@ -7,9 +7,10 @@ exploration.
 
 Phase 2 MVP: rule-driven only, no LLM, no execution.
 
-Signal sources (9 layers):
+Signal sources (10 layers):
   - AST structural: tag, role, aria-*, type, tabindex, contenteditable
   - AST class hints: btn, button, submit, tab, dropdown, menu, item, etc.
+  - Component library: el-button, ant-btn, van-button, n-input, etc.
   - AST state: disabled, readonly, visible
   - Text intent: visible text / aria-label / title containing action words
     (提交, 保存, 搜索, submit, save, search, etc.)
@@ -96,6 +97,75 @@ _CLASS_HINT_PATTERNS: list[tuple[re.Pattern[str], list[str]]] = [
     (re.compile(r"(?:^|[-_])clickable(?:$|[-_])", re.I), ["click"]),
     (re.compile(r"(?:^|[-_])hoverable(?:$|[-_])", re.I), ["hover"]),
 ]
+
+# ---------------------------------------------------------------------------
+# Component library prefix detection
+# ---------------------------------------------------------------------------
+
+# Known UI library prefixes (tag or class prefix before the component suffix)
+_COMPONENT_PREFIXES = frozenset({
+    "el", "ant", "van", "n", "t", "ivu", "arco",
+    "a", "v", "bp", "semi", "taro", "nut",
+    "at", "u", "uni", "weui", "mui", "chakra",
+})
+
+# Component suffix → inferred actions
+_COMPONENT_SUFFIX_ACTIONS: dict[str, list[str]] = {
+    "button": ["click"],
+    "btn": ["click"],
+    "link": ["click"],
+    "input": ["input"],
+    "textarea": ["input"],
+    "field": ["input"],
+    "select": ["select"],
+    "option": ["click"],
+    "checkbox": ["toggle"],
+    "radio": ["toggle"],
+    "switch": ["toggle"],
+    "slider": ["input"],
+    "rate": ["click"],
+    "upload": ["click"],
+    "uploader": ["click"],
+    "cascader": ["click"],
+    "transfer": ["click"],
+    "picker": ["click"],
+    "date-picker": ["click"],
+    "time-picker": ["click"],
+    "color-picker": ["click"],
+    "autocomplete": ["input"],
+    "auto-complete": ["input"],
+    "search": ["input"],
+    "stepper": ["input"],
+    "tab": ["click"],
+    "tabs": ["click"],
+    "tab-pane": ["click"],
+    "menu": ["click"],
+    "menu-item": ["click"],
+    "submenu": ["click"],
+    "sub-menu": ["click"],
+    "dropdown": ["click"],
+    "dropdown-item": ["click"],
+    "dropdown-menu": ["click"],
+    "collapse": ["toggle"],
+    "collapse-item": ["toggle"],
+    "tag": ["click"],
+    "pagination": ["click"],
+    "pager": ["click"],
+    "dialog": ["click"],
+    "modal": ["click"],
+    "drawer": ["click"],
+    "popover": ["hover"],
+    "tooltip": ["hover"],
+}
+
+# Pre-compiled regex: matches "prefix-suffix" in tag name or class token
+_COMPONENT_RE = re.compile(
+    r"^(" + "|".join(re.escape(p) for p in sorted(_COMPONENT_PREFIXES, key=len, reverse=True))
+    + r")[-]("
+    + "|".join(re.escape(s) for s in sorted(_COMPONENT_SUFFIX_ACTIONS, key=len, reverse=True))
+    + r")$",
+    re.I,
+)
 
 # ARIA attributes that signal interactivity
 _ARIA_INTERACTIVE_ATTRS = frozenset({
@@ -285,6 +355,7 @@ _SCORE_TABINDEX = 0.05
 _SCORE_CONTENTEDITABLE = 0.15
 _SCORE_TEXT_INTENT = 0.30
 _SCORE_ICON_INTENT = 0.15
+_SCORE_COMPONENT_LIB = 0.25
 _SCORE_MUTATION_LINKAGE = 0.20
 
 _PENALTY_DISABLED = -0.30
@@ -311,6 +382,7 @@ class _CandidateRaw:
     evidence_aria: dict[str, str] = field(default_factory=dict)
     evidence_text_intent: str | None = None
     evidence_icon_intent: list[str] = field(default_factory=list)
+    evidence_component_lib: str | None = None
     evidence_mutation_linkage: bool = False
 
 
@@ -432,7 +504,15 @@ def _score_node(
                 class_str, matched_hints
             )
 
-    # --- Signal 4: ARIA interactive attributes ---
+    # --- Signal 4: Component library prefix ---
+    comp_match = _match_component_lib(tag, class_str)
+    if comp_match:
+        prefix, suffix = comp_match
+        score += _SCORE_COMPONENT_LIB
+        actions.update(_COMPONENT_SUFFIX_ACTIONS.get(suffix, ["click"]))
+        candidate.evidence_component_lib = f"{prefix}-{suffix}"
+
+    # --- Signal 5: ARIA interactive attributes ---
     aria_evidence: dict[str, str] = {}
     for aria_attr in _ARIA_INTERACTIVE_ATTRS:
         if aria_attr in attrs:
@@ -443,7 +523,7 @@ def _score_node(
         if not actions:
             actions.add("click")
 
-    # --- Signal 5: tabindex ---
+    # --- Signal 6: tabindex ---
     if "tabindex" in attrs:
         try:
             ti = int(attrs["tabindex"])
@@ -454,13 +534,13 @@ def _score_node(
         except ValueError:
             pass
 
-    # --- Signal 6: contenteditable ---
+    # --- Signal 7: contenteditable ---
     if attrs.get("contenteditable", "").lower() in ("true", ""):
         if "contenteditable" in attrs:
             score += _SCORE_CONTENTEDITABLE
             actions.add("input")
 
-    # --- Signal 7: Text intent ---
+    # --- Signal 8: Text intent ---
     text_intent = _extract_text_intent(node)
     if text_intent:
         word, action = text_intent
@@ -468,7 +548,7 @@ def _score_node(
         actions.add(action)
         candidate.evidence_text_intent = word
 
-    # --- Signal 8: Icon intent ---
+    # --- Signal 9: Icon intent ---
     icon_hits = _extract_icon_intent(node)
     if icon_hits:
         score += _SCORE_ICON_INTENT * min(len(icon_hits), 2)
@@ -476,7 +556,7 @@ def _score_node(
             actions.add(icon_action)
         candidate.evidence_icon_intent = [kw for kw, _ in icon_hits]
 
-    # --- Signal 9: Mutation linkage ---
+    # --- Signal 10: Mutation linkage ---
     node_key = _node_key(node, path)
     if node_key in mutation_targets:
         score += _SCORE_MUTATION_LINKAGE
@@ -495,6 +575,31 @@ def _score_node(
     candidate.score = max(0.0, min(1.0, score))
     candidate.actions = actions
     return candidate
+
+
+# ---------------------------------------------------------------------------
+# Component library detection
+# ---------------------------------------------------------------------------
+
+def _match_component_lib(tag: str, class_str: str) -> tuple[str, str] | None:
+    """Match tag or class tokens against known component library patterns.
+
+    Returns (prefix, suffix) if matched, e.g. ("el", "button"), or None.
+    Checks the tag name first, then class tokens.
+    """
+    # 1. Check tag name (e.g. <el-button>, <van-cell>)
+    m = _COMPONENT_RE.match(tag)
+    if m:
+        return m.group(1).lower(), m.group(2).lower()
+
+    # 2. Check class tokens
+    if class_str:
+        for token in class_str.split():
+            m = _COMPONENT_RE.match(token)
+            if m:
+                return m.group(1).lower(), m.group(2).lower()
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -692,6 +797,8 @@ def _to_candidate_element(raw: _CandidateRaw, priority: int) -> dict[str, Any]:
         evidence["role"] = raw.evidence_role
     if raw.evidence_aria:
         evidence["aria"] = raw.evidence_aria
+    if raw.evidence_component_lib:
+        evidence["component_lib"] = raw.evidence_component_lib
     if raw.evidence_text_intent:
         evidence["text_intent"] = raw.evidence_text_intent
     if raw.evidence_icon_intent:
@@ -784,6 +891,8 @@ def _build_reason(raw: _CandidateRaw) -> str:
         parts.append(f"role=\"{raw.evidence_role}\"")
     if raw.evidence_class_hints:
         parts.append(f"class hints: {', '.join(raw.evidence_class_hints[:3])}")
+    if raw.evidence_component_lib:
+        parts.append(f"component: {raw.evidence_component_lib}")
     if raw.evidence_aria:
         parts.append(f"aria attrs: {', '.join(raw.evidence_aria.keys())}")
     if raw.evidence_text_intent:

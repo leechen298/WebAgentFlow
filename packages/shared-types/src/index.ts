@@ -818,6 +818,8 @@ export interface CandidateElement {
     class_hints?: string[];
     role?: string;
     aria?: Record<string, string>;
+    /** Matched component library pattern, e.g. "el-button", "ant-btn" */
+    component_lib?: string;
     /** Matched action word from visible text / aria-label / title */
     text_intent?: string;
     /** Matched icon keywords from class tokens / attributes */
