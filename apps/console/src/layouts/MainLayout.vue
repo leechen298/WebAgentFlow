@@ -30,6 +30,10 @@
           <play-circle-outlined />
           <span>{{ $t('nav.runs') }}</span>
         </a-menu-item>
+        <a-menu-item key="/learning/debug">
+          <experiment-outlined />
+          <span>{{ $t('nav.learningDebug') }}</span>
+        </a-menu-item>
       </a-menu>
     </a-layout-sider>
 
@@ -57,6 +61,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
   DashboardOutlined,
+  ExperimentOutlined,
   VideoCameraOutlined,
   ToolOutlined,
   PlayCircleOutlined

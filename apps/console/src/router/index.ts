@@ -7,6 +7,7 @@ import RunDetailPage from '@/pages/RunDetailPage.vue';
 import RunsPage from '@/pages/RunsPage.vue';
 import SkillDetailPage from '@/pages/SkillDetailPage.vue';
 import SkillsPage from '@/pages/SkillsPage.vue';
+import LearningDebugPage from '@/pages/LearningDebugPage.vue';
 import i18n from '@/i18n';
 
 const router = createRouter({
@@ -57,6 +58,12 @@ const router = createRouter({
           name: 'run-detail',
           component: RunDetailPage,
           meta: { titleKey: 'nav.runDetail', menuKey: '/runs' },
+        },
+        {
+          path: 'learning/debug',
+          name: 'learning-debug',
+          component: LearningDebugPage,
+          meta: { titleKey: 'nav.learningDebug', menuKey: '/learning/debug' },
         },
       ],
     },
