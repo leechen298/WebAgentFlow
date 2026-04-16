@@ -158,7 +158,9 @@ class TestLoadTaskFromFile:
         assert task.name == "Google Search"
         assert task.target_url == "https://www.google.com"
         assert len(task.steps) == 3
-        assert task.variables["query"] == "厦门天气"
+        assert task.variables["query"] == "openai"
+        assert task.steps[0].target_hint is not None
+        assert task.steps[0].target_hint.selector == 'textarea[name="q"], input[name="q"]'
 
 
 # ---------------------------------------------------------------------------

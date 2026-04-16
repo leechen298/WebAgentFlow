@@ -1,19 +1,18 @@
 {
   "id": "google-search-basic",
   "name": "Google Search",
-  "description": "Input a query, trigger search, verify results page appears.",
+  "description": "Search-only MVP: open Google, submit a query, verify the results page.",
   "target_url": "https://www.google.com",
   "variables": {
-    "query": "厦门天气"
+    "query": "openai"
   },
   "steps": [
     {
       "intent": "fill_search_box",
       "action_type": "fill",
       "target_hint": {
-        "role": "combobox",
-        "name": "搜索",
-        "tag": "textarea"
+        "tag": "textarea",
+        "selector": "textarea[name=\"q\"], input[name=\"q\"]"
       },
       "value_from": "query"
     },
@@ -21,9 +20,8 @@
       "intent": "submit_search",
       "action_type": "press",
       "target_hint": {
-        "role": "combobox",
-        "name": "搜索",
-        "tag": "textarea"
+        "tag": "textarea",
+        "selector": "textarea[name=\"q\"], input[name=\"q\"]"
       },
       "value": "Enter"
     },
@@ -38,9 +36,8 @@
             "required": true
           },
           {
-            "type": "title_contains",
-            "value_from": "query",
-            "required": false
+            "type": "no_error",
+            "required": true
           }
         ]
       }
@@ -53,6 +50,11 @@
         "required": true
       },
       {
+        "type": "url_contains",
+        "value": "search?q=",
+        "required": true
+      },
+      {
         "type": "no_error",
         "required": true
       }
@@ -60,5 +62,5 @@
   },
   "source": "builtin",
   "provenance": "user_authored",
-  "revision": 1
+  "revision": 3
 }

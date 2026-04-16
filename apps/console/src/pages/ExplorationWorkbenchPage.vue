@@ -58,6 +58,26 @@
           </a-space>
         </a-form-item>
       </a-form>
+
+      <a-alert type="info" show-icon style="margin-top: 16px">
+        <template #message>{{ $t('exploration.runAllStepsHint') }}</template>
+        <template #description>
+          <a-descriptions :column="1" size="small">
+            <a-descriptions-item :label="$t('exploration.currentTask')">
+              {{ selectedTask?.name || '—' }}
+            </a-descriptions-item>
+            <a-descriptions-item :label="$t('exploration.taskUrl')">
+              {{ selectedTask?.target_url || '—' }}
+            </a-descriptions-item>
+            <a-descriptions-item :label="$t('exploration.currentVariables')">
+              {{ variableSummary }}
+            </a-descriptions-item>
+            <a-descriptions-item :label="$t('exploration.currentStatus')">
+              {{ currentStatusLabel }}
+            </a-descriptions-item>
+          </a-descriptions>
+        </template>
+      </a-alert>
     </a-card>
 
     <!-- Error -->
@@ -89,6 +109,14 @@
               <span v-if="result.final_url"> — {{ result.final_url }}</span>
             </template>
           </a-alert>
+
+          <a-alert
+            :message="$t('exploration.resultSummary')"
+            :description="result.summary"
+            type="info"
+            show-icon
+            style="margin-bottom: 16px"
+          />
 
           <!-- Step timeline -->
           <a-timeline>
@@ -283,6 +311,9 @@
         :placeholder="$t('exploration.notePlaceholder')"
         style="margin-top: 12px; max-width: 600px"
       />
+      <div class="verdict-placeholder">
+        {{ $t('exploration.placeholderNotice') }}
+      </div>
     </a-card>
   </div>
 </template>
@@ -290,6 +321,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
+import { useI18n } from 'vue-i18n';
 import {
   listTasks,
   runExploration,
@@ -299,6 +331,8 @@ import {
   type RunExplorationResponse,
   type ExplorationStepData,
 } from '@/api/exploration';
+
+const { t: $t } = useI18n();
 
 // ─── State ───────────────────────────────────────────────────
 
@@ -316,6 +350,22 @@ const verdictNote = ref('');
 const selectedScreenshotIndex = ref(0);
 
 // ─── Computed ────────────────────────────────────────────────
+
+const selectedTask = computed(() =>
+  tasks.value.find(task => task.id === selectedTaskId.value) ?? null,
+);
+
+const variableSummary = computed(() => {
+  const pairs = Object.entries(editableVariables);
+  if (pairs.length === 0) return '—';
+  return pairs.map(([key, value]) => `${key}=${value}`).join(', ');
+});
+
+const currentStatusLabel = computed(() => {
+  if (running.value) return $t('exploration.runningStatus');
+  if (result.value) return $t('exploration.finishedStatus');
+  return $t('exploration.idleStatus');
+});
 
 interface StepScreenshot {
   label: string;
@@ -523,5 +573,11 @@ onMounted(() => {
 .screenshot-img {
   width: 100%;
   display: block;
+}
+
+.verdict-placeholder {
+  margin-top: 8px;
+  color: #8c8c8c;
+  font-size: 12px;
 }
 </style>

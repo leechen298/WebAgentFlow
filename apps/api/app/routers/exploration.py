@@ -84,7 +84,7 @@ class RunExplorationPayload(BaseModel):
     )
     max_steps: int | None = Field(
         default=None,
-        description="Override max steps. If set, only runs up to this step index.",
+        description="Limit the number of task steps executed after initial navigation.",
     )
 
 

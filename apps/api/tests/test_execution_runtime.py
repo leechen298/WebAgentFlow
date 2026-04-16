@@ -20,6 +20,7 @@ No LLM calls, no locator resolver, no action executor.
 import os
 
 import pytest
+from playwright.sync_api import Error as PlaywrightError
 
 from app.services.execution_runtime import (
     ExecutionRuntime,
@@ -477,6 +478,30 @@ class TestStartErrorBranches:
             with pytest.raises(RuntimeInitError, match="Failed to create context"):
                 rt.start()
 
+    def test_create_context_passes_optional_kwargs(self):
+        cfg = RuntimeConfig(
+            user_agent="TestBot/1.0",
+            storage_state={"cookies": []},
+            default_timeout_ms=4321,
+        )
+        rt = ExecutionRuntime(cfg)
+        mock_browser = MagicMock()
+        mock_context = MagicMock()
+        mock_page = MagicMock()
+        mock_context.new_page.return_value = mock_page
+        mock_browser.new_context.return_value = mock_context
+        rt._browser = mock_browser
+
+        rt._create_context()
+
+        mock_browser.new_context.assert_called_once_with(
+            viewport={"width": 1280, "height": 720},
+            user_agent="TestBot/1.0",
+            storage_state={"cookies": []},
+        )
+        mock_context.set_default_timeout.assert_called_once_with(4321)
+        assert rt.page is mock_page
+
 
 class TestIsPageUsableEdge:
     """Edge cases for is_page_usable."""
@@ -488,6 +513,69 @@ class TestIsPageUsableEdge:
         mock_page.is_closed.side_effect = Exception("detached")
         rt._page = mock_page
         assert rt.is_page_usable() is False
+
+
+class TestPlaywrightErrorWrapping:
+    def test_navigate_wraps_playwright_error(self):
+        rt = ExecutionRuntime()
+        mock_page = MagicMock()
+        mock_page.is_closed.return_value = False
+        mock_page.goto.side_effect = PlaywrightError("bad nav")
+        rt._page = mock_page
+
+        with pytest.raises(PageNavigationError, match="Navigation to 'about:blank' failed"):
+            rt.navigate("about:blank")
+
+    def test_current_url_wraps_playwright_error(self):
+        rt = ExecutionRuntime()
+        mock_page = MagicMock()
+        mock_page.is_closed.return_value = False
+        type(mock_page).url = PropertyMock(side_effect=PlaywrightError("url boom"))
+        rt._page = mock_page
+
+        with pytest.raises(PageObservationError, match="Failed to read URL"):
+            rt.current_url()
+
+    def test_current_title_wraps_playwright_error(self):
+        rt = ExecutionRuntime()
+        mock_page = MagicMock()
+        mock_page.is_closed.return_value = False
+        mock_page.title.side_effect = PlaywrightError("title boom")
+        rt._page = mock_page
+
+        with pytest.raises(PageObservationError, match="Failed to read title"):
+            rt.current_title()
+
+    def test_current_html_wraps_playwright_error(self):
+        rt = ExecutionRuntime()
+        mock_page = MagicMock()
+        mock_page.is_closed.return_value = False
+        mock_page.content.side_effect = PlaywrightError("html boom")
+        rt._page = mock_page
+
+        with pytest.raises(PageObservationError, match="Failed to read HTML"):
+            rt.current_html()
+
+    def test_snapshot_wraps_playwright_error(self):
+        rt = ExecutionRuntime()
+        mock_page = MagicMock()
+        mock_page.is_closed.return_value = False
+        type(mock_page).url = PropertyMock(return_value="about:blank")
+        mock_page.title.side_effect = PlaywrightError("snap boom")
+        rt._page = mock_page
+
+        with pytest.raises(PageObservationError, match="Snapshot failed"):
+            rt.snapshot()
+
+    def test_screenshot_wraps_playwright_error(self):
+        rt = ExecutionRuntime()
+        mock_page = MagicMock()
+        mock_page.is_closed.return_value = False
+        mock_page.screenshot.side_effect = PlaywrightError("shot boom")
+        rt._page = mock_page
+
+        with pytest.raises(PageObservationError, match="Screenshot failed"):
+            rt.screenshot()
 
 
 class TestScreenshotDirCreation:

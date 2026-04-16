@@ -2,6 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import HomePage from '@/pages/HomePage.vue';
 
+const push = vi.fn();
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push,
+  }),
+}));
+
 vi.mock('@/stores', () => ({
   useAppStore: () => ({
     apiConnected: true,
@@ -35,10 +43,6 @@ describe('HomePage', () => {
           'a-statistic': true,
           'a-space': true,
           'a-button': true,
-        },
-        provide: {
-          'Symbol(router)': {},
-          'Symbol(route location)': {},
         },
       },
     });

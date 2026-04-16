@@ -828,3 +828,76 @@ class TestRunExploration:
         result = run_exploration(task, runtime)
 
         assert result.success is True
+
+    @patch("app.services.execution.run_single_action.run_single_action")
+    @patch("time.sleep")
+    def test_global_criteria_tolerates_final_state_failures(self, _mock_sleep, mock_run):
+        mock_run.return_value = _make_execution_result()
+        runtime = _make_runtime()
+        runtime.current_url.side_effect = [
+            "https://before.example.com",
+            Exception("url fail"),
+            Exception("url fail"),
+        ]
+        runtime.current_title.side_effect = [
+            "Before",
+            Exception("title fail"),
+            Exception("title fail"),
+        ]
+        runtime.current_html.side_effect = [
+            "<html>before</html>",
+            Exception("html fail"),
+        ]
+        runtime.screenshot.side_effect = Exception("shot fail")
+        task = _make_task(
+            steps=[_make_step(intent="click", action_type="click")],
+            global_success_criteria=TaskStepSuccessCriteria(
+                conditions=[SuccessCondition(type="no_error")]
+            ),
+        )
+
+        result = run_exploration(task, runtime)
+
+        assert result.success is False
+        assert result.final_url == ""
+        assert result.final_title == ""
+        assert result.final_screenshot_ref is None
+
+    @patch("app.services.execution.run_single_action.run_single_action")
+    @patch("time.sleep")
+    def test_summary_includes_eval_fail_status(self, _mock_sleep, mock_run):
+        obs_dict = {
+            "url": "https://example.com/after",
+            "title": "After",
+            "url_changed": False,
+            "title_changed": False,
+            "html_changed": False,
+            "html_hash": "same",
+            "timestamp_ms": 3000,
+        }
+        mock_run.return_value = _make_execution_result(
+            ok=True,
+            action_type="click",
+            observation=obs_dict,
+        )
+        runtime = _make_runtime(
+            url="https://example.com",
+            title="Before",
+            html="<html>before</html>",
+        )
+        task = _make_task(
+            name="Eval Task",
+            steps=[
+                _make_step(
+                    intent="verify_change",
+                    action_type="click",
+                    success_criteria=TaskStepSuccessCriteria(
+                        conditions=[SuccessCondition(type="title_contains", value="Missing")]
+                    ),
+                )
+            ],
+        )
+
+        result = run_exploration(task, runtime)
+
+        assert "verify_change: ok (eval: fail)" in result.summary
