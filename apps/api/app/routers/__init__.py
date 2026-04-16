@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.routers.ast import router as ast_router
+from app.routers.exploration import router as exploration_router
 from app.routers.health import router as health_router
 from app.routers.learning_paths import router as learning_paths_router
 from app.routers.learning_runs import router as learning_runs_router
@@ -22,5 +23,6 @@ api_router.include_router(learning_success_criteria_router)
 api_router.include_router(learning_feedback_router)
 api_router.include_router(learning_paths_router)
 api_router.include_router(learning_runs_router)
+api_router.include_router(exploration_router)
 
 __all__ = ["api_router"]
