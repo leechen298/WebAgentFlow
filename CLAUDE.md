@@ -17,7 +17,7 @@ WebAgentFlow is a monorepo for an agent-driven web workflow engine with:
 
 ### A. Current Phase & Progress
 
-The project follows a 12-phase development timeline. Phases 1–6 are completed; Phase 7 is in progress (7A done).
+The project follows a 12-phase development timeline. Phases 1–7 are completed; exploration subsystem is in active development.
 
 **Completed phases:**
 1. **Page fact foundation** — raw HTML capture, HTML → Full AST (server-side, lxml), Full AST schema
@@ -26,13 +26,19 @@ The project follows a 12-phase development timeline. Phases 1–6 are completed;
 4. **DOM mutation recording** — MutationObserver on top-level + same-origin iframes, batching, noise filtering, AST association
 5. **Operation Step building** — correlating a primary event with subsequent DOM mutations into a Step
 6. **Agent initial understanding of pages and steps** — LLM provider layer, agent input contract, page understanding (6C), step understanding (6D), combined output (6E), server-side event AST matching
-7A. **Execution contract** — ExecutionRequest/ExecutionResult schemas, locator priority (6-level), data consumption boundary, `build_execution_request` entry point
-7B. **Execution runtime** — Playwright browser/context/page lifecycle, navigation, page observation (URL/title/HTML/screenshot), unified error handling, `create_execution_runtime` factory
-7C. **Locator resolution** — 6-level priority resolver (`resolve_locator`), SelectorDescriptor for Playwright consumption, region-scoped disambiguation, structured failure reporting
-7D. **Action executor** — `execute_action()` single-step executor for click/fill/select/check/uncheck/hover/press/navigate, before/after state capture, structured error handling
-7E. **Post-action observation** — `observe_post_action()` / `execute_and_observe()`, screenshot + HTML snapshot, URL/title/HTML change detection, target post-state (present/visible), observation attached to ExecutionResult
+7. **Full execution capability (Playwright)** — complete single-step execution chain:
+   - 7A: ExecutionRequest/ExecutionResult contract, locator priority (6-level), `build_execution_request`
+   - 7B: Playwright browser/context/page lifecycle, `create_execution_runtime` factory
+   - 7C: 6-level priority locator resolver, SelectorDescriptor, region-scoped disambiguation
+   - 7D: `execute_action()` for click/fill/select/check/uncheck/hover/press/navigate/scroll
+   - 7E: `observe_post_action()` / `execute_and_observe()`, change detection, target post-state
 
-**Phase 7 complete** — full single-step execution capability: contract → runtime → locator → action → observation
+**Exploration subsystem** (built on top of Phase 7):
+- **Success evaluator** — rule-based evaluation of 6 condition types (url_changed, url_contains, title_contains, element_present, html_changed, no_error), 3-state semantics (success/failure/uncertain)
+- **Task definitions** — external JSON files describing site-specific tasks (`data/tasks/`), with provenance tracking
+- **Exploration loop** — generic engine that executes TaskDefinition steps, evaluates success criteria, produces ExplorationResult. Zero site-specific code
+- **Exploration supervisor** — post-run LLM assessment (verdict/summary/anomalies/suggestions) with rule-based fallback
+- **Exploration workbench** — frontend page with 4 zones: task config, execution timeline, page state + supervisor, user verdict
 
 ### B. Technical Route Change
 
@@ -59,13 +65,15 @@ Server-side parser: `apps/api/app/services/html_ast_parser.py` (uses `lxml.html`
 Full AST schema: `apps/api/app/schemas/ast.py`
 Server-side event matcher: `apps/api/app/services/server_ast_matcher.py`
 Execution contract schema: `apps/api/app/schemas/execution.py`
-Execution contract builder: `apps/api/app/services/execution_contract.py`
-Execution runtime: `apps/api/app/services/execution_runtime.py`
-Locator resolver: `apps/api/app/services/locator_resolver.py`
+Execution sub-package: `apps/api/app/services/execution/` (contract, runtime, locator, action, observer, run_single_action)
 Locator schema: `apps/api/app/schemas/locator.py`
-Action executor: `apps/api/app/services/action_executor.py`
-Post-action observer: `apps/api/app/services/post_action_observer.py`
 Observation schema: `apps/api/app/schemas/observation.py`
+Learning sub-package: `apps/api/app/services/learning/` (candidate_inference, success_evaluator, exploration_loop, exploration_supervisor, CRUD services)
+Task definition schema: `apps/api/app/schemas/task_definition.py`
+Success criteria schema: `apps/api/app/schemas/success_criteria.py` (includes SuccessCondition, SuccessEvaluation)
+Task loader: `apps/api/app/services/task_loader.py`
+Exploration router: `apps/api/app/routers/exploration.py`
+Task definitions: `data/tasks/*.json` (site-specific knowledge, NOT in Python code)
 
 #### Dual-Track AST: Client vs Server Responsibilities
 
@@ -137,21 +145,59 @@ This approach means:
 4. ~~DOM mutation recording~~ ✅
 5. ~~Operation Step building~~ ✅
 6. ~~Agent initial understanding of pages and steps~~ ✅
-7. **Full execution capability (Playwright)** ← current — real browser automation with complete action coverage
-8. Wait-for-expected-change mechanism + automated testing (parallel tracks, start together with Phase 7)
-9. Execution loop stabilization — action → wait → judge → next step
-10. Path abstraction & experience accumulation (starts after Phase 7, grows continuously)
+7. ~~Full execution capability (Playwright)~~ ✅
+8. Wait-for-expected-change mechanism + automated testing (parallel tracks)
+9. **Exploration loop + success evaluation** ← current — generic task execution, success criteria, supervisor assessment
+10. Path abstraction & experience accumulation (starts after exploration validates, grows continuously)
 11. User correction & behavior teaching
 12. Automated evaluation & continuous optimization system
 
 **Key parallel relationships:**
-- **Agent understanding (Phase 6)** is complete — provides page/step/combined understanding for execution layer
-- **Automated testing (Phase 8B)** must start as soon as execution capability exists, not after — execution and testing grow together
-- **Path abstraction (Phase 10)** is not a final summary module — it starts after execution begins and grows with the system
+- **Phase 7 execution** is complete — provides the atomic action layer for exploration
+- **Exploration subsystem** is built on Phase 7 — TaskDefinition → run_exploration → success evaluation → supervisor assessment
+- **Google Search MVP** is the first end-to-end validation of the exploration pipeline
+- **Path abstraction (Phase 10)** starts after exploration validates — learned paths from exploration feed into it
 
-### F. Explicitly Out of Scope (current phase)
+### F. Tool / Data Separation
+
+The application is a pure engine. **Site-specific knowledge is never hardcoded in Python code.**
+
+- **Task definitions** live in `data/tasks/*.json` — they describe what to do on a specific site
+- **The exploration engine** (`exploration_loop.py`) is generic — it reads task definitions and executes them
+- **Success criteria** are defined in task definitions or in the DB — not in evaluator code
+- **Switching from Google to Baidu** means creating a new JSON file, not changing Python code
+
+Provenance tracking on all knowledge assets:
+- `source`: `"builtin"` (shipped with the app) or `"user"` (user-created)
+- `provenance`: how it was created (user_authored, autonomous_exploration, autonomous_then_user_corrected, etc.)
+- `based_on`, `edited_by_user`, `revision`: evolution tracking
+
+> The tool doesn't own user data. User data belongs to the user — migration/backup support is a design requirement.
+
+### G. Services Sub-Package Structure
+
+`apps/api/app/services/` is organized into sub-packages for the two main capability groups:
+
+**`services/execution/`** — Phase 7 execution pipeline:
+- `execution_contract.py`, `execution_runtime.py`, `locator_resolver.py`, `action_executor.py`, `post_action_observer.py`
+- `run_single_action.py` — simplified entry point for exploration loop
+- Public API exported via `__init__.py`
+
+**`services/learning/`** — autonomous learning and exploration:
+- `candidate_inference.py`, `success_evaluator.py`, `exploration_loop.py`, `exploration_supervisor.py`
+- CRUD services: `exploration_run_service.py`, `learned_path_service.py`, `success_criteria_service.py`, `candidate_feedback_service.py`
+- Public API exported via `__init__.py`
+
+**Remaining services** (AST, understanding, CRUD, LLM) stay flat in `services/` root — not yet worth sub-packaging.
+
+**Compat re-export stubs** exist at old paths (e.g. `services/execution_runtime.py`) so existing imports keep working. New code should use the sub-package paths.
+
+### H. Explicitly Out of Scope (current phase)
 
 The following are **not** part of the current implementation phase:
+- CLI tool (`apps/cli`) — wait until exploration loop validates real usage patterns
+- Skill registry / skill runtime — current services ARE the callable interface
+- Real-time per-step LLM supervision (Layer 1) — do post-run assessment (Layer 2) first
 - Replay execution strategies
 - User behavior ↔ page change causal modeling
 - Historical path template caching
@@ -229,6 +275,14 @@ All endpoints use action suffixes instead of RESTful HTTP verbs:
 - `POST /recordings/update`, `POST /recordings/delete`
 - Same pattern for `/skills/*` and `/runs/*`
 - `GET /health` — DB connectivity check
+
+### Exploration Routes
+The exploration workbench uses REST-style routes (not action suffixes):
+- `GET /exploration/tasks` — list available task definitions
+- `GET /exploration/tasks/{task_id}` — get a single task definition
+- `POST /exploration/run` — execute an exploration task (sync, blocking)
+- `POST /exploration/runs/{run_id}/approve` — approve a result (MVP placeholder)
+- `POST /exploration/runs/{run_id}/reject` — reject a result (MVP placeholder)
 
 ### Response Format
 All responses use an envelope: `{"code": 0, "msg": "ok", "data": {...}}`. Defined in `schemas/base.py` as `ApiResponse[T]`. The frontend axios interceptor unwraps `data` automatically.

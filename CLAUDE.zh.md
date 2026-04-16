@@ -17,7 +17,7 @@ WebAgentFlow 是一个面向 Agent 驱动的 Web 工作流引擎的 monorepo，�
 
 ### A. 当前阶段与进展
 
-项目按 12 阶段开发时间线推进。阶段 1–6 已完成，阶段 7 进行中（7A 已完成）。
+项目按 12 阶段开发时间线推进。阶段 1–7 已全部完成；探索子系统正在积极开发中。
 
 **已完成的阶段：**
 1. **页面事实基础** — 原始 HTML 抓取、HTML → Full AST（服务端，lxml）、Full AST schema
@@ -26,13 +26,19 @@ WebAgentFlow 是一个面向 Agent 驱动的 Web 工作流引擎的 monorepo，�
 4. **DOM 变更录制** — 顶层文档及同源 iframe 的 MutationObserver，批量处理，降噪，AST 关联
 5. **操作步骤（Step）构建** — 将主事件与后续 DOM 变更关联为一个 Step
 6. **Agent 初步理解页面与步骤** — LLM Provider 层、Agent 输入契约、页面理解（6C）、步骤理解（6D）、综合输出（6E）、服务端事件 AST 匹配
-7A. **执行契约** — ExecutionRequest/ExecutionResult schema、定位优先级（6 级）、数据消费边界、`build_execution_request` 统一入口
-7B. **执行运行时** — Playwright browser/context/page 生命周期、导航、页面观测（URL/title/HTML/截图）、统一错误处理、`create_execution_runtime` 工厂
-7C. **定位解析** — 6 级优先级解析器（`resolve_locator`）、SelectorDescriptor 供 Playwright 消费、区域范围消歧、结构化失败报告
-7D. **动作执行器** — `execute_action()` 单步执行器，支持 click/fill/select/check/uncheck/hover/press/navigate，前后状态捕获，结构化错误处理
-7E. **执行后观测** — `observe_post_action()` / `execute_and_observe()`，截图 + HTML 快照，URL/title/HTML 变化检测，目标元素后状态（存在/可见），观测结果附加到 ExecutionResult
+7. **接入完整执行能力（Playwright）** — 完整单步执行链：
+   - 7A：ExecutionRequest/ExecutionResult 契约、定位优先级（6 级）、`build_execution_request`
+   - 7B：Playwright browser/context/page 生命周期、`create_execution_runtime` 工厂
+   - 7C：6 级优先级定位解析器、SelectorDescriptor、区域范围消歧
+   - 7D：`execute_action()` 支持 click/fill/select/check/uncheck/hover/press/navigate/scroll
+   - 7E：`observe_post_action()` / `execute_and_observe()`，变化检测，目标元素后状态
 
-**阶段 7 已完成** — 完整单步执行能力：契约 → 运行时 → 定位 → 动作 → 观测
+**探索子系统**（基于阶段 7 构建）：
+- **成功评估器** — 基于规则的 6 种条件类型评估（url_changed、url_contains、title_contains、element_present、html_changed、no_error），3 态语义（成功/失败/不确定）
+- **任务定义** — 外部 JSON 文件描述站点特定任务（`data/tasks/`），带溯源追踪
+- **探索循环** — 通用引擎，执行 TaskDefinition 步骤、评估成功标准、生成 ExplorationResult。零站点特定代码
+- **探索监督器** — 运行后 LLM 评估（verdict/summary/anomalies/suggestions），带基于规则的降级方案
+- **探索工作台** — 前端页面，4 个区域：任务配置、执行时间线、页面状态 + 监督器、用户裁决
 
 ### B. 技术路线变更
 
@@ -59,13 +65,15 @@ WebAgentFlow 是一个面向 Agent 驱动的 Web 工作流引擎的 monorepo，�
 Full AST schema：`apps/api/app/schemas/ast.py`
 服务端事件匹配器：`apps/api/app/services/server_ast_matcher.py`
 执行契约 schema：`apps/api/app/schemas/execution.py`
-执行契约构建器：`apps/api/app/services/execution_contract.py`
-执行运行时：`apps/api/app/services/execution_runtime.py`
-定位解析器：`apps/api/app/services/locator_resolver.py`
+执行子包：`apps/api/app/services/execution/`（contract、runtime、locator、action、observer、run_single_action）
 定位 schema：`apps/api/app/schemas/locator.py`
-动作执行器：`apps/api/app/services/action_executor.py`
-执行后观测器：`apps/api/app/services/post_action_observer.py`
 观测 schema：`apps/api/app/schemas/observation.py`
+学习子包：`apps/api/app/services/learning/`（candidate_inference、success_evaluator、exploration_loop、exploration_supervisor、CRUD 服务）
+任务定义 schema：`apps/api/app/schemas/task_definition.py`
+成功标准 schema：`apps/api/app/schemas/success_criteria.py`（包含 SuccessCondition、SuccessEvaluation）
+任务加载器：`apps/api/app/services/task_loader.py`
+探索路由：`apps/api/app/routers/exploration.py`
+任务定义文件：`data/tasks/*.json`（站点特定知识，不在 Python 代码中）
 
 #### 双轨 AST：客户端与服务端职责
 
@@ -137,21 +145,59 @@ Full AST schema：`apps/api/app/schemas/ast.py`
 4. ~~DOM 变更录制~~ ✅
 5. ~~操作步骤（Step）构建~~ ✅
 6. ~~Agent 初步理解页面与步骤~~ ✅
-7. **接入完整执行能力（Playwright）** ← 当前 — 真实浏览器自动化，覆盖完整操作能力
-8. 等待预期变化机制 + 自动化测试（并行线，与阶段 7 同步启动）
-9. 执行闭环稳定化 — 动作 → 等待 → 判断 → 下一步
-10. 路径抽象与经验沉淀（阶段 7 之后启动，持续增长）
+7. ~~接入完整执行能力（Playwright）~~ ✅
+8. 等待预期变化机制 + 自动化测试（并行线）
+9. **探索循环 + 成功评估** ← 当前 — 通用任务执行、成功标准、监督器评估
+10. 路径抽象与经验沉淀（探索验证后启动，持续增长）
 11. 用户修正与行为示教
 12. 自动化评测与持续优化体系
 
 **关键并行关系：**
-- **Agent 理解（阶段 6）** 已完成 — 为执行层提供页面/步骤/综合理解
-- **自动化测试（阶段 8B）** 必须在具备执行能力时同步介入，而非后补 — 执行能力和测试能力一起长
-- **路径抽象（阶段 10）** 不是最终总结模块 — 从执行开始后就逐步展开，跟系统一起长
+- **阶段 7 执行** 已完成 — 为探索提供原子操作层
+- **探索子系统** 基于阶段 7 构建 — TaskDefinition → run_exploration → 成功评估 → 监督器评估
+- **Google 搜索 MVP** 是探索管道的首个端到端验证
+- **路径抽象（阶段 10）** 在探索验证后启动 — 从探索中学到的路径为其提供输入
 
-### F. 明确不在范围内（当前阶段）
+### F. 工具 / 数据分离
+
+应用是一个纯引擎。**站点特定知识绝不硬编码在 Python 代码中。**
+
+- **任务定义** 放在 `data/tasks/*.json` 中——描述在特定站点上做什么
+- **探索引擎**（`exploration_loop.py`）是通用的——读取任务定义并执行
+- **成功标准** 定义在任务定义或数据库中——不在评估器代码中
+- **从 Google 切换到百度** 意味着创建一个新的 JSON 文件，而非修改 Python 代码
+
+所有知识资产的溯源追踪：
+- `source`：`"builtin"`（随应用发布）或 `"user"`（用户创建）
+- `provenance`：创建方式（user_authored、autonomous_exploration、autonomous_then_user_corrected 等）
+- `based_on`、`edited_by_user`、`revision`：演进追踪
+
+> 工具不拥有用户数据。用户数据属于用户——迁移/备份支持是设计要求。
+
+### G. 服务子包结构
+
+`apps/api/app/services/` 按两个主要能力组划分为子包：
+
+**`services/execution/`** — 阶段 7 执行管道：
+- `execution_contract.py`、`execution_runtime.py`、`locator_resolver.py`、`action_executor.py`、`post_action_observer.py`
+- `run_single_action.py` — 为探索循环提供的简化入口
+- 公开 API 通过 `__init__.py` 导出
+
+**`services/learning/`** — 自主学习与探索：
+- `candidate_inference.py`、`success_evaluator.py`、`exploration_loop.py`、`exploration_supervisor.py`
+- CRUD 服务：`exploration_run_service.py`、`learned_path_service.py`、`success_criteria_service.py`、`candidate_feedback_service.py`
+- 公开 API 通过 `__init__.py` 导出
+
+**其余服务**（AST、理解、CRUD、LLM）保持在 `services/` 根目录——尚不值得子包化。
+
+**兼容性重导出桩** 存在于旧路径（如 `services/execution_runtime.py`），使现有导入继续工作。新代码应使用子包路径。
+
+### H. 明确不在范围内（当前阶段）
 
 以下内容**不属于**当前实现阶段：
+- CLI 工具（`apps/cli`）——等探索循环验证真实使用模式后再做
+- 技能注册表 / 技能运行时——当前服务本身就是可调用接口
+- 实时逐步 LLM 监督（Layer 1）——先做运行后评估（Layer 2）
 - 回放执行策略
 - 用户行为 ↔ 页面变化因果建模
 - 历史路径模板缓存
@@ -229,6 +275,14 @@ FastAPI 后端（`apps/api/app/`）采用严格的分层架构：
 - `POST /recordings/update`、`POST /recordings/delete`
 - `/skills/*` 和 `/runs/*` 遵循相同模式
 - `GET /health`——数据库连接检查
+
+### 探索路由
+探索工作台使用 REST 风格路由（非动作后缀）：
+- `GET /exploration/tasks` — 列出可用任务定义
+- `GET /exploration/tasks/{task_id}` — 获取单个任务定义
+- `POST /exploration/run` — 执行探索任务（同步，阻塞）
+- `POST /exploration/runs/{run_id}/approve` — 批准结果（MVP 占位）
+- `POST /exploration/runs/{run_id}/reject` — 拒绝结果（MVP 占位）
 
 ### 响应格式
 所有响应使用信封格式：`{"code": 0, "msg": "ok", "data": {...}}`。在 `schemas/base.py` 中定义为 `ApiResponse[T]`。前端 axios 拦截器自动解包 `data`。
