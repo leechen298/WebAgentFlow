@@ -364,4 +364,204 @@ describe('RecordingDetailPage behavior', () => {
     recordingsStore.currentRecording = recording;
   });
 
+  it('renders template branches: descriptions, timeline, target, AST match, field context, mutations', async () => {
+    const stubs = {
+      'a-page-header': { template: '<div><slot name="extra" /><slot /></div>' },
+      'a-spin': { template: '<div><slot /></div>' },
+      'a-card': { template: '<div><slot /></div>' },
+      'a-descriptions': { template: '<div><slot /></div>' },
+      'a-descriptions-item': { props: ['label', 'span'], template: '<div>{{ label }}<slot /></div>' },
+      'a-tabs': { template: '<div><slot /></div>' },
+      'a-tab-pane': { props: ['tab'], template: '<div><slot /></div>' },
+      'a-tag': { template: '<span><slot /></span>' },
+      'a-space': { template: '<div><slot /></div>' },
+      'a-button': { template: '<button><slot /><slot name="icon" /></button>' },
+      'a-popconfirm': { template: '<div><slot /></div>' },
+      'a-textarea': { props: ['value', 'rows', 'readonly'], template: '<textarea>{{ value }}</textarea>' },
+      'a-alert': { props: ['message', 'description'], template: '<div>{{ message }}</div>' },
+      'a-modal': { props: ['open', 'title'], template: '<div v-if="open"><slot /></div>' },
+      'a-form': { template: '<form><slot /></form>' },
+      'a-form-item': { props: ['label'], template: '<div><slot /></div>' },
+      'a-input': { template: '<input />' },
+      'a-input-number': { template: '<input />' },
+      'a-select': { template: '<select><slot /></select>' },
+      'a-select-option': { template: '<option><slot /></option>' },
+      'a-collapse': { template: '<div><slot /></div>' },
+      'a-collapse-panel': { props: ['header'], template: '<div>{{ header }}<slot /></div>' },
+      'a-empty': { props: ['description'], template: '<div>{{ description }}</div>' },
+      'a-statistic': { props: ['title', 'value'], template: '<div>{{ title }}={{ value }}</div>' },
+      'a-row': { template: '<div><slot /></div>' },
+      'a-col': { template: '<div><slot /></div>' },
+      'a-table': { props: ['columns', 'dataSource'], template: '<div><slot /></div>' },
+      'a-radio-group': { template: '<div><slot /></div>' },
+      'a-radio-button': { template: '<div><slot /></div>' },
+      'edit-outlined': { template: '<i />' },
+      'delete-outlined': { template: '<i />' },
+    };
+
+    // Rich recording with many template branches
+    recordingsStore.currentRecording = {
+      ...recording,
+      events: [
+        { id: 'e0', type: 'navigate', timestamp: 1000, url: 'https://example.com', title: 'Example Page' },
+        {
+          id: 'e1', type: 'click', timestamp: 2500, url: 'https://example.com',
+          target: { tag: 'button', text: 'Submit', id: 'btn-submit', role: 'button', label: 'Submit Form' },
+          value: 'clicked',
+          fieldContext: { fieldLabel: 'Actions', fieldPath: 'Form > Actions', containerType: 'form-item', fieldRequired: true, fieldProp: 'action' },
+          astMatch: { confidence: 'exact', nodeId: 'n1', nodePath: '0-1', nodeType: 'button', nodeLabel: 'Submit', areaLabel: 'main' },
+          frameInfo: { isIframe: true },
+        },
+        {
+          id: 'e2', type: 'input', timestamp: 3000, url: 'https://example.com',
+          target: { tag: 'input' },
+          astMatch: { confidence: 'none', areaLabel: 'footer', ancestorChain: 'body > footer' },
+        },
+      ],
+      meta: {
+        ...recording.meta,
+        capturedHtml: '<html><body><div>Hello</div></body></html>',
+        domMutations: [
+          {
+            mutationType: 'childList',
+            target: { tag: 'div', selector: '.container' },
+            detail: { type: 'childList', addedCount: 1, removedCount: 0, addedNodes: [{ tag: 'span', text: 'new' }], removedNodes: [] },
+            astMatch: { confidence: 'exact', nodeId: 'n2' },
+          },
+          {
+            mutationType: 'characterData',
+            target: { tag: 'span' },
+            detail: { type: 'characterData', oldValue: 'old', newValue: 'new' },
+            astMatch: { confidence: 'none' },
+          },
+        ],
+      },
+    } as any;
+
+    const wrapper = mount(RecordingDetailPage, { global: { stubs } });
+    const vm = getSetupState(wrapper);
+
+    // Force all tab data to be populated
+    vm.activeTab = 'timeline';
+    await new Promise(r => setTimeout(r, 0));
+
+    // Template should render timeline events, targets, AST matches, field context, mutations
+    const text = wrapper.text();
+    expect(text).toContain('rec-1');
+    expect(text).toContain('navigate');
+    expect(text).toContain('click');
+    expect(text).toContain('https://example.com');
+
+    // Switch tabs to exercise different template branches
+    vm.activeTab = 'raw';
+    await new Promise(r => setTimeout(r, 0));
+    vm.activeTab = 'initial-state';
+    await new Promise(r => setTimeout(r, 0));
+    vm.activeTab = 'dom-mutations';
+    await new Promise(r => setTimeout(r, 0));
+
+    recordingsStore.currentRecording = recording;
+  });
+
+  it('renders template branches: normalized, steps, AST tree, simplified AST views', async () => {
+    const stubs = {
+      'a-page-header': { template: '<div><slot /></div>' },
+      'a-spin': { template: '<div><slot /></div>' },
+      'a-card': { template: '<div><slot /></div>' },
+      'a-descriptions': { template: '<div><slot /></div>' },
+      'a-descriptions-item': { props: ['label'], template: '<div><slot /></div>' },
+      'a-tabs': { template: '<div><slot /></div>' },
+      'a-tab-pane': { props: ['tab'], template: '<div><slot /></div>' },
+      'a-tag': { template: '<span><slot /></span>' },
+      'a-space': { template: '<div><slot /></div>' },
+      'a-button': { template: '<button><slot /></button>' },
+      'a-popconfirm': { template: '<div><slot /></div>' },
+      'a-textarea': { props: ['value'], template: '<textarea>{{ value }}</textarea>' },
+      'a-alert': { template: '<div />' },
+      'a-modal': { props: ['open'], template: '<div v-if="open"><slot /></div>' },
+      'a-form': { template: '<form><slot /></form>' },
+      'a-form-item': { template: '<div><slot /></div>' },
+      'a-input': { template: '<input />' },
+      'a-input-number': { template: '<input />' },
+      'a-select': { template: '<select><slot /></select>' },
+      'a-select-option': { template: '<option><slot /></option>' },
+      'a-collapse': { template: '<div><slot /></div>' },
+      'a-collapse-panel': { template: '<div><slot /></div>' },
+      'a-empty': { template: '<div />' },
+      'a-statistic': { props: ['title', 'value'], template: '<div>{{ title }}</div>' },
+      'a-row': { template: '<div><slot /></div>' },
+      'a-col': { template: '<div><slot /></div>' },
+      'a-table': { props: ['columns', 'dataSource'], template: '<div />' },
+      'a-radio-group': { template: '<div><slot /></div>' },
+      'a-radio-button': { template: '<div><slot /></div>' },
+      'a-tree': { props: ['treeData', 'expandedKeys'], template: '<div />' },
+      'edit-outlined': { template: '<i />' },
+      'delete-outlined': { template: '<i />' },
+    };
+
+    const wrapper = mount(RecordingDetailPage, { global: { stubs } });
+    const vm = getSetupState(wrapper);
+
+    // Populate normalized data
+    vm.normalized = {
+      summary: { event_count_raw: 2, event_count_normalized: 2, contains_iframe: false, contains_richtext: false },
+      segments: [{ type: 'navigation', events: [{ type: 'navigate' }] }],
+      key_actions: [{ type: 'click', timestamp: 2500, target: 'button' }],
+    };
+    vm.activeTab = 'normalized';
+    await new Promise(r => setTimeout(r, 0));
+
+    // Populate steps data
+    vm.stepsResult = {
+      steps: [
+        {
+          timestamp: 2500,
+          event_type: 'click',
+          event_target_summary: 'button',
+          action: 'click-button',
+          server_ast_match: { confidence: 'exact', tag: 'button', label: 'Submit' },
+          step_descriptions: ['Clicked submit button'],
+          no_change_reason: null,
+        },
+      ],
+    };
+    vm.activeTab = 'steps';
+    await new Promise(r => setTimeout(r, 0));
+
+    // Populate AST data
+    vm.astResult = {
+      nodes: [
+        {
+          node_type: 'element',
+          tag: 'div',
+          attrs: { class: 'container main-panel' },
+          children: [
+            { node_type: 'element', tag: 'button', attrs: { id: 'submit' }, children: [], text_content: 'Submit' },
+            { node_type: 'text', text: 'Hello world', children: [] },
+          ],
+        },
+      ],
+    };
+    vm.activeTab = 'full-ast';
+    await new Promise(r => setTimeout(r, 0));
+
+    vm.simpResult = {
+      nodes: [
+        { node_type: 'element', tag: 'div', attrs: {}, children: [{ node_type: 'text', text: 'Simple', children: [] }] },
+      ],
+    };
+    vm.activeTab = 'simplified-ast';
+    await new Promise(r => setTimeout(r, 0));
+
+    // Open edit modal to cover modal template
+    vm.showEditModal();
+    await new Promise(r => setTimeout(r, 0));
+
+    // Open field detail modal
+    vm.openFieldDetailModal(recording.meta.initialState.fields[0]);
+    await new Promise(r => setTimeout(r, 0));
+
+    recordingsStore.currentRecording = recording;
+  });
+
 });

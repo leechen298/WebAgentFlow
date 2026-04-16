@@ -375,4 +375,61 @@ describe('CRUD page behavior', () => {
     skillsStore.skills = [skill];
     runsStore.runs = [run];
   });
+
+  it('renders RunsPage and SkillsPage modal forms with open state to cover form template branches', async () => {
+    // SkillsPage modal rendering
+    const skillsStubs = {
+      ...renderStubs,
+      'a-modal': { props: ['open', 'title'], template: '<div v-if="open">{{ title }}<slot /></div>' },
+    };
+    const skillsWrapper = mount(SkillsPage, { global: { stubs: skillsStubs } });
+    const skillsVm = getSetupState(skillsWrapper);
+    skillsVm.showCreateModal();
+    await flushPromises();
+    expect(skillsWrapper.text()).toContain('1.0.0');
+
+    skillsVm.editSkill(skill as never);
+    await flushPromises();
+    skillsVm.formData.definitionStr = '{bad';
+    skillsVm.validateJson();
+    await flushPromises();
+    expect(skillsVm.formErrors.definition).toBeTruthy();
+
+    // RunsPage modal rendering
+    const runsStubs = {
+      ...renderStubs,
+      'a-modal': { props: ['open', 'title'], template: '<div v-if="open">{{ title }}<slot /></div>' },
+    };
+    const runsWrapper = mount(RunsPage, { global: { stubs: runsStubs } });
+    const runsVm = getSetupState(runsWrapper);
+    runsVm.showCreateModal();
+    await flushPromises();
+
+    runsVm.editRun(run as never);
+    await flushPromises();
+    runsVm.formData.inputPayloadStr = '{bad';
+    runsVm.validateJson('input_payload');
+    runsVm.formData.resultPayloadStr = '{bad';
+    runsVm.validateJson('result_payload');
+    runsVm.formData.logsStr = '{bad';
+    runsVm.validateJson('logs');
+    await flushPromises();
+    expect(runsVm.formErrors.input_payload).toBeTruthy();
+    expect(runsVm.formErrors.result_payload).toBeTruthy();
+    expect(runsVm.formErrors.logs).toBeTruthy();
+  });
+
+  it('covers RunsPage and SkillsPage additional status colors and create-mode save', async () => {
+    const runsWrapper = mount(RunsPage);
+    const runsVm = getSetupState(runsWrapper);
+    expect(runsVm.getStatusColor('succeeded')).toBe('success');
+    expect(runsVm.getStatusColor('failed')).toBe('error');
+    expect(runsVm.getStatusColor('cancelled')).toBe('default');
+    expect(runsVm.getStatusColor('queued')).toBe('blue');
+
+    const skillsWrapper = mount(SkillsPage);
+    const skillsVm = getSetupState(skillsWrapper);
+    expect(skillsVm.getStatusColor('draft')).toBe('default');
+    expect(skillsVm.getStatusColor('archived')).toBe('orange');
+  });
 });
