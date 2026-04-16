@@ -77,6 +77,38 @@ function getSetupState(wrapper: ReturnType<typeof mount>) {
   return (wrapper.vm as any).$?.setupState ?? wrapper.vm;
 }
 
+const renderStubs = {
+  'a-layout': { template: '<div><slot /></div>' },
+  'a-layout-sider': { template: '<aside><slot /></aside>' },
+  'a-layout-header': { template: '<header><slot /></header>' },
+  'a-layout-content': { template: '<main><slot /></main>' },
+  'a-menu': { template: '<nav><slot /></nav>' },
+  'a-menu-item': { template: '<div><slot /></div>' },
+  'a-menu-divider': { template: '<hr />' },
+  'a-badge': { props: ['status', 'text'], template: '<div>{{ status }}{{ text }}</div>' },
+  'router-view': { template: '<div>router-view</div>' },
+  'a-page-header': { props: ['title'], emits: ['back'], template: '<section><button class="back" @click="$emit(\'back\')" />{{ title }}<slot /><slot name="extra" /></section>' },
+  'a-space': { template: '<div><slot /></div>' },
+  'a-button': { emits: ['click'], template: '<button @click="$emit(\'click\')"><slot /><slot name="icon" /></button>' },
+  'a-popconfirm': { emits: ['confirm'], template: '<div><slot /><button class="confirm" @click="$emit(\'confirm\')" /></div>' },
+  'a-spin': { template: '<div><slot /></div>' },
+  'a-alert': { props: ['message', 'description'], template: '<div>{{ message }}{{ description }}</div>' },
+  'a-card': { template: '<section><slot /></section>' },
+  'a-descriptions': { template: '<div><slot /></div>' },
+  'a-descriptions-item': { props: ['label'], template: '<div>{{ label }}<slot /></div>' },
+  'a-tag': { template: '<span><slot /></span>' },
+  'a-textarea': { props: ['value', 'rows', 'readonly'], template: '<textarea>{{ value }}</textarea>' },
+  'a-modal': { props: ['open', 'title'], template: '<div>{{ title }}<slot v-if="open" /></div>' },
+  'a-form': { template: '<form><slot /></form>' },
+  'a-row': { template: '<div><slot /></div>' },
+  'a-col': { template: '<div><slot /></div>' },
+  'a-form-item': { props: ['label'], template: '<label>{{ label }}<slot /></label>' },
+  'a-input': { template: '<input />' },
+  'a-select': { template: '<select><slot /></select>' },
+  'a-select-option': { props: ['value'], template: '<option><slot /></option>' },
+  'a-date-picker': { template: '<input type="datetime-local" />' },
+};
+
 describe('detail pages and layout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -234,5 +266,36 @@ describe('detail pages and layout', () => {
     runsStore.deleteRun.mockRejectedValueOnce(new Error('delete failed'));
     await vm.handleDelete();
     expect(message.error).toHaveBeenCalled();
+  });
+
+  it('renders MainLayout, SkillDetailPage, and RunDetailPage template branches', async () => {
+    skillsStore.error = 'skill load error';
+    runsStore.error = 'run load error';
+
+    const layout = mount(MainLayout, { global: { stubs: renderStubs } });
+    expect(layout.text()).toContain('WebAgentFlow');
+    expect(layout.text()).toContain('router-view');
+    expect(layout.text()).toContain('success');
+
+    const skillWrapper = mount(SkillDetailPage, { global: { stubs: renderStubs } });
+    expect(skillWrapper.text()).toContain('skill-1');
+    expect(skillWrapper.text()).toContain('Skill 1');
+    expect(skillWrapper.text()).toContain('published');
+    expect(skillWrapper.text()).toContain('skill load error');
+    await skillWrapper.findAll('button')[1].trigger('click');
+    expect(getSetupState(skillWrapper).editModalOpen).toBe(true);
+    expect(skillWrapper.text()).toContain('Skill 1');
+
+    const runWrapper = mount(RunDetailPage, { global: { stubs: renderStubs } });
+    expect(runWrapper.text()).toContain('run-1');
+    expect(runWrapper.text()).toContain('skill-1');
+    expect(runWrapper.text()).toContain('succeeded');
+    expect(runWrapper.text()).toContain('run load error');
+    await runWrapper.findAll('button')[1].trigger('click');
+    expect(getSetupState(runWrapper).editModalOpen).toBe(true);
+    expect(runWrapper.text()).toContain('run-1');
+
+    skillsStore.error = null;
+    runsStore.error = null;
   });
 });

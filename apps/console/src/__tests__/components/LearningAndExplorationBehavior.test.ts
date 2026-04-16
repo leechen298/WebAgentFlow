@@ -1,9 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { nextTick } from 'vue';
+import { defineComponent, nextTick } from 'vue';
 import { message } from 'ant-design-vue';
 import LearningDebugPage from '@/pages/LearningDebugPage.vue';
 import ExplorationWorkbenchPage from '@/pages/ExplorationWorkbenchPage.vue';
+
+const TableStub = defineComponent({
+  props: ['columns', 'dataSource'],
+  template: `
+    <div>
+      <div v-for="record in (dataSource || [])" :key="record.element_key || record.step_index || record.action || record.id">
+        <div v-for="column in (columns || [])" :key="column.key || column.dataIndex">
+          <slot name="bodyCell" :column="column" :record="record">
+            {{ record[column.dataIndex || column.key] }}
+          </slot>
+        </div>
+      </div>
+    </div>
+  `,
+});
 
 const renderStubs = {
   'a-page-header': { props: ['title', 'subTitle'], template: '<div>{{ title }}{{ subTitle }}<slot /></div>' },
@@ -29,6 +44,8 @@ const renderStubs = {
   'a-empty': { props: ['description'], template: '<div>{{ description }}</div>' },
   'a-radio-group': { template: '<div><slot /></div>' },
   'a-radio-button': { template: '<div><slot /></div>' },
+  'a-statistic': { props: ['title', 'value'], template: '<div>{{ title }}={{ value }}</div>' },
+  'a-table': TableStub,
 };
 
 const {
@@ -295,6 +312,26 @@ describe('learning and exploration behavior', () => {
     expect(vm.expandedCandidate).toBeNull();
     vm.expandedKey = 'button:submit';
     expect(vm.expandedCandidate?.element_key).toBe('button:submit');
+  });
+
+  it('renders LearningDebugPage summary, candidates, hints, and expanded evidence branches', async () => {
+    const wrapper = mount(LearningDebugPage, { global: { stubs: renderStubs } });
+    const vm = getSetupState(wrapper);
+
+    vm.recordingId = 'rec-1';
+    await vm.runInference();
+    await nextTick();
+
+    expect(wrapper.text()).toContain('button:submit');
+    expect(wrapper.text()).toContain('click');
+    expect(wrapper.text()).toContain('Primary CTA');
+    expect(wrapper.text()).toContain('Submit');
+    expect(wrapper.text()).toContain('reasonable');
+
+    vm.expandedKey = 'button:submit';
+    await nextTick();
+    expect(wrapper.text()).toContain('send');
+    expect(wrapper.text()).toContain('mutation_linkage');
   });
 
   it('covers ExplorationWorkbenchPage idle/error/fallback branches', async () => {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
+import { defineComponent } from 'vue';
 import { message } from 'ant-design-vue';
 import RecordingsPage from '@/pages/RecordingsPage.vue';
 import SkillsPage from '@/pages/SkillsPage.vue';
@@ -99,6 +100,46 @@ vi.mock('@/stores', () => ({
 function getSetupState(wrapper: ReturnType<typeof mount>) {
   return (wrapper.vm as any).$?.setupState ?? wrapper.vm;
 }
+
+const TableStub = defineComponent({
+  props: ['columns', 'dataSource'],
+  template: `
+    <div>
+      <div v-if="!dataSource || dataSource.length === 0">
+        <slot name="emptyText" />
+      </div>
+      <div v-for="record in (dataSource || [])" :key="record.id">
+        <div v-for="column in (columns || [])" :key="column.key">
+          <slot name="bodyCell" :column="column" :record="record">
+            {{ record[column.dataIndex || column.key] }}
+          </slot>
+        </div>
+      </div>
+    </div>
+  `,
+});
+
+const renderStubs = {
+  'a-card': { template: '<section><slot name="title" /><slot /></section>' },
+  'a-spin': { template: '<div><slot /></div>' },
+  'a-table': TableStub,
+  'a-tag': { template: '<span><slot /></span>' },
+  'a-space': { template: '<div><slot /></div>' },
+  'a-button': { emits: ['click'], template: '<button @click="$emit(\'click\')"><slot /><slot name="icon" /></button>' },
+  'a-popconfirm': { emits: ['confirm'], template: '<div><slot /><button class="confirm" @click="$emit(\'confirm\')" /></div>' },
+  'a-empty': { props: ['description'], template: '<div>{{ description }}<slot /></div>' },
+  'a-modal': { props: ['open', 'title'], template: '<div>{{ title }}<slot v-if="open" /></div>' },
+  'a-form': { template: '<form><slot /></form>' },
+  'a-row': { template: '<div><slot /></div>' },
+  'a-col': { template: '<div><slot /></div>' },
+  'a-form-item': { props: ['label'], template: '<label>{{ label }}<slot /></label>' },
+  'a-input': { template: '<input />' },
+  'a-select': { template: '<select><slot /></select>' },
+  'a-select-option': { props: ['value'], template: '<option><slot /></option>' },
+  'a-textarea': { props: ['value'], template: '<textarea>{{ value }}</textarea>' },
+  'a-date-picker': { template: '<input type="datetime-local" />' },
+  'plus-outlined': { template: '<i />' },
+};
 
 describe('CRUD page behavior', () => {
   beforeEach(() => {
@@ -294,5 +335,44 @@ describe('CRUD page behavior', () => {
     runsStore.deleteRun.mockRejectedValueOnce(new Error('delete failed'));
     await vm.deleteRun('run-1');
     expect(message.error).toHaveBeenCalled();
+  });
+
+  it('renders CRUD table pages, action slots, empty states, and modal branches', async () => {
+    const recordingsWrapper = mount(RecordingsPage, { global: { stubs: renderStubs } });
+    await flushPromises();
+    expect(recordingsWrapper.text()).toContain('Recording 1');
+    expect(recordingsWrapper.text()).toContain('draft');
+    await recordingsWrapper.findAll('button')[0].trigger('click');
+    expect(getSetupState(recordingsWrapper).modalOpen).toBe(true);
+
+    const skillsWrapper = mount(SkillsPage, { global: { stubs: renderStubs } });
+    await flushPromises();
+    expect(skillsWrapper.text()).toContain('Skill 1');
+    expect(skillsWrapper.text()).toContain('draft');
+    await skillsWrapper.findAll('button')[1].trigger('click');
+    expect(push).toHaveBeenCalledWith('/skills/skill-1');
+
+    const runsWrapper = mount(RunsPage, { global: { stubs: renderStubs } });
+    await flushPromises();
+    expect(runsWrapper.text()).toContain('skill-1');
+    expect(runsWrapper.text()).toContain('pending');
+    await runsWrapper.findAll('button')[1].trigger('click');
+    expect(push).toHaveBeenCalledWith('/runs/run-1');
+
+    recordingsStore.recordings = [];
+    skillsStore.skills = [];
+    runsStore.runs = [];
+
+    const emptyRecordings = mount(RecordingsPage, { global: { stubs: renderStubs } });
+    const emptySkills = mount(SkillsPage, { global: { stubs: renderStubs } });
+    const emptyRuns = mount(RunsPage, { global: { stubs: renderStubs } });
+
+    expect(emptyRecordings.text()).toBeTruthy();
+    expect(emptySkills.text()).toBeTruthy();
+    expect(emptyRuns.text()).toBeTruthy();
+
+    recordingsStore.recordings = [recording];
+    skillsStore.skills = [skill];
+    runsStore.runs = [run];
   });
 });
