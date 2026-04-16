@@ -193,9 +193,9 @@ class ExecutionRuntime:
 
         try:
             self._create_context()
-        except RuntimeInitError:
+        except RuntimeInitError as exc:
             self._cleanup_browser()
-            raise
+            raise RuntimeInitError(f"Failed to create context: {exc}") from exc
         except Exception as exc:
             self._cleanup_browser()
             raise RuntimeInitError(f"Failed to create context: {exc}") from exc

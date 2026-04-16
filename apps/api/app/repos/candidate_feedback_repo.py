@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.candidate_feedback import CandidateFeedback
@@ -21,17 +21,13 @@ class CandidateFeedbackRepository:
         stmt = select(CandidateFeedback).order_by(
             CandidateFeedback.created_at.desc(), CandidateFeedback.id.desc()
         )
+        items = list(self.session.scalars(stmt).all())
         if cursor_created_at is not None and cursor_id is not None:
-            stmt = stmt.where(
-                or_(
-                    CandidateFeedback.created_at < cursor_created_at,
-                    and_(
-                        CandidateFeedback.created_at == cursor_created_at,
-                        CandidateFeedback.id < cursor_id,
-                    ),
-                )
-            )
-        items = list(self.session.scalars(stmt.limit(limit + 1)).all())
+            items = [
+                item for item in items
+                if (item.created_at, item.id) < (cursor_created_at, cursor_id)
+            ]
+        items = items[: limit + 1]
         has_next = len(items) > limit
         if has_next:
             items = items[:limit]

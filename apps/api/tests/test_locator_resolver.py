@@ -386,3 +386,696 @@ class TestSerialization:
         assert restored.role == "button"
         assert restored.name == "Save"
         assert restored.nth == 2
+
+
+# ---------------------------------------------------------------------------
+# 12. Mocked tests — strategy branches without real Playwright
+# ---------------------------------------------------------------------------
+
+from unittest.mock import MagicMock, patch
+from app.services.locator_resolver import (
+    _try_server_ast_match,
+    _try_strong_attribute,
+    _try_tag_text_label,
+    _try_region_scoped,
+    _try_fallback_selector,
+    _try_client_ast_match,
+    _scope_to_region,
+    _parse_target_description,
+    _css_escape,
+    _css_escape_attr,
+    _tag_to_role,
+    _count_matches,
+    _get_element_info,
+    to_playwright_locator,
+)
+
+
+class TestHelperFunctions:
+    """Unit tests for internal helper functions."""
+
+    def test_tag_to_role_known(self):
+        assert _tag_to_role("button") == "button"
+        assert _tag_to_role("a") == "link"
+        assert _tag_to_role("input") == "textbox"
+        assert _tag_to_role("textarea") == "textbox"
+        assert _tag_to_role("select") == "combobox"
+        assert _tag_to_role("img") == "img"
+        assert _tag_to_role("nav") == "navigation"
+        assert _tag_to_role("dialog") == "dialog"
+        assert _tag_to_role("table") == "table"
+        assert _tag_to_role("th") == "columnheader"
+
+    def test_tag_to_role_unknown(self):
+        assert _tag_to_role("div") == ""
+        assert _tag_to_role("span") == ""
+        assert _tag_to_role("custom-element") == ""
+
+    def test_tag_to_role_case_insensitive(self):
+        assert _tag_to_role("BUTTON") == "button"
+        assert _tag_to_role("Input") == "textbox"
+
+    def test_css_escape(self):
+        assert _css_escape("simple") == "simple"
+        assert _css_escape("my-id") == "my-id"
+        assert _css_escape("has.dot") == "has\\.dot"
+        assert _css_escape("has space") == "has\\ space"
+
+    def test_css_escape_attr(self):
+        assert _css_escape_attr('normal') == 'normal'
+        assert _css_escape_attr('has"quote') == 'has\\"quote'
+        assert _css_escape_attr('back\\slash') == 'back\\\\slash'
+
+    def test_parse_target_description_tag_text(self):
+        tag, text = _parse_target_description('<button> "Save"')
+        assert tag == "button"
+        assert text == "Save"
+
+    def test_parse_target_description_tag_other(self):
+        tag, text = _parse_target_description('<div> some content here')
+        assert tag == "div"
+        assert text == "some content here"
+
+    def test_parse_target_description_just_text(self):
+        tag, text = _parse_target_description("plain text description")
+        assert tag == ""
+        assert text == "plain text description"
+
+    def test_parse_target_description_empty(self):
+        tag, text = _parse_target_description("")
+        assert tag == ""
+        assert text == ""
+
+
+class TestCountMatchesMocked:
+    """_count_matches returns 0 on exception."""
+
+    def test_exception_returns_zero(self):
+        page = MagicMock()
+        page.locator.side_effect = Exception("boom")
+        desc = SelectorDescriptor(selector_type="css", selector="div")
+        assert _count_matches(page, desc) == 0
+
+
+class TestGetElementInfoMocked:
+    """_get_element_info returns ("", "") on exceptions or 0 matches."""
+
+    def test_zero_matches(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 0
+        page.locator.return_value = loc
+        tag, text = _get_element_info(page, SelectorDescriptor(selector_type="css", selector="x"))
+        assert tag == ""
+        assert text == ""
+
+    def test_exception(self):
+        page = MagicMock()
+        page.locator.side_effect = Exception("boom")
+        tag, text = _get_element_info(page, SelectorDescriptor(selector_type="css", selector="x"))
+        assert tag == ""
+        assert text == ""
+
+
+class TestToPlaywrightLocatorTypes:
+    """to_playwright_locator handles all selector_type branches."""
+
+    def _mock_page(self):
+        page = MagicMock()
+        page.locator.return_value = MagicMock()
+        page.get_by_role.return_value = MagicMock()
+        page.get_by_text.return_value = MagicMock()
+        page.get_by_label.return_value = MagicMock()
+        page.get_by_placeholder.return_value = MagicMock()
+        page.get_by_test_id.return_value = MagicMock()
+        return page
+
+    def test_css(self):
+        page = self._mock_page()
+        desc = SelectorDescriptor(selector_type="css", selector="#btn")
+        to_playwright_locator(page, desc)
+        page.locator.assert_called_with("#btn")
+
+    def test_xpath(self):
+        page = self._mock_page()
+        desc = SelectorDescriptor(selector_type="xpath", selector="//button")
+        to_playwright_locator(page, desc)
+        page.locator.assert_called_with("xpath=//button")
+
+    def test_role_with_name(self):
+        page = self._mock_page()
+        desc = SelectorDescriptor(selector_type="role", role="button", name="Save", exact=True)
+        to_playwright_locator(page, desc)
+        page.get_by_role.assert_called_with("button", name="Save", exact=True)
+
+    def test_role_without_name(self):
+        page = self._mock_page()
+        desc = SelectorDescriptor(selector_type="role", role="button")
+        to_playwright_locator(page, desc)
+        page.get_by_role.assert_called_with("button")
+
+    def test_text(self):
+        page = self._mock_page()
+        desc = SelectorDescriptor(selector_type="text", name="Click me", exact=False)
+        to_playwright_locator(page, desc)
+        page.get_by_text.assert_called_with("Click me", exact=False)
+
+    def test_label(self):
+        page = self._mock_page()
+        desc = SelectorDescriptor(selector_type="label", name="Username", exact=True)
+        to_playwright_locator(page, desc)
+        page.get_by_label.assert_called_with("Username", exact=True)
+
+    def test_placeholder(self):
+        page = self._mock_page()
+        desc = SelectorDescriptor(selector_type="placeholder", name="Enter email", exact=False)
+        to_playwright_locator(page, desc)
+        page.get_by_placeholder.assert_called_with("Enter email", exact=False)
+
+    def test_test_id(self):
+        page = self._mock_page()
+        desc = SelectorDescriptor(selector_type="test_id", name="submit-btn")
+        to_playwright_locator(page, desc)
+        page.get_by_test_id.assert_called_with("submit-btn")
+
+    def test_nth_applied(self):
+        page = self._mock_page()
+        inner_loc = MagicMock()
+        page.locator.return_value = inner_loc
+        desc = SelectorDescriptor(selector_type="css", selector="div", nth=3)
+        to_playwright_locator(page, desc)
+        inner_loc.nth.assert_called_with(3)
+
+    def test_unknown_type_falls_back_to_locator(self):
+        """Unknown selector_type falls through to page.locator(desc.selector)."""
+        page = self._mock_page()
+        # Use a Pydantic-invalid type via direct attribute setting
+        desc = SelectorDescriptor(selector_type="css", selector=".foo")
+        desc.selector_type = "unknown_type"
+        to_playwright_locator(page, desc)
+        page.locator.assert_called_with(".foo")
+
+
+class TestServerAstMatchMocked:
+    """Mocked tests for _try_server_ast_match edge cases."""
+
+    def _mock_page_count(self, counts):
+        """Return a page mock that returns successive count values."""
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.side_effect = counts
+        page.locator.return_value = loc
+        page.get_by_role.return_value = loc
+        return page
+
+    def test_no_tag_in_meta(self):
+        hint = LocatorHint(strategy="SERVER_AST_MATCH", value="0.0", meta={})
+        trace = []
+        result = _try_server_ast_match(hint, MagicMock(), trace)
+        assert result is None
+        assert any("no tag" in t for t in trace)
+
+    def test_role_based_ambiguous_then_css_unique(self):
+        """Role matches multiple but CSS :has-text matches 1."""
+        page = MagicMock()
+        role_loc = MagicMock()
+        role_loc.count.return_value = 2
+        page.get_by_role.return_value = role_loc
+
+        css_loc = MagicMock()
+        css_loc.count.return_value = 1
+        page.locator.return_value = css_loc
+
+        hint = LocatorHint(
+            strategy="SERVER_AST_MATCH", value="0.0",
+            meta={"tag": "button", "label": "Save", "match_type": "exact"},
+        )
+        trace = []
+        result = _try_server_ast_match(hint, page, trace)
+        assert result is not None
+        assert result.selector_type == "css"
+
+    def test_css_multiple_no_region(self):
+        """CSS :has-text matches >1 but no region_hint, returns None."""
+        page = MagicMock()
+        role_loc = MagicMock()
+        role_loc.count.return_value = 0
+        page.get_by_role.return_value = role_loc
+
+        css_loc = MagicMock()
+        css_loc.count.return_value = 3
+        page.locator.return_value = css_loc
+
+        hint = LocatorHint(
+            strategy="SERVER_AST_MATCH", value="0.0",
+            meta={"tag": "button", "label": "Test", "match_type": "exact"},
+        )
+        trace = []
+        result = _try_server_ast_match(hint, page, trace)
+        assert result is None
+        assert any("no unique" in t for t in trace)
+
+    def test_css_zero_matches(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 0
+        page.get_by_role.return_value = loc
+        page.locator.return_value = loc
+
+        hint = LocatorHint(
+            strategy="SERVER_AST_MATCH", value="0.0",
+            meta={"tag": "button", "label": "Ghost"},
+        )
+        trace = []
+        result = _try_server_ast_match(hint, page, trace)
+        assert result is None
+        assert any("0 matches" in t for t in trace)
+
+    def test_no_label_exact_match(self):
+        hint = LocatorHint(
+            strategy="SERVER_AST_MATCH", value="0.0",
+            meta={"tag": "button", "match_type": "exact"},
+        )
+        trace = []
+        result = _try_server_ast_match(hint, MagicMock(), trace)
+        assert result is None
+        assert any("no label" in t for t in trace)
+
+    def test_css_ambiguous_with_region_hint(self):
+        """CSS :has-text matches >1 and region_hint exists — tries scoping."""
+        page = MagicMock()
+        role_loc = MagicMock()
+        role_loc.count.return_value = 0
+        page.get_by_role.return_value = role_loc
+
+        css_loc = MagicMock()
+        css_loc.count.return_value = 2
+        page.locator.return_value = css_loc
+
+        # region scoping: all region selectors also return 0
+        region_loc = MagicMock()
+        region_loc.count.return_value = 0
+
+        hint = LocatorHint(
+            strategy="SERVER_AST_MATCH", value="0.0",
+            meta={"tag": "button", "label": "Save", "region_hint": "User Info"},
+        )
+        trace = []
+        result = _try_server_ast_match(hint, page, trace)
+        # Region scoping fails (all return 0), so overall None
+        assert result is None
+
+    def test_tag_without_role(self):
+        """A tag that has no ARIA role mapping uses CSS directly."""
+        page = MagicMock()
+        css_loc = MagicMock()
+        css_loc.count.return_value = 1
+        page.locator.return_value = css_loc
+
+        hint = LocatorHint(
+            strategy="SERVER_AST_MATCH", value="0.0",
+            meta={"tag": "div", "label": "Section Title"},
+        )
+        trace = []
+        result = _try_server_ast_match(hint, page, trace)
+        assert result is not None
+        assert result.selector_type == "css"
+
+
+class TestStrongAttributeMocked:
+    """Mocked tests for _try_strong_attribute edge cases."""
+
+    def test_unparseable_value(self):
+        hint = LocatorHint(strategy="STRONG_ATTRIBUTE", value="noequals", meta={})
+        trace = []
+        result = _try_strong_attribute(hint, MagicMock(), trace)
+        assert result is None
+        assert any("cannot parse" in t for t in trace)
+
+    def test_id_zero_matches(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 0
+        page.locator.return_value = loc
+        hint = LocatorHint(strategy="STRONG_ATTRIBUTE", value="id=ghost", meta={"attribute": "id"})
+        trace = []
+        result = _try_strong_attribute(hint, page, trace)
+        assert result is None
+        assert any("0 matches" in t for t in trace)
+
+    def test_placeholder_zero_matches(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 0
+        page.get_by_placeholder.return_value = loc
+        hint = LocatorHint(strategy="STRONG_ATTRIBUTE", value="placeholder=ghost", meta={})
+        trace = []
+        result = _try_strong_attribute(hint, page, trace)
+        assert result is None
+        assert any("0 matches" in t for t in trace)
+
+    def test_role_match(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 1
+        page.get_by_role.return_value = loc
+        hint = LocatorHint(strategy="STRONG_ATTRIBUTE", value="role=button", meta={})
+        trace = []
+        result = _try_strong_attribute(hint, page, trace)
+        assert result is not None
+        assert result.selector_type == "role"
+        assert result.role == "button"
+
+    def test_role_zero_matches(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 0
+        page.get_by_role.return_value = loc
+        hint = LocatorHint(strategy="STRONG_ATTRIBUTE", value="role=gridcell", meta={})
+        trace = []
+        result = _try_strong_attribute(hint, page, trace)
+        assert result is None
+
+    def test_generic_attribute_match(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 1
+        page.locator.return_value = loc
+        hint = LocatorHint(strategy="STRONG_ATTRIBUTE", value="data-test=submit", meta={"tag": "button"})
+        trace = []
+        result = _try_strong_attribute(hint, page, trace)
+        assert result is not None
+        assert result.selector_type == "css"
+
+    def test_generic_attribute_zero_matches(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 0
+        page.locator.return_value = loc
+        hint = LocatorHint(strategy="STRONG_ATTRIBUTE", value="data-x=nope", meta={"tag": ""})
+        trace = []
+        result = _try_strong_attribute(hint, page, trace)
+        assert result is None
+        assert any("0 matches" in t for t in trace)
+
+
+class TestTagTextLabelMocked:
+    """Mocked tests for _try_tag_text_label edge cases."""
+
+    def test_no_separator(self):
+        hint = LocatorHint(strategy="TAG_TEXT_LABEL", value="nodelimiter", meta={})
+        trace = []
+        result = _try_tag_text_label(hint, MagicMock(), trace)
+        assert result is None
+        assert any("cannot parse" in t for t in trace)
+
+    def test_empty_text(self):
+        hint = LocatorHint(strategy="TAG_TEXT_LABEL", value="button::  ", meta={})
+        trace = []
+        result = _try_tag_text_label(hint, MagicMock(), trace)
+        assert result is None
+        assert any("empty text" in t for t in trace)
+
+    def test_role_ambiguous_exact_resolves(self):
+        """Role returns >1 but exact match returns 1."""
+        page = MagicMock()
+        inexact_loc = MagicMock()
+        inexact_loc.count.return_value = 3
+        exact_loc = MagicMock()
+        exact_loc.count.return_value = 1
+
+        page.get_by_role.side_effect = [inexact_loc, exact_loc]
+
+        hint = LocatorHint(strategy="TAG_TEXT_LABEL", value="button::Save", meta={})
+        trace = []
+        result = _try_tag_text_label(hint, page, trace)
+        assert result is not None
+        assert result.exact is True
+
+    def test_role_ambiguous_exact_also_ambiguous(self):
+        """Both inexact and exact role match return >1."""
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 2
+        page.get_by_role.return_value = loc
+
+        css_loc = MagicMock()
+        css_loc.count.return_value = 2
+        page.locator.return_value = css_loc
+
+        hint = LocatorHint(strategy="TAG_TEXT_LABEL", value="button::Submit", meta={})
+        trace = []
+        result = _try_tag_text_label(hint, page, trace)
+        assert result is None
+        assert any("ambiguous" in t for t in trace)
+
+    def test_no_role_tag_css_match(self):
+        """Tag with no ARIA role uses CSS directly."""
+        page = MagicMock()
+        css_loc = MagicMock()
+        css_loc.count.return_value = 1
+        page.locator.return_value = css_loc
+
+        hint = LocatorHint(strategy="TAG_TEXT_LABEL", value="span::Info", meta={})
+        trace = []
+        result = _try_tag_text_label(hint, page, trace)
+        assert result is not None
+        assert result.selector_type == "css"
+
+
+class TestRegionScopedMocked:
+    """Mocked tests for _try_region_scoped."""
+
+    def test_empty_region_name(self):
+        hint = LocatorHint(strategy="REGION_SCOPED", value="", meta={})
+        trace = []
+        req = _req(hints=[hint])
+        result = _try_region_scoped(hint, MagicMock(), trace, req)
+        assert result is None
+        assert any("empty region" in t for t in trace)
+
+    def test_no_parseable_target(self):
+        hint = LocatorHint(strategy="REGION_SCOPED", value="Settings", meta={})
+        trace = []
+        req = _req(hints=[hint], target_desc="")
+        result = _try_region_scoped(hint, MagicMock(), trace, req)
+        assert result is None
+        assert any("no parseable target" in t for t in trace)
+
+    def test_tag_and_text_target(self):
+        """Region scoped with tag+text target builds css :has-text inner."""
+        page = MagicMock()
+        region_loc = MagicMock()
+        region_loc.count.return_value = 1
+        inner_loc = MagicMock()
+        inner_loc.count.return_value = 1
+        region_loc.first.locator.return_value = inner_loc
+        page.locator.return_value = region_loc
+
+        hint = LocatorHint(strategy="REGION_SCOPED", value="Form Area", meta={})
+        trace = []
+        req = _req(hints=[hint], target_desc='<button> "Submit"')
+        result = _try_region_scoped(hint, page, trace, req)
+        assert result is not None
+
+    def test_text_only_target(self):
+        """Region scoped with text-only target builds a text descriptor."""
+        page = MagicMock()
+        region_loc = MagicMock()
+        region_loc.count.return_value = 1
+        inner_loc = MagicMock()
+        inner_loc.count.return_value = 1
+        region_loc.first.locator.return_value = inner_loc
+        page.locator.return_value = region_loc
+
+        hint = LocatorHint(strategy="REGION_SCOPED", value="Sidebar", meta={})
+        trace = []
+        req = _req(hints=[hint], target_desc="some text content")
+        result = _try_region_scoped(hint, page, trace, req)
+        assert result is not None
+
+    def test_tag_only_target(self):
+        """Region scoped with tag-only target (no text)."""
+        page = MagicMock()
+        region_loc = MagicMock()
+        region_loc.count.return_value = 1
+        inner_loc = MagicMock()
+        inner_loc.count.return_value = 1
+        region_loc.first.locator.return_value = inner_loc
+        page.locator.return_value = region_loc
+
+        hint = LocatorHint(strategy="REGION_SCOPED", value="Panel", meta={})
+        trace = []
+        req = _req(hints=[hint], target_desc='<div> ""')
+        result = _try_region_scoped(hint, page, trace, req)
+        # tag="div", text="" -> tag only -> inner = SelectorDescriptor(css, "div")
+        assert result is not None
+
+
+class TestFallbackSelectorMocked:
+    """Mocked tests for _try_fallback_selector."""
+
+    def test_empty_selector(self):
+        hint = LocatorHint(strategy="FALLBACK_SELECTOR", value="", meta={})
+        trace = []
+        result = _try_fallback_selector(hint, MagicMock(), trace)
+        assert result is None
+        assert any("empty selector" in t for t in trace)
+
+    def test_selector_matches(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 1
+        page.locator.return_value = loc
+        hint = LocatorHint(strategy="FALLBACK_SELECTOR", value="#btn", meta={})
+        trace = []
+        result = _try_fallback_selector(hint, page, trace)
+        assert result is not None
+        assert result.selector_type == "css"
+
+    def test_selector_zero_matches(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 0
+        page.locator.return_value = loc
+        hint = LocatorHint(strategy="FALLBACK_SELECTOR", value=".gone", meta={})
+        trace = []
+        result = _try_fallback_selector(hint, page, trace)
+        assert result is None
+        assert any("0 matches" in t for t in trace)
+
+
+class TestClientAstMatchMocked:
+    """Mocked tests for _try_client_ast_match."""
+
+    def test_no_node_label(self):
+        hint = LocatorHint(strategy="CLIENT_AST_MATCH", value="n1", meta={})
+        trace = []
+        result = _try_client_ast_match(hint, MagicMock(), trace)
+        assert result is None
+        assert any("no usable info" in t for t in trace)
+
+    def test_unique_text_match(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 1
+        page.get_by_text.return_value = loc
+        hint = LocatorHint(
+            strategy="CLIENT_AST_MATCH", value="n42",
+            meta={"nodeLabel": "Delete"},
+        )
+        trace = []
+        result = _try_client_ast_match(hint, page, trace)
+        assert result is not None
+        assert result.selector_type == "text"
+
+    def test_ambiguous_text_with_area_label_scope(self):
+        """Multiple text matches but area_label helps scope."""
+        page = MagicMock()
+        text_loc = MagicMock()
+        text_loc.count.return_value = 3
+        page.get_by_text.return_value = text_loc
+
+        # region scoping returns 1
+        region_loc = MagicMock()
+        region_loc.count.return_value = 1
+        inner_loc = MagicMock()
+        inner_loc.count.return_value = 1
+        region_loc.first.locator.return_value = inner_loc
+        page.locator.return_value = region_loc
+
+        hint = LocatorHint(
+            strategy="CLIENT_AST_MATCH", value="n42",
+            meta={"nodeLabel": "Edit", "areaLabel": "User Profile"},
+        )
+        trace = []
+        result = _try_client_ast_match(hint, page, trace)
+        assert result is not None
+
+    def test_ambiguous_text_no_area_label(self):
+        """Multiple text matches and no area label — fails."""
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 5
+        page.get_by_text.return_value = loc
+
+        hint = LocatorHint(
+            strategy="CLIENT_AST_MATCH", value="n42",
+            meta={"nodeLabel": "OK"},
+        )
+        trace = []
+        result = _try_client_ast_match(hint, page, trace)
+        assert result is None
+
+
+class TestScopeToRegionMocked:
+    """Mocked tests for _scope_to_region helper."""
+
+    def test_all_region_selectors_fail(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.count.return_value = 0
+        page.locator.return_value = loc
+
+        trace = []
+        inner = SelectorDescriptor(selector_type="css", selector="button")
+        result = _scope_to_region(page, "Header", inner, trace, "TEST")
+        assert result is None
+        assert any("not found" in t for t in trace)
+
+    def test_region_found_but_inner_ambiguous(self):
+        page = MagicMock()
+        region_loc = MagicMock()
+        region_loc.count.return_value = 1
+        inner_loc = MagicMock()
+        inner_loc.count.return_value = 3
+        region_loc.first.locator.return_value = inner_loc
+        page.locator.return_value = region_loc
+
+        trace = []
+        inner = SelectorDescriptor(selector_type="css", selector="button")
+        result = _scope_to_region(page, "Form", inner, trace, "TEST")
+        assert result is None
+        assert any("still ambiguous" in t for t in trace)
+
+    def test_region_locator_raises_exception(self):
+        """Exception during region matching is caught."""
+        page = MagicMock()
+        page.locator.side_effect = Exception("boom")
+
+        trace = []
+        inner = SelectorDescriptor(selector_type="css", selector="button")
+        result = _scope_to_region(page, "Nav", inner, trace, "TEST")
+        assert result is None
+
+    def test_region_with_text_inner_descriptor(self):
+        """Inner descriptor is text type — uses text= expression."""
+        page = MagicMock()
+        region_loc = MagicMock()
+        region_loc.count.return_value = 1
+        inner_loc = MagicMock()
+        inner_loc.count.return_value = 1
+        region_loc.first.locator.return_value = inner_loc
+        page.locator.return_value = region_loc
+
+        trace = []
+        inner = SelectorDescriptor(selector_type="text", name="Click me")
+        result = _scope_to_region(page, "Main", inner, trace, "TEST")
+        assert result is not None
+        assert "text=Click me" in result.selector
+
+
+class TestResolveLocatorUnknownStrategy:
+    """Unknown strategy name in hints is logged and skipped."""
+
+    def test_unknown_strategy_skipped(self):
+        rt = MagicMock()
+        rt.page = MagicMock()
+        rt.page.is_closed.return_value = False
+
+        req = _req(hints=[
+            LocatorHint(strategy="TOTALLY_UNKNOWN", value="foo", confidence="low", meta={}),
+        ])
+        result = resolve_locator(req, rt)
+        assert not result.ok
+        assert any("Unknown strategy" in t for t in result.trace)

@@ -494,10 +494,11 @@ def _score_node(
     class_str = attrs.get("class", "")
     if class_str:
         matched_hints: list[str] = []
-        for pattern, hint_actions in _CLASS_HINT_PATTERNS:
-            if pattern.search(class_str):
-                matched_hints.append(pattern.pattern)
-                actions.update(hint_actions)
+        for token in class_str.split():
+            for pattern, hint_actions in _CLASS_HINT_PATTERNS:
+                if pattern.search(token):
+                    matched_hints.append(pattern.pattern)
+                    actions.update(hint_actions)
         if matched_hints:
             score += _SCORE_CLASS_HINT * min(len(matched_hints), 3)
             candidate.evidence_class_hints = _extract_matching_tokens(
@@ -635,7 +636,8 @@ def _extract_text_intent(node: ASTNode) -> tuple[str, str] | None:
 
 def _match_text_intent(text: str) -> tuple[str, str] | None:
     """Match text against known action words. Returns (word, action) or None."""
-    normalized = text.strip().lower()
+    normalized = re.sub(r"[-_]+", " ", text.strip().lower())
+    normalized = re.sub(r"\s+", " ", normalized)
     if not normalized or len(normalized) > 50:
         return None
 
@@ -673,9 +675,12 @@ def _collect_text(
     for child in node.children:
         if child.node_type == "text" and child.text:
             stripped = child.text.strip()
-            if stripped:
+            if stripped and depth < max_depth:
                 parts.append(stripped)
         elif child.node_type == "element" and child.tag not in ("script", "style", "svg"):
+            child_role = child.attrs.get("role", "").lower().strip()
+            if child.tag in _INTERACTIVE_TAGS or child_role in _INTERACTIVE_ROLES:
+                continue
             _collect_text(child, parts, depth + 1, max_depth)
 
 
@@ -695,11 +700,12 @@ def _extract_icon_intent(node: ASTNode) -> list[tuple[str, str]]:
     # 1. Check class tokens for icon keywords
     class_str = attrs.get("class", "")
     if class_str:
-        for m in _ICON_KEYWORD_RE.finditer(class_str):
-            kw = m.group(1).lower()
-            if kw not in seen and kw in _ICON_INTENT_KEYWORDS:
-                seen.add(kw)
-                hits.append((kw, _ICON_INTENT_KEYWORDS[kw]))
+        for token in class_str.split():
+            for m in _ICON_KEYWORD_RE.finditer(token):
+                kw = m.group(1).lower()
+                if kw not in seen and kw in _ICON_INTENT_KEYWORDS:
+                    seen.add(kw)
+                    hits.append((kw, _ICON_INTENT_KEYWORDS[kw]))
 
     # 2. Check icon-related attributes
     for attr_name in ("aria-label", "title", "alt", "data-tooltip"):
@@ -855,6 +861,9 @@ def _make_element_key(raw: _CandidateRaw) -> str:
     nid = raw.attrs.get("id")
     if nid:
         return f"{tag}#{nid}"
+    href = raw.attrs.get("href")
+    if tag == "a" and href:
+        return f"{tag}[href={href}]"
     role = raw.attrs.get("role")
     if role:
         label = (

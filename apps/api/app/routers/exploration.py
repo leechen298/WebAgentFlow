@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.schemas.common import ApiResponse
@@ -61,7 +61,10 @@ def get_task(task_id: str) -> ApiResponse[TaskDefinition]:
     """Get a single task definition by ID."""
     from app.services.task_loader import load_task_by_id
 
-    task = load_task_by_id(task_id)
+    try:
+        task = load_task_by_id(task_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return ApiResponse(data=task)
 
 

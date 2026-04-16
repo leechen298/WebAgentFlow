@@ -261,3 +261,283 @@ class TestRuntimeConfig:
             assert rt.is_page_usable()
         finally:
             rt.stop()
+
+
+# ---------------------------------------------------------------------------
+# 9. Mocked tests — non-Playwright code paths
+# ---------------------------------------------------------------------------
+
+from unittest.mock import MagicMock, patch, PropertyMock
+
+
+class TestRuntimeConfigValidation:
+    """Test config fields and edge values without launching a browser."""
+
+    def test_user_agent_set(self):
+        cfg = RuntimeConfig(user_agent="TestBot/1.0")
+        assert cfg.user_agent == "TestBot/1.0"
+
+    def test_storage_state_as_dict(self):
+        state = {"cookies": [{"name": "tok", "value": "abc", "url": "http://ex.com"}]}
+        cfg = RuntimeConfig(storage_state=state)
+        assert cfg.storage_state == state
+
+    def test_storage_state_as_string(self):
+        cfg = RuntimeConfig(storage_state="/tmp/state.json")
+        assert cfg.storage_state == "/tmp/state.json"
+
+    def test_default_timeout(self):
+        cfg = RuntimeConfig(default_timeout_ms=5000)
+        assert cfg.default_timeout_ms == 5000
+
+
+class TestRuntimePropertiesBeforeStart:
+    """Property access on an unstarted runtime returns None / False."""
+
+    def test_browser_is_none(self):
+        rt = ExecutionRuntime()
+        assert rt.browser is None
+
+    def test_context_is_none(self):
+        rt = ExecutionRuntime()
+        assert rt.context is None
+
+    def test_page_is_none(self):
+        rt = ExecutionRuntime()
+        assert rt.page is None
+
+    def test_is_started_false(self):
+        rt = ExecutionRuntime()
+        assert rt.is_started is False
+
+    def test_config_returns_default(self):
+        rt = ExecutionRuntime()
+        assert rt.config.headless is True
+        assert rt.config.browser_type == "chromium"
+
+
+class TestEnsurePageRaises:
+    """_ensure_page raises PageObservationError when page is None or closed."""
+
+    def test_ensure_page_none(self):
+        rt = ExecutionRuntime()
+        with pytest.raises(PageObservationError, match="No usable page"):
+            rt._ensure_page()
+
+    def test_ensure_page_closed(self):
+        rt = ExecutionRuntime()
+        mock_page = MagicMock()
+        mock_page.is_closed.return_value = True
+        rt._page = mock_page
+        with pytest.raises(PageObservationError, match="No usable page"):
+            rt._ensure_page()
+
+
+class TestNavigateWithoutPage:
+    """navigate raises PageNavigationError when page is None or closed."""
+
+    def test_navigate_page_none(self):
+        rt = ExecutionRuntime()
+        rt._started = True  # pretend started but page is None
+        with pytest.raises(PageNavigationError, match="No usable page"):
+            rt.navigate("about:blank")
+
+    def test_navigate_page_closed(self):
+        rt = ExecutionRuntime()
+        rt._started = True
+        mock_page = MagicMock()
+        mock_page.is_closed.return_value = True
+        rt._page = mock_page
+        with pytest.raises(PageNavigationError, match="No usable page"):
+            rt.navigate("about:blank")
+
+
+class TestSnapshotAndScreenshotPageNone:
+    """snapshot() and screenshot() raise when page is missing."""
+
+    def test_snapshot_no_page(self):
+        rt = ExecutionRuntime()
+        with pytest.raises(PageObservationError):
+            rt.snapshot()
+
+    def test_screenshot_no_page(self):
+        rt = ExecutionRuntime()
+        with pytest.raises(PageObservationError):
+            rt.screenshot()
+
+    def test_current_html_no_page(self):
+        rt = ExecutionRuntime()
+        with pytest.raises(PageObservationError):
+            rt.current_html()
+
+    def test_current_title_no_page(self):
+        rt = ExecutionRuntime()
+        with pytest.raises(PageObservationError):
+            rt.current_title()
+
+
+class TestCleanupHelpers:
+    """Internal cleanup methods should not raise even if objects are in odd states."""
+
+    def test_close_page_when_none(self):
+        rt = ExecutionRuntime()
+        rt._page = None
+        rt._close_page()  # should not raise
+        assert rt._page is None
+
+    def test_close_page_when_already_closed(self):
+        rt = ExecutionRuntime()
+        mock_page = MagicMock()
+        mock_page.is_closed.return_value = True
+        rt._page = mock_page
+        rt._close_page()
+        assert rt._page is None
+        mock_page.close.assert_not_called()
+
+    def test_close_page_when_close_raises(self):
+        rt = ExecutionRuntime()
+        mock_page = MagicMock()
+        mock_page.is_closed.return_value = False
+        mock_page.close.side_effect = Exception("already gone")
+        rt._page = mock_page
+        rt._close_page()  # should not raise
+        assert rt._page is None
+
+    def test_close_context_when_none(self):
+        rt = ExecutionRuntime()
+        rt._context = None
+        rt._close_context()  # should not raise
+
+    def test_close_context_when_close_raises(self):
+        rt = ExecutionRuntime()
+        mock_ctx = MagicMock()
+        mock_ctx.close.side_effect = Exception("gone")
+        rt._context = mock_ctx
+        rt._close_context()
+        assert rt._context is None
+
+    def test_cleanup_browser_when_none(self):
+        rt = ExecutionRuntime()
+        rt._browser = None
+        rt._cleanup_browser()  # should not raise
+
+    def test_cleanup_browser_when_close_raises(self):
+        rt = ExecutionRuntime()
+        mock_browser = MagicMock()
+        mock_browser.close.side_effect = Exception("gone")
+        rt._browser = mock_browser
+        rt._cleanup_browser()
+        assert rt._browser is None
+
+    def test_cleanup_pw_when_none(self):
+        rt = ExecutionRuntime()
+        rt._pw = None
+        rt._cleanup_pw()  # should not raise
+
+    def test_cleanup_pw_when_stop_raises(self):
+        rt = ExecutionRuntime()
+        mock_pw = MagicMock()
+        mock_pw.stop.side_effect = Exception("gone")
+        rt._pw = mock_pw
+        rt._cleanup_pw()
+        assert rt._pw is None
+
+
+class TestStartErrorBranches:
+    """Test error paths during start() that don't require a real browser."""
+
+    def test_start_playwright_fails(self):
+        rt = ExecutionRuntime()
+        with patch("app.services.execution.execution_runtime.sync_playwright") as mock_sp:
+            mock_sp.return_value.start.side_effect = Exception("no pw")
+            with pytest.raises(RuntimeInitError, match="Failed to start Playwright"):
+                rt.start()
+
+    def test_start_browser_launch_fails(self):
+        rt = ExecutionRuntime()
+        mock_pw = MagicMock()
+        mock_launcher = MagicMock()
+        mock_launcher.launch.side_effect = Exception("launch fail")
+        mock_pw.chromium = mock_launcher
+        with patch("app.services.execution.execution_runtime.sync_playwright") as mock_sp:
+            mock_sp.return_value.start.return_value = mock_pw
+            with pytest.raises(RuntimeInitError, match="Failed to launch browser"):
+                rt.start()
+
+    def test_start_context_creation_fails(self):
+        rt = ExecutionRuntime()
+        mock_pw = MagicMock()
+        mock_browser = MagicMock()
+        mock_browser.new_context.side_effect = Exception("ctx fail")
+        mock_launcher = MagicMock()
+        mock_launcher.launch.return_value = mock_browser
+        mock_pw.chromium = mock_launcher
+        with patch("app.services.execution.execution_runtime.sync_playwright") as mock_sp:
+            mock_sp.return_value.start.return_value = mock_pw
+            with pytest.raises(RuntimeInitError, match="Failed to create context"):
+                rt.start()
+
+
+class TestIsPageUsableEdge:
+    """Edge cases for is_page_usable."""
+
+    def test_page_is_closed_raises(self):
+        """If is_closed() itself raises, return False."""
+        rt = ExecutionRuntime()
+        mock_page = MagicMock()
+        mock_page.is_closed.side_effect = Exception("detached")
+        rt._page = mock_page
+        assert rt.is_page_usable() is False
+
+
+class TestScreenshotDirCreation:
+    """screenshot_dir is created during start()."""
+
+    def test_screenshot_dir_set_during_start(self, tmp_path):
+        sdir = tmp_path / "shots"
+        cfg = RuntimeConfig(screenshot_dir=str(sdir))
+        rt = ExecutionRuntime(cfg)
+        # Simulate a successful start by mocking Playwright internals
+        mock_pw = MagicMock()
+        mock_browser = MagicMock()
+        mock_ctx = MagicMock()
+        mock_page = MagicMock()
+        mock_ctx.new_page.return_value = mock_page
+        mock_browser.new_context.return_value = mock_ctx
+        mock_launcher = MagicMock()
+        mock_launcher.launch.return_value = mock_browser
+        mock_pw.chromium = mock_launcher
+
+        with patch("app.services.execution.execution_runtime.sync_playwright") as mock_sp:
+            mock_sp.return_value.start.return_value = mock_pw
+            rt.start()
+
+        assert rt._screenshot_dir == sdir
+        assert sdir.exists()
+        rt.stop()
+
+
+class TestPageSnapshotModel:
+    """PageSnapshot model basic sanity."""
+
+    def test_default_values(self):
+        from app.services.execution.execution_runtime import PageSnapshot
+        snap = PageSnapshot()
+        assert snap.url == ""
+        assert snap.title == ""
+        assert snap.html == ""
+
+
+class TestCreateExecutionRuntimeFactory:
+    """Factory returns a fresh ExecutionRuntime."""
+
+    def test_returns_runtime(self):
+        rt = create_execution_runtime()
+        assert isinstance(rt, ExecutionRuntime)
+        assert not rt.is_started
+
+    def test_with_config(self):
+        cfg = RuntimeConfig(headless=False, browser_type="firefox")
+        rt = create_execution_runtime(cfg)
+        assert rt.config.headless is False
+        assert rt.config.browser_type == "firefox"
