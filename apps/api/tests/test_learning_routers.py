@@ -11,7 +11,8 @@ Covers:
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -807,6 +808,153 @@ def test_exploration_reject_run_no_body(client: TestClient) -> None:
     data = resp.json()["data"]
     assert data["run_id"] == "run-000"
     assert data["status"] == "rejected"
+
+
+def test_exploration_run_endpoint_success(client: TestClient) -> None:
+    from app.schemas.execution import ExecutionResult, PageStateChange
+    from app.schemas.exploration_run import ExplorationResult, ExplorationStepLog
+    from app.schemas.observation import PostActionObservation
+    from app.schemas.success_criteria import SuccessEvaluation
+    from app.schemas.task_definition import TaskDefinition, TaskStep
+
+    task = TaskDefinition(
+        id="search-task",
+        name="Search Task",
+        description="Run a search",
+        target_url="https://example.com",
+        variables={"query": "default"},
+        steps=[TaskStep(intent="search", action_type="fill", value_from="query")],
+        source="builtin",
+    )
+    step = ExplorationStepLog(
+        step_index=0,
+        intent="search",
+        action_type="fill",
+        target_summary="search box",
+        value="override",
+        timestamp_ms=1234,
+        agent_note="picked top candidate",
+        execution_result=ExecutionResult(
+            ok=True,
+            action_type="fill",
+            target_summary="search box",
+            page_change=PageStateChange(title_before="Before", title_after="After"),
+        ),
+        observation=PostActionObservation(title="After", html_hash="abc"),
+        success_evaluation=SuccessEvaluation(satisfied=True, confidence="high"),
+    )
+    result = ExplorationResult(
+        success=True,
+        steps=[step],
+        total_steps=1,
+        final_url="https://example.com/results",
+        final_title="Results",
+        final_screenshot_ref="shot.png",
+        summary="exploration ok",
+        elapsed_ms=321,
+    )
+    assessment = SimpleNamespace(
+        verdict="success",
+        confidence="high",
+        summary="looks good",
+        step_assessments=[{"step_index": 0, "verdict": "ok"}],
+        anomalies=["minor"],
+        suggestions=["save path"],
+        should_save_path=True,
+    )
+    fake_runtime = SimpleNamespace()
+    fake_cm = MagicMock()
+    fake_cm.__enter__.return_value = fake_runtime
+    fake_cm.__exit__.return_value = False
+
+    with (
+        patch("app.services.task_loader.load_task_by_id", return_value=task),
+        patch(
+            "app.services.execution.execution_runtime.create_execution_runtime",
+            return_value=fake_cm,
+        ) as mock_runtime_factory,
+        patch(
+            "app.services.learning.exploration_loop.run_exploration",
+            return_value=result,
+        ) as mock_run,
+        patch(
+            "app.services.learning.exploration_supervisor.summarize_exploration",
+            return_value=assessment,
+        ) as mock_supervisor,
+    ):
+        resp = client.post(
+            "/exploration/run",
+            json={
+                "task_id": "search-task",
+                "variables": {"query": "override"},
+                "headless": True,
+                "max_steps": 2,
+            },
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["success"] is True
+    assert data["final_url"] == "https://example.com/results"
+    assert data["steps"][0]["execution_result"]["ok"] is True
+    assert data["steps"][0]["observation"]["title"] == "After"
+    assert data["steps"][0]["success_evaluation"]["satisfied"] is True
+    assert data["supervisor"]["verdict"] == "success"
+    mock_runtime_factory.assert_called_once_with(headless=True)
+    passed_task, passed_runtime = mock_run.call_args.args[:2]
+    assert passed_task.variables["query"] == "override"
+    assert passed_runtime is fake_runtime
+    assert mock_run.call_args.kwargs["max_steps"] == 2
+    mock_supervisor.assert_called_once()
+
+
+def test_exploration_run_endpoint_supervisor_failure(client: TestClient) -> None:
+    from app.schemas.exploration_run import ExplorationResult
+    from app.schemas.task_definition import TaskDefinition
+
+    task = TaskDefinition(
+        id="simple-task",
+        name="Simple",
+        description="simple",
+        target_url="https://example.com",
+        steps=[],
+        source="builtin",
+    )
+    result = ExplorationResult(
+        success=False,
+        steps=[],
+        total_steps=0,
+        final_url="https://example.com",
+        final_title="Home",
+        summary="no-op",
+        elapsed_ms=12,
+    )
+    fake_runtime = SimpleNamespace()
+    fake_cm = MagicMock()
+    fake_cm.__enter__.return_value = fake_runtime
+    fake_cm.__exit__.return_value = False
+
+    with (
+        patch("app.services.task_loader.load_task_by_id", return_value=task),
+        patch(
+            "app.services.execution.execution_runtime.create_execution_runtime",
+            return_value=fake_cm,
+        ),
+        patch(
+            "app.services.learning.exploration_loop.run_exploration",
+            return_value=result,
+        ),
+        patch(
+            "app.services.learning.exploration_supervisor.summarize_exploration",
+            side_effect=Exception("supervisor boom"),
+        ),
+    ):
+        resp = client.post("/exploration/run", json={"task_id": "simple-task"})
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["success"] is False
+    assert data["supervisor"] is None
 
 
 # ═══════════════════════════════════════════════════════════════════════

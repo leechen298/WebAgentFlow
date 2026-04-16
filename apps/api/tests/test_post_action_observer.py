@@ -18,6 +18,8 @@ All tests use data: URLs — no real websites, no LLM calls.
 
 import hashlib
 import os
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 
@@ -287,6 +289,23 @@ class TestSnapshotFailure:
         assert obs.screenshot_ref is None
         rt.stop()
 
+    def test_target_state_check_failure_adds_warning(self):
+        with create_execution_runtime() as rt:
+            rt.navigate(STATIC_PAGE)
+            with patch(
+                "app.services.execution.post_action_observer.to_playwright_locator",
+                side_effect=Exception("locator boom"),
+            ):
+                obs = observe_post_action(
+                    runtime=rt,
+                    execution_result=_exec_result(),
+                    resolved_locator=_resolved("#noop"),
+                )
+            assert any("Target state check failed" in w for w in obs.warnings)
+            assert "target: check failed" in obs.trace
+            if obs.screenshot_ref and os.path.exists(obs.screenshot_ref):
+                os.unlink(obs.screenshot_ref)
+
 
 # ---------------------------------------------------------------------------
 # 8. observation serializable
@@ -355,6 +374,35 @@ class TestExecuteAndObserve:
             assert result.ok
             assert result.observation is not None
             assert result.observation["url_changed"] is True
+            if result.screenshot_ref and os.path.exists(result.screenshot_ref):
+                os.unlink(result.screenshot_ref)
+
+    def test_full_pipeline_ignores_before_html_hash_failure(self):
+        with create_execution_runtime() as rt:
+            rt.navigate(STATIC_PAGE)
+            req = _req(action_type="click", hints=_hint_id("noop"))
+            with patch.object(rt, "current_html", side_effect=Exception("html boom")):
+                result = execute_and_observe(req, rt)
+
+            assert result.ok
+            assert result.observation is not None
+            assert result.observation["html_hash"] != ""
+            if result.screenshot_ref and os.path.exists(result.screenshot_ref):
+                os.unlink(result.screenshot_ref)
+
+    def test_full_pipeline_ignores_locator_resolution_failure(self):
+        with create_execution_runtime() as rt:
+            rt.navigate(STATIC_PAGE)
+            req = _req(action_type="click", hints=_hint_id("noop"))
+            with patch(
+                "app.services.execution.locator_resolver.resolve_locator",
+                side_effect=Exception("resolve boom"),
+            ):
+                result = execute_and_observe(req, rt)
+
+            assert result.ok
+            assert result.observation is not None
+            assert result.observation["target"]["still_present"] is None
             if result.screenshot_ref and os.path.exists(result.screenshot_ref):
                 os.unlink(result.screenshot_ref)
 
