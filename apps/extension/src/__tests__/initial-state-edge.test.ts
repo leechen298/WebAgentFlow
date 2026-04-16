@@ -135,4 +135,207 @@ describe('captureInitialState edge cases', () => {
     expect(labels).toEqual(expect.arrayContaining(['Run A', 'Run B', 'Run C', 'Run D']));
     expect(findNodes(result.stateTree ?? [], (node) => node.label?.includes('其他'))).toHaveLength(0);
   });
+
+  it('captures upload, color, radio-checkbox options, and readonly range values inside form items', () => {
+    document.body.innerHTML = `
+      <main>
+        <div class="el-form-item" prop="assets">
+          <label class="el-form-item__label">Assets</label>
+          <div class="el-form-item__content">
+            <div class="el-upload">
+              <img src="https://example.com/upload.png" alt="uploaded" />
+            </div>
+          </div>
+        </div>
+
+        <div class="el-form-item" prop="themeColor">
+          <label class="el-form-item__label">Theme Color</label>
+          <div class="el-form-item__content">
+            <div class="el-color-picker">
+              <span class="el-color-picker__color-inner" style="background-color: rgb(255, 23, 45);"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="el-form-item" prop="mode">
+          <label class="el-form-item__label">Mode</label>
+          <div class="el-form-item__content">
+            <label><input type="radio" name="mode" checked value="simple" /> Simple</label>
+            <label><input type="radio" name="mode" value="advanced" /> Advanced</label>
+          </div>
+        </div>
+
+        <div class="el-form-item" prop="flags">
+          <label class="el-form-item__label">Flags</label>
+          <div class="el-form-item__content">
+            <label><input type="checkbox" name="flags" checked value="a" /> Alpha</label>
+            <label><input type="checkbox" name="flags" value="b" /> Beta</label>
+          </div>
+        </div>
+
+        <div class="el-form-item" prop="window">
+          <label class="el-form-item__label">Window</label>
+          <div class="el-form-item__content">
+            <input readonly value="2026-04-16 09:00" />
+            <input readonly value="2026-04-16 18:00" />
+          </div>
+        </div>
+      </main>
+    `;
+
+    const result = captureInitialState();
+
+    const upload = findNodes(result.stateTree ?? [], (node) => node.label === 'Assets')[0];
+    expect(upload?.type).toBe('upload');
+    expect(upload?.value).toContain('https://example.com/upload.png');
+
+    const color = findNodes(result.stateTree ?? [], (node) => node.label === 'Theme Color')[0];
+    expect(color?.type).toBe('color');
+    expect(color?.value).toContain('rgb(255, 23, 45)');
+
+    const mode = findNodes(result.stateTree ?? [], (node) => node.label === 'Mode')[0];
+    const modeRadio = findNodes([mode!], (node) => node.type === 'radio')[0] ?? mode;
+    expect(['group', 'radio']).toContain(mode?.type);
+    const modeText = JSON.stringify(modeRadio);
+    expect(modeText).toContain('Simple');
+    expect(modeText).toContain('Advanced');
+
+    const flags = findNodes(result.stateTree ?? [], (node) => node.label === 'Flags')[0];
+    const flagsCheckbox = findNodes([flags!], (node) => node.type === 'checkbox')[0] ?? flags;
+    expect(['group', 'checkbox']).toContain(flags?.type);
+    const flagsText = JSON.stringify(flagsCheckbox);
+    expect(flagsText).toContain('Alpha');
+    expect(flagsText).toContain('Beta');
+
+    const windowField = findNodes(result.stateTree ?? [], (node) => node.label === 'Window')[0];
+    const windowText = JSON.stringify(windowField);
+    expect(windowText).toContain('2026-04-16 09:00');
+    expect(windowText).toContain('2026-04-16 18:00');
+  });
+
+  it('captures complex table cells as structured rows and preserves footer tips', () => {
+    document.body.innerHTML = `
+      <main>
+        <div class="el-form-item" prop="inventory">
+          <label class="el-form-item__label">Inventory</label>
+          <div class="el-form-item__content">
+            <table>
+              <thead>
+                <tr><th>Preview</th><th>Actions</th><th>Qty</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><img src="https://example.com/item.png" alt="item image" /></td>
+                  <td>
+                    <button>Edit</button>
+                    <button>Remove</button>
+                  </td>
+                  <td>
+                    <div class="el-input-number" aria-valuenow="12">
+                      <input value="12" aria-valuenow="12" />
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="tip">Keep probability sum under 100%.</div>
+          </div>
+        </div>
+      </main>
+    `;
+
+    const result = captureInitialState();
+    const inventory = findNodes(result.stateTree ?? [], (node) => node.label === 'Inventory')[0];
+    const table = findNodes([inventory!], (node) => node.type === 'table')[0];
+
+    expect(inventory?.type).toBe('group');
+    expect(table?.headers).toEqual(['Preview', 'Actions', 'Qty']);
+    expect(table?.rows?.[0]?.[0]).toMatchObject({
+      type: 'image',
+      src: 'https://example.com/item.png',
+    });
+    expect(table?.rows?.[0]?.[1]).toMatchObject({
+      type: 'button-group',
+    });
+    expect((table?.rows?.[0]?.[1] as any)?.actions).toHaveLength(2);
+    expect(table?.rows?.[0]?.[2]).toMatchObject({
+      type: 'input-number',
+      value: '12',
+    });
+    expect(table?.localHtml).toContain('item.png');
+    expect(table?.footerTips).toBeDefined();
+    expect(JSON.stringify(table?.footerTips)).toContain('Keep probability sum');
+  });
+
+  it('expands titled sub-sections and extracts fallback values from custom displays', () => {
+    document.body.innerHTML = `
+      <main>
+        <div class="el-form-item" prop="advancedConfig">
+          <label class="el-form-item__label">Advanced Config</label>
+          <div class="el-form-item__content">
+            <div class="section-title">Basic</div>
+            <div class="selection-label">Alpha Mode</div>
+            <div class="section-title">Limits</div>
+            <div class="value-text">Threshold 10</div>
+          </div>
+        </div>
+
+        <div class="el-form-item" prop="delivery">
+          <label class="el-form-item__label">Delivery</label>
+          <div class="el-form-item__content">
+            <div class="custom-select">
+              <div class="selected-item">Scheduled Shipping</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="el-form-item" prop="docs">
+          <label class="el-form-item__label">Docs</label>
+          <div class="el-form-item__content">
+            <div class="el-upload"><a href="https://example.com/file.pdf">manual</a></div>
+          </div>
+        </div>
+      </main>
+    `;
+
+    const result = captureInitialState();
+
+    const advanced = findNodes(result.stateTree ?? [], (node) => node.label === 'Advanced Config')[0];
+    expect(advanced?.type).toBe('group');
+    expect(findNodes([advanced!], (node) => node.label === 'Basic')).toHaveLength(1);
+    expect(findNodes([advanced!], (node) => node.label === 'Limits')).toHaveLength(1);
+
+    const delivery = findNodes(result.stateTree ?? [], (node) => node.label === 'Delivery')[0];
+    expect(delivery?.value ?? JSON.stringify(delivery)).toContain('Scheduled Shipping');
+
+    const docs = findNodes(result.stateTree ?? [], (node) => node.label === 'Docs')[0];
+    expect(docs?.type).toBe('upload');
+    expect(docs?.value).toContain('https://example.com/file.pdf');
+  });
+
+  it('captures single-button, text-only, and empty table cells', () => {
+    document.body.innerHTML = `
+      <main>
+        <table>
+          <thead>
+            <tr><th>Action</th><th>Text</th><th>Empty</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><button title="Edit">Edit</button></td>
+              <td>Plain Value</td>
+              <td><span aria-hidden="true"></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </main>
+    `;
+
+    const result = captureInitialState();
+    const table = findNodes(result.stateTree ?? [], (node) => node.type === 'table')[0];
+    expect(table?.rows?.[0]?.[0]).toMatchObject({ type: 'button', text: 'Edit' });
+    expect((table?.rows?.[0]?.[1] as any)?.type).toBe('text');
+    expect(JSON.stringify(table?.rows?.[0]?.[1])).toContain('Plain Value');
+    expect(table?.rows?.[0]?.[2]).toMatchObject({ type: 'empty' });
+  });
 });

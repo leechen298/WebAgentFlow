@@ -116,4 +116,20 @@ describe('HomePage', () => {
     expect(fetchRuns).toHaveBeenCalledTimes(2);
     expect(message.success).toHaveBeenCalled();
   });
+
+  it('exposes unreachable API status and resets loading after refresh', async () => {
+    appStore.apiConnected = false;
+    appStore.loading = false;
+
+    const wrapper = mount(HomePage);
+    const vm = wrapper.vm.$.setupState;
+    await flushPromises();
+
+    expect(vm.apiStatusType).toBe('error');
+    expect(vm.apiStatusMessage).toBeTruthy();
+
+    vm.loading = true;
+    await vm.refreshData();
+    expect(vm.loading).toBe(false);
+  });
 });

@@ -62,7 +62,7 @@ const recording = {
       ],
     },
     domMutations: [
-      { mutationType: 'attributes', astMatch: { confidence: 'ancestor' } },
+      { mutationType: 'attributes', astMatch: { confidence: 'ancestor' }, detail: { type: 'attributes', attributeName: 'class', oldValue: 'a', newValue: 'b' } },
     ],
   },
 };
@@ -103,6 +103,7 @@ function getSetupState(wrapper: ReturnType<typeof mount>) {
 describe('RecordingDetailPage behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    recordingsStore.currentRecording = recording;
     getNormalizedRecording.mockResolvedValue({ summary: 'normalized' });
     getRecordingSteps.mockResolvedValue({ steps: [{ timestamp: 1000 }, { timestamp: 2500 }] });
     parseHtmlToAST.mockResolvedValue({ nodes: [{ node_type: 'element', tag: 'div', attrs: { class: 'a b c' }, children: [] }] });
@@ -206,6 +207,8 @@ describe('RecordingDetailPage behavior', () => {
     expect(vm.collectLeafHtml([{ type: 'custom', label: 'x', htmlContent: '<div>x</div>' } as any])).toHaveLength(1);
     expect(vm.convertASTToTreeData([{ node_type: 'text', text: 'Hello', children: [] }])[0].isLeaf).toBe(true);
     expect(vm.collectKeysToDepth([{ key: '0', children: [{ key: '0-0', children: [] }] }], 1)).toEqual(['0']);
+    expect(vm.parsedListItems).toEqual([]);
+    expect(vm.fieldDetailTitle).toBe('');
 
     vm.normalized = null;
     getNormalizedRecording.mockRejectedValueOnce(new Error('normalized failed'));
@@ -239,4 +242,126 @@ describe('RecordingDetailPage behavior', () => {
     await vm.handleDelete();
     expect(message.error).toHaveBeenCalled();
   });
+
+  it('covers legacy snapshot, collapsed tree visibility, modal titles, and unmount cleanup', async () => {
+    recordingsStore.currentRecording = {
+      ...recording,
+      events: [
+        { id: 'e0', type: 'navigate', timestamp: 1000, url: 'https://example.com' },
+        {
+          id: 'e1',
+          type: 'click',
+          timestamp: 2500,
+          astMatch: { confidence: 'none', areaLabel: 'main', ancestorChain: 'body > main' },
+        },
+      ],
+      meta: {
+        initialState: {
+          pageUrl: 'https://legacy.example.com',
+          pageTitle: 'Legacy',
+          capturedAt: 1000,
+          htmlSnapshot: '<main>legacy</main>',
+          stateTree: [
+            {
+              type: 'section',
+              label: 'Outer',
+              children: [
+                {
+                  type: 'group',
+                  label: 'Inner',
+                  children: [{ type: 'input', label: 'Name', value: 'Alice' }],
+                },
+              ],
+            },
+          ],
+          fields: [
+            {
+              fieldLabel: 'Items',
+              fieldType: 'list',
+              itemCount: 2,
+              defaultValueText: '共2项：Alpha；Beta',
+            },
+          ],
+        },
+      },
+    } as any;
+
+    const wrapper = mount(RecordingDetailPage);
+    const vm = getSetupState(wrapper);
+
+    expect(vm.rawHtmlSnapshotData).toBe('<main>legacy</main>');
+    expect(vm.astMatchCount.none).toBe(1);
+    expect(vm.fieldDetailTitle).toBe('');
+
+    vm.openFieldDetailModal(recordingsStore.currentRecording.meta.initialState.fields[0]);
+    expect(vm.parsedListItems).toEqual(['Alpha', 'Beta']);
+    expect(vm.fieldDetailTitle).toBe('Items（2 项）');
+
+    expect(vm.visibleTreeRows.map((row: any) => row.key)).toEqual(['0', '0-0', '0-0-0']);
+    vm.toggleNode('0');
+    expect(vm.visibleTreeRows.map((row: any) => row.key)).toEqual(['0']);
+    vm.toggleNode('0');
+    vm.toggleNode('0-0');
+    expect(vm.visibleTreeRows.map((row: any) => row.key)).toEqual(['0', '0-0']);
+
+    wrapper.unmount();
+    expect(recordingsStore.clearCurrent).toHaveBeenCalled();
+
+    recordingsStore.currentRecording = recording;
+  });
+
+  it('covers empty-json validation and save early return when json is invalid', async () => {
+    const wrapper = mount(RecordingDetailPage);
+    const vm = getSetupState(wrapper);
+
+    expect(vm.validateJson('events')).toBe(true);
+    expect(vm.formErrors.events).toBe('');
+
+    vm.formRef = { validate: vi.fn().mockResolvedValue(undefined) };
+    vm.showEditModal();
+    vm.formData.eventsStr = '[';
+    vm.formData.metaStr = '{}';
+    await vm.handleSave();
+    expect(recordingsStore.updateRecording).not.toHaveBeenCalled();
+    expect(vm.formErrors.events).toBeTruthy();
+  });
+
+  it('covers dense helper branches for cell formatting, colors, and minute-based timing', async () => {
+    const wrapper = mount(RecordingDetailPage);
+    const vm = getSetupState(wrapper);
+
+    expect(vm.stringifyTableCell({ value: 'V' })).toBe('V');
+    expect(vm.stringifyTableCell({ src: 'https://example.com/a.png' })).toBe('https://example.com/a.png');
+    expect(vm.stringifyTableCell({ actions: [{ label: 'Edit' }, { label: 'Delete' }] })).toBe('Edit | Delete');
+    expect(vm.stringifyTableCell({ children: [{ label: 'Alpha' }, { value: 'Beta' }] })).toBe('Alpha Beta');
+    expect(vm.stringifyTableCell({ type: 'upload' })).toBe('[upload]');
+    expect(vm.stringifyTableCell(1)).toBe('');
+
+    expect(vm.initialFieldTypeColor('upload')).toBe('magenta');
+    expect(vm.initialFieldTypeColor('color')).toBe('magenta');
+    expect(vm.initialFieldTypeColor('switch')).toBe('blue');
+    expect(vm.initialFieldTypeColor('mystery')).toBe('default');
+    expect(vm.actionColor('navigate-page')).toBe('geekblue');
+    expect(vm.actionColor('fill-field')).toBe('green');
+    expect(vm.actionColor('select-field')).toBe('lime');
+    expect(vm.actionColor('edit-richtext')).toBe('purple');
+    expect(vm.actionColor('click-button')).toBe('orange');
+    expect(vm.actionColor('open-dialog')).toBe('gold');
+    expect(vm.actionColor('confirm-dialog')).toBe('cyan');
+    expect(vm.actionColor('cancel-dialog')).toBe('red');
+
+    vm.stepsResult = { steps: [{ timestamp: 1000 }, { timestamp: 62000 }] };
+    expect(vm.formatStepRelativeTime(62000)).toBe('1m1s');
+
+    recordingsStore.currentRecording = {
+      ...recording,
+      events: [
+        { id: 'e0', type: 'navigate', timestamp: 1000, url: 'https://example.com' },
+        { id: 'e1', type: 'change', timestamp: 62000 },
+      ],
+    } as any;
+    expect(vm.formatRelativeTime(62000)).toBe('1m1s');
+    recordingsStore.currentRecording = recording;
+  });
+
 });
