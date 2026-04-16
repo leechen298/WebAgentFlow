@@ -9,9 +9,11 @@ Provides the backend for the Exploration Workbench frontend:
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.schemas.common import ApiResponse
@@ -19,6 +21,10 @@ from app.schemas.task_definition import TaskDefinition
 
 router = APIRouter(prefix="/exploration", tags=["exploration"])
 logger = logging.getLogger(__name__)
+
+# Screenshots are stored in a fixed directory so they can be served via HTTP.
+_SCREENSHOT_DIR = Path(__file__).resolve().parents[4] / "data" / "screenshots"
+_SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -129,14 +135,16 @@ def run_exploration_endpoint(
         task = task.model_copy(update={"variables": {**task.variables, **payload.variables}})
 
     # Lazy import to avoid Playwright at module load
-    from app.services.execution.execution_runtime import create_execution_runtime
+    from app.services.execution.execution_runtime import RuntimeConfig, create_execution_runtime
     from app.services.learning.exploration_loop import run_exploration
     from app.services.learning.exploration_supervisor import summarize_exploration
 
-    # Run exploration
-    runtime_config = {"headless": payload.headless}
+    runtime_config = RuntimeConfig(
+        headless=payload.headless,
+        screenshot_dir=str(_SCREENSHOT_DIR),
+    )
 
-    with create_execution_runtime(**runtime_config) as runtime:
+    with create_execution_runtime(config=runtime_config) as runtime:
         result = run_exploration(task, runtime, max_steps=payload.max_steps)
 
     # Supervisor assessment
@@ -155,7 +163,7 @@ def run_exploration_endpoint(
     except Exception as e:
         logger.warning("Supervisor assessment failed: %s", e)
 
-    # Serialize steps
+    # Serialize steps — convert screenshot file paths to API URLs
     steps_data = []
     for step in result.steps:
         step_dict: dict[str, Any] = {
@@ -168,9 +176,13 @@ def run_exploration_endpoint(
             "agent_note": step.agent_note,
         }
         if step.execution_result:
-            step_dict["execution_result"] = step.execution_result.model_dump()
+            er = step.execution_result.model_dump()
+            er["screenshot_ref"] = _to_screenshot_url(er.get("screenshot_ref"))
+            step_dict["execution_result"] = er
         if step.observation:
-            step_dict["observation"] = step.observation.model_dump()
+            obs = step.observation.model_dump()
+            obs["screenshot_ref"] = _to_screenshot_url(obs.get("screenshot_ref"))
+            step_dict["observation"] = obs
         if step.success_evaluation:
             step_dict["success_evaluation"] = step.success_evaluation.model_dump()
         steps_data.append(step_dict)
@@ -183,11 +195,33 @@ def run_exploration_endpoint(
             final_title=result.final_title,
             elapsed_ms=result.elapsed_ms,
             summary=result.summary,
-            final_screenshot_ref=result.final_screenshot_ref,
+            final_screenshot_ref=_to_screenshot_url(result.final_screenshot_ref),
             steps=steps_data,
             supervisor=supervisor_data,
         )
     )
+
+
+# ───────────────────────────────────────────────────────────────────
+# Screenshot serving
+# ───────────────────────────────────────────────────────────────────
+
+
+def _to_screenshot_url(file_path: str | None) -> str | None:
+    """Convert a local screenshot file path to an API-servable URL path."""
+    if not file_path:
+        return None
+    name = Path(file_path).name
+    return f"/exploration/screenshots/{name}"
+
+
+@router.get("/screenshots/{filename}")
+def get_screenshot(filename: str) -> FileResponse:
+    """Serve a screenshot image by filename."""
+    path = _SCREENSHOT_DIR / filename
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail=f"Screenshot not found: {filename}")
+    return FileResponse(path, media_type="image/png")
 
 
 # ───────────────────────────────────────────────────────────────────

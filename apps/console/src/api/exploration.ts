@@ -121,7 +121,10 @@ export async function getTask(taskId: string): Promise<TaskDefinition> {
 export async function runExploration(
   params: RunExplorationParams,
 ): Promise<RunExplorationResponse> {
-  return (await apiClient.post('/exploration/run', params)) as unknown as RunExplorationResponse;
+  // Exploration is synchronous and blocking — may take minutes.
+  return (await apiClient.post('/exploration/run', params, {
+    timeout: 300_000,
+  })) as unknown as RunExplorationResponse;
 }
 
 export async function approveRun(runId: string, note?: string): Promise<Record<string, string>> {

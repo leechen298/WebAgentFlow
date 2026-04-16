@@ -331,6 +331,9 @@ import {
   type RunExplorationResponse,
   type ExplorationStepData,
 } from '@/api/exploration';
+import { resolveApiConfig } from '@/api/client';
+
+const _apiBase = resolveApiConfig().baseURL;
 
 const { t: $t } = useI18n();
 
@@ -372,26 +375,34 @@ interface StepScreenshot {
   src: string;
 }
 
+/** Prepend API base so the browser can load screenshot images. */
+function screenshotUrl(ref: string | null | undefined): string | null {
+  if (!ref) return null;
+  return `${_apiBase}${ref}`;
+}
+
 const stepScreenshots = computed<StepScreenshot[]>(() => {
   if (!result.value) return [];
   const shots: StepScreenshot[] = [];
   for (const step of result.value.steps) {
     const obs = step.observation as Record<string, unknown> | null;
     const exec = step.execution_result as Record<string, unknown> | null;
-    const ref = (obs?.screenshot_ref ?? exec?.screenshot_ref) as string | undefined;
-    if (ref) {
-      shots.push({ label: `Step ${step.step_index}`, src: ref });
+    const raw = (obs?.screenshot_ref ?? exec?.screenshot_ref) as string | undefined;
+    const url = screenshotUrl(raw);
+    if (url) {
+      shots.push({ label: `Step ${step.step_index}`, src: url });
     }
   }
-  if (result.value.final_screenshot_ref) {
-    shots.push({ label: 'Final', src: result.value.final_screenshot_ref });
+  const finalUrl = screenshotUrl(result.value.final_screenshot_ref);
+  if (finalUrl) {
+    shots.push({ label: 'Final', src: finalUrl });
   }
   return shots;
 });
 
 const selectedScreenshot = computed(() => {
   if (stepScreenshots.value.length === 0) {
-    return result.value?.final_screenshot_ref || null;
+    return screenshotUrl(result.value?.final_screenshot_ref) || null;
   }
   return stepScreenshots.value[selectedScreenshotIndex.value]?.src || null;
 });
