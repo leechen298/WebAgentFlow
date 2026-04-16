@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { message } from 'ant-design-vue';
 import MainLayout from '@/layouts/MainLayout.vue';
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
 import SkillDetailPage from '@/pages/SkillDetailPage.vue';
@@ -130,6 +131,10 @@ describe('detail pages and layout', () => {
 
     expect(checkApiHealth).toHaveBeenCalled();
     expect(layoutVm.collapsed).toBe(true);
+    expect(layoutVm.selectedKeys).toEqual(['/skills']);
+    expect(layoutVm.pageTitle).toBeTruthy();
+    expect(layoutVm.apiStatus).toBe('success');
+    expect(layoutVm.apiStatusText).toBeTruthy();
 
     Object.defineProperty(window, 'innerWidth', { value: 1200, writable: true });
     layoutVm.handleResize();
@@ -142,5 +147,92 @@ describe('detail pages and layout', () => {
     const localeVm = getSetupState(locale);
     localeVm.handleChange('zh');
     expect(setLocale).toHaveBeenCalledWith('zh');
+    expect(localeVm.appStore.locale).toBe('en');
+  });
+
+  it('covers MainLayout fallback title, loading/error api states, and unmount cleanup', async () => {
+    vi.resetModules();
+    vi.doMock('vue-router', () => ({
+      useRouter: () => ({ push }),
+      useRoute: () => ({ path: '/unknown', meta: {}, params: { id: 'run-1' } }),
+    }));
+    vi.doMock('@/stores', () => ({
+      useAppStore: () => ({ ...appStore, apiConnected: false, loading: true }),
+      useSkillsStore: () => skillsStore,
+      useRunsStore: () => runsStore,
+    }));
+
+    const removeSpy = vi.spyOn(window, 'removeEventListener');
+    const { default: FreshMainLayout } = await import('@/layouts/MainLayout.vue');
+    const wrapper = mount(FreshMainLayout);
+    const vm = getSetupState(wrapper);
+
+    expect(vm.pageTitle).toBe('WebAgentFlow Console');
+    expect(vm.apiStatus).toBe('processing');
+    expect(vm.apiStatusText).toBeTruthy();
+
+    wrapper.unmount();
+    expect(removeSpy).toHaveBeenCalledWith('resize', vm.handleResize);
+    removeSpy.mockRestore();
+  });
+
+  it('covers SkillDetailPage helper and error branches', async () => {
+    const wrapper = mount(SkillDetailPage);
+    const vm = getSetupState(wrapper);
+
+    expect(vm.getStatusColor('draft')).toBe('default');
+    expect(vm.getStatusColor('other')).toBe('default');
+    expect(typeof vm.formatDate('2026-04-16T00:00:00Z')).toBe('string');
+    expect(vm.rules.name[0].message).toBeTruthy();
+    expect(vm.error).toBeNull();
+
+    skillsStore.fetchSkill.mockRejectedValueOnce(new Error('load failed'));
+    await vm.fetchSkill();
+    expect(message.error).toHaveBeenCalled();
+
+    vm.editModalOpen = false;
+    skillsStore.currentSkill = null as any;
+    vm.showEditModal();
+    expect(vm.editModalOpen).toBe(false);
+    skillsStore.currentSkill = skill as any;
+
+    vm.formRef = { validate: vi.fn().mockRejectedValue(new Error('invalid')) };
+    await vm.handleSave();
+    expect(message.error).toHaveBeenCalled();
+
+    skillsStore.deleteSkill.mockRejectedValueOnce(new Error('delete failed'));
+    await vm.handleDelete();
+    expect(message.error).toHaveBeenCalled();
+  });
+
+  it('covers RunDetailPage helper and error branches', async () => {
+    const wrapper = mount(RunDetailPage);
+    const vm = getSetupState(wrapper);
+
+    expect(vm.getStatusColor('queued')).toBe('blue');
+    expect(vm.getStatusColor('other')).toBe('default');
+    expect(typeof vm.formatDate('2026-04-16T00:00:00Z')).toBe('string');
+    expect(vm.rules.skill_id[0].message).toBeTruthy();
+    expect(vm.validateJson('input_payload')).toBe(true);
+    expect(vm.validateJson('result_payload')).toBe(true);
+    expect(vm.error).toBeNull();
+
+    runsStore.fetchRun.mockRejectedValueOnce(new Error('load failed'));
+    await vm.fetchRun();
+    expect(message.error).toHaveBeenCalled();
+
+    vm.editModalOpen = false;
+    runsStore.currentRun = null as any;
+    vm.showEditModal();
+    expect(vm.editModalOpen).toBe(false);
+    runsStore.currentRun = run as any;
+
+    vm.formRef = { validate: vi.fn().mockRejectedValue(new Error('invalid')) };
+    await vm.handleSave();
+    expect(message.error).toHaveBeenCalled();
+
+    runsStore.deleteRun.mockRejectedValueOnce(new Error('delete failed'));
+    await vm.handleDelete();
+    expect(message.error).toHaveBeenCalled();
   });
 });

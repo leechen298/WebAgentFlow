@@ -134,4 +134,79 @@ describe('recorder state', () => {
       label: 'Frame',
     });
   });
+
+  it('does not replace a better snapshot from the same frame with a weaker one', () => {
+    const base = startRecording(createInitialState(), 'https://top.example.com', 'Top');
+    const strong = {
+      pageUrl: 'https://top.example.com',
+      pageTitle: 'Top',
+      capturedAt: 10,
+      stateTree: [{ type: 'input', label: 'Name', value: 'Alice', required: true }],
+    };
+    const weak = {
+      pageUrl: 'about:blank',
+      pageTitle: '',
+      capturedAt: 20,
+      stateTree: [{ type: 'input', label: 'Name' }],
+    };
+
+    const withStrong = setInitialState(base, strong, { frameId: 0, senderUrl: 'https://top.example.com' });
+    const withWeak = setInitialState(withStrong, weak as never, { frameId: 0, senderUrl: 'about:blank' });
+
+    expect(withWeak.initialState).toEqual(strong);
+    expect(withWeak.initialStateSource?.senderUrl).toBe('https://top.example.com');
+  });
+
+  it('merges top-frame page metadata into an existing iframe-first state', () => {
+    const base = startRecording(createInitialState(), null as never, null as never);
+    const iframeFirst = {
+      pageUrl: 'https://frame.example.com',
+      pageTitle: 'Frame',
+      capturedAt: 1,
+      stateTree: [{ type: 'button', label: 'Submit' }],
+    };
+    const topLater = {
+      pageUrl: 'https://top.example.com',
+      pageTitle: 'Top',
+      capturedAt: 2,
+      pageHeading: 'Dashboard',
+      primaryActions: ['Save'],
+      stateTree: [{ type: 'section', label: 'Nav', children: [{ type: 'link', label: 'Home' }] }],
+    };
+
+    const withIframe = setInitialState(base, iframeFirst, { frameId: 2, senderUrl: 'https://frame.example.com' });
+    const merged = setInitialState(withIframe, topLater as never, { frameId: 0, senderUrl: 'https://top.example.com' });
+
+    expect(merged.initialState?.pageUrl).toBe('https://top.example.com');
+    expect(merged.initialState?.pageTitle).toBe('Top');
+    expect(merged.initialState?.pageHeading).toBe('Dashboard');
+    expect(merged.initialState?.primaryActions).toEqual(['Save']);
+    expect(merged.initialState?.stateTree?.[0].label).toBe('Nav');
+    expect(merged.initialState?.stateTree?.[1].label).toBe('Submit');
+  });
+
+  it('does not overwrite existing recording url/title and skips empty mutation batches', () => {
+    const active = startRecording(createInitialState(), 'https://seed.example.com', 'Seed');
+    const initialState = {
+      pageUrl: 'https://other.example.com',
+      pageTitle: 'Other',
+      capturedAt: 10,
+      fields: [{ fieldLabel: 'X', defaultValueText: 'Y' }],
+    };
+
+    const next = setInitialState(active, initialState as never, { frameId: 0, senderUrl: 'https://other.example.com' });
+    expect(next.initialUrl).toBe('https://seed.example.com');
+    expect(next.initialTitle).toBe('Seed');
+
+    const unchanged = addDomMutations(next, []);
+    expect(unchanged).toBe(next);
+
+    const cleared = clearEvents({
+      ...next,
+      events: [{ id: 'e1', type: 'click', timestamp: 1, url: 'https://seed.example.com' }] as never,
+      domMutations: [{ id: 'm1' }] as never,
+    });
+    expect(cleared.events).toEqual([]);
+    expect(cleared.domMutations).toHaveLength(1);
+  });
 });
