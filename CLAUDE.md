@@ -155,7 +155,7 @@ This approach means:
 **Key parallel relationships:**
 - **Phase 7 execution** is complete — provides the atomic action layer for exploration
 - **Exploration subsystem** is built on Phase 7 — TaskDefinition → run_exploration → success evaluation → supervisor assessment
-- **Google Search MVP** is the first end-to-end validation of the exploration pipeline
+- **A user-provided task definition** is the first end-to-end validation of the exploration pipeline
 - **Path abstraction (Phase 10)** starts after exploration validates — learned paths from exploration feed into it
 
 ### F. Tool / Data Separation
@@ -165,7 +165,7 @@ The application is a pure engine. **Site-specific knowledge is never hardcoded i
 - **Task definitions** live in `data/tasks/*.json` — they describe what to do on a specific site
 - **The exploration engine** (`exploration_loop.py`) is generic — it reads task definitions and executes them
 - **Success criteria** are defined in task definitions or in the DB — not in evaluator code
-- **Switching from Google to Baidu** means creating a new JSON file, not changing Python code
+- **Switching between target sites** means changing user-provided task data, not changing Python code
 
 Provenance tracking on all knowledge assets:
 - `source`: `"builtin"` (shipped with the app) or `"user"` (user-created)

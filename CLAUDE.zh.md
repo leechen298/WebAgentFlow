@@ -155,7 +155,7 @@ Full AST schema：`apps/api/app/schemas/ast.py`
 **关键并行关系：**
 - **阶段 7 执行** 已完成 — 为探索提供原子操作层
 - **探索子系统** 基于阶段 7 构建 — TaskDefinition → run_exploration → 成功评估 → 监督器评估
-- **Google 搜索 MVP** 是探索管道的首个端到端验证
+- **用户提供的任务定义** 是探索管道的首个端到端验证
 - **路径抽象（阶段 10）** 在探索验证后启动 — 从探索中学到的路径为其提供输入
 
 ### F. 工具 / 数据分离
@@ -165,7 +165,7 @@ Full AST schema：`apps/api/app/schemas/ast.py`
 - **任务定义** 放在 `data/tasks/*.json` 中——描述在特定站点上做什么
 - **探索引擎**（`exploration_loop.py`）是通用的——读取任务定义并执行
 - **成功标准** 定义在任务定义或数据库中——不在评估器代码中
-- **从 Google 切换到百度** 意味着创建一个新的 JSON 文件，而非修改 Python 代码
+- **在目标站点之间切换** 意味着更换用户提供的任务数据，而非修改 Python 代码
 
 所有知识资产的溯源追踪：
 - `source`：`"builtin"`（随应用发布）或 `"user"`（用户创建）

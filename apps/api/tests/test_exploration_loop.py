@@ -516,13 +516,13 @@ class TestRunExploration:
         mock_run.return_value = _make_execution_result()
         runtime = _make_runtime()
         task = _make_task(
-            target_url="https://google.com",
+            target_url="https://example.com/search",
             steps=[_make_step(intent="click_btn", action_type="click")],
         )
 
         run_exploration(task, runtime)
 
-        runtime.navigate.assert_called_once_with("https://google.com")
+        runtime.navigate.assert_called_once_with("https://example.com/search")
 
     @patch("app.services.execution.run_single_action.run_single_action")
     @patch("time.sleep")

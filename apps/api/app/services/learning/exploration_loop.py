@@ -8,7 +8,7 @@ Usage:
     from app.services.task_loader import load_task_by_id
     from app.services.learning.exploration_loop import run_exploration
 
-    task = load_task_by_id("google-search-basic")
+    task = load_task_by_id("search-basic")
     with create_execution_runtime() as runtime:
         result = run_exploration(task, runtime)
 """

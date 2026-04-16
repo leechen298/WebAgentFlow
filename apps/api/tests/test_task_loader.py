@@ -6,7 +6,7 @@ Covers:
 2. load_task_from_file with missing file -> FileNotFoundError
 3. load_task_from_file with invalid JSON -> error
 4. load_task_from_file with schema-violating JSON -> ValidationError
-5. load_task_by_id finds the google-search task from data/tasks/
+5. load_task_by_id finds a task from custom search directories
 6. load_task_by_id with nonexistent ID -> FileNotFoundError
 7. load_task_by_id skips malformed files without crashing
 8. load_task_by_id with custom search_dirs
@@ -26,20 +26,12 @@ from pathlib import Path
 import pytest
 
 from app.schemas.task_definition import TaskDefinition
-from app.services.task_loader import (
-    _PROJECT_ROOT,
-    list_tasks,
-    load_task_by_id,
-    load_task_from_file,
-    resolve_step_value,
-)
+from app.services.task_loader import list_tasks, load_task_by_id, load_task_from_file, resolve_step_value
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-_REAL_TASKS_DIR = _PROJECT_ROOT / "data" / "tasks"
 
 MINIMAL_TASK = {
     "id": "test-minimal",
@@ -147,27 +139,6 @@ class TestLoadTaskFromFile:
         task = load_task_from_file(str(f))
         assert task.id == "test-minimal"
 
-    def test_real_google_search_file(self) -> None:
-        """Load the real google-search.json shipped with the project."""
-        real_file = _REAL_TASKS_DIR / "google-search.json"
-        if not real_file.exists():
-            pytest.skip("google-search.json not found in data/tasks/")
-
-        task = load_task_from_file(real_file)
-        assert task.id == "google-search-basic"
-        assert task.name == "Google Search"
-        assert task.target_url == "https://www.google.com"
-        assert len(task.steps) == 3
-        assert task.variables["query"] == "openai"
-        assert task.steps[0].target_hint is not None
-        assert task.steps[0].target_hint.selector == 'textarea[name="q"], input[name="q"]'
-
-
-# ---------------------------------------------------------------------------
-# load_task_by_id
-# ---------------------------------------------------------------------------
-
-
 class TestLoadTaskById:
     """Tests for load_task_by_id."""
 
@@ -212,22 +183,6 @@ class TestLoadTaskById:
 
         task = load_task_by_id("dup", search_dirs=[dir1, dir2])
         assert task.name == "First"
-
-    def test_real_google_search_by_id(self) -> None:
-        """Find the real google-search task via the default search dirs."""
-        real_file = _REAL_TASKS_DIR / "google-search.json"
-        if not real_file.exists():
-            pytest.skip("google-search.json not found in data/tasks/")
-
-        task = load_task_by_id("google-search-basic")
-        assert task.id == "google-search-basic"
-        assert task.name == "Google Search"
-
-
-# ---------------------------------------------------------------------------
-# list_tasks
-# ---------------------------------------------------------------------------
-
 
 class TestListTasks:
     """Tests for list_tasks."""
@@ -281,15 +236,10 @@ class TestListTasks:
         assert "x" in ids
         assert "y" in ids
 
-    def test_real_tasks_dir(self) -> None:
-        """Default search dirs include data/tasks/ which has at least one task."""
-        if not _REAL_TASKS_DIR.is_dir():
-            pytest.skip("data/tasks/ directory not found")
-
+    def test_default_search_dirs_can_be_empty(self) -> None:
+        """User-managed data directories are optional in the repository."""
         tasks = list_tasks()
-        assert len(tasks) >= 1
-        ids = [t.id for t in tasks]
-        assert "google-search-basic" in ids
+        assert isinstance(tasks, list)
 
 
 # ---------------------------------------------------------------------------

@@ -746,7 +746,7 @@ def test_exploration_get_task(client: TestClient) -> None:
         id="search-basic",
         name="Search",
         description="Do a search",
-        target_url="https://google.com",
+        target_url="https://example.com/search",
         steps=[],
         source="builtin",
     )
@@ -759,7 +759,7 @@ def test_exploration_get_task(client: TestClient) -> None:
     data = resp.json()["data"]
     assert data["id"] == "search-basic"
     assert data["name"] == "Search"
-    assert data["target_url"] == "https://google.com"
+    assert data["target_url"] == "https://example.com/search"
 
 
 def test_exploration_get_task_not_found(client: TestClient) -> None:

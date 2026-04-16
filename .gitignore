@@ -31,3 +31,4 @@ apps/worker/.coverage
 .claude/
 .playwright-cli/
 .dev-logs/
+/data/

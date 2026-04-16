@@ -106,7 +106,7 @@ class TaskDefinition(BaseModel):
     a task on a specific site. No execution logic — pure data.
     """
 
-    id: str = Field(description="Unique task identifier, e.g. 'google-search-basic'.")
+    id: str = Field(description="Unique task identifier, e.g. 'search-basic'.")
     name: str = Field(description="Human-readable task name.")
     description: str = ""
     target_url: str = Field(description="Starting URL for the task.")
