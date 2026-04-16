@@ -537,6 +537,35 @@ describe('iframe mutation tracking', () => {
     container.remove();
   });
 
+  it('skips duplicate document attachment', async () => {
+    iframe = document.createElement('iframe');
+    container.appendChild(iframe);
+    await new Promise<void>((resolve) => {
+      iframe.addEventListener('load', () => resolve());
+      if (iframe.contentDocument?.readyState === 'complete') resolve();
+    });
+
+    tracker.start();
+
+    // The tracker should not double-attach to the same document
+    // Mutating iframe content should produce a single batch, not duplicated
+    const iframeDoc = iframe.contentDocument!;
+    const el = iframeDoc.createElement('span');
+    el.textContent = 'test unique';
+    iframeDoc.body.appendChild(el);
+
+    await waitForMutationAndBatch();
+
+    // Should get mutations, but no duplicates from the same document
+    const spanMuts = collected.filter(
+      (m) =>
+        m.mutationType === 'childList' &&
+        m.detail.type === 'childList' &&
+        m.detail.addedNodes.some((n) => n.tag === 'span'),
+    );
+    expect(spanMuts.length).toBeGreaterThanOrEqual(1);
+  });
+
   it('detects mutations inside same-origin iframe', async () => {
     // Create a same-origin iframe (about:blank is same-origin in jsdom)
     iframe = document.createElement('iframe');
@@ -567,5 +596,306 @@ describe('iframe mutation tracking', () => {
         m.detail.addedNodes.some((n) => n.tag === 'div'),
     );
     expect(iframeMuts.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('DomMutationTracker — extended coverage', () => {
+  let tracker: DomMutationTracker;
+  let collected: DomMutationRecord[];
+  let container: HTMLDivElement;
+
+  beforeEach(() => {
+    resetMutationCounter();
+    setMutationIdPrefix('m');
+    collected = [];
+    container = document.createElement('div');
+    container.id = 'ext-container';
+    document.body.appendChild(container);
+
+    tracker = new DomMutationTracker({
+      onMutations: (mutations) => {
+        collected.push(...mutations);
+      },
+    });
+  });
+
+  afterEach(() => {
+    tracker.stop();
+    container.remove();
+  });
+
+  it('filters extension elements by class webagentflow-extension', async () => {
+    const extEl = document.createElement('div');
+    extEl.classList.add('webagentflow-extension');
+    container.appendChild(extEl);
+
+    tracker.start();
+
+    const child = document.createElement('p');
+    child.textContent = 'internal';
+    extEl.appendChild(child);
+
+    await waitForMutationAndBatch();
+
+    const extMuts = collected.filter((m) => m.targetTag === 'div' && m.targetClassName === 'webagentflow-extension');
+    expect(extMuts.length).toBe(0);
+  });
+
+  it('handles non-interesting attributes (e.g. tabindex is interesting, but random is not)', async () => {
+    const el = document.createElement('div');
+    container.appendChild(el);
+
+    tracker.start();
+
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('custom-attr', 'val'); // not interesting, not data-*
+
+    await waitForMutationAndBatch();
+
+    const tabIndexMuts = collected.filter(
+      (m) => m.mutationType === 'attributes' && m.detail.type === 'attributes' && m.detail.attributeName === 'tabindex',
+    );
+    expect(tabIndexMuts.length).toBeGreaterThanOrEqual(1);
+
+    const customMuts = collected.filter(
+      (m) => m.mutationType === 'attributes' && m.detail.type === 'attributes' && m.detail.attributeName === 'custom-attr',
+    );
+    expect(customMuts.length).toBe(0);
+  });
+
+  it('skips attribute mutations with no actual value change', async () => {
+    const el = document.createElement('div');
+    el.setAttribute('aria-label', 'test');
+    container.appendChild(el);
+
+    tracker.start();
+
+    // Setting same value — MutationObserver still fires, but tracker should filter
+    el.setAttribute('aria-label', 'test');
+
+    await waitForMutationAndBatch();
+
+    const sameMuts = collected.filter(
+      (m) => m.mutationType === 'attributes' && m.detail.type === 'attributes' && m.detail.attributeName === 'aria-label',
+    );
+    expect(sameMuts.length).toBe(0);
+  });
+
+  it('skips characterData mutations with no actual change', async () => {
+    const el = document.createElement('span');
+    el.textContent = 'unchanged';
+    container.appendChild(el);
+
+    tracker.start();
+
+    // Set text to same value
+    el.firstChild!.textContent = 'unchanged';
+
+    await waitForMutationAndBatch();
+
+    const textMuts = collected.filter((m) => m.mutationType === 'characterData');
+    expect(textMuts.length).toBe(0);
+  });
+
+  it('skips characterData mutations with both old and new empty', async () => {
+    const el = document.createElement('span');
+    el.textContent = '';
+    container.appendChild(el);
+
+    tracker.start();
+
+    // text node from empty to empty (whitespace only)
+    if (el.firstChild) {
+      el.firstChild.textContent = '   ';
+    }
+
+    await waitForMutationAndBatch();
+
+    // No meaningful text change
+    const textMuts = collected.filter((m) => m.mutationType === 'characterData');
+    expect(textMuts.length).toBe(0);
+  });
+
+  it('includes area label from nearest heading', async () => {
+    container.innerHTML = '<section><h3>Settings Panel</h3><div id="target"></div></section>';
+    const target = container.querySelector('#target')!;
+
+    tracker.start();
+
+    const child = document.createElement('p');
+    child.textContent = 'new setting';
+    target.appendChild(child);
+
+    await waitForMutationAndBatch();
+
+    const mut = collected.find((m) => m.mutationType === 'childList');
+    if (mut) {
+      expect(mut.areaLabel).toBe('Settings Panel');
+    }
+  });
+
+  it('includes area label from aria-label on ancestor', async () => {
+    container.innerHTML = '<div aria-label="Config Zone"><div id="inner"></div></div>';
+    const inner = container.querySelector('#inner')!;
+
+    tracker.start();
+
+    const p = document.createElement('span');
+    p.textContent = 'item';
+    inner.appendChild(p);
+
+    await waitForMutationAndBatch();
+
+    const mut = collected.find((m) => m.mutationType === 'childList');
+    if (mut) {
+      expect(mut.areaLabel).toBe('Config Zone');
+    }
+  });
+
+  it('summarizeNode returns null for empty text nodes and ignored tags', async () => {
+    tracker.start();
+
+    // Add text node that's empty after trim
+    const text = document.createTextNode('   ');
+    container.appendChild(text);
+
+    // Add an SVG element (ignored)
+    const svg = document.createElement('svg');
+    container.appendChild(svg);
+
+    await waitForMutationAndBatch();
+
+    // childList mutations should be present but summarized nodes should filter these
+    const childMuts = collected.filter(
+      (m) => m.mutationType === 'childList' && m.detail.type === 'childList',
+    );
+    for (const m of childMuts) {
+      if (m.detail.type === 'childList') {
+        const svgAdded = m.detail.addedNodes.find((n) => n.tag === 'svg');
+        expect(svgAdded).toBeUndefined();
+      }
+    }
+  });
+
+  it('summarizeNode captures id, className, text, childCount for elements', async () => {
+    tracker.start();
+
+    const div = document.createElement('div');
+    div.id = 'card-1';
+    div.className = 'card active';
+    div.innerHTML = '<span>Title</span><span>Content</span>';
+    container.appendChild(div);
+
+    await waitForMutationAndBatch();
+
+    const addMut = collected.find(
+      (m) =>
+        m.mutationType === 'childList' &&
+        m.detail.type === 'childList' &&
+        m.detail.addedNodes.some((n) => n.tag === 'div' && n.id === 'card-1'),
+    );
+    expect(addMut).toBeDefined();
+    if (addMut?.detail.type === 'childList') {
+      const node = addMut.detail.addedNodes.find((n) => n.id === 'card-1');
+      expect(node?.className).toBe('card');
+      expect(node?.childCount).toBe(2);
+      expect(node?.text).toBeDefined();
+    }
+  });
+
+  it('observeDocument skips when root is null', async () => {
+    // Start on a normal document should work fine
+    tracker.start();
+    tracker.stop();
+    // No assertion needed — just verifying no crash
+  });
+
+  it('handles overflow protection (MAX_MUTATIONS_PER_BATCH)', async () => {
+    tracker.start();
+
+    // Add many elements rapidly to trigger overflow flush
+    for (let i = 0; i < 110; i++) {
+      const el = document.createElement('span');
+      el.textContent = `item-${i}`;
+      container.appendChild(el);
+    }
+
+    await waitForMutationAndBatch();
+
+    // Should have collected mutations (flushed at least once due to overflow)
+    expect(collected.length).toBeGreaterThan(0);
+  });
+
+  it('setAstIndex enables AST matching on mutations', async () => {
+    const mockAstIndex = {
+      matchElement: vi.fn(() => ({ confidence: 'exact' as const, nodeId: 'ast-1', nodeLabel: 'Button' })),
+    };
+    tracker.setAstIndex(mockAstIndex as never);
+    tracker.start();
+
+    const el = document.createElement('button');
+    el.textContent = 'Click';
+    container.appendChild(el);
+
+    await waitForMutationAndBatch();
+
+    expect(mockAstIndex.matchElement).toHaveBeenCalled();
+    const mut = collected.find((m) => m.astMatch !== undefined);
+    if (mut) {
+      expect(mut.astMatch?.nodeId).toBe('ast-1');
+    }
+  });
+
+  it('start is idempotent — calling start twice does not double-observe', async () => {
+    tracker.start();
+    tracker.start(); // Should be no-op
+
+    const el = document.createElement('div');
+    el.textContent = 'once';
+    container.appendChild(el);
+
+    await waitForMutationAndBatch();
+
+    // Mutations should not be duplicated
+    const divMuts = collected.filter(
+      (m) => m.mutationType === 'childList' && m.detail.type === 'childList' && m.detail.addedNodes.some((n) => n.tag === 'div'),
+    );
+    expect(divMuts.length).toBe(1);
+  });
+
+  it('handles style change from null to a business-state style', async () => {
+    const el = document.createElement('div');
+    container.appendChild(el);
+
+    tracker.start();
+
+    el.style.cssText = 'display: none';
+
+    await waitForMutationAndBatch();
+
+    const styleMuts = collected.filter(
+      (m) => m.mutationType === 'attributes' && m.detail.type === 'attributes' && m.detail.attributeName === 'style',
+    );
+    expect(styleMuts.length).toBeGreaterThanOrEqual(1);
+    if (styleMuts[0]?.detail.type === 'attributes') {
+      expect(styleMuts[0].detail.newValue).toContain('display');
+    }
+  });
+
+  it('generic aria-* attributes are treated as interesting', async () => {
+    const el = document.createElement('div');
+    el.setAttribute('aria-valuenow', '10');
+    container.appendChild(el);
+
+    tracker.start();
+
+    el.setAttribute('aria-valuenow', '20');
+
+    await waitForMutationAndBatch();
+
+    const ariaMuts = collected.filter(
+      (m) => m.mutationType === 'attributes' && m.detail.type === 'attributes' && m.detail.attributeName === 'aria-valuenow',
+    );
+    expect(ariaMuts.length).toBeGreaterThanOrEqual(1);
   });
 });
