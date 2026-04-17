@@ -34,6 +34,10 @@
           <rocket-outlined />
           <span>{{ $t('nav.exploration') }}</span>
         </a-menu-item>
+        <a-menu-item key="/exploration/autonomous">
+          <thunderbolt-outlined />
+          <span>{{ $t('nav.autonomousExploration') }}</span>
+        </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="/learning/debug">
           <experiment-outlined />
@@ -68,6 +72,7 @@ import {
   DashboardOutlined,
   ExperimentOutlined,
   RocketOutlined,
+  ThunderboltOutlined,
   VideoCameraOutlined,
   ToolOutlined,
   PlayCircleOutlined

@@ -323,6 +323,180 @@ def autonomous_exploration_endpoint(
 
 
 # ───────────────────────────────────────────────────────────────────
+# Autonomous exploration — streaming (SSE)
+# ───────────────────────────────────────────────────────────────────
+
+
+def _normalize_event_screenshots(data: dict[str, Any]) -> dict[str, Any]:
+    """Convert local screenshot paths to API URLs within an event payload.
+
+    Screenshot paths show up in many events:
+      - analysis_done.screenshot_ref
+      - step_done.screenshot_ref + step_done.execution_result.screenshot_ref
+      - self_assessment_done.final_screenshot_ref
+    """
+    if not isinstance(data, dict):
+        return data
+    if "screenshot_ref" in data:
+        data["screenshot_ref"] = _to_screenshot_url(data["screenshot_ref"])
+    if "final_screenshot_ref" in data:
+        data["final_screenshot_ref"] = _to_screenshot_url(data["final_screenshot_ref"])
+    return data
+
+
+@router.post("/autonomous-run/stream")
+def autonomous_exploration_stream(
+    payload: AutonomousExplorePayload,
+):
+    """Streaming variant of autonomous-run via Server-Sent Events.
+
+    Emits events at each phase boundary so the frontend workbench can
+    render live progress (no black-box waiting).
+
+    Event types (in order):
+      - run_started
+      - navigate_started / navigate_done
+      - analysis_started / analysis_done
+      - plan_done
+      - step_started / step_done (per step)
+      - self_assessment_done
+      - supervisor_done
+      - verification_done (only if spec_id provided)
+      - run_completed (final payload, same shape as POST /autonomous-run)
+      - run_failed (on exception)
+    """
+    import asyncio
+    import json
+    import queue
+    import threading
+
+    from fastapi.responses import StreamingResponse
+
+    if payload.spec_id and not payload.scenario:
+        raise HTTPException(
+            status_code=400,
+            detail="scenario is required when spec_id is set.",
+        )
+
+    event_queue: queue.Queue[tuple[str, dict[str, Any]] | None] = queue.Queue()
+
+    def emit(event_type: str, data: dict[str, Any]) -> None:
+        # Normalize screenshot paths so the browser can load them directly.
+        try:
+            data = _normalize_event_screenshots(dict(data))
+        except Exception:
+            pass
+        event_queue.put((event_type, data))
+
+    def worker() -> None:
+        """Run the exploration in a background thread, pushing events as they occur."""
+        from app.services.execution.execution_runtime import (
+            RuntimeConfig,
+            create_execution_runtime,
+        )
+        from app.services.learning.autonomous_explorer import (
+            run_autonomous_exploration,
+        )
+
+        try:
+            emit("run_started", {
+                "url": payload.url,
+                "goal": payload.goal,
+                "fill_values": payload.fill_values,
+                "spec_id": payload.spec_id,
+                "scenario": payload.scenario,
+                "headless": payload.headless,
+            })
+
+            runtime_config = RuntimeConfig(
+                headless=payload.headless,
+                screenshot_dir=str(_SCREENSHOT_DIR),
+            )
+            with create_execution_runtime(config=runtime_config) as runtime:
+                result = run_autonomous_exploration(
+                    url=payload.url,
+                    runtime=runtime,
+                    goal=payload.goal,
+                    fill_value=payload.fill_value,
+                    fill_values=payload.fill_values,
+                    event_emitter=emit,
+                )
+
+            # Spec verification (mirrors the non-streaming endpoint)
+            verification_payload: dict[str, Any] | None = None
+            if payload.spec_id and payload.scenario:
+                try:
+                    from app.services.learning.page_verification import (
+                        load_spec,
+                        verify_against_spec,
+                    )
+                    spec, spec_path = load_spec(payload.spec_id)
+                    scorecard = verify_against_spec(result, spec, payload.scenario)
+                    verification_payload = {
+                        "spec_source": str(spec_path),
+                        "spec_id": spec.page_id,
+                        "scenario": payload.scenario,
+                        "scorecard": scorecard.model_dump(),
+                    }
+                    emit("verification_done", verification_payload)
+                except FileNotFoundError as exc:
+                    emit("verification_done", {"error": f"spec not found: {exc}"})
+                except KeyError as exc:
+                    emit("verification_done", {"error": f"scenario not found: {exc}"})
+                except Exception as exc:
+                    logger.exception("Verification failed: %s", exc)
+                    emit("verification_done", {"error": str(exc)[:300]})
+
+            # Final payload — same shape as /autonomous-run response.data
+            final_data = result.model_dump()
+            if verification_payload is not None:
+                final_data["verification"] = verification_payload
+            if final_data.get("final_screenshot_ref"):
+                final_data["final_screenshot_ref"] = _to_screenshot_url(
+                    final_data["final_screenshot_ref"],
+                )
+            if final_data.get("page_analysis", {}).get("screenshot_ref"):
+                final_data["page_analysis"]["screenshot_ref"] = _to_screenshot_url(
+                    final_data["page_analysis"]["screenshot_ref"],
+                )
+            for step in final_data.get("steps", []):
+                if step.get("screenshot_ref"):
+                    step["screenshot_ref"] = _to_screenshot_url(step["screenshot_ref"])
+                inner = step.get("execution_result") or {}
+                if inner.get("screenshot_ref"):
+                    inner["screenshot_ref"] = _to_screenshot_url(inner["screenshot_ref"])
+
+            emit("run_completed", final_data)
+
+        except Exception as exc:
+            logger.exception("Autonomous streaming run failed: %s", exc)
+            emit("run_failed", {"error": str(exc)[:500]})
+        finally:
+            event_queue.put(None)  # sentinel
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    async def event_generator():
+        while True:
+            item = await asyncio.to_thread(event_queue.get)
+            if item is None:
+                break
+            event_type, data = item
+            payload_json = json.dumps(data, ensure_ascii=False)
+            yield f"event: {event_type}\ndata: {payload_json}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",   # disable proxy buffering if behind nginx
+            "Connection": "keep-alive",
+        },
+    )
+
+
+# ───────────────────────────────────────────────────────────────────
 # Screenshot serving
 # ───────────────────────────────────────────────────────────────────
 

@@ -9,6 +9,7 @@ export default {
     runDetail: 'Run Detail',
     learningDebug: 'Learning Debug',
     exploration: 'Exploration',
+    autonomousExploration: 'Autonomous',
   },
   common: {
     refresh: 'Refresh',
@@ -314,6 +315,19 @@ export default {
     action: 'Action',
     reason: 'Reason',
     expectedEffect: 'Expected Effect',
+  },
+  autonomous: {
+    runConfig: 'Run configuration',
+    liveStatus: 'Live status',
+    pageAnalysis: 'Page analysis',
+    timeline: 'Execution timeline',
+    verification: 'Verification',
+    sources: 'Source-origin legend',
+    run: 'Run',
+    running: 'Running…',
+    abort: 'Abort',
+    sourceAnalyzer: 'Output from services/learning/page_analyzer.py — pure structural classification of interactive elements on the initial page.',
+    sourceTimeline: 'Output from services/learning/autonomous_explorer.py — each step dispatched via Playwright with before/after observation.',
   },
   exploration: {
     title: 'Exploration Workbench',

@@ -8,6 +8,7 @@ import RunsPage from '@/pages/RunsPage.vue';
 import SkillDetailPage from '@/pages/SkillDetailPage.vue';
 import SkillsPage from '@/pages/SkillsPage.vue';
 import ExplorationWorkbenchPage from '@/pages/ExplorationWorkbenchPage.vue';
+import AutonomousWorkbenchPage from '@/pages/AutonomousWorkbenchPage.vue';
 import LearningDebugPage from '@/pages/LearningDebugPage.vue';
 import i18n from '@/i18n';
 
@@ -65,6 +66,15 @@ const router = createRouter({
           name: 'exploration',
           component: ExplorationWorkbenchPage,
           meta: { titleKey: 'nav.exploration', menuKey: '/exploration' },
+        },
+        {
+          path: 'exploration/autonomous',
+          name: 'exploration-autonomous',
+          component: AutonomousWorkbenchPage,
+          meta: {
+            titleKey: 'nav.autonomousExploration',
+            menuKey: '/exploration/autonomous',
+          },
         },
         {
           path: 'learning/debug',

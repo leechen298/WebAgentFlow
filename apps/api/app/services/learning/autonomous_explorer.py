@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from typing import Any
 
 from app.schemas.page_analysis import (
@@ -301,6 +302,13 @@ def _assess_outcome(steps: list[dict[str, Any]]) -> tuple[str, str]:
 # Public API
 # ───────────────────────────────────────────────────────────────────
 
+EventEmitter = Callable[[str, dict[str, Any]], None]
+
+
+def _noop_emitter(_event: str, _data: dict[str, Any]) -> None:
+    """Default emitter: does nothing. Preserves behavior for callers not using SSE."""
+
+
 def run_autonomous_exploration(
     url: str,
     runtime: ExecutionRuntime,
@@ -308,6 +316,7 @@ def run_autonomous_exploration(
     goal: str = "",
     fill_value: str = "",
     fill_values: dict[str, str] | None = None,
+    event_emitter: EventEmitter | None = None,
 ) -> AutonomousExplorationResult:
     """Run the full autonomous exploration pipeline.
 
@@ -318,19 +327,29 @@ def run_autonomous_exploration(
         fill_value: Value for the primary input (single-field mode).
         fill_values: Multi-field values keyed by semantic role
             (username/password/email/text). Takes precedence over fill_value.
+        event_emitter: Optional callback invoked at each phase boundary
+            with ``(event_type, data_dict)``. When None, runs silently —
+            backward compatible with callers that want a single return value.
 
     Returns:
         AutonomousExplorationResult with analysis, execution, and
         supervisor verification.
     """
+    emit: EventEmitter = event_emitter or _noop_emitter
     t0 = int(time.time() * 1000)
 
     # ── Phase 1: Navigate ──
+    emit("navigate_started", {"url": url})
     logger.info("Autonomous exploration: navigating to %s", url)
     runtime.navigate(url)
     time.sleep(1.5)
+    emit("navigate_done", {
+        "url": runtime.current_url() if runtime.page else url,
+        "title": runtime.current_title() if runtime.page else "",
+    })
 
     # ── Phase 2: Analyze ──
+    emit("analysis_started", {})
     logger.info("Autonomous exploration: analyzing page")
     analysis = analyze_page(runtime)
     logger.info(
@@ -338,6 +357,24 @@ def run_autonomous_exploration(
         analysis.total_visible, len(analysis.fillable),
         len(analysis.submit), len(analysis.navigation),
     )
+    emit("analysis_done", {
+        "total_visible": analysis.total_visible,
+        "total_hidden": analysis.total_hidden,
+        "counts": {
+            "fillable": len(analysis.fillable),
+            "submit": len(analysis.submit),
+            "clickable": len(analysis.clickable),
+            "navigation": len(analysis.navigation),
+            "select": len(analysis.select),
+            "toggle": len(analysis.toggle),
+            "other": len(analysis.other),
+        },
+        "fillable": [e.model_dump() for e in analysis.fillable],
+        "submit": [e.model_dump() for e in analysis.submit],
+        "clickable": [e.model_dump() for e in analysis.clickable],
+        "navigation": [e.model_dump() for e in analysis.navigation[:10]],
+        "screenshot_ref": analysis.screenshot_ref,
+    })
 
     # ── Phase 3: Plan ──
     logger.info("Autonomous exploration: planning actions")
@@ -346,17 +383,29 @@ def run_autonomous_exploration(
     )
     analysis.recommended_actions = planned
     logger.info("Planned %d actions", len(planned))
+    emit("plan_done", {
+        "total_actions": len(planned),
+        "actions": [a.model_dump() for a in planned],
+    })
 
     # ── Phase 4: Execute ──
     logger.info("Autonomous exploration: executing %d actions", len(planned))
     step_logs: list[dict[str, Any]] = []
     for action in planned:
+        emit("step_started", {
+            "step_index": action.step,
+            "action_type": action.action_type,
+            "target_selector": action.target_selector,
+            "target_description": action.target_description,
+            "value": action.value,
+        })
         logger.info("  Step %d: %s %s", action.step, action.action_type, action.target_selector)
         step_log = _execute_step(action, runtime)
         step_logs.append(step_log)
 
         if not step_log.get("ok", False) and action.action_type != "observe":
             logger.warning("  Step %d failed: %s", action.step, step_log.get("error"))
+        emit("step_done", step_log)
 
     # ── Phase 5: Final state ──
     final_url = runtime.current_url() if runtime.page else ""
@@ -367,11 +416,20 @@ def run_autonomous_exploration(
     elapsed = int(time.time() * 1000) - t0
     verdict, summary = _assess_outcome(step_logs)
     logger.info("Self-assessed verdict: %s — %s", verdict, summary)
+    emit("self_assessment_done", {
+        "verdict": verdict,
+        "summary": summary,
+        "final_url": final_url,
+        "final_title": final_title,
+        "final_screenshot_ref": final_screenshot,
+        "final_state": final_state,
+    })
 
     # ── Phase 6: Supervisor verification (project-internal Agent) ──
     supervisor_output = _run_supervisor(
         analysis, step_logs, verdict, summary, final_url, final_title, elapsed,
     )
+    emit("supervisor_done", supervisor_output or {})
 
     return AutonomousExplorationResult(
         page_analysis=analysis,

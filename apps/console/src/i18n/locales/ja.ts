@@ -9,6 +9,7 @@ export default {
     runDetail: '実行詳細',
     learningDebug: '学習デバッグ',
     exploration: '探索ワークベンチ',
+    autonomousExploration: '自律探索',
   },
   common: {
     refresh: '更新',
@@ -314,6 +315,19 @@ export default {
     action: 'アクション',
     reason: '理由',
     expectedEffect: '予想される効果',
+  },
+  autonomous: {
+    runConfig: '実行設定',
+    liveStatus: 'ライブステータス',
+    pageAnalysis: 'ページ分析',
+    timeline: '実行タイムライン',
+    verification: '検証',
+    sources: '出力元の凡例',
+    run: '実行',
+    running: '実行中…',
+    abort: '中止',
+    sourceAnalyzer: 'services/learning/page_analyzer.py の出力 — 初期ページの対話要素を構造のみで分類。',
+    sourceTimeline: 'services/learning/autonomous_explorer.py の出力 — 各ステップは Playwright で実行され、前後の観察を記録します。',
   },
   exploration: {
     title: '探索ワークベンチ',

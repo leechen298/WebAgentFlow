@@ -9,6 +9,7 @@ export default {
     runDetail: '执行详情',
     learningDebug: '学习调试',
     exploration: '探索工作台',
+    autonomousExploration: '自主探索',
   },
   common: {
     refresh: '刷新',
@@ -314,6 +315,19 @@ export default {
     action: '动作',
     reason: '原因',
     expectedEffect: '预期效果',
+  },
+  autonomous: {
+    runConfig: '运行配置',
+    liveStatus: '实时状态',
+    pageAnalysis: '页面分析',
+    timeline: '执行时间线',
+    verification: '验证',
+    sources: '输出来源说明',
+    run: '运行',
+    running: '运行中…',
+    abort: '中止',
+    sourceAnalyzer: '由 services/learning/page_analyzer.py 产出——对初始页面的可交互元素做纯结构分类。',
+    sourceTimeline: '由 services/learning/autonomous_explorer.py 产出——每步通过 Playwright 调度执行，并记录前后观察。',
   },
   exploration: {
     title: '探索工作台',
