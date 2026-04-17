@@ -203,6 +203,126 @@ def run_exploration_endpoint(
 
 
 # ───────────────────────────────────────────────────────────────────
+# Autonomous exploration — URL-only, no task definition
+# ───────────────────────────────────────────────────────────────────
+
+
+class AutonomousExplorePayload(BaseModel):
+    url: str = Field(description="Target URL to explore.")
+    goal: str = Field(default="", description="Optional goal description.")
+    fill_value: str = Field(
+        default="",
+        description="Value to fill into the primary input (single-field mode).",
+    )
+    fill_values: dict[str, str] | None = Field(
+        default=None,
+        description="Multi-field values keyed by generic semantic role "
+        "(username/password/email/text). Takes precedence over fill_value.",
+    )
+    headless: bool = Field(default=True, description="Run browser in headless mode.")
+    spec_id: str | None = Field(
+        default=None,
+        description="If set, load apps/validation-site/specs/<spec_id>.assertions.json "
+        "and run the comparator after exploration.",
+    )
+    scenario: str | None = Field(
+        default=None,
+        description="Scenario key within the spec (e.g. 'success' / 'failure'). "
+        "Required when spec_id is set.",
+    )
+
+
+@router.post("/autonomous-run")
+def autonomous_exploration_endpoint(
+    payload: AutonomousExplorePayload,
+) -> ApiResponse[dict[str, Any]]:
+    """Run autonomous exploration on a URL.
+
+    No pre-written selectors. No task definition. The system:
+      1. Opens the URL
+      2. Analyzes the page to discover interactive elements
+      3. Plans actions from the analysis
+      4. Executes the plan with Playwright
+      5. Runs the project's internal supervisor Agent for verification
+
+    Returns the full structured report plus supervisor verdict.
+    """
+    from app.services.execution.execution_runtime import (
+        RuntimeConfig,
+        create_execution_runtime,
+    )
+    from app.services.learning.autonomous_explorer import (
+        run_autonomous_exploration,
+    )
+
+    runtime_config = RuntimeConfig(
+        headless=payload.headless,
+        screenshot_dir=str(_SCREENSHOT_DIR),
+    )
+
+    with create_execution_runtime(config=runtime_config) as runtime:
+        result = run_autonomous_exploration(
+            url=payload.url,
+            runtime=runtime,
+            goal=payload.goal,
+            fill_value=payload.fill_value,
+            fill_values=payload.fill_values,
+        )
+
+    # Optional: spec-driven verification
+    verification_payload: dict[str, Any] | None = None
+    if payload.spec_id:
+        if not payload.scenario:
+            raise HTTPException(
+                status_code=400,
+                detail="scenario is required when spec_id is set.",
+            )
+        try:
+            from app.services.learning.page_verification import (
+                load_spec,
+                verify_against_spec,
+            )
+
+            spec, spec_path = load_spec(payload.spec_id)
+            scorecard = verify_against_spec(result, spec, payload.scenario)
+            verification_payload = {
+                "spec_source": str(spec_path),
+                "spec_id": spec.page_id,
+                "scenario": payload.scenario,
+                "scorecard": scorecard.model_dump(),
+            }
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except KeyError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception("Verification failed: %s", exc)
+            verification_payload = {"error": str(exc)[:300]}
+
+    # Serialize — convert screenshot paths to API URLs
+    data = result.model_dump()
+    if verification_payload is not None:
+        data["verification"] = verification_payload
+
+    # Top-level screenshot
+    if data.get("final_screenshot_ref"):
+        data["final_screenshot_ref"] = _to_screenshot_url(data["final_screenshot_ref"])
+
+    # Page analysis screenshot
+    if data.get("page_analysis", {}).get("screenshot_ref"):
+        data["page_analysis"]["screenshot_ref"] = _to_screenshot_url(
+            data["page_analysis"]["screenshot_ref"]
+        )
+
+    # Each step's screenshot
+    for step in data.get("steps", []):
+        if step.get("screenshot_ref"):
+            step["screenshot_ref"] = _to_screenshot_url(step["screenshot_ref"])
+
+    return ApiResponse(data=data)
+
+
+# ───────────────────────────────────────────────────────────────────
 # Screenshot serving
 # ───────────────────────────────────────────────────────────────────
 

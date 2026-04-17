@@ -1,0 +1,81 @@
+{
+  "$schema_version": 1,
+  "page_id": "login",
+  "url_pattern": "/login",
+  "description": "Validation-site login page — structured assertions for comparator. See login.md for human-readable spec.",
+
+  "critical_elements": [
+    {
+      "role": "username_input",
+      "expected_category": "fillable",
+      "expected_semantic_role": "username",
+      "match_by": { "id": "username" }
+    },
+    {
+      "role": "password_input",
+      "expected_category": "fillable",
+      "expected_semantic_role": "password",
+      "match_by": { "id": "password" }
+    },
+    {
+      "role": "submit_button",
+      "expected_category": "submit",
+      "match_by": { "tag": "button", "element_type": "submit" }
+    }
+  ],
+  "_note_error_alert": "The role=alert error region is verified via scenarios.failure.failure_signals.alert_visible + alert_text_contains_any_of. It is NOT a critical_element because it only mounts after a failed submit (v-if rendered post-action), and the analyzer runs on the initial page.",
+
+  "distractions": [
+    {
+      "role": "forgot_password_link",
+      "match_by": { "tag": "a", "text_contains": "Forgot password" }
+    },
+    {
+      "role": "contact_admin_link",
+      "match_by": { "tag": "a", "text_contains": "Contact admin" }
+    }
+  ],
+
+  "scenarios": {
+    "success": {
+      "description": "Valid credentials (admin/123456) should authenticate and route to /dashboard.",
+      "inputs": {
+        "username": "admin",
+        "password": "123456"
+      },
+      "expected_actions": [
+        "fill:username_input",
+        "fill:password_input",
+        "click:submit_button"
+      ],
+      "success_signals": {
+        "url_contains": "/dashboard",
+        "title_contains": "Dashboard",
+        "dom_contains_all_of": ["Welcome", "Validation Site — Dashboard"],
+        "dom_has_test_id": "dashboard-welcome"
+      },
+      "must_not_transition_to": null,
+      "expected_verdict": "success"
+    },
+
+    "failure": {
+      "description": "Wrong credentials should keep URL on /login and surface role=alert.",
+      "inputs": {
+        "username": "wrong",
+        "password": "wrong"
+      },
+      "expected_actions": [
+        "fill:username_input",
+        "fill:password_input",
+        "click:submit_button"
+      ],
+      "failure_signals": {
+        "url_contains": "/login",
+        "alert_visible": true,
+        "alert_text_contains_any_of": ["用户名或密码错误"]
+      },
+      "must_not_transition_to": "/dashboard",
+      "expected_verdict_not": "success"
+    }
+  }
+}

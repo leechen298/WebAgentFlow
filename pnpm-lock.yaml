@@ -146,6 +146,31 @@ importers:
         specifier: ^0.20.6
         version: 0.20.19(@types/node@24.12.0)(eslint@8.57.1)(jiti@2.6.1)(rollup@4.59.0)
 
+  apps/validation-site:
+    dependencies:
+      axios:
+        specifier: ^1.7.0
+        version: 1.13.6
+      vue:
+        specifier: ^3.5.18
+        version: 3.5.30(typescript@5.9.3)
+      vue-router:
+        specifier: ^4.5.1
+        version: 4.6.4(vue@3.5.30(typescript@5.9.3))
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.1
+        version: 6.0.5(vite@7.3.1(@types/node@24.12.0)(jiti@2.6.1))(vue@3.5.30(typescript@5.9.3))
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vite:
+        specifier: ^7.1.2
+        version: 7.3.1(@types/node@24.12.0)(jiti@2.6.1)
+      vue-tsc:
+        specifier: ^3.0.5
+        version: 3.2.5(typescript@5.9.3)
+
   packages/sdk-js:
     devDependencies:
       typescript:

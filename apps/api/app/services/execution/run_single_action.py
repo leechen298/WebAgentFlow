@@ -47,11 +47,11 @@ def _build_hints_from_task_hint(hint: TaskStepHint | None) -> list[LocatorHint]:
             meta=meta,
         ))
 
-    # Name/placeholder (STRONG_ATTRIBUTE)
+    # Name attribute (STRONG_ATTRIBUTE — HTML name attr, not visible text)
     if hint.name and not hint.role:
         hints.append(LocatorHint(
-            strategy="TAG_TEXT_LABEL",
-            value=f"{hint.tag or '*'}::{hint.name}",
+            strategy="STRONG_ATTRIBUTE",
+            value=f"name={hint.name}",
             confidence="medium",
             meta={"tag": hint.tag},
         ))
