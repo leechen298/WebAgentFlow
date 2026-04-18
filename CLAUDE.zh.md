@@ -194,12 +194,12 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 ## 另见
 
-- [`docs/architecture.md`](./docs/architecture.md) —— 12 阶段路线图、AST
+- [`docs/architecture.zh.md`](./docs/architecture.zh.md) —— 12 阶段路线图、AST
   双轨、服务子包结构、iframe 处理。
-- [`docs/parser-rules.md`](./docs/parser-rules.md) —— 客户端 Initial State
-  Parser（DOM → StateNode）的强制约束。
-- [`docs/scope-boundaries.md`](./docs/scope-boundaries.md) —— 当前阶段**明
-  确不做**的内容。
-- [`docs/roadmap.md`](./docs/roadmap.md) —— v0.1 阶段里程碑。
+- [`docs/parser-rules.zh.md`](./docs/parser-rules.zh.md) —— 客户端 Initial
+  State Parser（DOM → StateNode）的强制约束。
+- [`docs/scope-boundaries.zh.md`](./docs/scope-boundaries.zh.md) —— 当前阶段
+  **明确不做**的内容。
+- [`docs/roadmap.zh.md`](./docs/roadmap.zh.md) —— v0.1 阶段里程碑。
 - [`CLAUDE.md`](./CLAUDE.md) —— 英文原版。
 - [`AGENTS.md`](./AGENTS.md) —— 给 Codex 等 AI 编码 Agent 的版本。
