@@ -1,13 +1,16 @@
 # Product Model — WebAgentFlow
 
-> **This document is authoritative for "what WebAgentFlow is".**
-> AI coding agents (Claude Code, Codex, …) MUST treat this as the
-> reference when planning features. If a proposal isn't covered here,
-> pause and ask — don't invent a new role, phase, or loop and
-> back-fit the code to it.
+> This document is the **product baseline** — the current shared
+> understanding of what WebAgentFlow is. Treat it as a general outline,
+> not a rigid constitution.
 >
-> If you change your understanding of the product, **update this
-> file first**, then the code.
+> - When the **product direction** changes (a new phase, a new Agent
+>   role, an invariant shifts), update this doc first, then the code.
+> - Day-to-day implementation details don't need to round-trip through
+>   this doc — just keep the overall shape consistent.
+> - If a proposal doesn't fit any phase / Agent here and feels like a
+>   product-level addition rather than an implementation detail, pause
+>   and check with the user before writing code.
 
 ---
 
@@ -18,7 +21,35 @@ a page well enough to operate it autonomously, and when the user asks
 for something, it executes the task by driving a real browser — not
 by asking an LLM to click things step-by-step.
 
-## 2. Three Phases of a Page
+## 2. System Role Boundaries
+
+Before the phases, a note on **who does what**. These boundaries are
+easy to forget mid-session and lead to the system quietly drifting
+into the wrong shape.
+
+- **WebAgentFlow engine** (code + in-product Agents) — the runtime.
+  Fetches pages, analyzes, tries actions via Playwright, runs the
+  Supervisor. It is the one that actually does the work at runtime.
+- **Workbench UI** (`/exploration/autonomous`) — the operator's
+  window. It's where the user **observes** what the engine is doing,
+  **manually triggers** runs during development, and **accepts or
+  rejects** results. It's not the engine; it's the glass in front of
+  the engine.
+- **User** — the operator. Triggers runs, reviews results, gives
+  corrections. During Phase 2 (user-guided learning) the user is the
+  actual operator of the page, not a reviewer.
+- **AI coding agents** (Claude Code, Codex, …) — build and maintain
+  the engine. They are **not** in the runtime loop. They must not
+  run the app on the user's behalf and report results back, because
+  doing so collapses the user's ability to tell "the app works" from
+  "the AI agent faked it with scaffolding". (See `CLAUDE.md`
+  §"AI Coding Agent — Execution Boundary" for the hard rule.)
+
+When in doubt about where a new feature belongs, place it on this
+axis first: is it engine logic, workbench glass, operator workflow,
+or developer tooling? Different axes, different review standards.
+
+## 3. Three Phases of a Page
 
 Every page goes through three phases in WebAgentFlow's lifetime.
 Features belong to exactly one phase. Don't blur them.
@@ -34,12 +65,12 @@ the invariants that must not be violated.
 
 ---
 
-## 3. Phase 1 · Autonomous Learning
+## 4. Phase 1 · Autonomous Learning
 
 **Trigger**: The system encounters a page it has not learned (or the
 user forces re-learning).
 
-### 3.1 Pipeline
+### 4.1 Pipeline
 
 Sequential steps. Every step has a clear input/output contract so
 components can be replaced independently.
@@ -63,10 +94,15 @@ components can be replaced independently.
 6. **Agent B · Attempt-Evaluation Agent** judges each attempt's
    outcome and flags anomalies.
    - Output: per-attempt verdict + summary. Independent of Agent A.
-7. **Agent C · Learning-Report Agent** compiles the full learning
-   session into a report for the user.
+7. **Agent C · Learning-Report Agent** (presentation layer, low
+   priority) compiles the full learning session into a report for
+   the user.
    - Output: user-facing report (what the page is, what the system
      can do on it, what it couldn't figure out).
+   - **Not a prerequisite** for the learning loop to function. The
+     loop is complete once steps 1–6 + 8 run; C is UX polish on top
+     of that data. Prioritize accuracy in A / B / 4 / 5 before
+     investing in C.
 8. **Persist** as a learned page record:
    - page signature
    - page purpose (from Agent A)
@@ -75,7 +111,7 @@ components can be replaced independently.
    - failed paths (from step 5, verdict≠success) — kept as negative
      knowledge to avoid repeating mistakes.
 
-### 3.2 What Phase 1 deliberately is not
+### 4.2 What Phase 1 deliberately is not
 
 - Not a skill registry. The learned record is a data blob keyed by
   page signature, not a named skill.
@@ -86,7 +122,7 @@ components can be replaced independently.
 
 ---
 
-## 4. Phase 2 · User-Guided Learning
+## 5. Phase 2 · User-Guided Learning
 
 **Trigger** (either):
 
@@ -96,7 +132,7 @@ components can be replaced independently.
   explicit hand-off). Take-over automatically becomes guided learning
   — the system records everything the user does from that point.
 
-### 4.1 Pipeline
+### 5.1 Pipeline
 
 1. System opens the page in a **visible** Playwright browser (not
    headless — the user is driving).
@@ -109,7 +145,7 @@ components can be replaced independently.
    marked with `provenance = user`, and participate in Phase 3 route
    planning the same way Phase-1 paths do.
 
-### 4.2 Invariant
+### 5.2 Invariant
 
 Phase 2 records the user's real actions. It does **not** infer intent
 via LLM, and it does **not** retroactively rewrite what the user did.
@@ -117,7 +153,7 @@ Provenance is preserved so later reviews can trust it.
 
 ---
 
-## 5. Phase 3 · Actual Work
+## 6. Phase 3 · Actual Work
 
 This is the phase that matters to the end user. Everything in Phases
 1 and 2 exists to make Phase 3 cheap, fast, and reliable.
@@ -125,7 +161,33 @@ This is the phase that matters to the end user. Everything in Phases
 **Trigger**: The user submits a task ("log into X and download the
 weekly report as CSV", etc.).
 
-### 5.1 Happy-path pipeline
+### 6.1 Run shape — happy path is not the whole picture
+
+A real Phase 3 run is **not** a straight line from plan to report.
+It's a loop that can branch any time the page disagrees with what
+the learned record expected:
+
+```
+plan (D) → execute → observe → ok?  ─── yes ──→ report (E)
+                                │
+                                └── no ──→ recovery dialogue (F)
+                                             ├── re-plan   ──→ back to execute
+                                             ├── re-run    ──→ back to plan
+                                             └── hand off  ──→ Phase 2 mode
+```
+
+Triggers that flip a run off the happy path:
+
+- action hits an error (timeout, not-found, server 5xx)
+- observable state doesn't change when the learned path said it should
+- page has drifted (element moved, selector stale, layout changed)
+- user aborts (§6.5)
+
+The sections below describe each arm. "Happy path" is just the
+sunny-day subset; the error / drift / handoff arms are first-class,
+not exception cases.
+
+### 6.2 Happy-path pipeline
 
 1. **Agent D · Planner Agent** reads:
    - the user's task description
@@ -148,7 +210,7 @@ weekly report as CSV", etc.).
    the user. Output: natural-language result + structured fields the
    UI can render.
 
-### 5.2 The core invariant
+### 6.3 The core invariant
 
 During Phase 3 execution, **LLMs are only invoked at boundaries** —
 planning at the start, reporting at the end, and dialogue on error
@@ -160,7 +222,7 @@ This is non-negotiable. It is the thing that makes WebAgentFlow
 different from "LLM watches the browser and clicks around". Break
 this and you've built a different product.
 
-### 5.3 Error handling
+### 6.4 Error handling
 
 When an action fails (page error, element not found, observable state
 didn't change, server returned 5xx, etc.):
@@ -179,7 +241,7 @@ didn't change, server returned 5xx, etc.):
      the task manually; their actions are recorded and fed back into
      the learned record.
 
-### 5.4 User-initiated abort
+### 6.5 User-initiated abort
 
 The user can stop the run at any time. When they do:
 
@@ -196,7 +258,7 @@ different tone.
 
 ---
 
-## 6. The Agents (single reference table)
+## 7. The Agents (single reference table)
 
 These are separate Agents. Don't merge them. Different prompts,
 different inputs, different outputs, different models over time.
@@ -205,7 +267,7 @@ different inputs, different outputs, different models over time.
 |---|---|---|---|---|
 | A | Page-Intent | 1 | Simplified AST + screenshot | Page purpose description |
 | B | Attempt-Evaluation | 1 | Attempt log + before/after state | Per-attempt verdict + anomalies |
-| C | Learning-Report | 1 | Full learning session | User-facing learning report |
+| C | Learning-Report *(low priority, presentation)* | 1 | Full learning session | User-facing learning report |
 | D | Planner | 3 | User task + learned record | Chosen concrete route |
 | E | Result-Reporting | 3 | Execution outcome | User-facing result |
 | F | Recovery-Dialogue | 3 (error) | Error context + recent steps | Dialogue transcript + next action |
@@ -217,7 +279,7 @@ decision — update this document before adding it.
 
 ---
 
-## 7. Cross-Cutting Invariants
+## 8. Cross-Cutting Invariants
 
 Invariants that apply across all phases. Violations are product bugs,
 not implementation details.
@@ -238,7 +300,7 @@ not implementation details.
 
 ---
 
-## 8. Where the current codebase sits
+## 9. Where the current codebase sits
 
 Honest mapping, so the gap between the vision and the code is
 visible. Keep this section updated as phases ship.
@@ -252,10 +314,14 @@ visible. Keep this section updated as phases ship.
   evaluation concerns.
 - **Phase 1 steps 4–5 (element extraction + trial)**: shipped in the
   autonomous exploration subsystem.
-- **Phase 1 steps 6–8 (evaluation + report + persist)**: partial —
-  verdict exists, report exists, **persist-as-learned-record does
-  not**. Runs are persisted to `exploration_runs` for history, not
-  as learned paths.
+- **Phase 1 steps 6–8 (evaluation + report + persist)**: partial.
+  Verdict + 5-score verification scorecard + Supervisor summary
+  exist as exploration-stage artifacts. A **product-form,
+  user-facing learning report is still exploratory** — current
+  output is a developer-oriented debug surface, not the final shape
+  Agent C should produce. **Persist-as-learned-record does not exist
+  yet** — autonomous runs only land in `exploration_runs` as run
+  history, not as reusable learned paths.
 - **Phase 2 (User-Guided Learning)**: not started. The extension
   records events, but there is no guided-learning mode that appends
   to a learned page record.
@@ -266,7 +332,7 @@ When a phase fully lands, update this section to reflect it.
 
 ---
 
-## 9. Related Docs
+## 10. Related Docs
 
 - [`architecture.md`](./architecture.md) — how the code is organized
   (layers, AST dual-track, services sub-packages). Complements this
