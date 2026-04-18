@@ -71,11 +71,24 @@ Closed in Phase 9:
 
 Pending in Phase 9:
 
-- [ ] **Second fixture page** — a non-login page under
-  `apps/validation-site/` (proposed shape: a user-directory /
-  search+table view) with its own `specs/<page>.assertions.json`, so
-  the workbench is exercised on a page shape that isn't login. This is
-  the last Phase 9 gate before Phase 10 opens.
+- [ ] **Second fixture page — `users` (user directory)**. Shape
+  decided 2026-04-18:
+  - **UI side (full)**: the Vue page uses a production-style Ant
+    Design search form with text inputs, select, radio group, date
+    inputs, Cascader, DatePicker, RangePicker, MonthPicker,
+    TimePicker, Tag-as-filter, plus an Ant Design Table with column
+    sort and column filter. Backend is a mock `/validation-api/users`
+    that honors the filter params.
+  - **Spec side (minimal)**: `specs/users.{md,assertions.json}` only
+    ships scenarios the engine is expected to pass today — e.g.
+    `filter_by_name` and `no_match` — both operating the plain text
+    inputs plus the Search button.
+  - Popup-based controls (Cascader, all Picker variants, Tag filter,
+    column sort / filter) are deliberately **NOT covered by
+    scenarios in this round**. They sit on the page so the analyzer
+    can scan them and emit free diagnostics, but their formal
+    scenarios are a Phase 10 deliverable.
+  - This is the last Phase 9 gate before Phase 10 opens.
 
 ## Next — Phase 10: Path abstraction & experience accumulation
 
@@ -89,6 +102,15 @@ user review):
   action shape (login, search, CRUD).
 - **Replay execution against stored paths** with drift detection
   against current page analysis.
+- **Popup-based control support** — extend `page_analyzer` +
+  `action_planner` to handle components that reveal their interactive
+  surface only after a click (Cascader, DatePicker, RangePicker,
+  MonthPicker, TimePicker, Tag-as-filter, column sort / filter inside
+  a table header). Once the code lands, backfill
+  `apps/validation-site/specs/users.assertions.json` with the Tier 2
+  scenarios that exercise each control, using the `users` fixture
+  already on the page — so the scorecard flipping green becomes the
+  quantitative evidence of the improvement.
 
 ## Further (Phases 11–12)
 

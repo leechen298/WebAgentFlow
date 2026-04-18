@@ -50,10 +50,21 @@ Phase 9 已完成：
 
 Phase 9 尚未完成：
 
-- [ ] **第二个 fixture 页** —— 在 `apps/validation-site/` 里再做一个
-  非登录形态的页面（建议形态：用户目录 / 搜索 + 表格），配上自己的
-  `specs/<page>.assertions.json`，证明 workbench 能跑非登录形态的页面。
-  这是 Phase 9 进入 Phase 10 前的**最后一道门**。
+- [ ] **第二个 fixture 页 —— `users`（用户目录）**。形态于
+  2026-04-18 敲定：
+  - **UI 侧（做全）**：Vue 页面用一整套 Ant Design 的企业级搜索表单
+    —— 文本框、select、radio group、date 输入、Cascader、DatePicker、
+    RangePicker、MonthPicker、TimePicker、Tag 筛选 —— 加上带列 sort
+    和列 filter 的 Ant Design Table。后端是 mock 的
+    `/validation-api/users`，接收过滤参数返回对应数据。
+  - **Spec 侧（做窄）**：`specs/users.{md,assertions.json}` 只写
+    "engine 今天应该能过"的 scenario —— 例如 `filter_by_name` 和
+    `no_match`，都只操作普通 text 输入 + Search 按钮。
+  - **弹层式控件**（Cascader、所有 Picker 变体、Tag 筛选、表格列的
+    sort/filter）**本轮刻意不写 scenario**。它们留在页面上是为了让
+    analyzer 扫过去顺带产出诊断信息，但它们正式的 scenario 是
+    Phase 10 的交付物。
+  - 这是 Phase 9 进入 Phase 10 前的**最后一道门**。
 
 ## 下一阶段 —— Phase 10：路径抽象 & 经验累积
 
@@ -62,6 +73,13 @@ Phase 9 尚未完成：
 - **LearnedPath 落库** —— 审核通过的 exploration run 变成 LearnedPath 条目，按页面签名 + 场景归档，带溯源信息。
 - **跨页模式挖掘** —— 发现不同页面共享相同动作形态（登录、搜索、CRUD）。
 - **基于已存路径回放执行**，带针对当前页面分析的漂移检测。
+- **弹层式控件支持** —— 扩展 `page_analyzer` + `action_planner`，
+  让它们能处理"必须先点一下才暴露交互面"的组件（Cascader、
+  DatePicker、RangePicker、MonthPicker、TimePicker、Tag 筛选、
+  表格表头的列 sort / filter）。代码落地后，回到
+  `apps/validation-site/specs/users.assertions.json` 补齐 Tier 2
+  scenario，让每个控件都有对应的场景验证。由于 fixture 页面本身
+  上一阶段就搭好了，评分卡从红变绿就是改进的量化证据。
 
 ## 再往后（Phase 11–12）
 
