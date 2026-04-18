@@ -1,11 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import IndexPage from '../pages/IndexPage.vue';
 import LoginPage from '../pages/LoginPage.vue';
 import DashboardPage from '../pages/DashboardPage.vue';
 
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', redirect: '/login' },
+    { path: '/', name: 'index', component: IndexPage, meta: { title: 'WebAgentFlow · Validation Site' } },
     { path: '/login', name: 'login', component: LoginPage, meta: { title: 'Sign in — Validation Site' } },
     { path: '/dashboard', name: 'dashboard', component: DashboardPage, meta: { title: 'Dashboard — Validation Site' } },
   ],

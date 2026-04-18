@@ -210,7 +210,11 @@
         <!-- Screenshot -->
         <a-card :title="$t('exploration.pageState')" :bordered="false">
           <div v-if="selectedScreenshot" class="screenshot-container">
-            <img :src="selectedScreenshot" class="screenshot-img" />
+            <a-image
+              :src="selectedScreenshot"
+              class="screenshot-img"
+              :preview="{ mask: $t('exploration.clickToZoom') }"
+            />
           </div>
           <a-empty v-else :description="$t('exploration.noScreenshot')" />
 
