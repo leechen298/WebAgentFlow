@@ -16,10 +16,10 @@
 
 ## 1. One Sentence
 
-WebAgentFlow replaces the user at the keyboard on web pages: it learns
-a page well enough to operate it autonomously, and when the user asks
-for something, it executes the task by driving a real browser — not
-by asking an LLM to click things step-by-step.
+WebAgentFlow aims to replace the user at the keyboard on web pages:
+it first learns a page well enough to operate it, and is **gradually
+moving toward** executing user-submitted tasks by driving a real
+browser — not by asking an LLM to click things step-by-step.
 
 ## 2. System Role Boundaries
 
@@ -44,6 +44,20 @@ into the wrong shape.
   doing so collapses the user's ability to tell "the app works" from
   "the AI agent faked it with scaffolding". (See `CLAUDE.md`
   §"AI Coding Agent — Execution Boundary" for the hard rule.)
+
+**Runtime environment**: the engine drives an **independent Chromium
+bundled with the app** (installed via `playwright install chromium`),
+not the user's own browser. In order of importance:
+
+1. **Safety / isolation** — the user's cookies, logged-in sessions,
+   bookmarks, extensions, and history are never touched by the
+   engine, and vice versa. This matters for enterprise users where
+   data hygiene is a hard requirement.
+2. **Controlled environment** — everyone runs the same Chromium
+   build, with no noise from user-side extensions or profile state.
+3. **Room for extension** — surfaces to inject the engine's own UX
+   (Agent chat overlay, instrumentation) and to install plugins or
+   apply deeper browser customization later.
 
 When in doubt about where a new feature belongs, place it on this
 axis first: is it engine logic, workbench glass, operator workflow,
@@ -366,8 +380,9 @@ explicit capability units. At minimum:
   - Extraction of operable elements.
   - Output: page understanding, attempt results, learning report.
 - **Path planning**
-  - Choose or generate an executable route for a concrete task from
-    existing learned data.
+  - From existing learned data, **select / compose / fill gaps in**
+    an executable route for a concrete task. Never fabricate a new
+    route from scratch at runtime.
 - **Execution**
   - Automated browser operations against a real page.
   - Returns per-step execution log, observable state changes,
@@ -409,12 +424,19 @@ Even with a CLI / Skill / API, the role relationship does not change:
 A third-party Agent may call WebAgentFlow, but should not replace
 WebAgentFlow with its own per-step browser automation.
 
-> Clarification: "third-party Agent calling WebAgentFlow as a tool"
-> is a *runtime* role — a scheduler driving a user task. It is
-> distinct from "AI coding agent working on this repository" during
-> development. The `CLAUDE.md` §"AI Coding Agent — Execution
-> Boundary" rule still applies to the latter regardless of whether
-> §10 CLI / Skill entries exist.
+> **Clarification — three kinds of "Agent" appear near this document,
+> don't confuse them**:
+>
+> 1. **Product-internal Agents A–G** (§7) — roles that run *inside*
+>    WebAgentFlow at runtime (Page-Intent, Planner, Recovery-Dialogue,
+>    …). Defined by this document.
+> 2. **Third-party Agent** (this §10) — an *external* runtime
+>    scheduler that calls WebAgentFlow's CLI / Skill / API to get
+>    browser work done. Not part of WebAgentFlow.
+> 3. **AI coding agent** (Claude Code, Codex, …) — a development-time
+>    tool operating on this repository. **Not in the runtime loop at
+>    all.** Bound by `CLAUDE.md` §"AI Coding Agent — Execution
+>    Boundary" regardless of whether §10 CLI / Skill entries exist.
 
 ### 10.5 Boundaries when exposing capabilities
 
@@ -428,9 +450,13 @@ Opening capabilities outward does NOT relax the existing invariants:
 - External interfaces are a different *way to call*, not a different
   *product logic*.
 
-### 10.6 Current state
+### 10.6 Current state and priority
 
-This section describes a direction. Not all of it is shipped.
+This section describes a **long-term delivery direction**. Not all of
+it is shipped, and **its current priority sits below landing the
+three-phase main loop itself** — Phase 3 actual work must be stable
+and useful before heavy investment in CLI / Skill / API surface area
+is justified.
 
 Current codebase has part of the foundation:
 
