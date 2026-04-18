@@ -382,7 +382,11 @@ heartbeat logging is implemented but job execution logic is not yet built out.
 
 ## See Also
 
-- [`docs/parser-rules.md`](./parser-rules.md) — Initial State Parser
+- [`product-model.md`](./product-model.md) — **authoritative product
+  model**. This document describes how the code is organized; product
+  model describes what the code is supposed to do. Read product model
+  first when deciding *what* to build.
+- [`parser-rules.md`](./parser-rules.md) — Initial State Parser
   (client-side DOM → StateNode) rules. Mandatory when touching extension
   parsing code.
 - [`docs/scope-boundaries.md`](./scope-boundaries.md) — what's explicitly

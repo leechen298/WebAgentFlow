@@ -2,6 +2,10 @@
 
 本文列出**当前阶段刻意不做**的能力。提出或实现这些之前，先来这里看一眼。清单上的项目都在等某个前置阶段完成后才会解锁。
 
+**产品"要做什么"**（三阶段模型和各个 Agent）见
+[`product-model.zh.md`](./product-model.zh.md)。如果一个提议在那份
+文档里没位置、本清单也没列为"不做"，**停下来问**，不要擅自发明。
+
 ## 当前阶段
 
 **Phase 9** —— exploration loop + success evaluation + autonomous workbench。Phases 1–7 已完成（详见 [`architecture.zh.md`](./architecture.zh.md)）。

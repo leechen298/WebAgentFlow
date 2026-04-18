@@ -16,7 +16,12 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - `apps/validation-site` —— 自主探索的自建验证站点。
 - `packages/` —— 共享 TypeScript 包。
 
-深度架构 / 演进：[`docs/architecture.md`](./docs/architecture.md)。
+**产品形态**（WebAgentFlow 到底是什么）：
+[`docs/product-model.zh.md`](./docs/product-model.zh.md)。提议任何
+新功能 / 新阶段前**先读这份**。如果你的提议在那份文档里找不到位置，
+**先停下问用户**，不要擅自发明新 Agent / 新阶段 / 新循环再反向改代码。
+
+深度架构 / 演进：[`docs/architecture.zh.md`](./docs/architecture.zh.md)。
 
 ## AI 编码 Agent —— 执行边界（硬约束）
 
@@ -196,6 +201,9 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 ## 另见
 
+- [`docs/product-model.zh.md`](./docs/product-model.zh.md) —— **产品形态
+  权威文档**：三个阶段（自主学习 / 用户引导学习 / 实际工作）、七个
+  Agent、跨阶段不变量。**先看这份**。
 - [`docs/architecture.zh.md`](./docs/architecture.zh.md) —— 12 阶段路线图、AST
   双轨、服务子包结构、iframe 处理。
 - [`docs/parser-rules.zh.md`](./docs/parser-rules.zh.md) —— 客户端 Initial

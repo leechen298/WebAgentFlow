@@ -1,7 +1,12 @@
 # Roadmap
 
 Operational view of what's shipped, what's current, and what's next.
-For the 12-phase architectural timeline, see [`architecture.md`](./architecture.md) §E.
+
+- For what the product **is** (three phases, seven Agents, invariants),
+  see [`product-model.md`](./product-model.md). That's the authoritative
+  product reference.
+- For the 12-phase architectural timeline, see
+  [`architecture.md`](./architecture.md) §E.
 
 ## Shipped (Phases 1–7 + exploration scaffolding)
 

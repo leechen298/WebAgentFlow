@@ -4,6 +4,11 @@ This document lists capabilities that are **deliberately not** part of the
 current phase. When in doubt, check here before proposing or implementing
 them. Items on this list are deferred until a prerequisite phase validates.
 
+For **what the product is** (the three-phase model and the Agents),
+see [`product-model.md`](./product-model.md). If a proposal isn't
+in that document AND isn't listed here as out-of-scope, pause and
+ask — don't invent.
+
 ## Current Phase
 
 Phase 9 — exploration loop, success evaluation, autonomous workbench.

@@ -16,6 +16,12 @@ WebAgentFlow — monorepo for an agent-driven web workflow engine.
 - `apps/validation-site` — self-hosted page fixtures for autonomous exploration.
 - `packages/` — shared TypeScript packages.
 
+**Product model** (what WebAgentFlow actually is):
+[`docs/product-model.md`](./docs/product-model.md). Read this before
+proposing any new feature or phase of work. If a proposal isn't in
+that document, pause and ask — don't invent a new Agent, phase, or
+loop and retrofit code to it.
+
 Deep architecture / history: [`docs/architecture.md`](./docs/architecture.md).
 
 ## AI Coding Agent — Execution Boundary (HARD RULE)
@@ -199,6 +205,9 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 
 ## See Also
 
+- [`docs/product-model.md`](./docs/product-model.md) — **authoritative
+  product model**: three phases (autonomous learning, user-guided
+  learning, actual work), seven Agents, invariants. Read first.
 - [`docs/architecture.md`](./docs/architecture.md) — 12-phase timeline,
   AST dual-track, services sub-package structure, iframe handling.
 - [`docs/parser-rules.md`](./docs/parser-rules.md) — Initial State Parser

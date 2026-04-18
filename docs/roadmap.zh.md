@@ -1,7 +1,10 @@
 # 路线图
 
-运营视角下"已交付 / 正在做 / 下一步"的全景。  
-12 阶段架构时间线请见 [`architecture.zh.md`](./architecture.zh.md) §E。
+运营视角下"已交付 / 正在做 / 下一步"的全景。
+
+- 产品**是什么**（三个阶段、七个 Agent、跨阶段不变量）见
+  [`product-model.zh.md`](./product-model.zh.md) —— 权威产品参考。
+- 12 阶段架构时间线请见 [`architecture.zh.md`](./architecture.zh.md) §E。
 
 ## 已交付（Phase 1–7 + 探索子系统脚手架）
 

@@ -272,6 +272,9 @@ Docker Compose（`infra/docker/docker-compose.yml`）提供：
 
 ## 另见
 
+- [`product-model.zh.md`](./product-model.zh.md) —— **产品形态权威文档**。
+  本文讲"代码怎么组织"，产品形态讲"代码要实现什么"。在决定**做什么**
+  之前先看产品形态。
 - [`parser-rules.zh.md`](./parser-rules.zh.md) —— Initial State Parser（客户端 DOM → StateNode）规则。改扩展端解析代码时**必读**。
 - [`scope-boundaries.zh.md`](./scope-boundaries.zh.md) —— 当前阶段**刻意不做**的事。
 - [`roadmap.zh.md`](./roadmap.zh.md) —— v0.1 发布切出的运营里程碑。
