@@ -20,6 +20,12 @@ export interface AutonomousStreamPayload {
   headless?: boolean;
   spec_id?: string | null;
   scenario?: string | null;
+  /**
+   * UI locale passed through so the project-internal Supervisor Agent
+   * (the LLM part) responds in the user's language. Expected values:
+   * "en" | "zh" | "ja" (or any BCP-47 code — backend uses it verbatim).
+   */
+  language?: string;
 }
 
 export interface StreamEvent {

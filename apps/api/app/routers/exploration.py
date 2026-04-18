@@ -230,6 +230,11 @@ class AutonomousExplorePayload(BaseModel):
         description="Scenario key within the spec (e.g. 'success' / 'failure'). "
         "Required when spec_id is set.",
     )
+    language: str | None = Field(
+        default=None,
+        description="Preferred output language for the project-internal Supervisor "
+        "Agent (e.g. 'en', 'zh', 'ja'). Defaults to the page title's language when unset.",
+    )
 
 
 @router.post("/autonomous-run")
@@ -267,6 +272,7 @@ def autonomous_exploration_endpoint(
             goal=payload.goal,
             fill_value=payload.fill_value,
             fill_values=payload.fill_values,
+            language=payload.language,
         )
 
     # Optional: spec-driven verification
@@ -419,6 +425,7 @@ def autonomous_exploration_stream(
                     goal=payload.goal,
                     fill_value=payload.fill_value,
                     fill_values=payload.fill_values,
+                    language=payload.language,
                     event_emitter=emit,
                 )
 

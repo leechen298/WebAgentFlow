@@ -10,7 +10,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Request
 # ---------------------------------------------------------------------------
@@ -55,6 +54,12 @@ class LlmResponse(BaseModel):
     ok: bool = True
     text: str | None = None
     parsed: dict[str, Any] | None = None
+    thinking: str | None = Field(
+        default=None,
+        description="Reasoning trace emitted by thinking-capable models "
+        "(contents of <think>...</think> blocks), extracted out of the final "
+        "answer. Useful for UI transparency / audit; not sent back to the LLM.",
+    )
     usage: LlmUsage = Field(default_factory=LlmUsage)
     model: str | None = None
     raw: dict[str, Any] | None = Field(

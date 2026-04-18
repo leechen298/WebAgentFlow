@@ -7,38 +7,46 @@
       :bordered="false"
     >
       <template #extra>
-        <a-tag color="blue">project code</a-tag>
+        <a-tag color="blue">{{ $t('autonomous.badgeProjectCode') }}</a-tag>
       </template>
 
       <a-form layout="vertical">
         <a-row :gutter="16">
           <a-col :xs="24" :md="12">
-            <a-form-item label="URL" required>
+            <a-form-item :label="$t('autonomous.urlLabel')" required>
               <a-input
                 v-model:value="form.url"
-                placeholder="http://127.0.0.1:5175/login"
+                :placeholder="$t('autonomous.urlPlaceholder')"
                 allow-clear
               />
             </a-form-item>
           </a-col>
           <a-col :xs="24" :md="12">
-            <a-form-item label="goal (optional)">
-              <a-input v-model:value="form.goal" placeholder="e.g. log in as admin" allow-clear />
+            <a-form-item :label="$t('autonomous.goalLabel')">
+              <a-input
+                v-model:value="form.goal"
+                :placeholder="$t('autonomous.goalPlaceholder')"
+                allow-clear
+              />
             </a-form-item>
           </a-col>
         </a-row>
 
         <a-row :gutter="16">
           <a-col :xs="24" :md="12">
-            <a-form-item label="spec_id">
-              <a-input v-model:value="form.specId" placeholder="login" allow-clear />
+            <a-form-item :label="$t('autonomous.specIdLabel')">
+              <a-input
+                v-model:value="form.specId"
+                :placeholder="$t('autonomous.specIdPlaceholder')"
+                allow-clear
+              />
             </a-form-item>
           </a-col>
           <a-col :xs="24" :md="12">
-            <a-form-item label="scenario">
+            <a-form-item :label="$t('autonomous.scenarioLabel')">
               <a-select
                 v-model:value="form.scenario"
-                placeholder="success / failure"
+                :placeholder="$t('autonomous.scenarioPlaceholder')"
                 allow-clear
                 :options="[
                   { value: 'success', label: 'success' },
@@ -49,7 +57,7 @@
           </a-col>
         </a-row>
 
-        <a-form-item label="fill_values (semantic role → value)">
+        <a-form-item :label="$t('autonomous.fillValuesLabel')">
           <div
             v-for="(row, idx) in form.fillValues"
             :key="idx"
@@ -68,19 +76,23 @@
             />
             <a-input
               v-model:value="row.value"
-              placeholder="value"
+              :placeholder="$t('autonomous.fillValuesPlaceholder')"
               style="flex: 1"
             />
             <a-button type="text" danger @click="removeFillRow(idx)">×</a-button>
           </div>
-          <a-button size="small" @click="addFillRow">+ add field</a-button>
+          <a-button size="small" @click="addFillRow">
+            {{ $t('autonomous.addField') }}
+          </a-button>
         </a-form-item>
 
         <a-row :gutter="16" align="middle">
           <a-col>
-            <a-checkbox v-model:checked="form.headless">headless</a-checkbox>
+            <a-checkbox v-model:checked="form.headless">
+              {{ $t('autonomous.headlessLabel') }}
+            </a-checkbox>
             <span class="headless-hint">
-              ({{ form.headless ? 'browser runs invisibly' : 'browser window will pop up on the API machine' }})
+              ({{ form.headless ? $t('autonomous.headlessOn') : $t('autonomous.headlessOff') }})
             </span>
           </a-col>
         </a-row>
@@ -126,7 +138,7 @@
       style="margin-top: 16px"
     >
       <template #extra>
-        <a-tag color="blue">project code · SSE</a-tag>
+        <a-tag color="blue">{{ $t('autonomous.badgeProjectCodeSse') }}</a-tag>
       </template>
       <div class="phase-steps">
         <div
@@ -136,12 +148,12 @@
           :class="`phase-${phase.status}`"
         >
           <span class="phase-dot" />
-          <span class="phase-label">{{ phase.label }}</span>
+          <span class="phase-label">{{ $t(`autonomous.${phaseI18nKey(phase.key)}`) }}</span>
           <span v-if="phase.note" class="phase-note">{{ phase.note }}</span>
         </div>
       </div>
       <div v-if="runStartedAt" class="phase-timer">
-        elapsed: {{ elapsedLabel }}s
+        {{ $t('autonomous.elapsed') }}: {{ elapsedLabel }}s
       </div>
     </a-card>
 
@@ -154,25 +166,25 @@
       style="margin-top: 16px"
     >
       <template #extra>
-        <a-tag color="blue">project code · page_analyzer.py</a-tag>
+        <a-tag color="blue">{{ $t('autonomous.badgeProjectCodeAnalyzer') }}</a-tag>
       </template>
       <p class="source-note">
         {{ $t('autonomous.sourceAnalyzer') }}
       </p>
 
       <div class="counts">
-        <a-tag color="cyan">fillable: {{ analysis.counts?.fillable ?? 0 }}</a-tag>
-        <a-tag color="green">submit: {{ analysis.counts?.submit ?? 0 }}</a-tag>
-        <a-tag>clickable: {{ analysis.counts?.clickable ?? 0 }}</a-tag>
-        <a-tag>navigation: {{ analysis.counts?.navigation ?? 0 }}</a-tag>
-        <a-tag>hidden: {{ analysis.total_hidden ?? 0 }}</a-tag>
+        <a-tag color="cyan">{{ $t('autonomous.countFillable') }}: {{ analysis.counts?.fillable ?? 0 }}</a-tag>
+        <a-tag color="green">{{ $t('autonomous.countSubmit') }}: {{ analysis.counts?.submit ?? 0 }}</a-tag>
+        <a-tag>{{ $t('autonomous.countClickable') }}: {{ analysis.counts?.clickable ?? 0 }}</a-tag>
+        <a-tag>{{ $t('autonomous.countNavigation') }}: {{ analysis.counts?.navigation ?? 0 }}</a-tag>
+        <a-tag>{{ $t('autonomous.countHidden') }}: {{ analysis.total_hidden ?? 0 }}</a-tag>
       </div>
 
       <a-row :gutter="16" style="margin-top: 12px">
         <a-col :xs="24" :md="16">
-          <h4>elements (visible)</h4>
+          <h4>{{ $t('autonomous.elementsVisible') }}</h4>
           <div v-for="(bucket, name) in groupedElements" :key="name" class="bucket">
-            <strong>{{ name }} ({{ bucket.length }}):</strong>
+            <strong>{{ bucketLabel(name) }} ({{ bucket.length }}):</strong>
             <ul>
               <li v-for="el in bucket" :key="el.selector + el.id">
                 <code>{{ el.selector }}</code>
@@ -186,7 +198,7 @@
             </ul>
           </div>
 
-          <h4>recommended actions</h4>
+          <h4>{{ $t('autonomous.recommendedActions') }}</h4>
           <ol>
             <li v-for="act in analysis.recommended_actions" :key="act.step">
               <strong>{{ act.action_type }}</strong>
@@ -197,13 +209,14 @@
           </ol>
         </a-col>
         <a-col :xs="24" :md="8">
-          <h4>initial screenshot</h4>
-          <img
+          <h4>{{ $t('autonomous.initialScreenshot') }}</h4>
+          <a-image
             v-if="analysis.screenshot_ref"
             :src="toScreenshotUrl(analysis.screenshot_ref)"
             class="screenshot"
+            :preview="{ mask: $t('autonomous.clickToZoom') }"
           />
-          <a-empty v-else description="no screenshot" />
+          <a-empty v-else :description="$t('autonomous.noScreenshot')" />
         </a-col>
       </a-row>
     </a-card>
@@ -217,7 +230,7 @@
       style="margin-top: 16px"
     >
       <template #extra>
-        <a-tag color="blue">project code · autonomous_explorer</a-tag>
+        <a-tag color="blue">{{ $t('autonomous.badgeProjectCodeExplorer') }}</a-tag>
       </template>
       <p class="source-note">
         {{ $t('autonomous.sourceTimeline') }}
@@ -230,32 +243,37 @@
         >
           <div class="step-header">
             <strong>[{{ step.step_index }}] {{ step.action_type }}</strong>
-            <a-tag v-if="step.ok === true" color="green">ok</a-tag>
-            <a-tag v-else-if="step.ok === false" color="red">failed</a-tag>
-            <a-tag v-else color="blue">running…</a-tag>
+            <a-tag v-if="step.ok === true" color="green">{{ $t('autonomous.stepOk') }}</a-tag>
+            <a-tag v-else-if="step.ok === false" color="red">{{ $t('autonomous.stepFailed') }}</a-tag>
+            <a-tag v-else color="blue">{{ $t('autonomous.stepRunning') }}</a-tag>
           </div>
           <div class="step-body">
             <div v-if="step.target_description">
-              target: <code>{{ step.target_description }}</code>
+              {{ $t('autonomous.stepTarget') }}: <code>{{ step.target_description }}</code>
             </div>
-            <div v-if="step.value">value: <code>{{ step.value }}</code></div>
+            <div v-if="step.value">
+              {{ $t('autonomous.stepValue') }}: <code>{{ step.value }}</code>
+            </div>
             <div v-if="step.actual_value !== undefined">
-              actual: <code>{{ step.actual_value }}</code>
+              {{ $t('autonomous.stepActual') }}: <code>{{ step.actual_value }}</code>
             </div>
             <div v-if="step.url_changed">
-              url → <code>{{ step.url_after?.slice(0, 120) }}</code>
+              {{ $t('autonomous.stepUrl') }} → <code>{{ step.url_after?.slice(0, 120) }}</code>
             </div>
             <div v-if="step.title_changed">
-              title → <code>{{ step.title_after }}</code>
+              {{ $t('autonomous.stepTitle') }} → <code>{{ step.title_after }}</code>
             </div>
-            <div v-if="step.error" class="error-text">error: {{ step.error }}</div>
+            <div v-if="step.error" class="error-text">
+              {{ $t('autonomous.stepError') }}: {{ step.error }}
+            </div>
             <div v-if="step.result_signals">
-              signals: <code>{{ JSON.stringify(step.result_signals) }}</code>
+              {{ $t('autonomous.stepSignals') }}: <code>{{ JSON.stringify(step.result_signals) }}</code>
             </div>
-            <img
+            <a-image
               v-if="step.screenshot_ref"
               :src="toScreenshotUrl(step.screenshot_ref)"
               class="screenshot screenshot-thumb"
+              :preview="{ mask: $t('autonomous.clickToZoom') }"
             />
           </div>
         </a-timeline-item>
@@ -272,52 +290,67 @@
     >
       <a-row :gutter="16">
         <a-col :xs="24" :md="8">
-          <a-card size="small" :bordered="true" title="self verdict">
-            <template #extra><a-tag color="blue">project code</a-tag></template>
+          <a-card size="small" :bordered="true" :title="$t('autonomous.selfVerdict')">
+            <template #extra><a-tag color="blue">{{ $t('autonomous.badgeProjectCode') }}</a-tag></template>
             <div v-if="selfAssessment">
               <a-tag :color="verdictColor(selfAssessment.verdict)">
                 {{ selfAssessment.verdict }}
               </a-tag>
               <div class="summary">{{ selfAssessment.summary }}</div>
               <div v-if="selfAssessment.final_url" class="final-meta">
-                final_url:
+                {{ $t('autonomous.finalUrl') }}:
                 <code>{{ selfAssessment.final_url.slice(0, 120) }}</code>
               </div>
               <div v-if="selfAssessment.final_title" class="final-meta">
-                final_title: {{ selfAssessment.final_title }}
+                {{ $t('autonomous.finalTitle') }}: {{ selfAssessment.final_title }}
               </div>
             </div>
-            <a-empty v-else description="pending" />
+            <a-empty v-else :description="$t('autonomous.pendingVerdict')" />
           </a-card>
         </a-col>
         <a-col :xs="24" :md="8">
-          <a-card size="small" :bordered="true" title="supervisor">
-            <template #extra><a-tag color="purple">project LLM Agent</a-tag></template>
+          <a-card size="small" :bordered="true" :title="$t('autonomous.supervisorTitle')">
+            <template #extra><a-tag color="purple">{{ $t('autonomous.badgeProjectLlmAgent') }}</a-tag></template>
             <div v-if="supervisor">
               <a-tag :color="verdictColor(supervisor.verdict)">
                 {{ supervisor.verdict }}
               </a-tag>
-              <a-tag>confidence: {{ supervisor.confidence }}</a-tag>
+              <a-tag>{{ $t('autonomous.confidence') }}: {{ supervisor.confidence }}</a-tag>
               <div class="summary">{{ supervisor.summary }}</div>
               <div v-if="supervisor.anomalies?.length">
-                <strong>anomalies:</strong>
+                <strong>{{ $t('autonomous.anomalies') }}:</strong>
                 <ul>
                   <li v-for="(a, i) in supervisor.anomalies" :key="i">{{ a }}</li>
                 </ul>
               </div>
               <div v-if="supervisor.suggestions?.length">
-                <strong>suggestions:</strong>
+                <strong>{{ $t('autonomous.suggestions') }}:</strong>
                 <ul>
                   <li v-for="(s, i) in supervisor.suggestions" :key="i">{{ s }}</li>
                 </ul>
               </div>
+              <!-- Reasoning trace from the LLM (contents of <think>...</think>
+                   blocks). Renders only when the model emitted one. -->
+              <a-collapse v-if="supervisor._thinking" ghost style="margin-top: 8px">
+                <a-collapse-panel key="thinking" :header="$t('autonomous.thinkingProcess')">
+                  <div class="thinking-toolbar">
+                    <a-button size="small" @click="copyText(supervisor._thinking)">
+                      {{ $t('autonomous.copyText') }}
+                    </a-button>
+                    <span v-if="supervisor._model" class="thinking-model">
+                      {{ $t('autonomous.model') }}: <code>{{ supervisor._model }}</code>
+                    </span>
+                  </div>
+                  <pre class="thinking-text">{{ supervisor._thinking }}</pre>
+                </a-collapse-panel>
+              </a-collapse>
             </div>
-            <a-empty v-else description="pending" />
+            <a-empty v-else :description="$t('autonomous.pendingVerdict')" />
           </a-card>
         </a-col>
         <a-col :xs="24" :md="8">
-          <a-card size="small" :bordered="true" title="scorecard (baseline)">
-            <template #extra><a-tag color="blue">project code · spec</a-tag></template>
+          <a-card size="small" :bordered="true" :title="$t('autonomous.scorecardTitle')">
+            <template #extra><a-tag color="blue">{{ $t('autonomous.badgeProjectCodeSpec') }}</a-tag></template>
             <div v-if="scorecard">
               <div
                 v-for="metric in scoreMetrics"
@@ -332,16 +365,73 @@
                 />
               </div>
               <a-collapse ghost style="margin-top: 8px">
-                <a-collapse-panel key="details" header="raw checks">
+                <a-collapse-panel key="details" :header="$t('autonomous.rawChecks')">
                   <pre class="raw">{{ JSON.stringify(scorecard, null, 2) }}</pre>
                 </a-collapse-panel>
               </a-collapse>
             </div>
-            <a-empty v-else description="set spec_id + scenario to enable" />
+            <a-empty v-else :description="$t('autonomous.enableSpecHint')" />
           </a-card>
         </a-col>
       </a-row>
     </a-card>
+
+    <!-- Block 7: Raw SSE event stream — full audit trail with copy -->
+    <a-card
+      v-if="rawEvents.length > 0"
+      :title="$t('autonomous.sseRawTitle')"
+      class="sse-card"
+      :bordered="false"
+      style="margin-top: 16px"
+    >
+      <template #extra>
+        <a-tag color="blue">{{ $t('autonomous.badgeProjectCodeSse') }}</a-tag>
+      </template>
+      <p class="source-note">{{ $t('autonomous.sseRawNote') }}</p>
+      <div class="sse-toolbar">
+        <a-button size="small" @click="copyAllRawEvents">
+          {{ $t('autonomous.copyAllEvents') }} ({{ rawEvents.length }})
+        </a-button>
+        <a-button size="small" @click="showRawModal = true">
+          {{ $t('autonomous.openRawModal') }}
+        </a-button>
+        <span class="sse-count">
+          {{ $t('autonomous.sseEventsReceived') }}: {{ rawEvents.length }}
+        </span>
+      </div>
+      <a-collapse accordion ghost style="margin-top: 8px">
+        <a-collapse-panel
+          v-for="(evt, i) in rawEvents"
+          :key="i"
+          :header="`[${i}] ${evt.event}  ·  ${evt.relativeMs}ms`"
+        >
+          <div class="sse-item-toolbar">
+            <a-button size="small" @click="copyRawEvent(i)">
+              {{ $t('autonomous.copyThisEvent') }}
+            </a-button>
+          </div>
+          <pre class="sse-raw">{{ formatEvent(evt) }}</pre>
+        </a-collapse-panel>
+      </a-collapse>
+    </a-card>
+
+    <!-- Full-screen modal for raw SSE stream (when the inline collapse is too cramped) -->
+    <a-modal
+      v-model:open="showRawModal"
+      :title="$t('autonomous.sseRawTitle')"
+      :width="900"
+      :footer="null"
+    >
+      <div class="sse-toolbar" style="margin-bottom: 12px">
+        <a-button size="small" @click="copyAllRawEvents">
+          {{ $t('autonomous.copyAllEvents') }} ({{ rawEvents.length }})
+        </a-button>
+        <span class="sse-count">
+          {{ $t('autonomous.sseEventsReceived') }}: {{ rawEvents.length }}
+        </span>
+      </div>
+      <pre class="sse-raw-all">{{ allEventsText }}</pre>
+    </a-modal>
 
     <!-- Block 6: Source-origin legend -->
     <a-card
@@ -353,25 +443,20 @@
     >
       <ul class="source-legend">
         <li>
-          <a-tag color="blue">project code</a-tag>
-          — output produced directly by a WebAgentFlow module (analyzer, planner,
-          explorer, verification comparator). Deterministic, rule-based.
+          <a-tag color="blue">{{ $t('autonomous.badgeProjectCode') }}</a-tag>
+          — {{ $t('autonomous.legendProjectCode') }}
         </li>
         <li>
-          <a-tag color="purple">project LLM Agent</a-tag>
-          — output produced by the project's internal supervisor Agent calling
-          an LLM via <code>services/llm_provider</code>. Non-deterministic.
+          <a-tag color="purple">{{ $t('autonomous.badgeProjectLlmAgent') }}</a-tag>
+          — {{ $t('autonomous.legendProjectLlm') }}
         </li>
         <li>
-          <a-tag>spec baseline</a-tag>
-          — authored assertions from
-          <code>apps/validation-site/specs/&lt;page&gt;.assertions.json</code>.
-          The comparator's source of truth.
+          <a-tag>{{ $t('autonomous.badgeProjectCodeSpec') }}</a-tag>
+          — {{ $t('autonomous.legendSpec') }}
         </li>
         <li>
-          <em>none</em>
-          — labels without a tag (form labels, UI chrome) are just layout.
-          No system output here.
+          <em>—</em>
+          {{ $t('autonomous.legendNone') }}
         </li>
       </ul>
     </a-card>
@@ -385,7 +470,31 @@ import { message } from 'ant-design-vue';
 import { streamAutonomousRun } from '@/api/autonomousStream';
 import { resolveApiConfig } from '@/api/client';
 
-useI18n();
+const { t, locale } = useI18n();
+
+// ─── Phase key → i18n key map ────────────────────────────────
+// Phase internal keys don't always match English labels (e.g. 'analysis'
+// but the label is 'analyze'). Explicit map keeps both sides stable.
+const PHASE_I18N_KEY: Record<string, string> = {
+  navigate: 'phaseNavigate',
+  analysis: 'phaseAnalyze',
+  plan: 'phasePlan',
+  execute: 'phaseExecute',
+  assess: 'phaseSelfAssess',
+  supervisor: 'phaseSupervisor',
+  verify: 'phaseVerify',
+  done: 'phaseDone',
+};
+function phaseI18nKey(key: string): string {
+  return PHASE_I18N_KEY[key] || key;
+}
+
+// Map analyzer bucket names to i18n labels. Keeps raw keys in data model.
+function bucketLabel(name: string): string {
+  const key = `autonomous.count${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+  const translated = t(key);
+  return translated === key ? name : translated;
+}
 
 // ─── Form state ──────────────────────────────────────────────
 
@@ -433,6 +542,8 @@ interface PhaseState {
   note?: string;
 }
 
+// Phase labels come from i18n in the template via phaseI18nKey(). The
+// `label` field below is retained as a fallback debug identifier only.
 const phaseOrder: Array<{ key: string; label: string }> = [
   { key: 'navigate', label: 'navigate' },
   { key: 'analysis', label: 'analyze' },
@@ -485,18 +596,56 @@ const supervisor = ref<any>(null);
 const scorecard = ref<any>(null);
 let stepCountTotal = 0;
 
+// Raw SSE event audit log — every event that arrived from the stream,
+// timestamped, for transparency. User can copy individual events or the
+// whole stream.
+interface RawEvent {
+  index: number;
+  event: string;
+  data: unknown;
+  timestampMs: number;   // absolute epoch ms
+  relativeMs: number;    // ms since run_started
+}
+const rawEvents = ref<RawEvent[]>([]);
+const showRawModal = ref(false);
+
+const allEventsText = computed(() => {
+  return rawEvents.value.map(formatEvent).join('\n\n');
+});
+
+function formatEvent(evt: RawEvent): string {
+  return `[${evt.index}] event: ${evt.event}\n    t+${evt.relativeMs}ms\n${JSON.stringify(evt.data, null, 2)}`;
+}
+
+async function copyText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    message.success(t('autonomous.copied'));
+  } catch (err) {
+    message.error(t('autonomous.copyFailed') + (err as Error).message);
+  }
+}
+async function copyRawEvent(idx: number): Promise<void> {
+  const evt = rawEvents.value[idx];
+  if (!evt) return;
+  await copyText(formatEvent(evt));
+}
+async function copyAllRawEvents(): Promise<void> {
+  await copyText(allEventsText.value);
+}
+
 const scoreMetrics = computed(() => {
   if (!scorecard.value) return [];
   return [
-    { key: 'element_recognition', label: 'element recognition',
+    { key: 'element_recognition', label: t('autonomous.scoreElementRecognition'),
       score: scorecard.value.element_recognition?.score ?? 0 },
-    { key: 'action_coverage', label: 'action coverage',
+    { key: 'action_coverage', label: t('autonomous.scoreActionCoverage'),
       score: scorecard.value.action_coverage?.score ?? 0 },
-    { key: 'verdict_accuracy', label: 'verdict accuracy',
+    { key: 'verdict_accuracy', label: t('autonomous.scoreVerdictAccuracy'),
       score: scorecard.value.verdict_accuracy?.score ?? 0 },
-    { key: 'distraction_avoidance', label: 'distraction avoidance',
+    { key: 'distraction_avoidance', label: t('autonomous.scoreDistractionAvoidance'),
       score: scorecard.value.distraction_avoidance?.score ?? 0 },
-    { key: 'supervisor_agreement', label: 'supervisor agreement',
+    { key: 'supervisor_agreement', label: t('autonomous.scoreSupervisorAgreement'),
       score: scorecard.value.supervisor_agreement?.score ?? 0 },
   ];
 });
@@ -547,11 +696,22 @@ function resetOutputs() {
   scorecard.value = null;
   stepCountTotal = 0;
   errorMessage.value = '';
+  rawEvents.value = [];
   resetPhases();
 }
 
 function handleEvent(evt: { event: string; data: any }) {
   const { event, data } = evt;
+  // Capture every event into the audit log before any routing.
+  const now = Date.now();
+  const rel = runStartedAt.value ? now - runStartedAt.value : 0;
+  rawEvents.value.push({
+    index: rawEvents.value.length,
+    event,
+    data,
+    timestampMs: now,
+    relativeMs: rel,
+  });
   switch (event) {
     case 'run_started':
       break;
@@ -630,7 +790,7 @@ function handleEvent(evt: { event: string; data: any }) {
 function startRun() {
   if (running.value) return;
   if (!form.url) {
-    errorMessage.value = 'URL is required';
+    errorMessage.value = t('autonomous.urlRequired');
     return;
   }
   resetOutputs();
@@ -655,6 +815,9 @@ function startRun() {
       headless: form.headless,
       spec_id: form.specId || null,
       scenario: form.scenario || null,
+      // Pass the current UI locale so the project-internal Supervisor Agent
+      // (the LLM part) responds in the user's language.
+      language: String(locale.value),
     },
     {
       onEvent: handleEvent,
@@ -662,7 +825,7 @@ function startRun() {
         errorMessage.value = err.message;
         running.value = false;
         if (ticker) { clearInterval(ticker); ticker = null; }
-        message.error('Stream failed: ' + err.message);
+        message.error(t('autonomous.streamFailed') + err.message);
       },
       onDone: () => {
         running.value = false;
@@ -676,7 +839,7 @@ function startRun() {
 function abortRun() {
   if (abort) {
     abort();
-    message.info('Run aborted');
+    message.info(t('autonomous.runAborted'));
   }
 }
 
@@ -696,8 +859,63 @@ onBeforeUnmount(() => {
 .analysis-card,
 .timeline-card,
 .verify-card,
-.source-card {
+.source-card,
+.sse-card {
   background: #fff;
+}
+.thinking-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.thinking-model {
+  font-size: 11px;
+  color: #6b7280;
+}
+.thinking-text {
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 400px;
+  overflow: auto;
+  margin: 0;
+}
+.sse-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sse-count {
+  font-size: 12px;
+  color: #6b7280;
+}
+.sse-item-toolbar {
+  margin-bottom: 8px;
+}
+.sse-raw,
+.sse-raw-all {
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 12px;
+  border-radius: 4px;
+  max-height: 400px;
+  overflow: auto;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.sse-raw-all {
+  max-height: 600px;
 }
 .fv-row {
   display: flex;

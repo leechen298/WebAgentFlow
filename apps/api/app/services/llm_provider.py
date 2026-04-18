@@ -90,12 +90,31 @@ def _resolve(request: LlmRequest) -> dict[str, Any]:
     return kwargs
 
 
-_THINK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
+_THINK_RE = re.compile(r"<think>(.*?)</think>\s*", re.DOTALL)
+
+
+def _split_thinking(text: str) -> tuple[str, str | None]:
+    """Separate <think>...</think> blocks from the final answer.
+
+    Returns (clean_text_without_thinking, concatenated_thinking_content_or_None).
+    Used to expose the model's reasoning trace for UI transparency while
+    keeping it out of downstream JSON parsing.
+    """
+    thinking_parts: list[str] = []
+
+    def _capture(match: re.Match[str]) -> str:
+        thinking_parts.append(match.group(1))
+        return ""
+
+    clean = _THINK_RE.sub(_capture, text).strip()
+    thinking = "\n\n".join(p.strip() for p in thinking_parts).strip() if thinking_parts else None
+    return clean, thinking
 
 
 def _strip_thinking(text: str) -> str:
-    """Remove <think>...</think> blocks that some models emit."""
-    return _THINK_RE.sub("", text).strip()
+    """Remove <think>...</think> blocks — thin wrapper over _split_thinking."""
+    clean, _ = _split_thinking(text)
+    return clean
 
 
 def _extract_usage(raw_usage: Any) -> LlmUsage:
@@ -137,12 +156,14 @@ def generate_text(request: LlmRequest) -> LlmResponse:
         completion = client.chat.completions.create(**kwargs)
         choice = completion.choices[0] if completion.choices else None
         text = choice.message.content if choice else None
+        thinking = None
         if text:
-            text = _strip_thinking(text)
+            text, thinking = _split_thinking(text)
 
         return LlmResponse(
             ok=True,
             text=text,
+            thinking=thinking,
             usage=_extract_usage(completion.usage),
             model=completion.model,
             raw=completion.model_dump() if hasattr(completion, "model_dump") else None,
@@ -187,12 +208,14 @@ def generate_structured(request: LlmRequest) -> LlmResponse:
         completion = client.chat.completions.create(**kwargs)
         choice = completion.choices[0] if completion.choices else None
         raw_text = choice.message.content if choice else None
+        thinking: str | None = None
         if raw_text:
-            raw_text = _strip_thinking(raw_text)
+            raw_text, thinking = _split_thinking(raw_text)
 
         if not raw_text:
             return LlmResponse(
                 ok=False,
+                thinking=thinking,
                 usage=_extract_usage(completion.usage),
                 model=completion.model,
                 error=LlmError(kind="parse_error", message="Empty response from provider"),
@@ -205,6 +228,7 @@ def generate_structured(request: LlmRequest) -> LlmResponse:
             return LlmResponse(
                 ok=False,
                 text=raw_text,
+                thinking=thinking,
                 usage=_extract_usage(completion.usage),
                 model=completion.model,
                 error=LlmError(
@@ -218,6 +242,7 @@ def generate_structured(request: LlmRequest) -> LlmResponse:
             ok=True,
             text=raw_text,
             parsed=parsed,
+            thinking=thinking,
             usage=_extract_usage(completion.usage),
             model=completion.model,
             raw=completion.model_dump() if hasattr(completion, "model_dump") else None,

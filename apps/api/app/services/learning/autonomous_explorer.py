@@ -316,6 +316,7 @@ def run_autonomous_exploration(
     goal: str = "",
     fill_value: str = "",
     fill_values: dict[str, str] | None = None,
+    language: str | None = None,
     event_emitter: EventEmitter | None = None,
 ) -> AutonomousExplorationResult:
     """Run the full autonomous exploration pipeline.
@@ -327,6 +328,9 @@ def run_autonomous_exploration(
         fill_value: Value for the primary input (single-field mode).
         fill_values: Multi-field values keyed by semantic role
             (username/password/email/text). Takes precedence over fill_value.
+        language: Preferred output language for the Supervisor Agent's
+            LLM response (e.g. "en", "zh", "ja"). When None, the agent
+            defaults to the page title's language.
         event_emitter: Optional callback invoked at each phase boundary
             with ``(event_type, data_dict)``. When None, runs silently —
             backward compatible with callers that want a single return value.
@@ -428,6 +432,7 @@ def run_autonomous_exploration(
     # ── Phase 6: Supervisor verification (project-internal Agent) ──
     supervisor_output = _run_supervisor(
         analysis, step_logs, verdict, summary, final_url, final_title, elapsed,
+        language=language,
     )
     emit("supervisor_done", supervisor_output or {})
 
@@ -471,6 +476,28 @@ def _compact_element(e: DiscoveredElement) -> dict[str, Any]:
     }
 
 
+_LANGUAGE_NAMES: dict[str, str] = {
+    "en": "English",
+    "zh": "Chinese (Simplified)",
+    "zh-cn": "Chinese (Simplified)",
+    "zh-tw": "Chinese (Traditional)",
+    "zh-hk": "Chinese (Traditional)",
+    "ja": "Japanese",
+    "ja-jp": "Japanese",
+    "ko": "Korean",
+    "fr": "French",
+    "de": "German",
+    "es": "Spanish",
+}
+
+
+def _language_name(code: str | None) -> str | None:
+    """Map a BCP-47-ish locale code to a human-readable language name for the LLM."""
+    if not code:
+        return None
+    return _LANGUAGE_NAMES.get(code.lower().strip())
+
+
 def _run_supervisor(
     analysis: PageAnalysis,
     steps: list[dict[str, Any]],
@@ -479,6 +506,8 @@ def _run_supervisor(
     final_url: str,
     final_title: str,
     elapsed_ms: int,
+    *,
+    language: str | None = None,
 ) -> dict[str, Any] | None:
     """Run the project's internal supervisor Agent on the exploration results.
 
@@ -487,6 +516,10 @@ def _run_supervisor(
       - Element lists capped at top-N
       - Long URLs truncated
       - No screenshot bytes (refs only)
+
+    ``language`` — when provided, instructs the LLM to reply in that language
+    regardless of the page's content language. Intended to track the UI locale
+    so the user sees the agent's output in their own language.
     """
     import json
 
@@ -543,7 +576,16 @@ def _run_supervisor(
         ],
     }
 
-    system_prompt = """\
+    language_name = _language_name(language)
+    language_clause = (
+        f"Write ALL natural-language fields (summary, anomalies, "
+        f"suggestions, step_assessments.note) in {language_name}. "
+        f"This overrides the page-title language rule."
+        if language_name
+        else "Respond in the same language as the page title."
+    )
+
+    system_prompt = f"""\
 You are a verification agent inside the WebAgentFlow project. You review
 the results of an AUTONOMOUS web exploration run — one where the system
 discovered page elements on its own (no pre-written selectors), planned
@@ -560,7 +602,7 @@ Your job:
 Be concise, specific, and fact-based. Look at URLs, titles, and result_signals
 to determine the real outcome — don't just trust the self-reported success flag.
 
-Respond in the same language as the page title.\
+{language_clause}\
 """
 
     prompt_content = json.dumps(prompt_data, ensure_ascii=False, indent=2)
@@ -576,7 +618,17 @@ Respond in the same language as the page title.\
         response = generate_structured(request)
         if response.ok and response.parsed:
             logger.info("Supervisor verdict: %s", response.parsed.get("verdict"))
-            return response.parsed
+            # Expose the model's <think> reasoning trace for UI transparency.
+            # Key is `_thinking` (underscore-prefixed) so schema-strict consumers
+            # can ignore it; Pydantic SupervisorAssessment uses
+            # **dict-to-kwargs construction, so this would normally be rejected
+            # — but the frontend receives the raw dict via SSE and renders it.
+            result = dict(response.parsed)
+            if response.thinking:
+                result["_thinking"] = response.thinking
+            if response.model:
+                result["_model"] = response.model
+            return result
 
         logger.warning("Supervisor LLM call failed: %s",
                        response.error.message if response.error else "unknown")
