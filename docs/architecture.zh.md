@@ -214,7 +214,9 @@ WebAgentFlow 提供一个结构化平台：捕获 web 交互、自主分析页�
 - `provenance`：创建方式（`user_authored` / `autonomous_exploration` / `autonomous_then_user_corrected` 等）
 - `based_on`、`edited_by_user`、`revision`：演进追踪
 
-> 工具不拥有用户数据。用户数据属于用户 —— 迁移 / 备份 支持是设计要求。
+> 知识资产（任务、路径、验收标准）在设计上考虑了**迁移 / 备份**
+> 需求 —— provenance 记录保留了足够上下文，让一条记录可以被审阅、
+> 比较，以及在不同环境之间搬运。
 
 ---
 

@@ -49,7 +49,7 @@ Infrastructure shipped:
 - **Docs** split into compact `CLAUDE.md` + `docs/architecture.md` +
   `docs/parser-rules.md` + `docs/scope-boundaries.md`
 
-Closed in Phase 9 (design debts):
+Closed in Phase 9:
 
 - [x] **Run persistence** — every autonomous run is written to
   `exploration_runs` with `strategy_json.kind = "autonomous"` plus
@@ -62,15 +62,20 @@ Closed in Phase 9 (design debts):
 - [x] **Scenario-name de-coupling** — login scenarios renamed to
   `valid_credentials / invalid_credentials`; `VisibleOn` relaxed from a
   2-value `Literal` to free-form scenario keys.
+- [x] **User verification on the login page** (2026-04-18) —
+  D1 (`valid_credentials`) and D2 (`invalid_credentials`) both run by
+  the user in the workbench; all 5 verification scores green in each.
+  Runs `a7b9c035-…` (D1) and `3d830c63-…` (D2) persisted to
+  `exploration_runs` and visible at
+  `/api/exploration/autonomous-runs/list`.
 
 Pending in Phase 9:
 
-- [ ] **User verification** of the autonomous workbench on the login page
-  (D1 = `valid_credentials` / D2 = `invalid_credentials`) — user drives,
-  not Claude Code
-- [ ] **Second fixture page** — a list / query page under
-  `apps/validation-site/` with its own `specs/<page>.assertions.json`,
-  so the workbench is exercised on a page that isn't login-shaped
+- [ ] **Second fixture page** — a non-login page under
+  `apps/validation-site/` (proposed shape: a user-directory /
+  search+table view) with its own `specs/<page>.assertions.json`, so
+  the workbench is exercised on a page shape that isn't login. This is
+  the last Phase 9 gate before Phase 10 opens.
 
 ## Next — Phase 10: Path abstraction & experience accumulation
 
@@ -95,5 +100,7 @@ user review):
 ## Explicit non-goals (for current phase)
 
 See [`scope-boundaries.md`](./scope-boundaries.md) for the canonical
-list. Highlights: no CLI, no skill registry, no real-time per-step LLM
-supervision, no cross-device sync.
+list. Highlights: no real-time per-step LLM supervision in Phase 3, no
+cross-device sync. CLI / Skill / external-Agent interfaces are **not
+in this phase** either, but they are a long-term delivery direction —
+see [`product-model.md`](./product-model.md) §10.

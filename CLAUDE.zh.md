@@ -211,5 +211,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - [`docs/scope-boundaries.zh.md`](./docs/scope-boundaries.zh.md) —— 当前阶段
   **明确不做**的内容。
 - [`docs/roadmap.zh.md`](./docs/roadmap.zh.md) —— v0.1 阶段里程碑。
+- [`docs/dev-setup.zh.md`](./docs/dev-setup.zh.md) —— 完整的开发环境
+  搭建步骤（比上面的"常用命令"更详细，面向新 contributor）。
 - [`CLAUDE.md`](./CLAUDE.md) —— 英文原版。
 - [`AGENTS.md`](./AGENTS.md) —— 给 Codex 等 AI 编码 Agent 的版本。

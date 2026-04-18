@@ -18,12 +18,14 @@ Phases 1–7 are complete (see [`architecture.md`](./architecture.md)).
 
 ### Execution & Orchestration
 
-- **CLI tool** (`apps/cli`) — wait until exploration loop validates real
-  usage patterns.
-- **Skill registry / skill runtime** — current services ARE the callable
-  interface; no separate registry yet.
-- **Replay execution strategies** — replaying recorded steps deterministically
-  across environments is a later concern.
+- **CLI tool** (`apps/cli`) — not this phase. Listed as a long-term
+  delivery direction in [`product-model.md`](./product-model.md) §10.3;
+  its priority sits below landing the three-phase main loop.
+- **Skill / Tool interface for third-party Agents** — not this phase.
+  Current services ARE the callable interface; no separate registry
+  yet. Long-term direction in `product-model.md` §10.3.
+- **Replay execution strategies** — replaying recorded steps
+  deterministically across environments is a later concern (Phase 10).
 
 ### Supervision
 
@@ -58,8 +60,8 @@ Phases 1–7 are complete (see [`architecture.md`](./architecture.md)).
   `strategy_json.kind == "autonomous"`. List + detail via
   `GET /exploration/autonomous-runs/list|get`, filterable by `spec_id`
   and `scenario`. Still out of scope: LearnedPath write-back on approve.
-- **Cross-device / cloud sync of task definitions** — data belongs to the
-  user; local-first is the current stance.
+- **Cross-device / cloud sync of task definitions** — local-first is
+  the current stance; cross-device sync is out of scope for this phase.
 
 ## Re-evaluation Triggers
 

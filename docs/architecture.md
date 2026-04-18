@@ -306,8 +306,10 @@ Provenance tracking on all knowledge assets:
   `autonomous_then_user_corrected`, etc.)
 - `based_on`, `edited_by_user`, `revision`: evolution tracking
 
-> The tool doesn't own user data. User data belongs to the user —
-> migration / backup support is a design requirement.
+> Knowledge assets (tasks, paths, criteria) are designed with
+> migration / backup support in mind — provenance tracking preserves
+> enough context that a record can be inspected, diffed, and moved
+> between environments.
 
 ---
 

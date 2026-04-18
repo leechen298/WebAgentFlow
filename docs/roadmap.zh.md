@@ -32,7 +32,7 @@
 - **UI 语言感知的 Supervisor**：UI 当前语言透传给 LLM prompt
 - **文档拆分**：精简后的 `CLAUDE.md` + `docs/architecture.md` + `docs/parser-rules.md` + `docs/scope-boundaries.md`
 
-Phase 9 已完成的设计债：
+Phase 9 已完成：
 
 - [x] **Run 落库** —— 每次 autonomous run 都写入 `exploration_runs` 表，
   `strategy_json.kind = "autonomous"`，带 `spec_id / scenario / verdict`。
@@ -43,11 +43,17 @@ Phase 9 已完成的设计债：
 - [x] **场景命名去特化** —— 登录页 scenario 名从 `success / failure` 改成
   `valid_credentials / invalid_credentials`；schema `VisibleOn` 从
   2 值 `Literal` 放宽为自由 scenario key。
+- [x] **登录页用户验证**（2026-04-18）—— 用户在 workbench 亲跑 D1
+  （`valid_credentials`）和 D2（`invalid_credentials`），两次验证评分卡
+  5 项**全绿**。Run `a7b9c035-…`（D1）和 `3d830c63-…`（D2）已落库，
+  在 `/api/exploration/autonomous-runs/list` 可见。
 
 Phase 9 尚未完成：
 
-- [ ] **用户亲自验证** Autonomous Workbench 在登录页的 D1（`valid_credentials`）/ D2（`invalid_credentials`）两个场景 —— 用户驱动，不是 Claude Code 代跑
-- [ ] **第二个 fixture 页** —— 在 `apps/validation-site/` 里再做一个列表 / 查询页，配 `specs/<page>.assertions.json`，证明 workbench 能跑非登录形态的页面
+- [ ] **第二个 fixture 页** —— 在 `apps/validation-site/` 里再做一个
+  非登录形态的页面（建议形态：用户目录 / 搜索 + 表格），配上自己的
+  `specs/<page>.assertions.json`，证明 workbench 能跑非登录形态的页面。
+  这是 Phase 9 进入 Phase 10 前的**最后一道门**。
 
 ## 下一阶段 —— Phase 10：路径抽象 & 经验累积
 
@@ -64,7 +70,10 @@ Phase 9 尚未完成：
 
 ## 当前阶段的非目标
 
-规范列表见 [`scope-boundaries.zh.md`](./scope-boundaries.zh.md)。要点：不做 CLI、不做 skill 注册表、不做实时逐步 LLM 监督、不做跨设备同步。
+规范列表见 [`scope-boundaries.zh.md`](./scope-boundaries.zh.md)。要点：
+Phase 3 不做实时逐步 LLM 监督、不做跨设备同步。CLI / Skill /
+对外 Agent 接口**也不在本阶段**，但是一个长期交付方向 —— 见
+[`product-model.zh.md`](./product-model.zh.md) §10。
 
 ---
 

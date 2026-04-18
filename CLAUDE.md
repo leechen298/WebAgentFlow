@@ -216,5 +216,8 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 - [`docs/scope-boundaries.md`](./docs/scope-boundaries.md) — what's
   deliberately NOT in scope for the current phase.
 - [`docs/roadmap.md`](./docs/roadmap.md) — v0.1 operational milestones.
+- [`docs/dev-setup.md`](./docs/dev-setup.md) — full environment setup
+  walkthrough (more detailed than the Common Commands above, useful
+  for new contributors).
 - [`CLAUDE.zh.md`](./CLAUDE.zh.md) — Chinese mirror.
 - [`AGENTS.md`](./AGENTS.md) — mirror for Codex and other AI coding agents.

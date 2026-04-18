@@ -215,5 +215,7 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 - [`docs/scope-boundaries.md`](./docs/scope-boundaries.md) — what's
   deliberately NOT in scope for the current phase.
 - [`docs/roadmap.md`](./docs/roadmap.md) — v0.1 operational milestones.
+- [`docs/dev-setup.md`](./docs/dev-setup.md) — full environment setup
+  walkthrough.
 - [`CLAUDE.md`](./CLAUDE.md) — primary English reference.
 - [`CLAUDE.zh.md`](./CLAUDE.zh.md) — Chinese mirror.

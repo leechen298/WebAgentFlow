@@ -14,9 +14,13 @@
 
 ### 执行与编排
 
-- **CLI 工具**（`apps/cli`）—— 等 exploration loop 在真实场景下验证后再做。
-- **Skill 注册表 / Skill 运行时** —— 当前的 services 本身就是可调用接口，暂不做独立注册表。
-- **Replay 执行策略** —— 跨环境确定性重放录制步骤是后续阶段的事。
+- **CLI 工具**（`apps/cli`）—— **不在本阶段**。长期交付方向见
+  [`product-model.zh.md`](./product-model.zh.md) §10.3；优先级低于
+  三阶段主链路的落地。
+- **Skill / Tool 接口（给第三方 Agent）** —— **不在本阶段**。当前
+  services 本身就是可调用接口，暂不做独立注册表。长期方向见
+  `product-model.zh.md` §10.3。
+- **Replay 执行策略** —— 跨环境确定性重放录制步骤是后续阶段的事（Phase 10）。
 
 ### 监督
 
@@ -41,7 +45,8 @@
   `exploration_runs`，`strategy_json.kind == "autonomous"`。列表 / 详情通过
   `GET /exploration/autonomous-runs/list|get`，支持按 `spec_id` / `scenario`
   过滤。仍然在范围外：approve 时的 LearnedPath 权威写回。
-- **跨设备 / 云同步任务定义** —— 数据归用户所有，当前立场是本地优先。
+- **跨设备 / 云同步任务定义** —— 当前立场是本地优先；跨设备同步
+  本阶段不做。
 
 ## 何时回头看本清单
 
