@@ -140,3 +140,29 @@ export async function rejectRun(runId: string, note?: string): Promise<Record<st
     { run_id: runId, note: note ?? '' },
   )) as unknown as Record<string, string>;
 }
+
+// ─── Page verification specs ─────────────────────────────────
+
+export interface SpecScenarioSummary {
+  key: string;
+  description: string;
+  inputs: Record<string, string>;
+  expected_verdict?: string | null;
+  expected_verdict_not?: string | null;
+}
+
+export interface SpecSummary {
+  spec_id: string;
+  page_id: string;
+  url_pattern: string;
+  description: string;
+  scenarios: SpecScenarioSummary[];
+}
+
+export async function listSpecs(): Promise<SpecSummary[]> {
+  return (await apiClient.get('/exploration/specs')) as unknown as SpecSummary[];
+}
+
+export async function getSpec(specId: string): Promise<SpecSummary> {
+  return (await apiClient.get(`/exploration/specs/${specId}`)) as unknown as SpecSummary;
+}

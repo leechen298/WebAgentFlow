@@ -116,7 +116,7 @@ const PAGES: TestPage[] = [
     description:
       'Sign-in form with username + password inputs, a primary submit button, and a persistent role=alert error region. Two secondary links are present as distractors.',
     specId: 'login',
-    scenarios: ['success', 'failure'],
+    scenarios: ['valid_credentials', 'invalid_credentials'],
     credentials: 'admin / 123456',
   },
 ];

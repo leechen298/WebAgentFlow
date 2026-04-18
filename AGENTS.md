@@ -139,7 +139,9 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   project-internal LLM Agent.
 - `apps/api/app/services/learning/page_verification.py` — spec-baseline
   comparator; 5-score scorecard.
-- `apps/api/app/routers/exploration.py` — `/exploration/autonomous-run[/stream]`.
+- `apps/api/app/routers/exploration.py` — `/exploration/autonomous-run[/stream]`
+  plus `/exploration/specs[/{id}]` (spec metadata for workbench prefill)
+  and `/exploration/autonomous-runs/list|get` (persisted run history).
 - `apps/api/app/routers/validation_api.py` — validation-site mock backend.
 - `apps/validation-site/specs/<page>.{md,assertions.json}` — authored baselines.
 - `apps/validation-site/src/pages/IndexPage.vue` — fixture catalogue at `/`.

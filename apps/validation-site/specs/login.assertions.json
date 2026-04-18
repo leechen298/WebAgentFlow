@@ -37,7 +37,7 @@
   ],
 
   "scenarios": {
-    "success": {
+    "valid_credentials": {
       "description": "Valid credentials (admin/123456) should authenticate and route to /dashboard.",
       "inputs": {
         "username": "admin",
@@ -58,7 +58,7 @@
       "expected_verdict": "success"
     },
 
-    "failure": {
+    "invalid_credentials": {
       "description": "Wrong credentials should keep URL on /login and surface role=alert.",
       "inputs": {
         "username": "wrong",

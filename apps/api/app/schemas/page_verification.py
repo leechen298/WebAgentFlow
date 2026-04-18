@@ -13,7 +13,7 @@ Design notes:
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -50,16 +50,13 @@ class ElementMatcher(BaseModel):
 # ───────────────────────────────────────────────────────────────────
 
 
-VisibleOn = Literal["success", "failure"]
-
-
 class CriticalElementSpec(BaseModel):
     """A page element that MUST be recognized by the analyzer.
 
     ``visible_only_on`` lets authors declare that some elements are only
     expected to appear under specific scenarios (e.g. the error alert is
-    only mounted in a failure run). When set, the comparator skips the
-    element's "found" check for scenarios not listed.
+    only mounted in an invalid-credentials run). Values are free-form
+    scenario keys that must exist in the spec's ``scenarios`` map.
     """
 
     role: str = Field(description="Stable role key within this spec, e.g. 'username_input'.")
@@ -71,9 +68,10 @@ class CriticalElementSpec(BaseModel):
         default=None,
         description="Semantic role if applicable: 'username', 'password', 'email', 'text'.",
     )
-    visible_only_on: list[VisibleOn] | None = Field(
+    visible_only_on: list[str] | None = Field(
         default=None,
-        description="If set, this element is only expected in listed scenarios.",
+        description="If set, this element is only expected in listed scenarios "
+        "(scenario keys from this spec's ``scenarios`` map).",
     )
     match_by: ElementMatcher
 

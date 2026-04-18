@@ -33,7 +33,10 @@
 ### 数据 / 持久化
 
 - **Approve / reject 完整落库**（autonomous 与 task-driven 都一样）—— 目前是 MVP 占位符，把 LearnedPath 的权威写回延后。
-- **Autonomous-run 结果落库** —— autonomous workbench 当前通过 SSE 返回结果、前端渲染一次就完了，没写入 `exploration_run` 表。按 `(spec_id, scenario, timestamp)` 追踪 run 做基线回归监控是 Phase 9 收尾工作，尚未接入。
+- **Autonomous-run 结果落库** —— 已交付。每次 autonomous run 都写入
+  `exploration_runs`，`strategy_json.kind == "autonomous"`。列表 / 详情通过
+  `GET /exploration/autonomous-runs/list|get`，支持按 `spec_id` / `scenario`
+  过滤。仍然在范围外：approve 时的 LearnedPath 权威写回。
 - **跨设备 / 云同步任务定义** —— 数据归用户所有，当前立场是本地优先。
 
 ## 何时回头看本清单

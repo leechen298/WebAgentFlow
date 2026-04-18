@@ -10,13 +10,21 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
-from app.schemas.common import ApiResponse
+from app.core.db import SessionLocal, get_db
+from app.models.exploration_run import (
+    ExplorationMode,
+    ExplorationRun,
+    ExplorationRunStatus,
+)
+from app.repos.exploration_run_repo import ExplorationRunRepository
+from app.schemas.common import ApiResponse, CursorPage, decode_cursor, encode_cursor
 from app.schemas.task_definition import TaskDefinition
 
 router = APIRouter(prefix="/exploration", tags=["exploration"])
@@ -25,6 +33,57 @@ logger = logging.getLogger(__name__)
 # Screenshots are stored in a fixed directory so they can be served via HTTP.
 _SCREENSHOT_DIR = Path(__file__).resolve().parents[4] / "data" / "screenshots"
 _SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+
+DbSession = Annotated[Session, Depends(get_db)]
+
+
+def _persist_autonomous_run(
+    payload: AutonomousExplorePayload,
+    final_data: dict[str, Any],
+    verdict: str | None,
+    status: ExplorationRunStatus,
+    error: str | None = None,
+) -> str | None:
+    """Persist a finished autonomous run to the exploration_runs table.
+
+    Opens its own SessionLocal because the streaming endpoint's worker
+    runs in a background thread without a request-scoped DB session.
+    Returns the new row's id or ``None`` if persistence itself failed
+    (we never let persistence errors fail the user-facing run).
+    """
+    try:
+        db = SessionLocal()
+        try:
+            run = ExplorationRun(
+                page_signature=(payload.url or "")[:512],
+                mode=ExplorationMode.FORM,
+                status=status,
+                strategy_json={
+                    "kind": "autonomous",
+                    "url": payload.url,
+                    "goal": payload.goal or "",
+                    "spec_id": payload.spec_id,
+                    "scenario": payload.scenario,
+                    "language": payload.language,
+                    "headless": payload.headless,
+                    "fill_values": payload.fill_values or {},
+                    "verdict": verdict,
+                    **({"error": error[:500]} if error else {}),
+                },
+                summary=(final_data.get("summary") if isinstance(final_data, dict) else None),
+                result_snapshot_json=final_data if isinstance(final_data, dict) else None,
+            )
+            ExplorationRunRepository(db).create(run)
+            logger.info(
+                "Persisted autonomous run %s (spec=%s, scenario=%s, verdict=%s)",
+                run.id, payload.spec_id, payload.scenario, verdict,
+            )
+            return str(run.id)
+        finally:
+            db.close()
+    except Exception as exc:  # pragma: no cover - defensive; never break the run
+        logger.warning("Failed to persist autonomous run: %s", exc)
+        return None
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -325,6 +384,16 @@ def autonomous_exploration_endpoint(
         if step.get("screenshot_ref"):
             step["screenshot_ref"] = _to_screenshot_url(step["screenshot_ref"])
 
+    # Persist the run so baselines can be tracked over time.
+    run_id = _persist_autonomous_run(
+        payload,
+        data,
+        verdict=data.get("verdict"),
+        status=ExplorationRunStatus.COMPLETED,
+    )
+    if run_id:
+        data["run_id"] = run_id
+
     return ApiResponse(data=data)
 
 
@@ -473,11 +542,27 @@ def autonomous_exploration_stream(
                 if inner.get("screenshot_ref"):
                     inner["screenshot_ref"] = _to_screenshot_url(inner["screenshot_ref"])
 
+            run_id = _persist_autonomous_run(
+                payload,
+                final_data,
+                verdict=final_data.get("verdict") if isinstance(final_data, dict) else None,
+                status=ExplorationRunStatus.COMPLETED,
+            )
+            if run_id:
+                final_data["run_id"] = run_id
             emit("run_completed", final_data)
 
         except Exception as exc:
             logger.exception("Autonomous streaming run failed: %s", exc)
-            emit("run_failed", {"error": str(exc)[:500]})
+            err_text = str(exc)[:500]
+            _persist_autonomous_run(
+                payload,
+                {},
+                verdict=None,
+                status=ExplorationRunStatus.FAILED,
+                error=err_text,
+            )
+            emit("run_failed", {"error": err_text})
         finally:
             event_queue.put(None)  # sentinel
 
@@ -500,6 +585,219 @@ def autonomous_exploration_stream(
             "X-Accel-Buffering": "no",   # disable proxy buffering if behind nginx
             "Connection": "keep-alive",
         },
+    )
+
+
+# ───────────────────────────────────────────────────────────────────
+# Page verification specs — list + get
+# ───────────────────────────────────────────────────────────────────
+
+
+class SpecScenarioSummary(BaseModel):
+    key: str
+    description: str = ""
+    inputs: dict[str, str] = Field(default_factory=dict)
+    expected_verdict: str | None = None
+    expected_verdict_not: str | None = None
+
+
+class SpecSummary(BaseModel):
+    spec_id: str
+    page_id: str = ""
+    url_pattern: str = ""
+    description: str = ""
+    scenarios: list[SpecScenarioSummary] = Field(default_factory=list)
+
+
+@router.get("/specs", response_model=ApiResponse[list[SpecSummary]])
+def list_specs() -> ApiResponse[list[SpecSummary]]:
+    """List all authored page-verification specs.
+
+    Scans ``apps/validation-site/specs/*.assertions.json`` and returns
+    each spec's scenarios for the workbench dropdowns.
+    """
+    from app.services.learning.page_verification import _SPEC_ROOT, load_spec
+
+    if not _SPEC_ROOT.exists():
+        return ApiResponse(data=[])
+
+    items: list[SpecSummary] = []
+    for path in sorted(_SPEC_ROOT.glob("*.assertions.json")):
+        spec_id = path.stem.removesuffix(".assertions")
+        try:
+            spec, _ = load_spec(spec_id)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Failed to load spec %s: %s", spec_id, exc)
+            continue
+        items.append(
+            SpecSummary(
+                spec_id=spec_id,
+                page_id=spec.page_id,
+                url_pattern=spec.url_pattern,
+                description=spec.description,
+                scenarios=[
+                    SpecScenarioSummary(
+                        key=key,
+                        description=sc.description,
+                        inputs=sc.inputs,
+                        expected_verdict=sc.expected_verdict,
+                        expected_verdict_not=sc.expected_verdict_not,
+                    )
+                    for key, sc in spec.scenarios.items()
+                ],
+            )
+        )
+    return ApiResponse(data=items)
+
+
+@router.get("/specs/{spec_id}", response_model=ApiResponse[SpecSummary])
+def get_spec(spec_id: str) -> ApiResponse[SpecSummary]:
+    """Return scenarios (with inputs) for a single spec.
+
+    Used by the workbench to auto-prefill ``fill_values`` from
+    ``scenarios[scenario].inputs`` when the user picks a scenario.
+    """
+    from app.services.learning.page_verification import load_spec
+
+    try:
+        spec, _ = load_spec(spec_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    summary = SpecSummary(
+        spec_id=spec_id,
+        page_id=spec.page_id,
+        url_pattern=spec.url_pattern,
+        description=spec.description,
+        scenarios=[
+            SpecScenarioSummary(
+                key=key,
+                description=sc.description,
+                inputs=sc.inputs,
+                expected_verdict=sc.expected_verdict,
+                expected_verdict_not=sc.expected_verdict_not,
+            )
+            for key, sc in spec.scenarios.items()
+        ],
+    )
+    return ApiResponse(data=summary)
+
+
+# ───────────────────────────────────────────────────────────────────
+# Autonomous run history
+# ───────────────────────────────────────────────────────────────────
+
+
+class AutonomousRunSummary(BaseModel):
+    """Compact view of a persisted autonomous run for list pages."""
+
+    run_id: str
+    created_at: str
+    spec_id: str | None = None
+    scenario: str | None = None
+    verdict: str | None = None
+    status: str
+    url: str | None = None
+    summary: str | None = None
+
+
+@router.get(
+    "/autonomous-runs/list",
+    response_model=ApiResponse[CursorPage[AutonomousRunSummary]],
+)
+def list_autonomous_runs(
+    db: DbSession,
+    limit: int = Query(20, ge=1, le=100),
+    cursor: str | None = Query(None),
+    spec_id: str | None = Query(None),
+    scenario: str | None = Query(None),
+) -> ApiResponse[CursorPage[AutonomousRunSummary]]:
+    """List persisted autonomous runs, newest first.
+
+    The table is shared with candidate-inference ``ExplorationRun`` rows;
+    we distinguish autonomous ones by ``strategy_json.kind == 'autonomous'``
+    and allow optional filtering by spec_id / scenario so a spec's
+    baseline drift over time can be tracked.
+    """
+    cursor_created_at = cursor_id = None
+    if cursor:
+        cursor_created_at, cursor_id = decode_cursor(cursor)
+
+    repo = ExplorationRunRepository(db)
+    # We fetch a generous window and filter in Python — the
+    # strategy_json columns are JSON and this avoids dialect-specific
+    # JSON query paths for the current row volume. Revisit once the
+    # table grows past a few thousand rows.
+    items, _has_next = repo.list_page(
+        limit=limit * 5,
+        cursor_created_at=cursor_created_at,
+        cursor_id=cursor_id,
+    )
+
+    filtered: list[ExplorationRun] = []
+    for item in items:
+        strategy = item.strategy_json or {}
+        if strategy.get("kind") != "autonomous":
+            continue
+        if spec_id and strategy.get("spec_id") != spec_id:
+            continue
+        if scenario and strategy.get("scenario") != scenario:
+            continue
+        filtered.append(item)
+        if len(filtered) > limit:
+            break
+
+    has_next = len(filtered) > limit
+    if has_next:
+        filtered = filtered[:limit]
+
+    summaries = [
+        AutonomousRunSummary(
+            run_id=str(item.id),
+            created_at=item.created_at.isoformat(),
+            spec_id=(item.strategy_json or {}).get("spec_id"),
+            scenario=(item.strategy_json or {}).get("scenario"),
+            verdict=(item.strategy_json or {}).get("verdict"),
+            status=str(item.status),
+            url=(item.strategy_json or {}).get("url"),
+            summary=item.summary,
+        )
+        for item in filtered
+    ]
+
+    next_cursor = (
+        encode_cursor(filtered[-1].created_at, filtered[-1].id)
+        if has_next and filtered
+        else None
+    )
+    return ApiResponse(
+        data=CursorPage(items=summaries, has_next=has_next, next_cursor=next_cursor)
+    )
+
+
+@router.get(
+    "/autonomous-runs/get",
+    response_model=ApiResponse[dict[str, Any]],
+)
+def get_autonomous_run(
+    db: DbSession,
+    run_id: Annotated[str, Query(...)],
+) -> ApiResponse[dict[str, Any]]:
+    """Return one persisted autonomous run with its full result snapshot."""
+    repo = ExplorationRunRepository(db)
+    run = repo.get(run_id)
+    if run is None or (run.strategy_json or {}).get("kind") != "autonomous":
+        raise HTTPException(status_code=404, detail=f"Autonomous run not found: {run_id}")
+    return ApiResponse(
+        data={
+            "run_id": str(run.id),
+            "created_at": run.created_at.isoformat(),
+            "updated_at": run.updated_at.isoformat(),
+            "status": str(run.status),
+            "strategy": run.strategy_json,
+            "summary": run.summary,
+            "result": run.result_snapshot_json,
+        }
     )
 
 

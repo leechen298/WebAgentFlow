@@ -32,7 +32,7 @@ Infrastructure shipped:
   cataloguing fixtures + first fixture (login) + mock `/validation-api`
   backend
 - **Authored spec for login** (`specs/login.{md,assertions.json}`)
-  with success + failure scenarios
+  with `valid_credentials` + `invalid_credentials` scenarios
 - **Autonomous Workbench** (`/exploration/autonomous`) — user-driven UI
   with 7 blocks: run config, live SSE status, page analysis, execution
   timeline, verification (self + supervisor + scorecard), source-origin
@@ -44,19 +44,25 @@ Infrastructure shipped:
 - **Docs** split into compact `CLAUDE.md` + `docs/architecture.md` +
   `docs/parser-rules.md` + `docs/scope-boundaries.md`
 
-Pending in Phase 9 (see the forward plan at the bottom of this file):
+Closed in Phase 9 (design debts):
+
+- [x] **Run persistence** — every autonomous run is written to
+  `exploration_runs` with `strategy_json.kind = "autonomous"` plus
+  `spec_id / scenario / verdict`. List + detail at
+  `GET /exploration/autonomous-runs/list|get`.
+- [x] **Spec-driven form prefill** — the workbench reads
+  `GET /exploration/specs` on mount, populates the scenario dropdown
+  from the selected spec, and replaces `fill_values` with
+  `scenarios[scenario].inputs` on scenario change.
+- [x] **Scenario-name de-coupling** — login scenarios renamed to
+  `valid_credentials / invalid_credentials`; `VisibleOn` relaxed from a
+  2-value `Literal` to free-form scenario keys.
+
+Pending in Phase 9:
 
 - [ ] **User verification** of the autonomous workbench on the login page
-  (D1 success / D2 failure) — user drives, not Claude Code
-- [ ] **Run persistence** — save every autonomous run keyed by
-  `spec_id + scenario + timestamp` so baselines can be tracked across
-  time (Q3 design debt from session notes)
-- [ ] **Spec-driven form prefill** — selecting `spec_id + scenario`
-  auto-populates `fill_values` from `scenarios[scenario].inputs` instead
-  of the hardcoded login defaults (Q5 design debt)
-- [ ] **Scenario-name de-coupling** — rename login scenarios from
-  `success / failure` to `valid_credentials / invalid_credentials` to
-  prevent confusion with the system-level verdict enum (Q4 design debt)
+  (D1 = `valid_credentials` / D2 = `invalid_credentials`) — user drives,
+  not Claude Code
 - [ ] **Second fixture page** — a list / query page under
   `apps/validation-site/` with its own `specs/<page>.assertions.json`,
   so the workbench is exercised on a page that isn't login-shaped

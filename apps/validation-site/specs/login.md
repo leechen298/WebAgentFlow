@@ -76,10 +76,18 @@ during a login attempt, it is a distraction-avoidance failure.
 
 ## 7. Expected Coverage Scope
 
-Phase 1 of this spec only enforces:
+Phase 1 of this spec only enforces two scenarios (keys in
+`login.assertions.json#scenarios`):
 
-1. **Success scenario** — correct credentials (`admin` / `123456`)
-2. **Failure scenario** — incorrect credentials (anything else)
+1. **`valid_credentials`** — correct credentials (`admin` / `123456`), expected verdict `success`.
+2. **`invalid_credentials`** — incorrect credentials (anything else), expected verdict is anything but `success`.
+
+Scenario names are deliberately descriptive (`valid_credentials` /
+`invalid_credentials`) rather than mirroring the verdict enum
+(`success` / `failure`) so the scenario key and the outcome label stay
+orthogonal. The same scenario could be used in a future test where the
+system is expected to fail even with valid credentials (e.g. a
+maintenance window).
 
 Out of scope in Phase 1:
 

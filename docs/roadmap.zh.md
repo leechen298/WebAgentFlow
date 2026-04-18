@@ -23,18 +23,27 @@
   - `exploration_supervisor.py` —— 项目内 LLM Agent（MiniMax M2.7，保留 `<think>` 推理轨迹以便透明化）
   - `page_verification.py` —— 基线对照器，5 项独立评分
 - **自建 validation-site**（`apps/validation-site/`）—— 首页目录 + 首个 fixture（登录）+ mock 后端 `/validation-api`
-- **登录页基线 spec**（`specs/login.{md,assertions.json}`），含 success + failure 两个场景
+- **登录页基线 spec**（`specs/login.{md,assertions.json}`），含 `valid_credentials` + `invalid_credentials` 两个场景
 - **Autonomous Workbench**（`/exploration/autonomous`）—— 用户驱动的 UI，7 个区块：运行配置、实时 SSE 状态、页面分析、执行时间线、验证（self + supervisor + 评分卡）、来源标识、SSE 原始事件审计（带复制）
 - **透明化**：Supervisor 推理轨迹在 UI 上可见；每个 SSE 事件都在审计面板里，带复制按钮；截图支持点击放大预览
 - **UI 语言感知的 Supervisor**：UI 当前语言透传给 LLM prompt
 - **文档拆分**：精简后的 `CLAUDE.md` + `docs/architecture.md` + `docs/parser-rules.md` + `docs/scope-boundaries.md`
 
-Phase 9 尚未完成（见下方"后续计划"）：
+Phase 9 已完成的设计债：
 
-- [ ] **用户亲自验证** Autonomous Workbench 在登录页的 D1（成功）/ D2（失败）两个场景 —— 用户驱动，不是 Claude Code 代跑
-- [ ] **Run 落库** —— 每次 autonomous run 按 `spec_id + scenario + timestamp` 存库，用来追踪基线随时间的变化（Q3 设计债）
-- [ ] **按 spec 预填表单** —— 选择 `spec_id + scenario` 后自动从 `scenarios[scenario].inputs` 预填 `fill_values`，替代当前登录特化的硬编码默认值（Q5 设计债）
-- [ ] **场景命名去特化** —— 把登录页 scenario 名从 `success / failure` 改成 `valid_credentials / invalid_credentials`，避免和系统 verdict 枚举撞词（Q4 设计债）
+- [x] **Run 落库** —— 每次 autonomous run 都写入 `exploration_runs` 表，
+  `strategy_json.kind = "autonomous"`，带 `spec_id / scenario / verdict`。
+  历史列表与详情：`GET /exploration/autonomous-runs/list|get`。
+- [x] **按 spec 预填表单** —— workbench 挂载时拉 `GET /exploration/specs`，
+  选择 `spec_id` 后 scenario 下拉框从规范动态加载；切换 scenario 自动用
+  `scenarios[scenario].inputs` 覆写 `fill_values`。
+- [x] **场景命名去特化** —— 登录页 scenario 名从 `success / failure` 改成
+  `valid_credentials / invalid_credentials`；schema `VisibleOn` 从
+  2 值 `Literal` 放宽为自由 scenario key。
+
+Phase 9 尚未完成：
+
+- [ ] **用户亲自验证** Autonomous Workbench 在登录页的 D1（`valid_credentials`）/ D2（`invalid_credentials`）两个场景 —— 用户驱动，不是 Claude Code 代跑
 - [ ] **第二个 fixture 页** —— 在 `apps/validation-site/` 里再做一个列表 / 查询页，配 `specs/<page>.assertions.json`，证明 workbench 能跑非登录形态的页面
 
 ## 下一阶段 —— Phase 10：路径抽象 & 经验累积

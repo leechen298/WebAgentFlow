@@ -136,7 +136,9 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/api/app/services/learning/page_verification.py` —— 基线对照器，输出
   5 项评分。
 - `apps/api/app/routers/exploration.py` ——
-  `/exploration/autonomous-run[/stream]`。
+  `/exploration/autonomous-run[/stream]`、
+  `/exploration/specs[/{id}]`（workbench 拉 spec 做预填用）、
+  `/exploration/autonomous-runs/list|get`（落库后的 run 历史）。
 - `apps/api/app/routers/validation_api.py` —— 验证站点 mock 后端。
 - `apps/validation-site/specs/<page>.{md,assertions.json}` —— 基线定义。
 - `apps/validation-site/src/pages/IndexPage.vue` —— `/` 下的测试页目录。

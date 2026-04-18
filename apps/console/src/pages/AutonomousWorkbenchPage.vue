@@ -35,10 +35,15 @@
         <a-row :gutter="16">
           <a-col :xs="24" :md="12">
             <a-form-item :label="$t('autonomous.specIdLabel')">
-              <a-input
+              <a-select
                 v-model:value="form.specId"
                 :placeholder="$t('autonomous.specIdPlaceholder')"
+                :loading="specsLoading"
+                :options="specOptions"
                 allow-clear
+                show-search
+                :filter-option="filterSpecOption"
+                @change="onSpecIdChange"
               />
             </a-form-item>
           </a-col>
@@ -48,11 +53,13 @@
                 v-model:value="form.scenario"
                 :placeholder="$t('autonomous.scenarioPlaceholder')"
                 allow-clear
-                :options="[
-                  { value: 'success', label: 'success' },
-                  { value: 'failure', label: 'failure' },
-                ]"
+                :disabled="scenarioOptions.length === 0"
+                :options="scenarioOptions"
+                @change="onScenarioChange"
               />
+              <div v-if="scenarioDescription" class="scenario-hint">
+                {{ scenarioDescription }}
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
@@ -315,7 +322,9 @@
               <a-tag :color="verdictColor(supervisor.verdict)">
                 {{ supervisor.verdict }}
               </a-tag>
-              <a-tag>{{ $t('autonomous.confidence') }}: {{ supervisor.confidence }}</a-tag>
+              <a-tag :color="confidenceColor(supervisor.confidence)">
+                {{ $t('autonomous.confidence') }}: {{ supervisor.confidence }}
+              </a-tag>
               <div class="summary">{{ supervisor.summary }}</div>
               <div v-if="supervisor.anomalies?.length">
                 <strong>{{ $t('autonomous.anomalies') }}:</strong>
@@ -464,11 +473,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, onBeforeUnmount } from 'vue';
+import { computed, reactive, ref, onBeforeUnmount, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
 import { streamAutonomousRun } from '@/api/autonomousStream';
 import { resolveApiConfig } from '@/api/client';
+import { listSpecs, getSpec, type SpecSummary } from '@/api/exploration';
 
 const { t, locale } = useI18n();
 
@@ -503,13 +513,10 @@ interface FillRow { key: string; value: string }
 const form = reactive({
   url: 'http://127.0.0.1:5175/login',
   goal: '',
-  specId: 'login',
-  scenario: 'success' as 'success' | 'failure' | undefined,
+  specId: 'login' as string | undefined,
+  scenario: undefined as string | undefined,
   headless: true,
-  fillValues: [
-    { key: 'username', value: 'admin' },
-    { key: 'password', value: '123456' },
-  ] as FillRow[],
+  fillValues: [] as FillRow[],
 });
 
 function addFillRow() {
@@ -518,6 +525,101 @@ function addFillRow() {
 function removeFillRow(idx: number) {
   form.fillValues.splice(idx, 1);
 }
+
+// ─── Spec-driven scenario + prefill ──────────────────────────
+// The workbench reads available specs from GET /exploration/specs and
+// drives both the scenario dropdown and the fill_values table from the
+// selected spec's scenarios[key].inputs. No hardcoded scenario names or
+// credentials — the spec file is the single source of truth.
+
+const specs = ref<SpecSummary[]>([]);
+const specsLoading = ref(false);
+const selectedSpec = ref<SpecSummary | null>(null);
+
+const specOptions = computed(() =>
+  specs.value.map((s) => ({
+    value: s.spec_id,
+    label: s.page_id ? `${s.spec_id} — ${s.page_id}` : s.spec_id,
+  })),
+);
+
+const scenarioOptions = computed(() => {
+  if (!selectedSpec.value) return [];
+  return selectedSpec.value.scenarios.map((sc) => ({
+    value: sc.key,
+    label: sc.description ? `${sc.key} — ${sc.description.slice(0, 50)}` : sc.key,
+  }));
+});
+
+const scenarioDescription = computed(() => {
+  if (!selectedSpec.value || !form.scenario) return '';
+  const sc = selectedSpec.value.scenarios.find((s) => s.key === form.scenario);
+  return sc?.description ?? '';
+});
+
+function filterSpecOption(input: string, option: { value: string; label: string }): boolean {
+  const q = input.toLowerCase();
+  return option.value.toLowerCase().includes(q) || option.label.toLowerCase().includes(q);
+}
+
+async function loadSpecs(): Promise<void> {
+  specsLoading.value = true;
+  try {
+    specs.value = await listSpecs();
+    if (form.specId) await loadSpecById(form.specId);
+  } catch (err) {
+    message.warning(t('autonomous.specsLoadFailed') + (err as Error).message);
+  } finally {
+    specsLoading.value = false;
+  }
+}
+
+async function loadSpecById(specId: string): Promise<void> {
+  const cached = specs.value.find((s) => s.spec_id === specId);
+  if (cached) {
+    selectedSpec.value = cached;
+  } else {
+    try {
+      selectedSpec.value = await getSpec(specId);
+    } catch {
+      selectedSpec.value = null;
+      return;
+    }
+  }
+  // Auto-pick first scenario if current is invalid or unset.
+  const keys = selectedSpec.value?.scenarios.map((s) => s.key) ?? [];
+  if (!form.scenario || !keys.includes(form.scenario)) {
+    form.scenario = keys[0];
+    applyScenarioInputs();
+  }
+}
+
+function applyScenarioInputs(): void {
+  // Replace fillValues with the scenario's inputs. Overwriting (not
+  // merging) is deliberate — picking a scenario is a fresh setup, and
+  // merging would leave stale rows from the previous scenario around.
+  if (!selectedSpec.value || !form.scenario) return;
+  const sc = selectedSpec.value.scenarios.find((s) => s.key === form.scenario);
+  if (!sc) return;
+  form.fillValues = Object.entries(sc.inputs).map(([key, value]) => ({ key, value }));
+}
+
+async function onSpecIdChange(value: string | undefined): Promise<void> {
+  if (!value) {
+    selectedSpec.value = null;
+    form.scenario = undefined;
+    return;
+  }
+  await loadSpecById(value);
+}
+
+function onScenarioChange(): void {
+  applyScenarioInputs();
+}
+
+onMounted(() => {
+  loadSpecs();
+});
 
 // ─── Run state ───────────────────────────────────────────────
 
@@ -683,6 +785,17 @@ function verdictColor(v: string | undefined): string {
   if (['success'].includes(v)) return 'green';
   if (['failure', 'incomplete'].includes(v)) return 'red';
   if (['partial_success', 'no_progress'].includes(v)) return 'orange';
+  return 'default';
+}
+
+// Supervisor reports its own confidence (high / medium / low). Color
+// indicates certainty, not outcome — "high" doesn't mean "pass".
+function confidenceColor(c: string | undefined): string {
+  if (!c) return 'default';
+  const v = c.toLowerCase();
+  if (v === 'high') return 'blue';
+  if (v === 'medium') return 'cyan';
+  if (v === 'low') return 'orange';
   return 'default';
 }
 
@@ -927,6 +1040,12 @@ onBeforeUnmount(() => {
   color: #8c8c8c;
   font-size: 12px;
   margin-left: 8px;
+}
+.scenario-hint {
+  color: #8c8c8c;
+  font-size: 11px;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 .phase-steps {
   display: flex;
