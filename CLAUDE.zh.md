@@ -139,7 +139,9 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   `/exploration/autonomous-run[/stream]`。
 - `apps/api/app/routers/validation_api.py` —— 验证站点 mock 后端。
 - `apps/validation-site/specs/<page>.{md,assertions.json}` —— 基线定义。
+- `apps/validation-site/src/pages/IndexPage.vue` —— `/` 下的测试页目录。
 - `apps/console/src/pages/AutonomousWorkbenchPage.vue` —— 用户驱动的工作台。
+- `apps/console/src/api/autonomousStream.ts` —— SSE 客户端（POST + fetch 流）。
 
 **稳定基础：**
 

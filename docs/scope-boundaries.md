@@ -48,6 +48,11 @@ Phases 1–7 are complete (see [`architecture.md`](./architecture.md)).
 - **Approve / reject full persistence** (autonomous and task-driven
   exploration) — currently MVP placeholders; the authoritative LearnedPath
   write-back is deferred.
+- **Autonomous-run result persistence** — the autonomous workbench returns
+  results over SSE and renders them once; no run is saved to the
+  `exploration_run` table yet. Tracking runs by `(spec_id, scenario,
+  timestamp)` for baseline regression monitoring is Phase 9 closing work,
+  not yet wired.
 - **Cross-device / cloud sync of task definitions** — data belongs to the
   user; local-first is the current stance.
 

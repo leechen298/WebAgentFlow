@@ -93,11 +93,25 @@ Exploration + autonomous workbench in active development.
   scorecard (element_recognition / action_coverage / verdict_accuracy /
   distraction_avoidance / supervisor_agreement). No aggregate total.
 - **Autonomous Workbench** (`pages/AutonomousWorkbenchPage.vue`) — user-driven
-  UI with SSE live progress; 6 blocks (run config, live status, page analysis,
-  execution timeline, verification, source legend).
+  UI with SSE live progress; **7 blocks**: run config, live phase status,
+  page analysis, execution timeline (with click-to-preview step screenshots
+  via `<a-image>`), verification (self verdict + supervisor + 5-score
+  scorecard), raw SSE event audit (every event captured with copy button +
+  full-screen modal), source-origin legend.
+- **Supervisor transparency** — the Supervisor Agent's `<think>...</think>`
+  reasoning trace is preserved in `LlmResponse.thinking`, surfaced on the
+  supervisor card as a collapsible "thinking process" panel. The model ID
+  (`_model`) is shown alongside. `generate_structured` in `llm_provider.py`
+  splits thinking from the final answer via `_split_thinking()` instead of
+  silently stripping it.
+- **Locale-aware Supervisor** — UI locale (BCP-47 code like `zh`, `en`,
+  `ja`) passes through the stream endpoint into the Supervisor prompt as a
+  "write natural-language fields in {language}" override. Map in
+  `autonomous_explorer._LANGUAGE_NAMES`.
 - **Validation site** (`apps/validation-site`) — self-hosted Vue fixtures
-  (login, dashboard, …) so autonomous exploration doesn't depend on public
-  sites (which introduce CAPTCHA / rate-limit noise).
+  (login + dashboard today, more to come) so autonomous exploration doesn't
+  depend on public sites (which introduce CAPTCHA / rate-limit noise).
+  Index page at `/` catalogues available fixtures (`IndexPage.vue`).
 
 ---
 

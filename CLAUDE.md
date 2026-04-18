@@ -143,7 +143,9 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/api/app/routers/exploration.py` — `/exploration/autonomous-run[/stream]`.
 - `apps/api/app/routers/validation_api.py` — validation-site mock backend.
 - `apps/validation-site/specs/<page>.{md,assertions.json}` — authored baselines.
+- `apps/validation-site/src/pages/IndexPage.vue` — fixture catalogue at `/`.
 - `apps/console/src/pages/AutonomousWorkbenchPage.vue` — user-driven workbench.
+- `apps/console/src/api/autonomousStream.ts` — SSE client (POST + fetch stream).
 
 **Stable foundations:**
 
