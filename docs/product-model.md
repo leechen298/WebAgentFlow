@@ -332,7 +332,122 @@ When a phase fully lands, update this section to reflect it.
 
 ---
 
-## 10. Related Docs
+## 10. Open-source delivery forms
+
+WebAgentFlow is not only a UI-fronted application — it should also
+exist as an **independently runnable, externally callable open-source
+tool**. This section describes *how the engine's capabilities can be
+opened up to the outside world*, not a new product phase.
+
+### 10.1 Two delivery shapes
+
+WebAgentFlow supports (at least) two shapes of use:
+
+1. **Complete application**
+   - Users interact through WebAgentFlow's own UI.
+   - Learning, running, reviewing, and taking over all happen in a
+     visible environment.
+   - This is the primary shape for end users.
+
+2. **Capability-open shape**
+   - Learning, planning, execution, and verification capabilities are
+     exposed through stable interfaces.
+   - External systems or third-party Agents can call them.
+   - Callers include but are not limited to: Codex, Claude Code,
+     OpenClaw, or other Agent / automation systems.
+
+### 10.2 Scope of exposed capabilities
+
+What's exposed outward is not "the whole product UI" but a set of
+explicit capability units. At minimum:
+
+- **Page learning**
+  - Structural analysis of a page.
+  - Extraction of operable elements.
+  - Output: page understanding, attempt results, learning report.
+- **Path planning**
+  - Choose or generate an executable route for a concrete task from
+    existing learned data.
+- **Execution**
+  - Automated browser operations against a real page.
+  - Returns per-step execution log, observable state changes,
+    outcome.
+- **Verification**
+  - Rule-based verification / spec comparison / internal-Agent review
+    of an execution result.
+- **User-guided learning recording**
+  - When the user takes over, record the user's real actions to
+    supplement learned data.
+
+### 10.3 Interface shapes
+
+The capabilities above should be reachable via at least three
+entry shapes:
+
+1. **API**
+   - For machine-to-machine calls over HTTP / streaming.
+   - The standard remote entry.
+2. **CLI**
+   - For developers to invoke a capability directly from the terminal.
+   - Fits debugging, batch jobs, script or CI integration.
+3. **Skill / Tool form**
+   - For third-party Agent frameworks to treat WebAgentFlow as an
+     invokable tool.
+   - The external Agent decides *when* to call.
+   - WebAgentFlow does the actual browser work.
+
+### 10.4 Role relationship
+
+Even with a CLI / Skill / API, the role relationship does not change:
+
+- **WebAgentFlow** is the page-learning and page-execution engine.
+- **External Agents** are schedulers — they decide what to call and
+  when, but they do not step-by-step operate the browser themselves.
+- **The user** is the final confirmer, and can take over at any
+  point — which re-enters Phase 2 user-guided learning.
+
+A third-party Agent may call WebAgentFlow, but should not replace
+WebAgentFlow with its own per-step browser automation.
+
+> Clarification: "third-party Agent calling WebAgentFlow as a tool"
+> is a *runtime* role — a scheduler driving a user task. It is
+> distinct from "AI coding agent working on this repository" during
+> development. The `CLAUDE.md` §"AI Coding Agent — Execution
+> Boundary" rule still applies to the latter regardless of whether
+> §10 CLI / Skill entries exist.
+
+### 10.5 Boundaries when exposing capabilities
+
+Opening capabilities outward does NOT relax the existing invariants:
+
+- In Phase 3 actual work, LLMs still don't enter the per-step
+  execution loop.
+- Execution is still done by code + browser automation.
+- Failure, take-over, and recovery dialogue still follow the
+  three-phase model.
+- External interfaces are a different *way to call*, not a different
+  *product logic*.
+
+### 10.6 Current state
+
+This section describes a direction. Not all of it is shipped.
+
+Current codebase has part of the foundation:
+
+- Browser execution and exploration capabilities.
+- Page analysis / action planning / verification.
+- Autonomous workbench as the operator's trigger + observation surface.
+
+Pending:
+
+- A more stable CLI entry.
+- A clearer Skill / Tool interface definition.
+- Calling conventions oriented at third-party Agents.
+- Capability boundaries and I/O contracts for external callers.
+
+---
+
+## 11. Related Docs
 
 - [`architecture.md`](./architecture.md) — how the code is organized
   (layers, AST dual-track, services sub-packages). Complements this
@@ -344,3 +459,9 @@ When a phase fully lands, update this section to reflect it.
 - [`parser-rules.md`](./parser-rules.md) — DOM → StateNode
   constraints that support Phase 1 steps 1–2.
 - [`product-model.zh.md`](./product-model.zh.md) — Chinese mirror.
+
+---
+
+§10 describes *how WebAgentFlow's capabilities can be opened up for
+external use*, not a new product phase. It sits on top of the
+three-phase product model; it does not replace it.
