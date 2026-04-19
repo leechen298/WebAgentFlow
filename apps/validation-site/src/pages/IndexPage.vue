@@ -144,11 +144,20 @@ const byCategory = computed<Record<string, TestPage[]>>(() => {
 // just ignore this link — it's a hint, not a hard dependency.
 const workbenchRoot = 'http://localhost:5174/exploration/autonomous';
 
-function workbenchUrl(_: TestPage): string {
-  // No query-param wiring yet. Open the workbench root; user pastes the page
-  // URL + spec_id into the form. Keeping it dumb until we actually need deep
-  // linking.
-  return workbenchRoot;
+// Build a deep link into the workbench with `url` + `spec_id` (and the
+// first scenario, if any) pre-filled. The workbench reads these off
+// location.search on mount. The fixture URL is absolute so the
+// workbench (running on 5174) knows to point the engine at the
+// validation-site (running on 5175), regardless of which host it's
+// looking at the page from.
+function workbenchUrl(page: TestPage): string {
+  const params = new URLSearchParams();
+  params.set('url', `${window.location.origin}${page.path}`);
+  if (page.specId) params.set('spec_id', page.specId);
+  if (page.scenarios && page.scenarios.length > 0) {
+    params.set('scenario', page.scenarios[0]);
+  }
+  return `${workbenchRoot}?${params.toString()}`;
 }
 </script>
 

@@ -474,6 +474,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, onBeforeUnmount, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
 import { streamAutonomousRun } from '@/api/autonomousStream';
@@ -510,14 +511,22 @@ function bucketLabel(name: string): string {
 
 interface FillRow { key: string; value: string }
 
+// Form starts empty by design. The workbench expects callers to either
+// (a) deep-link into it with ?url=…&spec_id=…&scenario=… (e.g. the
+// "Run in workbench" buttons on the validation-site IndexPage), or
+// (b) pick a spec from the spec_id dropdown once specs are loaded.
+// There is no built-in default page, so opening the workbench fresh
+// won't silently point at login.
 const form = reactive({
-  url: 'http://127.0.0.1:5175/login',
+  url: '',
   goal: '',
-  specId: 'login' as string | undefined,
+  specId: undefined as string | undefined,
   scenario: undefined as string | undefined,
   headless: true,
   fillValues: [] as FillRow[],
 });
+
+const route = useRoute();
 
 function addFillRow() {
   form.fillValues.push({ key: 'text', value: '' });
@@ -586,12 +595,16 @@ async function loadSpecById(specId: string): Promise<void> {
       return;
     }
   }
-  // Auto-pick first scenario if current is invalid or unset.
   const keys = selectedSpec.value?.scenarios.map((s) => s.key) ?? [];
+  // If the current scenario isn't valid for this spec (e.g. spec just
+  // changed, or URL hydration left it empty), fall back to the first
+  // one. Either way, apply the inputs so fill_values is populated —
+  // the previous version only did that on the fallback branch, which
+  // missed the "URL already had a valid scenario" case.
   if (!form.scenario || !keys.includes(form.scenario)) {
     form.scenario = keys[0];
-    applyScenarioInputs();
   }
+  applyScenarioInputs();
 }
 
 function applyScenarioInputs(): void {
@@ -617,7 +630,30 @@ function onScenarioChange(): void {
   applyScenarioInputs();
 }
 
+// Hydrate the form from ?url=&spec_id=&scenario=&goal= query params.
+// Called before loadSpecs so that `specs` is fetched and — if spec_id
+// is in the URL — the matching spec is selected and the scenario
+// dropdown / fill_values are auto-populated per the usual
+// onSpecIdChange / applyScenarioInputs path.
+function hydrateFromQuery(): void {
+  const q = route.query;
+  const pick = (v: unknown) => (typeof v === 'string' ? v : undefined);
+
+  const url = pick(q.url);
+  const specId = pick(q.spec_id);
+  const scenario = pick(q.scenario);
+  const goal = pick(q.goal);
+
+  if (url) form.url = url;
+  if (goal) form.goal = goal;
+  if (specId) form.specId = specId;
+  // Keep the scenario string around; applied after the spec loads so
+  // that applyScenarioInputs has a spec to look up scenarios on.
+  if (scenario) form.scenario = scenario;
+}
+
 onMounted(() => {
+  hydrateFromQuery();
   loadSpecs();
 });
 
