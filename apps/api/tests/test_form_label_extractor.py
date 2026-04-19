@@ -44,6 +44,55 @@ def test_ant_design_extractor_matches_basic_form_item() -> None:
     assert result.text == "姓名"
 
 
+# Regression: the exact shape the analyzer receives at runtime —
+# `.ant-form-item` wrapping `.ant-form-item-row` wrapping the label
+# cell AND an `.ant-form-item-control` cell with multiple nested
+# wrappers around the actual <input>. If the JS passes this outer
+# wrapper in, the extractor must still walk down to the row and
+# read the label. This was reported on 2026-04-19 as label_text=null
+# during an autonomous run on /users.
+ANT_FORM_ITEM_FULL_REAL_HTML = """
+<div class="ant-col ant-col-xs-24 ant-col-sm-12 ant-col-lg-8 css-dev-only-do-not-override-1p3hq3p"
+     style="padding-left: 8px; padding-right: 8px;">
+  <div class="ant-form-item css-dev-only-do-not-override-1p3hq3p">
+    <div class="ant-row ant-form-item-row css-dev-only-do-not-override-1p3hq3p">
+      <div class="ant-col ant-form-item-label css-dev-only-do-not-override-1p3hq3p">
+        <label class="" title="姓名">姓名</label>
+      </div>
+      <div class="ant-col ant-form-item-control css-dev-only-do-not-override-1p3hq3p">
+        <div class="ant-form-item-control-input">
+          <div class="ant-form-item-control-input-content">
+            <span class="ant-input-affix-wrapper css-dev-only-do-not-override-1p3hq3p">
+              <input type="text" class="ant-input css-dev-only-do-not-override-1p3hq3p"
+                     placeholder="例如 alice" id="search-name" value="alice">
+              <span class="ant-input-suffix"></span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+"""
+
+
+def test_ant_design_extractor_handles_real_deep_nesting() -> None:
+    result = extract_label(ANT_FORM_ITEM_FULL_REAL_HTML, "search-name")
+    assert result.source == "ant-design"
+    assert result.text == "姓名"
+
+
+def test_ant_design_extractor_finds_label_when_wrapper_is_form_item_level() -> None:
+    # The JS might hand us the `.ant-form-item` ancestor rather than
+    # the `.ant-form-item-row`. Both shapes have to work.
+    inner = ANT_FORM_ITEM_FULL_REAL_HTML
+    # Strip the outer ant-col grid cell so root = .ant-form-item
+    stripped = inner[inner.index('<div class="ant-form-item '):]
+    result = extract_label(stripped, "search-name")
+    assert result.source == "ant-design"
+    assert result.text == "姓名"
+
+
 def test_ant_design_extractor_can_handle_check() -> None:
     ex = AntDesignExtractor()
     assert ex.can_handle(ANT_FORM_ITEM_HTML)

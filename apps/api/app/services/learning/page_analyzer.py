@@ -82,34 +82,42 @@ _DISCOVER_JS = """() => {
             // Explicit button type attribute (empty string if not set)
             const explicitType = el.getAttribute('type') || '';
 
-            // Capture the closest form-item-like ancestor's outerHTML
-            // so the server-side FormLabelExtractor has enough context
-            // to find a label. Walk up max 5 levels; stop on any class
-            // hint that looks like a form-item container (Ant Design,
-            // Element Plus, Naive, Arco all use these keyword shapes).
-            // If nothing matches in 5 levels, fall back to the element's
-            // own outerHTML so Native <label for=id> still works when
-            // label + input are siblings. Truncate to 6 KB to keep the
-            // payload bounded.
+            // Capture the form-item-like ancestor's outerHTML so the
+            // server-side FormLabelExtractor has enough context to
+            // find a label. Walk up to 6 levels, remembering the
+            // OUTERMOST ancestor whose class matches the form-item
+            // keywords — not the innermost. Ant Design nests form
+            // wrappers deeply (control-input-content → control-input
+            // → control → form-item-row → form-item), and only the
+            // outer level contains both the label cell and the
+            // control cell. Breaking early on the innermost match
+            // would hand the extractor a control-only snippet and
+            // it wouldn't find the label.
+            //
+            // If nothing matches within the cap, fall back to 3
+            // levels of parent so Native <label for=id> siblings
+            // still get captured. Finally, truncate to 6 KB to keep
+            // the payload bounded.
             let wrapperHtml = el.outerHTML || '';
             {
                 let anc = el.parentElement;
                 let levels = 0;
-                while (anc && levels < 5) {
+                let outermostMatch = null;
+                while (anc && levels < 6) {
                     const rawCls = anc.className;
                     const cls = (rawCls && rawCls.toString) ? rawCls.toString() : '';
                     if (/form-item|form-row|field-wrapper|form-field/i.test(cls)) {
-                        wrapperHtml = anc.outerHTML || wrapperHtml;
-                        break;
+                        outermostMatch = anc;
                     }
                     anc = anc.parentElement;
                     levels++;
                 }
-                // If the element isn't inside a recognised form-item,
-                // but it has an id, still grab up to 3 levels up so the
-                // Native <label for=id> / aria-labelledby siblings have
-                // a chance to show up in the snippet.
-                if (wrapperHtml === (el.outerHTML || '') && el.id) {
+                if (outermostMatch && outermostMatch.outerHTML) {
+                    wrapperHtml = outermostMatch.outerHTML;
+                } else if (el.id) {
+                    // No form-item detected. Grab up to 3 levels up so
+                    // Native <label for=id> / aria-labelledby siblings
+                    // have a chance to show up.
                     let p = el.parentElement;
                     for (let i = 0; p && i < 3; i++) p = p.parentElement;
                     if (p && p.outerHTML) wrapperHtml = p.outerHTML;
