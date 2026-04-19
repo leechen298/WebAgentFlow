@@ -39,6 +39,7 @@ they return ``None`` instead.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -95,9 +96,9 @@ def _text_of(node) -> str:
 
 def _closest_class_ancestor(node, class_names: set[str]):
     """Return the closest ancestor-or-self whose class contains any of
-    ``class_names``. Matches by exact class-token equality, so
-    ``"ant-form-item"`` matches the class attribute ``"ant-form-item
-    foo"`` but NOT ``"ant-form-item-row"``.
+    ``class_names`` as an **exact token**. So ``"ant-form-item"``
+    matches the class attribute ``"ant-form-item foo"`` but NOT
+    ``"ant-form-item-row"``.
 
     Walking up from the target means we always pick the wrapper that
     actually owns this control, not some grandparent that happens to
@@ -111,6 +112,45 @@ def _closest_class_ancestor(node, class_names: set[str]):
             return cur
         cur = cur.getparent()
     return None
+
+
+# Matches a class token that IS, or ends with "-<family>", where
+# family is one of the three form-container conventions we trust.
+# Using a regex with a dash / start-of-string boundary is stricter
+# than a raw endswith check — it correctly rejects tokens like
+# "conform-item" or "uniform-item" where "form-item" happens to
+# appear at the tail of the string but without a word boundary in
+# front of it.
+_FORM_CONTAINER_RE = re.compile(r"(?:^|-)(?:form-item|form-group|form-field)$")
+
+
+def _closest_class_token_matches(node, pattern: re.Pattern[str]):
+    """Return the closest ancestor-or-self whose class attribute has
+    any whitespace-separated token that matches ``pattern``.
+
+    Passing a pre-compiled regex keeps this helper general — the
+    caller owns the exact token shape they care about.
+    """
+    cur = node
+    while cur is not None:
+        raw = cur.get("class") or ""
+        for token in raw.split():
+            if pattern.search(token):
+                return cur
+        cur = cur.getparent()
+    return None
+
+
+def _clean_label_text(text: str) -> str:
+    """Strip common decorative markers from label text.
+
+    Handles the required-field asterisk on either side of the label
+    and trailing colons (both half-width ``:`` and full-width ``：``),
+    with any surrounding whitespace. This matches how Ant Design,
+    Element Plus, and most other form libraries decorate a bare label
+    string.
+    """
+    return text.strip().strip("*").strip(":：").strip()
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -186,7 +226,7 @@ class AntDesignExtractor:
             inner = child.cssselect("label")
             text = _text_of(inner[0]) if inner else _text_of(child)
             if text:
-                return text.lstrip("*").rstrip(":").rstrip("：").strip()
+                return _clean_label_text(text)
         return None
 
 
@@ -260,6 +300,106 @@ class NativeLabelExtractor:
 
 
 # ───────────────────────────────────────────────────────────────────
+# Generic form-item container
+# ───────────────────────────────────────────────────────────────────
+
+
+class GenericFormItemExtractor:
+    """Fallback for the Form.Item idiom used by libraries the specific
+    handlers don't recognise.
+
+    Triggers on any ancestor whose class token CONTAINS one of three
+    form-specific substrings — ``form-item``, ``form-group``,
+    ``form-field`` — which covers Element Plus (``el-form-item``),
+    Naive UI (``n-form-item``), Arco Design (``arco-form-item``),
+    TDesign (``t-form-item``), Bootstrap 3/4 (``form-group``), and
+    Material-ish libraries (``mat-form-field``), while deliberately
+    refusing to match unrelated container patterns like
+    ``menu-item``, ``list-item``, or ``card-item`` that happen to be
+    common in the wild but are not form containers.
+
+    Within the matched container the search is strict: only the
+    direct children of the container are considered label candidates,
+    and the child that contains the target input is skipped (so a
+    label nested inside the control cell can't contaminate the
+    match). Candidates are:
+
+    - a direct child whose tag is ``<label>``
+    - a direct child whose class token contains ``label`` (covers
+      ``el-form-item__label``, ``n-form-item-label``, etc.)
+
+    Anything that falls outside these shapes returns ``None`` rather
+    than guessing from nearby text.
+    """
+
+    framework = "generic"
+    # Cheap pre-filter — the real boundary-respecting match is done
+    # by ``_FORM_CONTAINER_RE`` once we're iterating ancestors.
+    _CAN_HANDLE_SUBSTRINGS = ("form-item", "form-group", "form-field")
+
+    def can_handle(self, wrapper_html: str) -> bool:
+        return any(s in wrapper_html for s in self._CAN_HANDLE_SUBSTRINGS)
+
+    def extract(self, wrapper_html: str, element_id: str) -> str | None:
+        root = _parse(wrapper_html)
+        if root is None or not element_id:
+            return None
+
+        targets = root.cssselect(f"#{element_id}")
+        if not targets:
+            return None
+        target = targets[0]
+
+        container = _closest_class_token_matches(target, _FORM_CONTAINER_RE)
+        if container is None:
+            return None
+
+        # The direct child of `container` that holds the input — we
+        # will NOT look for labels inside that subtree, because a
+        # label sitting in the same branch as the input is ambiguous
+        # (it might belong to a nested form-item in that control).
+        target_holding_child = None
+        target_id_css = f"#{element_id}"
+        for child in container.iterchildren():
+            if child is target or child.cssselect(target_id_css):
+                target_holding_child = child
+                break
+
+        for child in container.iterchildren():
+            if child is target_holding_child:
+                continue
+            text = self._label_text_from(child)
+            if text:
+                return _clean_label_text(text)
+        return None
+
+    @staticmethod
+    def _label_text_from(node) -> str | None:
+        """Return the node's label text if it looks like a label cell.
+
+        Two patterns count:
+          1. ``node.tag == "label"`` — plain HTML label sibling.
+          2. ``node`` has a class token that contains ``"label"``,
+             e.g. ``el-form-item__label`` / ``n-form-item-label``.
+             When a nested ``<label>`` is present inside the cell,
+             read from it; otherwise read the cell's own text.
+
+        Anything else → ``None`` (do not guess).
+        """
+        if node.tag == "label":
+            text = _text_of(node)
+            return text or None
+
+        classes = (node.get("class") or "").split()
+        if any("label" in c for c in classes):
+            inner = node.cssselect("label")
+            text = _text_of(inner[0]) if inner else _text_of(node)
+            return text or None
+
+        return None
+
+
+# ───────────────────────────────────────────────────────────────────
 # Dispatcher
 # ───────────────────────────────────────────────────────────────────
 
@@ -267,6 +407,7 @@ class NativeLabelExtractor:
 EXTRACTORS: list[FormLabelExtractor] = [
     AntDesignExtractor(),
     NativeLabelExtractor(),
+    GenericFormItemExtractor(),
 ]
 
 

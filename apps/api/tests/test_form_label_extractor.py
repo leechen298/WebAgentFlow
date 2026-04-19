@@ -14,7 +14,6 @@ from app.services.analysis.form_label_extractor import (
     extract_label,
 )
 
-
 # ───────────────────────────────────────────────────────────────────
 # Ant Design
 # ───────────────────────────────────────────────────────────────────
@@ -29,7 +28,8 @@ ANT_FORM_ITEM_HTML = """
     <div class="ant-form-item-control-input">
       <div class="ant-form-item-control-input-content">
         <span class="ant-input-affix-wrapper">
-          <input type="text" class="ant-input" placeholder="例如 alice" id="search-name" value="alice">
+          <input type="text" class="ant-input" placeholder="例如 alice"
+                 id="search-name" value="alice">
         </span>
       </div>
     </div>
@@ -205,7 +205,7 @@ def test_ant_design_extractor_strips_required_marker() -> None:
 def test_ant_design_extractor_picks_correct_row_among_multiple() -> None:
     # Two form items in the same wrapper blob; extractor must pick
     # the one whose control matches element_id.
-    html = f"""
+    html = """
     <div>
       <div class="ant-form-item-row">
         <div class="ant-form-item-label"><label>姓名</label></div>
@@ -334,3 +334,187 @@ def test_malformed_html_does_not_raise() -> None:
     # tolerance. Either outcome is acceptable as long as it doesn't
     # raise.
     assert result is not None
+
+
+# ───────────────────────────────────────────────────────────────────
+# Generic form-item extractor (Element Plus / Naive / Bootstrap etc.)
+# ───────────────────────────────────────────────────────────────────
+
+
+def test_generic_element_plus_shape() -> None:
+    html = """
+    <div class="el-form-item">
+      <label class="el-form-item__label">邮箱</label>
+      <div class="el-form-item__content"><input id="ep-email"></div>
+    </div>
+    """
+    result = extract_label(html, "ep-email")
+    assert result.source == "generic"
+    assert result.text == "邮箱"
+
+
+def test_generic_naive_ui_shape() -> None:
+    html = """
+    <div class="n-form-item">
+      <div class="n-form-item-label">邮箱</div>
+      <div class="n-form-item-blank"><input id="nu-email"></div>
+    </div>
+    """
+    result = extract_label(html, "nu-email")
+    assert result.source == "generic"
+    assert result.text == "邮箱"
+
+
+def test_generic_bootstrap_without_for_attribute() -> None:
+    # Bootstrap normally includes the `for` attribute (handled by
+    # Native). This test covers the "forgot for=" case: Native would
+    # fail, but Generic's form-group handler finds the direct-child
+    # <label>.
+    html = """
+    <div class="form-group">
+      <label>Email</label>
+      <input id="bs-email" class="form-control">
+    </div>
+    """
+    result = extract_label(html, "bs-email")
+    assert result.source == "generic"
+    assert result.text == "Email"
+
+
+def test_generic_form_field_shape() -> None:
+    # Material-ish and some custom libraries use a mat-form-field /
+    # form-field container with a nested label element.
+    html = """
+    <div class="mat-form-field">
+      <label class="mat-form-field-label">Phone</label>
+      <div class="mat-form-field-wrapper">
+        <input id="mff-phone">
+      </div>
+    </div>
+    """
+    result = extract_label(html, "mff-phone")
+    assert result.source == "generic"
+    assert result.text == "Phone"
+
+
+def test_generic_strips_trailing_colon_and_required_marker() -> None:
+    html = """
+    <div class="form-group">
+      <label>* Email：</label>
+      <input id="gx">
+    </div>
+    """
+    result = extract_label(html, "gx")
+    assert result.text == "Email"
+
+
+# Drift regressions — these MUST stay None.
+
+
+def test_generic_refuses_menu_item_container() -> None:
+    # .menu-item is a common non-form container — it contains the
+    # substring "item" but NOT "form-item" / "form-group" /
+    # "form-field", so the generic extractor must not trigger on it.
+    html = """
+    <div class="menu-item">
+      <span class="menu-label">Home</span>
+      <input id="not-a-form-field">
+    </div>
+    """
+    result = extract_label(html, "not-a-form-field")
+    assert result.text is None
+    assert result.source is None
+
+
+def test_generic_refuses_card_item_and_list_item() -> None:
+    for cls in ("card-item", "list-item", "feed-item"):
+        html = f"""
+        <div class="{cls}">
+          <label>Looks like a label but isn't</label>
+          <input id="decoy">
+        </div>
+        """
+        result = extract_label(html, "decoy")
+        assert result.text is None, f"{cls} wrongly matched"
+
+
+def test_generic_refuses_tokens_that_only_happen_to_end_in_form_item() -> None:
+    # Regex boundary test: "conform-item" and "uniform-item" both
+    # end with the literal characters "form-item" but lack the dash
+    # boundary in front of "form-". The container matcher MUST
+    # reject these — otherwise an endswith-only rule would pick
+    # them up as form containers.
+    for cls in ("conform-item", "uniform-item", "transform-item"):
+        html = f"""
+        <div class="{cls}">
+          <label>Decorative label</label>
+          <input id="decoy-boundary">
+        </div>
+        """
+        result = extract_label(html, "decoy-boundary")
+        assert result.text is None, f"{cls} wrongly matched (boundary regression)"
+
+
+def test_generic_refuses_plural_form_items_token() -> None:
+    # "form-items" is not the documented family name — it shouldn't
+    # match the $ anchor in the regex.
+    html = """
+    <div class="form-items">
+      <label>Should not be read</label>
+      <input id="plural-decoy">
+    </div>
+    """
+    result = extract_label(html, "plural-decoy")
+    assert result.text is None
+
+
+def test_generic_does_not_read_label_from_nested_form_item() -> None:
+    # Outer form-group directly contains the target input (no label
+    # of its own). A nested form-group inside has a label for a
+    # DIFFERENT input. The generic extractor must not leak that
+    # nested label up to the outer target — it's strict direct-child
+    # iteration and skips the child subtree holding the target.
+    html = """
+    <div class="form-group">
+      <input id="outer-target">
+      <div class="form-group">
+        <label>Inner label</label>
+        <input id="inner">
+      </div>
+    </div>
+    """
+    result = extract_label(html, "outer-target")
+    # Note: because of iteration order, the inner .form-group IS a
+    # sibling of the target in the outer container. It has class
+    # containing "form-group" (not "label") and tag is <div> (not
+    # <label>), so _label_text_from returns None for it — exactly
+    # what we want. Result: no label for outer-target.
+    assert result.text is None
+
+
+# Dispatcher order — specific handlers still win when they match.
+
+
+def test_ant_still_wins_over_generic_for_ant_pages() -> None:
+    html = """
+    <div class="ant-form-item-row">
+      <div class="ant-form-item-label"><label>姓名</label></div>
+      <div class="ant-form-item-control"><input id="ant-a"></div>
+    </div>
+    """
+    result = extract_label(html, "ant-a")
+    assert result.source == "ant-design"
+
+
+def test_native_still_wins_when_for_attribute_present() -> None:
+    # Bootstrap-with-for should go through Native (strict & cheap),
+    # keeping source consistent with classical HTML5 semantics.
+    html = """
+    <div class="form-group">
+      <label for="bs2">Email</label>
+      <input id="bs2">
+    </div>
+    """
+    result = extract_label(html, "bs2")
+    assert result.source == "native"
+    assert result.text == "Email"
