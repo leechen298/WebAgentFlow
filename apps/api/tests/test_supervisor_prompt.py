@@ -89,3 +89,36 @@ def test_prompt_embeds_language_clause_verbatim() -> None:
     marker = "LANGUAGE-CLAUSE-CANARY-9f3b"
     prompt = _build_supervisor_system_prompt(marker)
     assert marker in prompt
+
+
+# ───────────────────────────────────────────────────────────────────
+# Scenario-intent section (added 2026-04-19 after Run 4 false-partial)
+# ───────────────────────────────────────────────────────────────────
+
+
+def test_prompt_has_operator_intent_section() -> None:
+    # The rubric must tell the LLM to read scenario_description
+    # before interpreting signals, not just from execution.verdict.
+    # Without this section the LLM hedged a deliberate no-match run
+    # to partial_success (2026-04-19 Run 4).
+    text = _normalized(_prompt())
+    assert "scenario_name" in text
+    assert "scenario_description" in text
+
+
+def test_prompt_no_match_example_points_to_success() -> None:
+    # Named example ensures the LLM generalises to similar spec
+    # scenarios: zero-result runs can be success when the scenario
+    # description frames them as intentional.
+    text = _normalized(_prompt())
+    assert "no_match" in text
+    assert "result_row_count == 0" in text
+
+
+def test_prompt_invalid_credentials_example_points_to_failure() -> None:
+    # The converse example: login-wall end state for a bad-credentials
+    # test is FAILURE from the verdict perspective (the spec's
+    # expected_verdict_not reconciles that later).
+    text = _normalized(_prompt())
+    assert "invalid_credentials" in text
+    assert "has_login_wall" in text

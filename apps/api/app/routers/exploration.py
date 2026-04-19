@@ -326,6 +326,22 @@ def autonomous_exploration_endpoint(
         run_autonomous_exploration,
     )
 
+    # Look up scenario intent up front so the supervisor prompt can
+    # include it. Spec lookup failures here degrade gracefully — the
+    # run still executes, the supervisor just loses the intent hint.
+    scenario_description: str | None = None
+    if payload.spec_id and payload.scenario:
+        try:
+            from app.services.learning.page_verification import load_spec as _load
+
+            _spec, _ = _load(payload.spec_id)
+            _sc = _spec.scenarios.get(payload.scenario)
+            if _sc is not None:
+                scenario_description = _sc.description or None
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Scenario lookup failed (%s/%s): %s",
+                           payload.spec_id, payload.scenario, exc)
+
     runtime_config = RuntimeConfig(
         headless=payload.headless,
         screenshot_dir=str(_SCREENSHOT_DIR),
@@ -339,6 +355,8 @@ def autonomous_exploration_endpoint(
             fill_value=payload.fill_value,
             fill_values=payload.fill_values,
             toggle_values=payload.toggle_values,
+            scenario_name=payload.scenario,
+            scenario_description=scenario_description,
             language=payload.language,
         )
 
@@ -492,6 +510,23 @@ def autonomous_exploration_stream(
                 "headless": payload.headless,
             })
 
+            # Scenario description for the supervisor prompt. Mirrors
+            # the sync endpoint's lookup — degrades gracefully on miss.
+            scenario_description: str | None = None
+            if payload.spec_id and payload.scenario:
+                try:
+                    from app.services.learning.page_verification import (
+                        load_spec as _load,
+                    )
+
+                    _spec, _ = _load(payload.spec_id)
+                    _sc = _spec.scenarios.get(payload.scenario)
+                    if _sc is not None:
+                        scenario_description = _sc.description or None
+                except Exception as exc:  # pragma: no cover - defensive
+                    logger.warning("Scenario lookup failed (%s/%s): %s",
+                                   payload.spec_id, payload.scenario, exc)
+
             runtime_config = RuntimeConfig(
                 headless=payload.headless,
                 screenshot_dir=str(_SCREENSHOT_DIR),
@@ -504,6 +539,8 @@ def autonomous_exploration_stream(
                     fill_value=payload.fill_value,
                     fill_values=payload.fill_values,
                     toggle_values=payload.toggle_values,
+                    scenario_name=payload.scenario,
+                    scenario_description=scenario_description,
                     language=payload.language,
                     event_emitter=emit,
                 )

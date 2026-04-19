@@ -364,6 +364,8 @@ def run_autonomous_exploration(
     fill_value: str = "",
     fill_values: dict[str, str] | None = None,
     toggle_values: dict[str, str] | None = None,
+    scenario_name: str | None = None,
+    scenario_description: str | None = None,
     language: str | None = None,
     event_emitter: EventEmitter | None = None,
 ) -> AutonomousExplorationResult:
@@ -380,6 +382,14 @@ def run_autonomous_exploration(
             semantic role (e.g. 'status') -> option value (e.g.
             'active'). Drives radio / checkbox groups via the planner's
             toggle_values path.
+        scenario_name: Scenario key from the spec (e.g. ``no_match``).
+            Passed to the supervisor so the LLM has operator-intent
+            context instead of guessing from the raw step log.
+        scenario_description: Free-form scenario description from
+            the spec (e.g. "Type a value that matches no user; expect
+            empty-state"). Pairs with scenario_name — the supervisor
+            uses this to tell an intentional no-match scenario from a
+            broken search.
         language: Preferred output language for the Supervisor Agent's
             LLM response (e.g. "en", "zh", "ja"). When None, the agent
             defaults to the page title's language.
@@ -488,6 +498,8 @@ def run_autonomous_exploration(
     # ── Phase 6: Supervisor verification (project-internal Agent) ──
     supervisor_output = _run_supervisor(
         analysis, step_logs, verdict, summary, final_url, final_title, elapsed,
+        scenario_name=scenario_name,
+        scenario_description=scenario_description,
         language=language,
     )
     emit("supervisor_done", supervisor_output or {})
@@ -579,9 +591,28 @@ Your job:
 Be concise, specific, and fact-based. Look at URLs, titles, and result_signals
 to determine the real outcome — don't just trust the self-reported success flag.
 
+Operator intent — when ``execution.scenario_name`` and
+``execution.scenario_description`` are set, the spec author has
+already stated what this run is testing. Read the description before
+interpreting signals:
+
+  - A scenario called ``no_match`` that describes "type a value that
+    matches no user, expect empty state" means ``result_row_count == 0``
+    IS the desired outcome — return ``success``, not ``partial_success``.
+  - A scenario called ``invalid_credentials`` that describes "verify
+    bad credentials stay on login wall" means ``has_login_wall == true``
+    IS the desired outcome — but the spec's ``expected_verdict_not``
+    still treats this as non-success, so return ``failure``.
+  - A scenario described as "filter to active users" expects a filtered
+    result set with ``result_row_count > 0`` — 0 here is a real failure.
+
+Without scenario context (ad-hoc runs), infer intent from inputs and
+default to the signal-based rubric below.
+
 Verdict rubric — map observable signals to the verdict strictly. The
 rule-based self-verdict is provided in ``execution.verdict``; agree with
-it unless you can cite a specific signal it missed. Do NOT return
+it unless you can cite a specific signal it missed OR unless the
+scenario description reframes the signal's meaning. Do NOT return
 ``success`` just because action steps executed without errors — step
 completion is necessary but not sufficient.
 
@@ -636,6 +667,8 @@ def _run_supervisor(
     final_title: str,
     elapsed_ms: int,
     *,
+    scenario_name: str | None = None,
+    scenario_description: str | None = None,
     language: str | None = None,
 ) -> dict[str, Any] | None:
     """Run the project's internal supervisor Agent on the exploration results.
@@ -645,6 +678,12 @@ def _run_supervisor(
       - Element lists capped at top-N
       - Long URLs truncated
       - No screenshot bytes (refs only)
+
+    ``scenario_name`` / ``scenario_description`` — when provided (spec-driven
+    runs), included in the LLM prompt so it knows the operator's intent.
+    Without this, the LLM has to infer from input values whether e.g. a
+    zero-result filter was a deliberate no-match test or a broken search,
+    and it hedges to ``partial_success``.
 
     ``language`` — when provided, instructs the LLM to reply in that language
     regardless of the page's content language. Intended to track the UI locale
@@ -685,6 +724,14 @@ def _run_supervisor(
             "final_url": _trim_url(final_url),
             "final_title": final_title,
             "elapsed_ms": elapsed_ms,
+            # Operator intent. Present only for spec-driven runs — ad-hoc
+            # runs without a spec / scenario get ``None`` here, and the
+            # supervisor treats that as "intent unspecified, infer from
+            # inputs". When present, the LLM should read
+            # ``scenario_description`` as the authoritative task intent
+            # before interpreting result_signals.
+            "scenario_name": scenario_name,
+            "scenario_description": scenario_description,
         },
         "steps": [
             {
