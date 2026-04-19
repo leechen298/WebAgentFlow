@@ -140,22 +140,30 @@ def _observe_step(
                 //  - <tbody><tr>: standard HTML tables (Ant Table, plain tables)
                 //  - [role="row"]: ARIA grids, excluding rows that hold a
                 //    column header (i.e. thead analogues)
-                // Deliberately narrow — the previous broad matcher
-                // ([class*=result], [class*=search], main, article) was
-                // counting structural containers like .search-card and
-                // ant-select internals, yielding inflated numbers
-                // that had no relation to "how many results are shown".
+                // Filter out empty-state placeholder rows — Ant Design
+                // Table renders <tr class="ant-table-placeholder"> when
+                // there's no data, Element Plus uses "el-table__empty-row",
+                // Naive UI similar. Counting those as "1 row" would make
+                // empty results look identical to a single-row result,
+                // which is what the previous version did.
+                function isPlaceholderRow(tr) {
+                    const cls = (tr.className && tr.className.toString)
+                        ? tr.className.toString() : '';
+                    return cls.indexOf('placeholder') !== -1
+                        || cls.indexOf('empty-row') !== -1;
+                }
+
                 let rowCount = 0;
                 for (const tr of document.querySelectorAll('tbody tr')) {
-                    // Skip rows marked as group headers or placeholders.
                     if (tr.getAttribute('aria-hidden') === 'true') continue;
+                    if (isPlaceholderRow(tr)) continue;
                     rowCount++;
                 }
                 for (const row of document.querySelectorAll('[role="row"]')) {
-                    // Header rows contain a columnheader; skip them.
                     if (row.querySelector('[role="columnheader"]')) continue;
                     // Don't double-count <tr> that also has role="row".
                     if (row.tagName === 'TR' && row.closest('tbody')) continue;
+                    if (isPlaceholderRow(row)) continue;
                     rowCount++;
                 }
                 signals.result_row_count = rowCount;
