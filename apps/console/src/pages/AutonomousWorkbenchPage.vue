@@ -32,23 +32,42 @@
           </a-col>
         </a-row>
 
-        <a-row :gutter="16">
-          <a-col :xs="24" :md="12">
-            <a-form-item :label="$t('autonomous.specIdLabel')">
-              <a-select
-                v-model:value="form.specId"
-                :placeholder="$t('autonomous.specIdPlaceholder')"
-                :loading="specsLoading"
-                :options="specOptions"
-                allow-clear
-                show-search
-                :filter-option="filterSpecOption"
-                @change="onSpecIdChange"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :xs="24" :md="12">
-            <a-form-item :label="$t('autonomous.scenarioLabel')">
+        <!-- Spec auto-derived from URL. Users don't pick a spec_id;
+             it's inferred by matching the URL path against the
+             `url_pattern` of each authored spec. The alert below
+             tells the operator which spec (if any) was matched. -->
+        <a-alert
+          v-if="selectedSpec"
+          type="info"
+          show-icon
+          :message="$t('autonomous.specMatched', {
+            id: selectedSpec.spec_id,
+            count: selectedSpec.scenarios.length,
+          })"
+          :description="selectedSpec.description || ''"
+          style="margin-bottom: 16px"
+        />
+        <a-alert
+          v-else-if="form.url"
+          type="warning"
+          show-icon
+          :message="$t('autonomous.specNoMatch')"
+          style="margin-bottom: 16px"
+        />
+
+        <!-- Test scenario — dev fixture concept, see tooltip. Hidden
+             entirely when no spec is matched (nothing to pick from). -->
+        <a-row :gutter="16" v-if="selectedSpec">
+          <a-col :span="24">
+            <a-form-item>
+              <template #label>
+                <span>
+                  {{ $t('autonomous.scenarioLabel') }}
+                  <a-tooltip :title="$t('autonomous.scenarioHint')" placement="right">
+                    <span class="scenario-info-icon">ⓘ</span>
+                  </a-tooltip>
+                </span>
+              </template>
               <a-select
                 v-model:value="form.scenario"
                 :placeholder="$t('autonomous.scenarioPlaceholder')"
@@ -473,13 +492,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, onBeforeUnmount, onMounted } from 'vue';
+import { computed, reactive, ref, onBeforeUnmount, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
 import { streamAutonomousRun } from '@/api/autonomousStream';
 import { resolveApiConfig } from '@/api/client';
-import { listSpecs, getSpec, type SpecSummary } from '@/api/exploration';
+import { listSpecs, type SpecSummary } from '@/api/exploration';
 
 const { t, locale } = useI18n();
 
@@ -535,22 +554,21 @@ function removeFillRow(idx: number) {
   form.fillValues.splice(idx, 1);
 }
 
-// ─── Spec-driven scenario + prefill ──────────────────────────
-// The workbench reads available specs from GET /exploration/specs and
-// drives both the scenario dropdown and the fill_values table from the
-// selected spec's scenarios[key].inputs. No hardcoded scenario names or
-// credentials — the spec file is the single source of truth.
+// ─── Spec auto-matching + scenario prefill ───────────────────
+// The operator doesn't pick a spec_id directly — it's derived from
+// form.url by matching the URL path against each spec's url_pattern.
+// - If exactly one spec matches, selectedSpec is set, the scenario
+//   select appears with the spec's scenarios, and fill_values gets
+//   populated from scenarios[chosen].inputs.
+// - If no spec matches, selectedSpec is null; the scenario area is
+//   hidden and the run will execute as exploration-only (no
+//   comparator).
+// form.specId is kept in the form reactive because the backend still
+// expects it in the payload; it's just no longer user-editable.
 
 const specs = ref<SpecSummary[]>([]);
-const specsLoading = ref(false);
+const specsLoaded = ref(false);
 const selectedSpec = ref<SpecSummary | null>(null);
-
-const specOptions = computed(() =>
-  specs.value.map((s) => ({
-    value: s.spec_id,
-    label: s.page_id ? `${s.spec_id} — ${s.page_id}` : s.spec_id,
-  })),
-);
 
 const scenarioOptions = computed(() => {
   if (!selectedSpec.value) return [];
@@ -566,42 +584,62 @@ const scenarioDescription = computed(() => {
   return sc?.description ?? '';
 });
 
-function filterSpecOption(input: string, option: { value: string; label: string }): boolean {
-  const q = input.toLowerCase();
-  return option.value.toLowerCase().includes(q) || option.label.toLowerCase().includes(q);
-}
-
 async function loadSpecs(): Promise<void> {
-  specsLoading.value = true;
   try {
     specs.value = await listSpecs();
-    if (form.specId) await loadSpecById(form.specId);
   } catch (err) {
     message.warning(t('autonomous.specsLoadFailed') + (err as Error).message);
   } finally {
-    specsLoading.value = false;
+    specsLoaded.value = true;
+    // After the spec catalogue lands, try the URL once (in case the
+    // URL was already hydrated from ?url= but specs hadn't loaded yet).
+    applyUrl(form.url);
   }
 }
 
-async function loadSpecById(specId: string): Promise<void> {
-  const cached = specs.value.find((s) => s.spec_id === specId);
-  if (cached) {
-    selectedSpec.value = cached;
-  } else {
-    try {
-      selectedSpec.value = await getSpec(specId);
-    } catch {
-      selectedSpec.value = null;
-      return;
-    }
+// Return the spec whose url_pattern is contained in the given URL's
+// path. Keeps the matching dumb — substring, not regex — so spec
+// authors don't have to worry about escaping.
+function matchSpecByUrl(rawUrl: string): SpecSummary | null {
+  if (!rawUrl) return null;
+  let path: string;
+  try {
+    path = new URL(rawUrl).pathname;
+  } catch {
+    // Allow bare paths like "/users" too, in case an operator types
+    // without a host.
+    path = rawUrl.startsWith('/') ? rawUrl : '';
   }
-  const keys = selectedSpec.value?.scenarios.map((s) => s.key) ?? [];
-  // If the current scenario isn't valid for this spec (e.g. spec just
-  // changed, or URL hydration left it empty), fall back to the first
-  // one. Either way, apply the inputs so fill_values is populated —
-  // the previous version only did that on the fallback branch, which
-  // missed the "URL already had a valid scenario" case.
-  if (!form.scenario || !keys.includes(form.scenario)) {
+  if (!path) return null;
+  return (
+    specs.value.find((s) => s.url_pattern && path.includes(s.url_pattern)) ?? null
+  );
+}
+
+// Apply the URL → spec derivation. Called whenever form.url changes
+// and also once after specs finish loading. Safe to call with an
+// empty URL (clears the spec state).
+function applyUrl(url: string): void {
+  if (!specsLoaded.value) return;
+  const matched = matchSpecByUrl(url);
+
+  if (!matched) {
+    selectedSpec.value = null;
+    form.specId = undefined;
+    form.scenario = undefined;
+    form.fillValues = [];
+    return;
+  }
+
+  // Matched a spec. If it's a different spec from the one we had,
+  // or if the current scenario doesn't belong to this spec, reset
+  // scenario to the spec's first and repopulate fill_values.
+  const changed = selectedSpec.value?.spec_id !== matched.spec_id;
+  selectedSpec.value = matched;
+  form.specId = matched.spec_id;
+
+  const keys = matched.scenarios.map((sc) => sc.key);
+  if (changed || !form.scenario || !keys.includes(form.scenario)) {
     form.scenario = keys[0];
   }
   applyScenarioInputs();
@@ -617,38 +655,31 @@ function applyScenarioInputs(): void {
   form.fillValues = Object.entries(sc.inputs).map(([key, value]) => ({ key, value }));
 }
 
-async function onSpecIdChange(value: string | undefined): Promise<void> {
-  if (!value) {
-    selectedSpec.value = null;
-    form.scenario = undefined;
-    return;
-  }
-  await loadSpecById(value);
-}
-
 function onScenarioChange(): void {
   applyScenarioInputs();
 }
 
-// Hydrate the form from ?url=&spec_id=&scenario=&goal= query params.
-// Called before loadSpecs so that `specs` is fetched and — if spec_id
-// is in the URL — the matching spec is selected and the scenario
-// dropdown / fill_values are auto-populated per the usual
-// onSpecIdChange / applyScenarioInputs path.
+// Watch form.url. Debounce via a microtask so rapid typing doesn't
+// re-run the match logic on every keystroke. In practice the match
+// is cheap (string contains) so an explicit debounce isn't needed.
+watch(() => form.url, (val) => applyUrl(val));
+
+// Hydrate the form from ?url=&scenario=&goal= query params. spec_id
+// is no longer read from the URL directly — it's derived from ?url=
+// once specs have loaded. A leftover ?spec_id= is harmless but
+// ignored; the URL is the source of truth.
 function hydrateFromQuery(): void {
   const q = route.query;
   const pick = (v: unknown) => (typeof v === 'string' ? v : undefined);
 
   const url = pick(q.url);
-  const specId = pick(q.spec_id);
   const scenario = pick(q.scenario);
   const goal = pick(q.goal);
 
   if (url) form.url = url;
   if (goal) form.goal = goal;
-  if (specId) form.specId = specId;
-  // Keep the scenario string around; applied after the spec loads so
-  // that applyScenarioInputs has a spec to look up scenarios on.
+  // Keep the scenario string around; applied in applyUrl once the
+  // URL has been matched to a spec.
   if (scenario) form.scenario = scenario;
 }
 
@@ -1082,6 +1113,13 @@ onBeforeUnmount(() => {
   font-size: 11px;
   margin-top: 4px;
   line-height: 1.4;
+}
+.scenario-info-icon {
+  display: inline-block;
+  margin-left: 4px;
+  color: #1677ff;
+  cursor: help;
+  font-size: 12px;
 }
 .phase-steps {
   display: flex;
