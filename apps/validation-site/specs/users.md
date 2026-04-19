@@ -34,9 +34,8 @@ scope for the Phase 9 gate (see §7).
 | Registered from / to | `<input id="search-registered-from">`, `<input id="search-registered-to">` | Ant Design DatePicker — opens a popup panel on click |
 | Registered range | Ant Design RangePicker at `#search-registered-range` | Popup panel |
 | Region Cascader | Ant Design Cascader at `#search-region` | Popup tree |
-| Month picker | `#search-month` (Ant Design MonthPicker) | Popup panel |
-| Time picker | `#search-time` (Ant Design TimePicker) | Popup panel |
-| Department tag filter | `<span class="ant-tag tag-filter">` cluster | Click-to-toggle pills |
+| Month picker | `#search-month` (Ant Design MonthPicker) | Popup panel. Filters by registration month (backend query param `month=YYYY-MM`). |
+| Department tag filter | `<span class="ant-tag tag-filter">` cluster | Click-to-toggle pills. Filters by user department (backend `department=<comma-sep>`). |
 | Search button | `<button id="btn-search" type="submit">` | Primary submit; should be chosen over Reset and the per-row View buttons |
 | Reset button | `<button id="btn-reset">` | Distraction — clears form state, should never be clicked during a filter task |
 | Per-row View buttons | `<button class="btn-view-row" data-user-id="…">` (one per table row) | Distraction for filter tasks — operates on a single row, not on the filter |
@@ -75,7 +74,9 @@ shape yet:
 
 - Cascader (`#search-region`) — popup tree, click-through-layers
 - DatePicker (`#search-registered-from` / `#search-registered-to`),
-  RangePicker, MonthPicker, TimePicker — all popup panels
+  RangePicker, MonthPicker — all popup panels (the backend DOES honor
+  the resulting query params, it's the engine's popup-operation
+  capability that is missing)
 - Tag-as-filter department pills — click-to-toggle on span-like tags
 - Table column sort (clickable header arrow, popup-less but still not
   a standard form control)

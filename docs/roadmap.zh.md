@@ -75,7 +75,7 @@ Phase 9 尚未完成：
 - **基于已存路径回放执行**，带针对当前页面分析的漂移检测。
 - **弹层式控件支持** —— 扩展 `page_analyzer` + `action_planner`，
   让它们能处理"必须先点一下才暴露交互面"的组件（Cascader、
-  DatePicker、RangePicker、MonthPicker、TimePicker、Tag 筛选、
+  DatePicker、RangePicker、MonthPicker、Tag 筛选、
   表格表头的列 sort / filter）。代码落地后，回到
   `apps/validation-site/specs/users.assertions.json` 补齐 Tier 2
   scenario，让每个控件都有对应的场景验证。由于 fixture 页面本身

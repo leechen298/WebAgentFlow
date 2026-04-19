@@ -111,17 +111,6 @@
               />
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12" :lg="8">
-            <a-form-item :label="t('users.fields.time')">
-              <a-time-picker
-                id="search-time"
-                v-model:value="form.time"
-                value-format="HH:mm"
-                style="width: 100%"
-                :placeholder="t('users.placeholders.time')"
-              />
-            </a-form-item>
-          </a-col>
 
           <!-- Tag-as-filter row spans the full width because the
                click-to-toggle interaction is visually different from
@@ -287,7 +276,6 @@ const form = reactive({
   registeredRange: [] as string[],
   region: [] as string[],
   month: '' as string | undefined,
-  time: '' as string | undefined,
   departments: [] as string[],
 });
 
@@ -391,9 +379,10 @@ function buildParams(): Record<string, string> {
   if (form.region.length > 0) {
     params.region_prefix = form.region.join('/');
   }
+  if (form.month) {
+    params.month = form.month;
+  }
   if (form.departments.length > 0) {
-    // Backend doesn't filter by department today (Phase 10 will add
-    // it); sending it so the request still appears in network logs.
     params.department = form.departments.join(',');
   }
   return params;
@@ -445,7 +434,6 @@ function onReset() {
   form.registeredRange = [];
   form.region = [];
   form.month = '';
-  form.time = '';
   form.departments = [];
   detail.value = null;
   syncUrl();
@@ -482,6 +470,10 @@ onMounted(async () => {
   if (typeof q.registered_from === 'string') form.registeredFrom = q.registered_from;
   if (typeof q.registered_to === 'string') form.registeredTo = q.registered_to;
   if (typeof q.region_prefix === 'string') form.region = q.region_prefix.split('/');
+  if (typeof q.month === 'string') form.month = q.month;
+  if (typeof q.department === 'string') {
+    form.departments = q.department.split(',').filter(Boolean);
+  }
 
   await fetchUsers();
 });

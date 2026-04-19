@@ -183,6 +183,15 @@ def list_users(
         Query(description="Matches if region startswith this prefix; "
                           "intended for Cascader-style drill-down."),
     ] = None,
+    month: Annotated[
+        str | None,
+        Query(description="YYYY-MM — filter registered_at to that calendar month."),
+    ] = None,
+    department: Annotated[
+        str | None,
+        Query(description="Comma-separated department list; match if "
+                          "user's department is any of them."),
+    ] = None,
     sort_by: Annotated[SortKey | None, Query()] = None,
     sort_order: Annotated[Literal["asc", "desc"], Query()] = "asc",
 ) -> ApiResponse[UserListResponse]:
@@ -195,11 +204,15 @@ def list_users(
     """
     filters_applied = sum(
         1
-        for v in (name, email, role, status, registered_from, registered_to, region_prefix)
+        for v in (
+            name, email, role, status,
+            registered_from, registered_to,
+            region_prefix, month, department,
+        )
         if v not in (None, "")
     )
     # Variable delay so results-heavy queries feel different from
-    # trivial ones. Caps at ~850 ms to stay within Playwright's default
+    # trivial ones. Caps at ~970 ms to stay within Playwright's default
     # timeouts.
     time.sleep(_USERS_BASE_DELAY_SECONDS + filters_applied * _USERS_PER_FILTER_DELAY_SECONDS)
 
@@ -221,6 +234,22 @@ def list_users(
         items = [u for u in items if u.registered_at <= registered_to]
     if region_prefix:
         items = [u for u in items if u.region.startswith(region_prefix)]
+    if month:
+        # Expect YYYY-MM. Silently ignore malformed input — the fixture
+        # is permissive on bad params by design.
+        try:
+            y_str, m_str = month.split("-")
+            y, m = int(y_str), int(m_str)
+            items = [
+                u for u in items
+                if u.registered_at.year == y and u.registered_at.month == m
+            ]
+        except (ValueError, AttributeError):
+            pass
+    if department:
+        depts = {d.strip() for d in department.split(",") if d.strip()}
+        if depts:
+            items = [u for u in items if u.department in depts]
 
     if sort_by is not None:
         items.sort(key=lambda u: getattr(u, sort_by), reverse=(sort_order == "desc"))

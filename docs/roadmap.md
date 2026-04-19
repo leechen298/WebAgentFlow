@@ -105,8 +105,8 @@ user review):
 - **Popup-based control support** — extend `page_analyzer` +
   `action_planner` to handle components that reveal their interactive
   surface only after a click (Cascader, DatePicker, RangePicker,
-  MonthPicker, TimePicker, Tag-as-filter, column sort / filter inside
-  a table header). Once the code lands, backfill
+  MonthPicker, Tag-as-filter, column sort / filter inside a table
+  header). Once the code lands, backfill
   `apps/validation-site/specs/users.assertions.json` with the Tier 2
   scenarios that exercise each control, using the `users` fixture
   already on the page — so the scorecard flipping green becomes the

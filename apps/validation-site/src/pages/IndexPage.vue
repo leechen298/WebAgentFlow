@@ -119,7 +119,7 @@ const PAGES: TestPage[] = [
     name: 'User Directory',
     path: '/users',
     description:
-      'Production-style search + table: text inputs, select, radio, date pickers, Cascader, range picker, month/time pickers, Tag-as-filter, plus an Ant Design Table with column sort and column filter. Per-row View buttons are distractions for a "filter this list" task. Only plain-text-input scenarios are covered by the current spec — popup-based controls are deferred to Phase 10.',
+      'Production-style search + table: text inputs, select, radio, date pickers, Cascader, range picker, month picker, Tag-as-filter, plus an Ant Design Table with column sort and column filter. Per-row View buttons are distractions for a "filter this list" task. Only plain-text-input scenarios are covered by the current spec — popup-based controls are deferred to Phase 10.',
     specId: 'users',
     scenarios: ['filter_by_name', 'no_match'],
   },
