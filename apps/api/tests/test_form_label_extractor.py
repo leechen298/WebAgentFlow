@@ -93,6 +93,83 @@ def test_ant_design_extractor_finds_label_when_wrapper_is_form_item_level() -> N
     assert result.text == "姓名"
 
 
+# ───────────────────────────────────────────────────────────────────
+# Drift-avoidance regressions
+# ───────────────────────────────────────────────────────────────────
+# These tests lock in the behaviour that the extractor picks the
+# label for the form-item the control is DIRECTLY in, not any
+# ancestor form-item that transitively contains the control.
+
+
+def test_ant_design_picks_innermost_when_form_items_are_nested() -> None:
+    # Pathological nesting: an inner form-item lives inside the outer
+    # form-item's control cell. Without drift protection the old
+    # "scan all matching rows from outside in" logic would have
+    # returned "外层标签" because the outer row DOES transitively
+    # contain #target. The correct answer is the inner form-item's
+    # label, because that's where the control actually lives.
+    html = """
+    <div class="ant-form-item-row">
+      <div class="ant-form-item-label"><label>外层标签</label></div>
+      <div class="ant-form-item-control">
+        <div class="ant-form-item-row">
+          <div class="ant-form-item-label"><label>内层标签</label></div>
+          <div class="ant-form-item-control">
+            <input id="target">
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+    result = extract_label(html, "target")
+    assert result.source == "ant-design"
+    assert result.text == "内层标签"
+
+
+def test_ant_design_ignores_label_cells_from_unrelated_rows() -> None:
+    # Two sibling form-items in the same wrapper. Each row has its
+    # own label cell; the extractor must not mix them up even when
+    # the markup ordering is weird.
+    html = """
+    <div>
+      <div class="ant-form-item-row">
+        <div class="ant-form-item-label"><label>姓名</label></div>
+        <div class="ant-form-item-control"><input id="a"></div>
+      </div>
+      <div class="ant-form-item-row">
+        <div class="ant-form-item-label"><label>邮箱</label></div>
+        <div class="ant-form-item-control"><input id="b"></div>
+      </div>
+    </div>
+    """
+    assert extract_label(html, "a").text == "姓名"
+    assert extract_label(html, "b").text == "邮箱"
+
+
+def test_ant_design_does_not_read_label_from_nested_form_item_descendant() -> None:
+    # The target's own form-item has NO label cell. A descendant
+    # form-item (sitting inside the control) does have one. Previously
+    # a descendant-searching selector would have picked up the
+    # descendant's label by mistake. With direct-child iteration the
+    # extractor correctly returns None.
+    html = """
+    <div class="ant-form-item-row">
+      <div class="ant-form-item-control">
+        <input id="outer-target">
+        <div class="ant-form-item-row">
+          <div class="ant-form-item-label"><label>内层无关标签</label></div>
+          <div class="ant-form-item-control"><input id="inner"></div>
+        </div>
+      </div>
+    </div>
+    """
+    result = extract_label(html, "outer-target")
+    # Outer form-item has no label cell as a direct child of the row,
+    # so the correct answer is None — NOT the inner "内层无关标签".
+    assert result.text is None
+    assert result.source is None
+
+
 def test_ant_design_extractor_can_handle_check() -> None:
     ex = AntDesignExtractor()
     assert ex.can_handle(ANT_FORM_ITEM_HTML)

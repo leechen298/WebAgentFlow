@@ -93,6 +93,26 @@ def _text_of(node) -> str:
     return " ".join(raw.split()).strip()
 
 
+def _closest_class_ancestor(node, class_names: set[str]):
+    """Return the closest ancestor-or-self whose class contains any of
+    ``class_names``. Matches by exact class-token equality, so
+    ``"ant-form-item"`` matches the class attribute ``"ant-form-item
+    foo"`` but NOT ``"ant-form-item-row"``.
+
+    Walking up from the target means we always pick the wrapper that
+    actually owns this control, not some grandparent that happens to
+    also contain us. This is the piece that prevents drift when pages
+    have nested form-items.
+    """
+    cur = node
+    while cur is not None:
+        raw = cur.get("class") or ""
+        if class_names.intersection(raw.split()):
+            return cur
+        cur = cur.getparent()
+    return None
+
+
 # ───────────────────────────────────────────────────────────────────
 # Ant Design · 4.x / 5.x
 # ───────────────────────────────────────────────────────────────────
@@ -118,9 +138,16 @@ class AntDesignExtractor:
 
     The ``<label>`` element usually does NOT have a ``for`` attribute
     pointing at the control (Ant Design wires focus via JS), so
-    matching by ``for=id`` wouldn't work. We match by locating the
-    form-item-row that contains the control, then reading the label
-    text from the sibling ``ant-form-item-label`` cell.
+    matching by ``for=id`` wouldn't work.
+
+    To avoid drift on malformed or nested pages (a form-item inside
+    another form-item's control cell, which can happen with custom
+    render props), this extractor starts at the target control and
+    walks UP to its closest ``.ant-form-item-row`` (or
+    ``.ant-form-item``) ancestor — guaranteeing the row we pick is
+    the one that actually owns the control. Inside that row we only
+    consider DIRECT-CHILD label cells, so nested form-items further
+    down don't contaminate the match either.
     """
 
     framework = "ant-design"
@@ -133,33 +160,32 @@ class AntDesignExtractor:
         if root is None or not element_id:
             return None
 
-        # If the passed wrapper is itself the row, or if the row is a
-        # descendant, we match it via cssselect. For each candidate
-        # row, check whether the target input lives inside its control
-        # cell — this prevents picking the wrong row when multiple
-        # rows ended up in the wrapper snippet.
-        rows = root.cssselect(".ant-form-item-row")
-        # Fallback — the older Ant Design 3 / migration snippets flatten
-        # the row; treat the outer .ant-form-item itself as the unit.
-        if not rows:
-            rows = root.cssselect(".ant-form-item")
-        if not rows:
+        targets = root.cssselect(f"#{element_id}")
+        if not targets:
+            return None
+        target = targets[0]
+
+        row = _closest_class_ancestor(
+            target, {"ant-form-item-row", "ant-form-item"}
+        )
+        if row is None:
             return None
 
-        target_id_css = f"#{element_id}"
-        for row in rows:
-            if not row.cssselect(target_id_css):
+        # Only direct-child label cells count. A nested form-item
+        # sitting inside this row's control would also have a
+        # .ant-form-item-label, but reading that would return the
+        # wrong label for *this* row's control.
+        for child in row.iterchildren():
+            classes = (child.get("class") or "").split()
+            if "ant-form-item-label" not in classes:
                 continue
-            label_cells = row.cssselect(".ant-form-item-label label")
-            if not label_cells:
-                label_cells = row.cssselect(".ant-form-item-label")
-            if not label_cells:
-                continue
-            text = _text_of(label_cells[0])
+            # The standard layout puts a <label> inside the cell, but
+            # Ant Design also supports custom label nodes (via the
+            # `label` prop / slot). Try the <label> first, fall back
+            # to the cell's own text.
+            inner = child.cssselect("label")
+            text = _text_of(inner[0]) if inner else _text_of(child)
             if text:
-                # Strip the trailing colon Ant Design sometimes injects
-                # via the `:` suffix class without actually putting a
-                # character in the DOM; and remove required-marker "*".
                 return text.lstrip("*").rstrip(":").rstrip("：").strip()
         return None
 
