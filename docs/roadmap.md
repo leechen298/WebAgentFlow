@@ -79,10 +79,12 @@ Pending in Phase 9:
     TimePicker, Tag-as-filter, plus an Ant Design Table with column
     sort and column filter. Backend is a mock `/validation-api/users`
     that honors the filter params.
-  - **Spec side (minimal)**: `specs/users.{md,assertions.json}` only
-    ships scenarios the engine is expected to pass today — e.g.
-    `filter_by_name` and `no_match` — both operating the plain text
-    inputs plus the Search button.
+  - **Spec side (minimal)**: `specs/users.{md,assertions.json}` ships
+    only scenarios the engine is expected to pass in Phase 9.
+    Covered: `filter_by_name`, `no_match` (text input + Search) and
+    `filter_by_status` (native `<input type=radio>` group + Search —
+    drives one inline non-text control to prove the planner handles
+    more than just text inputs).
   - Popup-based controls (Cascader, all Picker variants, Tag filter,
     column sort / filter) are deliberately **NOT covered by
     scenarios in this round**. They sit on the page so the analyzer
@@ -105,8 +107,17 @@ user review):
 - **Popup-based control support** — extend `page_analyzer` +
   `action_planner` to handle components that reveal their interactive
   surface only after a click (Cascader, DatePicker, RangePicker,
-  MonthPicker, Tag-as-filter, column sort / filter inside a table
-  header).
+  MonthPicker, column sort / filter inside a table header).
+  The engine needs to first click the trigger, then operate the
+  surfaced popup surface. Native inline non-text controls (radio /
+  checkbox groups) are in Phase 9 scope — Phase 10 only adds the
+  popup shape on top of that foundation.
+- **Custom click-toggle controls** — Tag-as-filter and similar
+  `<span>` / `<div>`-based pills that are not native form inputs.
+  Separate from popup support because the trigger IS the interactive
+  surface; no popup to operate. Folded into this phase because they
+  share the "click changes a query param" contract with popup
+  filters.
 - **Form-label extractor · coverage expansion** — the analyzer's
   `form_label_extractor` currently ships handlers for Ant Design
   (matches `.ant-form-item` → `.ant-form-item-label`) and native

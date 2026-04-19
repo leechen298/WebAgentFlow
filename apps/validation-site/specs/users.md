@@ -30,7 +30,7 @@ scope for the Phase 9 gate (see §7).
 | Name input | `<input id="search-name">` | Primary fillable for this spec's scenarios |
 | Email input | `<input id="search-email">` | Present; scenarios do not use it |
 | Role select | `<select id="search-role">` (Ant Design select) | Present; scenarios do not use it |
-| Status radio group | `<input type=radio>` siblings under `#search-status` | Present; scenarios do not use it |
+| Status radio group | `<input type=radio>` siblings under `#search-status`; values `""` (All) / `"active"` / `"disabled"` | Covered by `filter_by_status` scenario — the one inline non-text control this spec asserts on |
 | Registered from / to | `<input id="search-registered-from">`, `<input id="search-registered-to">` | Ant Design DatePicker — opens a popup panel on click |
 | Registered range | Ant Design RangePicker at `#search-registered-range` | Popup panel |
 | Region Cascader | Ant Design Cascader at `#search-region` | Popup tree |
@@ -43,12 +43,23 @@ scope for the Phase 9 gate (see §7).
 
 ## 3. Key Actions (Phase 9 scope)
 
-The correct action path for the Phase 9 scenarios is:
+Two action shapes are in scope for Phase 9:
 
+**Text-filter shape** (`filter_by_name`, `no_match`):
 1. **fill** one or more text inputs (Name and/or Email)
 2. **click** the Search button
 
-That's it. No popup controls, no Tag toggling, no per-row View.
+**Radio-filter shape** (`filter_by_status`):
+1. **click** one specific radio in the `#search-status` group
+2. **click** the Search button
+
+Both shapes end with a Search click. What's different is that the
+radio-filter shape drives a native non-text control via the
+planner's `toggle_values` path, which is the Phase 9 gate widening
+from "only text inputs" to "text inputs + native toggles".
+
+Popup controls, Tag pill toggles, column sort / filter, and per-row
+View are NOT in scope.
 
 ## 4. Success Criteria
 
@@ -77,10 +88,17 @@ shape yet:
   RangePicker, MonthPicker — all popup panels (the backend DOES honor
   the resulting query params, it's the engine's popup-operation
   capability that is missing)
-- Tag-as-filter department pills — click-to-toggle on span-like tags
+- Tag-as-filter department pills — click-to-toggle on `<span>`-like
+  pills that aren't native form inputs, so the planner's
+  `toggle_values` path (which targets `<input type=radio|checkbox>`)
+  doesn't apply. Needs a custom-control extension in Phase 10.
 - Table column sort (clickable header arrow, popup-less but still not
   a standard form control)
 - Table column filter (clickable header funnel, opens a popup menu)
+
+Note that the Status radio group is **NOT** in this list — it uses
+native `<input type=radio>`, is inline (no popup), and is covered by
+`filter_by_status` in Phase 9.
 
 When Phase 10 lands popup-surface support in `page_analyzer` +
 `action_planner`, these controls get Tier 2 scenarios backfilled into
@@ -108,10 +126,16 @@ Phase 1 of this spec enforces:
    expected verdict still `success` (the empty-state IS a valid
    outcome for a search that was performed correctly, even when it
    yields zero hits).
+3. **`filter_by_status`** — pick the `active` radio in
+   `#search-status`, click Search. Table filters to only active
+   users; URL carries `status=active`. Validates the planner's
+   `toggle_values` path against a native non-text form control.
 
 Out of scope:
 
 - Any scenario operating a popup-based control (Phase 10).
+- Custom `<span>` / `<div>` click-toggle controls like the Tag
+  filter (Phase 10).
 - Multi-control combination scenarios (Phase 10).
 - Column sort / filter interactions (Phase 10).
 - The View detail panel flow (later).

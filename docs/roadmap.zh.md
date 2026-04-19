@@ -58,8 +58,10 @@ Phase 9 尚未完成：
     和列 filter 的 Ant Design Table。后端是 mock 的
     `/validation-api/users`，接收过滤参数返回对应数据。
   - **Spec 侧（做窄）**：`specs/users.{md,assertions.json}` 只写
-    "engine 今天应该能过"的 scenario —— 例如 `filter_by_name` 和
-    `no_match`，都只操作普通 text 输入 + Search 按钮。
+    Phase 9 engine 应该能过的 scenario。已覆盖：`filter_by_name`、
+    `no_match`（text 输入 + Search），以及 `filter_by_status`
+    （原生 `<input type=radio>` 组 + Search —— 用一个内联非文本
+    控件证明 planner 不止会驱动 text 输入）。
   - **弹层式控件**（Cascader、所有 Picker 变体、Tag 筛选、表格列的
     sort/filter）**本轮刻意不写 scenario**。它们留在页面上是为了让
     analyzer 扫过去顺带产出诊断信息，但它们正式的 scenario 是
@@ -75,8 +77,14 @@ Phase 9 尚未完成：
 - **基于已存路径回放执行**，带针对当前页面分析的漂移检测。
 - **弹层式控件支持** —— 扩展 `page_analyzer` + `action_planner`，
   让它们能处理"必须先点一下才暴露交互面"的组件（Cascader、
-  DatePicker、RangePicker、MonthPicker、Tag 筛选、
-  表格表头的列 sort / filter）。
+  DatePicker、RangePicker、MonthPicker、表格表头的列 sort /
+  filter）。engine 需要先点触发器，再去操作弹出的面板。
+  原生内联非文本控件（radio / checkbox 组）属于 Phase 9 范围 ——
+  Phase 10 只在此基础上追加弹层形态。
+- **自定义 click-toggle 控件** —— Tag 筛选等基于 `<span>` /
+  `<div>` 的伪按钮 pill，非原生 form input。和弹层分开单列是
+  因为触发器本身就是交互面，没有弹出面板可操作；和弹层归同一
+  phase 则是因为两者都遵循"点击改变一个 query 参数"的约定。
 - **Form-label extractor · 覆盖范围扩充** —— analyzer 当前的
   `form_label_extractor` 只带了 Ant Design（匹配 `.ant-form-item`
   → `.ant-form-item-label`）和原生 HTML5 `<label for>` 两个
