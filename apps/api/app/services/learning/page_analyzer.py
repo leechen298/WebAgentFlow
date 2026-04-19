@@ -42,11 +42,81 @@ _DISCOVER_JS = """() => {
         '[role="menuitemcheckbox"]', '[role="menuitemradio"]',
         '[contenteditable="true"]', '[contenteditable=""]',
         '[tabindex]:not([tabindex="-1"])',
+        // Class-based button patterns (div/span used as buttons). We
+        // start with a loose CSS filter then tighten per-element below
+        // so containers like .button-group / .btn-toolbar-list don't
+        // sneak in.
+        '[class*="btn"]', '[class*="button"]',
     ];
 
+    // Token-boundary check for the loose class-based selectors above.
+    // Only keep the element if it has a class TOKEN exactly equal to
+    // "btn" / "button", or a token ending in "-btn" / "-button".
+    // This excludes .button-group (container) and .toolbar-button-list
+    // (container) while still matching .btn, .btn-primary via btn,
+    // .submit-button, .v-btn etc.
+    function hasButtonLikeClass(el) {
+        const raw = el.className;
+        const cls = (raw && raw.toString) ? raw.toString() : '';
+        if (!cls) return false;
+        for (const token of cls.split(/\\s+/)) {
+            if (!token) continue;
+            if (token === 'btn' || token === 'button') return true;
+            if (token.endsWith('-btn') || token.endsWith('-button')) return true;
+        }
+        return false;
+    }
+
+    // Compute a content hint for elements whose innerText is empty.
+    // Answers "what's visually inside this button if it has no
+    // text?" — so the operator reading the analyzer output can tell
+    // one icon button from another. Only populated when the element
+    // has NO own text AND NO own aria-label (those are shown
+    // separately). Returns null if nothing informative is inside.
+    function computeContentHint(el) {
+        const ownText = ((el.innerText || el.textContent) || '').trim();
+        if (ownText) return null;
+        if (el.getAttribute('aria-label')) return null;
+
+        // 1. Descendant aria-label — page author's explicit label.
+        const aria = el.querySelector('[aria-label]:not([aria-label=""])');
+        if (aria) {
+            return 'aria:' + (aria.getAttribute('aria-label') || '').slice(0, 60);
+        }
+
+        // 2. <svg data-icon="X"> — Ant Design / Ant Icons convention.
+        const svgIcon = el.querySelector('svg[data-icon]');
+        if (svgIcon) {
+            const name = svgIcon.getAttribute('data-icon') || '';
+            if (name) return 'icon:' + name.slice(0, 60);
+        }
+
+        // 3. <img> — prefer alt, fall back to filename.
+        const img = el.querySelector('img');
+        if (img) {
+            if (img.alt) return 'img:' + img.alt.slice(0, 60);
+            let src = img.src || '';
+            if (src) {
+                const q = src.indexOf('?');
+                if (q >= 0) src = src.slice(0, q);
+                const last = src.substring(src.lastIndexOf('/') + 1);
+                return 'img:' + (last || 'image').slice(0, 60);
+            }
+            return 'img';
+        }
+
+        // 4. Bare <svg> — "there's an icon but no identifying name".
+        if (el.querySelector('svg')) return 'icon';
+
+        return null;
+    }
+
     for (const sel of selectors) {
+        const isClassButtonSel = sel === '[class*="btn"]' || sel === '[class*="button"]';
         for (const el of document.querySelectorAll(sel)) {
             if (seen.has(el)) continue;
+            // Gate loose class-based matches to real button-shaped tokens.
+            if (isClassButtonSel && !hasButtonLikeClass(el)) continue;
             seen.add(el);
 
             const rect = el.getBoundingClientRect();
@@ -139,6 +209,9 @@ _DISCOVER_JS = """() => {
                 wrapperHtml = wrapperHtml.slice(0, 6000);
             }
 
+            const rawClass = el.className;
+            const className = (rawClass && rawClass.toString) ? rawClass.toString() : '';
+
             results.push({
                 tag: el.tagName.toLowerCase(),
                 type: el.type || null,
@@ -161,6 +234,8 @@ _DISCOVER_JS = """() => {
                 href: el.href || null,
                 inputMode: el.inputMode || null,
                 wrapperHtml: wrapperHtml,
+                className: className,
+                contentHint: computeContentHint(el),
             });
         }
     }
@@ -247,7 +322,32 @@ def _classify(raw: dict) -> tuple[ElementCategory, str]:
     if role in _NAV_ROLES:
         return "navigation", f"role={role}"
 
+    # Custom buttons: elements with a class token of "btn" / "button"
+    # or ending in "-btn" / "-button". Picked up here rather than at
+    # selector time so the rest of the classifier has first chance at
+    # stronger signals (real <button> tag, role="button", etc.).
+    if _has_button_like_class(raw):
+        return "clickable", f"<{tag}> class-as-button"
+
     return "other", f"<{tag}> tabindex or unknown"
+
+
+def _has_button_like_class(raw: dict) -> bool:
+    """True if the element's className contains a token that reads as
+    a button class per common conventions (``btn`` / ``button`` as an
+    exact token, or a token ending in ``-btn`` / ``-button``).
+
+    This is what catches ``<div class="btn">`` / ``<span
+    class="submit-button">`` patterns without picking up container
+    classes like ``button-group`` / ``btn-toolbar-list``.
+    """
+    cls = raw.get("className") or ""
+    for token in cls.split():
+        if token in ("btn", "button"):
+            return True
+        if token.endswith("-btn") or token.endswith("-button"):
+            return True
+    return False
 
 
 # Generic word fragments that hint at a field's semantic purpose.
@@ -343,6 +443,7 @@ def _to_discovered(raw: dict, category: ElementCategory, reason: str) -> Discove
         semantic_role=_infer_semantic_role(raw, category),
         label_text=label.text if label else None,
         label_source=label.source if label else None,
+        content_hint=raw.get("contentHint") or None,
     )
 
 

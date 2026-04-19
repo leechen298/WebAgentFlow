@@ -235,6 +235,9 @@
                     · semantic_role=<code>{{ el.semantic_role }}</code>
                   </span>
                   <span v-if="el.text">· text="{{ el.text.slice(0, 40) }}"</span>
+                  <span v-if="el.content_hint" class="el-content-hint">
+                    · content="{{ el.content_hint }}"
+                  </span>
                   <span class="reason">· {{ el.reason }}</span>
                 </div>
               </li>
@@ -1232,6 +1235,9 @@ onBeforeUnmount(() => {
   color: #8c8c8c;
   font-weight: normal;
   font-size: 10px;
+}
+.el-content-hint {
+  color: #722ed1;
 }
 .reason {
   color: #8c8c8c;

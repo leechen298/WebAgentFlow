@@ -75,6 +75,15 @@ class DiscoveredElement(BaseModel):
         description="Which FormLabelExtractor produced label_text "
         "('ant-design' / 'native'). None when label_text is None.",
     )
+    content_hint: str | None = Field(
+        default=None,
+        description="Short description of what's visually inside an element "
+        "when its own text and aria-label are empty. Formats: 'aria:<label>' "
+        "from a descendant aria-label, 'icon:<name>' from svg[data-icon], "
+        "'img:<alt-or-filename>' from <img>, or bare 'icon' / 'img' when "
+        "only the shape is known. None when the element already has "
+        "informative text / aria_label, or truly has no content clue.",
+    )
 
 
 class PlannedAction(BaseModel):
