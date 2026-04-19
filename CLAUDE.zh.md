@@ -102,7 +102,7 @@ pnpm run dev:lan                # 绑到 0.0.0.0，局域网可访问
 # 单独起各服务
 pnpm run dev:console            # Vite，端口 5174
 pnpm run dev:api                # Uvicorn，端口 8001
-pnpm run dev:worker
+pnpm run dev:worker             # Python 文件改动自动 reload（走 watchfiles）
 pnpm run dev:validation         # 验证站点，端口 5175
 ```
 

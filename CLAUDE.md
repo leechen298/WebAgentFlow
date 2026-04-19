@@ -108,7 +108,7 @@ pnpm run dev:lan                # LAN-accessible (0.0.0.0)
 # Individual components
 pnpm run dev:console            # Vite dev server, port 5174
 pnpm run dev:api                # Uvicorn dev server, port 8001
-pnpm run dev:worker
+pnpm run dev:worker             # Python file changes auto-reload via watchfiles
 pnpm run dev:validation         # Validation-site fixtures, port 5175
 ```
 
