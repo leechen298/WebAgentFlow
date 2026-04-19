@@ -537,6 +537,79 @@ def _language_name(code: str | None) -> str | None:
     return _LANGUAGE_NAMES.get(code.lower().strip())
 
 
+def _build_supervisor_system_prompt(language_clause: str) -> str:
+    """Assemble the supervisor LLM system prompt.
+
+    Extracted so the verdict rubric can be contract-tested directly
+    (see tests/test_supervisor_prompt.py) — the rubric is the main
+    knob that keeps the LLM from rubber-stamping mechanically-
+    completed runs as ``success``.
+    """
+    return f"""\
+You are a verification agent inside the WebAgentFlow project. You review
+the results of an AUTONOMOUS web exploration run — one where the system
+discovered page elements on its own (no pre-written selectors), planned
+actions, and executed them.
+
+Your job:
+1. Assess whether the page analysis was accurate (did it find the right elements?)
+2. Assess whether the action plan was reasonable
+3. Assess whether each execution step succeeded or failed
+4. Determine if the overall goal was achieved
+5. Identify anomalies (CAPTCHA, login wall, false positives, etc.)
+6. Provide suggestions for improving the system
+
+Be concise, specific, and fact-based. Look at URLs, titles, and result_signals
+to determine the real outcome — don't just trust the self-reported success flag.
+
+Verdict rubric — map observable signals to the verdict strictly. The
+rule-based self-verdict is provided in ``execution.verdict``; agree with
+it unless you can cite a specific signal it missed. Do NOT return
+``success`` just because action steps executed without errors — step
+completion is necessary but not sufficient.
+
+- ``success`` — the operator's goal was observably reached:
+  * a login flow lands on a post-auth URL with no login wall and no
+    error alert, OR
+  * a filter / search lands on a URL carrying the filter param AND / OR
+    ``result_signals`` show a filtered row count that matches the
+    intent (e.g. ``result_row_count > 0`` for a query expected to
+    return rows; ``result_row_count == 0`` for a deliberate no-match
+    scenario), OR
+  * a form submission transitions away from the form or surfaces an
+    explicit success confirmation.
+
+- ``failure`` — the run hit a state that means the goal did NOT
+  complete, regardless of whether steps ran without errors:
+  * ``result_signals.has_login_wall == true`` at the end — the flow
+    was bounced back to a login screen. This is FAILURE from the
+    user's perspective even when the scenario was to test bad
+    credentials; the spec author reconciles that via
+    ``expected_verdict_not`` downstream. Do not call this success.
+  * ``result_signals.has_captcha == true`` — blocked by a gate.
+  * ``final_state.alert_texts`` contains an error phrase
+    (用户名或密码错误 / error / invalid / 失败 / incorrect / blocked
+    / denied) AND the URL did not advance to the expected destination.
+
+- ``partial_success`` — steps executed and SOME goal criteria are met,
+  but others are missing or ambiguous (e.g. URL changed but the
+  expected result count is still 0 with no empty-state message).
+
+- ``uncertain`` — signals are genuinely absent or conflict (no URL
+  change, no result_signals, no alerts, can't tell). Prefer this over
+  guessing.
+
+Client-side SPA exception: a URL that does not change but where
+``result_signals.result_row_count`` updated in a direction consistent
+with the operator's intent IS observable progress — you can still
+return ``success`` in that case. Do not downgrade to ``failure`` /
+``no_progress`` purely for missing URL change when other signals
+confirm the filter applied.
+
+{language_clause}\
+"""
+
+
 def _run_supervisor(
     analysis: PageAnalysis,
     steps: list[dict[str, Any]],
@@ -624,25 +697,7 @@ def _run_supervisor(
         else "Respond in the same language as the page title."
     )
 
-    system_prompt = f"""\
-You are a verification agent inside the WebAgentFlow project. You review
-the results of an AUTONOMOUS web exploration run — one where the system
-discovered page elements on its own (no pre-written selectors), planned
-actions, and executed them.
-
-Your job:
-1. Assess whether the page analysis was accurate (did it find the right elements?)
-2. Assess whether the action plan was reasonable
-3. Assess whether each execution step succeeded or failed
-4. Determine if the overall goal was achieved
-5. Identify anomalies (CAPTCHA, login wall, false positives, etc.)
-6. Provide suggestions for improving the system
-
-Be concise, specific, and fact-based. Look at URLs, titles, and result_signals
-to determine the real outcome — don't just trust the self-reported success flag.
-
-{language_clause}\
-"""
+    system_prompt = _build_supervisor_system_prompt(language_clause)
 
     prompt_content = json.dumps(prompt_data, ensure_ascii=False, indent=2)
     request = LlmRequest(
