@@ -10,6 +10,13 @@ execution succeeded, disagreeing with the rule-based ``no_progress``).
 These tests don't check wording exactly — they check that the signals
 the rubric is supposed to cover are all mentioned, so future edits
 can't silently drop a rule.
+
+(Pre-F note: the 2026-04-19 incident was the LLM returning ``success``
+on a login-wall run. Rule-side self-verdict was ``no_progress`` at
+the time; after F unified the vocabulary both sides emit the shared
+OutcomeVerdict — that specific cross-vocabulary confusion is gone,
+but the rubric still needs to guard against the underlying failure
+mode, namely "steps ran → success" reasoning.)
 """
 
 from __future__ import annotations

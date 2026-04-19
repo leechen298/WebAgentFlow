@@ -10,7 +10,7 @@ Regression focus: SPA flows where the click step's url_after is
 still the pre-route URL (the async router hasn't pushed yet) and
 only the subsequent observe step sees the final URL. Before the G
 fix that meant a login that LANDED on /dashboard got verdicted as
-no_progress.
+failure.
 """
 
 from __future__ import annotations
@@ -107,7 +107,7 @@ def test_spa_title_change_detected_via_observe() -> None:
 
 def test_no_change_when_observe_matches_initial() -> None:
     # SPA-like shape but observe URL still matches initial URL, and
-    # no click-step-local change — should still be no_progress (the
+    # no click-step-local change — should still be failure (the
     # filter search-but-URL-unchanged scenario).
     steps = [
         _fill_step(step_index=0),
@@ -115,7 +115,7 @@ def test_no_change_when_observe_matches_initial() -> None:
         _observe_step(step_index=2, url="http://t/login", title="Sign in"),
     ]
     verdict, summary = _assess_outcome(steps)
-    assert verdict == "no_progress"
+    assert verdict == "failure"
 
 
 def test_click_step_local_change_still_counts() -> None:
@@ -140,7 +140,7 @@ def test_click_step_local_change_still_counts() -> None:
 # ───────────────────────────────────────────────────────────────────
 
 
-def test_login_wall_still_no_progress() -> None:
+def test_login_wall_emits_failure() -> None:
     # Observe sees login wall → blocker wins over any URL check.
     steps = [
         _fill_step(step_index=0),
@@ -158,25 +158,40 @@ def test_login_wall_still_no_progress() -> None:
         ),
     ]
     verdict, summary = _assess_outcome(steps)
-    assert verdict == "no_progress"
+    assert verdict == "failure"
     assert "login wall" in summary
 
 
-def test_all_actions_failed_is_incomplete() -> None:
+def test_all_actions_failed_is_failure() -> None:
+    # All actions failing is worse than partial — emit failure with
+    # per-step error in the summary.
     steps = [
         _fill_step(step_index=0, ok=False, error="not found"),
         _click_step(step_index=1, ok=False, error="no element"),
         _observe_step(step_index=2),
     ]
-    verdict, _ = _assess_outcome(steps)
-    assert verdict == "incomplete"
+    verdict, summary = _assess_outcome(steps)
+    assert verdict == "failure"
+    assert "All 2 action" in summary
 
 
-def test_only_fill_no_submit_is_no_progress() -> None:
+def test_some_actions_failed_is_partial_success() -> None:
+    # Mixed outcome — some steps failed, some succeeded.
+    steps = [
+        _fill_step(step_index=0, ok=True),
+        _click_step(step_index=1, ok=False, error="no element"),
+        _observe_step(step_index=2),
+    ]
+    verdict, summary = _assess_outcome(steps)
+    assert verdict == "partial_success"
+    assert "1/2" in summary
+
+
+def test_only_fill_no_submit_is_failure() -> None:
     # Fill succeeded but there's no click/press → no state trigger.
     steps = [
         _fill_step(step_index=0),
         _observe_step(step_index=1),
     ]
     verdict, _ = _assess_outcome(steps)
-    assert verdict == "no_progress"
+    assert verdict == "failure"

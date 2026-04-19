@@ -240,10 +240,12 @@ _ACTION_TYPES = ("fill", "click", "press")
 def _assess_outcome(steps: list[dict[str, Any]]) -> tuple[str, str]:
     """Rule-based outcome verdict from step results.
 
-    Returns (verdict, summary). Verdict is one of:
+    Returns (verdict, summary). Verdict is one of the shared
+    OutcomeVerdict values (see schemas/page_analysis.py):
       - success: ≥1 state-changing action AND observable change (url/title/content)
-      - incomplete: some action steps attempted but some failed
-      - no_progress: no action steps executed, OR actions ok but no observable change
+      - partial_success: some action steps attempted but some failed
+      - failure: no action steps executed, actions ok but no observable
+        change, or blocked (CAPTCHA / login wall / error alert)
       - uncertain: signals ambiguous (should rarely fire from rule-based path)
 
     'success' explicitly cannot be returned when nothing happened.
@@ -251,10 +253,10 @@ def _assess_outcome(steps: list[dict[str, Any]]) -> tuple[str, str]:
     # Partition steps: actions (fill/click/press) vs observe/other
     action_steps = [s for s in steps if s.get("action_type") in _ACTION_TYPES]
 
-    # Case 1: no action steps planned or executed → no_progress
+    # Case 1: no action steps planned or executed → failure
     if not action_steps:
         return (
-            "no_progress",
+            "failure",
             "No interactive action steps were planned or executed. "
             "The page analysis found no actionable target, or planning yielded only observation.",
         )
@@ -262,18 +264,21 @@ def _assess_outcome(steps: list[dict[str, Any]]) -> tuple[str, str]:
     failed = [s for s in action_steps if not s.get("ok", False)]
     ok_actions = [s for s in action_steps if s.get("ok", False)]
 
-    # Case 2: all action steps failed → incomplete (all failed is still incomplete, not success)
+    # Case 2: all action steps failed → partial_success (mechanical
+    # failure, not the wider goal-state failure that "failure" means)
+    # — actually all failed is worse than partial, emit "failure" with
+    # the explicit per-step error so the operator can dig in.
     if len(failed) == len(action_steps):
         errors = [s.get("error", "") or "(no error message)" for s in failed]
         return (
-            "incomplete",
+            "failure",
             f"All {len(action_steps)} action step(s) failed. First error: {errors[0][:120]}",
         )
 
-    # Case 3: some actions failed but some succeeded → incomplete
+    # Case 3: some actions failed but some succeeded → partial_success
     if failed:
         return (
-            "incomplete",
+            "partial_success",
             f"{len(failed)}/{len(action_steps)} action step(s) failed, "
             f"{len(ok_actions)} succeeded.",
         )
@@ -308,27 +313,27 @@ def _assess_outcome(steps: list[dict[str, Any]]) -> tuple[str, str]:
 
     if signals.get("has_captcha"):
         return (
-            "no_progress",
+            "failure",
             "Actions executed but final page is a CAPTCHA / security verification.",
         )
     if signals.get("has_login_wall"):
         return (
-            "no_progress",
+            "failure",
             "Actions executed but final page is a login wall.",
         )
 
-    # State-changing actions present but nothing actually changed → no_progress
+    # State-changing actions present but nothing actually changed → failure
     if state_changing and not url_changed and not title_changed:
         return (
-            "no_progress",
+            "failure",
             f"{len(state_changing)} submit/click/press step(s) executed "
             "but no URL or title change was observed.",
         )
 
-    # Had no click/press at all (only fill) and no state change → no_progress
+    # Had no click/press at all (only fill) and no state change → failure
     if not state_changing:
         return (
-            "no_progress",
+            "failure",
             "Only fill actions were executed; no submit/click/press to trigger state change.",
         )
 
@@ -804,8 +809,12 @@ def _fallback_supervisor(
 ) -> dict[str, Any]:
     """Rule-based fallback when LLM is unavailable.
 
-    Maps the self-assessed verdict (success/incomplete/no_progress/uncertain)
-    to the supervisor verdict space (success/partial_success/failure/uncertain).
+    Rule-side and supervisor-side now share one OutcomeVerdict
+    vocabulary (success / partial_success / failure / uncertain), so
+    the fallback just passes self_verdict through — no cross-ontology
+    mapping is needed. The only nudge is downgrading an otherwise-
+    success verdict to partial_success when anomalies are present,
+    which is a stricter check the LLM would usually do on its own.
     """
     step_assessments = []
     for s in steps:
@@ -833,14 +842,11 @@ def _fallback_supervisor(
         if signals.get("has_login_wall"):
             anomalies.append("Login wall detected")
 
-    # Map self-verdict → supervisor verdict
-    verdict_map = {
-        "success": "success",
-        "incomplete": "partial_success",
-        "no_progress": "failure",
-        "uncertain": "uncertain",
-    }
-    verdict = verdict_map.get(self_verdict, "uncertain")
+    # Pass self_verdict straight through — shared vocabulary means no
+    # translation. Guard against unexpected values (future-proofing).
+    verdict = self_verdict if self_verdict in (
+        "success", "partial_success", "failure", "uncertain",
+    ) else "uncertain"
     if anomalies and verdict == "success":
         verdict = "partial_success"
 

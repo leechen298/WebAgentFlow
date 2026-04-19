@@ -155,7 +155,8 @@ function formatJson(obj: unknown): string {
 
 function verdictColor(verdict: string): string {
   if (verdict === 'success') return 'green';
-  if (verdict === 'incomplete' || verdict === 'no_progress') return 'orange';
+  if (verdict === 'partial_success') return 'orange';
+  if (verdict === 'failure') return 'red';
   if (verdict === 'uncertain') return 'default';
   return 'blue';
 }

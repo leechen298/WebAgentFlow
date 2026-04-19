@@ -912,10 +912,13 @@ function stepColor(step: StepData): string {
 }
 
 function verdictColor(v: string | undefined): string {
+  // Unified verdict vocabulary — rule-side self-verdict and
+  // supervisor LLM verdict both emit these four values now.
   if (!v) return 'default';
-  if (['success'].includes(v)) return 'green';
-  if (['failure', 'incomplete'].includes(v)) return 'red';
-  if (['partial_success', 'no_progress'].includes(v)) return 'orange';
+  if (v === 'success') return 'green';
+  if (v === 'failure') return 'red';
+  if (v === 'partial_success') return 'orange';
+  if (v === 'uncertain') return 'default';
   return 'default';
 }
 

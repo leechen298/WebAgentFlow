@@ -143,11 +143,16 @@ class PageAnalysis(BaseModel):
 
 
 OutcomeVerdict = Literal[
-    "success",       # all action steps ok AND observable state change
-    "incomplete",    # some action steps failed
-    "no_progress",   # actions executed but no state change, or blocked (CAPTCHA/login wall)
-    "uncertain",     # cannot determine — insufficient signals
+    "success",          # all action steps ok AND observable state change
+    "partial_success",  # some action steps failed
+    "failure",          # actions executed but no state change, or blocked (CAPTCHA/login wall)
+    "uncertain",        # cannot determine — insufficient signals
 ]
+# This enum is intentionally shared with the autonomous-supervisor
+# response schema (see exploration_supervisor.SUPERVISOR_RESPONSE_SCHEMA).
+# Rule-side self-verdict and LLM-side supervisor verdict speak the same
+# vocabulary so the scorecard's bucket mapping doesn't have to translate
+# between two ontologies.
 
 
 class AutonomousExplorationResult(BaseModel):
