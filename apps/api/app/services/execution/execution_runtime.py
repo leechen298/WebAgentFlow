@@ -302,8 +302,16 @@ class ExecutionRuntime:
         except PlaywrightError as exc:
             raise PageObservationError(f"Snapshot failed: {exc}") from exc
 
-    def screenshot(self, *, full_page: bool = False) -> str:
+    def screenshot(self, *, full_page: bool = True) -> str:
         """Take a screenshot and return the file path.
+
+        Defaults to ``full_page=True`` because the viewport-only
+        variant routinely cut off the interesting part of long pages
+        — tables, results lists, anything below the fold would be
+        invisible in the recorded step. Every caller in the
+        autonomous / task-driven pipelines wants the full page; they
+        can opt out explicitly with ``full_page=False`` if they ever
+        need the viewport-only behaviour.
 
         Uses ``screenshot_dir`` from config, or a temp directory.
         """
