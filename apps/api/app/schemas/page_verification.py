@@ -38,6 +38,7 @@ class ElementMatcher(BaseModel):
     name: str | None = None
     tag: str | None = None
     element_type: str | None = None
+    element_value: str | None = None
     role: str | None = None
     text_contains: str | None = None
     placeholder_contains: str | None = None
@@ -104,7 +105,17 @@ class FailureSignals(BaseModel):
 
 class ScenarioSpec(BaseModel):
     description: str = ""
-    inputs: dict[str, str] = Field(default_factory=dict)
+    inputs: dict[str, str] = Field(
+        default_factory=dict,
+        description="Text-field values keyed by semantic role (name/email/...). "
+        "Routes into the planner's fill_values path.",
+    )
+    selections: dict[str, str] = Field(
+        default_factory=dict,
+        description="Native toggle selections keyed by group's semantic role "
+        "(e.g. 'status') -> option value (e.g. 'active'). Routes into the "
+        "planner's toggle_values path for radio / checkbox groups.",
+    )
     expected_actions: list[str] = Field(
         default_factory=list,
         description="Encoded as 'action_type:element_role', e.g. 'fill:username_input'.",

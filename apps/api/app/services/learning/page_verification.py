@@ -77,6 +77,7 @@ def _matches(element: DiscoveredElement, matcher: ElementMatcher) -> bool:
         (matcher.name, element.name),
         (matcher.tag, element.tag),
         (matcher.element_type, element.element_type),
+        (matcher.element_value, element.element_value),
         (matcher.role, element.role),
     ]
     for expected, observed in atomic:

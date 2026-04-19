@@ -147,6 +147,7 @@ export interface SpecScenarioSummary {
   key: string;
   description: string;
   inputs: Record<string, string>;
+  selections: Record<string, string>;
   expected_verdict?: string | null;
   expected_verdict_not?: string | null;
 }

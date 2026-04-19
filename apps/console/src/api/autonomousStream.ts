@@ -17,6 +17,9 @@ export interface AutonomousStreamPayload {
   goal?: string;
   fill_value?: string;
   fill_values?: Record<string, string>;
+  /** Native toggle (radio/checkbox) selections keyed by group's
+   * semantic role (e.g. 'status') -> option value (e.g. 'active'). */
+  toggle_values?: Record<string, string>;
   headless?: boolean;
   spec_id?: string | null;
   scenario?: string | null;

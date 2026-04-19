@@ -96,6 +96,9 @@
                 { value: 'username', label: 'username' },
                 { value: 'password', label: 'password' },
                 { value: 'email', label: 'email' },
+                { value: 'name', label: 'name' },
+                { value: 'role', label: 'role' },
+                { value: 'status', label: 'status' },
                 { value: 'search', label: 'search' },
                 { value: 'text', label: 'text' },
               ]"
@@ -110,6 +113,34 @@
           <a-button size="small" @click="addFillRow">
             {{ $t('autonomous.addField') }}
           </a-button>
+        </a-form-item>
+
+        <a-form-item :label="$t('autonomous.toggleValuesLabel')">
+          <div
+            v-for="(row, idx) in form.toggleValues"
+            :key="idx"
+            class="fv-row"
+          >
+            <a-select
+              v-model:value="row.key"
+              style="width: 160px"
+              :options="[
+                { value: 'status', label: 'status' },
+                { value: 'role', label: 'role' },
+                { value: 'name', label: 'name' },
+              ]"
+            />
+            <a-input
+              v-model:value="row.value"
+              :placeholder="$t('autonomous.toggleValuesPlaceholder')"
+              style="flex: 1"
+            />
+            <a-button type="text" danger @click="removeToggleRow(idx)">×</a-button>
+          </div>
+          <a-button size="small" @click="addToggleRow">
+            {{ $t('autonomous.addToggle') }}
+          </a-button>
+          <div class="fv-hint">{{ $t('autonomous.toggleValuesHint') }}</div>
         </a-form-item>
 
         <a-row :gutter="16" align="middle">
@@ -549,6 +580,7 @@ function bucketLabel(name: string): string {
 // ─── Form state ──────────────────────────────────────────────
 
 interface FillRow { key: string; value: string }
+interface ToggleRow { key: string; value: string }
 
 // Form starts empty by design. The workbench expects callers to either
 // (a) deep-link into it with ?url=…&spec_id=…&scenario=… (e.g. the
@@ -563,6 +595,7 @@ const form = reactive({
   scenario: undefined as string | undefined,
   headless: true,
   fillValues: [] as FillRow[],
+  toggleValues: [] as ToggleRow[],
 });
 
 const route = useRoute();
@@ -572,6 +605,13 @@ function addFillRow() {
 }
 function removeFillRow(idx: number) {
   form.fillValues.splice(idx, 1);
+}
+
+function addToggleRow() {
+  form.toggleValues.push({ key: 'status', value: '' });
+}
+function removeToggleRow(idx: number) {
+  form.toggleValues.splice(idx, 1);
 }
 
 // ─── Spec auto-matching + scenario prefill ───────────────────
@@ -648,6 +688,7 @@ function applyUrl(url: string): void {
     form.specId = undefined;
     form.scenario = undefined;
     form.fillValues = [];
+    form.toggleValues = [];
     return;
   }
 
@@ -666,13 +707,16 @@ function applyUrl(url: string): void {
 }
 
 function applyScenarioInputs(): void {
-  // Replace fillValues with the scenario's inputs. Overwriting (not
-  // merging) is deliberate — picking a scenario is a fresh setup, and
-  // merging would leave stale rows from the previous scenario around.
+  // Replace fillValues + toggleValues with the scenario's inputs /
+  // selections. Overwriting (not merging) is deliberate — picking a
+  // scenario is a fresh setup, and merging would leave stale rows
+  // from the previous scenario around.
   if (!selectedSpec.value || !form.scenario) return;
   const sc = selectedSpec.value.scenarios.find((s) => s.key === form.scenario);
   if (!sc) return;
   form.fillValues = Object.entries(sc.inputs).map(([key, value]) => ({ key, value }));
+  const selections = sc.selections ?? {};
+  form.toggleValues = Object.entries(selections).map(([key, value]) => ({ key, value }));
 }
 
 function onScenarioChange(): void {
@@ -1007,11 +1051,22 @@ function startRun() {
     }
   }
 
+  // Toggle values keep empty-string values intentionally (Ant Design's
+  // "All" radio uses value="" — a meaningful selection, not a skip).
+  // Only skip rows whose KEY is empty.
+  const toggleValues: Record<string, string> = {};
+  for (const row of form.toggleValues) {
+    if (row.key) {
+      toggleValues[row.key] = row.value ?? '';
+    }
+  }
+
   abort = streamAutonomousRun(
     {
       url: form.url,
       goal: form.goal || undefined,
       fill_values: Object.keys(fillValues).length > 0 ? fillValues : undefined,
+      toggle_values: Object.keys(toggleValues).length > 0 ? toggleValues : undefined,
       headless: form.headless,
       spec_id: form.specId || null,
       scenario: form.scenario || null,
@@ -1122,6 +1177,12 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+}
+.fv-hint {
+  color: #8c8c8c;
+  font-size: 11px;
+  margin-top: 6px;
+  line-height: 1.4;
 }
 .headless-hint {
   color: #8c8c8c;

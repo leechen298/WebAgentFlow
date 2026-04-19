@@ -346,6 +346,7 @@ def run_autonomous_exploration(
     goal: str = "",
     fill_value: str = "",
     fill_values: dict[str, str] | None = None,
+    toggle_values: dict[str, str] | None = None,
     language: str | None = None,
     event_emitter: EventEmitter | None = None,
 ) -> AutonomousExplorationResult:
@@ -358,6 +359,10 @@ def run_autonomous_exploration(
         fill_value: Value for the primary input (single-field mode).
         fill_values: Multi-field values keyed by semantic role
             (username/password/email/text). Takes precedence over fill_value.
+        toggle_values: Native toggle selections keyed by a group's
+            semantic role (e.g. 'status') -> option value (e.g.
+            'active'). Drives radio / checkbox groups via the planner's
+            toggle_values path.
         language: Preferred output language for the Supervisor Agent's
             LLM response (e.g. "en", "zh", "ja"). When None, the agent
             defaults to the page title's language.
@@ -413,7 +418,11 @@ def run_autonomous_exploration(
     # ── Phase 3: Plan ──
     logger.info("Autonomous exploration: planning actions")
     planned = plan_actions(
-        analysis, goal=goal, fill_value=fill_value, fill_values=fill_values,
+        analysis,
+        goal=goal,
+        fill_value=fill_value,
+        fill_values=fill_values,
+        toggle_values=toggle_values,
     )
     analysis.recommended_actions = planned
     logger.info("Planned %d actions", len(planned))

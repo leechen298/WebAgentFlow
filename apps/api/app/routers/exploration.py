@@ -67,6 +67,7 @@ def _persist_autonomous_run(
                     "language": payload.language,
                     "headless": payload.headless,
                     "fill_values": payload.fill_values or {},
+                    "toggle_values": payload.toggle_values or {},
                     "verdict": verdict,
                     **({"error": error[:500]} if error else {}),
                 },
@@ -278,6 +279,12 @@ class AutonomousExplorePayload(BaseModel):
         description="Multi-field values keyed by generic semantic role "
         "(username/password/email/text). Takes precedence over fill_value.",
     )
+    toggle_values: dict[str, str] | None = Field(
+        default=None,
+        description="Native toggle (radio / checkbox) selections keyed by "
+        "a group's semantic role (e.g. 'status') -> option value "
+        "(e.g. 'active'). Drives the planner's toggle_values path.",
+    )
     headless: bool = Field(default=True, description="Run browser in headless mode.")
     spec_id: str | None = Field(
         default=None,
@@ -331,6 +338,7 @@ def autonomous_exploration_endpoint(
             goal=payload.goal,
             fill_value=payload.fill_value,
             fill_values=payload.fill_values,
+            toggle_values=payload.toggle_values,
             language=payload.language,
         )
 
@@ -478,6 +486,7 @@ def autonomous_exploration_stream(
                 "url": payload.url,
                 "goal": payload.goal,
                 "fill_values": payload.fill_values,
+                "toggle_values": payload.toggle_values,
                 "spec_id": payload.spec_id,
                 "scenario": payload.scenario,
                 "headless": payload.headless,
@@ -494,6 +503,7 @@ def autonomous_exploration_stream(
                     goal=payload.goal,
                     fill_value=payload.fill_value,
                     fill_values=payload.fill_values,
+                    toggle_values=payload.toggle_values,
                     language=payload.language,
                     event_emitter=emit,
                 )
@@ -597,6 +607,7 @@ class SpecScenarioSummary(BaseModel):
     key: str
     description: str = ""
     inputs: dict[str, str] = Field(default_factory=dict)
+    selections: dict[str, str] = Field(default_factory=dict)
     expected_verdict: str | None = None
     expected_verdict_not: str | None = None
 
@@ -640,6 +651,7 @@ def list_specs() -> ApiResponse[list[SpecSummary]]:
                         key=key,
                         description=sc.description,
                         inputs=sc.inputs,
+                        selections=sc.selections,
                         expected_verdict=sc.expected_verdict,
                         expected_verdict_not=sc.expected_verdict_not,
                     )
@@ -674,6 +686,7 @@ def get_spec(spec_id: str) -> ApiResponse[SpecSummary]:
                 key=key,
                 description=sc.description,
                 inputs=sc.inputs,
+                selections=sc.selections,
                 expected_verdict=sc.expected_verdict,
                 expected_verdict_not=sc.expected_verdict_not,
             )

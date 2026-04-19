@@ -16,6 +16,12 @@
       "match_by": { "id": "search-email" }
     },
     {
+      "role": "status_radio_active",
+      "expected_category": "toggle",
+      "expected_semantic_role": "status",
+      "match_by": { "tag": "input", "element_type": "radio", "element_value": "active" }
+    },
+    {
       "role": "search_button",
       "expected_category": "submit",
       "match_by": { "id": "btn-search" }
@@ -63,6 +69,23 @@
       "success_signals": {
         "url_contains": "name=xyz999",
         "dom_contains_all_of": ["No users found"]
+      },
+      "must_not_transition_to": "/login",
+      "expected_verdict": "success"
+    },
+
+    "filter_by_status": {
+      "description": "Pick the 'Active' radio in the Status group, click Search. Only active users remain; URL carries status=active. Drives the planner's native-toggle path (no text input involved).",
+      "inputs": {},
+      "selections": {
+        "status": "active"
+      },
+      "expected_actions": [
+        "click:status_radio_active",
+        "click:search_button"
+      ],
+      "success_signals": {
+        "url_contains": "status=active"
       },
       "must_not_transition_to": "/login",
       "expected_verdict": "success"
