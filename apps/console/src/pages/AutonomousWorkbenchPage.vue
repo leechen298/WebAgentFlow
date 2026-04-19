@@ -234,6 +234,9 @@
         <a-tag color="green">{{ $t('autonomous.countSubmit') }}: {{ analysis.counts?.submit ?? 0 }}</a-tag>
         <a-tag>{{ $t('autonomous.countClickable') }}: {{ analysis.counts?.clickable ?? 0 }}</a-tag>
         <a-tag>{{ $t('autonomous.countNavigation') }}: {{ analysis.counts?.navigation ?? 0 }}</a-tag>
+        <a-tag color="purple">{{ $t('autonomous.countToggle') }}: {{ analysis.counts?.toggle ?? 0 }}</a-tag>
+        <a-tag>{{ $t('autonomous.countSelect') }}: {{ analysis.counts?.select ?? 0 }}</a-tag>
+        <a-tag>{{ $t('autonomous.countOther') }}: {{ analysis.counts?.other ?? 0 }}</a-tag>
         <a-tag>{{ $t('autonomous.countHidden') }}: {{ analysis.total_hidden ?? 0 }}</a-tag>
       </div>
 
@@ -886,7 +889,12 @@ const scoreMetrics = computed(() => {
 const groupedElements = computed(() => {
   if (!analysis.value) return {};
   const g: Record<string, any[]> = {};
-  for (const cat of ['fillable', 'submit', 'clickable', 'navigation']) {
+  // Include every bucket the analyzer populates. Previously toggle /
+  // select / other were hidden in the UI even though the analyzer
+  // had them — operators saw Status radios scanned in the raw data
+  // but not listed in the visible-elements panel, which made it
+  // look like a detection miss.
+  for (const cat of ['fillable', 'submit', 'clickable', 'navigation', 'toggle', 'select', 'other']) {
     const arr = analysis.value[cat];
     if (arr && arr.length > 0) g[cat] = arr;
   }
