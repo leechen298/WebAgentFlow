@@ -1,157 +1,153 @@
 <template>
   <div class="page">
     <header class="header">
-      <h2>User Directory</h2>
-      <span class="hint">{{ loading ? 'Loading…' : `${total} user(s)` }}</span>
+      <h2>{{ t('users.title') }}</h2>
+      <span class="hint">{{ countLabel }}</span>
     </header>
 
-    <!-- Search form. Grouped by "common" (always-visible text + select +
-         radio) and "advanced" (pickers + Cascader + Tag) so users can
-         skim it. Both groups submit through the same Search / Reset
-         buttons at the bottom. -->
-    <a-form
-      id="user-search-form"
-      layout="horizontal"
-      :label-col="{ span: 6 }"
-      :wrapper-col="{ span: 18 }"
-      class="search-form"
-    >
-      <a-row :gutter="16">
-        <a-col :xs="24" :md="12">
-          <a-form-item label="Name">
-            <a-input
-              id="search-name"
-              v-model:value="form.name"
-              placeholder="e.g. alice"
-              allow-clear
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :xs="24" :md="12">
-          <a-form-item label="Email">
-            <a-input
-              id="search-email"
-              v-model:value="form.email"
-              placeholder="Substring of email"
-              allow-clear
-            />
-          </a-form-item>
-        </a-col>
+    <!-- Search card: all filters live here. Vertical form layout so
+         labels sit above inputs and the grid stays clean across
+         resolutions. Buttons pinned to the card footer, right-aligned. -->
+    <a-card :title="t('users.searchCardTitle')" class="search-card" :bordered="false">
+      <a-form
+        id="user-search-form"
+        layout="vertical"
+      >
+        <a-row :gutter="16">
+          <a-col :xs="24" :sm="12" :lg="8">
+            <a-form-item :label="t('users.fields.name')">
+              <a-input
+                id="search-name"
+                v-model:value="form.name"
+                :placeholder="t('users.placeholders.name')"
+                allow-clear
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :lg="8">
+            <a-form-item :label="t('users.fields.email')">
+              <a-input
+                id="search-email"
+                v-model:value="form.email"
+                :placeholder="t('users.placeholders.email')"
+                allow-clear
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-col :xs="24" :md="12">
-          <a-form-item label="Role">
-            <a-select
-              id="search-role"
-              v-model:value="form.role"
-              placeholder="Any role"
-              allow-clear
-              :options="roleOptions"
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :xs="24" :md="12">
-          <a-form-item label="Status">
-            <a-radio-group
-              id="search-status"
-              v-model:value="form.status"
-            >
-              <a-radio value="">All</a-radio>
-              <a-radio value="active">Active</a-radio>
-              <a-radio value="disabled">Disabled</a-radio>
-            </a-radio-group>
-          </a-form-item>
-        </a-col>
+          <a-col :xs="24" :sm="12" :lg="8">
+            <a-form-item :label="t('users.fields.role')">
+              <a-select
+                id="search-role"
+                v-model:value="form.role"
+                :placeholder="t('users.placeholders.anyRole')"
+                allow-clear
+                :options="roleOptions"
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-col :xs="24" :md="12">
-          <a-form-item label="Registered (from)">
-            <a-date-picker
-              id="search-registered-from"
-              v-model:value="form.registeredFrom"
-              value-format="YYYY-MM-DD"
-              style="width: 100%"
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :xs="24" :md="12">
-          <a-form-item label="Registered (to)">
-            <a-date-picker
-              id="search-registered-to"
-              v-model:value="form.registeredTo"
-              value-format="YYYY-MM-DD"
-              style="width: 100%"
-            />
-          </a-form-item>
-        </a-col>
+          <a-col :xs="24" :sm="12" :lg="8">
+            <a-form-item :label="t('users.fields.status')">
+              <a-radio-group id="search-status" v-model:value="form.status">
+                <a-radio value="">{{ t('users.statusAll') }}</a-radio>
+                <a-radio value="active">{{ t('users.statusActive') }}</a-radio>
+                <a-radio value="disabled">{{ t('users.statusDisabled') }}</a-radio>
+              </a-radio-group>
+            </a-form-item>
+          </a-col>
 
-        <a-col :xs="24" :md="12">
-          <a-form-item label="Region">
-            <a-cascader
-              id="search-region"
-              v-model:value="form.region"
-              :options="regionOptions"
-              placeholder="Country / Province / City"
-              change-on-select
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :xs="24" :md="12">
-          <a-form-item label="Registered range">
-            <a-range-picker
-              id="search-registered-range"
-              v-model:value="form.registeredRange"
-              value-format="YYYY-MM-DD"
-              style="width: 100%"
-            />
-          </a-form-item>
-        </a-col>
+          <a-col :xs="24" :sm="12" :lg="8">
+            <a-form-item :label="t('users.fields.registeredFrom')">
+              <a-date-picker
+                id="search-registered-from"
+                v-model:value="form.registeredFrom"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :lg="8">
+            <a-form-item :label="t('users.fields.registeredTo')">
+              <a-date-picker
+                id="search-registered-to"
+                v-model:value="form.registeredTo"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-col :xs="24" :md="12">
-          <a-form-item label="Month">
-            <a-month-picker
-              id="search-month"
-              v-model:value="form.month"
-              value-format="YYYY-MM"
-              style="width: 100%"
-              placeholder="Month (advisory)"
-            />
-          </a-form-item>
-        </a-col>
-        <a-col :xs="24" :md="12">
-          <a-form-item label="Cut-off time">
-            <a-time-picker
-              id="search-time"
-              v-model:value="form.time"
-              value-format="HH:mm"
-              style="width: 100%"
-              placeholder="Time (advisory)"
-            />
-          </a-form-item>
-        </a-col>
+          <a-col :xs="24" :sm="12" :lg="8">
+            <a-form-item :label="t('users.fields.region')">
+              <a-cascader
+                id="search-region"
+                v-model:value="form.region"
+                :options="regionOptions"
+                :placeholder="t('users.placeholders.region')"
+                change-on-select
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :lg="8">
+            <a-form-item :label="t('users.fields.registeredRange')">
+              <a-range-picker
+                id="search-registered-range"
+                v-model:value="form.registeredRange"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-col :span="24">
-          <a-form-item label="Department">
-            <!-- Tag-as-filter toggle group. A third distraction type:
-                 looks like a read-only label cluster but actually
-                 toggles state on click. -->
-            <a-tag
-              v-for="opt in departmentOptions"
-              :key="opt"
-              :color="form.departments.includes(opt) ? 'blue' : 'default'"
-              class="tag-filter"
-              @click="toggleDepartment(opt)"
-            >
-              {{ opt }}
-            </a-tag>
-          </a-form-item>
-        </a-col>
-      </a-row>
+          <a-col :xs="24" :sm="12" :lg="8">
+            <a-form-item :label="t('users.fields.month')">
+              <a-month-picker
+                id="search-month"
+                v-model:value="form.month"
+                value-format="YYYY-MM"
+                style="width: 100%"
+                :placeholder="t('users.placeholders.month')"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :lg="8">
+            <a-form-item :label="t('users.fields.time')">
+              <a-time-picker
+                id="search-time"
+                v-model:value="form.time"
+                value-format="HH:mm"
+                style="width: 100%"
+                :placeholder="t('users.placeholders.time')"
+              />
+            </a-form-item>
+          </a-col>
 
-      <a-row>
-        <a-col :span="24" style="text-align: right">
+          <!-- Tag-as-filter row spans the full width because the
+               click-to-toggle interaction is visually different from
+               the other inputs and wants its own breathing room. -->
+          <a-col :span="24">
+            <a-form-item :label="t('users.fields.department')">
+              <a-tag
+                v-for="opt in departmentOptions"
+                :key="opt"
+                :color="form.departments.includes(opt) ? 'blue' : 'default'"
+                class="tag-filter"
+                @click="toggleDepartment(opt)"
+              >
+                {{ opt }}
+              </a-tag>
+            </a-form-item>
+          </a-col>
+        </a-row>
+      </a-form>
+
+      <template #actions>
+        <div class="card-actions">
           <a-space>
-            <!-- Primary action. The planner must pick this as the
-                 submit, NOT one of the View buttons in the table and
-                 NOT Reset below. -->
+            <a-button id="btn-reset" @click="onReset">
+              {{ t('users.actionReset') }}
+            </a-button>
             <a-button
               id="btn-search"
               type="primary"
@@ -159,72 +155,97 @@
               :loading="loading"
               @click="onSearch"
             >
-              Search
+              {{ t('users.actionSearch') }}
             </a-button>
-            <!-- Distraction button: same-size secondary, resets state,
-                 should never be clicked during a filter flow. -->
-            <a-button id="btn-reset" @click="onReset">Reset</a-button>
           </a-space>
-        </a-col>
-      </a-row>
-    </a-form>
-
-    <!-- Table with column sort + column filter on Role, plus a
-         per-row View action button. -->
-    <a-table
-      :columns="columns"
-      :data-source="rows"
-      :pagination="false"
-      :loading="loading"
-      row-key="id"
-      size="middle"
-      :locale="{ emptyText: emptyText }"
-      class="user-table"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'status'">
-          <a-tag :color="record.status === 'active' ? 'green' : 'red'">
-            {{ record.status }}
-          </a-tag>
-        </template>
-        <template v-else-if="column.key === 'actions'">
-          <!-- Per-row button. Planner should NOT pick this when the
-               request is "search users" — View operates on a single
-               row, not on the filter. -->
-          <a-button
-            type="link"
-            size="small"
-            :data-user-id="record.id"
-            class="btn-view-row"
-            @click="onView(record)"
-          >
-            View
-          </a-button>
-        </template>
+        </div>
       </template>
-    </a-table>
+    </a-card>
+
+    <!-- Result card: the table always follows the filter card, so the
+         top-to-bottom reading order is "filters → results". -->
+    <a-card
+      :title="t('users.resultCardTitle')"
+      class="result-card"
+      :bordered="false"
+    >
+      <template #extra>
+        <span class="result-meta">{{ countLabel }}</span>
+      </template>
+
+      <a-table
+        :columns="columns"
+        :data-source="rows"
+        :pagination="false"
+        :loading="loading"
+        row-key="id"
+        size="middle"
+        :locale="{ emptyText: emptyText }"
+        class="user-table"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'status'">
+            <a-tag :color="record.status === 'active' ? 'green' : 'red'">
+              {{ record.status === 'active'
+                ? t('users.statusActive')
+                : t('users.statusDisabled') }}
+            </a-tag>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <!-- Per-row button. Planner should NOT pick this when the
+                 request is "search users" — View operates on a single
+                 row, not on the filter. -->
+            <a-button
+              type="link"
+              size="small"
+              :data-user-id="record.id"
+              class="btn-view-row"
+              @click="onView(record)"
+            >
+              {{ t('users.actionView') }}
+            </a-button>
+          </template>
+        </template>
+      </a-table>
+    </a-card>
 
     <!-- Detail panel (appears after clicking View on a row). Rendered
          inline rather than as a popup so the analyzer can see it. -->
-    <section v-if="detail" class="detail" data-testid="user-detail">
-      <h3>{{ detail.name }} — {{ detail.email }}</h3>
+    <a-card
+      v-if="detail"
+      class="detail-card"
+      :bordered="false"
+      data-testid="user-detail"
+    >
+      <template #title>
+        <span>{{ detail.name }}</span>
+        <span class="detail-sep"> · </span>
+        <span>{{ detail.email }}</span>
+      </template>
+      <template #extra>
+        <a-button size="small" @click="detail = null">
+          {{ t('users.detail.close') }}
+        </a-button>
+      </template>
       <dl>
-        <dt>Role</dt><dd>{{ detail.role }}</dd>
-        <dt>Status</dt><dd>{{ detail.status }}</dd>
-        <dt>Department</dt><dd>{{ detail.department }}</dd>
-        <dt>Region</dt><dd>{{ detail.region }}</dd>
-        <dt>Registered at</dt><dd>{{ detail.registered_at }}</dd>
-        <dt>Last login</dt><dd>{{ detail.last_login_at }}</dd>
+        <dt>{{ t('users.detail.role') }}</dt><dd>{{ detail.role }}</dd>
+        <dt>{{ t('users.detail.status') }}</dt><dd>{{ detail.status }}</dd>
+        <dt>{{ t('users.detail.department') }}</dt><dd>{{ detail.department }}</dd>
+        <dt>{{ t('users.detail.region') }}</dt><dd>{{ detail.region }}</dd>
+        <dt>{{ t('users.detail.registeredAt') }}</dt><dd>{{ detail.registered_at }}</dd>
+        <dt>{{ t('users.detail.lastLogin') }}</dt><dd>{{ detail.last_login_at }}</dd>
       </dl>
-      <a-button size="small" @click="detail = null">Close</a-button>
-    </section>
+    </a-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import axios from 'axios';
+
+const { t } = useI18n();
 
 interface User {
   id: number;
@@ -270,29 +291,36 @@ const form = reactive({
   departments: [] as string[],
 });
 
+const countLabel = computed(() => {
+  if (loading.value) return t('users.loading');
+  return total.value === 1
+    ? t('users.countOne', { n: total.value })
+    : t('users.countMany', { n: total.value });
+});
+
 // ─── Table columns ───────────────────────────────────────────
 // Sort and column-filter are intentionally real Ant Design table
 // features so the analyzer sees them in the DOM (a column header
 // that opens a filter menu is exactly the popup-style behaviour
 // deferred to Phase 10).
 
-const columns = [
+const columns = computed(() => [
   {
-    title: 'ID',
+    title: t('users.columns.id'),
     dataIndex: 'id',
     key: 'id',
     sorter: (a: User, b: User) => a.id - b.id,
     width: 80,
   },
   {
-    title: 'Name',
+    title: t('users.columns.name'),
     dataIndex: 'name',
     key: 'name',
     sorter: (a: User, b: User) => a.name.localeCompare(b.name),
   },
-  { title: 'Email', dataIndex: 'email', key: 'email' },
+  { title: t('users.columns.email'), dataIndex: 'email', key: 'email' },
   {
-    title: 'Role',
+    title: t('users.columns.role'),
     dataIndex: 'role',
     key: 'role',
     filters: [
@@ -303,24 +331,27 @@ const columns = [
     onFilter: (value: string | number | boolean, record: User) =>
       record.role === value,
   },
-  { title: 'Status', dataIndex: 'status', key: 'status' },
+  { title: t('users.columns.status'), dataIndex: 'status', key: 'status' },
   {
-    title: 'Registered',
+    title: t('users.columns.registered'),
     dataIndex: 'registered_at',
     key: 'registered_at',
     sorter: (a: User, b: User) =>
       a.registered_at.localeCompare(b.registered_at),
   },
-  { title: 'Department', dataIndex: 'department', key: 'department' },
-  { title: 'Actions', key: 'actions', width: 100 },
-];
+  { title: t('users.columns.department'), dataIndex: 'department', key: 'department' },
+  { title: t('users.columns.actions'), key: 'actions', width: 100 },
+]);
 
-// ─── Messages ────────────────────────────────────────────────
+// ─── Empty-state text ────────────────────────────────────────
+// Tracked as ref because the table's `locale.emptyText` reads it
+// directly; if we pushed translations through i18n via a computed
+// the table wouldn't update the message on state transitions the
+// way we want (Loading → No users found → Request failed).
+const emptyText = ref(t('users.emptyLoading'));
 
-const emptyText = ref('Loading…');
-
-function setEmpty(message: string) {
-  emptyText.value = message;
+function setEmpty(key: 'emptyLoading' | 'emptyNoMatch' | 'emptyRequestFailed') {
+  emptyText.value = t(`users.${key}`);
 }
 
 // ─── Remote calls ────────────────────────────────────────────
@@ -376,7 +407,7 @@ function syncUrl() {
 
 async function fetchUsers() {
   loading.value = true;
-  setEmpty('Loading…');
+  setEmpty('emptyLoading');
   try {
     const params = buildParams();
     const res = await axios.get('/validation-api/users', { params });
@@ -384,13 +415,13 @@ async function fetchUsers() {
     rows.value = data?.items ?? [];
     total.value = data?.total ?? 0;
     if (rows.value.length === 0) {
-      setEmpty('No users found');
+      setEmpty('emptyNoMatch');
     }
   } catch (err) {
     console.error('Failed to fetch users', err);
     rows.value = [];
     total.value = 0;
-    setEmpty('Request failed');
+    setEmpty('emptyRequestFailed');
   } finally {
     loading.value = false;
   }
@@ -458,9 +489,9 @@ onMounted(async () => {
 
 <style scoped>
 .page {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 24px 24px 48px;
 }
 .header {
   display: flex;
@@ -468,15 +499,32 @@ onMounted(async () => {
   justify-content: space-between;
   margin-bottom: 16px;
 }
+.header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
 .hint {
   color: #8c8c8c;
   font-size: 12px;
 }
-.search-form {
-  background: #fafafa;
-  padding: 16px;
-  border-radius: 4px;
+.search-card {
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   margin-bottom: 16px;
+}
+.card-actions {
+  text-align: right;
+  padding: 0 8px;
+}
+.result-card {
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  margin-bottom: 16px;
+}
+.result-meta {
+  color: #8c8c8c;
+  font-size: 12px;
 }
 .tag-filter {
   cursor: pointer;
@@ -484,28 +532,25 @@ onMounted(async () => {
   margin-right: 4px;
   margin-bottom: 4px;
 }
-.user-table {
+.detail-card {
   background: #fff;
-  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
-.detail {
-  margin-top: 16px;
-  padding: 16px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
+.detail-sep {
+  color: #bfbfbf;
+  margin: 0 4px;
 }
-.detail dl {
+.detail-card dl {
   display: grid;
   grid-template-columns: 140px 1fr;
-  row-gap: 4px;
-  margin: 8px 0;
+  row-gap: 6px;
+  margin: 0;
 }
-.detail dt {
+.detail-card dt {
   color: #8c8c8c;
   font-size: 12px;
 }
-.detail dd {
+.detail-card dd {
   margin: 0;
   font-size: 13px;
 }

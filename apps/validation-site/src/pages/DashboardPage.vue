@@ -1,13 +1,21 @@
 <template>
   <div>
     <header class="dashboard-header">
-      <h2>Validation Site — Dashboard</h2>
-      <span>{{ username ? `Signed in as ${username}` : 'Not signed in' }}</span>
+      <h2>{{ t('dashboard.headerTitle') }}</h2>
+      <span>
+        {{ username
+          ? t('dashboard.signedInAs', { user: username })
+          : t('dashboard.notSignedIn') }}
+      </span>
     </header>
     <main class="dashboard-content">
       <div class="welcome" data-testid="dashboard-welcome">
-        <h1>Welcome, {{ username || 'Guest' }}</h1>
-        <p>You have successfully signed in.</p>
+        <h1>
+          {{ username
+            ? t('dashboard.welcome', { user: username })
+            : t('dashboard.welcomeGuest') }}
+        </h1>
+        <p>{{ t('dashboard.body') }}</p>
       </div>
     </main>
   </div>
@@ -16,6 +24,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const username = ref('');
 const router = useRouter();

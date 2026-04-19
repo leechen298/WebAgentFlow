@@ -1,12 +1,8 @@
 <template>
   <div class="index-page">
     <header class="site-header">
-      <h1>WebAgentFlow · Validation Site</h1>
-      <p class="subtitle">
-        Self-hosted fixtures for autonomous exploration validation. Each page below is a
-        deterministic test target — the application connects here to prove it can analyse,
-        plan, act, and self-verify without depending on the public web.
-      </p>
+      <h1>{{ t('site.title') }}</h1>
+      <p class="subtitle">{{ t('site.subtitle') }}</p>
     </header>
 
     <div
@@ -14,7 +10,7 @@
       :key="category"
       class="category"
     >
-      <h2>{{ category }}</h2>
+      <h2>{{ localizedCategory(category) }}</h2>
       <div class="card-grid">
         <article
           v-for="page in pages"
@@ -23,30 +19,30 @@
         >
           <div class="card-head">
             <h3>{{ page.name }}</h3>
-            <span v-if="page.specId" class="badge badge-spec">spec</span>
+            <span v-if="page.specId" class="badge badge-spec">{{ t('index.specBadge') }}</span>
           </div>
           <p class="desc">{{ page.description }}</p>
 
           <dl class="meta">
             <div v-if="page.path">
-              <dt>Route</dt>
+              <dt>{{ t('index.meta.route') }}</dt>
               <dd><code>{{ page.path }}</code></dd>
             </div>
             <div v-if="page.credentials">
-              <dt>Credentials</dt>
+              <dt>{{ t('index.meta.credentials') }}</dt>
               <dd><code>{{ page.credentials }}</code></dd>
             </div>
             <div v-if="page.specId">
-              <dt>Spec id</dt>
+              <dt>{{ t('index.meta.specId') }}</dt>
               <dd>
                 <code>{{ page.specId }}</code>
                 <span class="hint">
-                  — see <code>apps/validation-site/specs/{{ page.specId }}.md</code>
+                  — {{ t('index.meta.seeSpec', { path: `apps/validation-site/specs/${page.specId}.md` }) }}
                 </span>
               </dd>
             </div>
             <div v-if="page.scenarios && page.scenarios.length">
-              <dt>Scenarios</dt>
+              <dt>{{ t('index.meta.scenarios') }}</dt>
               <dd>
                 <span
                   v-for="s in page.scenarios"
@@ -59,7 +55,7 @@
 
           <div class="actions">
             <router-link class="btn btn-primary" :to="page.path">
-              Open page
+              {{ t('index.actions.open') }}
             </router-link>
             <a
               v-if="page.specId"
@@ -68,7 +64,7 @@
               target="_blank"
               rel="noopener"
             >
-              Run in workbench ↗
+              {{ t('index.actions.workbench') }}
             </a>
           </div>
         </article>
@@ -77,15 +73,10 @@
 
     <footer class="site-footer">
       <div>
-        <strong>How to exercise these pages autonomously</strong>
-        <p>
-          Open the Autonomous Workbench at
-          <a :href="workbenchRoot" target="_blank" rel="noopener"><code>{{ workbenchRoot }}</code></a>
-          and fill in the URL + <code>spec_id</code> + <code>scenario</code> from any card
-          above. WebAgentFlow will open the page, analyse it, plan actions, execute, and
-          self-verify against the authored spec. You watch it happen — no curl, no
-          intermediate operator.
-        </p>
+        <strong>{{ t('index.footer.title') }}</strong>
+        <!-- eslint-disable vue/no-v-html -->
+        <p v-html="footerBody" />
+        <!-- eslint-enable vue/no-v-html -->
       </div>
     </footer>
   </div>
@@ -93,6 +84,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 // The curated list of validation pages. Add entries here as new fixtures land.
 // Keep the shape stable — this structure is read by humans and by future tooling.
@@ -143,6 +137,23 @@ const byCategory = computed<Record<string, TestPage[]>>(() => {
 // Console default dev port is 5174. If you're running the console elsewhere,
 // just ignore this link — it's a hint, not a hard dependency.
 const workbenchRoot = 'http://localhost:5174/exploration/autonomous';
+
+// Category labels come from a fixed dictionary because category keys
+// on TestPage are deliberately kept as stable English identifiers
+// (they're also part of serialized data and grouping logic).
+function localizedCategory(key: string): string {
+  const candidate = t(`categories.${key}` as const);
+  return candidate === `categories.${key}` ? key : candidate;
+}
+
+// Footer body contains an inline link; vue-i18n's {link} placeholder
+// is interpolated as a string, so we pre-compose the <a> tag and
+// render via v-html. The content is fully controlled (not from user
+// input), so the HTML is safe.
+const footerBody = computed(() => {
+  const anchor = `<a href="${workbenchRoot}" target="_blank" rel="noopener"><code>${workbenchRoot}</code></a>`;
+  return t('index.footer.body', { link: anchor });
+});
 
 // Build a deep link into the workbench with `url` + `spec_id` (and the
 // first scenario, if any) pre-filled. The workbench reads these off

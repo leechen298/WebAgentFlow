@@ -1,8 +1,8 @@
 <template>
   <div class="page">
     <div class="card">
-      <h1>Sign in</h1>
-      <div class="subtitle">WebAgentFlow Validation Site</div>
+      <h1>{{ t('login.title') }}</h1>
+      <div class="subtitle">{{ t('login.subtitle') }}</div>
 
       <!-- Stable error region, role=alert so it's observable. Hidden when empty. -->
       <div
@@ -16,25 +16,25 @@
 
       <form @submit.prevent="handleSubmit" novalidate>
         <div class="field">
-          <label for="username">Username</label>
+          <label for="username">{{ t('login.labelUsername') }}</label>
           <input
             id="username"
             name="username"
             type="text"
             autocomplete="username"
-            placeholder="Enter username"
+            :placeholder="t('login.placeholderUsername')"
             v-model="username"
           />
         </div>
 
         <div class="field">
-          <label for="password">Password</label>
+          <label for="password">{{ t('login.labelPassword') }}</label>
           <input
             id="password"
             name="password"
             type="password"
             autocomplete="current-password"
-            placeholder="Enter password"
+            :placeholder="t('login.placeholderPassword')"
             v-model="password"
           />
         </div>
@@ -44,14 +44,14 @@
           class="btn btn-primary"
           :disabled="submitting"
         >
-          {{ submitting ? 'Signing in…' : 'Sign in' }}
+          {{ submitting ? t('login.submitting') : t('login.submit') }}
         </button>
       </form>
 
       <!-- Minor distraction: secondary links that are NOT the main action. -->
       <div class="secondary-links">
-        <a href="#forgot">Forgot password?</a>
-        <a href="#contact">Contact admin</a>
+        <a href="#forgot">{{ t('login.linkForgot') }}</a>
+        <a href="#contact">{{ t('login.linkContact') }}</a>
       </div>
     </div>
   </div>
@@ -60,7 +60,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import axios from 'axios';
+
+const { t } = useI18n();
 
 const username = ref('');
 const password = ref('');
@@ -83,11 +86,11 @@ async function handleSubmit() {
       router.push('/dashboard');
       return;
     }
-    errorMessage.value = '登录失败：返回数据异常';
+    errorMessage.value = t('login.unexpectedError');
   } catch (err: unknown) {
-    // Extract msg from backend envelope; fall back to generic.
+    // Extract msg from backend envelope; fall back to localized generic.
     const resp = (err as { response?: { data?: { msg?: string } } }).response;
-    errorMessage.value = resp?.data?.msg || '用户名或密码错误';
+    errorMessage.value = resp?.data?.msg || t('login.genericError');
   } finally {
     submitting.value = false;
   }
