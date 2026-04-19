@@ -38,6 +38,10 @@
           <thunderbolt-outlined />
           <span>{{ $t('nav.autonomousExploration') }}</span>
         </a-menu-item>
+        <a-menu-item key="/exploration/autonomous/history">
+          <history-outlined />
+          <span>{{ $t('nav.autonomousHistory') }}</span>
+        </a-menu-item>
         <a-menu-divider />
         <a-menu-item key="/learning/debug">
           <experiment-outlined />
@@ -71,6 +75,7 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   DashboardOutlined,
   ExperimentOutlined,
+  HistoryOutlined,
   RocketOutlined,
   ThunderboltOutlined,
   VideoCameraOutlined,
