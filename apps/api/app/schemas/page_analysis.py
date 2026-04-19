@@ -64,6 +64,17 @@ class DiscoveredElement(BaseModel):
         description="Inferred semantic purpose for fillable elements, from structural signals "
         "(type attribute, name, placeholder, aria-label). None if not applicable.",
     )
+    label_text: str | None = Field(
+        default=None,
+        description="Visible human-readable label associated with this element, "
+        "extracted from common UI-library form-item shapes (Ant Design, native "
+        "<label>). None if no extractor matched — no fuzzy fallback.",
+    )
+    label_source: str | None = Field(
+        default=None,
+        description="Which FormLabelExtractor produced label_text "
+        "('ant-design' / 'native'). None when label_text is None.",
+    )
 
 
 class PlannedAction(BaseModel):

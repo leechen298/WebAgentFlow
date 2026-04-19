@@ -212,14 +212,31 @@
           <div v-for="(bucket, name) in groupedElements" :key="name" class="bucket">
             <strong>{{ bucketLabel(name) }} ({{ bucket.length }}):</strong>
             <ul>
-              <li v-for="el in bucket" :key="el.selector + el.id">
-                <code>{{ el.selector }}</code>
-                — <code>&lt;{{ el.tag }}&gt;</code>
-                <span v-if="el.semantic_role">
-                  · semantic_role=<code>{{ el.semantic_role }}</code>
-                </span>
-                <span v-if="el.text">· text="{{ el.text.slice(0, 40) }}"</span>
-                <span class="reason">· {{ el.reason }}</span>
+              <li v-for="el in bucket" :key="el.selector + el.id" class="el-item">
+                <!-- Line 1: the stable identifiers — selector and
+                     element tag/type. These are what the planner
+                     actually operates on. -->
+                <div class="el-primary">
+                  <code>{{ el.selector }}</code>
+                  — <code>&lt;{{ el.tag }}{{ el.element_type ? ` type="${el.element_type}"` : '' }}&gt;</code>
+                </div>
+                <!-- Line 2: the human-readable hints. Shown only when
+                     present so sparse elements don't reserve empty
+                     space. `label` is especially valuable — it's the
+                     text a human sees next to the input. -->
+                <div class="el-secondary">
+                  <span v-if="el.label_text" class="el-label">
+                    · label="{{ el.label_text }}"<span v-if="el.label_source" class="el-source"> ({{ el.label_source }})</span>
+                  </span>
+                  <span v-if="el.name">· name="{{ el.name }}"</span>
+                  <span v-if="el.placeholder">· placeholder="{{ el.placeholder }}"</span>
+                  <span v-if="el.aria_label">· aria_label="{{ el.aria_label }}"</span>
+                  <span v-if="el.semantic_role">
+                    · semantic_role=<code>{{ el.semantic_role }}</code>
+                  </span>
+                  <span v-if="el.text">· text="{{ el.text.slice(0, 40) }}"</span>
+                  <span class="reason">· {{ el.reason }}</span>
+                </div>
               </li>
             </ul>
           </div>
@@ -1194,7 +1211,27 @@ onBeforeUnmount(() => {
   padding: 0;
 }
 .bucket li {
-  margin-bottom: 2px;
+  margin-bottom: 6px;
+}
+.el-item {
+  line-height: 1.5;
+}
+.el-primary {
+  font-size: 12px;
+}
+.el-secondary {
+  font-size: 11px;
+  color: #595959;
+  padding-left: 12px;
+}
+.el-label {
+  color: #1677ff;
+  font-weight: 500;
+}
+.el-source {
+  color: #8c8c8c;
+  font-weight: normal;
+  font-size: 10px;
 }
 .reason {
   color: #8c8c8c;

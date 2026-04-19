@@ -82,6 +82,43 @@ _DISCOVER_JS = """() => {
             // Explicit button type attribute (empty string if not set)
             const explicitType = el.getAttribute('type') || '';
 
+            // Capture the closest form-item-like ancestor's outerHTML
+            // so the server-side FormLabelExtractor has enough context
+            // to find a label. Walk up max 5 levels; stop on any class
+            // hint that looks like a form-item container (Ant Design,
+            // Element Plus, Naive, Arco all use these keyword shapes).
+            // If nothing matches in 5 levels, fall back to the element's
+            // own outerHTML so Native <label for=id> still works when
+            // label + input are siblings. Truncate to 6 KB to keep the
+            // payload bounded.
+            let wrapperHtml = el.outerHTML || '';
+            {
+                let anc = el.parentElement;
+                let levels = 0;
+                while (anc && levels < 5) {
+                    const rawCls = anc.className;
+                    const cls = (rawCls && rawCls.toString) ? rawCls.toString() : '';
+                    if (/form-item|form-row|field-wrapper|form-field/i.test(cls)) {
+                        wrapperHtml = anc.outerHTML || wrapperHtml;
+                        break;
+                    }
+                    anc = anc.parentElement;
+                    levels++;
+                }
+                // If the element isn't inside a recognised form-item,
+                // but it has an id, still grab up to 3 levels up so the
+                // Native <label for=id> / aria-labelledby siblings have
+                // a chance to show up in the snippet.
+                if (wrapperHtml === (el.outerHTML || '') && el.id) {
+                    let p = el.parentElement;
+                    for (let i = 0; p && i < 3; i++) p = p.parentElement;
+                    if (p && p.outerHTML) wrapperHtml = p.outerHTML;
+                }
+            }
+            if (wrapperHtml.length > 6000) {
+                wrapperHtml = wrapperHtml.slice(0, 6000);
+            }
+
             results.push({
                 tag: el.tagName.toLowerCase(),
                 type: el.type || null,
@@ -103,6 +140,7 @@ _DISCOVER_JS = """() => {
                 selector: selector,
                 href: el.href || null,
                 inputMode: el.inputMode || null,
+                wrapperHtml: wrapperHtml,
             });
         }
     }
@@ -247,7 +285,26 @@ def _infer_semantic_role(raw: dict, category: ElementCategory) -> str | None:
 
 
 def _to_discovered(raw: dict, category: ElementCategory, reason: str) -> DiscoveredElement:
-    """Convert raw JS element data to DiscoveredElement."""
+    """Convert raw JS element data to DiscoveredElement.
+
+    Runs the FormLabelExtractor against the element's wrapper HTML when
+    the element has an ``id`` (the extractors key off ``#id``). When no
+    handler matches, ``label_text`` / ``label_source`` stay ``None`` —
+    we deliberately don't guess from nearby text nodes.
+    """
+    # Lazy import: keep the analysis package optional-feeling from
+    # this file's top, and it makes module-load cheaper for callers
+    # that only need the schema.
+    from app.services.analysis.form_label_extractor import extract_label
+
+    wrapper_html: str = raw.get("wrapperHtml") or ""
+    element_id: str | None = raw.get("id") or None
+    label = (
+        extract_label(wrapper_html, element_id)
+        if wrapper_html and element_id
+        else None
+    )
+
     return DiscoveredElement(
         category=category,
         tag=raw["tag"],
@@ -264,6 +321,8 @@ def _to_discovered(raw: dict, category: ElementCategory, reason: str) -> Discove
         selector=raw.get("selector", ""),
         reason=reason,
         semantic_role=_infer_semantic_role(raw, category),
+        label_text=label.text if label else None,
+        label_source=label.source if label else None,
     )
 
 
