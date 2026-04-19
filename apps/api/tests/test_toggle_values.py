@@ -19,7 +19,7 @@ from app.services.learning.action_planner import (
     _match_toggle_for_role,
     plan_actions,
 )
-from app.services.learning.page_analyzer import _infer_semantic_role
+from app.services.learning.page_analyzer import _infer_semantic_role, _to_discovered
 
 # ───────────────────────────────────────────────────────────────────
 # extract_group_label
@@ -312,6 +312,41 @@ def test_plan_actions_without_toggle_values_is_unchanged() -> None:
         ("fill", "#search-name"),
         ("click", "#btn-search"),
     ]
+
+
+def test_to_discovered_radio_pipeline() -> None:
+    # End-to-end pipeline test for an Ant Design status radio: raw dict
+    # mirrors what the JS emits (post-depth-bump), and the resulting
+    # DiscoveredElement must have semantic_role + label_text wired in so
+    # the planner's toggle path can target it.
+    #
+    # Pins the contract between the JS-side depth walk (must reach
+    # .ant-form-item-row for the radio) and the Python-side label +
+    # role inference (must fold the group label into the hint pool).
+    raw = {
+        "tag": "input",
+        "type": "radio",
+        "id": None,
+        "name": None,
+        "role": None,
+        "placeholder": None,
+        "text": "",
+        "value": "active",
+        "ariaLabel": None,
+        "contentEditable": False,
+        "visible": True,
+        "rect": {"x": 104, "y": 266, "w": 16, "h": 16},
+        "selector": "input.ant-radio-input",
+        "className": "ant-radio-input",
+        "contentHint": None,
+        "wrapperHtml": ANT_STATUS_RADIO_GROUP_HTML,
+    }
+    elem = _to_discovered(raw, "toggle", "<input type=radio>")
+    assert elem.element_value == "active"
+    assert elem.visible is True
+    assert elem.label_text == "Status"
+    assert elem.label_source == "ant-design-group"
+    assert elem.semantic_role == "status"
 
 
 def test_plan_actions_unmatched_toggle_is_skipped() -> None:

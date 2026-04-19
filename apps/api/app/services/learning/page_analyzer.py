@@ -121,10 +121,23 @@ _DISCOVER_JS = """() => {
 
             const rect = el.getBoundingClientRect();
             const style = getComputedStyle(el);
+            // Native <input type=radio|checkbox> are frequently painted
+            // with opacity:0 by component libraries (Ant Design,
+            // Element Plus, Naive, Arco, TDesign) so the framework's
+            // styled wrapper can own the visible pixels. The input
+            // itself stays in layout and is clickable (Playwright's
+            // actionability check doesn't care about opacity either —
+            // only display / visibility / pointer-events). Treat them
+            // as visible whenever rect has size and display / visibility
+            // are normal. For any OTHER element, keep opacity:0 as an
+            // invisibility signal — a bare opacity:0 div is almost
+            // always something the page is deliberately hiding.
+            const isNativeToggle = el.tagName === 'INPUT'
+                && (el.type === 'radio' || el.type === 'checkbox');
             const visible = rect.width > 0 && rect.height > 0
                 && style.display !== 'none'
                 && style.visibility !== 'hidden'
-                && style.opacity !== '0';
+                && (isNativeToggle || style.opacity !== '0');
 
             // Build a best-effort unique selector. Only the strong
             // attributes (id / name / role+text) are resolved here;
@@ -153,15 +166,27 @@ _DISCOVER_JS = """() => {
 
             // Capture the form-item-like ancestor's outerHTML so the
             // server-side FormLabelExtractor has enough context to
-            // find a label. Walk up to 6 levels, remembering the
+            // find a label. Walk up to 10 levels, remembering the
             // OUTERMOST ancestor whose class contains "form-item" —
-            // not the innermost. Ant Design nests wrappers deeply
-            // (control-input-content → control-input → control →
-            // form-item-row → form-item); only the outer level
-            // contains BOTH the label cell and the control cell, so
-            // breaking early on the innermost match would hand the
-            // extractor a control-only snippet and it wouldn't find
-            // the label.
+            // not the innermost. Ant Design nests wrappers deeply;
+            // only the outer level contains BOTH the label cell and
+            // the control cell, so breaking early on the innermost
+            // match would hand the extractor a control-only snippet
+            // and it wouldn't find the label.
+            //
+            // Depth of 10 is picked because Ant Design radio groups
+            // bury the native <input type=radio> the deepest:
+            //   input → span.ant-radio → label.ant-radio-wrapper
+            //   → div.ant-radio-group → div.form-item-control-input-content
+            //   → div.form-item-control-input → div.form-item-control
+            //   → div.form-item-row
+            // which is 7 parent hops before we reach the row. Depth 6
+            // stopped at form-item-control, a cell that holds the
+            // control but NOT the label cell, so extract_group_label
+            // returned None for every radio. 10 covers radios plus a
+            // margin for any similarly-nested future component. Going
+            // arbitrarily deep is safe because non-form-item ancestors
+            // never set outermostMatch.
             //
             // "form-item" as a substring covers the major Vue/React
             // UI libraries that share the Form.Item idiom:
@@ -184,7 +209,7 @@ _DISCOVER_JS = """() => {
                 let anc = el.parentElement;
                 let levels = 0;
                 let outermostMatch = null;
-                while (anc && levels < 6) {
+                while (anc && levels < 10) {
                     const rawCls = anc.className;
                     const cls = (rawCls && rawCls.toString) ? rawCls.toString() : '';
                     if (cls.indexOf('form-item') !== -1) {
