@@ -205,8 +205,20 @@ def _match_fillable_for_role(
 
     # Last resort: pick the highest-scored fillable that is NOT a type mismatch.
     # A 'username' slot should not fall back to a password input, etc.
-    mismatched = {"username": {"password", "email"}, "email": {"password"},
-                  "password": {"username", "email", "search", "text"}}
+    # Password is the only role with broad mismatch rules because
+    # password fields are visually / structurally distinct; the new
+    # name / role / status slots only need protection against password.
+    mismatched = {
+        "username": {"password", "email"},
+        "email": {"password"},
+        "name": {"password"},
+        "role": {"password"},
+        "status": {"password"},
+        "password": {
+            "username", "email", "search", "text",
+            "name", "role", "status",
+        },
+    }
     forbidden = mismatched.get(role_lower, set())
     loose = [
         e for e in fillables
@@ -235,8 +247,8 @@ def plan_actions(
         fill_value: Single-field value mode. Filled into the highest-scored
             fillable. Ignored if ``fill_values`` is provided.
         fill_values: Multi-field mode. Dict keyed by semantic role
-            (username/password/email/text/search) → value. Each key is
-            matched to the best-fitting fillable.
+            (username/email/name/role/status/search/text/password) → value.
+            Each key is matched to the best-fitting fillable.
 
     Returns:
         Ordered list of PlannedActions.
@@ -249,13 +261,20 @@ def plan_actions(
     # --- Multi-field mode (preferred when fill_values is set) ---
     if fill_values and analysis.fillable:
         used: set[str] = set()
-        # Canonical fill order for typical login-like flows: username, email,
-        # search, text, then password last (password fields often trigger
-        # additional validation on blur in some SPAs).
+        # Canonical fill order for typical login-like flows and admin
+        # filters: identity first (username/email), then admin table
+        # filters (name/role/status), then generic search/text, and
+        # password last (password fields often trigger additional
+        # validation on blur in some SPAs).
+        _ROLE_ORDER = [
+            "username", "email",
+            "name", "role", "status",
+            "search", "text",
+            "password",
+        ]
         order = sorted(
             fill_values.keys(),
-            key=lambda k: ["username", "email", "search", "text", "password"].index(k)
-            if k in ["username", "email", "search", "text", "password"] else 99,
+            key=lambda k: _ROLE_ORDER.index(k) if k in _ROLE_ORDER else 99,
         )
         for role in order:
             value = fill_values[role]

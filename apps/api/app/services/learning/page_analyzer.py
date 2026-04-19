@@ -399,6 +399,25 @@ _USERNAME_FRAGMENTS = (
 _EMAIL_FRAGMENTS = (
     "email", "mail", "邮箱", "邮件", "メール",
 )
+# "name" / "role" / "status" appear on admin-style list pages as
+# column filters. They sit below username/email in the precedence
+# order so that ``username`` on a login form (which also contains
+# the substring "name") still classifies as ``username``.
+_NAME_FRAGMENTS = (
+    "name",
+    "姓名", "名称",
+    "名前",
+)
+_ROLE_FRAGMENTS = (
+    "role",
+    "角色",
+    "役職", "役割",
+)
+_STATUS_FRAGMENTS = (
+    "status", "state",
+    "状态", "状態",
+    "ステータス",
+)
 _SEARCH_FRAGMENTS = (
     "search", "query",
     "搜索", "查询", "検索",
@@ -435,6 +454,16 @@ def _infer_semantic_role(raw: dict, category: ElementCategory) -> str | None:
         return "username"
     if any(f in hints for f in _EMAIL_FRAGMENTS):
         return "email"
+    # name / role / status sit between the identity fragments above
+    # and the catch-all ``search`` below so admin-table filters like
+    # ``search-name`` / ``filter-role`` / ``status-select`` get more
+    # specific buckets than the generic ``search`` role.
+    if any(f in hints for f in _NAME_FRAGMENTS):
+        return "name"
+    if any(f in hints for f in _ROLE_FRAGMENTS):
+        return "role"
+    if any(f in hints for f in _STATUS_FRAGMENTS):
+        return "status"
     if any(f in hints for f in _SEARCH_FRAGMENTS):
         return "search"
 

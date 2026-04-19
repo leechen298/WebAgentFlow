@@ -23,7 +23,9 @@ ElementCategory = Literal[
 
 
 SemanticRole = Literal[
-    "username", "password", "email", "search", "text",
+    "username", "password", "email", "search",
+    "name", "role", "status",
+    "text",
 ]
 
 
