@@ -88,6 +88,91 @@ def test_build_fallback_selector_prefers_first_non_dev_class() -> None:
 
 
 # ───────────────────────────────────────────────────────────────────
+# Native toggle discriminator — attribute-value selector
+# ───────────────────────────────────────────────────────────────────
+
+
+def test_build_fallback_selector_radio_with_value() -> None:
+    # Ant Design radios share tag + class; only `value` discriminates.
+    # The fallback MUST emit the value attribute so the planner's
+    # click target is unique.
+    raw = {
+        "tag": "input",
+        "type": "radio",
+        "value": "active",
+        "className": "ant-radio-input",
+    }
+    assert (
+        _build_fallback_selector(raw)
+        == 'input[type="radio"][value="active"]'
+    )
+
+
+def test_build_fallback_selector_radio_empty_value_kept() -> None:
+    # Ant Design's "All" radio uses value="" — still a meaningful
+    # selection, must be selectable.
+    raw = {
+        "tag": "input",
+        "type": "radio",
+        "value": "",
+        "className": "ant-radio-input",
+    }
+    assert _build_fallback_selector(raw) == 'input[type="radio"][value=""]'
+
+
+def test_build_fallback_selector_checkbox_with_value() -> None:
+    raw = {
+        "tag": "input",
+        "type": "checkbox",
+        "value": "newsletter",
+        "className": "ant-checkbox-input",
+    }
+    assert (
+        _build_fallback_selector(raw)
+        == 'input[type="checkbox"][value="newsletter"]'
+    )
+
+
+def test_build_fallback_selector_radio_without_value_falls_back_to_class() -> None:
+    # No value attribute at all (rare, but the analyzer gates on
+    # isinstance(raw_value, str), so value=None should NOT produce an
+    # attribute selector — fall through to tag/class).
+    raw = {
+        "tag": "input",
+        "type": "radio",
+        "value": None,
+        "className": "my-radio",
+    }
+    assert _build_fallback_selector(raw) == "input.my-radio"
+
+
+def test_build_fallback_selector_text_input_unchanged() -> None:
+    # The carve-out is radio/checkbox only — plain text inputs should
+    # use the class-based fallback regardless of their value attr.
+    raw = {
+        "tag": "input",
+        "type": "text",
+        "value": "alice",
+        "className": "ant-input",
+    }
+    assert _build_fallback_selector(raw) == "input.ant-input"
+
+
+def test_build_fallback_selector_escapes_quote_in_value() -> None:
+    raw = {
+        "tag": "input",
+        "type": "radio",
+        "value": 'ab"cd',
+        "className": "x",
+    }
+    # Quote must be backslash-escaped so the selector stays valid.
+    assert (
+        _build_fallback_selector(raw)
+        == r'input[type="radio"][value="ab\"cd"]'
+    )
+
+
+# ───────────────────────────────────────────────────────────────────
 # _to_discovered integration — JS-emitted empty selector gets filled in
 # ───────────────────────────────────────────────────────────────────
 

@@ -482,7 +482,16 @@ def plan_actions(
 
 
 def _describe(el: DiscoveredElement) -> str:
-    """Human-readable description of an element."""
+    """Human-readable description of an element.
+
+    For Ant Design radios / checkboxes the id / name / placeholder /
+    text are often all empty on the native <input> (they live on the
+    wrapper label). Include ``value`` (distinguishes siblings in a
+    group) and ``label_text`` (the group's form-item label) so a step
+    like ``click:status_radio_active`` is readable as
+    ``<input> value='active' label='Status'`` instead of a bare
+    ``<input>``.
+    """
     parts = [f"<{el.tag}>"]
     if el.id:
         parts.append(f"id={el.id}")
@@ -490,8 +499,12 @@ def _describe(el: DiscoveredElement) -> str:
         parts.append(f"name={el.name}")
     if el.role:
         parts.append(f"role={el.role}")
+    if el.element_value:
+        parts.append(f"value='{el.element_value[:30]}'")
     if el.text:
         parts.append(f"text='{el.text[:30]}'")
     if el.placeholder:
         parts.append(f"placeholder='{el.placeholder[:30]}'")
+    if el.label_text:
+        parts.append(f"label='{el.label_text[:30]}'")
     return " ".join(parts)

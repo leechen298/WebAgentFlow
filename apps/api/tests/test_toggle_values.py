@@ -16,6 +16,7 @@ from __future__ import annotations
 from app.schemas.page_analysis import DiscoveredElement, PageAnalysis
 from app.services.analysis.form_label_extractor import extract_group_label
 from app.services.learning.action_planner import (
+    _describe,
     _match_toggle_for_role,
     plan_actions,
 )
@@ -347,6 +348,44 @@ def test_to_discovered_radio_pipeline() -> None:
     assert elem.label_text == "Status"
     assert elem.label_source == "ant-design-group"
     assert elem.semantic_role == "status"
+
+
+def test_describe_radio_folds_in_value_and_label() -> None:
+    # The readable step description for a bare Ant Design radio was
+    # just "<input>" — no id, name, placeholder, or text is set on
+    # the native <input>. Include element_value and label_text so the
+    # operator can tell "status=active" from "status=disabled" at a
+    # glance in the timeline + scorecard + supervisor prompt.
+    el = _toggle(
+        element_value="active",
+        selector='input[type="radio"][value="active"]',
+        label_text="Status",
+    )
+    description = _describe(el)
+    assert "value='active'" in description
+    assert "label='Status'" in description
+
+
+def test_describe_fillable_unchanged_when_value_absent() -> None:
+    # Regression: text fillables with no value/label shouldn't
+    # accidentally grow noise. Only populated fields appear.
+    el = DiscoveredElement(
+        category="fillable",
+        tag="input",
+        element_type="text",
+        id="search-name",
+        placeholder="e.g. alice",
+        selector="#search-name",
+        semantic_role="name",
+        rect={"x": 0, "y": 0, "w": 10, "h": 10},
+    )
+    description = _describe(el)
+    assert "id=search-name" in description
+    assert "placeholder='e.g. alice'" in description
+    # element_value was not set → no stray value='' clause.
+    assert "value=" not in description
+    # label_text was not set → no stray label='' clause.
+    assert "label=" not in description
 
 
 def test_plan_actions_unmatched_toggle_is_skipped() -> None:

@@ -298,10 +298,29 @@ def _build_fallback_selector(raw: dict) -> str:
     """Build a fallback CSS selector for elements without id / name /
     role+text, skipping Ant Design 5's dev-only hash class.
 
+    Native toggles in a radio / checkbox group share every structural
+    attribute (tag, class, name) except ``value`` — the option key.
+    Emit ``input[type="radio"][value="active"]`` so the planner's
+    target selector uniquely identifies which radio to click. Without
+    this the fallback would hand back ``input.ant-radio-input`` for
+    all three Status radios and the executor would click whichever
+    happens to be first in the DOM.
+
     Worst case returns the bare tag — still better than a class shared
     by every component on the page.
     """
     tag = raw["tag"]
+
+    if tag == "input":
+        input_type = (raw.get("type") or "").lower()
+        raw_value = raw.get("value")
+        if input_type in ("radio", "checkbox") and isinstance(raw_value, str):
+            escaped = (
+                raw_value.replace("\\", "\\\\")
+                         .replace('"', '\\"')
+            )
+            return f'input[type="{input_type}"][value="{escaped}"]'
+
     token = _first_informative_class_token(raw.get("className") or "")
     return f"{tag}.{token}" if token else tag
 
