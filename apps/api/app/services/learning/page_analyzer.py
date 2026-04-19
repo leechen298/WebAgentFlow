@@ -126,7 +126,12 @@ _DISCOVER_JS = """() => {
                 && style.visibility !== 'hidden'
                 && style.opacity !== '0';
 
-            // Build a best-effort unique selector
+            // Build a best-effort unique selector. Only the strong
+            // attributes (id / name / role+text) are resolved here;
+            // the class-based fallback is left to Python so it can
+            // filter out Ant Design 5's dev-only hash class token
+            // (``css-dev-only-do-not-override-<hash>``), which has
+            // zero discriminating power within a single app.
             let selector = '';
             if (el.id) {
                 selector = '#' + CSS.escape(el.id);
@@ -139,12 +144,6 @@ _DISCOVER_JS = """() => {
                 if (text) {
                     selector = '[role="' + role + '"]';
                 }
-            }
-            if (!selector) {
-                // Fallback: tag + class snippet
-                const tag = el.tagName.toLowerCase();
-                const cls = (el.className.toString() || '').split(/\\s+/)[0];
-                selector = cls ? tag + '.' + CSS.escape(cls) : tag;
             }
 
             // Structural context: is this element inside a <form>?
@@ -241,6 +240,45 @@ _DISCOVER_JS = """() => {
     }
     return results;
 }"""
+
+
+# ───────────────────────────────────────────────────────────────────
+# Selector fallback
+# ───────────────────────────────────────────────────────────────────
+
+# Ant Design 5 injects ``css-dev-only-do-not-override-<hash>`` on every
+# component it renders. The hash is stable within one app, so the class
+# has zero discriminating power and is useless for a fallback selector.
+_DEV_ONLY_CLASS_PREFIX = "css-dev-only-do-not-override-"
+
+
+def _first_informative_class_token(class_string: str) -> str | None:
+    """Return the first class token that isn't an Ant Design 5 dev-only
+    hash class, or ``None`` if no token remains.
+
+    Preferred tokens are framework / component classes (``ant-btn``,
+    ``el-form-item``, fixture-specific classes) because they discriminate
+    between elements. The dev-only token is shared across every Ant
+    Design component in a single app, so selecting by it collapses
+    unrelated elements into one selector.
+    """
+    for token in class_string.split():
+        if token.startswith(_DEV_ONLY_CLASS_PREFIX):
+            continue
+        return token
+    return None
+
+
+def _build_fallback_selector(raw: dict) -> str:
+    """Build a fallback CSS selector for elements without id / name /
+    role+text, skipping Ant Design 5's dev-only hash class.
+
+    Worst case returns the bare tag — still better than a class shared
+    by every component on the page.
+    """
+    tag = raw["tag"]
+    token = _first_informative_class_token(raw.get("className") or "")
+    return f"{tag}.{token}" if token else tag
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -425,6 +463,8 @@ def _to_discovered(raw: dict, category: ElementCategory, reason: str) -> Discove
         else None
     )
 
+    selector = raw.get("selector") or _build_fallback_selector(raw)
+
     return DiscoveredElement(
         category=category,
         tag=raw["tag"],
@@ -438,7 +478,7 @@ def _to_discovered(raw: dict, category: ElementCategory, reason: str) -> Discove
         content_editable=raw.get("contentEditable", False),
         visible=raw.get("visible", False),
         rect=raw.get("rect", {}),
-        selector=raw.get("selector", ""),
+        selector=selector,
         reason=reason,
         semantic_role=_infer_semantic_role(raw, category),
         label_text=label.text if label else None,
