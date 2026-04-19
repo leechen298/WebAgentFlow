@@ -106,7 +106,25 @@ user review):
   `action_planner` to handle components that reveal their interactive
   surface only after a click (Cascader, DatePicker, RangePicker,
   MonthPicker, Tag-as-filter, column sort / filter inside a table
-  header). Once the code lands, backfill
+  header).
+- **Form-label extractor · coverage expansion** — the analyzer's
+  `form_label_extractor` currently ships handlers for Ant Design
+  (matches `.ant-form-item` → `.ant-form-item-label`) and native
+  HTML5 `<label for>`. Before Phase 10 closes, add handlers for the
+  other widely-used Vue/React form libraries that follow the same
+  Form.Item idiom but with a different class prefix. Candidates and
+  their characteristic classes:
+  - Element Plus (`el-form-item`)
+  - Naive UI (`n-form-item`)
+  - Arco Design (`arco-form-item`)
+  - TDesign (`t-form-item`)
+  - Quasar (`q-field__label`) — shape differs slightly, may need its
+    own handler
+  - Material UI / MUI v5 (`MuiFormControl-root` wrapping
+    `MuiInputLabel-root`) — different idiom, separate handler
+  Each new handler is ~15 LOC; the dispatcher in `extract_label`
+  already picks the first hit. Ship as needed when fixture pages or
+  user-reported real pages fall outside the current coverage. Once the code lands, backfill
   `apps/validation-site/specs/users.assertions.json` with the Tier 2
   scenarios that exercise each control, using the `users` fixture
   already on the page — so the scorecard flipping green becomes the

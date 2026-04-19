@@ -76,7 +76,21 @@ Phase 9 尚未完成：
 - **弹层式控件支持** —— 扩展 `page_analyzer` + `action_planner`，
   让它们能处理"必须先点一下才暴露交互面"的组件（Cascader、
   DatePicker、RangePicker、MonthPicker、Tag 筛选、
-  表格表头的列 sort / filter）。代码落地后，回到
+  表格表头的列 sort / filter）。
+- **Form-label extractor · 覆盖范围扩充** —— analyzer 当前的
+  `form_label_extractor` 只带了 Ant Design（匹配 `.ant-form-item`
+  → `.ant-form-item-label`）和原生 HTML5 `<label for>` 两个
+  handler。Phase 10 结束前，把其他遵循同一 Form.Item 约定、仅 class
+  前缀不同的主流 Vue / React 表单库补上。候选清单：
+  - Element Plus（`el-form-item`）
+  - Naive UI（`n-form-item`）
+  - Arco Design（`arco-form-item`）
+  - TDesign（`t-form-item`）
+  - Quasar（`q-field__label`）—— 形态稍微不同，可能需要独立 handler
+  - Material UI / MUI v5（`MuiFormControl-root` 包
+    `MuiInputLabel-root`）—— 范式不同，单独 handler
+  每个新 handler 大约 15 行 Python，`extract_label` 的分派器已经支持
+  第一个命中即返回。按 fixture 需要或真实页面报告触发时再补。代码落地后，回到
   `apps/validation-site/specs/users.assertions.json` 补齐 Tier 2
   scenario，让每个控件都有对应的场景验证。由于 fixture 页面本身
   上一阶段就搭好了，评分卡从红变绿就是改进的量化证据。

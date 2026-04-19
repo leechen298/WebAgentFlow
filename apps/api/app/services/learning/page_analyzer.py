@@ -85,14 +85,26 @@ _DISCOVER_JS = """() => {
             // Capture the form-item-like ancestor's outerHTML so the
             // server-side FormLabelExtractor has enough context to
             // find a label. Walk up to 6 levels, remembering the
-            // OUTERMOST ancestor whose class matches the form-item
-            // keywords — not the innermost. Ant Design nests form
-            // wrappers deeply (control-input-content → control-input
-            // → control → form-item-row → form-item), and only the
-            // outer level contains both the label cell and the
-            // control cell. Breaking early on the innermost match
-            // would hand the extractor a control-only snippet and
-            // it wouldn't find the label.
+            // OUTERMOST ancestor whose class contains "form-item" —
+            // not the innermost. Ant Design nests wrappers deeply
+            // (control-input-content → control-input → control →
+            // form-item-row → form-item); only the outer level
+            // contains BOTH the label cell and the control cell, so
+            // breaking early on the innermost match would hand the
+            // extractor a control-only snippet and it wouldn't find
+            // the label.
+            //
+            // "form-item" as a substring covers the major Vue/React
+            // UI libraries that share the Form.Item idiom:
+            //   ant-form-item (Ant Design)
+            //   el-form-item  (Element Plus)
+            //   n-form-item   (Naive UI)
+            //   arco-form-item (Arco Design)
+            //   t-form-item   (TDesign)
+            // Keeping the matcher narrow — no speculative keywords
+            // like "form-row" / "field-wrapper" — avoids grabbing
+            // application-specific classes that merely happen to
+            // contain a form-ish word.
             //
             // If nothing matches within the cap, fall back to 3
             // levels of parent so Native <label for=id> siblings
@@ -106,7 +118,7 @@ _DISCOVER_JS = """() => {
                 while (anc && levels < 6) {
                     const rawCls = anc.className;
                     const cls = (rawCls && rawCls.toString) ? rawCls.toString() : '';
-                    if (/form-item|form-row|field-wrapper|form-field/i.test(cls)) {
+                    if (cls.indexOf('form-item') !== -1) {
                         outermostMatch = anc;
                     }
                     anc = anc.parentElement;
