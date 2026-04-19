@@ -1,5 +1,5 @@
 <template>
-  <div class="page">
+  <div class="directory-page">
     <header class="header">
       <h2>{{ t('users.title') }}</h2>
       <span class="hint">{{ countLabel }}</span>
@@ -488,7 +488,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page {
+/* Intentionally NOT using .page — that class is defined unscoped in
+   global.css for the single-centered-card login layout, and Vue's
+   scoped styles only override per-property (so un-set properties
+   like `display: flex` from the global rule would still cascade).
+   .directory-page is unique to this page and safe from cascade. */
+.directory-page {
   max-width: 1280px;
   margin: 0 auto;
   padding: 24px 24px 48px;
