@@ -135,9 +135,31 @@ def _observe_step(
         try:
             result_signals = page.evaluate("""() => {
                 const signals = {};
-                signals.has_search_results = document.querySelectorAll(
-                    '[class*=result], [class*=search], [id*=result], main, article'
-                ).length;
+
+                // Count real data rows.
+                //  - <tbody><tr>: standard HTML tables (Ant Table, plain tables)
+                //  - [role="row"]: ARIA grids, excluding rows that hold a
+                //    column header (i.e. thead analogues)
+                // Deliberately narrow — the previous broad matcher
+                // ([class*=result], [class*=search], main, article) was
+                // counting structural containers like .search-card and
+                // ant-select internals, yielding inflated numbers
+                // that had no relation to "how many results are shown".
+                let rowCount = 0;
+                for (const tr of document.querySelectorAll('tbody tr')) {
+                    // Skip rows marked as group headers or placeholders.
+                    if (tr.getAttribute('aria-hidden') === 'true') continue;
+                    rowCount++;
+                }
+                for (const row of document.querySelectorAll('[role="row"]')) {
+                    // Header rows contain a columnheader; skip them.
+                    if (row.querySelector('[role="columnheader"]')) continue;
+                    // Don't double-count <tr> that also has role="row".
+                    if (row.tagName === 'TR' && row.closest('tbody')) continue;
+                    rowCount++;
+                }
+                signals.result_row_count = rowCount;
+
                 signals.has_captcha = !!(
                     document.title.match(/验证|captcha|challenge|security/i)
                     || document.URL.match(/captcha|verify|sorry|challenge/i)
