@@ -289,6 +289,23 @@ def _assess_outcome(steps: list[dict[str, Any]]) -> tuple[str, str]:
     )
     signals = (observe.get("result_signals") or {}) if observe else {}
 
+    # SPA fix: clicking Sign in fires router navigation, but the
+    # click step's url_after is captured BEFORE the SPA's async
+    # router has pushed the new URL. The observe step (which waits)
+    # is the first step that sees /dashboard. Fold the observe
+    # step's url/title into the change detection so SPA flows don't
+    # get mis-verdicted as no_progress just because no single click
+    # step's before/after pair saw the update.
+    if observe and state_changing:
+        first_url = state_changing[0].get("url_before")
+        observe_url = observe.get("url")
+        if first_url and observe_url and observe_url != first_url:
+            url_changed = True
+        first_title = state_changing[0].get("title_before")
+        observe_title = observe.get("title")
+        if first_title and observe_title and observe_title != first_title:
+            title_changed = True
+
     if signals.get("has_captcha"):
         return (
             "no_progress",
