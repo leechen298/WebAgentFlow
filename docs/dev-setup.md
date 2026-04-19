@@ -59,6 +59,14 @@
    pnpm run dev:worker
    ```
 
+5. Start the validation-site fixtures (port 5175):
+
+   ```bash
+   pnpm run dev:validation
+   ```
+
+Or start all four at once with `pnpm run dev` from the repo root.
+
 ## Build and Quality Checks
 
 - `pnpm run build`

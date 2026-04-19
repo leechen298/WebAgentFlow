@@ -101,7 +101,7 @@ docker compose -f infra/docker/docker-compose.yml up -d
 # Apply database migrations
 pnpm run db:migrate:api
 
-# Run everything (console + api + worker)
+# Run everything (console + api + worker + validation-site)
 pnpm run dev
 pnpm run dev:lan                # LAN-accessible (0.0.0.0)
 

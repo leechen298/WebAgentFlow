@@ -95,7 +95,7 @@ docker compose -f infra/docker/docker-compose.yml up -d
 # 应用数据库迁移
 pnpm run db:migrate:api
 
-# 一键起全部（console + api + worker）
+# 一键起全部（console + api + worker + validation-site）
 pnpm run dev
 pnpm run dev:lan                # 绑到 0.0.0.0，局域网可访问
 
