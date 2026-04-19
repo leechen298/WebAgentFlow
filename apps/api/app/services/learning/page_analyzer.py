@@ -424,30 +424,45 @@ _SEARCH_FRAGMENTS = (
 )
 
 
-def _infer_semantic_role(raw: dict, category: ElementCategory) -> str | None:
-    """Infer semantic_role for fillable elements using structural signals only.
+def _infer_semantic_role(
+    raw: dict,
+    category: ElementCategory,
+    label_text: str | None = None,
+) -> str | None:
+    """Infer semantic_role for fillable / toggle elements from structural signals.
 
     Signals used (in priority order):
-      1. HTML input type attribute (most authoritative)
+      1. HTML input type attribute (most authoritative, fillable only)
       2. autocomplete hints would be good but we don't capture them yet
       3. name / id / placeholder / aria-label fragments (universal words only)
+      4. label_text — folded in because radios and checkboxes in a group
+         typically lack self-identifiers (all three Status radios share
+         ``type=radio`` with different ``value`` attributes and no id),
+         so the form-item label ("Status") is the only signal that
+         distinguishes the group's semantic purpose.
     """
-    if category != "fillable":
+    if category not in ("fillable", "toggle"):
         return None
 
-    input_type = (raw.get("type") or "").lower()
-    # Rule 1: HTML type attribute is authoritative
-    if input_type == "password":
-        return "password"
-    if input_type == "email":
-        return "email"
-    if input_type == "search":
-        return "search"
+    # Rule 1: HTML type attribute. password / email / search as input
+    # types only make sense on fillables; radio / checkbox have their
+    # own type values but are already classified by category=toggle.
+    if category == "fillable":
+        input_type = (raw.get("type") or "").lower()
+        if input_type == "password":
+            return "password"
+        if input_type == "email":
+            return "email"
+        if input_type == "search":
+            return "search"
 
-    # Rule 2: scan identifiers for universal word fragments
+    # Rule 2: scan identifiers for universal word fragments. Include
+    # label_text so toggles with no self-identifier inherit the group
+    # role from their form-item label.
     hints = " ".join(filter(None, [
         raw.get("name"), raw.get("id"),
         raw.get("placeholder"), raw.get("ariaLabel"),
+        label_text or "",
     ])).lower()
 
     if any(f in hints for f in _USERNAME_FRAGMENTS):
@@ -467,8 +482,9 @@ def _infer_semantic_role(raw: dict, category: ElementCategory) -> str | None:
     if any(f in hints for f in _SEARCH_FRAGMENTS):
         return "search"
 
-    # Default for a text-input-like fillable
-    return "text"
+    # Default: generic text for fillables; None for toggles since we
+    # don't have a "generic toggle" semantic bucket.
+    return "text" if category == "fillable" else None
 
 
 def _to_discovered(raw: dict, category: ElementCategory, reason: str) -> DiscoveredElement:
@@ -482,7 +498,10 @@ def _to_discovered(raw: dict, category: ElementCategory, reason: str) -> Discove
     # Lazy import: keep the analysis package optional-feeling from
     # this file's top, and it makes module-load cheaper for callers
     # that only need the schema.
-    from app.services.analysis.form_label_extractor import extract_label
+    from app.services.analysis.form_label_extractor import (
+        extract_group_label,
+        extract_label,
+    )
 
     wrapper_html: str = raw.get("wrapperHtml") or ""
     element_id: str | None = raw.get("id") or None
@@ -491,13 +510,25 @@ def _to_discovered(raw: dict, category: ElementCategory, reason: str) -> Discove
         if wrapper_html and element_id
         else None
     )
+    # Toggles (radio / checkbox) usually lack a self-id — the form-item
+    # label belongs to the whole group, and every radio within the
+    # group legitimately inherits it. Fall back to a group-label lookup
+    # that scans the wrapper for an ant-form-item / generic form-item
+    # label cell without anchoring on a specific id.
+    if (label is None or not label.text) and category == "toggle" and wrapper_html:
+        label = extract_group_label(wrapper_html)
+    label_text = label.text if label else None
 
     selector = raw.get("selector") or _build_fallback_selector(raw)
+
+    raw_value = raw.get("value")
+    element_value = raw_value if isinstance(raw_value, str) else None
 
     return DiscoveredElement(
         category=category,
         tag=raw["tag"],
         element_type=raw.get("type"),
+        element_value=element_value,
         id=raw.get("id"),
         name=raw.get("name"),
         role=raw.get("role"),
@@ -509,8 +540,8 @@ def _to_discovered(raw: dict, category: ElementCategory, reason: str) -> Discove
         rect=raw.get("rect", {}),
         selector=selector,
         reason=reason,
-        semantic_role=_infer_semantic_role(raw, category),
-        label_text=label.text if label else None,
+        semantic_role=_infer_semantic_role(raw, category, label_text),
+        label_text=label_text,
         label_source=label.source if label else None,
         content_hint=raw.get("contentHint") or None,
     )

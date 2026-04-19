@@ -434,3 +434,73 @@ def extract_label(wrapper_html: str, element_id: str) -> LabelResult:
             return LabelResult(text=text, source=ex.framework)
 
     return LabelResult()
+
+
+# ───────────────────────────────────────────────────────────────────
+# Group-label fallback (no anchor id)
+# ───────────────────────────────────────────────────────────────────
+
+
+def extract_group_label(wrapper_html: str) -> LabelResult:
+    """Pull the form-item label from a wrapper without anchoring on an id.
+
+    Used when the specific element has no ``id`` — most commonly a
+    ``<input type=radio>`` / ``<input type=checkbox>`` that lives inside
+    a form-item whose label belongs to the whole group. All radios /
+    checkboxes in one form-item share that label, so returning it is
+    semantically correct for the group's purpose (even if "label of
+    this exact element" is technically ambiguous).
+
+    Only honors the two shapes the analyzer already pins down:
+
+    - Ant Design ``.ant-form-item-label`` direct child of a
+      ``.ant-form-item-row`` / ``.ant-form-item``.
+    - Generic form-item container (Element Plus / Naive / Arco /
+      TDesign / Bootstrap / …) with a direct-child ``<label>`` or a
+      child whose class token contains ``label``.
+
+    Returns a :class:`LabelResult` with source ``"ant-design-group"``
+    or ``"generic-group"``; returns ``LabelResult()`` when the wrapper
+    has no recognisable form-item shape.
+    """
+    if not wrapper_html:
+        return LabelResult()
+    root = _parse(wrapper_html)
+    if root is None:
+        return LabelResult()
+
+    # Ant Design: the root itself IS the form-item-row when the JS
+    # captured the outermost form-item ancestor, so look for a direct
+    # .ant-form-item-label child.
+    candidates_ant = [root]
+    candidates_ant.extend(root.cssselect(".ant-form-item-row, .ant-form-item"))
+    for node in candidates_ant:
+        for child in node.iterchildren():
+            classes = (child.get("class") or "").split()
+            if "ant-form-item-label" not in classes:
+                continue
+            inner = child.cssselect("label")
+            text = _text_of(inner[0]) if inner else _text_of(child)
+            if text:
+                return LabelResult(
+                    text=_clean_label_text(text), source="ant-design-group",
+                )
+
+    # Generic: walk root + any descendant whose class has a form-item
+    # boundary, then pick the first direct-child label cell.
+    candidates_generic = [root]
+    for el in root.iter():
+        raw_class = el.get("class") or ""
+        for token in raw_class.split():
+            if _FORM_CONTAINER_RE.search(token):
+                candidates_generic.append(el)
+                break
+    for node in candidates_generic:
+        for child in node.iterchildren():
+            text = GenericFormItemExtractor._label_text_from(child)
+            if text:
+                return LabelResult(
+                    text=_clean_label_text(text), source="generic-group",
+                )
+
+    return LabelResult()

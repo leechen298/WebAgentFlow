@@ -170,6 +170,63 @@ def _find_fallback_submit(
     return ranked[0]
 
 
+def _match_toggle_for_role(
+    role: str,
+    value: str,
+    toggles: list[DiscoveredElement],
+    already_used: set[str],
+) -> DiscoveredElement | None:
+    """Pick the specific toggle (radio / checkbox) matching role AND value.
+
+    Radios in one group share ``semantic_role`` (e.g. all three Status
+    radios classify as ``"status"`` via the group's form-item label),
+    so role alone does not distinguish ``"active"`` from ``"disabled"``.
+    The HTML value attribute does — native ``<input type=radio value="…">``
+    carries the option key, which is what specs reference.
+
+    Matching order:
+
+    1. Exact, case-sensitive ``element_value`` match — preserves
+       meaningful empty-string values (e.g. Ant Design's ``value=""``
+       for an "All" radio).
+    2. Case-insensitive ``element_value`` match — safety net for
+       operator-typed values that differ only in case.
+    3. Case-insensitive match against ``label_text`` / ``text`` /
+       ``aria_label`` — covers controls that use a human-visible
+       option label instead of a stable value attribute.
+
+    Returns ``None`` when nothing plausibly matches; the planner then
+    skips this toggle instead of clicking the wrong one.
+    """
+    role_lower = role.lower()
+    candidates = [
+        t for t in toggles
+        if t.semantic_role == role_lower and t.selector not in already_used
+    ]
+    if not candidates:
+        return None
+
+    # 1. Exact value match (case-sensitive).
+    for t in candidates:
+        if t.element_value is not None and t.element_value == value:
+            return t
+
+    value_lower = value.lower()
+
+    # 2. Case-insensitive value match.
+    for t in candidates:
+        if t.element_value is not None and t.element_value.lower() == value_lower:
+            return t
+
+    # 3. Case-insensitive label / text / aria-label match.
+    for t in candidates:
+        for signal in (t.label_text, t.text, t.aria_label):
+            if signal and signal.lower() == value_lower:
+                return t
+
+    return None
+
+
 def _match_fillable_for_role(
     role: str,
     fillables: list[DiscoveredElement],
@@ -238,6 +295,7 @@ def plan_actions(
     goal: str = "",
     fill_value: str = "",
     fill_values: dict[str, str] | None = None,
+    toggle_values: dict[str, str] | None = None,
 ) -> list[PlannedAction]:
     """Generate an action plan from page analysis results.
 
@@ -249,6 +307,14 @@ def plan_actions(
         fill_values: Multi-field mode. Dict keyed by semantic role
             (username/email/name/role/status/search/text/password) → value.
             Each key is matched to the best-fitting fillable.
+        toggle_values: Native toggle mode. Dict keyed by semantic role
+            (usually matching a group's form-item label, e.g.
+            ``"status"``) → value attribute of the option to click
+            (e.g. ``"active"``). Drives native ``<input type=radio>``
+            and ``<input type=checkbox>`` groups. Custom span/div
+            click-toggle controls (Ant Design Tag filter and similar)
+            are NOT handled here — they belong to a Phase 10
+            custom-control path.
 
     Returns:
         Ordered list of PlannedActions.
@@ -317,6 +383,32 @@ def plan_actions(
                        f"{best_input.reason}",
             ))
             last_filled = best_input
+            step += 1
+
+    # --- Toggle clicks (radio / checkbox groups) ---
+    # Runs AFTER fills and BEFORE submit so a "fill text → pick radio
+    # → click Search" flow lands in that order. Independent of
+    # fill_values so scenarios that drive toggles only (no text input)
+    # still work.
+    if toggle_values and analysis.toggle:
+        toggle_used: set[str] = set()
+        for t_role, t_value in toggle_values.items():
+            target = _match_toggle_for_role(
+                t_role, t_value, analysis.toggle, toggle_used,
+            )
+            if target is None:
+                continue
+            toggle_used.add(target.selector)
+            actions.append(PlannedAction(
+                step=step,
+                action_type="click",
+                target_selector=target.selector,
+                target_description=_describe(target),
+                reason=f"Toggle match: role={t_role!r} value={t_value!r} → "
+                       f"semantic_role={target.semantic_role!r} "
+                       f"element_value={target.element_value!r}. "
+                       f"{target.reason}",
+            ))
             step += 1
 
     # --- Find best submit element ---

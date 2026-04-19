@@ -37,6 +37,14 @@ class DiscoveredElement(BaseModel):
     element_type: str | None = Field(
         default=None, description="HTML type attribute (text, submit, checkbox, etc.).",
     )
+    element_value: str | None = Field(
+        default=None,
+        description="HTML value attribute. Populated for radio / checkbox / "
+        "select <option> elements so the planner can distinguish siblings in "
+        "one group (e.g. radios with value='active' vs value='disabled'). "
+        "Empty string retained verbatim since it is a meaningful value "
+        "(e.g. the 'All' radio in an Ant Design radio group).",
+    )
     id: str | None = None
     name: str | None = Field(
         default=None, description="HTML name attribute.",
