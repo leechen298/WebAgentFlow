@@ -46,14 +46,18 @@
           </template>
           <div v-if="selfAssessment">
             <!-- Self-assessment tile shows the RAW rule-side verdict
-                 (success/failure/partial_success/uncertain) — that's
-                 the mechanical claim the rule engine made. The
-                 authoritative pass/fail/unverified outcome is the
-                 top pass-gate banner; this tile is the "what the
-                 code thought" layer. Showing pass_gate-driven labels
-                 here was premature during the SSE loading window
-                 because the comparator hadn't run yet. -->
-            <a-tag :color="verdictColor(selfAssessment.verdict)">
+                 (success/failure/partial_success/uncertain) once the
+                 run's evaluation is settled. While ``isEvaluating``,
+                 the verdict tag is hidden entirely — showing a red
+                 "failure" chip here mid-stream was reading to
+                 operators as a decided bad outcome, even though the
+                 comparator + LLM hadn't weighed in yet. The summary +
+                 final URL below are still visible so the tile isn't
+                 empty during the wait. -->
+            <a-tag
+              v-if="!isEvaluating"
+              :color="verdictColor(selfAssessment.verdict)"
+            >
               {{ selfAssessment.verdict }}
             </a-tag>
             <div
@@ -87,10 +91,13 @@
           </template>
           <div v-if="supervisor">
             <!-- Same pattern as the self-assessment tile: show the
-                 raw mechanical verdict the supervisor produced. The
-                 strict-gate decision ("did this count as passing
-                 verification") is the top banner's job. -->
-            <a-tag :color="verdictColor(supervisor.verdict)">
+                 raw mechanical verdict once evaluation is settled,
+                 hide the chip while ``isEvaluating`` so a brief
+                 "failure" flash doesn't spook the operator. -->
+            <a-tag
+              v-if="!isEvaluating"
+              :color="verdictColor(supervisor.verdict)"
+            >
               {{ supervisor.verdict }}
             </a-tag>
             <!-- Distinguish "LLM ran and said 'low confidence'" from
