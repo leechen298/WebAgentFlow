@@ -8,94 +8,115 @@ Operational view of what's shipped, what's current, and what's next.
 - For the 12-phase architectural timeline, see
   [`architecture.md`](./architecture.md) §E.
 
-## Shipped (Phases 1–7 + exploration scaffolding)
+## Shipped (foundation + autonomous exploration subsystem)
 
-- Page fact foundation (HTML → Full AST on server via `lxml`).
-- User event recording in the extension (click, input, change, navigate,
-  richtext-input), with AST association and DOM mutation tracking.
-- Step building from primary event + mutations.
-- Agent input contract + page / step / combined understanding (6C / 6D / 6E).
-- Full execution layer (Phase 7): Playwright runtime, 6-level locator
-  resolver, action executor, post-action observer.
-- Task-driven exploration: TaskDefinition JSON → `run_exploration` →
-  success criteria → supervisor assessment → Exploration Workbench UI
-  (`/exploration`).
+Post-2026-04-20 cleanup, the only product surface in the repo is the
+autonomous-Playwright pipeline. Earlier iterations (recording, Chrome
+extension, task-driven exploration, skills / runs / learning-debug UI)
+have been removed from the code — see
+`memory/project_legacy_stack_removed.md`. For the historical 12-phase
+timeline, see [`architecture.md`](./architecture.md) §E.
 
-## Current — Phase 9: Autonomous exploration, user-driven verification
+Foundation:
 
-Infrastructure shipped:
+- HTML → Full AST on server via `lxml` (`html_ast_parser.py`,
+  `ast_simplifier.py`)
+- Playwright chromium lifecycle wrapper
+  (`services/execution/execution_runtime.py`)
+- Self-hosted validation-site (`apps/validation-site/`) with mock
+  `/validation-api` backend
 
-- **Autonomous exploration pipeline** end-to-end
-  - `page_analyzer.py` — live-page element discovery (structural only)
-  - `action_planner.py` — rule-based multi-field planner, semantic-role
-    matching (username / password / email / search / text)
-  - `autonomous_explorer.py` — orchestrator with SSE event emitter
-  - `exploration_supervisor.py` — project-internal LLM Agent (MiniMax
-    M2.7, `<think>` trace preserved for transparency)
-  - `page_verification.py` — spec-baseline comparator, 5 independent scores
-- **Self-hosted validation-site** (`apps/validation-site/`) — index page
-  cataloguing fixtures + first fixture (login) + mock `/validation-api`
-  backend
-- **Authored spec for login** (`specs/login.{md,assertions.json}`)
-  with `valid_credentials` + `invalid_credentials` scenarios
-- **Autonomous Workbench** (`/exploration/autonomous`) — user-driven UI
-  with 7 blocks: run config, live SSE status, page analysis, execution
-  timeline, verification (self + supervisor + scorecard), source-origin
-  legend, raw SSE event audit (with copy)
-- **Transparency features**: Supervisor thinking trace surfaced to UI,
-  every SSE event captured in raw audit panel with copy buttons,
-  click-to-preview screenshots
-- **Locale-aware supervisor**: UI locale passed through to the LLM prompt
-- **Docs** split into compact `CLAUDE.md` + `docs/architecture.md` +
-  `docs/scope-boundaries.md`
+Autonomous exploration pipeline (end-to-end):
 
-Closed in Phase 9:
+- `page_analyzer.py` — live-page element discovery (structural only;
+  Ant Design 5 `css-dev-only-do-not-override-<hash>` skipped in
+  fallback selector)
+- `action_planner.py` — rule-based multi-field planner, semantic-role
+  matching (username / password / email / search / text / name / role
+  / status)
+- `autonomous_explorer.py` — orchestrator + SSE event emitter +
+  `_run_supervisor` LLM call
+- `supervisor_observations.py` — LLM observation-atom schema +
+  code-side verdict derivation + `pass_gate` (`pass` / `fail` /
+  `unverified`)
+- `page_verification.py` — spec-baseline comparator, 5 independent
+  scores
+- `routers/exploration.py` — `/autonomous-run[/stream]`,
+  `/specs[/{id}]`, `/autonomous-runs/list|get`, `/screenshots/{file}`
+- Persistence: every run lands in the `exploration_runs` table with
+  `strategy_json.kind = "autonomous"` + `spec_id / scenario / verdict`
 
-- [x] **Run persistence** — every autonomous run is written to
-  `exploration_runs` with `strategy_json.kind = "autonomous"` plus
-  `spec_id / scenario / verdict`. List + detail at
-  `GET /exploration/autonomous-runs/list|get`.
-- [x] **Spec-driven form prefill** — the workbench reads
-  `GET /exploration/specs` on mount, populates the scenario dropdown
-  from the selected spec, and replaces `fill_values` with
-  `scenarios[scenario].inputs` on scenario change.
-- [x] **Scenario-name de-coupling** — login scenarios renamed to
-  `valid_credentials / invalid_credentials`; `VisibleOn` relaxed from a
-  2-value `Literal` to free-form scenario keys.
-- [x] **User verification on the login page** (2026-04-18) —
-  D1 (`valid_credentials`) and D2 (`invalid_credentials`) both run by
-  the user in the workbench; all 5 verification scores green in each.
-  Runs `a7b9c035-…` (D1) and `3d830c63-…` (D2) persisted to
-  `exploration_runs` and visible at
-  `/api/exploration/autonomous-runs/list`.
+Operator surface:
 
-Pending in Phase 9:
+- Autonomous Workbench (`/exploration/autonomous`) — 7 blocks:
+  config / live SSE status / page analysis / execution timeline /
+  verification (self + supervisor + 5-score scorecard) / origin
+  legend / raw SSE audit with copy
+- Run history (`/exploration/autonomous/history`) — list + per-run
+  detail page reusing the workbench blocks
+- Transparency: Supervisor `<think>` trace surfaced, every SSE event
+  captured in raw audit, click-to-preview screenshots
+- Locale-aware supervisor (UI locale forwarded to LLM prompt)
+- Tri-state outcome surfaced as `pass_gate` — `pass` requires
+  high-confidence LLM agreement AND clean rubric; everything else is
+  `unverified` or `fail`
 
-- [ ] **Second fixture page — `users` (user directory)**. Shape
-  decided 2026-04-18:
-  - **UI side (full)**: the Vue page uses a production-style Ant
-    Design search form with text inputs, select, radio group, date
-    inputs, Cascader, DatePicker, RangePicker, MonthPicker,
-    TimePicker, Tag-as-filter, plus an Ant Design Table with column
-    sort and column filter. Backend is a mock `/validation-api/users`
-    that honors the filter params.
-  - **Spec side (minimal)**: `specs/users.{md,assertions.json}` ships
-    only scenarios the engine is expected to pass in Phase 9.
-    Covered: `filter_by_name`, `no_match` (text input + Search) and
-    `filter_by_status` (native `<input type=radio>` group + Search —
-    drives one inline non-text control to prove the planner handles
-    more than just text inputs).
+External entry:
+
+- `wagent` CLI (`apps/cli/`) + `verify-scenario` Claude Code skill —
+  one-shot runs against the API, supervisor verdict + scorecard +
+  `run_id` returned as structured JSON
+
+Authored specs:
+
+- `login.{valid_credentials, invalid_credentials}`
+- `users.{filter_by_name, filter_by_status, no_match}`
+
+## Phase 9 — closed 2026-04-21
+
+Autonomous exploration, user-driven verification. Closure gate: all 5
+authored scenarios re-ran on 2026-04-21 via the `verify-scenario`
+skill, every one `pass_gate = pass` with supervisor source `llm` and
+5/5 across the scorecard (element_recognition, action_coverage,
+verdict_accuracy, distraction_avoidance, supervisor_agreement). Run
+IDs live in `exploration_runs`.
+
+Notable closures during Phase 9:
+
+- [x] Run persistence + spec-driven workbench prefill + free-form
+  scenario keys.
+- [x] User verification on the login page — `valid_credentials` and
+  `invalid_credentials` both green (2026-04-18).
+- [x] Second fixture — `users` (user directory):
+  - UI uses the full Ant Design search-form palette (text inputs,
+    select, radio group, date inputs, Cascader, DatePicker,
+    RangePicker, MonthPicker, TimePicker, Tag-as-filter) + Ant
+    Design Table with column sort / filter.
+  - Spec covers `filter_by_name`, `no_match`, `filter_by_status` —
+    text input + Search plus one native inline non-text control
+    (radio group) to prove the planner isn't text-only.
   - Popup-based controls (Cascader, all Picker variants, Tag filter,
-    column sort / filter) are deliberately **NOT covered by
-    scenarios in this round**. They sit on the page so the analyzer
-    can scan them and emit free diagnostics, but their formal
-    scenarios are a Phase 10 deliverable.
-  - This is the last Phase 9 gate before Phase 10 opens.
+    column sort / filter) are intentionally on the page but **not**
+    asserted on — their scenarios are a Phase 10 deliverable.
+- [x] Tier-A polish: selector builder now skips Ant Design 5's
+  `css-dev-only-do-not-override-<hash>` class; `no_match` re-verified
+  after the empty-state placeholder fix.
+- [x] Tier-B polish: run history page (list + detail); semantic-role
+  classifier extended with `name` / `role` / `status` buckets.
+- [x] Supervisor observation-atom redesign — LLM emits only
+  observation atoms, verdict derived in code; `pass_gate` tri-state
+  (`pass` / `fail` / `unverified`) surfaced in UI + CLI.
+- [x] Legacy stack removal (2026-04-20) — recordings / skills / runs
+  / Chrome extension / task-driven exploration deleted from code,
+  DB, and docs; `exploration_runs` is the only surviving table.
+
+No remaining Phase 9 items. Phase 10 is now open.
 
 ## Next — Phase 10: Path abstraction & experience accumulation
 
-Only after Phase 9 closes out (at least one non-login fixture passing
-user review):
+With Phase 9 closed, the focus shifts from "can the engine drive a
+page" to "can it reuse what it learned and cover more control
+shapes":
 
 - **LearnedPath persistence** — approved exploration runs become
   LearnedPath rows, keyed by page signature + scenario, with provenance
@@ -135,7 +156,8 @@ user review):
     `MuiInputLabel-root`) — different idiom, separate handler
   Each new handler is ~15 LOC; the dispatcher in `extract_label`
   already picks the first hit. Ship as needed when fixture pages or
-  user-reported real pages fall outside the current coverage. Once the code lands, backfill
+  user-reported real pages fall outside the current coverage. Once
+  the code lands, backfill
   `apps/validation-site/specs/users.assertions.json` with the Tier 2
   scenarios that exercise each control, using the `users` fixture
   already on the page — so the scorecard flipping green becomes the

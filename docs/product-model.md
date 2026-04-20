@@ -319,11 +319,12 @@ not implementation details.
 Honest mapping, so the gap between the vision and the code is
 visible. Keep this section updated as phases ship.
 
-- **Phase 1 steps 1–2 (HTML → AST → Simplified AST)**: done for the
-  recording/extension path; autonomous exploration currently uses a
-  live-page analyzer (`page_analyzer.py`), not the offline AST
-  pipeline. Reconciling these two views is open work.
-- **Phase 1 steps 3 (Page-Intent Agent)**: not yet built as a
+- **Phase 1 steps 1–2 (HTML → AST → Simplified AST)**: shipped as
+  server-side parsing (`html_ast_parser.py` + `ast_simplifier.py`).
+  Autonomous exploration currently uses a live-page analyzer
+  (`page_analyzer.py`) rather than the offline AST pipeline;
+  reconciling the two views is open work.
+- **Phase 1 step 3 (Page-Intent Agent)**: not yet built as a
   separate Agent. Today's Supervisor mixes intent-understanding and
   evaluation concerns.
 - **Phase 1 steps 4–5 (element extraction + trial)**: shipped in the
@@ -335,12 +336,15 @@ visible. Keep this section updated as phases ship.
   output is a developer-oriented debug surface, not the final shape
   Agent C should produce. **Persist-as-learned-record does not exist
   yet** — autonomous runs only land in `exploration_runs` as run
-  history, not as reusable learned paths.
-- **Phase 2 (User-Guided Learning)**: not started. The extension
-  records events, but there is no guided-learning mode that appends
-  to a learned page record.
+  history, not as reusable learned paths. LearnedPath persistence
+  is the headline Phase 10 deliverable.
+- **Phase 2 (User-Guided Learning)**: not started. The 2026-04-20
+  cleanup removed the old Chrome extension; Phase 2 will be built
+  from scratch on top of a **visible** Playwright browser (per §5.1),
+  not on the extension. No guided-learning mode exists today.
 - **Phase 3 (Actual Work)**: not started. No Planner Agent, no
-  replay, no recovery dialogue. This is the next big bet.
+  replay, no recovery dialogue. This is the next big bet after
+  Phase 10's LearnedPath foundation lands.
 
 When a phase fully lands, update this section to reflect it.
 
