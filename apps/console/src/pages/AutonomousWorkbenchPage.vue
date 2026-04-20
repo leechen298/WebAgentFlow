@@ -215,248 +215,24 @@
     </a-card>
 
     <!-- Block 3: Page analysis -->
-    <a-card
-      v-if="analysis"
-      :title="$t('autonomous.pageAnalysis')"
-      class="analysis-card"
-      :bordered="false"
+    <PageAnalysisBlock
+      :analysis="analysis"
       style="margin-top: 16px"
-    >
-      <template #extra>
-        <a-tag color="blue">{{ $t('autonomous.badgeProjectCodeAnalyzer') }}</a-tag>
-      </template>
-      <p class="source-note">
-        {{ $t('autonomous.sourceAnalyzer') }}
-      </p>
-
-      <div class="counts">
-        <a-tag color="cyan">{{ $t('autonomous.countFillable') }}: {{ analysis.counts?.fillable ?? 0 }}</a-tag>
-        <a-tag color="green">{{ $t('autonomous.countSubmit') }}: {{ analysis.counts?.submit ?? 0 }}</a-tag>
-        <a-tag>{{ $t('autonomous.countClickable') }}: {{ analysis.counts?.clickable ?? 0 }}</a-tag>
-        <a-tag>{{ $t('autonomous.countNavigation') }}: {{ analysis.counts?.navigation ?? 0 }}</a-tag>
-        <a-tag color="purple">{{ $t('autonomous.countToggle') }}: {{ analysis.counts?.toggle ?? 0 }}</a-tag>
-        <a-tag>{{ $t('autonomous.countSelect') }}: {{ analysis.counts?.select ?? 0 }}</a-tag>
-        <a-tag>{{ $t('autonomous.countOther') }}: {{ analysis.counts?.other ?? 0 }}</a-tag>
-        <a-tag>{{ $t('autonomous.countHidden') }}: {{ analysis.total_hidden ?? 0 }}</a-tag>
-      </div>
-
-      <a-row :gutter="16" style="margin-top: 12px">
-        <a-col :xs="24" :md="16">
-          <h4>{{ $t('autonomous.elementsVisible') }}</h4>
-          <div v-for="(bucket, name) in groupedElements" :key="name" class="bucket">
-            <strong>{{ bucketLabel(name) }} ({{ bucket.length }}):</strong>
-            <ul>
-              <li v-for="el in bucket" :key="el.selector + el.id" class="el-item">
-                <!-- Line 1: the stable identifiers — selector and
-                     element tag/type. These are what the planner
-                     actually operates on. -->
-                <div class="el-primary">
-                  <code>{{ el.selector }}</code>
-                  — <code>&lt;{{ el.tag }}{{ el.element_type ? ` type="${el.element_type}"` : '' }}&gt;</code>
-                </div>
-                <!-- Line 2: the human-readable hints. Shown only when
-                     present so sparse elements don't reserve empty
-                     space. `label` is especially valuable — it's the
-                     text a human sees next to the input. -->
-                <div class="el-secondary">
-                  <span v-if="el.label_text" class="el-label">
-                    · label="{{ el.label_text }}"<span v-if="el.label_source" class="el-source"> ({{ el.label_source }})</span>
-                  </span>
-                  <span v-if="el.name">· name="{{ el.name }}"</span>
-                  <span v-if="el.placeholder">· placeholder="{{ el.placeholder }}"</span>
-                  <span v-if="el.aria_label">· aria_label="{{ el.aria_label }}"</span>
-                  <span v-if="el.semantic_role">
-                    · semantic_role=<code>{{ el.semantic_role }}</code>
-                  </span>
-                  <span v-if="el.text">· text="{{ el.text.slice(0, 40) }}"</span>
-                  <span v-if="el.content_hint" class="el-content-hint">
-                    · content="{{ el.content_hint }}"
-                  </span>
-                  <span class="reason">· {{ el.reason }}</span>
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          <h4>{{ $t('autonomous.recommendedActions') }}</h4>
-          <ol>
-            <li v-for="act in analysis.recommended_actions" :key="act.step">
-              <strong>{{ act.action_type }}</strong>
-              → <code>{{ act.target_selector || '—' }}</code>
-              <span v-if="act.value"> = <code>{{ act.value }}</code></span>
-              <div class="reason">{{ act.reason }}</div>
-            </li>
-          </ol>
-        </a-col>
-        <a-col :xs="24" :md="8">
-          <h4>{{ $t('autonomous.initialScreenshot') }}</h4>
-          <a-image
-            v-if="analysis.screenshot_ref"
-            :src="toScreenshotUrl(analysis.screenshot_ref)"
-            class="screenshot"
-            :preview="{ mask: $t('autonomous.clickToZoom') }"
-          />
-          <a-empty v-else :description="$t('autonomous.noScreenshot')" />
-        </a-col>
-      </a-row>
-    </a-card>
+    />
 
     <!-- Block 4: Execution timeline -->
-    <a-card
-      v-if="steps.length > 0"
-      :title="$t('autonomous.timeline')"
-      class="timeline-card"
-      :bordered="false"
+    <StepTimelineBlock
+      :steps="steps"
       style="margin-top: 16px"
-    >
-      <template #extra>
-        <a-tag color="blue">{{ $t('autonomous.badgeProjectCodeExplorer') }}</a-tag>
-      </template>
-      <p class="source-note">
-        {{ $t('autonomous.sourceTimeline') }}
-      </p>
-      <a-timeline>
-        <a-timeline-item
-          v-for="step in steps"
-          :key="step.step_index"
-          :color="stepColor(step)"
-        >
-          <div class="step-header">
-            <strong>[{{ step.step_index }}] {{ step.action_type }}</strong>
-            <a-tag v-if="step.ok === true" color="green">{{ $t('autonomous.stepOk') }}</a-tag>
-            <a-tag v-else-if="step.ok === false" color="red">{{ $t('autonomous.stepFailed') }}</a-tag>
-            <a-tag v-else color="blue">{{ $t('autonomous.stepRunning') }}</a-tag>
-          </div>
-          <div class="step-body">
-            <div v-if="step.target_description">
-              {{ $t('autonomous.stepTarget') }}: <code>{{ step.target_description }}</code>
-            </div>
-            <div v-if="step.value">
-              {{ $t('autonomous.stepValue') }}: <code>{{ step.value }}</code>
-            </div>
-            <div v-if="step.actual_value !== undefined">
-              {{ $t('autonomous.stepActual') }}: <code>{{ step.actual_value }}</code>
-            </div>
-            <div v-if="step.url_changed">
-              {{ $t('autonomous.stepUrl') }} → <code>{{ step.url_after?.slice(0, 120) }}</code>
-            </div>
-            <div v-if="step.title_changed">
-              {{ $t('autonomous.stepTitle') }} → <code>{{ step.title_after }}</code>
-            </div>
-            <div v-if="step.error" class="error-text">
-              {{ $t('autonomous.stepError') }}: {{ step.error }}
-            </div>
-            <div v-if="step.result_signals">
-              {{ $t('autonomous.stepSignals') }}: <code>{{ JSON.stringify(step.result_signals) }}</code>
-            </div>
-            <a-image
-              v-if="step.screenshot_ref"
-              :src="toScreenshotUrl(step.screenshot_ref)"
-              class="screenshot screenshot-thumb"
-              :preview="{ mask: $t('autonomous.clickToZoom') }"
-            />
-          </div>
-        </a-timeline-item>
-      </a-timeline>
-    </a-card>
+    />
 
-    <!-- Block 5: Verification -->
-    <a-card
-      v-if="selfAssessment || supervisor || scorecard"
-      :title="$t('autonomous.verification')"
-      class="verify-card"
-      :bordered="false"
+    <!-- Block 5: Verification (self-assessment + supervisor + scorecard) -->
+    <VerificationBlock
+      :self-assessment="selfAssessment"
+      :supervisor="supervisor"
+      :scorecard="scorecard"
       style="margin-top: 16px"
-    >
-      <a-row :gutter="16">
-        <a-col :xs="24" :md="8">
-          <a-card size="small" :bordered="true" :title="$t('autonomous.selfVerdict')">
-            <template #extra><a-tag color="blue">{{ $t('autonomous.badgeProjectCode') }}</a-tag></template>
-            <div v-if="selfAssessment">
-              <a-tag :color="verdictColor(selfAssessment.verdict)">
-                {{ selfAssessment.verdict }}
-              </a-tag>
-              <div class="summary">{{ selfAssessment.summary }}</div>
-              <div v-if="selfAssessment.final_url" class="final-meta">
-                {{ $t('autonomous.finalUrl') }}:
-                <code>{{ selfAssessment.final_url.slice(0, 120) }}</code>
-              </div>
-              <div v-if="selfAssessment.final_title" class="final-meta">
-                {{ $t('autonomous.finalTitle') }}: {{ selfAssessment.final_title }}
-              </div>
-            </div>
-            <a-empty v-else :description="$t('autonomous.pendingVerdict')" />
-          </a-card>
-        </a-col>
-        <a-col :xs="24" :md="8">
-          <a-card size="small" :bordered="true" :title="$t('autonomous.supervisorTitle')">
-            <template #extra><a-tag color="purple">{{ $t('autonomous.badgeProjectLlmAgent') }}</a-tag></template>
-            <div v-if="supervisor">
-              <a-tag :color="verdictColor(supervisor.verdict)">
-                {{ supervisor.verdict }}
-              </a-tag>
-              <a-tag :color="confidenceColor(supervisor.confidence)">
-                {{ $t('autonomous.confidence') }}: {{ supervisor.confidence }}
-              </a-tag>
-              <div class="summary">{{ supervisor.summary }}</div>
-              <div v-if="supervisor.anomalies?.length">
-                <strong>{{ $t('autonomous.anomalies') }}:</strong>
-                <ul>
-                  <li v-for="(a, i) in supervisor.anomalies" :key="i">{{ a }}</li>
-                </ul>
-              </div>
-              <div v-if="supervisor.suggestions?.length">
-                <strong>{{ $t('autonomous.suggestions') }}:</strong>
-                <ul>
-                  <li v-for="(s, i) in supervisor.suggestions" :key="i">{{ s }}</li>
-                </ul>
-              </div>
-              <!-- Reasoning trace from the LLM (contents of <think>...</think>
-                   blocks). Renders only when the model emitted one. -->
-              <a-collapse v-if="supervisor._thinking" ghost style="margin-top: 8px">
-                <a-collapse-panel key="thinking" :header="$t('autonomous.thinkingProcess')">
-                  <div class="thinking-toolbar">
-                    <a-button size="small" @click="copyText(supervisor._thinking)">
-                      {{ $t('autonomous.copyText') }}
-                    </a-button>
-                    <span v-if="supervisor._model" class="thinking-model">
-                      {{ $t('autonomous.model') }}: <code>{{ supervisor._model }}</code>
-                    </span>
-                  </div>
-                  <pre class="thinking-text">{{ supervisor._thinking }}</pre>
-                </a-collapse-panel>
-              </a-collapse>
-            </div>
-            <a-empty v-else :description="$t('autonomous.pendingVerdict')" />
-          </a-card>
-        </a-col>
-        <a-col :xs="24" :md="8">
-          <a-card size="small" :bordered="true" :title="$t('autonomous.scorecardTitle')">
-            <template #extra><a-tag color="blue">{{ $t('autonomous.badgeProjectCodeSpec') }}</a-tag></template>
-            <div v-if="scorecard">
-              <div
-                v-for="metric in scoreMetrics"
-                :key="metric.key"
-                class="score-row"
-              >
-                <span class="score-label">{{ metric.label }}</span>
-                <a-progress
-                  :percent="Math.round(metric.score * 100)"
-                  :status="metric.score >= 1 ? 'success' : metric.score >= 0.5 ? 'active' : 'exception'"
-                  size="small"
-                />
-              </div>
-              <a-collapse ghost style="margin-top: 8px">
-                <a-collapse-panel key="details" :header="$t('autonomous.rawChecks')">
-                  <pre class="raw">{{ JSON.stringify(scorecard, null, 2) }}</pre>
-                </a-collapse-panel>
-              </a-collapse>
-            </div>
-            <a-empty v-else :description="$t('autonomous.enableSpecHint')" />
-          </a-card>
-        </a-col>
-      </a-row>
-    </a-card>
+    />
 
     <!-- Block 7: Raw SSE event stream — full audit trail with copy -->
     <a-card
@@ -551,8 +327,10 @@ import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
 import { streamAutonomousRun } from '@/api/autonomousStream';
-import { resolveApiConfig } from '@/api/client';
 import { listSpecs, type SpecSummary } from '@/api/exploration';
+import PageAnalysisBlock from '@/components/autonomous/PageAnalysisBlock.vue';
+import StepTimelineBlock from '@/components/autonomous/StepTimelineBlock.vue';
+import VerificationBlock from '@/components/autonomous/VerificationBlock.vue';
 
 const { t, locale } = useI18n();
 
@@ -571,13 +349,6 @@ const PHASE_I18N_KEY: Record<string, string> = {
 };
 function phaseI18nKey(key: string): string {
   return PHASE_I18N_KEY[key] || key;
-}
-
-// Map analyzer bucket names to i18n labels. Keeps raw keys in data model.
-function bucketLabel(name: string): string {
-  const key = `autonomous.count${name.charAt(0).toUpperCase()}${name.slice(1)}`;
-  const translated = t(key);
-  return translated === key ? name : translated;
 }
 
 // ─── Form state ──────────────────────────────────────────────
@@ -868,77 +639,6 @@ async function copyRawEvent(idx: number): Promise<void> {
 }
 async function copyAllRawEvents(): Promise<void> {
   await copyText(allEventsText.value);
-}
-
-const scoreMetrics = computed(() => {
-  if (!scorecard.value) return [];
-  return [
-    { key: 'element_recognition', label: t('autonomous.scoreElementRecognition'),
-      score: scorecard.value.element_recognition?.score ?? 0 },
-    { key: 'action_coverage', label: t('autonomous.scoreActionCoverage'),
-      score: scorecard.value.action_coverage?.score ?? 0 },
-    { key: 'verdict_accuracy', label: t('autonomous.scoreVerdictAccuracy'),
-      score: scorecard.value.verdict_accuracy?.score ?? 0 },
-    { key: 'distraction_avoidance', label: t('autonomous.scoreDistractionAvoidance'),
-      score: scorecard.value.distraction_avoidance?.score ?? 0 },
-    { key: 'supervisor_agreement', label: t('autonomous.scoreSupervisorAgreement'),
-      score: scorecard.value.supervisor_agreement?.score ?? 0 },
-  ];
-});
-
-const groupedElements = computed(() => {
-  if (!analysis.value) return {};
-  const g: Record<string, any[]> = {};
-  // Include every bucket the analyzer populates. Previously toggle /
-  // select / other were hidden in the UI even though the analyzer
-  // had them — operators saw Status radios scanned in the raw data
-  // but not listed in the visible-elements panel, which made it
-  // look like a detection miss.
-  for (const cat of ['fillable', 'submit', 'clickable', 'navigation', 'toggle', 'select', 'other']) {
-    const arr = analysis.value[cat];
-    if (arr && arr.length > 0) g[cat] = arr;
-  }
-  return g;
-});
-
-// ─── Screenshot URL helper ───────────────────────────────────
-
-const apiBase = resolveApiConfig().baseURL;
-function toScreenshotUrl(ref: string | null | undefined): string {
-  if (!ref) return '';
-  // Backend returns paths like "/exploration/screenshots/xxx.png".
-  // In proxy mode we prepend "/api" so vite forwards correctly.
-  return ref.startsWith('http') ? ref : `${apiBase}${ref}`;
-}
-
-// ─── Helpers for UI ──────────────────────────────────────────
-
-function stepColor(step: StepData): string {
-  if (step.ok === true) return 'green';
-  if (step.ok === false) return 'red';
-  return 'blue';
-}
-
-function verdictColor(v: string | undefined): string {
-  // Unified verdict vocabulary — rule-side self-verdict and
-  // supervisor LLM verdict both emit these four values now.
-  if (!v) return 'default';
-  if (v === 'success') return 'green';
-  if (v === 'failure') return 'red';
-  if (v === 'partial_success') return 'orange';
-  if (v === 'uncertain') return 'default';
-  return 'default';
-}
-
-// Supervisor reports its own confidence (high / medium / low). Color
-// indicates certainty, not outcome — "high" doesn't mean "pass".
-function confidenceColor(c: string | undefined): string {
-  if (!c) return 'default';
-  const v = c.toLowerCase();
-  if (v === 'high') return 'blue';
-  if (v === 'medium') return 'cyan';
-  if (v === 'low') return 'orange';
-  return 'default';
 }
 
 // ─── SSE event handling ──────────────────────────────────────
@@ -1271,103 +971,6 @@ onBeforeUnmount(() => {
   font-size: 12px;
   margin-top: -8px;
   margin-bottom: 12px;
-}
-.counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.bucket {
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-.bucket ul {
-  margin: 4px 0 8px 20px;
-  padding: 0;
-}
-.bucket li {
-  margin-bottom: 6px;
-}
-.el-item {
-  line-height: 1.5;
-}
-.el-primary {
-  font-size: 12px;
-}
-.el-secondary {
-  font-size: 11px;
-  color: #595959;
-  padding-left: 12px;
-}
-.el-label {
-  color: #1677ff;
-  font-weight: 500;
-}
-.el-source {
-  color: #8c8c8c;
-  font-weight: normal;
-  font-size: 10px;
-}
-.el-content-hint {
-  color: #722ed1;
-}
-.reason {
-  color: #8c8c8c;
-  font-size: 11px;
-}
-.screenshot {
-  width: 100%;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-}
-.screenshot-thumb {
-  max-width: 400px;
-  margin-top: 4px;
-}
-.step-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.step-body {
-  font-size: 12px;
-  margin-top: 4px;
-  color: #595959;
-}
-.step-body code {
-  background: #f5f5f5;
-  padding: 0 4px;
-  border-radius: 2px;
-}
-.error-text {
-  color: #cf1322;
-  margin-top: 2px;
-}
-.summary {
-  margin-top: 8px;
-  font-size: 13px;
-  color: #595959;
-}
-.final-meta {
-  font-size: 11px;
-  color: #8c8c8c;
-  margin-top: 4px;
-}
-.score-row {
-  margin-bottom: 8px;
-}
-.score-label {
-  display: inline-block;
-  width: 150px;
-  font-size: 12px;
-}
-.raw {
-  font-size: 11px;
-  max-height: 300px;
-  overflow: auto;
-  background: #fafafa;
-  padding: 8px;
-  border-radius: 4px;
 }
 .source-legend {
   margin: 0;
