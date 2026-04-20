@@ -18,22 +18,6 @@
           <dashboard-outlined />
           <span>{{ $t('nav.overview') }}</span>
         </a-menu-item>
-        <a-menu-item key="/recordings">
-          <video-camera-outlined />
-          <span>{{ $t('nav.recordings') }}</span>
-        </a-menu-item>
-        <a-menu-item key="/skills">
-          <tool-outlined />
-          <span>{{ $t('nav.skills') }}</span>
-        </a-menu-item>
-        <a-menu-item key="/runs">
-          <play-circle-outlined />
-          <span>{{ $t('nav.runs') }}</span>
-        </a-menu-item>
-        <a-menu-item key="/exploration">
-          <rocket-outlined />
-          <span>{{ $t('nav.exploration') }}</span>
-        </a-menu-item>
         <a-menu-item key="/exploration/autonomous">
           <thunderbolt-outlined />
           <span>{{ $t('nav.autonomousExploration') }}</span>
@@ -41,11 +25,6 @@
         <a-menu-item key="/exploration/autonomous/history">
           <history-outlined />
           <span>{{ $t('nav.autonomousHistory') }}</span>
-        </a-menu-item>
-        <a-menu-divider />
-        <a-menu-item key="/learning/debug">
-          <experiment-outlined />
-          <span>{{ $t('nav.learningDebug') }}</span>
         </a-menu-item>
       </a-menu>
     </a-layout-sider>
@@ -74,13 +53,8 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import {
   DashboardOutlined,
-  ExperimentOutlined,
   HistoryOutlined,
-  RocketOutlined,
   ThunderboltOutlined,
-  VideoCameraOutlined,
-  ToolOutlined,
-  PlayCircleOutlined
 } from '@ant-design/icons-vue';
 import { useAppStore } from '@/stores';
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue';

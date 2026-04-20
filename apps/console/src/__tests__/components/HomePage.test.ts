@@ -1,74 +1,44 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
-import { flushPromises } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import { message } from 'ant-design-vue';
 
 const push = vi.fn();
-const checkApiHealth = vi.fn();
-const fetchRecordings = vi.fn();
-const fetchSkills = vi.fn();
-const fetchRuns = vi.fn();
-const resolveApiConfig = vi.hoisted(() => vi.fn());
-
-const appStore = {
-  apiConnected: true,
-  loading: false,
-  checkApiHealth,
-};
-
-const recordingsStore = {
-  recordings: [{ id: 'r1' }],
-  loadingList: false,
-  fetchRecordings,
-};
-
-const skillsStore = {
-  skills: [{ id: 's1' }, { id: 's2' }],
-  loadingList: false,
-  fetchSkills,
-};
-
-const runsStore = {
-  runs: [{ id: 'run1' }, { id: 'run2' }, { id: 'run3' }],
-  loadingList: false,
-  fetchRuns,
-};
+const listAutonomousRuns = vi.fn();
 
 vi.mock('vue-router', () => ({
-  useRouter: () => ({
-    push,
-  }),
+  useRouter: () => ({ push }),
 }));
 
-vi.mock('@/stores', () => ({
-  useAppStore: () => appStore,
-  useRecordingsStore: () => recordingsStore,
-  useSkillsStore: () => skillsStore,
-  useRunsStore: () => runsStore,
+vi.mock('@/api/exploration', () => ({
+  listAutonomousRuns,
 }));
 
-vi.mock('@/api/client', () => ({
-  resolveApiConfig,
-}));
-
-const renderStubs = {
+const stubs = {
   'a-row': { template: '<div><slot /></div>' },
   'a-col': { template: '<div><slot /></div>' },
-  'a-card': { props: ['title'], template: '<section>{{ title }}<slot /></section>' },
-  'a-space': { template: '<div><slot /></div>' },
-  'a-alert': { props: ['message', 'type'], template: '<div>{{ type }}:{{ message }}</div>' },
-  'a-statistic': { props: ['title', 'value', 'loading'], template: '<div>{{ title }}={{ value }}<slot name="prefix" /></div>' },
-  'a-button': { props: ['loading'], emits: ['click'], template: '<button @click="$emit(\'click\')"><slot /><slot name="icon" /></button>' },
-  'a-descriptions': { template: '<div><slot /></div>' },
-  'a-descriptions-item': { props: ['label'], template: '<div>{{ label }}<slot /></div>' },
-  'a-tag': { template: '<span><slot /></span>' },
-  'a-divider': { template: '<hr />' },
-  'video-camera-outlined': { template: '<i />' },
-  'tool-outlined': { template: '<i />' },
-  'play-circle-outlined': { template: '<i />' },
+  'a-card': {
+    props: ['title', 'bordered', 'hoverable'],
+    emits: ['click'],
+    template: '<section @click="$emit(\'click\')"><header>{{ title }}</header><slot name="extra" /><slot /></section>',
+  },
+  'a-tag': { props: ['color'], template: '<span><slot /></span>' },
+  'a-button': {
+    props: ['loading', 'size', 'type'],
+    emits: ['click'],
+    template: '<button @click="$emit(\'click\')"><slot /><slot name="icon" /></button>',
+  },
+  'a-empty': { props: ['description'], template: '<div class="empty">{{ description }}</div>' },
+  'a-list': {
+    props: ['dataSource', 'loading'],
+    template: '<ul><template v-for="item in dataSource" :key="item.run_id"><slot name="renderItem" :item="item" /></template></ul>',
+  },
+  'a-list-item': {
+    emits: ['click'],
+    template: '<li @click="$emit(\'click\')"><slot /></li>',
+  },
+  'thunderbolt-outlined': { template: '<i />' },
+  'history-outlined': { template: '<i />' },
   'sync-outlined': { template: '<i />' },
-  'plus-outlined': { template: '<i />' },
-  'info-circle-outlined': { template: '<i />' },
 };
 
 async function loadHomePage() {
@@ -80,137 +50,78 @@ describe('HomePage', () => {
   beforeEach(() => {
     vi.resetModules();
     push.mockReset();
-    checkApiHealth.mockReset().mockResolvedValue(undefined);
-    fetchRecordings.mockReset().mockResolvedValue(undefined);
-    fetchSkills.mockReset().mockResolvedValue(undefined);
-    fetchRuns.mockReset().mockResolvedValue(undefined);
-    resolveApiConfig.mockReset().mockReturnValue({
-      mode: 'direct',
-      useDevProxy: false,
-      baseURL: 'http://127.0.0.1:8001',
-      configuredApiBaseUrl: 'http://127.0.0.1:8001',
+    listAutonomousRuns.mockReset();
+  });
+
+  it('loads recent runs on mount and renders entry cards', async () => {
+    listAutonomousRuns.mockResolvedValueOnce({
+      items: [
+        {
+          run_id: 'r1',
+          created_at: '2026-04-20T10:00:00Z',
+          spec_id: 'login',
+          scenario: 'valid_credentials',
+          verdict: 'success',
+          scenario_matched: true,
+          pass_gate_status: 'pass',
+          status: 'completed',
+        },
+      ],
+      has_next: false,
+      next_cursor: null,
     });
-    appStore.apiConnected = true;
-    appStore.loading = false;
-  });
 
-  it('renders, loads dashboard data, and exposes the expected counts', async () => {
     const HomePage = await loadHomePage();
-    const wrapper = mount(HomePage);
+    const wrapper = mount(HomePage, { global: { stubs } });
     await flushPromises();
 
-    expect(wrapper.exists()).toBe(true);
-    expect(checkApiHealth).toHaveBeenCalled();
-    expect(fetchRecordings).toHaveBeenCalled();
-    expect(fetchSkills).toHaveBeenCalled();
-    expect(fetchRuns).toHaveBeenCalled();
-
-    const vm = wrapper.vm.$.setupState;
-    expect(vm.recordingsCount).toBe(1);
-    expect(vm.skillsCount).toBe(2);
-    expect(vm.runsCount).toBe(3);
-    expect(vm.apiStatusType).toBe('success');
-    expect(vm.apiStatusMessage).toBeTruthy();
-    expect(message.success).toHaveBeenCalled();
+    expect(listAutonomousRuns).toHaveBeenCalledWith({ limit: 5 });
+    expect(wrapper.text()).toContain('WebAgentFlow');
+    expect(wrapper.text()).toContain('login');
+    expect(wrapper.text()).toContain('valid_credentials');
   });
 
-  it('handles refresh failures and route navigation actions', async () => {
+  it('navigates on entry-card clicks', async () => {
+    listAutonomousRuns.mockResolvedValueOnce({ items: [], has_next: false, next_cursor: null });
     const HomePage = await loadHomePage();
-    checkApiHealth.mockRejectedValueOnce(new Error('boom'));
-    appStore.apiConnected = false;
-    appStore.loading = true;
-
-    const wrapper = mount(HomePage);
-    const vm = wrapper.vm.$.setupState;
-
-    expect(vm.apiStatusType).toBe('info');
+    const wrapper = mount(HomePage, { global: { stubs } });
     await flushPromises();
-    expect(message.error).toHaveBeenCalled();
 
-    vm.goToRecordings();
-    vm.goToSkills();
-    vm.goToRuns();
+    const vm = (wrapper.vm as unknown as {
+      $: { setupState: {
+        goWorkbench: () => void;
+        goHistory: () => void;
+        openRun: (item: { run_id: string }) => void;
+      } };
+    }).$.setupState;
+    vm.goWorkbench();
+    vm.goHistory();
+    vm.openRun({ run_id: 'abc' });
 
-    expect(push).toHaveBeenNthCalledWith(1, '/recordings');
-    expect(push).toHaveBeenNthCalledWith(2, '/skills');
-    expect(push).toHaveBeenNthCalledWith(3, '/runs');
+    expect(push).toHaveBeenNthCalledWith(1, '/exploration/autonomous');
+    expect(push).toHaveBeenNthCalledWith(2, '/exploration/autonomous/history');
+    expect(push).toHaveBeenNthCalledWith(3, '/exploration/autonomous/history/abc');
   });
 
-  it('treats list fetch failures as non-fatal during refresh', async () => {
-    const HomePage = await loadHomePage();
-    fetchRecordings.mockRejectedValueOnce(new Error('ignore'));
-    fetchSkills.mockRejectedValueOnce(new Error('ignore'));
-    fetchRuns.mockRejectedValueOnce(new Error('ignore'));
+  it('shows an error toast when recent-runs fetch fails', async () => {
+    listAutonomousRuns.mockRejectedValueOnce(new Error('boom'));
+    const err = vi.spyOn(message, 'error').mockImplementation(() => ({}) as any);
 
-    const wrapper = mount(HomePage);
-    const vm = wrapper.vm.$.setupState;
+    const HomePage = await loadHomePage();
+    mount(HomePage, { global: { stubs } });
     await flushPromises();
 
-    message.success = vi.fn();
-    await vm.refreshData();
-
-    expect(checkApiHealth).toHaveBeenCalledTimes(2);
-    expect(fetchRecordings).toHaveBeenCalledTimes(2);
-    expect(fetchSkills).toHaveBeenCalledTimes(2);
-    expect(fetchRuns).toHaveBeenCalledTimes(2);
-    expect(message.success).toHaveBeenCalled();
+    expect(err).toHaveBeenCalled();
+    err.mockRestore();
   });
 
-  it('exposes unreachable API status and resets loading after refresh', async () => {
+  it('can be refreshed via defineExpose', async () => {
+    listAutonomousRuns.mockResolvedValue({ items: [], has_next: false, next_cursor: null });
     const HomePage = await loadHomePage();
-    appStore.apiConnected = false;
-    appStore.loading = false;
-
-    const wrapper = mount(HomePage);
-    const vm = wrapper.vm.$.setupState;
+    const wrapper = mount(HomePage, { global: { stubs } });
     await flushPromises();
 
-    expect(vm.apiStatusType).toBe('error');
-    expect(vm.apiStatusMessage).toBeTruthy();
-
-    vm.loading = true;
-    await vm.refreshData();
-    expect(vm.loading).toBe(false);
-  });
-
-  it('renders the dashboard cards, debug panel, and quick actions in direct mode', async () => {
-    const HomePage = await loadHomePage();
-    const wrapper = mount(HomePage, { global: { stubs: renderStubs } });
-    await flushPromises();
-
-    expect(wrapper.text()).toContain('http://127.0.0.1:8001');
-    expect(wrapper.text()).toContain('1');
-    expect(wrapper.text()).toContain('2');
-    expect(wrapper.text()).toContain('3');
-
-    const buttons = wrapper.findAll('button');
-    expect(buttons).toHaveLength(4);
-
-    await buttons[1].trigger('click');
-    await buttons[2].trigger('click');
-    await buttons[3].trigger('click');
-
-    expect(push).toHaveBeenNthCalledWith(1, '/recordings');
-    expect(push).toHaveBeenNthCalledWith(2, '/skills');
-    expect(push).toHaveBeenNthCalledWith(3, '/runs');
-  });
-
-  it('renders the proxy branch and refresh button through the template', async () => {
-    resolveApiConfig.mockReturnValueOnce({
-      mode: 'proxy',
-      useDevProxy: true,
-      baseURL: '/api',
-      configuredApiBaseUrl: '',
-    });
-    const HomePage = await loadHomePage();
-    const wrapper = mount(HomePage, { global: { stubs: renderStubs } });
-    await flushPromises();
-
-    expect(wrapper.text()).toContain('/api');
-    expect(wrapper.text()).not.toContain('http://127.0.0.1:8001');
-
-    await wrapper.find('button').trigger('click');
-    expect(checkApiHealth).toHaveBeenCalledTimes(2);
-    expect(fetchRecordings).toHaveBeenCalledTimes(2);
+    await (wrapper.vm as unknown as { refresh: () => Promise<void> }).refresh();
+    expect(listAutonomousRuns).toHaveBeenCalledTimes(2);
   });
 });

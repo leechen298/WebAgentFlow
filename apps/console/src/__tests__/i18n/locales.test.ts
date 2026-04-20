@@ -36,17 +36,16 @@ describe('locale bundles', () => {
       expect(locale).toHaveProperty('nav');
       expect(locale).toHaveProperty('common');
       expect(locale).toHaveProperty('home');
-      expect(locale).toHaveProperty('recordings');
-      expect(locale).toHaveProperty('skills');
-      expect(locale).toHaveProperty('runs');
-      expect(locale).toHaveProperty('exploration');
-      expect(locale).toHaveProperty('learning');
+      expect(locale).toHaveProperty('autonomous');
+      expect(locale).toHaveProperty('autonomousHistory');
     }
   });
 
   it('keeps critical navigation and action keys aligned across locales', () => {
-    expect(zh.nav.recordings).toBeTruthy();
-    expect(ja.nav.recordings).toBeTruthy();
+    expect(zh.nav.overview).toBeTruthy();
+    expect(ja.nav.overview).toBeTruthy();
+    expect(zh.nav.autonomousExploration).toBeTruthy();
+    expect(ja.nav.autonomousExploration).toBeTruthy();
     expect(en.common.save).toBeTruthy();
     expect(zh.common.save).toBeTruthy();
     expect(ja.common.save).toBeTruthy();
@@ -59,13 +58,13 @@ describe('locale bundles', () => {
 
     expect(zhPaths).toEqual(enPaths);
     expect(jaPaths).toEqual(enPaths);
-    expect(enPaths.length).toBeGreaterThan(200);
+    expect(enPaths.length).toBeGreaterThan(100);
   });
 
   it('can read every locale leaf value as a non-empty string', () => {
     for (const locale of [en, zh, ja]) {
       const leaves = readLeafValues(locale);
-      expect(leaves.length).toBeGreaterThan(200);
+      expect(leaves.length).toBeGreaterThan(100);
       expect(leaves.every((value) => value.length > 0)).toBe(true);
     }
   });

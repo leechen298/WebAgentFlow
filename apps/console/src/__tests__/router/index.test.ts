@@ -12,19 +12,14 @@ describe('router', () => {
 
     expect(names).toEqual(expect.arrayContaining([
       'home',
-      'recordings',
-      'recording-detail',
-      'skills',
-      'skill-detail',
-      'runs',
-      'run-detail',
-      'exploration',
-      'learning-debug',
+      'exploration-autonomous',
+      'exploration-autonomous-history',
+      'exploration-autonomous-run-detail',
     ]));
   });
 
   it('updates document.title from route metadata', async () => {
-    await router.push('/skills');
+    await router.push('/exploration/autonomous');
 
     expect(document.title).toContain('WebAgentFlow');
     expect(document.title.length).toBeGreaterThan('WebAgentFlow'.length);

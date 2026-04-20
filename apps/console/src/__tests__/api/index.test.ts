@@ -6,9 +6,7 @@ describe('API index exports', () => {
 
     expect(api.apiClient).toBeDefined();
     expect(api.getHealth).toBeDefined();
-    expect(api.getRecordingsList).toBeDefined();
-    expect(api.createSkill).toBeDefined();
-    expect(api.createRun).toBeDefined();
-    expect(api.inferCandidates).toBeDefined();
+    expect(api.listSpecs).toBeDefined();
+    expect(api.listAutonomousRuns).toBeDefined();
   });
 });
