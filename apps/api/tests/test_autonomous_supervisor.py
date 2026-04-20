@@ -80,6 +80,73 @@ def test_llm_success_tags_source_llm() -> None:
     assert "fallback" not in out["summary"].lower()
 
 
+def test_supervisor_prompt_includes_final_state() -> None:
+    # invalid_credentials showed the LLM was hedging to "uncertain"
+    # because we didn't pass final_state.alert_texts to it. Pin the
+    # fix: when _run_supervisor is called with final_state, the LLM
+    # request body carries a compacted form of body_text +
+    # alert_texts + test_ids so the model can verify
+    # "surface role=alert" directly.
+    captured: dict[str, object] = {}
+
+    def fake_gen(req):
+        captured["user"] = req.messages[0].content
+        return _llm_ok("success")
+
+    with patch("app.services.llm_provider.generate_structured", side_effect=fake_gen):
+        ae._run_supervisor(
+            _empty_analysis(), [], "failure",
+            "Actions executed but login wall persisted.",
+            "http://t/login", "Sign in", 100,
+            scenario_name="invalid_credentials",
+            scenario_description="Wrong creds stay on /login and surface role=alert.",
+            final_state={
+                "body_text": "Username\nPassword\n用户名或密码错误",
+                "body_text_length": 27,
+                "alert_texts": ["用户名或密码错误"],
+                "test_ids": ["login-error"],
+            },
+        )
+    user_prompt = captured["user"]
+    # The compacted final_state must land in the user prompt.
+    assert "用户名或密码错误" in user_prompt
+    assert "login-error" in user_prompt
+    assert "alert_texts" in user_prompt
+
+
+def test_supervisor_prompt_handles_missing_final_state() -> None:
+    # Ad-hoc runs or failures before capture may not have final_state.
+    # The supervisor must not crash; the prompt just omits the data.
+    def fake_gen(req):
+        return _llm_ok("uncertain")
+
+    with patch("app.services.llm_provider.generate_structured", side_effect=fake_gen):
+        out = ae._run_supervisor(
+            _empty_analysis(), [], "uncertain", "no data", "", "", 0,
+            final_state=None,
+        )
+    assert out is not None
+    assert out["verdict"] == "uncertain"
+
+
+def test_compact_final_state_caps_body_text() -> None:
+    # A chatty page mustn't blow the context window. Body text is
+    # hard-capped; alert texts individually capped so a long stack
+    # trace in a role=alert doesn't dominate the payload.
+    long = "x" * 10_000
+    compact = ae._compact_final_state({
+        "body_text": long,
+        "body_text_length": 10_000,
+        "alert_texts": ["y" * 1_000],
+        "test_ids": ["t1"],
+    })
+    assert compact is not None
+    assert len(compact["body_text"]) < 2_500
+    assert compact["body_text_length"] == 10_000
+    assert len(compact["alert_texts"][0]) < 500
+    assert compact["test_ids"] == ["t1"]
+
+
 # ───────────────────────────────────────────────────────────────────
 # Retry behaviour
 # ───────────────────────────────────────────────────────────────────

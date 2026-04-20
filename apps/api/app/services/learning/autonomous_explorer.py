@@ -506,6 +506,7 @@ def run_autonomous_exploration(
         scenario_name=scenario_name,
         scenario_description=scenario_description,
         language=language,
+        final_state=final_state,
     )
     emit("supervisor_done", supervisor_output or {})
 
@@ -546,6 +547,38 @@ def _compact_element(e: DiscoveredElement) -> dict[str, Any]:
         "reason": e.reason,
         "text": (e.text or "")[:40],
         "placeholder": e.placeholder,
+    }
+
+
+_FINAL_STATE_BODY_TEXT_MAX = 2000
+_FINAL_STATE_ALERT_TEXT_MAX = 400
+
+
+def _compact_final_state(fs: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Trim final_state for the LLM prompt.
+
+    final_state carries what actually ended up on the page after the
+    last action — ``alert_texts`` (DOM nodes with role=alert), visible
+    ``body_text``, and any ``test_ids``. The LLM needs these to verify
+    scenario requirements like "surface role=alert" without hedging.
+    Cap string sizes so a chatty page can't blow the context window.
+    """
+    if not fs:
+        return None
+    body_text = (fs.get("body_text") or "")
+    if len(body_text) > _FINAL_STATE_BODY_TEXT_MAX:
+        body_text = body_text[:_FINAL_STATE_BODY_TEXT_MAX] + "…[truncated]"
+    alert_texts_raw = fs.get("alert_texts") or []
+    alert_texts = [
+        (t if len(t) <= _FINAL_STATE_ALERT_TEXT_MAX else t[:_FINAL_STATE_ALERT_TEXT_MAX] + "…")
+        for t in alert_texts_raw
+        if isinstance(t, str)
+    ]
+    return {
+        "body_text": body_text,
+        "body_text_length": fs.get("body_text_length"),
+        "alert_texts": alert_texts,
+        "test_ids": fs.get("test_ids") or [],
     }
 
 
@@ -659,6 +692,27 @@ return ``success`` in that case. Do not downgrade to ``failure`` /
 ``no_progress`` purely for missing URL change when other signals
 confirm the filter applied.
 
+Confidence calibration — pick the level that honestly reflects what
+you could verify in the data provided:
+
+- ``high`` — every requirement in the scenario description is
+  directly observable in the data you were given (URLs, titles,
+  ``final_state.alert_texts``, ``final_state.body_text``,
+  ``final_state.test_ids``, per-step ``result_signals``). No hedging
+  words, no inferred claims. If a scenario says "surface role=alert"
+  and ``final_state.alert_texts`` contains the expected phrase, that
+  IS direct observation — say ``high``.
+- ``medium`` — core outcome is clear but one sub-signal the scenario
+  named is genuinely unavailable in the data. State exactly which
+  signal is missing in ``anomalies``.
+- ``low`` — data is too sparse to confirm the main outcome; you are
+  effectively guessing from partial signals. Prefer ``uncertain`` as
+  the verdict in this case.
+
+Do NOT downgrade to ``medium`` just because the task seems subjective
+— if the requirement is written down and the observation is in the
+data you received, that is ``high`` confidence.
+
 {language_clause}\
 """
 
@@ -675,6 +729,7 @@ def _run_supervisor(
     scenario_name: str | None = None,
     scenario_description: str | None = None,
     language: str | None = None,
+    final_state: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Run the project's internal supervisor Agent on the exploration results.
 
@@ -755,6 +810,17 @@ def _run_supervisor(
             }
             for s in steps
         ],
+        # Final-page signals the LLM needs to make a high-confidence
+        # judgement. Historically we only included per-step
+        # result_signals (has_login_wall / result_row_count / etc.),
+        # but those are pre-aggregated flags — they can't prove e.g.
+        # that the invalid_credentials scenario's role=alert actually
+        # surfaced. The full final_state carries alert_texts and
+        # test_ids collected from the DOM after the last action, which
+        # lets the LLM verify "surface role=alert" directly instead of
+        # hedging to "uncertain" for lack of evidence. Kept below a
+        # hard byte cap so a chatty page can't blow the context window.
+        "final_state": _compact_final_state(final_state),
     }
 
     language_name = _language_name(language)
