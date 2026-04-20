@@ -10,6 +10,7 @@ import SkillsPage from '@/pages/SkillsPage.vue';
 import ExplorationWorkbenchPage from '@/pages/ExplorationWorkbenchPage.vue';
 import AutonomousWorkbenchPage from '@/pages/AutonomousWorkbenchPage.vue';
 import AutonomousRunHistoryPage from '@/pages/AutonomousRunHistoryPage.vue';
+import AutonomousRunDetailPage from '@/pages/AutonomousRunDetailPage.vue';
 import LearningDebugPage from '@/pages/LearningDebugPage.vue';
 import i18n from '@/i18n';
 
@@ -83,6 +84,16 @@ const router = createRouter({
           component: AutonomousRunHistoryPage,
           meta: {
             titleKey: 'nav.autonomousHistory',
+            menuKey: '/exploration/autonomous/history',
+          },
+        },
+        {
+          path: 'exploration/autonomous/history/:run_id',
+          name: 'exploration-autonomous-run-detail',
+          component: AutonomousRunDetailPage,
+          meta: {
+            titleKey: 'nav.autonomousHistory',
+            // Keep the history link highlighted when viewing a run.
             menuKey: '/exploration/autonomous/history',
           },
         },
