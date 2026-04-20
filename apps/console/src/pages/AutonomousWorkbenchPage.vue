@@ -231,6 +231,7 @@
       :self-assessment="selfAssessment"
       :supervisor="supervisor"
       :scorecard="scorecard"
+      :is-running="running"
       style="margin-top: 16px"
     />
 

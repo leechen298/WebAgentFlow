@@ -402,6 +402,8 @@ export default {
     passGatePassSubtitle: '规则全对，LLM 高置信度交叉验证通过。',
     passGateFailSubtitle: '偏离规格 —— 详情见下方。',
     passGateUnverifiedSubtitle: '规则机械流程通过，但 LLM 未完成独立交叉验证。',
+    passGateEvaluating: '验证中…',
+    passGateEvaluatingSubtitle: 'Supervisor 和比对器还在跑 —— 下方结果尚未定案。',
     supervisorTitle: 'Supervisor（项目内 Agent）',
     scorecardTitle: '基线对照得分',
     confidence: '置信度',

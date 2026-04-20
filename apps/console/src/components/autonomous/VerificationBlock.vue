@@ -6,10 +6,12 @@
     :bordered="false"
   >
     <!-- Top-level pass gate banner: the binary outcome that matters.
-         Shows only when the scorecard produced a gate (spec-driven
-         runs after the comparator finished). Gives the operator the
-         one-line answer plus every reason a gate failed, so they
-         don't have to infer from the per-tile scores. -->
+         Shows once the comparator produces a gate; during the SSE
+         loading window (self-assessment arrived but supervisor /
+         scorecard still pending) we show an explicit "evaluating"
+         state instead of nothing — the previous rev rendered tiles
+         with raw "failure" verdicts before the gate landed and the
+         operator read that as a decided outcome. -->
     <div v-if="passGateStatus" class="pass-gate-banner" :class="passGateBannerClass">
       <div class="pass-gate-row">
         <a-tag :color="effectiveStatusColor(effectiveGateStatus)" class="pass-gate-tag">
@@ -21,6 +23,20 @@
         <li v-for="(r, i) in passGateReasons" :key="i">{{ r }}</li>
       </ul>
     </div>
+    <div
+      v-else-if="isEvaluating"
+      class="pass-gate-banner pass-gate-banner-loading"
+    >
+      <div class="pass-gate-row">
+        <a-spin size="small" />
+        <span class="pass-gate-loading-text">
+          {{ $t('autonomous.passGateEvaluating') }}
+        </span>
+      </div>
+      <div class="pass-gate-subtitle">
+        {{ $t('autonomous.passGateEvaluatingSubtitle') }}
+      </div>
+    </div>
 
     <a-row :gutter="16">
       <a-col :xs="24" :md="8">
@@ -29,15 +45,16 @@
             <a-tag color="blue">{{ $t('autonomous.badgeProjectCode') }}</a-tag>
           </template>
           <div v-if="selfAssessment">
-            <!-- Primary label is the scenario outcome a human cares
-                 about, not the raw rule verdict. For negative-path
-                 scenarios (invalid_credentials expects login wall),
-                 the rule verdict is "failure" by design — surfacing
-                 that as the main tag makes passing runs look broken.
-                 Raw verdict still shown as a small subtitle when it
-                 disagrees, so the mechanics stay inspectable. -->
-            <a-tag :color="effectiveStatusColor(effectiveSelfStatus)">
-              {{ effectiveStatusLabel(effectiveSelfStatus) }}
+            <!-- Self-assessment tile shows the RAW rule-side verdict
+                 (success/failure/partial_success/uncertain) — that's
+                 the mechanical claim the rule engine made. The
+                 authoritative pass/fail/unverified outcome is the
+                 top pass-gate banner; this tile is the "what the
+                 code thought" layer. Showing pass_gate-driven labels
+                 here was premature during the SSE loading window
+                 because the comparator hadn't run yet. -->
+            <a-tag :color="verdictColor(selfAssessment.verdict)">
+              {{ selfAssessment.verdict }}
             </a-tag>
             <div
               v-if="scenarioMatched === true && selfAssessment.verdict !== 'success'"
@@ -69,8 +86,12 @@
             <a-tag color="purple">{{ $t('autonomous.badgeProjectLlmAgent') }}</a-tag>
           </template>
           <div v-if="supervisor">
-            <a-tag :color="effectiveStatusColor(effectiveSupervisorStatus)">
-              {{ effectiveStatusLabel(effectiveSupervisorStatus) }}
+            <!-- Same pattern as the self-assessment tile: show the
+                 raw mechanical verdict the supervisor produced. The
+                 strict-gate decision ("did this count as passing
+                 verification") is the top banner's job. -->
+            <a-tag :color="verdictColor(supervisor.verdict)">
+              {{ supervisor.verdict }}
             </a-tag>
             <!-- Distinguish "LLM ran and said 'low confidence'" from
                  "LLM never produced a verdict". The latter has
@@ -167,6 +188,7 @@ import {
   confidenceColor,
   effectiveStatus,
   effectiveStatusColor,
+  verdictColor,
   type EffectiveStatus,
 } from '@/utils/autonomousDisplay';
 
@@ -222,11 +244,22 @@ interface ScorecardShape {
   [key: string]: unknown;
 }
 
-const props = defineProps<{
-  selfAssessment: SelfAssessmentShape | null;
-  supervisor: SupervisorShape | null;
-  scorecard: ScorecardShape | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    selfAssessment: SelfAssessmentShape | null;
+    supervisor: SupervisorShape | null;
+    scorecard: ScorecardShape | null;
+    /**
+     * True when the parent has an in-progress SSE stream — used to
+     * decide whether a missing scorecard means "comparator still
+     * running" (show loading banner) vs "ad-hoc run, no spec, done"
+     * (show nothing). Defaults to false for persisted / finished
+     * runs so the history detail page doesn't render a spinner.
+     */
+    isRunning?: boolean;
+  }>(),
+  { isRunning: false },
+);
 
 const scenarioMatched = computed<boolean | null>(() => {
   const vc = props.scorecard?.verdict_check;
@@ -242,25 +275,26 @@ const passGateReasons = computed<string[]>(() => {
   return props.scorecard?.pass_gate?.reasons ?? [];
 });
 
-const effectiveSelfStatus = computed<EffectiveStatus>(() =>
-  effectiveStatus({
-    verdict: props.selfAssessment?.verdict ?? null,
-    scenarioMatched: scenarioMatched.value,
-    passGateStatus: passGateStatus.value,
-  }),
-);
-
-const effectiveSupervisorStatus = computed<EffectiveStatus>(() =>
-  effectiveStatus({
-    verdict: props.supervisor?.verdict ?? null,
-    scenarioMatched: scenarioMatched.value,
-    passGateStatus: passGateStatus.value,
-  }),
-);
-
+// Only the top pass-gate banner uses effective status now — the
+// per-layer tiles show their raw mechanical verdict so operators
+// aren't shown a premature "未通过" during the SSE loading window
+// (before the comparator has run). See the ``v-if="passGateStatus"``
+// guard on the banner + the per-tile raw verdict tags.
 const effectiveGateStatus = computed<EffectiveStatus>(() =>
   effectiveStatus({ passGateStatus: passGateStatus.value }),
 );
+
+// Mid-run indicator for the pass-gate banner:
+//   - pass_gate already computed → not loading
+//   - parent says the run ended → not loading (persisted detail page)
+//   - self-assessment hasn't even arrived → card itself is hidden
+//   - otherwise → show the "evaluating" banner so the user doesn't
+//     misread raw tile verdicts as the final outcome
+const isEvaluating = computed<boolean>(() => {
+  if (passGateStatus.value) return false;
+  if (!props.isRunning) return false;
+  return !!props.selfAssessment;
+});
 
 const passGateLabel = computed<string>(() => {
   const s = passGateStatus.value;
@@ -300,14 +334,6 @@ const supervisorErrorKind = computed<string | null>(() => {
   if (!s) return null;
   return s.error_kind ?? s._supervisor_error_kind ?? null;
 });
-
-function effectiveStatusLabel(s: EffectiveStatus): string {
-  if (s === 'success') return t('autonomousHistory.statusSuccess');
-  if (s === 'failure') return t('autonomousHistory.statusFailure');
-  if (s === 'partial') return t('autonomousHistory.statusPartial');
-  if (s === 'uncertain') return t('autonomousHistory.statusUncertain');
-  return '—';
-}
 
 const { t } = useI18n();
 
@@ -373,6 +399,15 @@ async function copyThinking(): Promise<void> {
 .pass-gate-banner-unverified {
   background: #fff7e6;
   border-color: #ffd591;
+}
+.pass-gate-banner-loading {
+  background: #f5f5f5;
+  border-color: #d9d9d9;
+}
+.pass-gate-loading-text {
+  font-size: 13px;
+  color: #595959;
+  font-weight: 500;
 }
 .pass-gate-row {
   display: flex;

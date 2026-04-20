@@ -402,6 +402,8 @@ export default {
     passGatePassSubtitle: 'All rule checks clean, supervisor high-confidence.',
     passGateFailSubtitle: 'Spec deviation — see details below.',
     passGateUnverifiedSubtitle: 'Rule mechanics ok but LLM did not cleanly cross-check.',
+    passGateEvaluating: 'Evaluating…',
+    passGateEvaluatingSubtitle: 'Supervisor and comparator are still running — the outcome below is not yet final.',
     supervisorTitle: 'supervisor',
     scorecardTitle: 'scorecard (baseline)',
     confidence: 'confidence',

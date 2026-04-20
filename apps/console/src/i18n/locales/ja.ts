@@ -402,6 +402,8 @@ export default {
     passGatePassSubtitle: 'ルール検査全通過、Supervisor も高信頼度で一致。',
     passGateFailSubtitle: '仕様から逸脱しています — 詳細は下記。',
     passGateUnverifiedSubtitle: 'ルール機械的には通過したが、LLM のクロスチェックは未完了。',
+    passGateEvaluating: '検証中…',
+    passGateEvaluatingSubtitle: 'Supervisor とコンパレータが実行中 — 下記の結果はまだ確定していません。',
     supervisorTitle: 'Supervisor（プロジェクト内 Agent）',
     scorecardTitle: 'ベースライン照合スコア',
     confidence: '信頼度',

@@ -28,13 +28,19 @@
             {{ formatDate(record.created_at) }}
           </template>
           <template v-else-if="column.key === 'verdict'">
-            <!-- Show the scenario-level outcome as the primary signal.
-                 For negative-path scenarios (e.g. invalid_credentials)
-                 the raw verdict is "failure" by design — surfacing that
-                 as red here made correct runs look broken. Tooltip keeps
-                 the raw verdict accessible for debugging. -->
+            <!-- Authoritative outcome is pass_gate_status. Running /
+                 pending rows haven't produced a gate yet — show a
+                 neutral loader instead of falling back to raw verdict
+                 (which would render as "未通过" for negative-path
+                 scenarios and mislead the operator). For completed
+                 rows without a gate (ad-hoc runs with no spec), fall
+                 back to scenario_matched / verdict as a last resort. -->
+            <a-spin
+              v-if="isRunningRow(record)"
+              size="small"
+            />
             <a-tooltip
-              v-if="record.verdict || record.scenario_matched !== null"
+              v-else-if="record.pass_gate_status || record.verdict || record.scenario_matched !== null"
               :title="rowTooltip(record)"
             >
               <a-tag :color="effectiveStatusColor(rowStatus(record))">
@@ -111,6 +117,14 @@ import {
   effectiveStatusColor,
   type EffectiveStatus,
 } from '@/utils/autonomousDisplay';
+
+function isRunningRow(record: AutonomousRunSummary): boolean {
+  // Persisted rows are normally created at run-completion time, so
+  // "running" is rare in this list — but guard anyway so a row
+  // captured mid-stream doesn't render a premature verdict tag.
+  const s = (record.status || "").toLowerCase();
+  return s === "running" || s === "pending" || s === "in_progress";
+}
 
 function rowStatus(record: AutonomousRunSummary): EffectiveStatus {
   return effectiveStatus({
