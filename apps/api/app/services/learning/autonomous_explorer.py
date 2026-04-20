@@ -713,6 +713,22 @@ Do NOT downgrade to ``medium`` just because the task seems subjective
 — if the requirement is written down and the observation is in the
 data you received, that is ``high`` confidence.
 
+Verdict vocabulary is MECHANICAL, not "did the test pass":
+``success`` means the operator's action produced the happy path — a
+login authenticated, a form submitted, a filter returned rows. A
+negative-path scenario like ``invalid_credentials`` exists precisely
+to assert the system blocked the action: the operator did NOT log in,
+so the mechanical verdict is ``failure`` (or ``partial_success`` if
+the block surfaced plus some expected error UI). You may note in
+``summary`` that this failure is the scenario-expected outcome — but
+do NOT set ``verdict=success`` just because the scenario's intent was
+"verify the block". The spec's ``expected_verdict_not=success`` field
+is how the comparator reconciles "mechanical failure is the
+scenario-expected outcome"; your job is to report the mechanical
+verdict honestly so the two layers line up. A ``success`` verdict on
+a scenario whose ``expected_verdict_not`` is ``success`` is a direct
+conflict and will flag the run as unverified.
+
 {language_clause}\
 """
 
