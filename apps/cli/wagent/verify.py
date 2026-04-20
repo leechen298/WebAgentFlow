@@ -1,25 +1,23 @@
-#!/usr/bin/env python3
-"""verify_scenario — run one autonomous exploration and emit its result.
+"""``wagent verify`` — run one autonomous exploration via the HTTP API.
 
-Thin HTTP client around the already-running WebAgentFlow API. Used as
-the backing command for the ``verify-scenario`` Claude Code skill so
-that an AI coding agent can ask WebAgentFlow to verify a scenario
-without participating in the run itself.
+Thin client around ``/exploration/autonomous-run``. Used as the backing
+command for the ``verify-scenario`` Claude Code skill so that an AI
+coding agent can ask WebAgentFlow to verify a scenario without
+participating in the run itself.
 
-Contract (see ``.claude/skills/verify-scenario/SKILL.md`` for the full
-policy):
+Contract (see the generated SKILL.md for the full policy):
 
     stdout  — one JSON object with the trimmed summary (or full
-              snapshot with --full). Machine-readable, no log noise.
+              snapshot with ``--full``). Machine-readable, no log noise.
     stderr  — one human-readable banner (``✓/✗ verdict — scorecard``)
               plus any error messages. Safe to ignore when parsing.
     exit    — 0 if verdict == 'success', 1 if verdict ∈ {partial_success,
               failure, uncertain}, 2 for CLI / network / spec errors.
 
-The CLI does NOT start the API, does NOT drive Playwright in-process,
-does NOT touch the DB directly. If the API is down, CLI exits 2 with
-a clear message. Keeping it this thin means every run is persisted
-the same way a workbench run is, and the run shows up in
+The command does NOT start the API, does NOT drive Playwright in-process,
+does NOT touch the DB directly. If the API is down, exits 2 with a clear
+message. Keeping it this thin means every run is persisted the same way
+a workbench run is, and the run shows up in
 ``/exploration/autonomous/history`` like any other.
 """
 
@@ -77,38 +75,37 @@ def _parse_kv_json(raw: str | None) -> dict[str, str] | None:
     return {str(k): str(v) for k, v in data.items()}
 
 
-def _build_arg_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
-        prog="verify-scenario",
-        description=(
-            "Run one autonomous exploration and emit the result JSON. "
-            "Requires the WebAgentFlow API to be running."
-        ),
-    )
-    p.add_argument(
+def configure_parser(parser: argparse.ArgumentParser) -> None:
+    """Attach ``verify``'s arguments to a subparser.
+
+    Kept as a standalone function so the top-level ``wagent`` dispatcher
+    in ``main.py`` can wire it as a subcommand without importing
+    argparse internals.
+    """
+    parser.add_argument(
         "--spec-id",
         help=(
             "Spec id (e.g. 'login' / 'users'). Pairs with --scenario. "
             "Omit for an ad-hoc run against --url."
         ),
     )
-    p.add_argument(
+    parser.add_argument(
         "--scenario",
         help="Scenario key within the spec (e.g. 'valid_credentials').",
     )
-    p.add_argument(
+    parser.add_argument(
         "--url",
         help=(
             "Target URL. Required for ad-hoc runs; when --spec-id is "
             "also set, takes precedence over the spec's url_pattern."
         ),
     )
-    p.add_argument(
+    parser.add_argument(
         "--goal",
         default="",
         help="Optional human-readable goal (passed verbatim to the planner).",
     )
-    p.add_argument(
+    parser.add_argument(
         "--fill-values",
         type=_parse_kv_json,
         default=None,
@@ -118,7 +115,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "Prefix a filename with @ to read from disk."
         ),
     )
-    p.add_argument(
+    parser.add_argument(
         "--toggle-values",
         type=_parse_kv_json,
         default=None,
@@ -128,20 +125,20 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "read from disk."
         ),
     )
-    p.add_argument(
+    parser.add_argument(
         "--headless",
         dest="headless",
         action="store_true",
         default=True,
         help="Run Playwright headless (default).",
     )
-    p.add_argument(
+    parser.add_argument(
         "--headed",
         dest="headless",
         action="store_false",
         help="Show the Playwright window on the API host (debugging).",
     )
-    p.add_argument(
+    parser.add_argument(
         "--language",
         default=None,
         help=(
@@ -149,7 +146,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "output (e.g. 'en' / 'zh' / 'ja')."
         ),
     )
-    p.add_argument(
+    parser.add_argument(
         "--api-base",
         default=os.environ.get("WBAF_API_BASE", "http://localhost:8001"),
         help=(
@@ -157,13 +154,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "(env: WBAF_API_BASE, default http://localhost:8001)."
         ),
     )
-    p.add_argument(
+    parser.add_argument(
         "--timeout",
         type=float,
         default=_DEFAULT_TIMEOUT_SEC,
         help=f"HTTP timeout in seconds (default {_DEFAULT_TIMEOUT_SEC:.0f}).",
     )
-    p.add_argument(
+    parser.add_argument(
         "--full",
         action="store_true",
         help=(
@@ -171,12 +168,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "verification) instead of the trimmed summary."
         ),
     )
-    p.add_argument(
+    parser.add_argument(
         "--pretty",
         action="store_true",
         help="Indent the JSON output for human reading.",
     )
-    return p
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -191,14 +187,14 @@ def _validate_args(args: argparse.Namespace) -> None:
     """
     if args.spec_id and not args.scenario:
         print(
-            "verify-scenario: --spec-id requires --scenario.\n"
+            "wagent verify: --spec-id requires --scenario.\n"
             "Either pass both, or drop --spec-id for an ad-hoc run.",
             file=sys.stderr,
         )
         raise SystemExit(2)
     if not args.spec_id and not args.url:
         print(
-            "verify-scenario: need either --spec-id/--scenario "
+            "wagent verify: need either --spec-id/--scenario "
             "(to run a known spec) or --url (ad-hoc).",
             file=sys.stderr,
         )
@@ -310,21 +306,11 @@ def _exit_code_for(verdict: str | None) -> int:
 
 
 # ───────────────────────────────────────────────────────────────────
-# Main
+# Spec-driven hydration + HTTP
 # ───────────────────────────────────────────────────────────────────
 
 
 def _build_payload(args: argparse.Namespace) -> dict[str, Any]:
-    # Resolve the target URL: operators can pass --url explicitly,
-    # otherwise we let the spec's url_pattern steer (server-side).
-    # For v1 we always require --url when running a spec because
-    # the API endpoint requires ``url`` as a mandatory field and we
-    # don't want to special-case spec lookup in the client.
-    #
-    # If --spec-id is set but --url isn't, derive from the spec's
-    # url_pattern via the /exploration/specs endpoint. Keeps the
-    # CLI usable without the operator having to paste the URL every
-    # time.
     payload: dict[str, Any] = {
         "url": args.url or "",
         "goal": args.goal or "",
@@ -346,11 +332,10 @@ def _build_payload(args: argparse.Namespace) -> dict[str, Any]:
 def _resolve_url_from_spec(
     client: httpx.Client, spec_id: str,
 ) -> str | None:
-    """When --spec-id is set but --url is not, resolve the target
-    URL from the spec's ``url_pattern``.
-
-    Returns None if the spec lookup fails — caller falls back to the
-    empty string and the API will reject the run with a clear 4xx.
+    """When --spec-id is set but --url is not, resolve the target URL
+    from the spec's ``url_pattern``. Returns None on lookup failure —
+    caller falls back to the empty string and the API will reject
+    with a clear 4xx.
     """
     try:
         r = client.get(f"/exploration/specs/{spec_id}")
@@ -363,16 +348,11 @@ def _resolve_url_from_spec(
 
 
 def _hydrate_values_from_spec(
-    client: httpx.Client,
-    spec_id: str,
-    scenario: str,
+    client: httpx.Client, spec_id: str, scenario: str,
 ) -> tuple[dict[str, str] | None, dict[str, str] | None]:
-    """Pull fill_values / selections from the spec's scenario when
-    the operator didn't override them on the command line.
-
-    Mirrors what the workbench does when the operator picks a
-    scenario — so ``verify-scenario --spec-id=login --scenario=valid_credentials``
-    actually runs with admin/123456, not empty inputs.
+    """Pull fill_values / selections from the spec's scenario when the
+    operator didn't override them on the command line. Mirrors what
+    the workbench does when the user picks a scenario.
     """
     try:
         r = client.get(f"/exploration/specs/{spec_id}")
@@ -392,9 +372,8 @@ def _hydrate_values_from_spec(
         return None, None
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = _build_arg_parser()
-    args = parser.parse_args(argv)
+def run(args: argparse.Namespace) -> int:
+    """Entry point called by ``wagent``'s top-level dispatcher."""
     _validate_args(args)
 
     api_base = args.api_base.rstrip("/")
@@ -404,8 +383,7 @@ def main(argv: list[str] | None = None) -> int:
     with httpx.Client(base_url=api_base, timeout=args.timeout) as client:
         # Spec-driven hydration: if operator passed --spec-id/--scenario
         # but omitted --url / --fill-values / --toggle-values, fill in
-        # the gaps from the spec JSON. Makes the common case
-        # (``verify-scenario --spec-id=X --scenario=Y``) one-shot.
+        # the gaps from the spec JSON.
         if args.spec_id and args.scenario:
             if not args.url:
                 resolved_url = _resolve_url_from_spec(client, args.spec_id)
@@ -422,7 +400,7 @@ def main(argv: list[str] | None = None) -> int:
 
         if not args.url:
             print(
-                "verify-scenario: could not determine target URL. "
+                "wagent verify: could not determine target URL. "
                 "Pass --url explicitly or verify the spec's url_pattern.",
                 file=sys.stderr,
             )
@@ -434,18 +412,18 @@ def main(argv: list[str] | None = None) -> int:
             response = client.post("/exploration/autonomous-run", json=payload)
         except httpx.ConnectError as exc:
             print(
-                f"verify-scenario: cannot reach API at {api_base}. "
+                f"wagent verify: cannot reach API at {api_base}. "
                 f"Is WebAgentFlow running? ({exc})",
                 file=sys.stderr,
             )
             return 2
         except httpx.HTTPError as exc:
-            print(f"verify-scenario: HTTP error — {exc}", file=sys.stderr)
+            print(f"wagent verify: HTTP error — {exc}", file=sys.stderr)
             return 2
 
         if response.status_code >= 400:
             print(
-                f"verify-scenario: API returned {response.status_code} — "
+                f"wagent verify: API returned {response.status_code} — "
                 f"{response.text[:300]}",
                 file=sys.stderr,
             )
@@ -454,12 +432,12 @@ def main(argv: list[str] | None = None) -> int:
         try:
             envelope = response.json()
         except json.JSONDecodeError as exc:
-            print(f"verify-scenario: malformed response — {exc}", file=sys.stderr)
+            print(f"wagent verify: malformed response — {exc}", file=sys.stderr)
             return 2
 
         if envelope.get("code") != 0:
             print(
-                f"verify-scenario: API business error code={envelope.get('code')} "
+                f"wagent verify: API business error code={envelope.get('code')} "
                 f"msg={envelope.get('msg')!r}",
                 file=sys.stderr,
             )
@@ -468,19 +446,11 @@ def main(argv: list[str] | None = None) -> int:
         result = envelope.get("data") or {}
         output = result if args.full else _trim_result(result, api_base)
 
-        # One JSON object on stdout; indent only when asked so the
-        # default form is machine-friendly (`jq`, `python -m json.tool`,
-        # skill parser).
         if args.pretty:
             print(json.dumps(output, ensure_ascii=False, indent=2))
         else:
             print(json.dumps(output, ensure_ascii=False))
 
-        # Human banner on stderr for the caller / Claude to read.
         print(_banner(_trim_result(result, api_base)), file=sys.stderr)
 
         return _exit_code_for(result.get("verdict"))
-
-
-if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main())

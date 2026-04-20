@@ -88,7 +88,8 @@ list. Its job when using the skill is to faithfully surface (1) + (2).
 
 When you've invoked the skill, the structure is:
 
-> "Ran `verify-scenario --spec-id login --scenario valid_credentials`.
+> "Ran the `verify-scenario` skill
+> (`wagent verify --spec-id login --scenario valid_credentials`).
 > Supervisor verdict: `success` (confidence `high`). Scorecard 5/5:
 > element_recognition 1.0, action_coverage 1.0, verdict_accuracy 1.0,
 > distraction_avoidance 1.0, supervisor_agreement 1.0. Supervisor
@@ -119,7 +120,7 @@ Do NOT say:
 # Install dependencies
 pnpm install
 python3.11 -m venv .venv
-.venv/bin/pip install -e './apps/api[dev]' -e './apps/worker[dev]'
+.venv/bin/pip install -e './apps/api[dev]' -e './apps/worker[dev]' -e './apps/cli'
 .venv/bin/python -m playwright install chromium   # autonomous exploration needs this
 
 # Start infrastructure (PostgreSQL, Redis, MinIO)

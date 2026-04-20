@@ -17,12 +17,13 @@
 - **面向最终用户的完整 CLI 工具** —— **不在本阶段**。让用户从 shell 驱动
   LearnedPath / skill 的用户端 CLI 是长期交付方向，见
   [`product-model.zh.md`](./product-model.zh.md) §10.3；优先级低于
-  三阶段主链路。目前仓库里窄窄的 `apps/cli/verify_scenario.py` 只是
+  三阶段主链路。目前仓库里窄窄的 `wagent` CLI（位于 `apps/cli/`，
+  子命令 `wagent verify` 和 `wagent skill install`）只是
   `verify-scenario` Claude Code skill 的后端（给 AI 编码 Agent 调引擎
   跑验证用的），**不是**上述面向用户的完整 CLI。
 - **Skill / Tool 接口（给第三方 Agent）** —— 对外接口仍然是 HTTP API。
-  唯一例外是 `verify-scenario` Claude Code skill（由
-  `pnpm run skill:install` 生成到 `~/.claude/skills/`），包装同一个 HTTP
+  唯一例外是 `verify-scenario` Claude Code skill（由 `wagent` CLI 通过
+  `wagent skill install` 生成到 `~/.claude/skills/`），包装同一个 HTTP
   端点并带上可审计的汇报契约，让 AI 编码 Agent 可以跑 scenario 而不
   绕过项目内 Supervisor Agent。更广义的第三方 Agent 注册表仍然是长期
   方向，见 `product-model.zh.md` §10.3。

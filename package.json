@@ -17,8 +17,6 @@
     "dev:worker": "cd apps/worker && ../../.venv/bin/watchfiles --filter python '../../.venv/bin/python -m app.main' .",
     "dev:lan": "concurrently -k -n console,api,worker,validation -c cyan,yellow,green,magenta \"pnpm run dev:console:lan\" \"pnpm run dev:api:lan\" \"pnpm run dev:worker\" \"pnpm run dev:validation:lan\"",
     "db:migrate:api": ".venv/bin/alembic -c apps/api/alembic.ini upgrade head",
-    "skill:install": ".venv/bin/python scripts/install_skill.py install",
-    "skill:uninstall": ".venv/bin/python scripts/install_skill.py uninstall",
     "build": "pnpm run build:packages && pnpm run build:console && pnpm run build:extension",
     "build:packages": "pnpm --filter @web-agent-flow/shared-types build && pnpm --filter @web-agent-flow/skill-schema build && pnpm --filter @web-agent-flow/sdk-js build",
     "build:console": "pnpm --filter @web-agent-flow/console build",

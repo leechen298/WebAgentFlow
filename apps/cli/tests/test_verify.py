@@ -1,7 +1,8 @@
-"""Tests for apps/cli/verify_scenario.py.
+"""Tests for ``wagent verify``.
 
-The CLI is a thin HTTP client around /exploration/autonomous-run. These
-tests pin its contract with Claude Code (the skill caller):
+The verify subcommand is a thin HTTP client around
+/exploration/autonomous-run. These tests pin its contract with the
+generated skill (and therefore Claude Code):
 
     - stdout is exactly one JSON object (no log noise)
     - stderr carries the human banner
@@ -16,16 +17,19 @@ how the CLI interprets well-formed and malformed responses.
 from __future__ import annotations
 
 import json
-import sys
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, "apps")
+from wagent import main as wagent_main
+from wagent import verify as vs
 
-from cli import verify_scenario as vs  # noqa: E402
+
+def _run(argv: list[str]) -> int:
+    """Invoke the top-level wagent dispatcher with 'verify' prefixed."""
+    return wagent_main.main(["verify", *argv])
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -35,13 +39,15 @@ from cli import verify_scenario as vs  # noqa: E402
 
 def test_spec_id_without_scenario_is_rejected() -> None:
     with pytest.raises(SystemExit) as exc:
-        vs.main(["--spec-id", "users"])
+        with redirect_stderr(StringIO()):
+            _run(["--spec-id", "users"])
     assert exc.value.code == 2
 
 
 def test_no_spec_no_url_is_rejected() -> None:
     with pytest.raises(SystemExit) as exc:
-        vs.main([])
+        with redirect_stderr(StringIO()):
+            _run([])
     assert exc.value.code == 2
 
 
@@ -199,7 +205,7 @@ def test_success_run_writes_json_to_stdout_and_exits_zero() -> None:
         stdout = StringIO()
         stderr = StringIO()
         with redirect_stdout(stdout), redirect_stderr(stderr):
-            rc = vs.main(["--url", "http://t/"])
+            rc = _run(["--url", "http://t/"])
     assert rc == 0
     parsed = json.loads(stdout.getvalue())
     assert parsed["verdict"] == "success"
@@ -214,7 +220,7 @@ def test_full_flag_emits_untrimmed_snapshot() -> None:
     with patch.object(vs.httpx, "Client", return_value=client):
         stdout = StringIO()
         with redirect_stdout(stdout), redirect_stderr(StringIO()):
-            rc = vs.main(["--url", "http://t/", "--full"])
+            rc = _run(["--url", "http://t/", "--full"])
     assert rc == 0
     parsed = json.loads(stdout.getvalue())
     # Full payload carries the heavy fields.
@@ -227,7 +233,7 @@ def test_failure_verdict_exits_one() -> None:
     client = _mock_client(envelope)
     with patch.object(vs.httpx, "Client", return_value=client):
         with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
-            rc = vs.main(["--url", "http://t/"])
+            rc = _run(["--url", "http://t/"])
     assert rc == 1
 
 
@@ -237,7 +243,7 @@ def test_business_error_code_exits_two() -> None:
     with patch.object(vs.httpx, "Client", return_value=client):
         stderr = StringIO()
         with redirect_stdout(StringIO()), redirect_stderr(stderr):
-            rc = vs.main(["--url", "http://t/"])
+            rc = _run(["--url", "http://t/"])
     assert rc == 2
     assert "400" in stderr.getvalue()
 
@@ -252,7 +258,7 @@ def test_http_4xx_exits_two() -> None:
     with patch.object(vs.httpx, "Client", return_value=client):
         stderr = StringIO()
         with redirect_stdout(StringIO()), redirect_stderr(stderr):
-            rc = vs.main(["--url", "http://t/"])
+            rc = _run(["--url", "http://t/"])
     assert rc == 2
     assert "422" in stderr.getvalue()
 
@@ -284,7 +290,7 @@ def test_spec_scenario_hydrates_url_and_fill_values() -> None:
     client = _mock_client(run_envelope, get_response=spec_get)
     with patch.object(vs.httpx, "Client", return_value=client):
         with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
-            rc = vs.main([
+            rc = _run([
                 "--spec-id", "login",
                 "--scenario", "valid_credentials",
             ])
@@ -312,7 +318,7 @@ def test_explicit_url_overrides_spec_url() -> None:
     client = _mock_client(run_envelope, get_response=spec_get)
     with patch.object(vs.httpx, "Client", return_value=client):
         with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
-            vs.main([
+            _run([
                 "--spec-id", "x", "--scenario", "s",
                 "--url", "http://operator-override/",
             ])

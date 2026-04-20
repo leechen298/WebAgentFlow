@@ -1,28 +1,26 @@
-#!/usr/bin/env python3
-"""install_skill — materialize WebAgentFlow's verify-scenario skill into
-Claude Code's skill directory.
+"""``wagent skill {install,uninstall}`` — materialize the
+verify-scenario skill into Claude Code's skill directory.
 
-Run from the repo root:
+    wagent skill install         # write files into ~/.claude/skills/
+    wagent skill uninstall       # remove the skill
 
-    pnpm run skill:install         # write files into ~/.claude/skills/
-    pnpm run skill:uninstall       # remove the skill
+The repo does NOT ship with a pre-populated ``.claude/skills/`` tree —
+that directory belongs to each user's Claude Code home and the installed
+copy needs to carry the absolute path of THIS checkout's ``wagent`` binary.
+Generating at install time keeps a single source of truth (this module)
+and lets the same repo be used from multiple machines or re-installed
+after moving the checkout.
 
-The repo itself does NOT ship with a pre-populated ``.claude/skills/``
-tree — that directory belongs to each user's Claude Code home and the
-installed copy needs to carry the absolute paths of THIS checkout's
-Python interpreter + CLI script. Generating at install time keeps a
-single source of truth (this script) and lets the same repo be used
-from multiple machines or re-installed after moving the checkout.
-
-The install command rewrites the skill files on every run, so
-re-running after updating the repo is idempotent and always produces
-absolute paths that still point at the right place.
+The install command rewrites the skill files on every run, so re-running
+after ``git pull`` (or recreating the venv) is idempotent and always
+produces absolute paths that still point at the right place.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import stat
 import sys
 from pathlib import Path
@@ -35,12 +33,50 @@ SKILL_NAME = "verify-scenario"
 # the operator needs to invoke the skill from other projects too.
 DEFAULT_INSTALL_DIR = Path.home() / ".claude" / "skills"
 
-# When generating run.sh we hard-code the venv Python rather than
-# ``$(which python)`` because the skill is invoked from Claude Code's
-# Bash tool in whatever environment it happens to run — the venv is
-# NOT activated there, and ``which python`` might resolve to the
-# system Python that doesn't have httpx installed.
-DEFAULT_VENV_PYTHON_REL = Path(".venv") / "bin" / "python"
+
+# ───────────────────────────────────────────────────────────────────
+# Path resolution
+# ───────────────────────────────────────────────────────────────────
+
+
+def _repo_root() -> Path:
+    """Resolve the WebAgentFlow repo root from this module's location.
+
+    This file lives at ``apps/cli/wagent/skill.py`` after the package
+    refactor, so the repo root is four parents up. The ``WBAF_REPO``
+    env var takes precedence for unusual install layouts.
+    """
+    override = os.environ.get("WBAF_REPO")
+    if override:
+        return Path(override).resolve()
+    return Path(__file__).resolve().parent.parent.parent.parent
+
+
+def _resolve_wagent_binary(repo_root: Path) -> Path:
+    """Best-effort resolve the ``wagent`` binary path the skill should use.
+
+    Priority:
+      1. $WBAF_WAGENT env var (explicit override)
+      2. <repo>/.venv/bin/wagent (standard dev setup)
+      3. shutil.which('wagent') (system-wide install)
+
+    Install DOESN'T fail when the binary is missing; it records the
+    resolved path and warns. The shim itself fails fast at invocation
+    with a clear error, so a missing binary is a recoverable state.
+    """
+    override = os.environ.get("WBAF_WAGENT")
+    if override:
+        return Path(override)
+    venv_wagent = repo_root / ".venv" / "bin" / "wagent"
+    if venv_wagent.exists():
+        return venv_wagent
+    from_path = shutil.which("wagent")
+    if from_path:
+        return Path(from_path)
+    # Last resort: point at where it SHOULD be so the user gets a
+    # coherent "missing at X, did you run pip install -e apps/cli?"
+    # message from the shim.
+    return venv_wagent
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -48,47 +84,40 @@ DEFAULT_VENV_PYTHON_REL = Path(".venv") / "bin" / "python"
 # ───────────────────────────────────────────────────────────────────
 
 
-def _render_run_sh(python_path: Path, cli_path: Path, repo_root: Path) -> str:
-    # The heredoc-style template is intentionally tiny — all the real
-    # logic lives in the Python CLI. run.sh is just a shim that
-    # resolves the right interpreter and forwards arguments.
+def _shell_quote(value: str) -> str:
+    """Minimal POSIX-shell quoting for a single argument."""
+    if value and all(c.isalnum() or c in "-_./:@=" for c in value):
+        return value
+    escaped = value.replace("'", "'\\''")
+    return f"'{escaped}'"
+
+
+def _render_run_sh(wagent_path: Path, repo_root: Path) -> str:
+    # The template is intentionally tiny — all the real logic lives
+    # in ``wagent verify``. run.sh is just a shim that resolves the
+    # right binary and forwards arguments.
     return dedent(
         f"""\
         #!/usr/bin/env bash
-        # Generated by WebAgentFlow scripts/install_skill.py
-        # Re-run ``pnpm run skill:install`` after moving the repo or
+        # Generated by WebAgentFlow — wagent skill install
+        # Re-run ``wagent skill install`` after moving the repo or
         # re-creating the venv — this file hard-codes absolute paths
         # so it can be invoked from any working directory.
         set -euo pipefail
 
         WBAF_REPO={_shell_quote(str(repo_root))}
-        WBAF_PYTHON={_shell_quote(str(python_path))}
-        WBAF_CLI={_shell_quote(str(cli_path))}
+        WBAF_WAGENT={_shell_quote(str(wagent_path))}
 
-        if [[ ! -x "$WBAF_PYTHON" ]]; then
-          echo "verify-scenario: Python interpreter missing at $WBAF_PYTHON" >&2
-          echo "  Re-create the venv, then re-run 'pnpm run skill:install' from $WBAF_REPO" >&2
-          exit 2
-        fi
-        if [[ ! -f "$WBAF_CLI" ]]; then
-          echo "verify-scenario: CLI script missing at $WBAF_CLI" >&2
-          echo "  Did the repo move? Re-run 'pnpm run skill:install' from $WBAF_REPO" >&2
+        if [[ ! -x "$WBAF_WAGENT" ]]; then
+          echo "verify-scenario: wagent binary missing at $WBAF_WAGENT" >&2
+          echo "  From $WBAF_REPO, run '.venv/bin/pip install -e apps/cli'" >&2
+          echo "  then re-run 'wagent skill install'." >&2
           exit 2
         fi
 
-        exec "$WBAF_PYTHON" "$WBAF_CLI" "$@"
+        exec "$WBAF_WAGENT" verify "$@"
         """,
     )
-
-
-def _shell_quote(value: str) -> str:
-    """Minimal POSIX-shell quoting for a single argument."""
-    if value and all(
-        c.isalnum() or c in "-_./:@=" for c in value
-    ):
-        return value
-    escaped = value.replace("'", "'\\''")
-    return f"'{escaped}'"
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -97,9 +126,8 @@ def _shell_quote(value: str) -> str:
 
 
 def _render_skill_md(run_sh: Path, repo_root: Path, api_base: str) -> str:
-    # This is the contract Claude Code's skill loader reads. The
-    # reporting rules here match the CLAUDE.md execution-boundary
-    # section — they must stay in sync.
+    # Reporting contract here mirrors CLAUDE.md's execution-boundary
+    # section — edits must stay in sync.
     return dedent(
         f"""\
         ---
@@ -121,8 +149,8 @@ def _render_skill_md(run_sh: Path, repo_root: Path, api_base: str) -> str:
         or otherwise exercise the WebAgentFlow engine end-to-end.
 
         This skill was installed from `{repo_root}` — re-run
-        `pnpm run skill:install` from that checkout after a git pull
-        so the pinned Python / CLI paths stay current.
+        `wagent skill install` from that checkout after a git pull
+        so the pinned binary paths stay current.
 
         ## When to invoke
 
@@ -210,38 +238,8 @@ def _render_skill_md(run_sh: Path, repo_root: Path, api_base: str) -> str:
 
 
 # ───────────────────────────────────────────────────────────────────
-# Install / uninstall
+# Install / uninstall implementations
 # ───────────────────────────────────────────────────────────────────
-
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _resolve_python(repo_root: Path) -> Path:
-    """Best-effort resolve the Python interpreter the skill should use.
-
-    Priority:
-      1. $WBAF_PYTHON env var (explicit override)
-      2. <repo>/.venv/bin/python (standard dev setup)
-      3. sys.executable (fallback — only useful if the installer runs
-         inside the venv already)
-
-    The install DOESN'T fail when the venv is missing; it records the
-    path anyway and warns. The shim itself fails fast at invocation
-    time with a clear error, so missing venv is a recoverable state.
-    """
-    env_override = os.environ.get("WBAF_PYTHON")
-    if env_override:
-        return Path(env_override)
-    venv_python = repo_root / DEFAULT_VENV_PYTHON_REL
-    if venv_python.exists():
-        return venv_python
-    return Path(sys.executable)
-
-
-def _resolve_cli(repo_root: Path) -> Path:
-    return repo_root / "apps" / "cli" / "verify_scenario.py"
 
 
 def _install(
@@ -250,23 +248,16 @@ def _install(
     api_base: str,
     force: bool,
 ) -> int:
+    del force  # kept for future "skip if newer" semantics
     skill_dir = install_dir / SKILL_NAME
-    if skill_dir.exists() and not force:
-        # Idempotent install — always overwrites. --force is only for
-        # future "skip if newer" semantics; today it's a no-op flag
-        # we keep for compatibility with an eventual update-in-place
-        # check. Not prompting the operator here because install is
-        # driven from pnpm and should be deterministic.
-        pass
 
-    python_path = _resolve_python(repo_root)
-    cli_path = _resolve_cli(repo_root)
+    wagent_path = _resolve_wagent_binary(repo_root)
 
     skill_dir.mkdir(parents=True, exist_ok=True)
     run_sh = skill_dir / "run.sh"
     skill_md = skill_dir / "SKILL.md"
 
-    run_sh.write_text(_render_run_sh(python_path, cli_path, repo_root))
+    run_sh.write_text(_render_run_sh(wagent_path, repo_root))
     current_mode = run_sh.stat().st_mode
     run_sh.chmod(current_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
@@ -275,21 +266,14 @@ def _install(
     print(f"Installed skill '{SKILL_NAME}' → {skill_dir}")
     print(f"  SKILL.md: {skill_md}")
     print(f"  run.sh:   {run_sh}")
-    print(f"  Python:   {python_path}{' (missing)' if not python_path.exists() else ''}")
-    print(f"  CLI:      {cli_path}{' (missing)' if not cli_path.exists() else ''}")
+    print(f"  wagent:   {wagent_path}{' (missing)' if not wagent_path.exists() else ''}")
     print(f"  API base: {api_base}")
 
-    if not python_path.exists():
+    if not wagent_path.exists():
         print(
-            "\nWarning: Python interpreter doesn't exist yet. Run "
-            "`python3 -m venv .venv && .venv/bin/pip install -e './apps/api[dev]'` "
-            "then re-run 'pnpm run skill:install'.",
-            file=sys.stderr,
-        )
-    if not cli_path.exists():
-        print(
-            "\nWarning: CLI script missing. The repo layout may have "
-            "changed; re-run install from the current checkout.",
+            "\nWarning: wagent binary missing. From the repo root run "
+            "'.venv/bin/pip install -e apps/cli' to install it into the "
+            "venv, then re-run 'wagent skill install' to refresh the shim.",
             file=sys.stderr,
         )
 
@@ -297,9 +281,7 @@ def _install(
         "\nClaude Code can now invoke the 'verify-scenario' skill from "
         "any directory while the WebAgentFlow API is running.",
     )
-    print(
-        "Uninstall with: pnpm run skill:uninstall",
-    )
+    print("Uninstall with: wagent skill uninstall")
     return 0
 
 
@@ -333,28 +315,18 @@ def _uninstall(install_dir: Path) -> int:
 
 
 # ───────────────────────────────────────────────────────────────────
-# CLI
+# Subcommand wiring (called by wagent.main)
 # ───────────────────────────────────────────────────────────────────
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
-        prog="install_skill",
-        description=(
-            "Install or uninstall WebAgentFlow's verify-scenario skill "
-            "in Claude Code's skill directory."
-        ),
-    )
-    sub = p.add_subparsers(dest="command", required=True)
-
-    install = sub.add_parser("install", help="Write skill files.")
-    install.add_argument(
+def configure_install_parser(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
         "--dest",
         type=Path,
         default=DEFAULT_INSTALL_DIR,
         help=f"Claude Code skills root (default {DEFAULT_INSTALL_DIR}).",
     )
-    install.add_argument(
+    parser.add_argument(
         "--api-base",
         default=os.environ.get("WBAF_API_BASE", "http://localhost:8001"),
         help=(
@@ -362,39 +334,30 @@ def _build_parser() -> argparse.ArgumentParser:
             "reference. CLI defaults to the same via $WBAF_API_BASE."
         ),
     )
-    install.add_argument(
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Overwrite existing files (install is idempotent anyway).",
     )
 
-    uninstall = sub.add_parser("uninstall", help="Remove skill files.")
-    uninstall.add_argument(
+
+def configure_uninstall_parser(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
         "--dest",
         type=Path,
         default=DEFAULT_INSTALL_DIR,
         help=f"Claude Code skills root (default {DEFAULT_INSTALL_DIR}).",
     )
 
-    return p
+
+def run_install(args: argparse.Namespace) -> int:
+    return _install(
+        install_dir=args.dest,
+        repo_root=_repo_root(),
+        api_base=args.api_base,
+        force=args.force,
+    )
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = _build_parser()
-    args = parser.parse_args(argv)
-
-    if args.command == "install":
-        return _install(
-            install_dir=args.dest,
-            repo_root=_repo_root(),
-            api_base=args.api_base,
-            force=args.force,
-        )
-    if args.command == "uninstall":
-        return _uninstall(install_dir=args.dest)
-    parser.error(f"Unknown command: {args.command}")
-    return 2
-
-
-if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main())
+def run_uninstall(args: argparse.Namespace) -> int:
+    return _uninstall(install_dir=args.dest)

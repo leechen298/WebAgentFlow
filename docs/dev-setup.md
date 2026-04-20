@@ -12,7 +12,11 @@
 1. Copy `.env.example` to `.env`.
 2. Run `pnpm install`.
 3. Create a virtual environment with `python3.11 -m venv .venv`.
-4. Run `.venv/bin/pip install -e './apps/api[dev]' -e './apps/worker[dev]'`.
+4. Run `.venv/bin/pip install -e './apps/api[dev]' -e './apps/worker[dev]' -e './apps/cli'`.
+   The last one installs `wagent` into `.venv/bin/` — used for
+   `wagent verify` (run a scenario) and `wagent skill install`
+   (materialize the Claude Code skill). See
+   [the wagent CLI section](#wagent-cli) below.
 5. Apply API migrations before launching the API:
 
    ```bash
@@ -72,3 +76,40 @@ Or start all four at once with `pnpm run dev` from the repo root.
 - `pnpm run build`
 - `pnpm run lint`
 - `pnpm run format`
+
+## wagent CLI
+
+`wagent` is the WebAgentFlow command-line interface. Once
+`pip install -e ./apps/cli` is done in step 4 of Install, the
+binary lives at `.venv/bin/wagent`.
+
+### Verify a scenario
+
+Runs one autonomous exploration via the HTTP API and prints the
+result JSON. The API must be running (`pnpm run dev:api`).
+
+```bash
+.venv/bin/wagent verify --spec-id login --scenario valid_credentials
+.venv/bin/wagent verify --url http://localhost:5175/users \
+    --fill-values '{"name":"alice"}'
+```
+
+- stdout → one JSON object (trimmed; add `--full` for the complete
+  snapshot, `--pretty` for indented output).
+- stderr → one-line banner with verdict + scorecard summary.
+- exit 0 on `success`, 1 on non-success verdicts, 2 on CLI errors.
+
+### Install the Claude Code skill
+
+```bash
+.venv/bin/wagent skill install     # writes ~/.claude/skills/verify-scenario/
+.venv/bin/wagent skill uninstall   # removes it
+```
+
+Installing is idempotent — re-run after a `git pull` or after
+re-creating the venv to refresh the embedded absolute paths.
+
+Claude Code can then invoke the `verify-scenario` skill from any
+project directory (as long as WebAgentFlow's API is running). The
+reporting contract lives in the generated `SKILL.md` and mirrors
+[`CLAUDE.md`](../CLAUDE.md)'s execution-boundary section.

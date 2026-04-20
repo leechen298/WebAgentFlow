@@ -81,7 +81,8 @@ AI 编码 Agent 是**中转**，不是验证者。它不在这个链上。使用
 
 用了 skill 之后，结构应该是：
 
-> "跑了 `verify-scenario --spec-id login --scenario valid_credentials`。
+> "跑了 `verify-scenario` skill
+> （`wagent verify --spec-id login --scenario valid_credentials`）。
 > Supervisor 裁决：`success`（置信度 `high`）。Scorecard 5/5：
 > element_recognition 1.0、action_coverage 1.0、verdict_accuracy 1.0、
 > distraction_avoidance 1.0、supervisor_agreement 1.0。Supervisor
@@ -110,7 +111,7 @@ AI 编码 Agent 是**中转**，不是验证者。它不在这个链上。使用
 # 安装依赖
 pnpm install
 python3.11 -m venv .venv
-.venv/bin/pip install -e './apps/api[dev]' -e './apps/worker[dev]'
+.venv/bin/pip install -e './apps/api[dev]' -e './apps/worker[dev]' -e './apps/cli'
 .venv/bin/python -m playwright install chromium   # 自主探索需要
 
 # 启动基础设施（PostgreSQL / Redis / MinIO）

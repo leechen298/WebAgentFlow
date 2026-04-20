@@ -12,7 +12,10 @@
 1. 复制 `.env.example` 为 `.env`。
 2. 运行 `pnpm install`。
 3. 创建 Python 虚拟环境：`python3.11 -m venv .venv`。
-4. 运行 `.venv/bin/pip install -e './apps/api[dev]' -e './apps/worker[dev]'`。
+4. 运行 `.venv/bin/pip install -e './apps/api[dev]' -e './apps/worker[dev]' -e './apps/cli'`。
+   最后一个会把 `wagent` 装到 `.venv/bin/`，用于 `wagent verify`（跑场景）
+   和 `wagent skill install`（给 Claude Code 安装 skill）。详见下方
+   [wagent CLI 章节](#wagent-cli)。
 5. 启动 API 之前先应用数据库迁移：
 
    ```bash
@@ -76,6 +79,40 @@
 - `pnpm run build`
 - `pnpm run lint`
 - `pnpm run format`
+
+## wagent CLI
+
+`wagent` 是 WebAgentFlow 的命令行工具。步骤 4 里 `pip install -e ./apps/cli`
+做完后，二进制位于 `.venv/bin/wagent`。
+
+### 跑一次场景验证
+
+通过 HTTP API 跑一次自主探索并打印结果 JSON。API 必须在跑（`pnpm run dev:api`）。
+
+```bash
+.venv/bin/wagent verify --spec-id login --scenario valid_credentials
+.venv/bin/wagent verify --url http://localhost:5175/users \
+    --fill-values '{"name":"alice"}'
+```
+
+- stdout → 一个 JSON 对象（默认裁剪过的摘要；`--full` 输出完整快照、
+  `--pretty` 缩进输出）。
+- stderr → 一行 banner，带 verdict + scorecard 摘要。
+- exit 0 代表 `success`，1 代表其他非成功裁决，2 代表 CLI 错误。
+
+### 安装 Claude Code skill
+
+```bash
+.venv/bin/wagent skill install     # 写入 ~/.claude/skills/verify-scenario/
+.venv/bin/wagent skill uninstall   # 卸载
+```
+
+安装是幂等的 —— `git pull` 之后或者重建 venv 之后重跑一次即可刷新内嵌
+的绝对路径。
+
+之后 Claude Code 在任意项目目录都可以调用 `verify-scenario` skill（只
+要 WebAgentFlow API 在跑）。汇报契约写在生成的 `SKILL.md` 里，和
+[`CLAUDE.md`](../CLAUDE.md) 的执行边界章节保持一致。
 
 ---
 
