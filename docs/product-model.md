@@ -482,8 +482,6 @@ Pending:
   vs. in progress vs. next.
 - [`scope-boundaries.md`](./scope-boundaries.md) — what's deliberately
   NOT being built right now.
-- [`parser-rules.md`](./parser-rules.md) — DOM → StateNode
-  constraints that support Phase 1 steps 1–2.
 - [`product-model.zh.md`](./product-model.zh.md) — Chinese mirror.
 
 ---

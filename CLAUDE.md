@@ -13,8 +13,8 @@ WebAgentFlow — monorepo for an agent-driven web workflow engine.
 - `apps/console` — Vue 3 operator console.
 - `apps/api` — FastAPI backend (routes, services, schemas, LLM provider).
 - `apps/worker` — async worker (currently scaffold).
-- `apps/extension` — Chrome MV3 recorder (WXT).
 - `apps/validation-site` — self-hosted page fixtures for autonomous exploration.
+- `apps/cli` — Python CLI (`wagent`) + the `verify-scenario` Claude Code skill.
 - `packages/` — shared TypeScript packages.
 
 **Product model** (what WebAgentFlow actually is):
@@ -29,8 +29,9 @@ Deep architecture / history: [`docs/architecture.md`](./docs/architecture.md).
 
 WebAgentFlow IS an autonomous web-operation engine with its own internal
 **Supervisor Agent** at
-`apps/api/app/services/learning/exploration_supervisor.py` +
-`autonomous_explorer._run_supervisor`.
+`apps/api/app/services/learning/autonomous_explorer.py::_run_supervisor`,
+emitting observation atoms defined in
+`apps/api/app/services/learning/supervisor_observations.py`.
 
 The app operates. The user is the operator. The AI coding agent (Claude Code,
 Codex, …) primarily writes code. The AI MAY also trigger a run via the
@@ -174,7 +175,6 @@ pnpm run dev:validation         # Validation-site fixtures, port 5175
 pnpm run build                  # all
 pnpm run build:packages         # required before console build
 pnpm run build:console
-pnpm run build:extension
 
 pnpm run lint                   # ESLint + Ruff
 pnpm run format                 # Prettier + Ruff
@@ -193,13 +193,13 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 **Current focus — autonomous exploration subsystem:**
 
 - `apps/api/app/services/learning/autonomous_explorer.py` — orchestrator,
-  SSE event emitter.
+  SSE event emitter, Supervisor LLM call.
 - `apps/api/app/services/learning/page_analyzer.py` — live-page element
   discovery (structural classification only).
 - `apps/api/app/services/learning/action_planner.py` — rule-based multi-field
   planner; semantic-role matching.
-- `apps/api/app/services/learning/exploration_supervisor.py` —
-  project-internal LLM Agent.
+- `apps/api/app/services/learning/supervisor_observations.py` — LLM
+  observation-atom schema + code-side verdict derivation.
 - `apps/api/app/services/learning/page_verification.py` — spec-baseline
   comparator; 5-score scorecard.
 - `apps/api/app/routers/exploration.py` — `/exploration/autonomous-run[/stream]`
@@ -214,9 +214,10 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 **Stable foundations:**
 
 - `apps/api/app/services/html_ast_parser.py` — HTML → Full AST (`lxml`).
-- `apps/api/app/services/execution/` — Playwright runtime, locator, action,
-  observer.
-- `apps/api/app/schemas/` — Pydantic contracts.
+- `apps/api/app/services/execution/execution_runtime.py` — Playwright
+  chromium lifecycle wrapper used by autonomous_explorer.
+- `apps/api/app/schemas/` — Pydantic contracts (page_analysis,
+  page_verification, llm, ast, common).
 
 ## Architecture Summary
 
@@ -235,17 +236,20 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 
 ### Route conventions
 
-- Action-based for CRUD: `POST /recordings/create`, `POST /recordings/update`,
-  `GET /recordings/list`, `GET /recordings/get?recording_id=…`.
-- REST-style for exploration: `GET /exploration/tasks`,
-  `POST /exploration/run`, `POST /exploration/autonomous-run[/stream]`.
+- `POST /exploration/autonomous-run[/stream]` — run a scenario (SSE
+  streaming variant is primary).
+- `GET /exploration/specs[/{id}]` — spec metadata for workbench prefill.
+- `GET /exploration/autonomous-runs/list|get` — persisted run history.
+- `GET /exploration/screenshots/{filename}` — screenshot file server.
 
 ### Database
 
 - PostgreSQL 16, SQLAlchemy 2.x, Alembic migrations.
-- All models inherit `UUIDPrimaryKeyMixin` + `TimestampMixin`.
-- Flexible payloads via JSON columns (`Recording.events`, `Skill.definition`,
-  `Run.result_payload`, …).
+- Single table: `exploration_runs` (autonomous run history). All other
+  tables from the earlier product iteration have been dropped.
+- `ExplorationRun` inherits `UUIDPrimaryKeyMixin` + `TimestampMixin` and
+  keeps flexible payloads in JSON columns
+  (`strategy_json`, `result_snapshot_json`, …).
 
 ### Frontend
 
@@ -254,21 +258,13 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 - Console tests in `src/__tests__/` (Vitest + `@vue/test-utils`).
 - `VITE_USE_DEV_PROXY=true` — Vite proxies `/api/*` to backend (same-origin).
 
-### Extension
-
-- WXT framework. MV3. Background + content + popup + Vue 3 popup UI.
-- MutationObserver on top-level + same-origin iframes, batching at ~500ms.
-- Details: [`docs/parser-rules.md`](./docs/parser-rules.md).
-
 ## See Also
 
 - [`docs/product-model.md`](./docs/product-model.md) — **authoritative
   product model**: three phases (autonomous learning, user-guided
   learning, actual work), seven Agents, invariants. Read first.
-- [`docs/architecture.md`](./docs/architecture.md) — 12-phase timeline,
-  AST dual-track, services sub-package structure, iframe handling.
-- [`docs/parser-rules.md`](./docs/parser-rules.md) — Initial State Parser
-  (client-side DOM → StateNode) mandatory constraints.
+- [`docs/architecture.md`](./docs/architecture.md) — AST dual-track,
+  services sub-package structure, iframe handling.
 - [`docs/scope-boundaries.md`](./docs/scope-boundaries.md) — what's
   deliberately NOT in scope for the current phase.
 - [`docs/roadmap.md`](./docs/roadmap.md) — v0.1 operational milestones.

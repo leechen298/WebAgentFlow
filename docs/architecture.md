@@ -19,14 +19,15 @@ FastAPI backend, Python worker, and browser extension.
 
 ## App Responsibilities
 
-- `apps/console` — operator UI for recordings, skills, runs, exploration,
-  autonomous workbench.
+- `apps/console` — operator UI: autonomous workbench, run history,
+  overview landing page.
 - `apps/api` — HTTP API, LLM provider layer, autonomous exploration,
   page verification, validation-api mock backend.
 - `apps/worker` — async execution shell (currently scaffold).
-- `apps/extension` — Chrome MV3 recorder with background / content / popup.
-- `apps/validation-site` — self-hosted test fixtures (login, dashboard, …)
+- `apps/validation-site` — self-hosted test fixtures (login, users, …)
   that autonomous exploration runs against.
+- `apps/cli` — Python CLI (`wagent`) plus the `verify-scenario`
+  Claude Code skill that invokes it.
 
 ---
 
@@ -147,17 +148,11 @@ Key files:
 - Server-side event matcher: `apps/api/app/services/server_ast_matcher.py`
 - Execution contract: `apps/api/app/schemas/execution.py`
 - Execution sub-package: `apps/api/app/services/execution/`
-- Locator schema: `apps/api/app/schemas/locator.py`
-- Observation schema: `apps/api/app/schemas/observation.py`
 - Learning sub-package: `apps/api/app/services/learning/`
 - Page verification schema: `apps/api/app/schemas/page_verification.py`
 - Page analysis schema: `apps/api/app/schemas/page_analysis.py`
-- Task definition schema: `apps/api/app/schemas/task_definition.py`
-- Success criteria schema: `apps/api/app/schemas/success_criteria.py`
-- Task loader: `apps/api/app/services/task_loader.py`
 - Exploration router: `apps/api/app/routers/exploration.py`
 - Validation API router: `apps/api/app/routers/validation_api.py`
-- Task definitions: `data/tasks/*.json`
 - Validation specs: `apps/validation-site/specs/*.{md,assertions.json}`
 
 ### Dual-Track AST: Client vs Server Responsibilities
@@ -165,38 +160,16 @@ Key files:
 The project maintains two AST-related systems with distinct purposes. They
 are **not in conflict**, but their boundaries must be respected.
 
-**Client-side AstIndex** (`apps/extension/src/recorder/ast-index.ts`):
-
-- Recording-time real-time matching tool.
-- Runs in the browser during recording to immediately associate events /
-  mutations with stateTree nodes.
-- Produces `astMatch` on each event (confidence, nodeId, nodeLabel, areaLabel).
-- **Not** the authoritative source for page structure or execution-layer
-  positioning.
-
-**Server-side FullAST** (`html_ast_parser.py` → `ast_simplifier.py` →
-`server_ast_matcher.py`):
+**Server-side FullAST** (`html_ast_parser.py` → `ast_simplifier.py`):
 
 - Authoritative page fact representation.
-- Page understanding (6C), step understanding (6D), combined understanding (6E)
-  all consume server-side AST.
-- `server_ast_matcher.py` provides `server_ast_match` — event positioning
-  within the authoritative AST.
-- Phase 7 execution layer should consume server-side AST and
-  `server_ast_match`, not client stateTree.
+- `page_analyzer.py` consumes the Full AST to discover interactive
+  elements during autonomous exploration.
+- `page_verification.py` compares the observed page against the authored
+  spec baseline using the same AST representation.
 
-**Consumption priority:**
-
-- Client `astMatch` is preserved as recording-time auxiliary information.
-- `server_ast_match` is the server-side authoritative positioning for events.
-- Downstream consumers (step_builder, agent_input) prefer `server_ast_match`
-  when available, fall back to client `astMatch`.
-- Mutation server-side re-matching is **not yet implemented** — mutations
-  still use client `astMatch` only.
-
-> The goal is not "immediately unify all AST to the server". The client-side
-> AstIndex stays for real-time recording. The server-side AST is the
-> authoritative source for understanding and execution.
+> Client-side recording tracks (`apps/extension`) have been retired;
+> autonomous exploration drives a visible Playwright browser directly.
 
 ---
 
@@ -286,81 +259,46 @@ Consequences:
 The application is a pure engine. **Site-specific knowledge is never
 hardcoded in Python code.**
 
-- **Task definitions** live in `data/tasks/*.json` — describe what to do on
-  a specific site.
-- **Verification specs** live in `apps/validation-site/specs/*.assertions.json`
-  — describe the authored baseline for a page.
-- **The exploration engine** (`exploration_loop.py`) is generic — reads task
-  definitions and executes them.
+- **Verification specs** live in `apps/validation-site/specs/*.{md,assertions.json}`
+  — describe the authored baseline for a page, including positive-path
+  and negative-path scenarios.
 - **The autonomous engine** (`autonomous_explorer.py`) is generic — takes a
-  URL and discovers structure at runtime.
-- **Success criteria** are defined in task definitions or in the DB — not in
-  evaluator code.
-- **Switching target sites** means changing user-provided data files, not
-  changing Python code.
-
-Provenance tracking on all knowledge assets:
-
-- `source`: `"builtin"` or `"user"`
-- `provenance`: how it was created (`user_authored`, `autonomous_exploration`,
-  `autonomous_then_user_corrected`, etc.)
-- `based_on`, `edited_by_user`, `revision`: evolution tracking
-
-> Knowledge assets (tasks, paths, criteria) are designed with
-> migration / backup support in mind — provenance tracking preserves
-> enough context that a record can be inspected, diffed, and moved
-> between environments.
+  URL (optionally paired with a spec + scenario) and discovers structure
+  at runtime.
+- **Switching target sites** means adding a new spec, not changing Python
+  code.
 
 ---
 
 ## G. Services Sub-Package Structure
 
-`apps/api/app/services/` is organized into sub-packages for the main capability
-groups.
+`apps/api/app/services/` is organized into a small number of capability
+groups. Everything here backs the autonomous exploration path.
 
-**`services/execution/`** — Phase 7 execution pipeline:
+**`services/execution/`** — Playwright runtime:
 
-- `execution_contract.py`, `execution_runtime.py`, `locator_resolver.py`,
-  `action_executor.py`, `post_action_observer.py`
-- `run_single_action.py` — simplified entry point for exploration loop
-- Public API exported via `__init__.py`
+- `execution_runtime.py` — chromium/context/page lifecycle wrapper.
+- Public API exported via `__init__.py`.
 
-**`services/learning/`** — autonomous learning, exploration, verification:
+**`services/learning/`** — autonomous exploration + page verification:
 
-- `candidate_inference.py`, `success_evaluator.py`, `exploration_loop.py`,
-  `exploration_supervisor.py`
-- `page_analyzer.py`, `action_planner.py`, `autonomous_explorer.py`,
-  `page_verification.py` (autonomous subsystem)
-- CRUD services: `exploration_run_service.py`, `learned_path_service.py`,
-  `success_criteria_service.py`, `candidate_feedback_service.py`
-- Public API exported via `__init__.py`
+- `autonomous_explorer.py` — orchestrator, SSE event emission,
+  Supervisor LLM call.
+- `page_analyzer.py` — live-page element discovery.
+- `action_planner.py` — rule-based multi-field planner.
+- `supervisor_observations.py` — LLM observation-atom schema and
+  code-side verdict derivation.
+- `page_verification.py` — spec-baseline comparator producing a
+  five-part scorecard.
 
-**Remaining services** (AST, understanding, CRUD, LLM) stay flat in
-`services/` root — not yet worth sub-packaging.
+**`services/analysis/`** — analyzer helpers (e.g. `form_label_extractor.py`).
+
+**Top-level flat services:** `html_ast_parser.py`, `ast_simplifier.py`,
+`llm_provider.py`.
 
 **Compat re-export stubs** exist at old paths (e.g.
 `services/execution_runtime.py`) so existing imports keep working. New code
 should use the sub-package paths.
-
----
-
-## DOM Mutation Tracking (extension)
-
-During recording, the extension monitors DOM changes via `MutationObserver`
-on both the top-level document and same-origin iframe documents. Key files:
-
-- `src/recorder/mutation-observer.ts` — `DomMutationTracker` class: observes
-  childList/attributes/characterData mutations, batches at ~500ms, maps to
-  AST nodes, emits `DomMutationRecord[]`.
-- Mutation records are stored in `RecorderState.domMutations` and included
-  in `meta.domMutations` on submission.
-- Each mutation carries: target element info, mutation detail, AST
-  association, frame info, area context.
-- Noise filtering: script/style/svg tags, framework bookkeeping attrs
-  (`_ngcontent`, `data-v-`), extension elements.
-- Iframe support: same-origin iframes observed recursively; cross-origin
-  silently skipped.
-- Frontend: "DOM Changes" tab on RecordingDetailPage shows mutation timeline.
 
 ---
 
@@ -388,9 +326,6 @@ heartbeat logging is implemented but job execution logic is not yet built out.
   model**. This document describes how the code is organized; product
   model describes what the code is supposed to do. Read product model
   first when deciding *what* to build.
-- [`parser-rules.md`](./parser-rules.md) — Initial State Parser
-  (client-side DOM → StateNode) rules. Mandatory when touching extension
-  parsing code.
 - [`docs/scope-boundaries.md`](./scope-boundaries.md) — what's explicitly
   NOT part of the current phase.
 - [`docs/roadmap.md`](./roadmap.md) — operational milestones for the v0.1

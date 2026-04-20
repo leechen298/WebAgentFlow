@@ -418,8 +418,6 @@ WebAgentFlow 至少支持两种使用形态：
   下一步。
 - [`scope-boundaries.zh.md`](./scope-boundaries.zh.md) —— **当前
   刻意不做**的事。
-- [`parser-rules.zh.md`](./parser-rules.zh.md) —— DOM → StateNode
-  的约束（支撑 Phase 1 步骤 1–2）。
 - [`product-model.md`](./product-model.md) —— 英文原版。
 
 ---

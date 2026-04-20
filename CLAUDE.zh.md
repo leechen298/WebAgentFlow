@@ -12,8 +12,8 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - `apps/console` —— Vue 3 操作控制台。
 - `apps/api` —— FastAPI 后端（routes / services / schemas / LLM provider）。
 - `apps/worker` —— 异步 worker（当前是骨架）。
-- `apps/extension` —— Chrome MV3 录制扩展（WXT 构建）。
 - `apps/validation-site` —— 自主探索的自建验证站点。
+- `apps/cli` —— Python CLI（`wagent`）与 `verify-scenario` Claude Code skill。
 - `packages/` —— 共享 TypeScript 包。
 
 **产品形态**（WebAgentFlow 到底是什么）：
@@ -27,8 +27,9 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 
 WebAgentFlow **本身就是**一个自主 web 操作引擎，内置有项目自己的
 **Supervisor Agent**，位于
-`apps/api/app/services/learning/exploration_supervisor.py` +
-`autonomous_explorer._run_supervisor`。
+`apps/api/app/services/learning/autonomous_explorer.py::_run_supervisor`，
+观察原子 schema 定义在
+`apps/api/app/services/learning/supervisor_observations.py`。
 
 **应用**才是执行者。**用户**是操作者。**AI 编码 Agent**（Claude Code、
 Codex 等）主要负责写代码。AI 也可以通过项目提供的
@@ -163,7 +164,6 @@ pnpm run dev:validation         # 验证站点，端口 5175
 pnpm run build                  # 全部
 pnpm run build:packages         # 构建 console 前要先构建共享包
 pnpm run build:console
-pnpm run build:extension
 
 pnpm run lint                   # ESLint + Ruff
 pnpm run format                 # Prettier + Ruff
@@ -181,14 +181,14 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 **当前焦点 —— 自主探索子系统：**
 
-- `apps/api/app/services/learning/autonomous_explorer.py` —— 编排器 + SSE
-  事件分发。
+- `apps/api/app/services/learning/autonomous_explorer.py` —— 编排器 +
+  SSE 事件分发 + Supervisor LLM 调用。
 - `apps/api/app/services/learning/page_analyzer.py` —— 实时页面元素发现
   （纯结构分类）。
 - `apps/api/app/services/learning/action_planner.py` —— 多字段规划器，按
   semantic_role 匹配。
-- `apps/api/app/services/learning/exploration_supervisor.py` —— 项目内 LLM
-  Agent。
+- `apps/api/app/services/learning/supervisor_observations.py` ——
+  LLM 观察原子 schema + 代码侧裁决推导。
 - `apps/api/app/services/learning/page_verification.py` —— 基线对照器，输出
   5 项评分。
 - `apps/api/app/routers/exploration.py` ——
@@ -204,9 +204,10 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 **稳定基础：**
 
 - `apps/api/app/services/html_ast_parser.py` —— HTML → Full AST（`lxml`）。
-- `apps/api/app/services/execution/` —— Playwright runtime、locator、
-  action、observer。
-- `apps/api/app/schemas/` —— Pydantic 契约。
+- `apps/api/app/services/execution/execution_runtime.py` ——
+  autonomous_explorer 用的 Playwright chromium 生命周期封装。
+- `apps/api/app/schemas/` —— Pydantic 契约（page_analysis、
+  page_verification、llm、ast、common）。
 
 ## 架构总览
 
@@ -224,18 +225,19 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 ### 路由规范
 
-- CRUD 用动作后缀：`POST /recordings/create`、
-  `POST /recordings/update`、`GET /recordings/list`、
-  `GET /recordings/get?recording_id=…`。
-- exploration 用 REST 风格：`GET /exploration/tasks`、
-  `POST /exploration/run`、`POST /exploration/autonomous-run[/stream]`。
+- `POST /exploration/autonomous-run[/stream]` —— 跑一次场景（SSE
+  流式版为主）。
+- `GET /exploration/specs[/{id}]` —— workbench 拉 spec 做预填。
+- `GET /exploration/autonomous-runs/list|get` —— 落库后的 run 历史。
+- `GET /exploration/screenshots/{filename}` —— 截图文件服务。
 
 ### 数据库
 
 - PostgreSQL 16 + SQLAlchemy 2.x + Alembic。
-- 所有模型继承 `UUIDPrimaryKeyMixin` + `TimestampMixin`。
-- 灵活字段走 JSON 列（`Recording.events`、`Skill.definition`、
-  `Run.result_payload` 等）。
+- 仅一张表：`exploration_runs`（autonomous 运行历史）。旧产品形态
+  留下的其他表已全部删除。
+- `ExplorationRun` 继承 `UUIDPrimaryKeyMixin` + `TimestampMixin`，灵活
+  字段走 JSON 列（`strategy_json`、`result_snapshot_json` 等）。
 
 ### 前端
 
@@ -244,21 +246,13 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - 测试在 `src/__tests__/`（Vitest + `@vue/test-utils`）。
 - `VITE_USE_DEV_PROXY=true` 时 Vite 把 `/api/*` 代理到后端。
 
-### Extension
-
-- WXT 框架。MV3。background + content + popup + Vue 3 popup UI。
-- MutationObserver 监听 top-level 和同源 iframe，~500ms 批处理。
-- 详见 [`docs/parser-rules.md`](./docs/parser-rules.md)。
-
 ## 另见
 
 - [`docs/product-model.zh.md`](./docs/product-model.zh.md) —— **产品形态
   权威文档**：三个阶段（自主学习 / 用户引导学习 / 实际工作）、七个
   Agent、跨阶段不变量。**先看这份**。
-- [`docs/architecture.zh.md`](./docs/architecture.zh.md) —— 12 阶段路线图、AST
-  双轨、服务子包结构、iframe 处理。
-- [`docs/parser-rules.zh.md`](./docs/parser-rules.zh.md) —— 客户端 Initial
-  State Parser（DOM → StateNode）的强制约束。
+- [`docs/architecture.zh.md`](./docs/architecture.zh.md) —— AST 双轨、
+  服务子包结构、iframe 处理。
 - [`docs/scope-boundaries.zh.md`](./docs/scope-boundaries.zh.md) —— 当前阶段
   **明确不做**的内容。
 - [`docs/roadmap.zh.md`](./docs/roadmap.zh.md) —— v0.1 阶段里程碑。

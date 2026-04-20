@@ -13,11 +13,11 @@ WebAgentFlow 提供一个结构化平台：捕获 web 交互、自主分析页�
 
 ## 各 app 职责
 
-- `apps/console` —— 操作者 UI，覆盖 recording / skill / run / exploration / autonomous workbench。
+- `apps/console` —— 操作者 UI：autonomous workbench、运行历史、引导首页。
 - `apps/api` —— HTTP API、LLM provider 层、autonomous exploration、page verification、validation-api mock 后端。
 - `apps/worker` —— 异步执行骨架（当前是脚手架）。
-- `apps/extension` —— Chrome MV3 录制扩展，含 background / content / popup。
-- `apps/validation-site` —— 自主探索的自建测试 fixture（login、dashboard 等）。
+- `apps/validation-site` —— 自主探索的自建测试 fixture（login、users 等）。
+- `apps/cli` —— Python CLI（`wagent`）与 `verify-scenario` Claude Code skill。
 
 ---
 
@@ -83,48 +83,25 @@ WebAgentFlow 提供一个结构化平台：捕获 web 交互、自主分析页�
 
 - 服务端 parser：`apps/api/app/services/html_ast_parser.py`（基于 `lxml.html`）
 - Full AST schema：`apps/api/app/schemas/ast.py`
-- 服务端 event matcher：`apps/api/app/services/server_ast_matcher.py`
-- 执行契约：`apps/api/app/schemas/execution.py`
 - 执行子包：`apps/api/app/services/execution/`
-- Locator schema：`apps/api/app/schemas/locator.py`
-- Observation schema：`apps/api/app/schemas/observation.py`
 - Learning 子包：`apps/api/app/services/learning/`
 - Page verification schema：`apps/api/app/schemas/page_verification.py`
 - Page analysis schema：`apps/api/app/schemas/page_analysis.py`
-- Task definition schema：`apps/api/app/schemas/task_definition.py`
-- Success criteria schema：`apps/api/app/schemas/success_criteria.py`
-- Task loader：`apps/api/app/services/task_loader.py`
 - Exploration router：`apps/api/app/routers/exploration.py`
 - Validation API router：`apps/api/app/routers/validation_api.py`
-- Task definitions：`data/tasks/*.json`
 - Validation specs：`apps/validation-site/specs/*.{md,assertions.json}`
 
 ### AST 双轨：客户端 vs 服务端职责
 
 项目目前同时维护两套 AST 相关系统，各司其职，**不冲突**，但边界必须守住。
 
-**客户端 AstIndex**（`apps/extension/src/recorder/ast-index.ts`）：
-
-- 录制时的实时匹配工具。
-- 在浏览器中录制期间运行，把 event / mutation 立刻关联到 stateTree 节点。
-- 每个 event 带一个 `astMatch`（confidence / nodeId / nodeLabel / areaLabel）。
-- **不是**页面结构或执行层定位的权威来源。
-
-**服务端 FullAST**（`html_ast_parser.py` → `ast_simplifier.py` → `server_ast_matcher.py`）：
+**服务端 FullAST**（`html_ast_parser.py` → `ast_simplifier.py`）：
 
 - 页面事实的权威表示。
-- 页面理解（6C）、步骤理解（6D）、组合理解（6E）都消费服务端 AST。
-- `server_ast_matcher.py` 提供 `server_ast_match` —— event 在权威 AST 中的定位。
-- Phase 7 执行层应消费服务端 AST 和 `server_ast_match`，而不是客户端 stateTree。
+- `page_analyzer.py` 在 autonomous 探索时消费 Full AST 来发现交互元素。
+- `page_verification.py` 用同一份 AST 表示把实际页面和 spec 基线做对照。
 
-**消费优先级**：
-
-- 客户端 `astMatch` 保留作为录制时的辅助信息。
-- `server_ast_match` 是服务端对 event 的权威定位。
-- 下游消费者（step_builder / agent_input）在 `server_ast_match` 存在时优先使用，否则回退到客户端 `astMatch`。
-- Mutation 的服务端重匹配**尚未实现** —— mutation 目前仍然只用客户端 `astMatch`。
-
-> 目标不是"立刻把所有 AST 统一到服务端"。客户端 AstIndex 保留用于实时录制。服务端 AST 是理解与执行的权威来源。
+> 客户端录制相关的通路（`apps/extension`）已经下线；autonomous 探索直接驱动可见的 Playwright 浏览器。
 
 ---
 
@@ -201,58 +178,36 @@ WebAgentFlow 提供一个结构化平台：捕获 web 交互、自主分析页�
 
 应用是纯引擎。**站点特定知识绝不硬编码在 Python 代码里。**
 
-- **Task definitions** 在 `data/tasks/*.json` —— 描述在特定站点上做什么。
-- **Verification specs** 在 `apps/validation-site/specs/*.assertions.json` —— 描述页面的人工基线。
-- **Exploration 引擎**（`exploration_loop.py`）通用 —— 读取 task definition 执行。
-- **自主引擎**（`autonomous_explorer.py`）通用 —— 拿到 URL 后在运行时发现结构。
-- **Success criteria** 在 task definition 或 DB 里定义 —— 不在 evaluator 代码里。
-- **切换目标站点**等于换用户提供的数据文件，不改 Python 代码。
-
-所有知识资产都带溯源：
-
-- `source`：`"builtin"` 或 `"user"`
-- `provenance`：创建方式（`user_authored` / `autonomous_exploration` / `autonomous_then_user_corrected` 等）
-- `based_on`、`edited_by_user`、`revision`：演进追踪
-
-> 知识资产（任务、路径、验收标准）在设计上考虑了**迁移 / 备份**
-> 需求 —— provenance 记录保留了足够上下文，让一条记录可以被审阅、
-> 比较，以及在不同环境之间搬运。
+- **Verification specs** 在 `apps/validation-site/specs/*.{md,assertions.json}`
+  —— 描述页面的人工基线，包含正向路径与负向路径两类场景。
+- **自主引擎**（`autonomous_explorer.py`）通用 —— 拿到 URL（可选配
+  spec + scenario）后在运行时发现结构。
+- **切换目标站点**等于新增一份 spec，不改 Python 代码。
 
 ---
 
 ## G. Services 子包结构
 
-`apps/api/app/services/` 按主要能力组分成子包。
+`apps/api/app/services/` 下只有少数几组能力，全部服务于 autonomous
+exploration。
 
-**`services/execution/`** —— Phase 7 执行流水线：
+**`services/execution/`** —— Playwright runtime：
 
-- `execution_contract.py` / `execution_runtime.py` / `locator_resolver.py` / `action_executor.py` / `post_action_observer.py`
-- `run_single_action.py` —— 给 exploration loop 用的简化入口
-- 公共 API 通过 `__init__.py` 导出
+- `execution_runtime.py` —— chromium/context/page 生命周期封装。
+- 公共 API 通过 `__init__.py` 导出。
 
-**`services/learning/`** —— 自主学习 / 探索 / 验证：
+**`services/learning/`** —— 自主探索 + 页面校验：
 
-- `candidate_inference.py` / `success_evaluator.py` / `exploration_loop.py` / `exploration_supervisor.py`
-- `page_analyzer.py` / `action_planner.py` / `autonomous_explorer.py` / `page_verification.py`（自主子系统）
-- CRUD 服务：`exploration_run_service.py` / `learned_path_service.py` / `success_criteria_service.py` / `candidate_feedback_service.py`
-- 公共 API 通过 `__init__.py` 导出
+- `autonomous_explorer.py` —— 编排、SSE 事件、Supervisor LLM 调用。
+- `page_analyzer.py` —— 实时页面元素发现。
+- `action_planner.py` —— 规则驱动的多字段规划器。
+- `supervisor_observations.py` —— LLM 观察原子 schema + 代码侧裁决推导。
+- `page_verification.py` —— spec 基线对照器，输出 5 项评分。
 
-**其余 services**（AST、understanding、CRUD、LLM）暂时平铺在 `services/` 根 —— 还不到子包的规模。
+**`services/analysis/`** —— 分析辅助（如 `form_label_extractor.py`）。
 
-**兼容 re-export stub** 保留在旧路径（如 `services/execution_runtime.py`），让旧 import 继续工作。新代码请用子包路径。
-
----
-
-## DOM Mutation 跟踪（扩展端）
-
-录制期间扩展通过 `MutationObserver` 监视顶层文档与同源 iframe 文档的 DOM 变化。关键文件：
-
-- `src/recorder/mutation-observer.ts` —— `DomMutationTracker` 类：监听 childList / attributes / characterData 变更，~500ms 批处理，映射到 AST 节点，发出 `DomMutationRecord[]`。
-- Mutation 记录存在 `RecorderState.domMutations`，提交时带在 `meta.domMutations`。
-- 每条 mutation 带：目标元素信息、变更细节、AST 关联、frame 信息、区域上下文。
-- 噪音过滤：script/style/svg 标签、框架记账属性（`_ngcontent` / `data-v-`）、扩展自身元素。
-- iframe 支持：同源 iframe 递归监视；跨源静默跳过。
-- 前端：RecordingDetailPage 的 "DOM Changes" tab 展示 mutation 时间线。
+**顶层平铺 services**：`html_ast_parser.py`、`ast_simplifier.py`、
+`llm_provider.py`。
 
 ---
 
@@ -277,7 +232,6 @@ Docker Compose（`infra/docker/docker-compose.yml`）提供：
 - [`product-model.zh.md`](./product-model.zh.md) —— **产品形态权威文档**。
   本文讲"代码怎么组织"，产品形态讲"代码要实现什么"。在决定**做什么**
   之前先看产品形态。
-- [`parser-rules.zh.md`](./parser-rules.zh.md) —— Initial State Parser（客户端 DOM → StateNode）规则。改扩展端解析代码时**必读**。
 - [`scope-boundaries.zh.md`](./scope-boundaries.zh.md) —— 当前阶段**刻意不做**的事。
 - [`roadmap.zh.md`](./roadmap.zh.md) —— v0.1 发布切出的运营里程碑。
 - [`../CLAUDE.zh.md`](../CLAUDE.zh.md) —— 给 AI 编码 Agent 的会话级指引。

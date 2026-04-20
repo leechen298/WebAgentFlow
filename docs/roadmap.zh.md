@@ -30,7 +30,7 @@
 - **Autonomous Workbench**（`/exploration/autonomous`）—— 用户驱动的 UI，7 个区块：运行配置、实时 SSE 状态、页面分析、执行时间线、验证（self + supervisor + 评分卡）、来源标识、SSE 原始事件审计（带复制）
 - **透明化**：Supervisor 推理轨迹在 UI 上可见；每个 SSE 事件都在审计面板里，带复制按钮；截图支持点击放大预览
 - **UI 语言感知的 Supervisor**：UI 当前语言透传给 LLM prompt
-- **文档拆分**：精简后的 `CLAUDE.md` + `docs/architecture.md` + `docs/parser-rules.md` + `docs/scope-boundaries.md`
+- **文档拆分**：精简后的 `CLAUDE.md` + `docs/architecture.md` + `docs/scope-boundaries.md`
 
 Phase 9 已完成：
 

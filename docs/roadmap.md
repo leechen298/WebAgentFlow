@@ -47,7 +47,7 @@ Infrastructure shipped:
   click-to-preview screenshots
 - **Locale-aware supervisor**: UI locale passed through to the LLM prompt
 - **Docs** split into compact `CLAUDE.md` + `docs/architecture.md` +
-  `docs/parser-rules.md` + `docs/scope-boundaries.md`
+  `docs/scope-boundaries.md`
 
 Closed in Phase 9:
 
