@@ -248,6 +248,60 @@ class TestGenerateStructured:
         assert resp.error.kind == "provider_error"
         assert resp.error.retryable is True
 
+    @patch("app.services.llm_provider._get_client")
+    def test_markdown_fenced_json_is_parsed(self, mock_get_client: MagicMock):
+        # Reasoning-oriented providers (MiniMax-M2.x notably) wrap JSON in
+        # ```json ... ``` fences even when response_format: json_object is
+        # requested. The structured path must peel the fence before
+        # json.loads, otherwise every supervisor call falls back to
+        # rule-based mirroring — see project_wagent_followup.md Bug C.
+        client = MagicMock()
+        fenced = '```json\n{"verdict": "success", "confidence": "high"}\n```'
+        client.chat.completions.create.return_value = _make_completion(fenced)
+        mock_get_client.return_value = client
+
+        req = build_request("assess this", response_schema=SIMPLE_SCHEMA)
+        resp = generate_structured(req)
+
+        assert resp.ok is True
+        assert resp.parsed == {"verdict": "success", "confidence": "high"}
+        # Raw text is retained so debugging output still shows the fence.
+        assert resp.text == fenced
+
+    @patch("app.services.llm_provider._get_client")
+    def test_fence_with_thinking_block(self, mock_get_client: MagicMock):
+        # Full shape seen in the wild: <think>…</think> followed by a
+        # fenced JSON block. Both wrappers must be stripped in order.
+        client = MagicMock()
+        payload = (
+            "<think>reasoning about how to respond…</think>\n"
+            '```json\n{"verdict": "partial_success"}\n```'
+        )
+        client.chat.completions.create.return_value = _make_completion(payload)
+        mock_get_client.return_value = client
+
+        req = build_request("assess this", response_schema=SIMPLE_SCHEMA)
+        resp = generate_structured(req)
+
+        assert resp.ok is True
+        assert resp.parsed == {"verdict": "partial_success"}
+        assert resp.thinking is not None
+        assert "reasoning" in resp.thinking
+
+    @patch("app.services.llm_provider._get_client")
+    def test_bare_fence_without_language_tag(self, mock_get_client: MagicMock):
+        # Some providers omit the ``json`` language tag.
+        client = MagicMock()
+        fenced = '```\n{"ok": true}\n```'
+        client.chat.completions.create.return_value = _make_completion(fenced)
+        mock_get_client.return_value = client
+
+        req = build_request("assess this", response_schema=SIMPLE_SCHEMA)
+        resp = generate_structured(req)
+
+        assert resp.ok is True
+        assert resp.parsed == {"ok": True}
+
 
 # ---------------------------------------------------------------------------
 # build_request helper

@@ -117,6 +117,23 @@ def _strip_thinking(text: str) -> str:
     return clean
 
 
+_FENCE_RE = re.compile(r"^\s*```(?:[A-Za-z0-9_+-]+)?\s*\n(.*?)\n```\s*$", re.DOTALL)
+
+
+def _strip_code_fence(text: str) -> str:
+    """Peel an optional ```[lang]\\n...\\n``` Markdown wrapper.
+
+    Reasoning-oriented providers (MiniMax-M2.x notably) default to
+    Markdown-fenced JSON even when ``response_format={"type":"json_object"}``
+    is set, which makes ``json.loads`` choke on the backticks. The
+    fence is only stripped when the whole cleaned response is a
+    single code block — loose text that merely *contains* a fence is
+    left for the caller to handle.
+    """
+    match = _FENCE_RE.match(text)
+    return match.group(1).strip() if match else text
+
+
 def _extract_usage(raw_usage: Any) -> LlmUsage:
     if raw_usage is None:
         return LlmUsage()
@@ -221,9 +238,12 @@ def generate_structured(request: LlmRequest) -> LlmResponse:
                 error=LlmError(kind="parse_error", message="Empty response from provider"),
             )
 
+        # Peel ```json ... ``` wrapper if present — see _strip_code_fence.
+        json_text = _strip_code_fence(raw_text)
+
         # Parse JSON
         try:
-            parsed = json.loads(raw_text)
+            parsed = json.loads(json_text)
         except json.JSONDecodeError as exc:
             return LlmResponse(
                 ok=False,
