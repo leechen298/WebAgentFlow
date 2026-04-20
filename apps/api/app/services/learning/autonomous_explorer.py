@@ -874,35 +874,32 @@ def _fallback_supervisor(
             "note": note,
         })
 
-    # Detect anomalies
-    anomalies = []
-    observe = next(
-        (s for s in reversed(steps) if s.get("action_type") == "observe"), None,
-    )
-    if observe:
-        signals = observe.get("result_signals") or {}
-        if signals.get("has_captcha"):
-            anomalies.append("CAPTCHA / security verification detected")
-        if signals.get("has_login_wall"):
-            anomalies.append("Login wall detected")
-
+    # Deliberately NO anomaly detection here. Earlier versions tried
+    # to flag ``has_login_wall`` / ``has_captcha`` as anomalies based
+    # on the final observe's result_signals, but fallback has no
+    # scenario context — for a scenario like ``invalid_credentials``
+    # the login wall IS the expected outcome, and "Login wall detected"
+    # shows up in the UI as if something went wrong. The rule-side
+    # ``_assess_outcome`` already folds these signals into the verdict
+    # (failure when login_wall persists on a positive-path scenario);
+    # duplicating that as an anomaly string is either redundant or
+    # actively misleading.
+    #
     # Pass self_verdict straight through — shared vocabulary means no
     # translation. Guard against unexpected values (future-proofing).
     verdict = self_verdict if self_verdict in (
         "success", "partial_success", "failure", "uncertain",
     ) else "uncertain"
-    if anomalies and verdict == "success":
-        verdict = "partial_success"
 
     suffix = f" [fallback: {error_kind or 'LLM unavailable'}]"
     return {
         "verdict": verdict,
-        "confidence": "medium" if not anomalies else "high",
+        "confidence": "low",  # always low — we didn't really verify
         "summary": summary + suffix,
         "step_assessments": step_assessments,
-        "anomalies": anomalies,
+        "anomalies": [],
         "suggestions": [],
-        "should_save_path": (verdict == "success") and not anomalies,
+        "should_save_path": verdict == "success",
         "_supervisor_source": "fallback",
         "_supervisor_error_kind": error_kind,
     }

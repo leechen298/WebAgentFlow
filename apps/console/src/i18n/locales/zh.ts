@@ -392,6 +392,8 @@ export default {
     selfVerdict: '自评结论',
     scenarioExpected: '符合场景预期',
     scenarioMismatch: '偏离场景规格',
+    scenarioExpectNegativeNote: '规则侧裁决为 "{verdict}"，这正是该场景的预期结果（例如 "invalid_credentials" 期望登录墙保留）。本次运行通过规格。',
+    scenarioDeviationNote: '规则侧裁决为 "{verdict}"，但场景预期不同 —— 本次运行偏离规格。',
     supervisorTitle: 'Supervisor（项目内 Agent）',
     scorecardTitle: '基线对照得分',
     confidence: '置信度',

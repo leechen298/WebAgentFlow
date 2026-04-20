@@ -12,28 +12,28 @@
             <a-tag color="blue">{{ $t('autonomous.badgeProjectCode') }}</a-tag>
           </template>
           <div v-if="selfAssessment">
-            <a-tag :color="verdictColor(selfAssessment.verdict)">
-              {{ selfAssessment.verdict }}
+            <!-- Primary label is the scenario outcome a human cares
+                 about, not the raw rule verdict. For negative-path
+                 scenarios (invalid_credentials expects login wall),
+                 the rule verdict is "failure" by design — surfacing
+                 that as the main tag makes passing runs look broken.
+                 Raw verdict still shown as a small subtitle when it
+                 disagrees, so the mechanics stay inspectable. -->
+            <a-tag :color="effectiveStatusColor(effectiveSelfStatus)">
+              {{ effectiveStatusLabel(effectiveSelfStatus) }}
             </a-tag>
-            <!-- Reconciliation badge: for negative-path scenarios the
-                 raw verdict above is "failure" by design — this chip
-                 makes it obvious whether that failure is scenario-
-                 expected or a real deviation. Uses the rubric's
-                 verdict_check.matches_expectation, not the raw verdict. -->
-            <a-tag
-              v-if="scenarioMatched === true"
-              color="green"
-              :bordered="false"
+            <div
+              v-if="scenarioMatched === true && selfAssessment.verdict !== 'success'"
+              class="scenario-note"
             >
-              ✓ {{ $t('autonomous.scenarioExpected') }}
-            </a-tag>
-            <a-tag
+              {{ $t('autonomous.scenarioExpectNegativeNote', { verdict: selfAssessment.verdict }) }}
+            </div>
+            <div
               v-else-if="scenarioMatched === false"
-              color="red"
-              :bordered="false"
+              class="scenario-note scenario-note-warn"
             >
-              ✗ {{ $t('autonomous.scenarioMismatch') }}
-            </a-tag>
+              {{ $t('autonomous.scenarioDeviationNote', { verdict: selfAssessment.verdict }) }}
+            </div>
             <div class="summary">{{ selfAssessment.summary }}</div>
             <div v-if="selfAssessment.final_url" class="final-meta">
               {{ $t('autonomous.finalUrl') }}:
@@ -52,12 +52,18 @@
             <a-tag color="purple">{{ $t('autonomous.badgeProjectLlmAgent') }}</a-tag>
           </template>
           <div v-if="supervisor">
-            <a-tag :color="verdictColor(supervisor.verdict)">
-              {{ supervisor.verdict }}
+            <a-tag :color="effectiveStatusColor(effectiveSupervisorStatus)">
+              {{ effectiveStatusLabel(effectiveSupervisorStatus) }}
             </a-tag>
             <a-tag :color="confidenceColor(supervisor.confidence)">
               {{ $t('autonomous.confidence') }}: {{ supervisor.confidence }}
             </a-tag>
+            <div
+              v-if="scenarioMatched === true && supervisor.verdict && supervisor.verdict !== 'success'"
+              class="scenario-note"
+            >
+              {{ $t('autonomous.scenarioExpectNegativeNote', { verdict: supervisor.verdict }) }}
+            </div>
             <div class="summary">{{ supervisor.summary }}</div>
             <div v-if="supervisor.anomalies?.length">
               <strong>{{ $t('autonomous.anomalies') }}:</strong>
@@ -125,7 +131,12 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
-import { verdictColor, confidenceColor } from '@/utils/autonomousDisplay';
+import {
+  confidenceColor,
+  effectiveStatus,
+  effectiveStatusColor,
+  type EffectiveStatus,
+} from '@/utils/autonomousDisplay';
 
 interface SelfAssessmentShape {
   verdict?: string;
@@ -174,6 +185,28 @@ const scenarioMatched = computed<boolean | null>(() => {
   return vc.matches_expectation;
 });
 
+const effectiveSelfStatus = computed<EffectiveStatus>(() =>
+  effectiveStatus({
+    verdict: props.selfAssessment?.verdict ?? null,
+    scenarioMatched: scenarioMatched.value,
+  }),
+);
+
+const effectiveSupervisorStatus = computed<EffectiveStatus>(() =>
+  effectiveStatus({
+    verdict: props.supervisor?.verdict ?? null,
+    scenarioMatched: scenarioMatched.value,
+  }),
+);
+
+function effectiveStatusLabel(s: EffectiveStatus): string {
+  if (s === 'success') return t('autonomousHistory.statusSuccess');
+  if (s === 'failure') return t('autonomousHistory.statusFailure');
+  if (s === 'partial') return t('autonomousHistory.statusPartial');
+  if (s === 'uncertain') return t('autonomousHistory.statusUncertain');
+  return '—';
+}
+
 const { t } = useI18n();
 
 const scoreMetrics = computed(() => {
@@ -210,6 +243,16 @@ async function copyThinking(): Promise<void> {
   margin-top: 8px;
   font-size: 13px;
   color: #595959;
+}
+.scenario-note {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #8c8c8c;
+  font-style: italic;
+  line-height: 1.4;
+}
+.scenario-note-warn {
+  color: #d4380d;
 }
 .final-meta {
   font-size: 11px;

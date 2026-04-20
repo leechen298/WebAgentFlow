@@ -176,10 +176,14 @@ def test_fallback_without_error_kind_uses_generic_label() -> None:
     assert "[fallback: LLM unavailable]" in out["summary"]
 
 
-def test_fallback_downgrades_to_partial_when_anomaly_present() -> None:
-    # Existing behaviour — an otherwise-success rule verdict gets
-    # downgraded to partial_success when anomalies like login_wall
-    # are detected. Keep this wired up across the refactor.
+def test_fallback_does_not_emit_scenario_blind_anomalies() -> None:
+    # Earlier versions hardcoded "Login wall detected" / "CAPTCHA
+    # detected" anomalies based on result_signals, which was noise:
+    # for invalid_credentials the login wall IS the expected outcome,
+    # and the rule side already folds these signals into the main
+    # verdict via _assess_outcome. Fallback has no scenario context to
+    # tell "expected" from "unexpected", so it must stay silent on
+    # anomalies entirely — misleading noise is worse than none.
     out = ae._fallback_supervisor(
         steps=[
             {"step_index": 0, "ok": True, "action_type": "click"},
@@ -187,12 +191,13 @@ def test_fallback_downgrades_to_partial_when_anomaly_present() -> None:
                 "step_index": 1,
                 "ok": True,
                 "action_type": "observe",
-                "result_signals": {"has_login_wall": True},
+                "result_signals": {"has_login_wall": True, "has_captcha": True},
             },
         ],
-        self_verdict="success",
-        summary="done",
+        self_verdict="failure",
+        summary="login wall persisted",
         error_kind="provider_error",
     )
-    assert out["verdict"] == "partial_success"
-    assert "Login wall detected" in out["anomalies"]
+    assert out["verdict"] == "failure"  # passes self_verdict through
+    assert out["anomalies"] == []
+    assert out["confidence"] == "low"  # fallback never pretends to be confident

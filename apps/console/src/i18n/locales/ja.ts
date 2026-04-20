@@ -392,6 +392,8 @@ export default {
     selfVerdict: '自己評価結果',
     scenarioExpected: 'シナリオ期待通り',
     scenarioMismatch: 'シナリオ仕様から逸脱',
+    scenarioExpectNegativeNote: 'ルール側の判定は "{verdict}" ですが、これはシナリオの期待結果です（例: "invalid_credentials" はログイン壁の残存を期待）。仕様に合格。',
+    scenarioDeviationNote: 'ルール側の判定は "{verdict}" ですが、シナリオの期待とは異なります。仕様から逸脱。',
     supervisorTitle: 'Supervisor（プロジェクト内 Agent）',
     scorecardTitle: 'ベースライン照合スコア',
     confidence: '信頼度',
