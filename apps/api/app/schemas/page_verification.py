@@ -201,6 +201,31 @@ class ScoreBlock(BaseModel):
     weight_note: str = ""
 
 
+class PassGate(BaseModel):
+    """Strict pass criterion for a spec-driven scenario.
+
+    The 5 scorecard scores give a nuanced per-dimension picture, but a
+    run is either ready to call "passed" or it isn't. This gate codifies
+    that binary: a scenario is only considered passed when every layer
+    of verification agrees AND the LLM was confident. Anything less —
+    a fallback supervisor, a medium / low LLM confidence, a conflicting
+    LLM verdict — is ``unverified`` (not ``failed`` — failed means a
+    concrete deviation from spec). See project_phase9_tail_plan.md for
+    the rationale; being lax here accumulates "sort-of passed" runs
+    that silently hide regressions.
+    """
+
+    status: str = Field(description="One of: 'pass', 'fail', 'unverified'.")
+    reasons: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Structured reasons for the current status. Empty when "
+            "status='pass'; otherwise lists every gate that failed so "
+            "the operator can see exactly what's missing."
+        ),
+    )
+
+
 class PageVerificationScorecard(BaseModel):
     """The 5-score output of the comparator. No aggregate total by design."""
 
@@ -227,6 +252,11 @@ class PageVerificationScorecard(BaseModel):
     # 5. Supervisor agreement with baseline
     supervisor_agreement: ScoreBlock
     supervisor_check: SupervisorCheck
+
+    # Strict pass gate — binary pass/fail/unverified driven by the
+    # combination of the above checks + LLM confidence. Used for the
+    # CLI exit code + the UI's primary status badge.
+    pass_gate: PassGate | None = None
 
     # Raw metadata
     notes: list[str] = Field(default_factory=list)

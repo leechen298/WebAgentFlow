@@ -29,6 +29,7 @@ from app.schemas.page_verification import (
     ElementMatcher,
     PageVerificationScorecard,
     PageVerificationSpec,
+    PassGate,
     ScoreBlock,
     SupervisorCheck,
     VerdictCheck,
@@ -538,6 +539,16 @@ def verify_against_spec(
     supervisor_check = _check_supervisor(result, scenario)
     supervisor_score = supervisor_check.score
 
+    # Strict pass gate — see PassGate docstring for rationale.
+    pass_gate = _compute_pass_gate(
+        result=result,
+        element_score=element_score,
+        action_score=action_score,
+        verdict_check=verdict_check,
+        distraction_score=distraction_score,
+        supervisor_check=supervisor_check,
+    )
+
     return PageVerificationScorecard(
         page_id=spec.page_id,
         scenario=scenario_name,
@@ -567,4 +578,87 @@ def verify_against_spec(
             "exact=1, uncertain-vs-non-success=0.5, conflict=0.",
         ),
         supervisor_check=supervisor_check,
+        pass_gate=pass_gate,
     )
+
+
+def _compute_pass_gate(
+    *,
+    result: AutonomousExplorationResult,
+    element_score: float,
+    action_score: float,
+    verdict_check: VerdictCheck,
+    distraction_score: float,
+    supervisor_check: SupervisorCheck,
+) -> PassGate:
+    """Derive the binary pass / fail / unverified status.
+
+    Every gate must be true for ``pass``. A single failure degrades to
+    ``fail`` (concrete spec deviation) or ``unverified`` (LLM couldn't
+    or didn't validate). See `PassGate` in schemas for the rationale.
+
+    Gate ordering matters for the ``reasons`` list — spec deviations
+    surface before LLM-availability issues so the most action-relevant
+    reason is first.
+    """
+    fail_reasons: list[str] = []
+    unverified_reasons: list[str] = []
+
+    # Gate 1 — spec deviations (hard fails)
+    if not verdict_check.matches_expectation:
+        fail_reasons.append(
+            f"rule-side verdict did not match scenario expectation: "
+            f"{verdict_check.notes or 'see verdict_check'}",
+        )
+    if element_score < 1.0:
+        fail_reasons.append(
+            f"element recognition score {element_score:.2f} < 1.0 — "
+            f"one or more critical elements missing or mis-classified",
+        )
+    if action_score < 1.0:
+        fail_reasons.append(
+            f"action coverage score {action_score:.2f} < 1.0 — "
+            f"an expected action was not executed against the right target",
+        )
+    if distraction_score < 1.0:
+        fail_reasons.append(
+            f"distraction avoidance score {distraction_score:.2f} < 1.0 — "
+            f"planner hit a distractor element",
+        )
+
+    # Gate 2 — supervisor availability + confidence. Mechanics may be
+    # fine but if the LLM didn't (or couldn't) cross-check, the run is
+    # unverified — neither a clean pass nor a concrete fail.
+    supervisor = result.supervisor or {}
+    source = supervisor.get("_supervisor_source") or supervisor.get("source")
+    if source == "fallback":
+        error_kind = (
+            supervisor.get("_supervisor_error_kind")
+            or supervisor.get("error_kind")
+            or "unknown"
+        )
+        unverified_reasons.append(
+            f"supervisor ran in fallback mode (error_kind={error_kind}) — "
+            f"LLM did not independently verify this run",
+        )
+    else:
+        if not supervisor:
+            unverified_reasons.append("supervisor block missing entirely")
+        else:
+            confidence = (supervisor.get("confidence") or "").lower()
+            if confidence and confidence != "high":
+                unverified_reasons.append(
+                    f"supervisor confidence={confidence} — scenario requires "
+                    f"high-confidence LLM agreement",
+                )
+            if supervisor_check.score < 1.0:
+                unverified_reasons.append(
+                    f"supervisor_agreement score {supervisor_check.score} < 1.0: "
+                    f"{supervisor_check.notes}",
+                )
+
+    if fail_reasons:
+        return PassGate(status="fail", reasons=fail_reasons + unverified_reasons)
+    if unverified_reasons:
+        return PassGate(status="unverified", reasons=unverified_reasons)
+    return PassGate(status="pass", reasons=[])
