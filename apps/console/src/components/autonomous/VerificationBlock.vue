@@ -55,7 +55,22 @@
             <a-tag :color="effectiveStatusColor(effectiveSupervisorStatus)">
               {{ effectiveStatusLabel(effectiveSupervisorStatus) }}
             </a-tag>
-            <a-tag :color="confidenceColor(supervisor.confidence)">
+            <!-- Distinguish "LLM ran and said 'low confidence'" from
+                 "LLM never produced a verdict". The latter has
+                 supervisor.source === 'fallback' + an error_kind;
+                 reporting confidence=low in that case was conflating
+                 two completely different states. -->
+            <a-tag
+              v-if="supervisorIsFallback"
+              color="orange"
+            >
+              {{ $t('autonomous.supervisorUnavailable') }}:
+              {{ supervisorErrorKind || $t('autonomous.supervisorUnknownReason') }}
+            </a-tag>
+            <a-tag
+              v-else-if="supervisor.confidence"
+              :color="confidenceColor(supervisor.confidence)"
+            >
               {{ $t('autonomous.confidence') }}: {{ supervisor.confidence }}
             </a-tag>
             <div
@@ -147,10 +162,21 @@ interface SelfAssessmentShape {
 
 interface SupervisorShape {
   verdict?: string;
-  confidence?: string;
+  // confidence is null when source === 'fallback' — fallback has no
+  // LLM self-assessment signal. Positive values ('high'/'medium'/'low')
+  // only come from real LLM verdicts.
+  confidence?: string | null;
   summary?: string;
   anomalies?: string[];
   suggestions?: string[];
+  // Set by autonomous_explorer._run_supervisor; distinguishes a real
+  // LLM verdict ("llm") from a rule-mirrored fallback ("fallback").
+  // The workbench SSE payload uses the underscore-prefixed form;
+  // the CLI's trimmed output flattens to non-prefixed fields.
+  source?: 'llm' | 'fallback' | null;
+  error_kind?: string | null;
+  _supervisor_source?: 'llm' | 'fallback' | null;
+  _supervisor_error_kind?: string | null;
   _thinking?: string;
   _model?: string;
 }
@@ -198,6 +224,21 @@ const effectiveSupervisorStatus = computed<EffectiveStatus>(() =>
     scenarioMatched: scenarioMatched.value,
   }),
 );
+
+// Supervisor source + error_kind can arrive under either snake_case
+// (CLI / flattened API) or underscore-prefixed (SSE event + persisted
+// result snapshot). Normalise at read time so the template stays tidy.
+const supervisorIsFallback = computed<boolean>(() => {
+  const s = props.supervisor;
+  if (!s) return false;
+  return (s.source ?? s._supervisor_source) === 'fallback';
+});
+
+const supervisorErrorKind = computed<string | null>(() => {
+  const s = props.supervisor;
+  if (!s) return null;
+  return s.error_kind ?? s._supervisor_error_kind ?? null;
+});
 
 function effectiveStatusLabel(s: EffectiveStatus): string {
   if (s === 'success') return t('autonomousHistory.statusSuccess');

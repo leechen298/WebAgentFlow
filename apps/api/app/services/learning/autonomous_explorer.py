@@ -891,10 +891,18 @@ def _fallback_supervisor(
         "success", "partial_success", "failure", "uncertain",
     ) else "uncertain"
 
+    # Deliberately leave confidence unset: ``confidence`` is an LLM
+    # self-assessment signal (high/medium/low), and a fallback response
+    # has no LLM self-assessment. Reporting "low" here was conflating
+    # two different states — "LLM said it isn't confident" vs "LLM
+    # never produced a verdict" — which made the UI indistinguishable
+    # between those two cases. Downstream code should key off
+    # ``_supervisor_source`` + ``_supervisor_error_kind`` to render
+    # the fallback state.
     suffix = f" [fallback: {error_kind or 'LLM unavailable'}]"
     return {
         "verdict": verdict,
-        "confidence": "low",  # always low — we didn't really verify
+        "confidence": None,
         "summary": summary + suffix,
         "step_assessments": step_assessments,
         "anomalies": [],

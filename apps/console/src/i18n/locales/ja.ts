@@ -394,6 +394,8 @@ export default {
     scenarioMismatch: 'シナリオ仕様から逸脱',
     scenarioExpectNegativeNote: 'ルール側の判定は "{verdict}" ですが、これはシナリオの期待結果です（例: "invalid_credentials" はログイン壁の残存を期待）。仕様に合格。',
     scenarioDeviationNote: 'ルール側の判定は "{verdict}" ですが、シナリオの期待とは異なります。仕様から逸脱。',
+    supervisorUnavailable: 'LLM 利用不可',
+    supervisorUnknownReason: '理由不明',
     supervisorTitle: 'Supervisor（プロジェクト内 Agent）',
     scorecardTitle: 'ベースライン照合スコア',
     confidence: '信頼度',

@@ -394,6 +394,8 @@ export default {
     scenarioMismatch: 'scenario-mismatch',
     scenarioExpectNegativeNote: 'Rule-side verdict is "{verdict}" — this is the expected outcome for this scenario (e.g. "invalid_credentials" expects the login wall to persist). The run passed its spec.',
     scenarioDeviationNote: 'Rule-side verdict is "{verdict}" but the scenario expected a different outcome — this run deviated from the spec.',
+    supervisorUnavailable: 'LLM unavailable',
+    supervisorUnknownReason: 'unknown reason',
     supervisorTitle: 'supervisor',
     scorecardTitle: 'scorecard (baseline)',
     confidence: 'confidence',

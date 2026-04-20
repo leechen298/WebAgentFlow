@@ -200,4 +200,10 @@ def test_fallback_does_not_emit_scenario_blind_anomalies() -> None:
     )
     assert out["verdict"] == "failure"  # passes self_verdict through
     assert out["anomalies"] == []
-    assert out["confidence"] == "low"  # fallback never pretends to be confident
+    # confidence is an LLM self-assessment signal; fallback has no
+    # LLM verdict to self-assess, so the field is deliberately None.
+    # Downstream keys off _supervisor_source + _supervisor_error_kind
+    # to render the "LLM unavailable" state.
+    assert out["confidence"] is None
+    assert out["_supervisor_source"] == "fallback"
+    assert out["_supervisor_error_kind"] == "provider_error"
