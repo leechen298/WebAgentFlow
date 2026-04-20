@@ -777,35 +777,73 @@ def _run_supervisor(
         metadata={"source": "autonomous_exploration_supervisor"},
     )
 
-    try:
-        response = generate_structured(request)
-        if response.ok and response.parsed:
-            logger.info("Supervisor verdict: %s", response.parsed.get("verdict"))
-            # Expose the model's <think> reasoning trace for UI transparency.
-            # Key is `_thinking` (underscore-prefixed) so schema-strict consumers
-            # can ignore it; Pydantic SupervisorAssessment uses
-            # **dict-to-kwargs construction, so this would normally be rejected
-            # — but the frontend receives the raw dict via SSE and renders it.
-            result = dict(response.parsed)
-            if response.thinking:
-                result["_thinking"] = response.thinking
-            if response.model:
-                result["_model"] = response.model
-            return result
+    # One retry on transient / retryable errors (rate_limit, timeout,
+    # 5xx provider errors). Tight sequential usage — 5 scenarios back-
+    # to-back in the Phase 9 runner — routinely triggered a single
+    # blip that a one-shot retry covers without re-exercising Playwright.
+    # The delay is short because rate-limit windows on our providers
+    # tend to be sub-second; long back-off here would balloon run time
+    # without meaningfully improving hit rate.
+    import time as _time
 
-        logger.warning("Supervisor LLM call failed: %s",
-                       response.error.message if response.error else "unknown")
-    except Exception as exc:
-        logger.warning("Supervisor call raised: %s", exc)
+    last_error_kind: str | None = None
+    last_error_message: str | None = None
+    attempts = 2
+    for attempt in range(attempts):
+        try:
+            response = generate_structured(request)
+            if response.ok and response.parsed:
+                logger.info("Supervisor verdict: %s (attempt %d)",
+                            response.parsed.get("verdict"), attempt + 1)
+                # Expose the model's <think> reasoning trace for UI
+                # transparency. Underscore-prefixed so schema-strict
+                # consumers can ignore it; the frontend receives the
+                # raw dict via SSE and renders it.
+                result = dict(response.parsed)
+                if response.thinking:
+                    result["_thinking"] = response.thinking
+                if response.model:
+                    result["_model"] = response.model
+                result["_supervisor_source"] = "llm"
+                return result
 
-    # Fallback: rule-based
-    return _fallback_supervisor(steps, verdict, summary)
+            # Non-OK response — capture error for potential retry / fallback.
+            err = response.error
+            last_error_kind = err.kind if err else "unknown"
+            last_error_message = err.message if err else "unknown"
+            retryable = bool(err and err.retryable)
+            logger.warning(
+                "Supervisor LLM call failed (attempt %d/%d): kind=%s retryable=%s msg=%s",
+                attempt + 1, attempts, last_error_kind, retryable, last_error_message,
+            )
+            if not retryable or attempt == attempts - 1:
+                break
+            _time.sleep(0.5)
+        except Exception as exc:
+            last_error_kind = "exception"
+            last_error_message = str(exc)
+            logger.warning("Supervisor call raised (attempt %d/%d): %s",
+                           attempt + 1, attempts, exc)
+            # Exceptions are conservatively treated as retryable once —
+            # a transient httpx.ConnectError is the common case.
+            if attempt == attempts - 1:
+                break
+            _time.sleep(0.5)
+
+    # Fallback: rule-based, tagged with the underlying error kind so
+    # the UI / CLI can distinguish a real LLM verdict from a fallback.
+    return _fallback_supervisor(
+        steps, verdict, summary,
+        error_kind=last_error_kind,
+    )
 
 
 def _fallback_supervisor(
     steps: list[dict[str, Any]],
     self_verdict: str,
     summary: str,
+    *,
+    error_kind: str | None = None,
 ) -> dict[str, Any]:
     """Rule-based fallback when LLM is unavailable.
 
@@ -815,6 +853,12 @@ def _fallback_supervisor(
     mapping is needed. The only nudge is downgrading an otherwise-
     success verdict to partial_success when anomalies are present,
     which is a stricter check the LLM would usually do on its own.
+
+    ``error_kind`` — optional tag from the failed LLM call
+    (``rate_limit`` / ``timeout`` / ``provider_error`` / ``parse_error`` /
+    ``auth_error`` / ``exception``). Included in both the summary
+    suffix and the returned ``_supervisor_error_kind`` field so the
+    operator can tell a transient blip from a persistent misconfig.
     """
     step_assessments = []
     for s in steps:
@@ -850,12 +894,15 @@ def _fallback_supervisor(
     if anomalies and verdict == "success":
         verdict = "partial_success"
 
+    suffix = f" [fallback: {error_kind or 'LLM unavailable'}]"
     return {
         "verdict": verdict,
         "confidence": "medium" if not anomalies else "high",
-        "summary": summary + (" [fallback: LLM unavailable]"),
+        "summary": summary + suffix,
         "step_assessments": step_assessments,
         "anomalies": anomalies,
         "suggestions": [],
         "should_save_path": (verdict == "success") and not anomalies,
+        "_supervisor_source": "fallback",
+        "_supervisor_error_kind": error_kind,
     }
