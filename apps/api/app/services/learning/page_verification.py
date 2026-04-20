@@ -399,74 +399,71 @@ def _check_verdict(
     )
 
 
-_SUPERVISOR_SUCCESS = {"success"}
-_SUPERVISOR_PARTIAL = {"partial_success"}
-_SUPERVISOR_FAILURE = {"failure"}
-_SUPERVISOR_UNCERTAIN = {"uncertain"}
-
-
-def _supervisor_bucket(verdict: str | None) -> str:
-    if not verdict:
-        return "missing"
-    v = verdict.lower()
-    if v in _SUPERVISOR_SUCCESS:
-        return "success"
-    if v in _SUPERVISOR_PARTIAL:
-        return "partial"
-    if v in _SUPERVISOR_FAILURE:
-        return "failure"
-    if v in _SUPERVISOR_UNCERTAIN:
-        return "uncertain"
-    return "other"
-
-
 def _check_supervisor(
     result: AutonomousExplorationResult,
     scenario: ScenarioSpec,  # noqa: F821
 ) -> SupervisorCheck:
-    """Coarse 3-bucket agreement:
-        exact match (same bucket as expected)           → 1.0
-        uncertain vs non-success (either side uncertain) → 0.5
-        clear conflict                                   → 0.0
+    """Agreement between LLM observation and scenario intent.
+
+    New contract: the LLM reports ``scenario_goal_observed`` (did the
+    thing the scenario is checking for happen) with a short
+    ``scenario_goal_evidence`` quote. Agreement is graded on those
+    two atoms, not on a verdict bucket:
+
+      * ``scenario_goal_observed=true`` + evidence non-empty → 1.0
+      * ``scenario_goal_observed=true`` + evidence empty     → 0.5
+      * ``scenario_goal_observed=false`` OR observations missing → 0.0
+
+    Rationale: under the old contract the LLM returned a verdict
+    directly, and the supervisor_agreement check compared it to
+    the scenario's expected bucket. That contract proved unsafe —
+    reasoning models talked themselves out of mechanical rules. The
+    new contract removes the LLM's verdict pen; agreement now
+    measures whether the LLM *saw what the scenario was checking
+    for*, with evidence. See project_supervisor_verdict_override_plan.md.
     """
-    sup_verdict = None
-    if result.supervisor:
-        sup_verdict = result.supervisor.get("verdict")
-    sup_bucket = _supervisor_bucket(sup_verdict)
+    supervisor = result.supervisor or {}
+    observations = supervisor.get("observations") or {}
+    goal_observed = observations.get("scenario_goal_observed")
+    evidence = (observations.get("scenario_goal_evidence") or "").strip()
+    # The derived verdict for reporting — what the LLM-observed
+    # atoms implied after derivation. Still surfaced so the
+    # SupervisorCheck record is useful for audit.
+    sup_verdict = supervisor.get("verdict")
 
     expected = scenario.expected_verdict
     expected_not = scenario.expected_verdict_not
     if expected == "success":
         expected_bucket = "success"
     elif expected_not == "success":
-        # scenario expects non-success; accept failure or partial
         expected_bucket = "non_success"
     elif expected is not None:
-        expected_bucket = expected  # fall-through — unusual
+        expected_bucket = expected
     else:
         expected_bucket = "unspecified"
 
-    # Score
-    if expected_bucket == "success":
-        if sup_bucket == "success":
-            score, note = 1.0, "supervisor success agrees with expected success"
-        elif sup_bucket == "uncertain":
-            score, note = 0.5, "supervisor uncertain where success expected"
-        elif sup_bucket in ("failure", "partial"):
-            score, note = 0.0, f"supervisor {sup_bucket} conflicts with expected success"
-        else:
-            score, note = 0.0, f"supervisor bucket '{sup_bucket}' unrecognized"
-    elif expected_bucket == "non_success":
-        if sup_bucket in ("failure", "partial"):
-            score, note = 1.0, f"supervisor {sup_bucket} agrees with expected non-success"
-        elif sup_bucket == "uncertain":
-            score, note = 0.5, "supervisor uncertain where non-success expected"
-        elif sup_bucket == "success":
-            score, note = 0.0, "supervisor success conflicts with expected non-success"
-        else:
-            score, note = 0.0, f"supervisor bucket '{sup_bucket}' unrecognized"
+    if not supervisor:
+        score, note = 0.0, "supervisor block missing"
+    elif not observations:
+        # Fallback mode or schema failure — no atoms to grade.
+        score, note = 0.0, "no supervisor observations available"
+    elif goal_observed is True and evidence:
+        score, note = 1.0, (
+            f"LLM observed scenario goal ({expected_bucket}) with evidence"
+        )
+    elif goal_observed is True and not evidence:
+        score, note = 0.5, (
+            "LLM reported scenario_goal_observed=true but cited no evidence"
+        )
+    elif goal_observed is False:
+        score, note = 0.0, (
+            "LLM reported scenario_goal_observed=false — did not see the "
+            "thing the scenario is checking for"
+        )
     else:
-        score, note = 0.0, f"expected verdict '{expected_bucket}' not comparable"
+        score, note = 0.0, (
+            "scenario_goal_observed atom missing from LLM response"
+        )
 
     return SupervisorCheck(
         supervisor_verdict=sup_verdict,
@@ -626,9 +623,10 @@ def _compute_pass_gate(
             f"planner hit a distractor element",
         )
 
-    # Gate 2 — supervisor availability + confidence. Mechanics may be
-    # fine but if the LLM didn't (or couldn't) cross-check, the run is
-    # unverified — neither a clean pass nor a concrete fail.
+    # Gate 2 — supervisor availability + observation completeness.
+    # Mechanics may be fine but if the LLM didn't (or couldn't)
+    # cross-check, the run is unverified — neither a clean pass nor a
+    # concrete fail.
     supervisor = result.supervisor or {}
     source = supervisor.get("_supervisor_source") or supervisor.get("source")
     if source == "fallback":
@@ -645,11 +643,15 @@ def _compute_pass_gate(
         if not supervisor:
             unverified_reasons.append("supervisor block missing entirely")
         else:
-            confidence = (supervisor.get("confidence") or "").lower()
-            if confidence and confidence != "high":
+            # Under the observation-atom contract the LLM no longer
+            # emits a confidence field. The equivalent signal is the
+            # partial-parse flag: if any critical atom was missing
+            # from the LLM response, the observation side isn't
+            # complete and we can't claim a verified pass.
+            if supervisor.get("_supervisor_partial_parse") is True:
                 unverified_reasons.append(
-                    f"supervisor confidence={confidence} — scenario requires "
-                    f"high-confidence LLM agreement",
+                    "supervisor response was partially parsed — one or "
+                    "more critical observation atoms were missing",
                 )
             if supervisor_check.score < 1.0:
                 unverified_reasons.append(

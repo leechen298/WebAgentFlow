@@ -1,9 +1,15 @@
 """Tests for the strict pass gate computed alongside the scorecard.
 
 The gate codifies "what counts as a real pass" for a spec-driven
-scenario: every rule-side check ok AND the LLM cross-checked AND the
-LLM was high-confident. Being lax here accumulates "sort-of passed"
-runs that silently hide regressions, so the bar is deliberately hard.
+scenario: every rule-side check ok AND the LLM produced a complete
+observation set AND the supervisor_agreement score hit 1.0. Being
+lax here accumulates "sort-of passed" runs that silently hide
+regressions, so the bar is deliberately hard.
+
+Under the observation-atom contract the old "confidence" field is
+gone — the equivalent signal is ``_supervisor_partial_parse=true``
+(critical atoms missing from the LLM response) which downgrades to
+``unverified`` the same way ``confidence=medium`` used to.
 
 See PassGate in app/schemas/page_verification.py for the product
 rationale.
@@ -50,13 +56,32 @@ def _sup(score: float = 1.0, notes: str = "supervisor success agrees") -> Superv
 # ───────────────────────────────────────────────────────────────────
 
 
+def _ok_supervisor(**overrides) -> dict:
+    """Baseline "LLM ran successfully with full observations" block.
+
+    Consolidated so individual tests only name the fields they're
+    varying, keeping test intent legible.
+    """
+    base = {
+        "_supervisor_source": "llm",
+        "_supervisor_partial_parse": False,
+        "verdict": "success",
+        "observations": {
+            "did_navigate": True,
+            "did_show_error": False,
+            "form_state_after": "no_form",
+            "scenario_goal_observed": True,
+            "scenario_goal_evidence": "Reached destination.",
+            "summary": "ok",
+        },
+    }
+    base.update(overrides)
+    return base
+
+
 def test_pass_when_all_gates_clean() -> None:
     gate = _compute_pass_gate(
-        result=_result({
-            "_supervisor_source": "llm",
-            "confidence": "high",
-            "verdict": "success",
-        }),
+        result=_result(_ok_supervisor()),
         element_score=1.0,
         action_score=1.0,
         verdict_check=_vc(matches=True),
@@ -74,10 +99,7 @@ def test_pass_when_all_gates_clean() -> None:
 
 def test_fail_when_verdict_does_not_match_expectation() -> None:
     gate = _compute_pass_gate(
-        result=_result({
-            "_supervisor_source": "llm",
-            "confidence": "high",
-        }),
+        result=_result(_ok_supervisor()),
         element_score=1.0,
         action_score=1.0,
         verdict_check=_vc(matches=False, notes="verdict must not be 'success', but it is"),
@@ -90,7 +112,7 @@ def test_fail_when_verdict_does_not_match_expectation() -> None:
 
 def test_fail_when_element_missing() -> None:
     gate = _compute_pass_gate(
-        result=_result({"_supervisor_source": "llm", "confidence": "high"}),
+        result=_result(_ok_supervisor()),
         element_score=0.67,
         action_score=1.0,
         verdict_check=_vc(),
@@ -103,7 +125,7 @@ def test_fail_when_element_missing() -> None:
 
 def test_fail_when_distraction_hit() -> None:
     gate = _compute_pass_gate(
-        result=_result({"_supervisor_source": "llm", "confidence": "high"}),
+        result=_result(_ok_supervisor()),
         element_score=1.0,
         action_score=1.0,
         verdict_check=_vc(),
@@ -139,42 +161,33 @@ def test_unverified_when_supervisor_is_fallback() -> None:
     assert any("provider_error" in r for r in gate.reasons)
 
 
-def test_unverified_when_llm_confidence_below_high() -> None:
-    # The invalid_credentials case from today's session: LLM hedged
-    # to uncertain/medium because it couldn't see final_state. Even
-    # if the rule rubric passed, medium confidence is not a pass —
-    # otherwise every ambiguous run looks green.
+def test_unverified_when_observations_partial() -> None:
+    # Under the new contract, "LLM answered but some critical atoms
+    # were missing" is the equivalent of the old "confidence=medium"
+    # — rule rubric may be clean but we can't claim verified if the
+    # observation side wasn't complete.
     gate = _compute_pass_gate(
-        result=_result({
-            "_supervisor_source": "llm",
-            "confidence": "medium",
-            "verdict": "uncertain",
-        }),
+        result=_result(_ok_supervisor(_supervisor_partial_parse=True)),
         element_score=1.0,
         action_score=1.0,
         verdict_check=_vc(matches=True),
         distraction_score=1.0,
-        supervisor_check=_sup(score=0.5, notes="uncertain vs non-success"),
+        supervisor_check=_sup(score=1.0),
     )
     assert gate.status == "unverified"
-    assert any("confidence=medium" in r for r in gate.reasons)
+    assert any("partially parsed" in r for r in gate.reasons)
 
 
 def test_unverified_when_supervisor_agreement_partial() -> None:
-    # Supervisor disagreed partially with the rule side (0.5 bucket).
-    # This is the "uncertain where non-success expected" case — not a
-    # pass, not a fail, just unverified.
+    # Supervisor only half-agreed (0.5 score — e.g. goal_observed=true
+    # but no evidence cited). Not a pass, not a fail, just unverified.
     gate = _compute_pass_gate(
-        result=_result({
-            "_supervisor_source": "llm",
-            "confidence": "high",
-            "verdict": "uncertain",
-        }),
+        result=_result(_ok_supervisor()),
         element_score=1.0,
         action_score=1.0,
         verdict_check=_vc(matches=True),
         distraction_score=1.0,
-        supervisor_check=_sup(score=0.5, notes="supervisor uncertain where non-success expected"),
+        supervisor_check=_sup(score=0.5, notes="goal observed but no evidence"),
     )
     assert gate.status == "unverified"
     assert any("supervisor_agreement score" in r for r in gate.reasons)

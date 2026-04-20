@@ -112,11 +112,16 @@
               {{ $t('autonomous.supervisorUnavailable') }}:
               {{ supervisorErrorKind || $t('autonomous.supervisorUnknownReason') }}
             </a-tag>
+            <!-- Partial-parse chip: the LLM returned an observation
+                 response but one or more critical atoms were missing
+                 (schema drift). pass_gate downgrades to unverified for
+                 this; the chip tells the operator why without having
+                 to open the scorecard. -->
             <a-tag
-              v-else-if="supervisor.confidence"
-              :color="confidenceColor(supervisor.confidence)"
+              v-if="supervisorIsPartial"
+              color="orange"
             >
-              {{ $t('autonomous.confidence') }}: {{ supervisor.confidence }}
+              {{ $t('autonomous.supervisorPartial') }}
             </a-tag>
             <div
               v-if="scenarioMatched === true && supervisor.verdict && supervisor.verdict !== 'success'"
@@ -137,6 +142,39 @@
                 <li v-for="(s, i) in supervisor.suggestions" :key="i">{{ s }}</li>
               </ul>
             </div>
+            <!-- Observation atoms — the raw LLM output under the new
+                 contract. Shown collapsed by default so the summary
+                 dominates the tile; operators expand when they need
+                 to audit "what did the LLM actually see". -->
+            <a-collapse
+              v-if="observations || derivationTrail.length"
+              ghost
+              style="margin-top: 8px"
+            >
+              <a-collapse-panel
+                v-if="observations"
+                key="observations"
+                :header="$t('autonomous.observationsTitle')"
+              >
+                <ul class="observations-list">
+                  <li v-for="row in observationRows" :key="row.key">
+                    <code class="atom-key">{{ row.key }}</code>
+                    <span class="atom-value">{{ row.value }}</span>
+                  </li>
+                </ul>
+              </a-collapse-panel>
+              <a-collapse-panel
+                v-if="derivationTrail.length"
+                key="derivation"
+                :header="$t('autonomous.verdictDerivation')"
+              >
+                <ul class="derivation-list">
+                  <li v-for="(rule, i) in derivationTrail" :key="i">
+                    <code>{{ rule }}</code>
+                  </li>
+                </ul>
+              </a-collapse-panel>
+            </a-collapse>
             <!-- Reasoning trace from the LLM (contents of <think>...</think>
                  blocks). Renders only when the model emitted one. -->
             <a-collapse v-if="supervisor._thinking" ghost style="margin-top: 8px">
@@ -192,7 +230,6 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
 import {
-  confidenceColor,
   effectiveStatus,
   effectiveStatusColor,
   verdictColor,
@@ -206,15 +243,35 @@ interface SelfAssessmentShape {
   final_title?: string;
 }
 
+interface ObservationsShape {
+  did_navigate?: boolean;
+  final_url_path?: string;
+  did_show_error?: boolean;
+  error_texts?: string[];
+  form_state_after?: 'reset' | 'persisted' | 'no_form' | 'unclear';
+  list_row_count?: number | null;
+  scenario_goal_observed?: boolean;
+  scenario_goal_evidence?: string;
+  anomalies?: string[];
+  suggestions?: string[];
+  summary?: string;
+  [key: string]: unknown;
+}
+
 interface SupervisorShape {
+  // Derived by the backend from observation atoms — no longer an LLM
+  // choice under the new contract. Kept so existing tiles still show
+  // the mechanical verdict chip.
   verdict?: string;
-  // confidence is null when source === 'fallback' — fallback has no
-  // LLM self-assessment signal. Positive values ('high'/'medium'/'low')
-  // only come from real LLM verdicts.
+  // Always null under the new contract (confidence was an LLM output
+  // that went away with the verdict pen). Kept in the shape so
+  // persisted pre-migration payloads still parse.
   confidence?: string | null;
   summary?: string;
   anomalies?: string[];
   suggestions?: string[];
+  // New under the observation-atom contract.
+  observations?: ObservationsShape | null;
   // Set by autonomous_explorer._run_supervisor; distinguishes a real
   // LLM verdict ("llm") from a rule-mirrored fallback ("fallback").
   // The workbench SSE payload uses the underscore-prefixed form;
@@ -223,6 +280,8 @@ interface SupervisorShape {
   error_kind?: string | null;
   _supervisor_source?: 'llm' | 'fallback' | null;
   _supervisor_error_kind?: string | null;
+  _supervisor_partial_parse?: boolean;
+  _supervisor_verdict_derivation?: string[];
   _thinking?: string;
   _model?: string;
 }
@@ -340,6 +399,52 @@ const supervisorErrorKind = computed<string | null>(() => {
   const s = props.supervisor;
   if (!s) return null;
   return s.error_kind ?? s._supervisor_error_kind ?? null;
+});
+
+const supervisorIsPartial = computed<boolean>(() => {
+  return props.supervisor?._supervisor_partial_parse === true;
+});
+
+const observations = computed<ObservationsShape | null>(() => {
+  return props.supervisor?.observations ?? null;
+});
+
+// Ordered atom list for the collapsed panel. The order matches the
+// derivation rules (error first, then navigation, list, form) so
+// readers can trace "why this verdict" top-to-bottom.
+const OBSERVATION_FIELDS: (keyof ObservationsShape)[] = [
+  'did_show_error',
+  'error_texts',
+  'did_navigate',
+  'final_url_path',
+  'list_row_count',
+  'form_state_after',
+  'scenario_goal_observed',
+  'scenario_goal_evidence',
+];
+
+const observationRows = computed<{ key: string; value: string }[]>(() => {
+  const obs = observations.value;
+  if (!obs) return [];
+  return OBSERVATION_FIELDS
+    .filter((k) => obs[k] !== undefined)
+    .map((k) => ({
+      key: String(k),
+      value: formatAtomValue(obs[k]),
+    }));
+});
+
+function formatAtomValue(v: unknown): string {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (Array.isArray(v)) {
+    return v.length ? v.map((x) => String(x)).join(' · ') : '—';
+  }
+  return String(v);
+}
+
+const derivationTrail = computed<string[]>(() => {
+  return props.supervisor?._supervisor_verdict_derivation ?? [];
 });
 
 const { t } = useI18n();
@@ -481,6 +586,26 @@ async function copyThinking(): Promise<void> {
   overflow: auto;
   font-size: 11px;
   white-space: pre-wrap;
+  word-break: break-word;
+}
+.observations-list,
+.derivation-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+}
+.observations-list li,
+.derivation-list li {
+  margin: 2px 0;
+}
+.atom-key {
+  display: inline-block;
+  min-width: 150px;
+  color: #595959;
+  font-size: 11px;
+}
+.atom-value {
+  color: #262626;
   word-break: break-word;
 }
 </style>

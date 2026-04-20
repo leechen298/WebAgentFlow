@@ -41,19 +41,27 @@ def _empty_analysis() -> PageAnalysis:
 
 
 def _llm_ok(verdict: str = "success") -> LlmResponse:
-    return LlmResponse(
-        ok=True,
-        parsed={
-            "verdict": verdict,
-            "confidence": "high",
-            "summary": "LLM-generated summary.",
-            "step_assessments": [],
-            "anomalies": [],
-            "suggestions": [],
-            "should_save_path": verdict == "success",
-        },
-        model="test-model",
-    )
+    """Emit an observation-atom response shaped so that
+    ``derive_verdict`` produces the target mechanical verdict.
+
+    * ``success`` — navigation happened, no error.
+    * ``failure`` — error surface rendered.
+    * ``uncertain`` — no positive signal and no error.
+    """
+    atoms: dict[str, object] = {
+        "did_navigate": verdict == "success",
+        "final_url_path": "/done" if verdict == "success" else "/login",
+        "did_show_error": verdict == "failure",
+        "error_texts": ["nope"] if verdict == "failure" else [],
+        "form_state_after": "no_form",
+        "list_row_count": None,
+        "scenario_goal_observed": True,
+        "scenario_goal_evidence": "evidence cited",
+        "anomalies": [],
+        "suggestions": [],
+        "summary": "LLM-generated summary.",
+    }
+    return LlmResponse(ok=True, parsed=atoms, model="test-model")
 
 
 def _llm_err(kind: str, *, retryable: bool) -> LlmResponse:

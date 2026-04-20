@@ -119,19 +119,6 @@ export function effectiveStatusColor(s: EffectiveStatus): string {
   return 'default';
 }
 
-/**
- * Color for the supervisor's self-reported confidence (high / medium
- * / low). Indicates certainty, not outcome — ``high`` doesn't mean
- * "pass".
- */
-export function confidenceColor(c: string | null | undefined): string {
-  if (!c) return 'default';
-  const v = c.toLowerCase();
-  if (v === 'high') return 'blue';
-  if (v === 'medium') return 'cyan';
-  if (v === 'low') return 'orange';
-  return 'default';
-}
 
 /**
  * Translate analyzer bucket names (``fillable`` / ``toggle`` / ...)

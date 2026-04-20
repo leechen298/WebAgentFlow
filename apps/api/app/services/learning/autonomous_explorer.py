@@ -607,127 +607,130 @@ def _language_name(code: str | None) -> str | None:
 def _build_supervisor_system_prompt(language_clause: str) -> str:
     """Assemble the supervisor LLM system prompt.
 
-    Extracted so the verdict rubric can be contract-tested directly
-    (see tests/test_supervisor_prompt.py) — the rubric is the main
-    knob that keeps the LLM from rubber-stamping mechanically-
-    completed runs as ``success``.
+    New contract (2026-04-20): the LLM reports observation atoms, not
+    a verdict. The mechanical ``verdict`` is derived in code from the
+    atoms by ``supervisor_observations.derive_verdict`` — this prompt
+    deliberately contains NO verdict rubric, NO success/failure
+    definitions, NO few-shot examples of "this scenario → this
+    verdict". The LLM's job ends at "describe the page".
+
+    See project_supervisor_verdict_override_plan.md for the rationale:
+    a reasoning model that holds the verdict pen can always talk
+    itself out of a stated rule; taking the pen away removes that
+    failure mode structurally.
     """
     return f"""\
 You are a verification agent inside the WebAgentFlow project. You review
 the results of an AUTONOMOUS web exploration run — one where the system
-discovered page elements on its own (no pre-written selectors), planned
-actions, and executed them.
+discovered page elements on its own, planned actions, and executed them.
 
-Your job:
-1. Assess whether the page analysis was accurate (did it find the right elements?)
-2. Assess whether the action plan was reasonable
-3. Assess whether each execution step succeeded or failed
-4. Determine if the overall goal was achieved
-5. Identify anomalies (CAPTCHA, login wall, false positives, etc.)
-6. Provide suggestions for improving the system
+Your job is NOT to judge whether the run passed or failed. That
+judgement is computed downstream by project code from the observations
+you report. Your job is to describe the final page state accurately.
 
-Be concise, specific, and fact-based. Look at URLs, titles, and result_signals
-to determine the real outcome — don't just trust the self-reported success flag.
+Return the structured observation atoms defined by the response schema.
+Every atom is either a direct reading of the page state, or (for
+``scenario_goal_observed``) an "did this scenario's subject event
+happen" observation with a short piece of quoted evidence.
 
-Operator intent — when ``execution.scenario_name`` and
-``execution.scenario_description`` are set, the spec author has
-already stated what this run is testing. Read the description before
-interpreting signals:
+Rules for filling the atoms:
 
-  - A scenario called ``no_match`` that describes "type a value that
-    matches no user, expect empty state" means ``result_row_count == 0``
-    IS the desired outcome — return ``success``, not ``partial_success``.
-  - A scenario called ``invalid_credentials`` that describes "verify
-    bad credentials stay on login wall" means ``has_login_wall == true``
-    IS the desired outcome — but the spec's ``expected_verdict_not``
-    still treats this as non-success, so return ``failure``.
-  - A scenario described as "filter to active users" expects a filtered
-    result set with ``result_row_count > 0`` — 0 here is a real failure.
+* ``did_navigate`` — true iff ``final_url_path`` differs from the URL
+  path at the start of the LAST user-intent action (login submit,
+  filter apply, …). A hash-only or query-only change still counts.
+  Trust the URL fields; don't guess.
 
-Without scenario context (ad-hoc runs), infer intent from inputs and
-default to the signal-based rubric below.
+* ``final_url_path`` — the path component of ``execution.final_url``,
+  stripped of query and fragment. Copy, don't invent.
 
-Verdict rubric — map observable signals to the verdict strictly. The
-rule-based self-verdict is provided in ``execution.verdict``; agree with
-it unless you can cite a specific signal it missed OR unless the
-scenario description reframes the signal's meaning. Do NOT return
-``success`` just because action steps executed without errors — step
-completion is necessary but not sufficient.
+* ``did_show_error`` — true iff the page rendered an error surface
+  carrying non-empty text. ``final_state.alert_texts`` is the primary
+  signal; anything listed there that reads like an error (incorrect /
+  invalid / denied / failed / 错误 / 失败 / 无效 / etc.) qualifies.
+  A neutral status banner ("Results filtered") is NOT an error.
 
-- ``success`` — the operator's goal was observably reached:
-  * a login flow lands on a post-auth URL with no login wall and no
-    error alert, OR
-  * a filter / search lands on a URL carrying the filter param AND / OR
-    ``result_signals`` show a filtered row count that matches the
-    intent (e.g. ``result_row_count > 0`` for a query expected to
-    return rows; ``result_row_count == 0`` for a deliberate no-match
-    scenario), OR
-  * a form submission transitions away from the form or surfaces an
-    explicit success confirmation.
+* ``error_texts`` — copy the raw text(s) from each error surface.
+  Empty list when ``did_show_error`` is false.
 
-- ``failure`` — the run hit a state that means the goal did NOT
-  complete, regardless of whether steps ran without errors:
-  * ``result_signals.has_login_wall == true`` at the end — the flow
-    was bounced back to a login screen. This is FAILURE from the
-    user's perspective even when the scenario was to test bad
-    credentials; the spec author reconciles that via
-    ``expected_verdict_not`` downstream. Do not call this success.
-  * ``result_signals.has_captcha == true`` — blocked by a gate.
-  * ``final_state.alert_texts`` contains an error phrase
-    (用户名或密码错误 / error / invalid / 失败 / incorrect / blocked
-    / denied) AND the URL did not advance to the expected destination.
+* ``form_state_after`` — if the page has a form, whether its fields
+  were cleared (``reset``), still show the submitted values
+  (``persisted``), or you cannot tell (``unclear``). If the final
+  page has no form, use ``no_form``.
 
-- ``partial_success`` — steps executed and SOME goal criteria are met,
-  but others are missing or ambiguous (e.g. URL changed but the
-  expected result count is still 0 with no empty-state message).
+* ``list_row_count`` — if the final page renders a data list or
+  table, the number of visible rows. Use null if there is no list.
+  Count zero when the list renders with an empty state — zero rows
+  is a valid observation, not "no list".
 
-- ``uncertain`` — signals are genuinely absent or conflict (no URL
-  change, no result_signals, no alerts, can't tell). Prefer this over
-  guessing.
+* ``scenario_goal_observed`` — an interpretive observation, not a
+  verdict. Read ``execution.scenario_description`` carefully:
+    - If the scenario describes a POSITIVE goal ("log in", "filter
+      to active users"), set this to true when that positive outcome
+      is visible (reached destination, filtered list rendered, etc.).
+    - If the scenario describes a NEGATIVE goal ("verify bad
+      credentials stay blocked", "verify the form rejects empty
+      input"), set this to true when the block + whatever UI the
+      scenario names (error alert, warning icon, refusal to submit)
+      is visible.
+    In both cases "true" means "the thing the scenario is checking
+    for actually happened". The downstream code reconciles
+    scenario_goal_observed against ``expected_verdict`` /
+    ``expected_verdict_not`` — you do NOT.
 
-Client-side SPA exception: a URL that does not change but where
-``result_signals.result_row_count`` updated in a direction consistent
-with the operator's intent IS observable progress — you can still
-return ``success`` in that case. Do not downgrade to ``failure`` /
-``no_progress`` purely for missing URL change when other signals
-confirm the filter applied.
+* ``scenario_goal_evidence`` — one-sentence quote or reference from
+  ``final_state`` (alert text, URL path, test_id, body text excerpt)
+  that justifies ``scenario_goal_observed``. Empty string when the
+  observation is false.
 
-Confidence calibration — pick the level that honestly reflects what
-you could verify in the data provided:
+* ``anomalies`` — things outside the atoms that a human should
+  notice: a captcha rendered, an analytics banner covered the submit
+  button, a third-party iframe loaded late. Keep it short.
 
-- ``high`` — every requirement in the scenario description is
-  directly observable in the data you were given (URLs, titles,
-  ``final_state.alert_texts``, ``final_state.body_text``,
-  ``final_state.test_ids``, per-step ``result_signals``). No hedging
-  words, no inferred claims. If a scenario says "surface role=alert"
-  and ``final_state.alert_texts`` contains the expected phrase, that
-  IS direct observation — say ``high``.
-- ``medium`` — core outcome is clear but one sub-signal the scenario
-  named is genuinely unavailable in the data. State exactly which
-  signal is missing in ``anomalies``.
-- ``low`` — data is too sparse to confirm the main outcome; you are
-  effectively guessing from partial signals. Prefer ``uncertain`` as
-  the verdict in this case.
+* ``suggestions`` — optional. Skip unless you have a concrete fix.
 
-Do NOT downgrade to ``medium`` just because the task seems subjective
-— if the requirement is written down and the observation is in the
-data you received, that is ``high`` confidence.
+* ``summary`` — 2-4 plain sentences recapping the run. No verdict
+  word; just what happened.
 
-Verdict vocabulary is MECHANICAL, not "did the test pass":
-``success`` means the operator's action produced the happy path — a
-login authenticated, a form submitted, a filter returned rows. A
-negative-path scenario like ``invalid_credentials`` exists precisely
-to assert the system blocked the action: the operator did NOT log in,
-so the mechanical verdict is ``failure`` (or ``partial_success`` if
-the block surfaced plus some expected error UI). You may note in
-``summary`` that this failure is the scenario-expected outcome — but
-do NOT set ``verdict=success`` just because the scenario's intent was
-"verify the block". The spec's ``expected_verdict_not=success`` field
-is how the comparator reconciles "mechanical failure is the
-scenario-expected outcome"; your job is to report the mechanical
-verdict honestly so the two layers line up. A ``success`` verdict on
-a scenario whose ``expected_verdict_not`` is ``success`` is a direct
-conflict and will flag the run as unverified.
+Few-shot observation examples (illustrative, not exhaustive):
+
+Example A — login with valid credentials, landed on dashboard:
+```
+{{
+  "did_navigate": true, "final_url_path": "/users",
+  "did_show_error": false, "error_texts": [],
+  "form_state_after": "no_form", "list_row_count": 8,
+  "scenario_goal_observed": true,
+  "scenario_goal_evidence": "Reached /users with 8 rows rendered.",
+  "summary": "Login accepted; user table rendered."
+}}
+```
+
+Example B — login with wrong password, stayed on /login with alert:
+```
+{{
+  "did_navigate": false, "final_url_path": "/login",
+  "did_show_error": true, "error_texts": ["用户名或密码错误"],
+  "form_state_after": "persisted", "list_row_count": null,
+  "scenario_goal_observed": true,
+  "scenario_goal_evidence": "role=alert with 用户名或密码错误; still on /login.",
+  "summary": "Credentials rejected; login form retained values."
+}}
+```
+
+Example C — filter applied but result list is empty, scenario expects 0 rows:
+```
+{{
+  "did_navigate": false, "final_url_path": "/users",
+  "did_show_error": false, "error_texts": [],
+  "form_state_after": "no_form", "list_row_count": 0,
+  "scenario_goal_observed": true,
+  "scenario_goal_evidence": "no-match test_id present; 0 rows.",
+  "summary": "Filter produced zero rows; empty-state UI visible."
+}}
+```
+
+Do NOT output ``verdict`` / ``confidence`` / ``should_save_path`` —
+those fields are not in the response schema and will be rejected.
 
 {language_clause}\
 """
@@ -768,7 +771,11 @@ def _run_supervisor(
     import json
 
     from app.schemas.llm import LlmMessage, LlmRequest
-    from app.services.learning.exploration_supervisor import SUPERVISOR_RESPONSE_SCHEMA
+    from app.services.learning.supervisor_observations import (
+        SUPERVISOR_OBSERVATIONS_SCHEMA,
+        build_supervisor_output,
+        parse_observations_lax,
+    )
     from app.services.llm_provider import generate_structured
 
     # Build prompt from autonomous exploration data — trimmed.
@@ -854,7 +861,7 @@ def _run_supervisor(
     request = LlmRequest(
         system=system_prompt,
         messages=[LlmMessage(role="user", content=prompt_content)],
-        response_schema=SUPERVISOR_RESPONSE_SCHEMA,
+        response_schema=SUPERVISOR_OBSERVATIONS_SCHEMA,
         temperature=0.3,
         metadata={"source": "autonomous_exploration_supervisor"},
     )
@@ -875,18 +882,23 @@ def _run_supervisor(
         try:
             response = generate_structured(request)
             if response.ok and response.parsed:
-                logger.info("Supervisor verdict: %s (attempt %d)",
-                            response.parsed.get("verdict"), attempt + 1)
-                # Expose the model's <think> reasoning trace for UI
-                # transparency. Underscore-prefixed so schema-strict
-                # consumers can ignore it; the frontend receives the
-                # raw dict via SSE and renders it.
-                result = dict(response.parsed)
-                if response.thinking:
-                    result["_thinking"] = response.thinking
-                if response.model:
-                    result["_model"] = response.model
-                result["_supervisor_source"] = "llm"
+                # Parse observation atoms laxly — a missing optional
+                # atom becomes the conservative default rather than a
+                # Pydantic crash that forces the whole supervisor call
+                # into fallback. The partial flag rides through to
+                # pass_gate so operators can see "LLM answered, but
+                # some atoms were missing" as unverified.
+                obs, partial = parse_observations_lax(response.parsed)
+                result = build_supervisor_output(
+                    obs,
+                    partial_parse=partial,
+                    thinking=response.thinking,
+                    model=response.model,
+                )
+                logger.info(
+                    "Supervisor derived verdict=%s partial=%s (attempt %d)",
+                    result["verdict"], partial, attempt + 1,
+                )
                 return result
 
             # Non-OK response — capture error for potential retry / fallback.
@@ -990,6 +1002,12 @@ def _fallback_supervisor(
         "anomalies": [],
         "suggestions": [],
         "should_save_path": verdict == "success",
+        # Fallback has no observations — the LLM never ran. Downstream
+        # (pass_gate, UI) treats the absence of observations plus
+        # _supervisor_source=="fallback" as "unverified", same as a
+        # partial-parse LLM response.
+        "observations": None,
+        "_supervisor_partial_parse": False,
         "_supervisor_source": "fallback",
         "_supervisor_error_kind": error_kind,
     }

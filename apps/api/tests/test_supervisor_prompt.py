@@ -1,22 +1,20 @@
 """Contract tests for the autonomous supervisor's system prompt.
 
-The supervisor is an LLM call — we can't unit-test its behavior
-deterministically. What we CAN pin is the rubric text that tells the
-LLM how to map observable signals to a verdict, because when that
-text drifts the LLM's verdicts drift too (observed 2026-04-19: the
-LLM called a login-wall outcome ``success`` because the step-level
-execution succeeded, disagreeing with the rule-based ``no_progress``).
+Under the observation-atom contract (2026-04-20), the supervisor LLM
+does NOT choose a verdict — it reports a fixed set of observation
+atoms and a scenario-goal observation. Verdict is derived in code
+by ``supervisor_observations.derive_verdict``.
 
-These tests don't check wording exactly — they check that the signals
-the rubric is supposed to cover are all mentioned, so future edits
-can't silently drop a rule.
+These tests pin the contract that keeps the prompt scenario-general
+and blocks the LLM from re-acquiring the verdict pen:
 
-(Pre-F note: the 2026-04-19 incident was the LLM returning ``success``
-on a login-wall run. Rule-side self-verdict was ``no_progress`` at
-the time; after F unified the vocabulary both sides emit the shared
-OutcomeVerdict — that specific cross-vocabulary confusion is gone,
-but the rubric still needs to guard against the underlying failure
-mode, namely "steps ran → success" reasoning.)
+  * Each required atom is named in the prompt.
+  * The prompt tells the LLM it is NOT judging outcomes.
+  * Error-text detection covers both English and Chinese surfaces.
+  * Few-shot examples illustrate observations, NOT verdict mapping.
+  * The old verdict rubric (success/failure/partial_success enum) is
+    absent — its presence would leak the old contract back in.
+  * The language clause is embedded verbatim.
 """
 
 from __future__ import annotations
@@ -32,100 +30,125 @@ def _prompt() -> str:
 
 def _normalized(text: str) -> str:
     """Collapse all whitespace so line-wrapping in the prompt doesn't
-    break substring assertions. The LLM reads the prompt as one
-    wrapped paragraph anyway."""
+    break substring assertions."""
     return " ".join(text.split())
 
 
-def test_prompt_contains_strict_verdict_rubric() -> None:
+# ── Required atoms are named in the prompt ───────────────────────────
+
+
+def test_prompt_names_every_required_atom() -> None:
     text = _prompt()
-    # Rubric header — without this phrase the LLM treats the four
-    # verdict values as interchangeable labels.
-    assert "Verdict rubric" in text
-    # All four verdict values must be explicitly listed.
-    for verdict in ("success", "failure", "partial_success", "uncertain"):
-        assert f"``{verdict}``" in text, f"verdict {verdict!r} missing from rubric"
+    for atom in (
+        "did_navigate",
+        "final_url_path",
+        "did_show_error",
+        "error_texts",
+        "form_state_after",
+        "list_row_count",
+        "scenario_goal_observed",
+        "scenario_goal_evidence",
+    ):
+        assert atom in text, f"atom {atom!r} missing from prompt"
 
 
-def test_prompt_blocks_login_wall_success() -> None:
-    text = _prompt()
-    # The 2026-04-19 supervisor disagreement was specifically the LLM
-    # calling a login-wall run ``success``. The rubric must explicitly
-    # forbid that.
-    assert "has_login_wall" in text
-    assert "Do not call this success" in text or "this is FAILURE" in text
+# ── Prompt strips the LLM of the verdict pen ─────────────────────────
 
 
-def test_prompt_covers_captcha_signal() -> None:
-    assert "has_captcha" in _prompt()
-
-
-def test_prompt_covers_alert_error_signal() -> None:
+def test_prompt_tells_llm_not_to_judge() -> None:
+    # The single most important contract: the LLM must know it is NOT
+    # the verdict authority. If this phrase disappears future edits
+    # might re-normalize the prompt toward "pick a verdict".
     text = _normalized(_prompt())
-    assert "alert_texts" in text
-    # Includes at least one Chinese error phrase so non-English error
-    # alerts on Chinese pages aren't missed.
-    assert "用户名或密码错误" in text
+    assert "NOT to judge whether the run passed or failed" in text
 
 
-def test_prompt_forbids_step_completion_as_success() -> None:
+def test_prompt_does_not_ask_for_verdict_field() -> None:
     text = _prompt()
-    # The core failure mode was "steps ran without errors -> success";
-    # the rubric must say that step completion alone is insufficient.
-    assert "necessary but not sufficient" in text
+    # The atoms don't include a verdict/confidence/should_save_path
+    # field. The prompt must not mention them as expected output.
+    # (They may appear in forbidden-output clauses — assert negation
+    # by searching for affirmative phrasings only.)
+    assert "Do NOT output" in text
+    assert "``verdict``" in text  # named in the forbidden list
+    assert "``confidence``" in text
 
 
-def test_prompt_keeps_spa_client_side_exception() -> None:
-    text = _prompt()
-    # SPA filter flows don't change URL but DO change result_row_count;
-    # the rubric needs to keep those as a valid success path so we
-    # don't over-correct and call legitimate client-side searches
-    # ``uncertain``.
-    assert "result_row_count" in text
-    assert "Client-side SPA exception" in text or "SPA" in text
-
-
-def test_prompt_defers_to_rule_verdict_by_default() -> None:
+def test_prompt_has_no_old_verdict_rubric() -> None:
+    # Phrases that were load-bearing in the old rubric and must be
+    # gone now that verdict is derived in code.
     text = _normalized(_prompt())
-    # When the LLM and the rule-based self-verdict disagree without
-    # a signal-backed reason, the rubric should make the LLM defer.
-    assert "agree with it unless" in text
+    forbidden = [
+        "Verdict rubric",
+        "necessary but not sufficient",
+        "Client-side SPA exception",
+        "Confidence calibration",
+        "Verdict vocabulary is MECHANICAL",
+    ]
+    for phrase in forbidden:
+        assert phrase not in text, (
+            f"stale old-rubric phrase {phrase!r} still in prompt — "
+            "LLM will revert to verdict-deciding behavior"
+        )
+
+
+# ── Error detection: the prompt is language-aware ────────────────────
+
+
+def test_prompt_covers_chinese_error_phrases() -> None:
+    # Validation-site fixtures surface role=alert with Chinese text
+    # ("用户名或密码错误"). Prompt must list at least one common
+    # Chinese error cue so the LLM flips did_show_error when it sees
+    # one.
+    text = _prompt()
+    assert "错误" in text or "失败" in text or "无效" in text
+
+
+def test_prompt_covers_english_error_cues() -> None:
+    text = _normalized(_prompt())
+    # At least one of the common error tokens must be named so the
+    # LLM doesn't hesitate on "Invalid credentials" / "denied" pages.
+    tokens = ("invalid", "denied", "failed", "incorrect")
+    assert any(tok in text.lower() for tok in tokens)
+
+
+# ── Scenario-goal observation ────────────────────────────────────────
+
+
+def test_prompt_instructs_reading_scenario_description() -> None:
+    # scenario_goal_observed is an interpretive atom; the prompt must
+    # tell the LLM to read scenario_description before picking true /
+    # false, otherwise it falls back to guessing from heuristics.
+    text = _normalized(_prompt())
+    assert "scenario_description" in text
+
+
+def test_prompt_distinguishes_positive_and_negative_goals() -> None:
+    text = _normalized(_prompt())
+    # The prompt must cover both "positive goal" (login succeeds) and
+    # "negative goal" (login is blocked as expected) without leaking
+    # into verdict language.
+    assert "POSITIVE" in text
+    assert "NEGATIVE" in text
+
+
+# ── Few-shot observation examples ────────────────────────────────────
+
+
+def test_prompt_has_observation_examples() -> None:
+    # Few-shot section uses observation-atom JSON, not "scenario X →
+    # verdict Y" mapping.
+    text = _normalized(_prompt())
+    assert "Few-shot observation examples" in text
+    # Every example JSON carries did_navigate + did_show_error keys.
+    assert text.count("did_navigate") >= 3
+    assert text.count("did_show_error") >= 3
+
+
+# ── Language clause passthrough ──────────────────────────────────────
 
 
 def test_prompt_embeds_language_clause_verbatim() -> None:
     marker = "LANGUAGE-CLAUSE-CANARY-9f3b"
     prompt = _build_supervisor_system_prompt(marker)
     assert marker in prompt
-
-
-# ───────────────────────────────────────────────────────────────────
-# Scenario-intent section (added 2026-04-19 after Run 4 false-partial)
-# ───────────────────────────────────────────────────────────────────
-
-
-def test_prompt_has_operator_intent_section() -> None:
-    # The rubric must tell the LLM to read scenario_description
-    # before interpreting signals, not just from execution.verdict.
-    # Without this section the LLM hedged a deliberate no-match run
-    # to partial_success (2026-04-19 Run 4).
-    text = _normalized(_prompt())
-    assert "scenario_name" in text
-    assert "scenario_description" in text
-
-
-def test_prompt_no_match_example_points_to_success() -> None:
-    # Named example ensures the LLM generalises to similar spec
-    # scenarios: zero-result runs can be success when the scenario
-    # description frames them as intentional.
-    text = _normalized(_prompt())
-    assert "no_match" in text
-    assert "result_row_count == 0" in text
-
-
-def test_prompt_invalid_credentials_example_points_to_failure() -> None:
-    # The converse example: login-wall end state for a bad-credentials
-    # test is FAILURE from the verdict perspective (the spec's
-    # expected_verdict_not reconciles that later).
-    text = _normalized(_prompt())
-    assert "invalid_credentials" in text
-    assert "has_login_wall" in text
