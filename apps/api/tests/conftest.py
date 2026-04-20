@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.db import get_db
 from app.main import app
-from app.models import Recording, Run, Skill  # noqa: F401
+from app.models import ExplorationRun  # noqa: F401
 from app.models.base import Base
 
 TEST_DATABASE_URL = "sqlite://"
