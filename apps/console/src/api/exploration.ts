@@ -176,6 +176,13 @@ export interface AutonomousRunSummary {
   spec_id?: string | null;
   scenario?: string | null;
   verdict?: string | null;
+  /**
+   * True when the scenario's rubric accepted this run (positive-path
+   * scenarios match on `verdict=success`; negative-path scenarios
+   * like invalid_credentials match on the expected failure signals).
+   * Null for ad-hoc / pre-feature runs that don't have verdict_check.
+   */
+  scenario_matched?: boolean | null;
   status: string;
   url?: string | null;
   summary?: string | null;

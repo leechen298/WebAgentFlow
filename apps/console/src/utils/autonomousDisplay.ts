@@ -53,6 +53,48 @@ export function verdictColor(v: string | null | undefined): string {
 }
 
 /**
+ * Resolve the "scenario outcome" a human cares about, decoupled from
+ * the raw rule-side verdict.
+ *
+ * A negative-path scenario like ``invalid_credentials`` expects
+ * ``verdict=failure`` by design (login wall must persist), and
+ * surfacing "failure" prominently in the UI makes it look like the
+ * scenario regressed when it actually passed. The rubric already
+ * computes this reconciliation in ``scorecard.verdict_check.matches_expectation``.
+ *
+ * Returns:
+ *   - 'success'  — scenario matched its declared expectation
+ *   - 'failure'  — scenario deviated from expectation
+ *   - 'partial'  — rule verdict is partial_success and no scenario
+ *                  reconciliation is available
+ *   - 'uncertain' — rule verdict is uncertain / unknown
+ *   - null       — no verdict and no scenario signal (e.g. run failed
+ *                  before any evaluation ran)
+ */
+export type EffectiveStatus = 'success' | 'failure' | 'partial' | 'uncertain' | null;
+
+export function effectiveStatus(ctx: {
+  verdict?: string | null;
+  scenarioMatched?: boolean | null;
+}): EffectiveStatus {
+  if (ctx.scenarioMatched === true) return 'success';
+  if (ctx.scenarioMatched === false) return 'failure';
+  const v = ctx.verdict;
+  if (v === 'success') return 'success';
+  if (v === 'failure') return 'failure';
+  if (v === 'partial_success') return 'partial';
+  if (v === 'uncertain') return 'uncertain';
+  return null;
+}
+
+export function effectiveStatusColor(s: EffectiveStatus): string {
+  if (s === 'success') return 'green';
+  if (s === 'failure') return 'red';
+  if (s === 'partial') return 'orange';
+  return 'default';
+}
+
+/**
  * Color for the supervisor's self-reported confidence (high / medium
  * / low). Indicates certainty, not outcome — ``high`` doesn't mean
  * "pass".

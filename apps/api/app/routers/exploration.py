@@ -37,6 +37,28 @@ _SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 DbSession = Annotated[Session, Depends(get_db)]
 
 
+def _scenario_matched_for(item: ExplorationRun) -> bool | None:
+    """Resolve whether a persisted run satisfied the scenario's spec.
+
+    Prefers the cached ``strategy_json.scenario_matched`` value written
+    at persist time. Falls back to walking the result snapshot so older
+    rows (persisted before this field existed) still surface correctly
+    without a data migration.
+    """
+    strat = item.strategy_json or {}
+    if "scenario_matched" in strat:
+        cached = strat["scenario_matched"]
+        return None if cached is None else bool(cached)
+    snapshot = item.result_snapshot_json or {}
+    vc = (
+        ((snapshot.get("verification") or {}).get("scorecard") or {})
+        .get("verdict_check") or {}
+    )
+    if "matches_expectation" in vc:
+        return bool(vc["matches_expectation"])
+    return None
+
+
 def _persist_autonomous_run(
     payload: AutonomousExplorePayload,
     final_data: dict[str, Any],
@@ -51,6 +73,19 @@ def _persist_autonomous_run(
     Returns the new row's id or ``None`` if persistence itself failed
     (we never let persistence errors fail the user-facing run).
     """
+    # Cache scenario_matched on the strategy_json so the list endpoint
+    # doesn't have to deserialize the full result snapshot just to
+    # render the correct status tag. Older rows fall back to reading
+    # the nested path at query time (see list_autonomous_runs).
+    scenario_matched: bool | None = None
+    if isinstance(final_data, dict):
+        vc = (
+            ((final_data.get("verification") or {}).get("scorecard") or {})
+            .get("verdict_check") or {}
+        )
+        if "matches_expectation" in vc:
+            scenario_matched = bool(vc["matches_expectation"])
+
     try:
         db = SessionLocal()
         try:
@@ -69,6 +104,7 @@ def _persist_autonomous_run(
                     "fill_values": payload.fill_values or {},
                     "toggle_values": payload.toggle_values or {},
                     "verdict": verdict,
+                    "scenario_matched": scenario_matched,
                     **({"error": error[:500]} if error else {}),
                 },
                 summary=(final_data.get("summary") if isinstance(final_data, dict) else None),
@@ -746,6 +782,7 @@ class AutonomousRunSummary(BaseModel):
     spec_id: str | None = None
     scenario: str | None = None
     verdict: str | None = None
+    scenario_matched: bool | None = None
     status: str
     url: str | None = None
     summary: str | None = None
@@ -808,6 +845,7 @@ def list_autonomous_runs(
             spec_id=(item.strategy_json or {}).get("spec_id"),
             scenario=(item.strategy_json or {}).get("scenario"),
             verdict=(item.strategy_json or {}).get("verdict"),
+            scenario_matched=_scenario_matched_for(item),
             status=str(item.status),
             url=(item.strategy_json or {}).get("url"),
             summary=item.summary,

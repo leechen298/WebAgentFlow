@@ -15,6 +15,25 @@
             <a-tag :color="verdictColor(selfAssessment.verdict)">
               {{ selfAssessment.verdict }}
             </a-tag>
+            <!-- Reconciliation badge: for negative-path scenarios the
+                 raw verdict above is "failure" by design — this chip
+                 makes it obvious whether that failure is scenario-
+                 expected or a real deviation. Uses the rubric's
+                 verdict_check.matches_expectation, not the raw verdict. -->
+            <a-tag
+              v-if="scenarioMatched === true"
+              color="green"
+              :bordered="false"
+            >
+              ✓ {{ $t('autonomous.scenarioExpected') }}
+            </a-tag>
+            <a-tag
+              v-else-if="scenarioMatched === false"
+              color="red"
+              :bordered="false"
+            >
+              ✗ {{ $t('autonomous.scenarioMismatch') }}
+            </a-tag>
             <div class="summary">{{ selfAssessment.summary }}</div>
             <div v-if="selfAssessment.final_url" class="final-meta">
               {{ $t('autonomous.finalUrl') }}:
@@ -129,12 +148,17 @@ interface ScorecardBlockShape {
   score?: number;
 }
 
+interface VerdictCheckShape {
+  matches_expectation?: boolean;
+}
+
 interface ScorecardShape {
   element_recognition?: ScorecardBlockShape;
   action_coverage?: ScorecardBlockShape;
   verdict_accuracy?: ScorecardBlockShape;
   distraction_avoidance?: ScorecardBlockShape;
   supervisor_agreement?: ScorecardBlockShape;
+  verdict_check?: VerdictCheckShape;
   [key: string]: unknown;
 }
 
@@ -143,6 +167,12 @@ const props = defineProps<{
   supervisor: SupervisorShape | null;
   scorecard: ScorecardShape | null;
 }>();
+
+const scenarioMatched = computed<boolean | null>(() => {
+  const vc = props.scorecard?.verdict_check;
+  if (!vc || typeof vc.matches_expectation !== 'boolean') return null;
+  return vc.matches_expectation;
+});
 
 const { t } = useI18n();
 

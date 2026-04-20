@@ -28,9 +28,19 @@
             {{ formatDate(record.created_at) }}
           </template>
           <template v-else-if="column.key === 'verdict'">
-            <a-tag v-if="record.verdict" :color="verdictColor(record.verdict)">
-              {{ record.verdict }}
-            </a-tag>
+            <!-- Show the scenario-level outcome as the primary signal.
+                 For negative-path scenarios (e.g. invalid_credentials)
+                 the raw verdict is "failure" by design — surfacing that
+                 as red here made correct runs look broken. Tooltip keeps
+                 the raw verdict accessible for debugging. -->
+            <a-tooltip
+              v-if="record.verdict || record.scenario_matched !== null"
+              :title="rowTooltip(record)"
+            >
+              <a-tag :color="effectiveStatusColor(rowStatus(record))">
+                {{ rowStatusLabel(record) }}
+              </a-tag>
+            </a-tooltip>
             <span v-else class="muted">—</span>
           </template>
           <template v-else-if="column.key === 'status'">
@@ -96,7 +106,41 @@ import {
   getAutonomousRun,
   type AutonomousRunSummary,
 } from '@/api/exploration';
-import { verdictColor } from '@/utils/autonomousDisplay';
+import {
+  effectiveStatus,
+  effectiveStatusColor,
+  type EffectiveStatus,
+} from '@/utils/autonomousDisplay';
+
+function rowStatus(record: AutonomousRunSummary): EffectiveStatus {
+  return effectiveStatus({
+    verdict: record.verdict,
+    scenarioMatched: record.scenario_matched,
+  });
+}
+
+function rowStatusLabel(record: AutonomousRunSummary): string {
+  const s = rowStatus(record);
+  if (s === 'success') return t('autonomousHistory.statusSuccess');
+  if (s === 'failure') return t('autonomousHistory.statusFailure');
+  if (s === 'partial') return t('autonomousHistory.statusPartial');
+  if (s === 'uncertain') return t('autonomousHistory.statusUncertain');
+  return '—';
+}
+
+function rowTooltip(record: AutonomousRunSummary): string {
+  // Always expose the raw rule-side verdict + scenario match flag so
+  // operators can tell "passed negative-path scenario" from "broken
+  // positive-path scenario" on hover.
+  const parts: string[] = [];
+  if (record.verdict) parts.push(`${t('autonomousHistory.ruleVerdict')}: ${record.verdict}`);
+  if (record.scenario_matched === true) {
+    parts.push(t('autonomousHistory.scenarioMatched'));
+  } else if (record.scenario_matched === false) {
+    parts.push(t('autonomousHistory.scenarioMismatch'));
+  }
+  return parts.join(' · ');
+}
 
 const { t } = useI18n();
 const router = useRouter();
