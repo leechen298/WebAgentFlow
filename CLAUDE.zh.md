@@ -83,29 +83,37 @@ AI 编码 Agent 是**中转**，不是验证者。它不在这个链上。使用
 
 用了 skill 之后，结构应该是：
 
+**永远先报 `pass_gate.status`** —— 这是权威结果。只有 `pass` 才算真
+通过；`unverified` **不是**通过。
+
+干净通过：
+
 > "跑了 `verify-scenario` skill
 > （`wagent verify --spec-id login --scenario valid_credentials`）。
-> Supervisor 裁决：`success`（置信度 `high`，来源 `llm`）。
-> scenario_matched: true。Scorecard 5/5：element_recognition 1.0、
-> action_coverage 1.0、verdict_accuracy 1.0、distraction_avoidance 1.0、
-> supervisor_agreement 1.0。Supervisor summary：……引用原文……。
-> run_id：`<uuid>` —— 在 WebAgentFlow 控制台打开
-> `/exploration/autonomous/history/<run_id>` 查看完整详情。"
+> pass_gate：`pass`。Supervisor 裁决：`success`（置信度 `high`，
+> 来源 `llm`）。Scorecard 5/5：……。Supervisor summary：……引用原文……。
+> run_id：`<uuid>`。"
 
-**Negative-path 场景**（比如 `invalid_credentials`、`no_match`）按设计
-就会返回 `verdict: failure` 或 `partial_success` —— 规则侧正确地把
-"登录墙还在" 识别成机械意义上的 failure。当 `scenario_matched: true`
-时，要先讲"匹配预期"，再讲原始 verdict：
+未完成验证（MiniMax 过载 / LLM fallback）：
 
-> "scenario_matched: true（这个场景期望错误凭据保留登录墙，实际确实
-> 保留了）。Supervisor 裁决 `failure` —— 这是 negative-path 场景预期
-> 的规则侧裁决。……"
+> "跑了 `wagent verify ...`。**pass_gate：`unverified`（不是通过）**。
+> pass_gate.reasons：'supervisor ran in fallback mode
+> (error_kind=provider_error) — LLM did not independently verify this
+> run'。规则侧 5/5 机械通过，但要真通过必须 LLM 独立复核。
+> run_id：`<uuid>`。"
 
-如果 `supervisor.source == "fallback"`，一定要点明 —— Supervisor Agent
-**实际上没有独立验证**这次运行，只有规则侧跑了：
+未完成验证（LLM 低置信度）：
 
-> "……supervisor.source: fallback（error_kind: timeout）—— LLM supervisor
-> 没跑通，所以 supervisor_agreement 是自一致镜像，不是独立验证。"
+> "跑了 `wagent verify --spec-id login --scenario invalid_credentials`。
+> **pass_gate：`unverified`**。pass_gate.reasons：'supervisor
+> confidence=medium — scenario requires high-confidence LLM
+> agreement'。Supervisor 没法确认 role=alert 是否真展示，提示 prompt
+> 信号不够。……"
+
+硬失败（偏离规格）：
+
+> "跑了 `wagent verify ...`。**pass_gate：`fail`**。pass_gate.reasons：
+> '……'。……"
 
 没跑任何东西时，说你改了什么、交给用户跑：
 

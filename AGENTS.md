@@ -88,29 +88,28 @@ list. Its job when using the skill is to faithfully surface (1) + (2).
 
 When you've invoked the skill, the structure is:
 
-> "Ran the `verify-scenario` skill
-> (`wagent verify --spec-id login --scenario valid_credentials`).
-> Supervisor verdict: `success` (confidence `high`, source `llm`).
-> scenario_matched: true. Scorecard 5/5: element_recognition 1.0,
-> action_coverage 1.0, verdict_accuracy 1.0, distraction_avoidance 1.0,
-> supervisor_agreement 1.0. Supervisor summary: …quoted…. run_id:
-> `<uuid>` — open at `/exploration/autonomous/history/<run_id>`."
+**Always lead with `pass_gate.status`** — this is the authoritative
+outcome. `pass` = clean; `fail` = concrete spec deviation;
+`unverified` = mechanics ok but LLM didn't cross-check (NOT a pass).
 
-**Negative-path scenarios** (e.g. `invalid_credentials`, `no_match`) often
-return `verdict: failure` or `partial_success` by design. When
-`scenario_matched: true`, lead with the match, not the raw verdict:
+Clean pass:
 
-> "scenario_matched: true (the scenario expects the login wall to
-> persist on wrong credentials, and it did). Supervisor verdict:
-> `failure` — this is the expected rule-side verdict for a negative-path
-> scenario. …"
+> "Ran `wagent verify --spec-id login --scenario valid_credentials`.
+> pass_gate: `pass`. Supervisor verdict: `success` (confidence `high`,
+> source `llm`). Scorecard 5/5: …. run_id: `<uuid>`."
 
-If `supervisor.source == "fallback"`, call it out — the Supervisor Agent
-didn't actually verify this run; only the rule side did:
+Unverified (LLM fallback / low confidence):
 
-> "…supervisor.source: fallback (error_kind: timeout) — the LLM
-> supervisor didn't run, so supervisor_agreement is self-mirrored rather
-> than independently verified."
+> "Ran `wagent verify ...`. **pass_gate: `unverified`** (NOT a pass).
+> pass_gate.reasons: "supervisor ran in fallback mode
+> (error_kind=provider_error) — LLM did not independently verify this
+> run". Rule mechanics 5/5 but supervisor Agent's cross-check is
+> required for a real pass. run_id: `<uuid>`."
+
+Hard fail:
+
+> "Ran `wagent verify ...`. **pass_gate: `fail`**. pass_gate.reasons:
+> "<reason>". …"
 
 When you haven't run anything, say what changed and hand off:
 

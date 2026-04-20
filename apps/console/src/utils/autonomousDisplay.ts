@@ -53,30 +53,52 @@ export function verdictColor(v: string | null | undefined): string {
 }
 
 /**
- * Resolve the "scenario outcome" a human cares about, decoupled from
- * the raw rule-side verdict.
+ * Resolve the "scenario outcome" a human cares about.
  *
- * A negative-path scenario like ``invalid_credentials`` expects
- * ``verdict=failure`` by design (login wall must persist), and
- * surfacing "failure" prominently in the UI makes it look like the
- * scenario regressed when it actually passed. The rubric already
- * computes this reconciliation in ``scorecard.verdict_check.matches_expectation``.
+ * Prefers the authoritative ``scorecard.pass_gate.status`` computed
+ * by the backend — 'pass' / 'fail' / 'unverified'. See
+ * apps/api/app/schemas/page_verification.py::PassGate for the product
+ * rationale: the gate is strict on purpose so the UI doesn't accumulate
+ * "sort-of passed" runs that mask regressions.
+ *
+ * Legacy inputs without a pass_gate (ad-hoc runs, older persisted
+ * rows, workbench SSE before the comparator finishes) fall back to
+ * the old verdict / scenarioMatched logic — that way the status
+ * surface is coherent across mid-run states.
  *
  * Returns:
- *   - 'success'  — scenario matched its declared expectation
- *   - 'failure'  — scenario deviated from expectation
- *   - 'partial'  — rule verdict is partial_success and no scenario
- *                  reconciliation is available
- *   - 'uncertain' — rule verdict is uncertain / unknown
- *   - null       — no verdict and no scenario signal (e.g. run failed
- *                  before any evaluation ran)
+ *   - 'success'     — pass_gate.status === 'pass'
+ *   - 'failure'     — pass_gate.status === 'fail', OR legacy
+ *                     scenarioMatched=false / verdict=failure
+ *   - 'unverified'  — pass_gate.status === 'unverified' (LLM fallback
+ *                     or low / medium confidence or partial agreement)
+ *   - 'partial'     — legacy verdict=partial_success without a gate
+ *   - 'uncertain'   — legacy verdict=uncertain without a gate
+ *   - null          — no data (e.g. run failed before evaluation)
  */
-export type EffectiveStatus = 'success' | 'failure' | 'partial' | 'uncertain' | null;
+export type EffectiveStatus =
+  | 'success'
+  | 'failure'
+  | 'unverified'
+  | 'partial'
+  | 'uncertain'
+  | null;
 
 export function effectiveStatus(ctx: {
   verdict?: string | null;
   scenarioMatched?: boolean | null;
+  passGateStatus?: string | null;
 }): EffectiveStatus {
+  // Authoritative: the backend-computed pass gate drives the UI when
+  // it's available.
+  const g = ctx.passGateStatus;
+  if (g === 'pass') return 'success';
+  if (g === 'fail') return 'failure';
+  if (g === 'unverified') return 'unverified';
+
+  // Legacy / pre-gate fallback — preserve the earlier scenario-
+  // matched-first logic for rows persisted before pass_gate shipped
+  // and for mid-stream SSE states.
   if (ctx.scenarioMatched === true) return 'success';
   if (ctx.scenarioMatched === false) return 'failure';
   const v = ctx.verdict;
@@ -90,6 +112,9 @@ export function effectiveStatus(ctx: {
 export function effectiveStatusColor(s: EffectiveStatus): string {
   if (s === 'success') return 'green';
   if (s === 'failure') return 'red';
+  // unverified + partial both use orange — they're "not a clean pass"
+  // signals and the operator should dig in before trusting them.
+  if (s === 'unverified') return 'orange';
   if (s === 'partial') return 'orange';
   return 'default';
 }

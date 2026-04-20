@@ -87,32 +87,42 @@ list. Its job when using the skill is to faithfully surface (1) + (2).
 
 ### Reporting style
 
-When you've invoked the skill on a positive-path scenario, the structure is:
+**Always lead with `pass_gate.status`** — this is the authoritative
+outcome. A spec run is a "pass" only when the gate says `pass`.
+`unverified` is NOT a pass.
+
+Clean pass:
 
 > "Ran the `verify-scenario` skill
 > (`wagent verify --spec-id login --scenario valid_credentials`).
-> Supervisor verdict: `success` (confidence `high`, source `llm`).
-> scenario_matched: true. Scorecard 5/5: element_recognition 1.0,
+> pass_gate: `pass`. Supervisor verdict: `success` (confidence `high`,
+> source `llm`). Scorecard 5/5: element_recognition 1.0,
 > action_coverage 1.0, verdict_accuracy 1.0, distraction_avoidance 1.0,
 > supervisor_agreement 1.0. Supervisor summary: …quoted…. run_id:
 > `<uuid>` — open at `/exploration/autonomous/history/<run_id>`."
 
-**Negative-path scenarios** (e.g. `invalid_credentials`, `no_match`) often
-return `verdict: failure` or `partial_success` by design — the rule
-rubric correctly reports "login wall persisted" as mechanical failure.
-When `scenario_matched: true`, lead with the match, not the raw verdict:
+Unverified (e.g. MiniMax overloaded, LLM fallback fired):
+
+> "Ran `wagent verify --spec-id users --scenario filter_by_status`.
+> **pass_gate: `unverified`** (NOT a pass). pass_gate.reasons:
+> "supervisor ran in fallback mode (error_kind=provider_error) — LLM
+> did not independently verify this run". The rule side saw
+> scenario_matched=true and 5/5 mechanics clean, but the supervisor
+> Agent's cross-check is required for a real pass. run_id: `<uuid>`."
+
+Unverified (LLM low confidence):
 
 > "Ran `wagent verify --spec-id login --scenario invalid_credentials`.
-> scenario_matched: true (the scenario expects the login wall to persist
-> on wrong credentials, and it did). Supervisor verdict: `failure` — this
-> is the expected rule-side verdict for a negative-path scenario. …"
+> **pass_gate: `unverified`**. pass_gate.reasons: "supervisor
+> confidence=medium — scenario requires high-confidence LLM agreement".
+> Supervisor could not verify that `role=alert` surfaced because the
+> prompt didn't carry enough signal. …"
 
-If `supervisor.source == "fallback"`, call it out — the Supervisor Agent
-didn't actually verify this run; only the rule side did:
+Hard fail (spec deviation):
 
-> "…supervisor.source: fallback (error_kind: timeout) — the LLM
-> supervisor didn't run, so supervisor_agreement is self-mirrored rather
-> than independently verified."
+> "Ran `wagent verify --spec-id X --scenario Y`. **pass_gate: `fail`**.
+> pass_gate.reasons: "element recognition score 0.67 < 1.0 — one or
+> more critical elements missing or mis-classified". …"
 
 When you haven't run anything, say what changed and hand off:
 

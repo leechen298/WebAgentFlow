@@ -59,6 +59,20 @@ def _scenario_matched_for(item: ExplorationRun) -> bool | None:
     return None
 
 
+def _pass_gate_status_for(item: ExplorationRun) -> str | None:
+    """Resolve the strict pass_gate status for the list row.
+
+    Always reads from the persisted result snapshot — cheap, and there's
+    no write-time cache to keep in sync (the gate is derivable from
+    scorecard anyway). Returns None for rows persisted before the gate
+    shipped, and the list falls back to scenario_matched.
+    """
+    snapshot = item.result_snapshot_json or {}
+    scorecard = (snapshot.get("verification") or {}).get("scorecard") or {}
+    gate = scorecard.get("pass_gate") or {}
+    return gate.get("status")
+
+
 def _persist_autonomous_run(
     payload: AutonomousExplorePayload,
     final_data: dict[str, Any],
@@ -783,6 +797,10 @@ class AutonomousRunSummary(BaseModel):
     scenario: str | None = None
     verdict: str | None = None
     scenario_matched: bool | None = None
+    # Strict pass gate outcome ('pass' / 'fail' / 'unverified') — the
+    # UI reads this as the authoritative status. Null for pre-gate
+    # rows; the list row then falls back to scenario_matched + verdict.
+    pass_gate_status: str | None = None
     status: str
     url: str | None = None
     summary: str | None = None
@@ -846,6 +864,7 @@ def list_autonomous_runs(
             scenario=(item.strategy_json or {}).get("scenario"),
             verdict=(item.strategy_json or {}).get("verdict"),
             scenario_matched=_scenario_matched_for(item),
+            pass_gate_status=_pass_gate_status_for(item),
             status=str(item.status),
             url=(item.strategy_json or {}).get("url"),
             summary=item.summary,

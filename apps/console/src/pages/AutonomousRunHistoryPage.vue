@@ -116,6 +116,7 @@ function rowStatus(record: AutonomousRunSummary): EffectiveStatus {
   return effectiveStatus({
     verdict: record.verdict,
     scenarioMatched: record.scenario_matched,
+    passGateStatus: record.pass_gate_status,
   });
 }
 
@@ -123,21 +124,27 @@ function rowStatusLabel(record: AutonomousRunSummary): string {
   const s = rowStatus(record);
   if (s === 'success') return t('autonomousHistory.statusSuccess');
   if (s === 'failure') return t('autonomousHistory.statusFailure');
+  if (s === 'unverified') return t('autonomousHistory.statusUnverified');
   if (s === 'partial') return t('autonomousHistory.statusPartial');
   if (s === 'uncertain') return t('autonomousHistory.statusUncertain');
   return '—';
 }
 
 function rowTooltip(record: AutonomousRunSummary): string {
-  // Always expose the raw rule-side verdict + scenario match flag so
-  // operators can tell "passed negative-path scenario" from "broken
-  // positive-path scenario" on hover.
+  // Expose the raw rule-side verdict, scenario match flag, and strict
+  // gate outcome so the operator can tell "passed negative-path" from
+  // "broken positive-path" and "unverified due to LLM blip" apart on
+  // hover. The gate is the main status shown as the tag; this tooltip
+  // adds the inputs the gate was computed from.
   const parts: string[] = [];
   if (record.verdict) parts.push(`${t('autonomousHistory.ruleVerdict')}: ${record.verdict}`);
   if (record.scenario_matched === true) {
     parts.push(t('autonomousHistory.scenarioMatched'));
   } else if (record.scenario_matched === false) {
     parts.push(t('autonomousHistory.scenarioMismatch'));
+  }
+  if (record.pass_gate_status) {
+    parts.push(`${t('autonomousHistory.passGate')}: ${record.pass_gate_status}`);
   }
   return parts.join(' · ');
 }

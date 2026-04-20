@@ -5,6 +5,23 @@
     class="verify-card"
     :bordered="false"
   >
+    <!-- Top-level pass gate banner: the binary outcome that matters.
+         Shows only when the scorecard produced a gate (spec-driven
+         runs after the comparator finished). Gives the operator the
+         one-line answer plus every reason a gate failed, so they
+         don't have to infer from the per-tile scores. -->
+    <div v-if="passGateStatus" class="pass-gate-banner" :class="passGateBannerClass">
+      <div class="pass-gate-row">
+        <a-tag :color="effectiveStatusColor(effectiveGateStatus)" class="pass-gate-tag">
+          {{ passGateLabel }}
+        </a-tag>
+        <span class="pass-gate-subtitle">{{ passGateSubtitle }}</span>
+      </div>
+      <ul v-if="passGateReasons.length" class="pass-gate-reasons">
+        <li v-for="(r, i) in passGateReasons" :key="i">{{ r }}</li>
+      </ul>
+    </div>
+
     <a-row :gutter="16">
       <a-col :xs="24" :md="8">
         <a-card size="small" :bordered="true" :title="$t('autonomous.selfVerdict')">
@@ -189,6 +206,11 @@ interface VerdictCheckShape {
   matches_expectation?: boolean;
 }
 
+interface PassGateShape {
+  status?: 'pass' | 'fail' | 'unverified';
+  reasons?: string[];
+}
+
 interface ScorecardShape {
   element_recognition?: ScorecardBlockShape;
   action_coverage?: ScorecardBlockShape;
@@ -196,6 +218,7 @@ interface ScorecardShape {
   distraction_avoidance?: ScorecardBlockShape;
   supervisor_agreement?: ScorecardBlockShape;
   verdict_check?: VerdictCheckShape;
+  pass_gate?: PassGateShape | null;
   [key: string]: unknown;
 }
 
@@ -211,10 +234,19 @@ const scenarioMatched = computed<boolean | null>(() => {
   return vc.matches_expectation;
 });
 
+const passGateStatus = computed<string | null>(() => {
+  return props.scorecard?.pass_gate?.status ?? null;
+});
+
+const passGateReasons = computed<string[]>(() => {
+  return props.scorecard?.pass_gate?.reasons ?? [];
+});
+
 const effectiveSelfStatus = computed<EffectiveStatus>(() =>
   effectiveStatus({
     verdict: props.selfAssessment?.verdict ?? null,
     scenarioMatched: scenarioMatched.value,
+    passGateStatus: passGateStatus.value,
   }),
 );
 
@@ -222,8 +254,37 @@ const effectiveSupervisorStatus = computed<EffectiveStatus>(() =>
   effectiveStatus({
     verdict: props.supervisor?.verdict ?? null,
     scenarioMatched: scenarioMatched.value,
+    passGateStatus: passGateStatus.value,
   }),
 );
+
+const effectiveGateStatus = computed<EffectiveStatus>(() =>
+  effectiveStatus({ passGateStatus: passGateStatus.value }),
+);
+
+const passGateLabel = computed<string>(() => {
+  const s = passGateStatus.value;
+  if (s === 'pass') return t('autonomous.passGatePass');
+  if (s === 'fail') return t('autonomous.passGateFail');
+  if (s === 'unverified') return t('autonomous.passGateUnverified');
+  return '—';
+});
+
+const passGateSubtitle = computed<string>(() => {
+  const s = passGateStatus.value;
+  if (s === 'pass') return t('autonomous.passGatePassSubtitle');
+  if (s === 'fail') return t('autonomous.passGateFailSubtitle');
+  if (s === 'unverified') return t('autonomous.passGateUnverifiedSubtitle');
+  return '';
+});
+
+const passGateBannerClass = computed<string>(() => {
+  const s = passGateStatus.value;
+  if (s === 'pass') return 'pass-gate-banner-pass';
+  if (s === 'fail') return 'pass-gate-banner-fail';
+  if (s === 'unverified') return 'pass-gate-banner-unverified';
+  return '';
+});
 
 // Supervisor source + error_kind can arrive under either snake_case
 // (CLI / flattened API) or underscore-prefixed (SSE event + persisted
@@ -294,6 +355,47 @@ async function copyThinking(): Promise<void> {
 }
 .scenario-note-warn {
   color: #d4380d;
+}
+.pass-gate-banner {
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  border: 1px solid transparent;
+}
+.pass-gate-banner-pass {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+}
+.pass-gate-banner-fail {
+  background: #fff1f0;
+  border-color: #ffa39e;
+}
+.pass-gate-banner-unverified {
+  background: #fff7e6;
+  border-color: #ffd591;
+}
+.pass-gate-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pass-gate-tag {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 2px 10px;
+}
+.pass-gate-subtitle {
+  font-size: 12px;
+  color: #595959;
+}
+.pass-gate-reasons {
+  margin: 8px 0 0 0;
+  padding-left: 22px;
+  font-size: 12px;
+  color: #595959;
+}
+.pass-gate-reasons li {
+  margin: 2px 0;
 }
 .final-meta {
   font-size: 11px;

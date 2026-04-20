@@ -81,6 +81,8 @@ def _full_result(
     verdict: str = "success",
     *,
     matches_expectation: bool | None = True,
+    pass_gate_status: str | None = "pass",
+    pass_gate_reasons: list[str] | None = None,
 ) -> dict:
     scorecard: dict = {
         "page_id": "login",
@@ -101,6 +103,11 @@ def _full_result(
             "final_url": "http://t/",
             "matches_expectation": matches_expectation,
             "notes": "OK",
+        }
+    if pass_gate_status is not None:
+        scorecard["pass_gate"] = {
+            "status": pass_gate_status,
+            "reasons": pass_gate_reasons or [],
         }
     return {
         "run_id": "abc-123",
@@ -162,9 +169,11 @@ def test_banner_success_uses_checkmark() -> None:
 
 
 def test_banner_failure_uses_cross() -> None:
-    # Ad-hoc run (no verdict_check block) falls back to raw verdict
-    # → ✗ for anything not == "success".
-    b = vs._banner(vs._trim_result(_full_result("failure", matches_expectation=None)))
+    # Ad-hoc run (no verdict_check + no pass_gate) falls back to raw
+    # verdict → ✗ for anything not == "success".
+    b = vs._banner(vs._trim_result(_full_result(
+        "failure", matches_expectation=None, pass_gate_status=None,
+    )))
     assert b.startswith("✗")
     assert "verdict=failure" in b
 
@@ -198,11 +207,28 @@ def test_exit_code_unknown_verdict_is_one_not_two() -> None:
     assert vs._exit_code_for("whatever") == 1
 
 
+def test_exit_code_pass_gate_pass_is_zero() -> None:
+    # Authoritative path: pass gate drives the exit code when it's set,
+    # overriding both scenario_matched and raw verdict.
+    assert vs._exit_code_for("failure", scenario_matched=False,
+                             pass_gate_status="pass") == 0
+
+
+def test_exit_code_pass_gate_unverified_is_one() -> None:
+    # "LLM couldn't cross-check" is not a pass — that's the whole
+    # reason the gate exists. Exit non-zero so CI catches it.
+    assert vs._exit_code_for("success", scenario_matched=True,
+                             pass_gate_status="unverified") == 1
+
+
+def test_exit_code_pass_gate_fail_is_one() -> None:
+    assert vs._exit_code_for("success", scenario_matched=True,
+                             pass_gate_status="fail") == 1
+
+
 def test_exit_code_scenario_match_overrides_failure_verdict() -> None:
-    # Negative-path scenario: invalid_credentials produces
-    # verdict=failure by design, but the scenario matched expectation,
-    # so the CLI must exit 0 — otherwise operators can't distinguish
-    # "scenario behaved as designed" from "scenario broke".
+    # Legacy fallback when pass_gate is absent (ad-hoc / pre-feature).
+    # Negative-path scenarios still exit 0.
     assert vs._exit_code_for("failure", scenario_matched=True) == 0
     assert vs._exit_code_for("partial_success", scenario_matched=True) == 0
 
@@ -246,22 +272,36 @@ def test_trim_result_surfaces_supervisor_source() -> None:
     assert sup["error_kind"] is None
 
 
-def test_banner_scenario_matched_failure_still_checkmark() -> None:
-    # invalid_credentials case: verdict=failure, scenario_matched=True
-    # → ✓ with an explicit (scenario-expected) tag so Claude has a
-    # cue to not just parrot "failure" to the operator.
-    b = vs._banner(vs._trim_result(_full_result("failure", matches_expectation=True)))
+def test_banner_uses_pass_gate_when_present() -> None:
+    # The gate is authoritative — verdict=failure with pass_gate=pass
+    # (invalid_credentials running as designed, LLM confident) should
+    # render ✓ pass, not ✗ failure.
+    b = vs._banner(vs._trim_result(_full_result(
+        "failure", matches_expectation=True, pass_gate_status="pass",
+    )))
     assert b.startswith("✓")
-    assert "verdict=failure" in b
-    assert "(scenario-expected)" in b
+    assert "pass" in b
 
 
-def test_banner_scenario_mismatch_cross() -> None:
-    # Scenario declares expected success but the run came back as
-    # something else, or vice-versa → ✗ + explicit mismatch note.
-    b = vs._banner(vs._trim_result(_full_result("success", matches_expectation=False)))
+def test_banner_unverified_uses_warning_glyph() -> None:
+    # Unverified gets a distinct glyph so the operator doesn't confuse
+    # "LLM couldn't cross-check" with a clean pass or a hard fail.
+    b = vs._banner(vs._trim_result(_full_result(
+        "success", matches_expectation=True,
+        pass_gate_status="unverified",
+        pass_gate_reasons=["supervisor ran in fallback mode (error_kind=provider_error)"],
+    )))
+    assert b.startswith("⚠")
+    assert "unverified" in b
+
+
+def test_banner_fail_uses_cross_glyph() -> None:
+    b = vs._banner(vs._trim_result(_full_result(
+        "failure", matches_expectation=False,
+        pass_gate_status="fail",
+    )))
     assert b.startswith("✗")
-    assert "(scenario-mismatch)" in b
+    assert "fail" in b
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -320,7 +360,9 @@ def test_failure_verdict_exits_one() -> None:
     # Ad-hoc run (no scenario) with verdict=failure exits 1.
     envelope = {
         "code": 0,
-        "data": _full_result("failure", matches_expectation=None),
+        "data": _full_result(
+            "failure", matches_expectation=None, pass_gate_status=None,
+        ),
         "msg": "ok",
     }
     client = _mock_client(envelope)

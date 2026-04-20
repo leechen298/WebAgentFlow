@@ -183,6 +183,12 @@ export interface AutonomousRunSummary {
    * Null for ad-hoc / pre-feature runs that don't have verdict_check.
    */
   scenario_matched?: boolean | null;
+  /**
+   * Authoritative pass/fail/unverified status — the strict gate the
+   * UI reads as the primary outcome. Null for pre-gate persisted rows
+   * (the list falls back to scenario_matched in that case).
+   */
+  pass_gate_status?: 'pass' | 'fail' | 'unverified' | null;
   status: string;
   url?: string | null;
   summary?: string | null;

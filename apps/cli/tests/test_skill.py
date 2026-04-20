@@ -94,8 +94,13 @@ def test_skill_md_has_reporting_contract(tmp_path: Path) -> None:
     # fabricate a frontend URL.
     assert "run_id" in text
     assert "history_url" not in text
+    # pass_gate must be surfaced so Claude doesn't mis-report an
+    # "unverified" run as a pass.
+    assert "pass_gate" in text
     # Must forbid fake-pass / fake-fail summaries.
     assert "MUST NOT" in text
+    # Must specifically forbid calling an unverified run "passed".
+    assert "unverified" in text
 
 
 def test_skill_md_frontmatter_has_name_and_description(tmp_path: Path) -> None:

@@ -253,6 +253,15 @@ def _trim_result(result: dict[str, Any]) -> dict[str, Any]:
     if "matches_expectation" in vc:
         scenario_matched = bool(vc.get("matches_expectation"))
 
+    # Strict pass gate — the authoritative pass/fail/unverified outcome
+    # the CLI uses for its exit code. See PassGate in
+    # apps/api/app/schemas/page_verification.py for the product
+    # rationale. Runs without a gate (ad-hoc, pre-feature) fall back
+    # to scenario_matched + verdict-based exit.
+    pg = scorecard.get("pass_gate") or {}
+    pass_gate_status: str | None = pg.get("status")
+    pass_gate_reasons: list[str] = list(pg.get("reasons") or [])
+
     supervisor_source: str | None = None
     if supervisor:
         supervisor_source = supervisor.get("_supervisor_source")
@@ -262,6 +271,10 @@ def _trim_result(result: dict[str, Any]) -> dict[str, Any]:
         "verdict": result.get("verdict"),
         "success": result.get("success"),
         "scenario_matched": scenario_matched,
+        "pass_gate": {
+            "status": pass_gate_status,
+            "reasons": pass_gate_reasons,
+        } if pass_gate_status else None,
         "summary": result.get("summary"),
         "final_url": result.get("final_url"),
         "final_title": result.get("final_title"),
@@ -290,20 +303,32 @@ def _banner(result: dict[str, Any]) -> str:
     Reads from the trimmed result only — keep this cheap and safe
     against partial data.
 
-    The glyph follows scenario-match outcome for spec-driven runs
-    (``scenario_matched=True`` is a ✓ even if ``verdict=failure``,
-    because a negative-path scenario like ``invalid_credentials``
-    *expects* the login wall to persist). Ad-hoc runs fall back to
-    the raw verdict.
+    Priority for the glyph + status word:
+      1. Pass gate (``result.pass_gate.status``) — the authoritative
+         pass/fail/unverified outcome for spec-driven runs.
+      2. Scenario match (legacy runs without a gate) — handles ad-hoc
+         or pre-feature persistence.
+      3. Raw verdict (ad-hoc runs with no spec at all).
     """
     verdict = result.get("verdict") or "unknown"
     scenario_matched = result.get("scenario_matched")
-    if scenario_matched is True:
-        glyph = "✓"
+    gate = result.get("pass_gate") or {}
+    gate_status = gate.get("status")
+
+    if gate_status == "pass":
+        glyph, status_word = "✓", "pass"
+    elif gate_status == "fail":
+        glyph, status_word = "✗", "fail"
+    elif gate_status == "unverified":
+        glyph, status_word = "⚠", "unverified"
+    elif scenario_matched is True:
+        glyph, status_word = "✓", "scenario-matched"
     elif scenario_matched is False:
-        glyph = "✗"
+        glyph, status_word = "✗", "scenario-mismatch"
+    elif verdict == _SUCCESS_VERDICT:
+        glyph, status_word = "✓", "success"
     else:
-        glyph = "✓" if verdict == _SUCCESS_VERDICT else "✗"
+        glyph, status_word = "✗", verdict
 
     run_id = result.get("run_id") or "<no-run-id>"
     sc = result.get("scorecard") or {}
@@ -320,32 +345,26 @@ def _banner(result: dict[str, Any]) -> str:
         passed = sum(1 for s in filled if s >= 1.0)
         score_str = f" scorecard={passed}/{len(filled)}"
 
-    # For spec-driven runs where scenario passed but the rule-side
-    # verdict is non-success, make the inversion explicit so Claude
-    # knows to report "matched expectation" rather than just
-    # parroting the rule verdict.
-    match_note = ""
-    if scenario_matched is True and verdict != _SUCCESS_VERDICT:
-        match_note = " (scenario-expected)"
-    elif scenario_matched is False:
-        match_note = " (scenario-mismatch)"
-
-    return f"{glyph} run={run_id} verdict={verdict}{match_note}{score_str}"
+    return f"{glyph} run={run_id} {status_word} verdict={verdict}{score_str}"
 
 
 def _exit_code_for(
     verdict: str | None,
     scenario_matched: bool | None = None,
+    pass_gate_status: str | None = None,
 ) -> int:
     """Map the result to a POSIX exit code.
 
-    Spec-driven runs defer to ``scenario_matched`` when it's known:
-    a negative-path scenario (``invalid_credentials``) produces
-    ``verdict=failure`` by design, and the CLI should still exit 0
-    because the scenario behaved as declared in the spec. Ad-hoc
-    runs (``scenario_matched is None``) fall back to the plain
-    ``verdict == success`` check.
+    Authoritative: ``pass_gate.status``. ``pass`` → 0; ``fail`` or
+    ``unverified`` → 1. Scenario-match fallback for legacy / gate-
+    less runs; then plain verdict check. Unverified deliberately
+    exits non-zero because "LLM couldn't cross-check" is not a pass —
+    that was the whole point of introducing the gate.
     """
+    if pass_gate_status == "pass":
+        return 0
+    if pass_gate_status in ("fail", "unverified"):
+        return 1
     if scenario_matched is True:
         return 0
     if scenario_matched is False:
@@ -526,4 +545,5 @@ def run(args: argparse.Namespace) -> int:
         return _exit_code_for(
             result.get("verdict"),
             scenario_matched=trimmed.get("scenario_matched"),
+            pass_gate_status=(trimmed.get("pass_gate") or {}).get("status"),
         )
