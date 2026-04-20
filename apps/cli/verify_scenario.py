@@ -1,0 +1,486 @@
+#!/usr/bin/env python3
+"""verify_scenario — run one autonomous exploration and emit its result.
+
+Thin HTTP client around the already-running WebAgentFlow API. Used as
+the backing command for the ``verify-scenario`` Claude Code skill so
+that an AI coding agent can ask WebAgentFlow to verify a scenario
+without participating in the run itself.
+
+Contract (see ``.claude/skills/verify-scenario/SKILL.md`` for the full
+policy):
+
+    stdout  — one JSON object with the trimmed summary (or full
+              snapshot with --full). Machine-readable, no log noise.
+    stderr  — one human-readable banner (``✓/✗ verdict — scorecard``)
+              plus any error messages. Safe to ignore when parsing.
+    exit    — 0 if verdict == 'success', 1 if verdict ∈ {partial_success,
+              failure, uncertain}, 2 for CLI / network / spec errors.
+
+The CLI does NOT start the API, does NOT drive Playwright in-process,
+does NOT touch the DB directly. If the API is down, CLI exits 2 with
+a clear message. Keeping it this thin means every run is persisted
+the same way a workbench run is, and the run shows up in
+``/exploration/autonomous/history`` like any other.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from typing import Any
+
+import httpx
+
+# Shared vocabulary with the rule + supervisor sides — see
+# apps/api/app/schemas/page_analysis.py (OutcomeVerdict).
+_SUCCESS_VERDICT = "success"
+_NON_SUCCESS_VERDICTS = {"partial_success", "failure", "uncertain"}
+
+# Long enough for a full run (planner + Playwright + LLM supervisor)
+# plus some margin. The workbench SSE typically finishes in 30–90s.
+_DEFAULT_TIMEOUT_SEC = 300.0
+
+
+# ───────────────────────────────────────────────────────────────────
+# Argument parsing
+# ───────────────────────────────────────────────────────────────────
+
+
+def _parse_kv_json(raw: str | None) -> dict[str, str] | None:
+    """Decode a --fill-values / --toggle-values JSON arg.
+
+    Accepts either a JSON object literal (``'{"name":"alice"}'``) or
+    ``@path/to/file.json`` for larger payloads. Returns None when
+    the arg is omitted so the server-side default kicks in.
+    """
+    if raw is None or raw == "":
+        return None
+    if raw.startswith("@"):
+        path = raw[1:]
+        with open(path, encoding="utf-8") as f:
+            raw = f.read()
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise argparse.ArgumentTypeError(
+            f"Invalid JSON: {exc.msg} (pos {exc.pos})",
+        ) from exc
+    if not isinstance(data, dict):
+        raise argparse.ArgumentTypeError(
+            "Expected a JSON object mapping role → value.",
+        )
+    # Coerce values to strings — the API's Pydantic schema expects
+    # dict[str, str]. Boolean / numeric toggle values round-trip as
+    # the stringified form.
+    return {str(k): str(v) for k, v in data.items()}
+
+
+def _build_arg_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="verify-scenario",
+        description=(
+            "Run one autonomous exploration and emit the result JSON. "
+            "Requires the WebAgentFlow API to be running."
+        ),
+    )
+    p.add_argument(
+        "--spec-id",
+        help=(
+            "Spec id (e.g. 'login' / 'users'). Pairs with --scenario. "
+            "Omit for an ad-hoc run against --url."
+        ),
+    )
+    p.add_argument(
+        "--scenario",
+        help="Scenario key within the spec (e.g. 'valid_credentials').",
+    )
+    p.add_argument(
+        "--url",
+        help=(
+            "Target URL. Required for ad-hoc runs; when --spec-id is "
+            "also set, takes precedence over the spec's url_pattern."
+        ),
+    )
+    p.add_argument(
+        "--goal",
+        default="",
+        help="Optional human-readable goal (passed verbatim to the planner).",
+    )
+    p.add_argument(
+        "--fill-values",
+        type=_parse_kv_json,
+        default=None,
+        help=(
+            "Text-input values keyed by semantic role, e.g. "
+            "'{\"username\":\"admin\",\"password\":\"123456\"}'. "
+            "Prefix a filename with @ to read from disk."
+        ),
+    )
+    p.add_argument(
+        "--toggle-values",
+        type=_parse_kv_json,
+        default=None,
+        help=(
+            "Native toggle selections keyed by group role, e.g. "
+            "'{\"status\":\"active\"}'. Prefix a filename with @ to "
+            "read from disk."
+        ),
+    )
+    p.add_argument(
+        "--headless",
+        dest="headless",
+        action="store_true",
+        default=True,
+        help="Run Playwright headless (default).",
+    )
+    p.add_argument(
+        "--headed",
+        dest="headless",
+        action="store_false",
+        help="Show the Playwright window on the API host (debugging).",
+    )
+    p.add_argument(
+        "--language",
+        default=None,
+        help=(
+            "Language hint for the supervisor LLM's natural-language "
+            "output (e.g. 'en' / 'zh' / 'ja')."
+        ),
+    )
+    p.add_argument(
+        "--api-base",
+        default=os.environ.get("WBAF_API_BASE", "http://localhost:8001"),
+        help=(
+            "Base URL of the WebAgentFlow API "
+            "(env: WBAF_API_BASE, default http://localhost:8001)."
+        ),
+    )
+    p.add_argument(
+        "--timeout",
+        type=float,
+        default=_DEFAULT_TIMEOUT_SEC,
+        help=f"HTTP timeout in seconds (default {_DEFAULT_TIMEOUT_SEC:.0f}).",
+    )
+    p.add_argument(
+        "--full",
+        action="store_true",
+        help=(
+            "Emit the full run snapshot (page_analysis + all steps + "
+            "verification) instead of the trimmed summary."
+        ),
+    )
+    p.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Indent the JSON output for human reading.",
+    )
+    return p
+
+
+# ───────────────────────────────────────────────────────────────────
+# Argument validation
+# ───────────────────────────────────────────────────────────────────
+
+
+def _validate_args(args: argparse.Namespace) -> None:
+    """Fail fast on combinations the API would reject anyway.
+
+    CLI-level errors exit 2 (distinct from verdict-failure exit 1).
+    """
+    if args.spec_id and not args.scenario:
+        print(
+            "verify-scenario: --spec-id requires --scenario.\n"
+            "Either pass both, or drop --spec-id for an ad-hoc run.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+    if not args.spec_id and not args.url:
+        print(
+            "verify-scenario: need either --spec-id/--scenario "
+            "(to run a known spec) or --url (ad-hoc).",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+
+
+# ───────────────────────────────────────────────────────────────────
+# Response formatting
+# ───────────────────────────────────────────────────────────────────
+
+
+def _trim_result(result: dict[str, Any], api_base: str) -> dict[str, Any]:
+    """Strip the heavy parts of the run snapshot for default output.
+
+    Keeps: run_id, verdict, summary, final state basics, supervisor
+    verdict / summary / anomalies / suggestions, scorecard top-level
+    scores. Drops: full step log, page_analysis element lists,
+    supervisor `_thinking`, screenshots.
+
+    The full payload is still accessible via ``--full`` or
+    ``GET /exploration/autonomous-runs/get?run_id=…``.
+    """
+    verification = result.get("verification") or {}
+    scorecard = verification.get("scorecard") or {}
+    supervisor = result.get("supervisor") or {}
+
+    run_id = result.get("run_id")
+    history_path = f"/exploration/autonomous/history/{run_id}" if run_id else None
+
+    # scorecard trimmed to the 5 top-level score blocks — each
+    # carries { score, weight_note }; the per-element / per-action
+    # check details are in the full snapshot.
+    score_keys = (
+        "element_recognition",
+        "action_coverage",
+        "verdict_accuracy",
+        "distraction_avoidance",
+        "supervisor_agreement",
+    )
+    scorecard_summary = {
+        k: {
+            "score": (scorecard.get(k) or {}).get("score"),
+            "weight_note": (scorecard.get(k) or {}).get("weight_note"),
+        }
+        for k in score_keys
+        if k in scorecard
+    }
+
+    return {
+        "run_id": run_id,
+        "verdict": result.get("verdict"),
+        "success": result.get("success"),
+        "summary": result.get("summary"),
+        "final_url": result.get("final_url"),
+        "final_title": result.get("final_title"),
+        "total_steps": result.get("total_steps"),
+        "elapsed_ms": result.get("elapsed_ms"),
+        "supervisor": {
+            "verdict": supervisor.get("verdict"),
+            "confidence": supervisor.get("confidence"),
+            "summary": supervisor.get("summary"),
+            "anomalies": supervisor.get("anomalies") or [],
+            "suggestions": supervisor.get("suggestions") or [],
+        } if supervisor else None,
+        "scorecard": {
+            "page_id": scorecard.get("page_id"),
+            "scenario": scorecard.get("scenario"),
+            **scorecard_summary,
+        } if scorecard else None,
+        "history_url": f"{api_base.rstrip('/')}{history_path}" if history_path else None,
+    }
+
+
+def _banner(result: dict[str, Any]) -> str:
+    """One-line human banner written to stderr for Claude / operator.
+
+    Reads from the trimmed result only — keep this cheap and safe
+    against partial data.
+    """
+    verdict = result.get("verdict") or "unknown"
+    glyph = "✓" if verdict == _SUCCESS_VERDICT else "✗"
+    run_id = result.get("run_id") or "<no-run-id>"
+    sc = result.get("scorecard") or {}
+    scores = [
+        sc.get(k, {}).get("score")
+        for k in (
+            "element_recognition", "action_coverage", "verdict_accuracy",
+            "distraction_avoidance", "supervisor_agreement",
+        )
+    ]
+    filled = [s for s in scores if isinstance(s, (int, float))]
+    score_str = ""
+    if filled:
+        passed = sum(1 for s in filled if s >= 1.0)
+        score_str = f" scorecard={passed}/{len(filled)}"
+    history = result.get("history_url")
+    history_str = f"\n  history: {history}" if history else ""
+    return f"{glyph} run={run_id} verdict={verdict}{score_str}{history_str}"
+
+
+def _exit_code_for(verdict: str | None) -> int:
+    if verdict == _SUCCESS_VERDICT:
+        return 0
+    if verdict in _NON_SUCCESS_VERDICTS:
+        return 1
+    # Missing verdict / unknown value → treat as non-success, distinct
+    # from CLI-level errors which always exit 2.
+    return 1
+
+
+# ───────────────────────────────────────────────────────────────────
+# Main
+# ───────────────────────────────────────────────────────────────────
+
+
+def _build_payload(args: argparse.Namespace) -> dict[str, Any]:
+    # Resolve the target URL: operators can pass --url explicitly,
+    # otherwise we let the spec's url_pattern steer (server-side).
+    # For v1 we always require --url when running a spec because
+    # the API endpoint requires ``url`` as a mandatory field and we
+    # don't want to special-case spec lookup in the client.
+    #
+    # If --spec-id is set but --url isn't, derive from the spec's
+    # url_pattern via the /exploration/specs endpoint. Keeps the
+    # CLI usable without the operator having to paste the URL every
+    # time.
+    payload: dict[str, Any] = {
+        "url": args.url or "",
+        "goal": args.goal or "",
+        "headless": args.headless,
+    }
+    if args.fill_values is not None:
+        payload["fill_values"] = args.fill_values
+    if args.toggle_values is not None:
+        payload["toggle_values"] = args.toggle_values
+    if args.spec_id:
+        payload["spec_id"] = args.spec_id
+    if args.scenario:
+        payload["scenario"] = args.scenario
+    if args.language:
+        payload["language"] = args.language
+    return payload
+
+
+def _resolve_url_from_spec(
+    client: httpx.Client, spec_id: str,
+) -> str | None:
+    """When --spec-id is set but --url is not, resolve the target
+    URL from the spec's ``url_pattern``.
+
+    Returns None if the spec lookup fails — caller falls back to the
+    empty string and the API will reject the run with a clear 4xx.
+    """
+    try:
+        r = client.get(f"/exploration/specs/{spec_id}")
+        r.raise_for_status()
+        body = r.json()
+        data = (body or {}).get("data") or {}
+        return (data.get("url_pattern") or "").strip() or None
+    except Exception:
+        return None
+
+
+def _hydrate_values_from_spec(
+    client: httpx.Client,
+    spec_id: str,
+    scenario: str,
+) -> tuple[dict[str, str] | None, dict[str, str] | None]:
+    """Pull fill_values / selections from the spec's scenario when
+    the operator didn't override them on the command line.
+
+    Mirrors what the workbench does when the operator picks a
+    scenario — so ``verify-scenario --spec-id=login --scenario=valid_credentials``
+    actually runs with admin/123456, not empty inputs.
+    """
+    try:
+        r = client.get(f"/exploration/specs/{spec_id}")
+        r.raise_for_status()
+        body = r.json()
+        data = (body or {}).get("data") or {}
+        scenarios = data.get("scenarios") or []
+        sc = next((s for s in scenarios if s.get("key") == scenario), None)
+        if sc is None:
+            return None, None
+        inputs = sc.get("inputs") or None
+        selections = sc.get("selections") or None
+        inputs = {str(k): str(v) for k, v in inputs.items()} if inputs else None
+        selections = {str(k): str(v) for k, v in selections.items()} if selections else None
+        return inputs, selections
+    except Exception:
+        return None, None
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = _build_arg_parser()
+    args = parser.parse_args(argv)
+    _validate_args(args)
+
+    api_base = args.api_base.rstrip("/")
+
+    # One long-lived httpx.Client so connection reuse + timeout are
+    # centralised. The exploration request itself is a single POST.
+    with httpx.Client(base_url=api_base, timeout=args.timeout) as client:
+        # Spec-driven hydration: if operator passed --spec-id/--scenario
+        # but omitted --url / --fill-values / --toggle-values, fill in
+        # the gaps from the spec JSON. Makes the common case
+        # (``verify-scenario --spec-id=X --scenario=Y``) one-shot.
+        if args.spec_id and args.scenario:
+            if not args.url:
+                resolved_url = _resolve_url_from_spec(client, args.spec_id)
+                if resolved_url:
+                    args.url = resolved_url
+            if args.fill_values is None or args.toggle_values is None:
+                inputs, selections = _hydrate_values_from_spec(
+                    client, args.spec_id, args.scenario,
+                )
+                if args.fill_values is None and inputs is not None:
+                    args.fill_values = inputs
+                if args.toggle_values is None and selections is not None:
+                    args.toggle_values = selections
+
+        if not args.url:
+            print(
+                "verify-scenario: could not determine target URL. "
+                "Pass --url explicitly or verify the spec's url_pattern.",
+                file=sys.stderr,
+            )
+            return 2
+
+        payload = _build_payload(args)
+
+        try:
+            response = client.post("/exploration/autonomous-run", json=payload)
+        except httpx.ConnectError as exc:
+            print(
+                f"verify-scenario: cannot reach API at {api_base}. "
+                f"Is WebAgentFlow running? ({exc})",
+                file=sys.stderr,
+            )
+            return 2
+        except httpx.HTTPError as exc:
+            print(f"verify-scenario: HTTP error — {exc}", file=sys.stderr)
+            return 2
+
+        if response.status_code >= 400:
+            print(
+                f"verify-scenario: API returned {response.status_code} — "
+                f"{response.text[:300]}",
+                file=sys.stderr,
+            )
+            return 2
+
+        try:
+            envelope = response.json()
+        except json.JSONDecodeError as exc:
+            print(f"verify-scenario: malformed response — {exc}", file=sys.stderr)
+            return 2
+
+        if envelope.get("code") != 0:
+            print(
+                f"verify-scenario: API business error code={envelope.get('code')} "
+                f"msg={envelope.get('msg')!r}",
+                file=sys.stderr,
+            )
+            return 2
+
+        result = envelope.get("data") or {}
+        output = result if args.full else _trim_result(result, api_base)
+
+        # One JSON object on stdout; indent only when asked so the
+        # default form is machine-friendly (`jq`, `python -m json.tool`,
+        # skill parser).
+        if args.pretty:
+            print(json.dumps(output, ensure_ascii=False, indent=2))
+        else:
+            print(json.dumps(output, ensure_ascii=False))
+
+        # Human banner on stderr for the caller / Claude to read.
+        print(_banner(_trim_result(result, api_base)), file=sys.stderr)
+
+        return _exit_code_for(result.get("verdict"))
+
+
+if __name__ == "__main__":  # pragma: no cover
+    sys.exit(main())
