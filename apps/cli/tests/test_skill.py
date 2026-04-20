@@ -90,7 +90,10 @@ def test_skill_md_has_reporting_contract(tmp_path: Path) -> None:
     assert "Reporting contract" in text
     assert "supervisor.verdict" in text
     assert "scorecard" in text
-    assert "history_url" in text
+    # Report by run_id — the CLI stays backend-only and must not
+    # fabricate a frontend URL.
+    assert "run_id" in text
+    assert "history_url" not in text
     # Must forbid fake-pass / fake-fail summaries.
     assert "MUST NOT" in text
 

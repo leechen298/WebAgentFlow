@@ -113,7 +113,7 @@ def _full_result(verdict: str = "success") -> dict:
 
 
 def test_trim_result_drops_heavy_fields() -> None:
-    trimmed = vs._trim_result(_full_result(), "http://a")
+    trimmed = vs._trim_result(_full_result())
     assert "steps" not in trimmed
     assert "page_analysis" not in trimmed
     # Supervisor _thinking is not retained in the trimmed view.
@@ -124,16 +124,12 @@ def test_trim_result_drops_heavy_fields() -> None:
     assert "element_checks" not in sc
 
 
-def test_trim_result_includes_history_url() -> None:
-    trimmed = vs._trim_result(_full_result(), "http://api.local:8001")
-    assert trimmed["history_url"] == (
-        "http://api.local:8001/exploration/autonomous/history/abc-123"
-    )
-
-
-def test_trim_result_null_run_id_yields_null_history() -> None:
-    trimmed = vs._trim_result({"verdict": "uncertain"}, "http://a")
-    assert trimmed["history_url"] is None
+def test_trim_result_does_not_emit_frontend_url() -> None:
+    # The CLI is a backend client. It must not fabricate a console /
+    # workbench URL — the frontend host is not CLI-layer knowledge.
+    trimmed = vs._trim_result(_full_result())
+    assert "history_url" not in trimmed
+    assert trimmed["run_id"] == "abc-123"
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -142,16 +138,23 @@ def test_trim_result_null_run_id_yields_null_history() -> None:
 
 
 def test_banner_success_uses_checkmark() -> None:
-    b = vs._banner(vs._trim_result(_full_result("success"), "http://a"))
+    b = vs._banner(vs._trim_result(_full_result("success")))
     assert b.startswith("✓")
     assert "verdict=success" in b
     assert "scorecard=5/5" in b
 
 
 def test_banner_failure_uses_cross() -> None:
-    b = vs._banner(vs._trim_result(_full_result("failure"), "http://a"))
+    b = vs._banner(vs._trim_result(_full_result("failure")))
     assert b.startswith("✗")
     assert "verdict=failure" in b
+
+
+def test_banner_does_not_leak_frontend_url() -> None:
+    b = vs._banner(vs._trim_result(_full_result("success")))
+    # Banner must stay a single line with no history/console pointer.
+    assert "\n" not in b
+    assert "history" not in b.lower()
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -302,6 +305,31 @@ def test_spec_scenario_hydrates_url_and_fill_values() -> None:
     assert payload["fill_values"] == {"username": "admin", "password": "123456"}
     assert payload["spec_id"] == "login"
     assert payload["scenario"] == "valid_credentials"
+
+
+def test_path_style_url_pattern_refuses_and_hints() -> None:
+    # spec's url_pattern is a match pattern (e.g. "/login"), not a
+    # navigable URL. The CLI must refuse, print a hint, and exit 2 —
+    # anything else ends up as a 500 inside Playwright.
+    spec_get = {
+        "code": 0,
+        "data": {
+            "spec_id": "login",
+            "url_pattern": "/login",
+            "scenarios": [{"key": "valid", "inputs": {}, "selections": {}}],
+        },
+        "msg": "ok",
+    }
+    client = _mock_client(post_response={"code": 0, "data": {}}, get_response=spec_get)
+    with patch.object(vs.httpx, "Client", return_value=client):
+        stderr = StringIO()
+        with redirect_stdout(StringIO()), redirect_stderr(stderr):
+            rc = _run(["--spec-id", "login", "--scenario", "valid"])
+    assert rc == 2
+    err = stderr.getvalue()
+    assert "path-style" in err or "--url" in err
+    # Must not have sent the POST — no run should have happened.
+    assert not client.post.called
 
 
 def test_explicit_url_overrides_spec_url() -> None:

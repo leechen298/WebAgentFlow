@@ -186,16 +186,17 @@ def _render_skill_md(run_sh: Path, repo_root: Path, api_base: str) -> str:
           checkbox (JSON object, or `@path.json`).
         - `--full` — emit full snapshot (page_analysis + all steps).
           Default is a trimmed summary; the full form is usually too
-          large to read in one go. Prefer following the `history_url`
-          for deep inspection.
+          large to read in one go. For deep inspection, ask the user
+          to open the run by `run_id` in their WebAgentFlow console.
         - `--pretty` — indent the JSON for human reading.
         - `--api-base http://host:port` — point at a non-default API.
 
         ## Output contract
 
         - **stdout**: exactly one JSON object with `run_id`, `verdict`,
-          `summary`, `final_url`, `supervisor`, `scorecard`, and
-          `history_url`. Safe to parse directly.
+          `summary`, `final_url`, `supervisor`, and `scorecard`. Safe
+          to parse directly. The CLI is a backend client — it does NOT
+          emit a frontend URL; the user knows where their console is.
         - **stderr**: a one-line banner (`✓/✗ verdict — scorecard`) and
           any error text. Ignore when parsing stdout.
         - **exit 0**: verdict == `success`.
@@ -212,8 +213,9 @@ def _render_skill_md(run_sh: Path, repo_root: Path, api_base: str) -> str:
            `element_recognition`, `action_coverage`, `verdict_accuracy`,
            `distraction_avoidance`, `supervisor_agreement`. Cite the
            actual numbers.
-        3. Include the `history_url` so the user can open the detail
-           page in their browser.
+        3. Include the `run_id` so the user can look the run up in
+           their WebAgentFlow console (the CLI stays backend-only and
+           does not fabricate a frontend URL).
         4. If the verdict is not `success`, read the step log +
            `supervisor.anomalies` + `supervisor.suggestions` and offer
            a concrete next step (e.g. "the radio selector didn't

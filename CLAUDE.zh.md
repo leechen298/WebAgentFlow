@@ -48,7 +48,9 @@ Codex 等）主要负责写代码。AI 也可以通过项目提供的
 - 导入 `run_autonomous_exploration` 并在进程内直接驱动 Playwright。
 - 用"通过了"/"跑过了"/"works"之类的总结概括结果，**而不引用**这次运行
   的 `supervisor.verdict` 原值和 5 项 scorecard 得分原值。
-- 汇报时省略 `history_url` —— 用户需要这个链接在 workbench 里看完整详情。
+- 汇报时省略 `run_id` —— 用户靠 `run_id` 在 WebAgentFlow 控制台里查这次
+  运行。CLI **不会**输出前端 URL：它只是后端客户端，不该知道 console
+  跑在哪台机器哪个端口。
 - 伪造或篡改裁决。skill 退出非 0 就如实报告非 0；退出 0 就报告成功，
   **同时引用 Supervisor 的 confidence + summary 原文**。
 - 在循环里反复调 skill 来"平均"或"复核"结果 —— 每次调用都是一次真实
@@ -62,8 +64,8 @@ Codex 等）主要负责写代码。AI 也可以通过项目提供的
 - 按用户要求修改代码。
 - **调用 `verify-scenario` skill**，当用户的请求暗示需要一次真实运行时
   （"verify X"、"跑一下 spec Y"、"check workflow Z"）。如实转发 Supervisor
-  的裁决 + scorecard + `history_url` 给用户；如果裁决不是 `success`，再
-  给出具体的分析 / 下一步建议。
+  的裁决 + scorecard + `run_id` 给用户；如果裁决不是 `success`，再给出
+  具体的分析 / 下一步建议。
 - 当 skill 无法使用时（API 没起、或需要手动检查），请用户去 workbench
   亲自跑。
 
@@ -86,8 +88,8 @@ AI 编码 Agent 是**中转**，不是验证者。它不在这个链上。使用
 > Supervisor 裁决：`success`（置信度 `high`）。Scorecard 5/5：
 > element_recognition 1.0、action_coverage 1.0、verdict_accuracy 1.0、
 > distraction_avoidance 1.0、supervisor_agreement 1.0。Supervisor
-> summary：……引用原文……。完整 run：
-> http://localhost:5174/exploration/autonomous/history/<run_id>"
+> summary：……引用原文……。run_id：`<uuid>` —— 在 WebAgentFlow 控制台
+> 打开 `/exploration/autonomous/history/<run_id>` 查看完整详情。"
 
 没跑任何东西时，说你改了什么、交给用户跑：
 

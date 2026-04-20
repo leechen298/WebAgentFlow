@@ -52,8 +52,9 @@ Running the engine via any other means — direct `curl` to
   the user's behalf.
 - Summarise the result as "passed" / "failed" / "works" without citing the
   run's `supervisor.verdict` and the five scorecard scores verbatim.
-- Omit the `history_url` from the skill output when reporting back — the
-  user needs the link to open the full run in the workbench.
+- Omit the `run_id` when reporting back — the user needs it to look the
+  run up in the WebAgentFlow console. The CLI does NOT emit a frontend
+  URL; it is a backend client and doesn't know where the console lives.
 - Fabricate or reshape verdicts. If the skill exits non-zero, report
   non-zero; if it exits 0, report success *with the Supervisor's own
   confidence + summary quoted*.
@@ -69,8 +70,8 @@ Running the engine via any other means — direct `curl` to
 - Edit code as requested.
 - **Invoke the `verify-scenario` skill** when the user's request implies a
   live run (e.g. "verify X", "run spec Y", "check workflow Z"). Forward the
-  Supervisor verdict + scorecard + `history_url` to the user verbatim, plus
-  a concrete analysis / next step if the verdict is not `success`.
+  Supervisor verdict + scorecard + `run_id` to the user verbatim, plus a
+  concrete analysis / next step if the verdict is not `success`.
 - Ask the user to run a flow in the workbench when the skill can't help
   (e.g. the API isn't up, or manual inspection matters).
 
@@ -93,8 +94,8 @@ When you've invoked the skill, the structure is:
 > Supervisor verdict: `success` (confidence `high`). Scorecard 5/5:
 > element_recognition 1.0, action_coverage 1.0, verdict_accuracy 1.0,
 > distraction_avoidance 1.0, supervisor_agreement 1.0. Supervisor
-> summary: …quoted…. Full run:
-> http://localhost:5174/exploration/autonomous/history/<run_id>"
+> summary: …quoted…. run_id: `<uuid>` — open it in the WebAgentFlow
+> console at `/exploration/autonomous/history/<run_id>`."
 
 When you haven't run anything, say what changed and hand off:
 

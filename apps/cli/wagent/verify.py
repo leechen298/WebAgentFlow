@@ -206,7 +206,7 @@ def _validate_args(args: argparse.Namespace) -> None:
 # ───────────────────────────────────────────────────────────────────
 
 
-def _trim_result(result: dict[str, Any], api_base: str) -> dict[str, Any]:
+def _trim_result(result: dict[str, Any]) -> dict[str, Any]:
     """Strip the heavy parts of the run snapshot for default output.
 
     Keeps: run_id, verdict, summary, final state basics, supervisor
@@ -220,9 +220,6 @@ def _trim_result(result: dict[str, Any], api_base: str) -> dict[str, Any]:
     verification = result.get("verification") or {}
     scorecard = verification.get("scorecard") or {}
     supervisor = result.get("supervisor") or {}
-
-    run_id = result.get("run_id")
-    history_path = f"/exploration/autonomous/history/{run_id}" if run_id else None
 
     # scorecard trimmed to the 5 top-level score blocks — each
     # carries { score, weight_note }; the per-element / per-action
@@ -244,7 +241,7 @@ def _trim_result(result: dict[str, Any], api_base: str) -> dict[str, Any]:
     }
 
     return {
-        "run_id": run_id,
+        "run_id": result.get("run_id"),
         "verdict": result.get("verdict"),
         "success": result.get("success"),
         "summary": result.get("summary"),
@@ -264,7 +261,6 @@ def _trim_result(result: dict[str, Any], api_base: str) -> dict[str, Any]:
             "scenario": scorecard.get("scenario"),
             **scorecard_summary,
         } if scorecard else None,
-        "history_url": f"{api_base.rstrip('/')}{history_path}" if history_path else None,
     }
 
 
@@ -290,9 +286,7 @@ def _banner(result: dict[str, Any]) -> str:
     if filled:
         passed = sum(1 for s in filled if s >= 1.0)
         score_str = f" scorecard={passed}/{len(filled)}"
-    history = result.get("history_url")
-    history_str = f"\n  history: {history}" if history else ""
-    return f"{glyph} run={run_id} verdict={verdict}{score_str}{history_str}"
+    return f"{glyph} run={run_id} verdict={verdict}{score_str}"
 
 
 def _exit_code_for(verdict: str | None) -> int:
@@ -333,18 +327,33 @@ def _resolve_url_from_spec(
     client: httpx.Client, spec_id: str,
 ) -> str | None:
     """When --spec-id is set but --url is not, resolve the target URL
-    from the spec's ``url_pattern``. Returns None on lookup failure —
-    caller falls back to the empty string and the API will reject
-    with a clear 4xx.
+    from the spec's ``url_pattern``.
+
+    A spec's ``url_pattern`` is a *match pattern* used by the workbench
+    to auto-pick a spec for an operator-typed URL — it can be a bare
+    path like ``/login``. Only absolute ``http(s)://`` values are safe
+    to navigate to; for path-style patterns this returns None and
+    emits a stderr hint telling the caller to pass ``--url`` explicitly.
     """
     try:
         r = client.get(f"/exploration/specs/{spec_id}")
         r.raise_for_status()
         body = r.json()
         data = (body or {}).get("data") or {}
-        return (data.get("url_pattern") or "").strip() or None
+        raw = (data.get("url_pattern") or "").strip()
     except Exception:
         return None
+    if not raw:
+        return None
+    if raw.startswith(("http://", "https://")):
+        return raw
+    print(
+        f"wagent verify: spec '{spec_id}' has a path-style url_pattern "
+        f"('{raw}'); pass --url explicitly, e.g. "
+        f"--url http://localhost:5175{raw}",
+        file=sys.stderr,
+    )
+    return None
 
 
 def _hydrate_values_from_spec(
@@ -444,13 +453,13 @@ def run(args: argparse.Namespace) -> int:
             return 2
 
         result = envelope.get("data") or {}
-        output = result if args.full else _trim_result(result, api_base)
+        output = result if args.full else _trim_result(result)
 
         if args.pretty:
             print(json.dumps(output, ensure_ascii=False, indent=2))
         else:
             print(json.dumps(output, ensure_ascii=False))
 
-        print(_banner(_trim_result(result, api_base)), file=sys.stderr)
+        print(_banner(_trim_result(result)), file=sys.stderr)
 
         return _exit_code_for(result.get("verdict"))
