@@ -302,6 +302,88 @@ class TestGenerateStructured:
         assert resp.ok is True
         assert resp.parsed == {"ok": True}
 
+    @patch("app.services.llm_provider._get_client")
+    def test_fence_without_trailing_newline(self, mock_get_client: MagicMock):
+        # MiniMax occasionally emits the closing fence without a
+        # leading newline: ``...}````. The strict whole-response regex
+        # must tolerate this; earlier versions fell back to parse_error
+        # and silently rule-mirrored the supervisor verdict.
+        client = MagicMock()
+        payload = '```json\n{"verdict": "success"}```'
+        client.chat.completions.create.return_value = _make_completion(payload)
+        mock_get_client.return_value = client
+
+        req = build_request("assess this", response_schema=SIMPLE_SCHEMA)
+        resp = generate_structured(req)
+
+        assert resp.ok is True
+        assert resp.parsed == {"verdict": "success"}
+
+    @patch("app.services.llm_provider._get_client")
+    def test_json_with_surrounding_prose_is_recovered(
+        self, mock_get_client: MagicMock,
+    ):
+        # "Here's your answer: {...}. Let me know if you need more."
+        # is a real shape some providers emit when the system prompt
+        # isn't strong enough. The raw-decode fallback walks to the
+        # first '{' and parses the first balanced object.
+        client = MagicMock()
+        payload = (
+            "Here's your answer: "
+            '{"verdict": "failure", "confidence": "high"}'
+            " — let me know if you need more detail."
+        )
+        client.chat.completions.create.return_value = _make_completion(payload)
+        mock_get_client.return_value = client
+
+        req = build_request("assess this", response_schema=SIMPLE_SCHEMA)
+        resp = generate_structured(req)
+
+        assert resp.ok is True
+        assert resp.parsed == {"verdict": "failure", "confidence": "high"}
+
+    @patch("app.services.llm_provider._get_client")
+    def test_loose_fence_with_preamble_is_recovered(
+        self, mock_get_client: MagicMock,
+    ):
+        # Preamble before a fenced block — the loose matcher picks up
+        # the first fence anywhere inside the text.
+        client = MagicMock()
+        payload = (
+            "Let me answer your question.\n\n"
+            '```json\n{"verdict": "uncertain"}\n```\n\n'
+            "Hope this helps!"
+        )
+        client.chat.completions.create.return_value = _make_completion(payload)
+        mock_get_client.return_value = client
+
+        req = build_request("assess this", response_schema=SIMPLE_SCHEMA)
+        resp = generate_structured(req)
+
+        assert resp.ok is True
+        assert resp.parsed == {"verdict": "uncertain"}
+
+    @patch("app.services.llm_provider._get_client")
+    def test_truly_unparseable_reports_error_with_preview(
+        self, mock_get_client: MagicMock,
+    ):
+        # When all recovery strategies fail, the error message should
+        # carry a short preview of the raw text so we can diagnose
+        # without replaying the run. LlmError.raw keeps the full
+        # raw_text for deeper inspection.
+        client = MagicMock()
+        payload = "no json here, just prose and more prose, nothing to parse"
+        client.chat.completions.create.return_value = _make_completion(payload)
+        mock_get_client.return_value = client
+
+        req = build_request("assess this", response_schema=SIMPLE_SCHEMA)
+        resp = generate_structured(req)
+
+        assert resp.ok is False
+        assert resp.error.kind == "parse_error"
+        assert "Preview" in resp.error.message
+        assert resp.error.raw["raw_text"] == payload
+
 
 # ---------------------------------------------------------------------------
 # build_request helper

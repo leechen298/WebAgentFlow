@@ -117,21 +117,63 @@ def _strip_thinking(text: str) -> str:
     return clean
 
 
-_FENCE_RE = re.compile(r"^\s*```(?:[A-Za-z0-9_+-]+)?\s*\n(.*?)\n```\s*$", re.DOTALL)
+# Deliberately forgiving: accepts `\n` or missing newline between the
+# language tag / content / closing fence. Reasoning-oriented providers
+# (MiniMax-M2.x notably) emit JSON wrapped in Markdown fences even with
+# ``response_format=json_object`` set, and their exact whitespace
+# discipline drifts between calls.
+_FENCE_RE_STRICT = re.compile(
+    r"^\s*```(?:[A-Za-z0-9_+-]+)?\s*\n?(.*?)\n?```\s*$", re.DOTALL,
+)
+_FENCE_RE_LOOSE = re.compile(
+    r"```(?:[A-Za-z0-9_+-]+)?\s*\n?(.*?)\n?```", re.DOTALL,
+)
 
 
 def _strip_code_fence(text: str) -> str:
-    """Peel an optional ```[lang]\\n...\\n``` Markdown wrapper.
+    """Peel a Markdown code fence around JSON content.
 
-    Reasoning-oriented providers (MiniMax-M2.x notably) default to
-    Markdown-fenced JSON even when ``response_format={"type":"json_object"}``
-    is set, which makes ``json.loads`` choke on the backticks. The
-    fence is only stripped when the whole cleaned response is a
-    single code block — loose text that merely *contains* a fence is
-    left for the caller to handle.
+    Strategy, in order:
+      1. Whole response is a single fence (strict match, tolerates
+         missing newlines around the content).
+      2. A fence appears somewhere inside loose text (take the first
+         one). This handles cases where the model prepends a short
+         natural-language preamble before the fenced answer.
+
+    Returns the peeled content when found; otherwise returns ``text``
+    unchanged so the caller can try other strategies.
     """
-    match = _FENCE_RE.match(text)
-    return match.group(1).strip() if match else text
+    strict = _FENCE_RE_STRICT.match(text)
+    if strict:
+        return strict.group(1).strip()
+    loose = _FENCE_RE_LOOSE.search(text)
+    if loose:
+        return loose.group(1).strip()
+    return text
+
+
+def _extract_json_blob(text: str) -> str | None:
+    """Last-ditch JSON recovery using ``json.JSONDecoder.raw_decode``.
+
+    Walks to the first ``{`` and asks the standard decoder to parse the
+    first complete value; any trailing content (prose, extra tokens)
+    is ignored. Used only when direct ``json.loads`` and the fence
+    peeler both fail — e.g. when a provider returns
+    ``"Here's your answer: {...}. Let me know if you need more."``.
+
+    Returns a canonical JSON string when a balanced object is found,
+    else ``None``.
+    """
+    start = text.find("{")
+    if start < 0:
+        return None
+    try:
+        obj, _end = json.JSONDecoder().raw_decode(text[start:])
+    except ValueError:
+        return None
+    # Re-serialize so downstream json.loads always sees clean input,
+    # even if the recovered object lies inside other junk.
+    return json.dumps(obj, ensure_ascii=False)
 
 
 def _extract_usage(raw_usage: Any) -> LlmUsage:
@@ -238,13 +280,37 @@ def generate_structured(request: LlmRequest) -> LlmResponse:
                 error=LlmError(kind="parse_error", message="Empty response from provider"),
             )
 
-        # Peel ```json ... ``` wrapper if present — see _strip_code_fence.
-        json_text = _strip_code_fence(raw_text)
+        # Progressive recovery — MiniMax + friends emit JSON wrapped
+        # in Markdown fences and sometimes with surrounding prose.
+        # Try strategies from cheapest to most forgiving; first one
+        # that parses wins.
+        candidates: list[str] = [raw_text]
+        fenced = _strip_code_fence(raw_text)
+        if fenced != raw_text:
+            candidates.append(fenced)
+        extracted = _extract_json_blob(raw_text)
+        if extracted is not None:
+            candidates.append(extracted)
 
-        # Parse JSON
-        try:
-            parsed = json.loads(json_text)
-        except json.JSONDecodeError as exc:
+        parsed: dict[str, Any] | list[Any] | None = None
+        last_exc: json.JSONDecodeError | None = None
+        for cand in candidates:
+            try:
+                parsed = json.loads(cand)
+                break
+            except json.JSONDecodeError as exc:
+                last_exc = exc
+                continue
+
+        if parsed is None:
+            # Log a preview so a subsequent failure is diagnosable
+            # from uvicorn logs without having to replay the run.
+            preview = raw_text[:500].replace("\n", "\\n")
+            logger.warning(
+                "Structured LLM call: JSON parse failed after fence + "
+                "raw-decode fallbacks. exc=%s raw_text[0:500]=%r",
+                last_exc, preview,
+            )
             return LlmResponse(
                 ok=False,
                 text=raw_text,
@@ -253,7 +319,10 @@ def generate_structured(request: LlmRequest) -> LlmResponse:
                 model=completion.model,
                 error=LlmError(
                     kind="parse_error",
-                    message=f"Failed to parse JSON: {exc}",
+                    message=(
+                        f"Failed to parse JSON: {last_exc}. "
+                        f"Preview: {preview[:200]}"
+                    ),
                     raw={"raw_text": raw_text},
                 ),
             )
