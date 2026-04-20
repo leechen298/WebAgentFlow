@@ -30,19 +30,29 @@ WebAgentFlow **本身就是**一个自主 web 操作引擎，内置有项目自�
 `apps/api/app/services/learning/exploration_supervisor.py` +
 `autonomous_explorer._run_supervisor`。
 
-**应用**才是执行者。**用户**是操作者。**AI 编码 Agent**（Claude Code、Codex
-等）只负责写代码。
+**应用**才是执行者。**用户**是操作者。**AI 编码 Agent**（Claude Code、
+Codex 等）主要负责写代码。AI 也可以通过项目提供的
+**`verify-scenario` skill** 触发一次运行 —— 但必须遵守下面的契约。
+通过 skill 调用是可审计的（走 HTTP API、持久化进 `exploration_runs`、
+输出原始 Supervisor 裁决 + scorecard），所以验证逻辑依然成立：裁决由项
+目内 Supervisor Agent 产出，AI 只是中转原样呈现。
 
-如果 AI 编码 Agent 替用户跑应用再把结果汇报回去，用户就无法区分"应用真的
-在工作"和"AI 编码 Agent 用脚手架代码糊弄"。这会瓦解整套验证逻辑。
+**不得**通过其他任何方式驱动引擎 —— 直接 `curl`
+`/exploration/autonomous-run`、内联 Playwright 脚本、直接导入
+`run_autonomous_exploration` 都在禁止范围内。
 
 ### 禁止做
 
-- 用 curl 或任何 HTTP 客户端代用户调用
-  `POST /exploration/autonomous-run` 或 `.../stream`。
-- 解析应用输出，再拿去当"应用能跑"的证据。
-- 冒充 Supervisor Agent，或冒充用户的最终审核。
-- 说出"我跑了 D1，5/5 通过"或"我端到端验证过了"之类的话。
+- 用 curl、fetch、httpx 或除 `verify-scenario` skill 的 CLI 以外的任何
+  HTTP 客户端调用 `POST /exploration/autonomous-run` 或 `.../stream`。
+- 导入 `run_autonomous_exploration` 并在进程内直接驱动 Playwright。
+- 用"通过了"/"跑过了"/"works"之类的总结概括结果，**而不引用**这次运行
+  的 `supervisor.verdict` 原值和 5 项 scorecard 得分原值。
+- 汇报时省略 `history_url` —— 用户需要这个链接在 workbench 里看完整详情。
+- 伪造或篡改裁决。skill 退出非 0 就如实报告非 0；退出 0 就报告成功，
+  **同时引用 Supervisor 的 confidence + summary 原文**。
+- 在循环里反复调 skill 来"平均"或"复核"结果 —— 每次调用都是一次真实
+  的 Playwright + LLM 运行。
 
 ### 允许做
 
@@ -50,23 +60,37 @@ WebAgentFlow **本身就是**一个自主 web 操作引擎，内置有项目自�
 - 跑**不涉及** `autonomous_explorer.run_autonomous_exploration` 的单元 /
   集成测试。
 - 按用户要求修改代码。
-- **请用户**在 workbench 里跑某个流程，然后把观察到的告诉你。
-- **仅当用户明确要求时**，才能跑一次自主探索；跑完只能汇报原始观察，不
-  能冒充应用给结论。
+- **调用 `verify-scenario` skill**，当用户的请求暗示需要一次真实运行时
+  （"verify X"、"跑一下 spec Y"、"check workflow Z"）。如实转发 Supervisor
+  的裁决 + scorecard + `history_url` 给用户；如果裁决不是 `success`，再
+  给出具体的分析 / 下一步建议。
+- 当 skill 无法使用时（API 没起、或需要手动检查），请用户去 workbench
+  亲自跑。
 
 ### 验证权威顺序
 
-1. **用户** —— 在 `/exploration/autonomous` 里亲自运行并判定接受或拒绝。
+1. **用户** —— 在 `/exploration/autonomous` 或 history 详情页中确认或
+   驳回一次运行。
 2. **项目内 Supervisor Agent** —— `_run_supervisor` 的 LLM 调用 + 基于规则
    的 `page_verification` 评分卡。
 
-任何外部 AI 编码工具都不在这个链上。
+AI 编码 Agent 是**中转**，不是验证者。它不在这个链上。使用 skill 时的
+职责是把 (1) + (2) 原样转给用户。
 
 ### 汇报方式
 
-说你改了什么、交给用户跑。例子：
+用了 skill 之后，结构应该是：
 
-> "改了 X/Y/Z。你去 workbench 跑 D1，如果看到 A 就说明修好了。"
+> "跑了 `verify-scenario --spec-id login --scenario valid_credentials`。
+> Supervisor 裁决：`success`（置信度 `high`）。Scorecard 5/5：
+> element_recognition 1.0、action_coverage 1.0、verdict_accuracy 1.0、
+> distraction_avoidance 1.0、supervisor_agreement 1.0。Supervisor
+> summary：……引用原文……。完整 run：
+> http://localhost:5174/exploration/autonomous/history/<run_id>"
+
+没跑任何东西时，说你改了什么、交给用户跑：
+
+> "改了 X/Y/Z。你去 workbench（或用 skill）跑 D1，如果看到 A 就说明修好了。"
 
 不要这样说：
 

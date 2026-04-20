@@ -32,19 +32,32 @@ WebAgentFlow IS an autonomous web-operation engine with its own internal
 `autonomous_explorer._run_supervisor`.
 
 The app operates. The user is the operator. The AI coding agent (Codex,
-Claude Code, Cursor, …) writes code only.
+Claude Code, Cursor, …) primarily writes code. The AI MAY also trigger a
+run via the project-provided **`verify-scenario` skill** — but only under
+the contract below. The skill invocation is auditable (it goes through the
+HTTP API, persists to `exploration_runs`, emits the raw Supervisor verdict
++ scorecard), so the verification story stays intact: the app's internal
+Supervisor Agent produces the verdict, and the AI merely relays it.
 
-If the AI coding agent runs the app on the user's behalf and reports results,
-the user cannot distinguish "the app works" from "the AI agent faked it with
-scaffolding". That collapses the verification story.
+Running the engine via any other means — direct `curl` to
+`/exploration/autonomous-run`, an inline Playwright script, importing
+`run_autonomous_exploration` directly — is NOT permitted.
 
 ### MUST NOT
 
-- Invoke `POST /exploration/autonomous-run` or `.../stream` via curl or any
-  HTTP client on the user's behalf.
-- Parse the app's output and present it as evidence the app works.
-- Stand in for the Supervisor Agent or the user's final review.
-- Use phrasings like "I ran D1 and it passed 5/5" or "I verified end-to-end".
+- Call `POST /exploration/autonomous-run` or `.../stream` via curl, fetch,
+  httpx, or any HTTP client other than the `verify-scenario` skill's CLI.
+- Import `run_autonomous_exploration` and drive Playwright in-process on
+  the user's behalf.
+- Summarise the result as "passed" / "failed" / "works" without citing the
+  run's `supervisor.verdict` and the five scorecard scores verbatim.
+- Omit the `history_url` from the skill output when reporting back — the
+  user needs the link to open the full run in the workbench.
+- Fabricate or reshape verdicts. If the skill exits non-zero, report
+  non-zero; if it exits 0, report success *with the Supervisor's own
+  confidence + summary quoted*.
+- Re-invoke the skill in a loop to average or "re-check" results — each
+  call is a real Playwright + LLM run.
 
 ### MAY
 
@@ -53,24 +66,38 @@ scaffolding". That collapses the verification story.
 - Run unit / integration tests that do NOT drive
   `autonomous_explorer.run_autonomous_exploration`.
 - Edit code as requested.
-- Ask the user to run a specific flow in the workbench and report back.
-- Run an autonomous exploration **only** when explicitly asked; then report
-  raw observations without impersonating the app's verdict.
+- **Invoke the `verify-scenario` skill** when the user's request implies a
+  live run (e.g. "verify X", "run spec Y", "check workflow Z"). Forward the
+  Supervisor verdict + scorecard + `history_url` to the user verbatim, plus
+  a concrete analysis / next step if the verdict is not `success`.
+- Ask the user to run a flow in the workbench when the skill can't help
+  (e.g. the API isn't up, or manual inspection matters).
 
 ### Authoritative verification order
 
-1. **User** — running the flow in `/exploration/autonomous` and accepting
-   or rejecting.
+1. **User** — accepting or rejecting a run in `/exploration/autonomous` or
+   its history detail page.
 2. **Project-internal Supervisor Agent** — `_run_supervisor` LLM call +
    `page_verification` rule-based scorecard.
 
-No external AI coding tool sits on this list.
+The AI coding agent is a **relay**, not a verifier. It does not sit on this
+list. Its job when using the skill is to faithfully surface (1) + (2).
 
 ### Reporting style
 
-Say what changed and hand off:
+When you've invoked the skill, the structure is:
 
-> "Changed X/Y/Z. Run D1 in the workbench; if you see A the fix worked."
+> "Ran `verify-scenario --spec-id login --scenario valid_credentials`.
+> Supervisor verdict: `success` (confidence `high`). Scorecard 5/5:
+> element_recognition 1.0, action_coverage 1.0, verdict_accuracy 1.0,
+> distraction_avoidance 1.0, supervisor_agreement 1.0. Supervisor
+> summary: …quoted…. Full run:
+> http://localhost:5174/exploration/autonomous/history/<run_id>"
+
+When you haven't run anything, say what changed and hand off:
+
+> "Changed X/Y/Z. Run D1 in the workbench (or via the skill); if you see A
+> the fix worked."
 
 Do NOT say:
 
