@@ -194,13 +194,16 @@ def _render_skill_md(run_sh: Path, repo_root: Path, api_base: str) -> str:
         ## Output contract
 
         - **stdout**: exactly one JSON object with `run_id`, `verdict`,
-          `summary`, `final_url`, `supervisor`, and `scorecard`. Safe
-          to parse directly. The CLI is a backend client — it does NOT
-          emit a frontend URL; the user knows where their console is.
-        - **stderr**: a one-line banner (`✓/✗ verdict — scorecard`) and
-          any error text. Ignore when parsing stdout.
-        - **exit 0**: verdict == `success`.
-        - **exit 1**: verdict in {{`partial_success`, `failure`, `uncertain`}}.
+          `scenario_matched`, `summary`, `final_url`, `supervisor`, and
+          `scorecard`. Safe to parse directly. The CLI is a backend
+          client — it does NOT emit a frontend URL; the user knows
+          where their console is.
+        - **stderr**: a one-line banner (`✓/✗ verdict [scenario-*] —
+          scorecard`) and any error text. Ignore when parsing stdout.
+        - **exit 0**: scenario matched expectation (spec runs) OR
+          verdict == `success` (ad-hoc runs).
+        - **exit 1**: scenario mismatched expectation, OR verdict in
+          {{`partial_success`, `failure`, `uncertain`}} for ad-hoc runs.
         - **exit 2**: CLI / network / spec error (the run did not happen).
 
         ## Reporting contract — MUST follow
@@ -208,7 +211,11 @@ def _render_skill_md(run_sh: Path, repo_root: Path, api_base: str) -> str:
         When reporting results back to the user, you MUST:
 
         1. Include `supervisor.verdict` and `supervisor.summary`
-           verbatim — do not paraphrase the Supervisor Agent.
+           verbatim — do not paraphrase the Supervisor Agent. Also
+           note `supervisor.source` (`"llm"` = real LLM verdict;
+           `"fallback"` + `supervisor.error_kind` = rule-mirrored
+           because the LLM call failed — call the user's attention to
+           this so they know the supervisor layer was bypassed).
         2. Include the 5 scorecard scores:
            `element_recognition`, `action_coverage`, `verdict_accuracy`,
            `distraction_avoidance`, `supervisor_agreement`. Cite the
@@ -216,15 +223,24 @@ def _render_skill_md(run_sh: Path, repo_root: Path, api_base: str) -> str:
         3. Include the `run_id` so the user can look the run up in
            their WebAgentFlow console (the CLI stays backend-only and
            does not fabricate a frontend URL).
-        4. If the verdict is not `success`, read the step log +
-           `supervisor.anomalies` + `supervisor.suggestions` and offer
-           a concrete next step (e.g. "the radio selector didn't
-           discriminate by value — would you like me to inspect the
-           planner's matcher?").
+        4. Interpret `scenario_matched` carefully. For spec runs:
+           `true` means the run satisfied the scenario's declared
+           expectation — report this as "scenario matched expectation"
+           even when `verdict` is `failure` (e.g. `invalid_credentials`
+           EXPECTS the login wall to persist). `false` means the run
+           deviated from spec and is the real signal to dig into. Do
+           NOT collapse "verdict=failure + scenario_matched=true" into
+           "it failed" — that confuses a passing negative-path test
+           with a broken positive-path test.
+        5. If the verdict is not `success` AND `scenario_matched` is
+           not `true`, read the step log + `supervisor.anomalies` +
+           `supervisor.suggestions` and offer a concrete next step
+           (e.g. "the radio selector didn't discriminate by value —
+           would you like me to inspect the planner's matcher?").
 
         You MUST NOT:
-        - Summarize as "passed" / "failed" without citing the verdict
-          and score values from this run.
+        - Summarize as "passed" / "failed" without citing the verdict,
+          scenario_matched, and score values from this run.
         - Fabricate verdicts or claim a run succeeded when the exit
           code was non-zero.
         - Re-run the skill in a loop to average results — each run

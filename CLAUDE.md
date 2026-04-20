@@ -87,15 +87,32 @@ list. Its job when using the skill is to faithfully surface (1) + (2).
 
 ### Reporting style
 
-When you've invoked the skill, the structure is:
+When you've invoked the skill on a positive-path scenario, the structure is:
 
 > "Ran the `verify-scenario` skill
 > (`wagent verify --spec-id login --scenario valid_credentials`).
-> Supervisor verdict: `success` (confidence `high`). Scorecard 5/5:
-> element_recognition 1.0, action_coverage 1.0, verdict_accuracy 1.0,
-> distraction_avoidance 1.0, supervisor_agreement 1.0. Supervisor
-> summary: …quoted…. run_id: `<uuid>` — open it in the WebAgentFlow
-> console at `/exploration/autonomous/history/<run_id>`."
+> Supervisor verdict: `success` (confidence `high`, source `llm`).
+> scenario_matched: true. Scorecard 5/5: element_recognition 1.0,
+> action_coverage 1.0, verdict_accuracy 1.0, distraction_avoidance 1.0,
+> supervisor_agreement 1.0. Supervisor summary: …quoted…. run_id:
+> `<uuid>` — open at `/exploration/autonomous/history/<run_id>`."
+
+**Negative-path scenarios** (e.g. `invalid_credentials`, `no_match`) often
+return `verdict: failure` or `partial_success` by design — the rule
+rubric correctly reports "login wall persisted" as mechanical failure.
+When `scenario_matched: true`, lead with the match, not the raw verdict:
+
+> "Ran `wagent verify --spec-id login --scenario invalid_credentials`.
+> scenario_matched: true (the scenario expects the login wall to persist
+> on wrong credentials, and it did). Supervisor verdict: `failure` — this
+> is the expected rule-side verdict for a negative-path scenario. …"
+
+If `supervisor.source == "fallback"`, call it out — the Supervisor Agent
+didn't actually verify this run; only the rule side did:
+
+> "…supervisor.source: fallback (error_kind: timeout) — the LLM
+> supervisor didn't run, so supervisor_agreement is self-mirrored rather
+> than independently verified."
 
 When you haven't run anything, say what changed and hand off:
 

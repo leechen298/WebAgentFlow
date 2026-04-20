@@ -77,7 +77,31 @@ def test_parse_kv_json_coerces_values_to_strings() -> None:
 # ───────────────────────────────────────────────────────────────────
 
 
-def _full_result(verdict: str = "success") -> dict:
+def _full_result(
+    verdict: str = "success",
+    *,
+    matches_expectation: bool | None = True,
+) -> dict:
+    scorecard: dict = {
+        "page_id": "login",
+        "scenario": "valid",
+        "element_recognition": {"score": 1.0, "weight_note": "a"},
+        "action_coverage": {"score": 1.0, "weight_note": "b"},
+        "verdict_accuracy": {"score": 1.0, "weight_note": "c"},
+        "distraction_avoidance": {"score": 1.0, "weight_note": "d"},
+        "supervisor_agreement": {"score": 1.0, "weight_note": "e"},
+        "element_checks": [{"role": "x"}] * 10,  # heavy
+    }
+    if matches_expectation is not None:
+        scorecard["verdict_check"] = {
+            "self_verdict": verdict,
+            "expected_verdict": "success" if verdict == "success" else None,
+            "expected_verdict_not": None if verdict == "success" else "success",
+            "must_not_transition_to": None,
+            "final_url": "http://t/",
+            "matches_expectation": matches_expectation,
+            "notes": "OK",
+        }
     return {
         "run_id": "abc-123",
         "verdict": verdict,
@@ -96,18 +120,11 @@ def _full_result(verdict: str = "success") -> dict:
             "anomalies": [],
             "suggestions": [],
             "_thinking": "long LLM trace " * 500,  # heavy
+            "_supervisor_source": "llm",
+            "_supervisor_error_kind": None,
         },
         "verification": {
-            "scorecard": {
-                "page_id": "login",
-                "scenario": "valid",
-                "element_recognition": {"score": 1.0, "weight_note": "a"},
-                "action_coverage": {"score": 1.0, "weight_note": "b"},
-                "verdict_accuracy": {"score": 1.0, "weight_note": "c"},
-                "distraction_avoidance": {"score": 1.0, "weight_note": "d"},
-                "supervisor_agreement": {"score": 1.0, "weight_note": "e"},
-                "element_checks": [{"role": "x"}] * 10,  # heavy
-            },
+            "scorecard": scorecard,
         },
     }
 
@@ -145,7 +162,9 @@ def test_banner_success_uses_checkmark() -> None:
 
 
 def test_banner_failure_uses_cross() -> None:
-    b = vs._banner(vs._trim_result(_full_result("failure")))
+    # Ad-hoc run (no verdict_check block) falls back to raw verdict
+    # → ✗ for anything not == "success".
+    b = vs._banner(vs._trim_result(_full_result("failure", matches_expectation=None)))
     assert b.startswith("✗")
     assert "verdict=failure" in b
 
@@ -177,6 +196,72 @@ def test_exit_code_unknown_verdict_is_one_not_two() -> None:
     # non-success verdict, which is 1. Don't conflate the two.
     assert vs._exit_code_for(None) == 1
     assert vs._exit_code_for("whatever") == 1
+
+
+def test_exit_code_scenario_match_overrides_failure_verdict() -> None:
+    # Negative-path scenario: invalid_credentials produces
+    # verdict=failure by design, but the scenario matched expectation,
+    # so the CLI must exit 0 — otherwise operators can't distinguish
+    # "scenario behaved as designed" from "scenario broke".
+    assert vs._exit_code_for("failure", scenario_matched=True) == 0
+    assert vs._exit_code_for("partial_success", scenario_matched=True) == 0
+
+
+def test_exit_code_scenario_mismatch_is_one() -> None:
+    # Explicit mismatch is always non-zero, even if the rule-side
+    # happened to call the run success by accident.
+    assert vs._exit_code_for("success", scenario_matched=False) == 1
+
+
+def test_exit_code_scenario_unspecified_falls_back_to_verdict() -> None:
+    # Ad-hoc runs don't have a scenario — exit by verdict.
+    assert vs._exit_code_for("success", scenario_matched=None) == 0
+    assert vs._exit_code_for("failure", scenario_matched=None) == 1
+
+
+# ───────────────────────────────────────────────────────────────────
+# Scenario-aware trim + banner
+# ───────────────────────────────────────────────────────────────────
+
+
+def test_trim_result_surfaces_scenario_matched_from_verdict_check() -> None:
+    # The rule-side VerdictCheck is the source of truth for
+    # "did this scenario behave as its spec declares". CLI surfaces
+    # it so exit code + reporting can be scenario-aware.
+    trimmed = vs._trim_result(_full_result("failure", matches_expectation=True))
+    assert trimmed["scenario_matched"] is True
+
+
+def test_trim_result_scenario_matched_none_when_no_verdict_check() -> None:
+    # Ad-hoc runs (no spec) → no verdict_check → no scenario_matched
+    # signal. Callers fall back to raw verdict-based logic.
+    trimmed = vs._trim_result(_full_result("success", matches_expectation=None))
+    assert trimmed["scenario_matched"] is None
+
+
+def test_trim_result_surfaces_supervisor_source() -> None:
+    trimmed = vs._trim_result(_full_result("success"))
+    sup = trimmed["supervisor"]
+    assert sup["source"] == "llm"
+    assert sup["error_kind"] is None
+
+
+def test_banner_scenario_matched_failure_still_checkmark() -> None:
+    # invalid_credentials case: verdict=failure, scenario_matched=True
+    # → ✓ with an explicit (scenario-expected) tag so Claude has a
+    # cue to not just parrot "failure" to the operator.
+    b = vs._banner(vs._trim_result(_full_result("failure", matches_expectation=True)))
+    assert b.startswith("✓")
+    assert "verdict=failure" in b
+    assert "(scenario-expected)" in b
+
+
+def test_banner_scenario_mismatch_cross() -> None:
+    # Scenario declares expected success but the run came back as
+    # something else, or vice-versa → ✗ + explicit mismatch note.
+    b = vs._banner(vs._trim_result(_full_result("success", matches_expectation=False)))
+    assert b.startswith("✗")
+    assert "(scenario-mismatch)" in b
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -232,7 +317,12 @@ def test_full_flag_emits_untrimmed_snapshot() -> None:
 
 
 def test_failure_verdict_exits_one() -> None:
-    envelope = {"code": 0, "data": _full_result("failure"), "msg": "ok"}
+    # Ad-hoc run (no scenario) with verdict=failure exits 1.
+    envelope = {
+        "code": 0,
+        "data": _full_result("failure", matches_expectation=None),
+        "msg": "ok",
+    }
     client = _mock_client(envelope)
     with patch.object(vs.httpx, "Client", return_value=client):
         with redirect_stdout(StringIO()), redirect_stderr(StringIO()):

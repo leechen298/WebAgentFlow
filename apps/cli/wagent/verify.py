@@ -240,10 +240,28 @@ def _trim_result(result: dict[str, Any]) -> dict[str, Any]:
         if k in scorecard
     }
 
+    # Scenario-match awareness: for spec-driven runs, the rubric
+    # already computes whether the run satisfied the scenario's
+    # expectation (invalid_credentials scenario expects a login wall;
+    # no_match scenario expects zero rows; etc.). Surface that
+    # boolean so the CLI can exit 0 when a negative scenario behaves
+    # as designed, even though the rule-side top-level verdict is
+    # "failure". See scorecard.verdict_check.matches_expectation in
+    # page_verification.py.
+    vc = scorecard.get("verdict_check") or {}
+    scenario_matched: bool | None = None
+    if "matches_expectation" in vc:
+        scenario_matched = bool(vc.get("matches_expectation"))
+
+    supervisor_source: str | None = None
+    if supervisor:
+        supervisor_source = supervisor.get("_supervisor_source")
+
     return {
         "run_id": result.get("run_id"),
         "verdict": result.get("verdict"),
         "success": result.get("success"),
+        "scenario_matched": scenario_matched,
         "summary": result.get("summary"),
         "final_url": result.get("final_url"),
         "final_title": result.get("final_title"),
@@ -255,6 +273,8 @@ def _trim_result(result: dict[str, Any]) -> dict[str, Any]:
             "summary": supervisor.get("summary"),
             "anomalies": supervisor.get("anomalies") or [],
             "suggestions": supervisor.get("suggestions") or [],
+            "source": supervisor_source,
+            "error_kind": supervisor.get("_supervisor_error_kind"),
         } if supervisor else None,
         "scorecard": {
             "page_id": scorecard.get("page_id"),
@@ -269,9 +289,22 @@ def _banner(result: dict[str, Any]) -> str:
 
     Reads from the trimmed result only — keep this cheap and safe
     against partial data.
+
+    The glyph follows scenario-match outcome for spec-driven runs
+    (``scenario_matched=True`` is a ✓ even if ``verdict=failure``,
+    because a negative-path scenario like ``invalid_credentials``
+    *expects* the login wall to persist). Ad-hoc runs fall back to
+    the raw verdict.
     """
     verdict = result.get("verdict") or "unknown"
-    glyph = "✓" if verdict == _SUCCESS_VERDICT else "✗"
+    scenario_matched = result.get("scenario_matched")
+    if scenario_matched is True:
+        glyph = "✓"
+    elif scenario_matched is False:
+        glyph = "✗"
+    else:
+        glyph = "✓" if verdict == _SUCCESS_VERDICT else "✗"
+
     run_id = result.get("run_id") or "<no-run-id>"
     sc = result.get("scorecard") or {}
     scores = [
@@ -286,10 +319,37 @@ def _banner(result: dict[str, Any]) -> str:
     if filled:
         passed = sum(1 for s in filled if s >= 1.0)
         score_str = f" scorecard={passed}/{len(filled)}"
-    return f"{glyph} run={run_id} verdict={verdict}{score_str}"
+
+    # For spec-driven runs where scenario passed but the rule-side
+    # verdict is non-success, make the inversion explicit so Claude
+    # knows to report "matched expectation" rather than just
+    # parroting the rule verdict.
+    match_note = ""
+    if scenario_matched is True and verdict != _SUCCESS_VERDICT:
+        match_note = " (scenario-expected)"
+    elif scenario_matched is False:
+        match_note = " (scenario-mismatch)"
+
+    return f"{glyph} run={run_id} verdict={verdict}{match_note}{score_str}"
 
 
-def _exit_code_for(verdict: str | None) -> int:
+def _exit_code_for(
+    verdict: str | None,
+    scenario_matched: bool | None = None,
+) -> int:
+    """Map the result to a POSIX exit code.
+
+    Spec-driven runs defer to ``scenario_matched`` when it's known:
+    a negative-path scenario (``invalid_credentials``) produces
+    ``verdict=failure`` by design, and the CLI should still exit 0
+    because the scenario behaved as declared in the spec. Ad-hoc
+    runs (``scenario_matched is None``) fall back to the plain
+    ``verdict == success`` check.
+    """
+    if scenario_matched is True:
+        return 0
+    if scenario_matched is False:
+        return 1
     if verdict == _SUCCESS_VERDICT:
         return 0
     if verdict in _NON_SUCCESS_VERDICTS:
@@ -453,13 +513,17 @@ def run(args: argparse.Namespace) -> int:
             return 2
 
         result = envelope.get("data") or {}
-        output = result if args.full else _trim_result(result)
+        trimmed = _trim_result(result)
+        output = result if args.full else trimmed
 
         if args.pretty:
             print(json.dumps(output, ensure_ascii=False, indent=2))
         else:
             print(json.dumps(output, ensure_ascii=False))
 
-        print(_banner(_trim_result(result)), file=sys.stderr)
+        print(_banner(trimmed), file=sys.stderr)
 
-        return _exit_code_for(result.get("verdict"))
+        return _exit_code_for(
+            result.get("verdict"),
+            scenario_matched=trimmed.get("scenario_matched"),
+        )
