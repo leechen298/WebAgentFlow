@@ -271,5 +271,10 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 - [`docs/dev-setup.md`](./docs/dev-setup.md) — full environment setup
   walkthrough (more detailed than the Common Commands above, useful
   for new contributors).
+- [`docs/iterations/README.md`](./docs/iterations/README.md) —
+  **per-iteration doc convention** (phase-scoped folders with
+  `intent.md` / `plan.md` / `review.md`). Write `intent.md` before
+  starting non-trivial work; the `codex-review` skill reads these as
+  context.
 - [`CLAUDE.zh.md`](./CLAUDE.zh.md) — Chinese mirror.
 - [`AGENTS.md`](./AGENTS.md) — mirror for Codex and other AI coding agents.

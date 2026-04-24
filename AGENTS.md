@@ -257,5 +257,11 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 - [`docs/roadmap.md`](./docs/roadmap.md) — v0.1 operational milestones.
 - [`docs/dev-setup.md`](./docs/dev-setup.md) — full environment setup
   walkthrough.
+- [`docs/iterations/README.md`](./docs/iterations/README.md) —
+  **per-iteration doc convention** (phase-scoped folders with
+  `intent.md` / `plan.md` / `review.md`). Read the iteration's
+  `intent.md` + `plan.md` before reviewing diffs or proposing changes;
+  if Claude Code triggered you via the `codex-review` skill, those
+  files are already prepended to your prompt.
 - [`CLAUDE.md`](./CLAUDE.md) — primary English reference.
 - [`CLAUDE.zh.md`](./CLAUDE.zh.md) — Chinese mirror.

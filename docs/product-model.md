@@ -14,6 +14,27 @@
 
 ---
 
+## Terminology (three numbering systems — don't mix)
+
+Three different numbering systems live near this document and look alike
+at a glance. They are not the same:
+
+- **Product phase 1 / 2 / 3** — the three lifecycle stages a page goes
+  through in WebAgentFlow (autonomous learning → user-guided learning →
+  actual work). Defined in §3–§6 of this document. The count is fixed
+  at three.
+- **Delivery phase N** — engineering milestones tracked in
+  [`roadmap.md`](./roadmap.md) and realized as `docs/iterations/phase-N/`
+  folders. Currently at delivery phase 10; the count grows over time.
+- **§N** — section number *within this document*, used for
+  cross-references only. Unrelated to either "phase" concept.
+
+When in doubt, spell out the full form — "product phase 2",
+"delivery phase 10", "product-model.md §7" — rather than a bare
+"phase 2" or "§7".
+
+---
+
 ## 1. One Sentence
 
 WebAgentFlow aims to replace the user at the keyboard on web pages:
@@ -474,6 +495,44 @@ Pending:
 - A clearer Skill / Tool interface definition.
 - Calling conventions oriented at third-party Agents.
 - Capability boundaries and I/O contracts for external callers.
+
+### 10.7 Instance-local data & the shell boundary
+
+The engine's data boundary is **one running instance**. WebAgentFlow
+does not maintain a user-account model and does not know "who" is using
+it. Everything persisted inside an instance — LearnedPaths, trust
+records, feedback history — belongs to whoever runs that instance, by
+construction.
+
+"Real-user data fine-tuning" is not a separate mechanism. It is the
+three-phase product model operating on *this instance's* pages: the
+user demos during product phase 2, confirms or rejects during product
+phase 3 review, and the engine's LearnedPath store adapts over time.
+More usage on an instance → more signal → better behavior, scoped to
+that instance.
+
+Anything that needs the concept of "user" — account system,
+cross-device sync, cross-instance collaboration, at-rest encryption,
+tenant isolation — is a **shell concern** outside the engine. A future
+shell layer may wrap the engine to provide these; the engine must not
+assume one exists.
+
+Invariants:
+
+- The engine MUST NOT embed instance identity into LLM prompts, logs,
+  SSE events, or outbound reports.
+- The engine MUST NOT push learned data out of the instance on its own.
+- Persistence code SHOULD leave obvious interception points (the repo
+  layer) where a future shell can plug in encryption / sync, but does
+  not implement any shell code in this phase.
+- Schema MUST NOT add multi-tenant columns (no `user_id`, no
+  `scope_id`). If a shell later needs tenancy, that is the shell's
+  job — or at worst a justified future schema change, not a
+  speculative one today.
+
+This framing was made explicit in delivery phase 10 alongside
+LearnedPath persistence. Before that, "one instance = one user's data"
+was implicit.
 
 ---
 
