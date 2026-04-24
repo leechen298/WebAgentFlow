@@ -208,6 +208,9 @@ def test_ingest_hook_writes_on_pass_gate_pass(
         scenario="filter_by_status",
     )
     final_data = _final_data_with_pass_gate("pass")
+    # Analyzer ended up on the same URL the operator requested — the
+    # no-redirect case. Identity is computed from page_analysis.url.
+    final_data["page_analysis"]["url"] = "https://example.com/users?status=active"
 
     with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
         run_id = _persist_autonomous_run(
@@ -227,6 +230,55 @@ def test_ingest_hook_writes_on_pass_gate_pass(
     assert row.query_signature == {"status": "active"}
     # screenshot_ref must have been stripped from actions.
     assert "screenshot_ref" not in row.actions[0]
+
+
+def test_ingest_hook_identity_tracks_analyzer_url_on_redirect(
+    db_session: Session,
+) -> None:
+    """When Playwright landed on a different URL than requested
+    (canonical redirect, slash-fix, etc.), the LearnedPath identity
+    must follow the URL the analyzer actually inspected, not the one
+    the operator typed in.
+    """
+    from sqlalchemy.orm import sessionmaker
+
+    from app.models.exploration_run import ExplorationRunStatus
+    from app.routers.exploration import (
+        AutonomousExplorePayload,
+        _persist_autonomous_run,
+    )
+
+    TestingSessionLocal = sessionmaker(
+        bind=db_session.bind,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+
+    # Operator asked for /users (no query); analyzer ended up on
+    # /users/?status=active after a server redirect.
+    payload = AutonomousExplorePayload(
+        url="https://example.com/users",
+        scenario="filter_by_status",
+    )
+    final_data = _final_data_with_pass_gate("pass")
+    final_data["page_analysis"]["url"] = "https://example.com/users/?status=active"
+
+    with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
+        _persist_autonomous_run(
+            payload,
+            final_data,
+            verdict="success",
+            status=ExplorationRunStatus.COMPLETED,
+        )
+
+    rows, _, _ = LearnedPathRepository(db_session).list_page()
+    assert len(rows) == 1
+    row = rows[0]
+    # page_template should reflect the redirect target (trailing slash
+    # normalised by path_template); query_signature should contain the
+    # status flag that only exists in the analyzer URL.
+    assert row.page_template == "/users"
+    assert row.query_signature == {"status": "active"}
 
 
 def test_ingest_hook_skips_on_pass_gate_unverified(

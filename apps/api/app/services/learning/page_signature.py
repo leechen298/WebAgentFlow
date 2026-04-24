@@ -101,12 +101,14 @@ def query_signature(url_or_query: str) -> dict[str, str]:
     """Return a canonicalised ``{key: normalized_value}`` mapping.
 
     Heuristic: a value is preserved (lower-cased) iff it is short
-    (``len <= QUERY_KEEP_MAX_LEN``) AND entirely alphabetic. Everything
-    else becomes ``"*"`` so the signature is stable across concrete
-    data values.
+    (``len <= QUERY_KEEP_MAX_LEN``) AND entirely ASCII-alphabetic.
+    Everything else becomes ``"*"`` so the signature is stable across
+    concrete data values.
 
     - Repeated keys collapse to the first-seen value.
     - Keys are lower-cased; the returned dict iterates in sorted order.
+    - Fragment (``#...``) is stripped before parsing so
+      ``?type=edit#frag`` does not leak the hash into the value.
 
     Known limitations (tracked in the iteration's ``review.md``):
 
@@ -117,10 +119,18 @@ def query_signature(url_or_query: str) -> dict[str, str]:
     if not url_or_query:
         return {}
 
-    if "?" in url_or_query:
-        query = url_or_query.split("?", 1)[1]
-    elif "=" in url_or_query:
+    # Use urlsplit so we get a clean query segment regardless of
+    # whether the caller passed a full URL, a "?foo=bar" bit, or a
+    # bare "foo=bar". Fragment is dropped automatically; it must not
+    # bleed into the last value.
+    split = urlsplit(url_or_query)
+    if split.query:
+        query = split.query
+    elif "=" in url_or_query and "?" not in url_or_query:
+        # Bare "key=value" with no leading "?" — parse as-is.
         query = url_or_query
+        if "#" in query:
+            query = query.split("#", 1)[0]
     else:
         query = ""
 

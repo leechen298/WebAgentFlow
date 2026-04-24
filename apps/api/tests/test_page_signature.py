@@ -69,6 +69,10 @@ def test_detail_1_and_2_collapse() -> None:
         ("/x?a=1&a=2", {"a": "*"}),               # repeated key → first value
         ("/x?Type=Edit&type=view", {"type": "edit"}),  # key lowercased, first wins
         ("type=edit", {"type": "edit"}),          # bare query without path
+        ("/x?type=edit#frag", {"type": "edit"}),  # fragment stripped, not leaked
+        ("type=edit#frag", {"type": "edit"}),     # bare kv + fragment
+        ("/x?id=2#section", {"id": "*"}),         # fragment doesn't rescue concrete value
+        ("https://example.com/create?type=edit#section", {"type": "edit"}),
     ],
 )
 def test_query_signature(input_: str, expected: dict[str, str]) -> None:

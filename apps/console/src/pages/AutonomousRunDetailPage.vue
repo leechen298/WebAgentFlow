@@ -164,7 +164,7 @@
             </div>
           </div>
           <div v-else class="learned-path-absent">
-            {{ $t('autonomousHistory.learnedPathAbsent') }}
+            {{ $t(absentMessageKey) }}
           </div>
         </a-card>
 
@@ -218,8 +218,25 @@ const loadError = ref<string>('');
 
 const learnedPathId = ref<string | null>(null);
 const learnedPathTrust = ref<LearnedPathTrust | null>(null);
+const passGateStatus = ref<'pass' | 'fail' | 'unverified' | null>(null);
 const updatingTrust = ref(false);
 const pendingAction = ref<LearnedPathPatchStatus | null>(null);
+
+/**
+ * Pick the right "no LearnedPath" copy based on the run's gate
+ * outcome. `pass` but no ingest = hook failed or predates the feature;
+ * anything else is the documented "non-pass doesn't sink" behaviour.
+ * Null falls back to the generic string for historical pre-gate rows.
+ */
+const absentMessageKey = computed(() => {
+  if (passGateStatus.value === 'pass') {
+    return 'autonomousHistory.learnedPathAbsentPassButMissing';
+  }
+  if (passGateStatus.value === 'fail' || passGateStatus.value === 'unverified') {
+    return 'autonomousHistory.learnedPathAbsentNotPass';
+  }
+  return 'autonomousHistory.learnedPathAbsent';
+});
 
 const trustI18nKey = computed(() => {
   switch (learnedPathTrust.value) {
@@ -378,6 +395,7 @@ async function load(): Promise<void> {
     detail.value = fetched;
     learnedPathId.value = fetched.learned_path_id ?? null;
     learnedPathTrust.value = (fetched.learned_path_trust as LearnedPathTrust | null) ?? null;
+    passGateStatus.value = fetched.pass_gate_status ?? null;
   } catch (err) {
     loadError.value = (err as Error).message || String(err);
   } finally {

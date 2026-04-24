@@ -242,7 +242,11 @@ export default {
     learnedPathIngested:
       'This run was sunk into a LearnedPath. Confirm to promote it, or mark it wrong to block it.',
     learnedPathAbsent:
-      'No LearnedPath was stored for this run (LearnedPath is only sunk when pass_gate = pass).',
+      'No LearnedPath was stored for this run.',
+    learnedPathAbsentNotPass:
+      "This run's pass_gate is not `pass`, so no LearnedPath was stored.",
+    learnedPathAbsentPassButMissing:
+      'This run passed the gate but no LearnedPath is attached — the ingest hook either failed or this run predates it. Check the server logs for "LearnedPath ingest failed".',
     learnedPathConfirm: 'Confirm',
     learnedPathMarkWrong: 'Mark wrong',
     learnedPathConfirmPrompt:

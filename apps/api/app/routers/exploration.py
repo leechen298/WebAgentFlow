@@ -152,7 +152,13 @@ def _maybe_ingest_learned_path(
         logger.warning("LearnedPath: failed to rehydrate PageAnalysis: %s", exc)
         return None
 
-    url = payload.url or ""
+    # Prefer the URL the analyzer actually saw (post-navigation /
+    # post-redirect) over the URL the operator asked for. Redirects,
+    # canonical-slash fixes, login-gate bounces all make payload.url
+    # unreliable as a page identity — page_analysis.url is what
+    # produced the DOM fingerprint we're about to hash, so they must
+    # come from the same source.
+    url = analysis.url or payload.url or ""
     actions = _trim_actions_for_learned_path(final_data.get("steps") or [])
     if not actions:
         # No replay-worthy steps survived trimming — don't pollute the
@@ -841,6 +847,7 @@ def get_autonomous_run(
             "strategy": run.strategy_json,
             "summary": run.summary,
             "result": run.result_snapshot_json,
+            "pass_gate_status": _pass_gate_status_for(run),
             "learned_path_id": str(learned.id) if learned else None,
             "learned_path_trust": str(learned.trust) if learned else None,
         }

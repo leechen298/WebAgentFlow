@@ -240,11 +240,15 @@ export default {
     passGate: '通过闸门',
     learnedPathTitle: 'LearnedPath',
     learnedPathIngested:
-      '这次运行已经沉淀为一条 LearnedPath。点 Confirm 提升为 confirmed，或 Mark wrong 让它进入 deprecated。',
+      '这次运行已经沉淀为一条 LearnedPath。点「确认」提升为 confirmed，或「标记错误」让它进入 deprecated。',
     learnedPathAbsent:
-      '这次运行未沉淀成 LearnedPath（只有 pass_gate = pass 的运行才会沉淀）。',
-    learnedPathConfirm: 'Confirm',
-    learnedPathMarkWrong: 'Mark wrong',
+      '这次运行没有对应的 LearnedPath。',
+    learnedPathAbsentNotPass:
+      '这次运行的 pass_gate 不是 `pass`，因此没有沉淀为 LearnedPath。',
+    learnedPathAbsentPassButMissing:
+      '这次运行通过了 pass_gate，但没有关联的 LearnedPath —— 写入 hook 可能失败了，或者这条记录早于 hook 上线。请到服务端日志里搜 "LearnedPath ingest failed"。',
+    learnedPathConfirm: '确认',
+    learnedPathMarkWrong: '标记错误',
     learnedPathConfirmPrompt: '把这条 LearnedPath 提升为 confirmed？未来 Phase 3 规划会优先选它。',
     learnedPathRejectPrompt: '把这条 LearnedPath 标记为 deprecated？未来规划不再使用它。',
     learnedPathUpdated: 'LearnedPath 已更新',

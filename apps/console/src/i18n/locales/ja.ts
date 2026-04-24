@@ -240,11 +240,15 @@ export default {
     passGate: '合格ゲート',
     learnedPathTitle: 'LearnedPath',
     learnedPathIngested:
-      'この実行は LearnedPath として保存されました。Confirm で昇格、Mark wrong で無効化できます。',
+      'この実行は LearnedPath として保存されました。「確認」で昇格、「誤りとして報告」で無効化できます。',
     learnedPathAbsent:
-      'この実行は LearnedPath として保存されていません（pass_gate = pass の実行のみ保存されます）。',
-    learnedPathConfirm: 'Confirm',
-    learnedPathMarkWrong: 'Mark wrong',
+      'この実行に対応する LearnedPath はありません。',
+    learnedPathAbsentNotPass:
+      'この実行の pass_gate は `pass` ではないため、LearnedPath として保存されていません。',
+    learnedPathAbsentPassButMissing:
+      'この実行は pass_gate を通過しましたが、対応する LearnedPath がありません — ingest フックが失敗したか、フック導入前の実行の可能性があります。サーバーログで "LearnedPath ingest failed" を確認してください。',
+    learnedPathConfirm: '確認',
+    learnedPathMarkWrong: '誤りとして報告',
     learnedPathConfirmPrompt:
       'この LearnedPath を confirmed に昇格しますか？今後のフェーズ 3 計画で優先されます。',
     learnedPathRejectPrompt:
