@@ -23,8 +23,21 @@ from app.models.exploration_run import (
     ExplorationRun,
     ExplorationRunStatus,
 )
+from app.models.learned_path import TrustStatus
 from app.repos.exploration_run_repo import ExplorationRunRepository
+from app.repos.learned_paths_repo import LearnedPathRepository
 from app.schemas.common import ApiResponse, CursorPage, decode_cursor, encode_cursor
+from app.schemas.learned_path import (
+    LearnedPathDetail,
+    LearnedPathSummary,
+    TrustPatchRequest,
+)
+from app.schemas.page_analysis import PageAnalysis
+from app.services.learning.page_signature import (
+    dom_fingerprint,
+    path_template,
+    query_signature,
+)
 
 router = APIRouter(prefix="/exploration", tags=["exploration"])
 logger = logging.getLogger(__name__)
@@ -70,6 +83,91 @@ def _pass_gate_status_for(item: ExplorationRun) -> str | None:
     scorecard = (snapshot.get("verification") or {}).get("scorecard") or {}
     gate = scorecard.get("pass_gate") or {}
     return gate.get("status")
+
+
+def _pass_gate_from_final_data(final_data: dict[str, Any]) -> str | None:
+    """Pull ``pass_gate.status`` out of a run's final data blob.
+
+    Used by the LearnedPath ingest hook to decide whether to persist a
+    run as a reusable path. Mirrors ``_pass_gate_status_for`` but reads
+    from the in-flight ``final_data`` dict instead of a persisted row.
+    """
+    if not isinstance(final_data, dict):
+        return None
+    scorecard = (final_data.get("verification") or {}).get("scorecard") or {}
+    gate = scorecard.get("pass_gate") or {}
+    return gate.get("status")
+
+
+_ACTION_KEEP_KEYS = (
+    "step",
+    "action_type",
+    "target_selector",
+    "target_description",
+    "value",
+)
+
+
+def _trim_actions_for_learned_path(
+    steps: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Keep only the fields a planner needs to replay a successful step.
+
+    Screenshots, timing, raw ExecutionResult payloads, and free-form
+    diagnostic text are dropped so the LearnedPath row stays small and
+    rehydrates cleanly into a planner-ready shape.
+    """
+    trimmed: list[dict[str, Any]] = []
+    for step in steps or []:
+        if not isinstance(step, dict):
+            continue
+        kept = {k: step[k] for k in _ACTION_KEEP_KEYS if k in step}
+        if kept:
+            trimmed.append(kept)
+    return trimmed
+
+
+def _maybe_ingest_learned_path(
+    db: Session,
+    run: ExplorationRun,
+    payload: AutonomousExplorePayload,
+    final_data: dict[str, Any],
+) -> str | None:
+    """Persist a LearnedPath when the run cleared ``pass_gate=pass``.
+
+    No-op for any other outcome (``fail`` / ``unverified`` / missing
+    gate / missing page analysis). Failures here are logged and
+    swallowed — LearnedPath ingest must never break the main run's
+    response. Returns the learned_path id on success, None otherwise.
+    """
+    if _pass_gate_from_final_data(final_data) != "pass":
+        return None
+
+    page_analysis_dict = final_data.get("page_analysis") if isinstance(final_data, dict) else None
+    if not isinstance(page_analysis_dict, dict):
+        return None
+    try:
+        analysis = PageAnalysis.model_validate(page_analysis_dict)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("LearnedPath: failed to rehydrate PageAnalysis: %s", exc)
+        return None
+
+    url = payload.url or ""
+    actions = _trim_actions_for_learned_path(final_data.get("steps") or [])
+    if not actions:
+        # No replay-worthy steps survived trimming — don't pollute the
+        # store with empty rows.
+        return None
+
+    path = LearnedPathRepository(db).ingest_run(
+        page_template=path_template(url),
+        query_signature=query_signature(url),
+        dom_fingerprint=dom_fingerprint(analysis),
+        scenario=payload.scenario or "",
+        actions=actions,
+        source_run_id=str(run.id),
+    )[0]
+    return str(path.id)
 
 
 def _persist_autonomous_run(
@@ -128,6 +226,20 @@ def _persist_autonomous_run(
                 "Persisted autonomous run %s (spec=%s, scenario=%s, verdict=%s)",
                 run.id, payload.spec_id, payload.scenario, verdict,
             )
+            try:
+                learned_path_id = _maybe_ingest_learned_path(
+                    db, run, payload, final_data
+                )
+                if learned_path_id:
+                    logger.info(
+                        "Ingested LearnedPath %s from run %s",
+                        learned_path_id,
+                        run.id,
+                    )
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "LearnedPath ingest failed (run=%s): %s", run.id, exc
+                )
             return str(run.id)
         finally:
             db.close()
@@ -719,6 +831,7 @@ def get_autonomous_run(
     run = repo.get(run_id)
     if run is None or (run.strategy_json or {}).get("kind") != "autonomous":
         raise HTTPException(status_code=404, detail=f"Autonomous run not found: {run_id}")
+    learned = LearnedPathRepository(db).find_by_source_run(str(run.id))
     return ApiResponse(
         data={
             "run_id": str(run.id),
@@ -728,8 +841,113 @@ def get_autonomous_run(
             "strategy": run.strategy_json,
             "summary": run.summary,
             "result": run.result_snapshot_json,
+            "learned_path_id": str(learned.id) if learned else None,
+            "learned_path_trust": str(learned.trust) if learned else None,
         }
     )
+
+
+# ───────────────────────────────────────────────────────────────────
+# LearnedPath — list / get / trust PATCH
+# ───────────────────────────────────────────────────────────────────
+
+
+def _learned_path_to_summary(row: Any) -> LearnedPathSummary:
+    return LearnedPathSummary(
+        id=str(row.id),
+        page_template=row.page_template,
+        query_signature=dict(row.query_signature or {}),
+        dom_fingerprint=row.dom_fingerprint,
+        scenario=row.scenario or "",
+        provenance=str(row.provenance),
+        trust=str(row.trust),
+        trust_reason=row.trust_reason,
+        trust_updated_at=row.trust_updated_at,
+        hit_count=row.hit_count,
+        source_run_id=row.source_run_id,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+def _learned_path_to_detail(row: Any) -> LearnedPathDetail:
+    summary = _learned_path_to_summary(row)
+    return LearnedPathDetail(
+        **summary.model_dump(),
+        actions=list(row.actions or []),
+    )
+
+
+@router.get(
+    "/learned-paths/list",
+    response_model=ApiResponse[CursorPage[LearnedPathSummary]],
+)
+def list_learned_paths(
+    db: DbSession,
+    limit: int = Query(20, ge=1, le=100),
+    cursor: str | None = Query(None),
+    page_template: str | None = Query(None),
+    scenario: str | None = Query(None),
+    trust: str | None = Query(None),
+) -> ApiResponse[CursorPage[LearnedPathSummary]]:
+    """List LearnedPath rows, newest first, with optional filters."""
+    trust_filter: TrustStatus | None = None
+    if trust is not None:
+        try:
+            trust_filter = TrustStatus(trust)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail=f"invalid trust: {trust}"
+            ) from exc
+
+    rows, has_next, next_cursor = LearnedPathRepository(db).list_page(
+        page_template=page_template,
+        scenario=scenario,
+        trust=trust_filter,
+        cursor=cursor,
+        limit=limit,
+    )
+    summaries = [_learned_path_to_summary(row) for row in rows]
+    return ApiResponse(
+        data=CursorPage(items=summaries, has_next=has_next, next_cursor=next_cursor)
+    )
+
+
+@router.get(
+    "/learned-paths/{path_id}",
+    response_model=ApiResponse[LearnedPathDetail],
+)
+def get_learned_path(
+    db: DbSession,
+    path_id: str,
+) -> ApiResponse[LearnedPathDetail]:
+    row = LearnedPathRepository(db).get(path_id)
+    if row is None:
+        raise HTTPException(
+            status_code=404, detail=f"learned_path not found: {path_id}"
+        )
+    return ApiResponse(data=_learned_path_to_detail(row))
+
+
+@router.patch(
+    "/learned-paths/{path_id}/trust",
+    response_model=ApiResponse[LearnedPathDetail],
+)
+def patch_learned_path_trust(
+    db: DbSession,
+    path_id: str,
+    body: TrustPatchRequest,
+) -> ApiResponse[LearnedPathDetail]:
+    repo = LearnedPathRepository(db)
+    if repo.get(path_id) is None:
+        raise HTTPException(
+            status_code=404, detail=f"learned_path not found: {path_id}"
+        )
+    try:
+        updated = repo.set_trust(path_id, TrustStatus(body.status), body.reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ApiResponse(data=_learned_path_to_detail(updated))
 
 
 # ───────────────────────────────────────────────────────────────────

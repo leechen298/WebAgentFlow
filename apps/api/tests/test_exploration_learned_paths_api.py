@@ -1,0 +1,263 @@
+"""Contract tests for the LearnedPath HTTP surface + ingest hook."""
+
+from __future__ import annotations
+
+from unittest.mock import patch
+
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from app.repos.learned_paths_repo import LearnedPathRepository
+
+
+def _ingest_sample(db_session: Session, **overrides) -> str:
+    kwargs = dict(
+        page_template="/users",
+        query_signature={"status": "active"},
+        dom_fingerprint="a" * 64,
+        scenario="filter_by_status",
+        actions=[{"step": 1, "action_type": "fill", "target_selector": "#q"}],
+        source_run_id=None,
+    )
+    kwargs.update(overrides)
+    row, _ = LearnedPathRepository(db_session).ingest_run(**kwargs)
+    return row.id
+
+
+def test_list_learned_paths_returns_empty_initially(client: TestClient) -> None:
+    resp = client.get("/exploration/learned-paths/list")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["code"] == 0
+    assert body["data"]["items"] == []
+    assert body["data"]["has_next"] is False
+
+
+def test_list_learned_paths_returns_inserted_rows(
+    client: TestClient, db_session: Session
+) -> None:
+    _ingest_sample(db_session)
+    _ingest_sample(db_session, dom_fingerprint="b" * 64, scenario="filter_by_name")
+
+    resp = client.get("/exploration/learned-paths/list")
+    assert resp.status_code == 200
+    items = resp.json()["data"]["items"]
+    assert len(items) == 2
+    assert all(item["trust"] == "provisional" for item in items)
+
+
+def test_list_learned_paths_filters_by_trust(
+    client: TestClient, db_session: Session
+) -> None:
+    promoted = _ingest_sample(db_session)
+    _ingest_sample(db_session, dom_fingerprint="b" * 64)
+
+    client.patch(
+        f"/exploration/learned-paths/{promoted}/trust",
+        json={"status": "confirmed", "reason": "ok"},
+    )
+
+    resp = client.get("/exploration/learned-paths/list?trust=confirmed")
+    items = resp.json()["data"]["items"]
+    assert [item["id"] for item in items] == [promoted]
+
+
+def test_list_learned_paths_rejects_unknown_trust(client: TestClient) -> None:
+    resp = client.get("/exploration/learned-paths/list?trust=bogus")
+    assert resp.status_code == 422
+
+
+def test_get_learned_path_returns_actions(
+    client: TestClient, db_session: Session
+) -> None:
+    row_id = _ingest_sample(db_session)
+    resp = client.get(f"/exploration/learned-paths/{row_id}")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["id"] == row_id
+    assert data["actions"] == [
+        {"step": 1, "action_type": "fill", "target_selector": "#q"}
+    ]
+
+
+def test_get_learned_path_unknown_is_404(client: TestClient) -> None:
+    resp = client.get("/exploration/learned-paths/missing-id")
+    assert resp.status_code == 404
+
+
+def test_patch_trust_promotes_row(
+    client: TestClient, db_session: Session
+) -> None:
+    row_id = _ingest_sample(db_session)
+    resp = client.patch(
+        f"/exploration/learned-paths/{row_id}/trust",
+        json={"status": "confirmed", "reason": "looks good"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["trust"] == "confirmed"
+    assert data["trust_reason"] == "looks good"
+
+
+def test_patch_trust_rejects_illegal_transition(
+    client: TestClient, db_session: Session
+) -> None:
+    row_id = _ingest_sample(db_session)
+    # provisional → deprecated is legal; after that flaky is not.
+    client.patch(
+        f"/exploration/learned-paths/{row_id}/trust",
+        json={"status": "deprecated", "reason": "nope"},
+    )
+    resp = client.patch(
+        f"/exploration/learned-paths/{row_id}/trust",
+        json={"status": "flaky", "reason": None},
+    )
+    assert resp.status_code == 422
+
+
+def test_patch_trust_rejects_provisional_target(
+    client: TestClient, db_session: Session
+) -> None:
+    row_id = _ingest_sample(db_session)
+    # provisional isn't in the Literal whitelist — pydantic 422s at
+    # the schema layer before reaching the repo.
+    resp = client.patch(
+        f"/exploration/learned-paths/{row_id}/trust",
+        json={"status": "provisional", "reason": None},
+    )
+    assert resp.status_code == 422
+
+
+def test_patch_trust_unknown_id_is_404(client: TestClient) -> None:
+    resp = client.patch(
+        "/exploration/learned-paths/missing-id/trust",
+        json={"status": "confirmed"},
+    )
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Ingest hook
+# ---------------------------------------------------------------------------
+
+
+def _final_data_with_pass_gate(status: str = "pass") -> dict:
+    return {
+        "page_analysis": {
+            "url": "https://example.com/users",
+            "title": "Users",
+            "fillable": [
+                {
+                    "category": "fillable",
+                    "tag": "input",
+                    "element_type": "text",
+                    "name": "q",
+                    "label_text": "Search",
+                    "semantic_role": "search",
+                }
+            ],
+            "submit": [
+                {
+                    "category": "submit",
+                    "tag": "button",
+                    "element_type": "submit",
+                    "text": "Search",
+                }
+            ],
+        },
+        "steps": [
+            {
+                "step": 1,
+                "action_type": "fill",
+                "target_selector": "#q",
+                "target_description": "search input",
+                "value": "bob",
+                "screenshot_ref": "/tmp/not-kept.png",
+            }
+        ],
+        "verdict": "success",
+        "verification": {"scorecard": {"pass_gate": {"status": status}}},
+    }
+
+
+def test_ingest_hook_writes_on_pass_gate_pass(
+    db_session: Session,
+) -> None:
+    """Exercise ``_persist_autonomous_run`` directly (no Playwright)
+    and assert the LearnedPath side-effect only.
+
+    ``SessionLocal`` is pointed at the test engine so writes land in
+    the same in-memory SQLite the fixtures read from.
+    """
+    from sqlalchemy.orm import sessionmaker
+
+    from app.models.exploration_run import ExplorationRunStatus
+    from app.routers.exploration import (
+        AutonomousExplorePayload,
+        _persist_autonomous_run,
+    )
+
+    TestingSessionLocal = sessionmaker(
+        bind=db_session.bind,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+
+    payload = AutonomousExplorePayload(
+        url="https://example.com/users?status=active",
+        scenario="filter_by_status",
+    )
+    final_data = _final_data_with_pass_gate("pass")
+
+    with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
+        run_id = _persist_autonomous_run(
+            payload,
+            final_data,
+            verdict="success",
+            status=ExplorationRunStatus.COMPLETED,
+        )
+
+    assert run_id is not None
+    rows, _, _ = LearnedPathRepository(db_session).list_page()
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.source_run_id == run_id
+    assert row.scenario == "filter_by_status"
+    assert row.page_template == "/users"
+    assert row.query_signature == {"status": "active"}
+    # screenshot_ref must have been stripped from actions.
+    assert "screenshot_ref" not in row.actions[0]
+
+
+def test_ingest_hook_skips_on_pass_gate_unverified(
+    db_session: Session,
+) -> None:
+    from sqlalchemy.orm import sessionmaker
+
+    from app.models.exploration_run import ExplorationRunStatus
+    from app.routers.exploration import (
+        AutonomousExplorePayload,
+        _persist_autonomous_run,
+    )
+
+    TestingSessionLocal = sessionmaker(
+        bind=db_session.bind,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+
+    payload = AutonomousExplorePayload(
+        url="https://example.com/users",
+        scenario="filter_by_status",
+    )
+    final_data = _final_data_with_pass_gate("unverified")
+
+    with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
+        _persist_autonomous_run(
+            payload,
+            final_data,
+            verdict="success",
+            status=ExplorationRunStatus.COMPLETED,
+        )
+
+    assert LearnedPathRepository(db_session).count() == 0
