@@ -238,5 +238,21 @@ export default {
     scenarioMatched: 'scenario matched expectation',
     scenarioMismatch: 'scenario deviated from spec',
     passGate: 'pass gate',
+    learnedPathTitle: 'LearnedPath',
+    learnedPathIngested:
+      'This run was sunk into a LearnedPath. Confirm to promote it, or mark it wrong to block it.',
+    learnedPathAbsent:
+      'No LearnedPath was stored for this run (LearnedPath is only sunk when pass_gate = pass).',
+    learnedPathConfirm: 'Confirm',
+    learnedPathMarkWrong: 'Mark wrong',
+    learnedPathConfirmPrompt:
+      'Promote this LearnedPath to confirmed? A future Phase 3 planner will prefer this path.',
+    learnedPathRejectPrompt:
+      'Mark this LearnedPath as deprecated? It will be excluded from future planning.',
+    learnedPathUpdated: 'LearnedPath updated',
+    trustProvisional: 'provisional',
+    trustConfirmed: 'confirmed',
+    trustFlaky: 'flaky',
+    trustDeprecated: 'deprecated',
   },
 }

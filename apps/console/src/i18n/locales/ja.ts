@@ -238,5 +238,21 @@ export default {
     scenarioMatched: 'シナリオ期待に一致',
     scenarioMismatch: 'シナリオ仕様から逸脱',
     passGate: '合格ゲート',
+    learnedPathTitle: 'LearnedPath',
+    learnedPathIngested:
+      'この実行は LearnedPath として保存されました。Confirm で昇格、Mark wrong で無効化できます。',
+    learnedPathAbsent:
+      'この実行は LearnedPath として保存されていません（pass_gate = pass の実行のみ保存されます）。',
+    learnedPathConfirm: 'Confirm',
+    learnedPathMarkWrong: 'Mark wrong',
+    learnedPathConfirmPrompt:
+      'この LearnedPath を confirmed に昇格しますか？今後のフェーズ 3 計画で優先されます。',
+    learnedPathRejectPrompt:
+      'この LearnedPath を deprecated にしますか？今後の計画では使用されません。',
+    learnedPathUpdated: 'LearnedPath を更新しました',
+    trustProvisional: '仮保存',
+    trustConfirmed: '確認済み',
+    trustFlaky: '不安定',
+    trustDeprecated: '非推奨',
   },
 }

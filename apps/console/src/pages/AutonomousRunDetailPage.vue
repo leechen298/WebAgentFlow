@@ -115,6 +115,59 @@
           style="margin-top: 16px"
         />
 
+        <a-card
+          :title="$t('autonomousHistory.learnedPathTitle')"
+          :bordered="false"
+          style="margin-top: 16px"
+          class="learned-path-card"
+        >
+          <div v-if="learnedPathId">
+            <a-space :size="12" align="center" wrap>
+              <span>{{ $t('autonomousHistory.learnedPathIngested') }}</span>
+              <a-tag :color="trustTagColor">
+                {{ $t(trustI18nKey) }}
+              </a-tag>
+            </a-space>
+            <div class="learned-path-actions">
+              <a-popconfirm
+                :title="$t('autonomousHistory.learnedPathConfirmPrompt')"
+                :ok-text="$t('autonomousHistory.learnedPathConfirm')"
+                :cancel-text="$t('common.cancel')"
+                @confirm="onConfirm"
+              >
+                <a-button
+                  type="primary"
+                  :disabled="learnedPathTrust === 'confirmed' || updatingTrust"
+                  :loading="updatingTrust && pendingAction === 'confirmed'"
+                >
+                  {{ $t('autonomousHistory.learnedPathConfirm') }}
+                </a-button>
+              </a-popconfirm>
+              <a-popconfirm
+                :title="$t('autonomousHistory.learnedPathRejectPrompt')"
+                :ok-text="$t('autonomousHistory.learnedPathMarkWrong')"
+                :cancel-text="$t('common.cancel')"
+                @confirm="onMarkWrong"
+              >
+                <a-button
+                  danger
+                  :disabled="learnedPathTrust === 'deprecated' || updatingTrust"
+                  :loading="updatingTrust && pendingAction === 'deprecated'"
+                  style="margin-left: 8px"
+                >
+                  {{ $t('autonomousHistory.learnedPathMarkWrong') }}
+                </a-button>
+              </a-popconfirm>
+            </div>
+            <div class="learned-path-id">
+              <code>{{ learnedPathId }}</code>
+            </div>
+          </div>
+          <div v-else class="learned-path-absent">
+            {{ $t('autonomousHistory.learnedPathAbsent') }}
+          </div>
+        </a-card>
+
         <!-- Escape hatch: full raw JSON for operators who want to
              drop the whole payload into Claude Code or another
              tool. -->
@@ -146,7 +199,10 @@ import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import {
   getAutonomousRun,
+  patchLearnedPathTrust,
   type AutonomousRunDetail,
+  type LearnedPathPatchStatus,
+  type LearnedPathTrust,
 } from '@/api/exploration';
 import PageAnalysisBlock from '@/components/autonomous/PageAnalysisBlock.vue';
 import StepTimelineBlock from '@/components/autonomous/StepTimelineBlock.vue';
@@ -159,6 +215,37 @@ const { t } = useI18n();
 const detail = ref<AutonomousRunDetail | null>(null);
 const loading = ref(false);
 const loadError = ref<string>('');
+
+const learnedPathId = ref<string | null>(null);
+const learnedPathTrust = ref<LearnedPathTrust | null>(null);
+const updatingTrust = ref(false);
+const pendingAction = ref<LearnedPathPatchStatus | null>(null);
+
+const trustI18nKey = computed(() => {
+  switch (learnedPathTrust.value) {
+    case 'confirmed':
+      return 'autonomousHistory.trustConfirmed';
+    case 'flaky':
+      return 'autonomousHistory.trustFlaky';
+    case 'deprecated':
+      return 'autonomousHistory.trustDeprecated';
+    default:
+      return 'autonomousHistory.trustProvisional';
+  }
+});
+
+const trustTagColor = computed(() => {
+  switch (learnedPathTrust.value) {
+    case 'confirmed':
+      return 'green';
+    case 'deprecated':
+      return 'red';
+    case 'flaky':
+      return 'orange';
+    default:
+      return 'blue';
+  }
+});
 
 // ─── Derived views over detail.result ────────────────────────
 // `result` is the full AutonomousExplorationResult snapshot produced
@@ -287,12 +374,39 @@ async function load(): Promise<void> {
   loading.value = true;
   loadError.value = '';
   try {
-    detail.value = await getAutonomousRun(runId);
+    const fetched = await getAutonomousRun(runId);
+    detail.value = fetched;
+    learnedPathId.value = fetched.learned_path_id ?? null;
+    learnedPathTrust.value = (fetched.learned_path_trust as LearnedPathTrust | null) ?? null;
   } catch (err) {
     loadError.value = (err as Error).message || String(err);
   } finally {
     loading.value = false;
   }
+}
+
+async function updateTrust(status: LearnedPathPatchStatus): Promise<void> {
+  if (!learnedPathId.value || updatingTrust.value) return;
+  updatingTrust.value = true;
+  pendingAction.value = status;
+  try {
+    const updated = await patchLearnedPathTrust(learnedPathId.value, { status });
+    learnedPathTrust.value = updated.trust;
+    message.success(t('autonomousHistory.learnedPathUpdated'));
+  } catch (err) {
+    message.error((err as Error).message || String(err));
+  } finally {
+    updatingTrust.value = false;
+    pendingAction.value = null;
+  }
+}
+
+function onConfirm(): void {
+  void updateTrust('confirmed');
+}
+
+function onMarkWrong(): void {
+  void updateTrust('deprecated');
 }
 
 onMounted(load);
@@ -321,5 +435,22 @@ onMounted(load);
   border-radius: 4px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+.learned-path-card :deep(.ant-card-body) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.learned-path-actions {
+  margin-top: 8px;
+}
+.learned-path-id {
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+}
+.learned-path-absent {
+  color: #888;
+  font-size: 13px;
 }
 </style>

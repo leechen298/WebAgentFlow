@@ -238,5 +238,19 @@ export default {
     scenarioMatched: '符合场景预期',
     scenarioMismatch: '偏离场景规格',
     passGate: '通过闸门',
+    learnedPathTitle: 'LearnedPath',
+    learnedPathIngested:
+      '这次运行已经沉淀为一条 LearnedPath。点 Confirm 提升为 confirmed，或 Mark wrong 让它进入 deprecated。',
+    learnedPathAbsent:
+      '这次运行未沉淀成 LearnedPath（只有 pass_gate = pass 的运行才会沉淀）。',
+    learnedPathConfirm: 'Confirm',
+    learnedPathMarkWrong: 'Mark wrong',
+    learnedPathConfirmPrompt: '把这条 LearnedPath 提升为 confirmed？未来 Phase 3 规划会优先选它。',
+    learnedPathRejectPrompt: '把这条 LearnedPath 标记为 deprecated？未来规划不再使用它。',
+    learnedPathUpdated: 'LearnedPath 已更新',
+    trustProvisional: '暂存',
+    trustConfirmed: '已确认',
+    trustFlaky: '不稳定',
+    trustDeprecated: '已废弃',
   },
 }

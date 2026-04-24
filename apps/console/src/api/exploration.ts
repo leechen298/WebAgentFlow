@@ -76,6 +76,83 @@ export interface AutonomousRunDetail {
   strategy: Record<string, unknown>;
   summary: string | null;
   result: Record<string, unknown> | null;
+  /**
+   * LearnedPath auto-sunk from this run's `pass_gate = pass` outcome,
+   * if any. Null means the run wasn't a clean pass or pre-dates the
+   * ingest hook.
+   */
+  learned_path_id?: string | null;
+  learned_path_trust?: LearnedPathTrust | null;
+}
+
+// ─── LearnedPath ────────────────────────────────────────────
+
+export type LearnedPathTrust =
+  | 'provisional'
+  | 'confirmed'
+  | 'flaky'
+  | 'deprecated';
+
+export type LearnedPathPatchStatus = 'confirmed' | 'deprecated' | 'flaky';
+
+export interface LearnedPathSummary {
+  id: string;
+  page_template: string;
+  query_signature: Record<string, string>;
+  dom_fingerprint: string;
+  scenario: string;
+  provenance: string;
+  trust: LearnedPathTrust;
+  trust_reason: string | null;
+  trust_updated_at: string | null;
+  hit_count: number;
+  source_run_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LearnedPathDetail extends LearnedPathSummary {
+  actions: Array<Record<string, unknown>>;
+}
+
+export interface LearnedPathListPage {
+  items: LearnedPathSummary[];
+  has_next: boolean;
+  next_cursor: string | null;
+}
+
+export async function listLearnedPaths(params: {
+  limit?: number;
+  cursor?: string | null;
+  page_template?: string | null;
+  scenario?: string | null;
+  trust?: LearnedPathTrust | null;
+} = {}): Promise<LearnedPathListPage> {
+  return (await apiClient.get('/exploration/learned-paths/list', {
+    params: {
+      limit: params.limit ?? 20,
+      cursor: params.cursor ?? undefined,
+      page_template: params.page_template ?? undefined,
+      scenario: params.scenario ?? undefined,
+      trust: params.trust ?? undefined,
+    },
+  })) as unknown as LearnedPathListPage;
+}
+
+export async function getLearnedPath(pathId: string): Promise<LearnedPathDetail> {
+  return (await apiClient.get(
+    `/exploration/learned-paths/${pathId}`,
+  )) as unknown as LearnedPathDetail;
+}
+
+export async function patchLearnedPathTrust(
+  pathId: string,
+  payload: { status: LearnedPathPatchStatus; reason?: string | null },
+): Promise<LearnedPathDetail> {
+  return (await apiClient.patch(
+    `/exploration/learned-paths/${pathId}/trust`,
+    payload,
+  )) as unknown as LearnedPathDetail;
 }
 
 export async function listAutonomousRuns(params: {
