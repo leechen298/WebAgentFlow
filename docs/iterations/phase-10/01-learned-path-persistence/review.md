@@ -423,9 +423,54 @@ router 通过 repo 访问、没有实例外推数据"）。
 
 ### 下一步
 
-- 用户拉起 DB → 跑 `verify-scenario --spec-id login --scenario
+- ~~用户拉起 DB → 跑 `verify-scenario --spec-id login --scenario
   valid_credentials` → 把 run_id + 沉淀出的 learned_path_id 追加到
-  本文件下方，正式收口本迭代。
+  本文件下方，正式收口本迭代。~~ **已完成，见下方"2026-04-25
+  verify-scenario 端到端证据"。**
 - 进入 Phase 10 第 02 迭代（候选：popup-based control 支持 / 或
   replay execution + drift detection；按 `phase-10/README.md` 的
   六项交付物挑下一个）。
+
+---
+
+## 2026-04-25 verify-scenario 端到端证据（intent #7 收口）
+
+**调用**：`/Users/leechen/.claude/skills/verify-scenario/run.sh
+--spec-id login --scenario valid_credentials --url
+http://localhost:5175/login --pretty`
+
+CLI 强制要求 `--url` 因为 `login` spec 的 `url_pattern` 是
+path-style（`/login`）；这是已有 CLI 行为，与本迭代无关。
+
+### 结果
+
+- **`pass_gate.status`: `pass`**（reasons: `[]`）
+- `supervisor.verdict`: `success`，`source`: `llm`，`error_kind`:
+  null
+- Scorecard 5/5：`element_recognition` 1.0 / `action_coverage` 1.0
+  / `verdict_accuracy` 1.0 / `distraction_avoidance` 1.0 /
+  `supervisor_agreement` 1.0
+- `final_url`: `http://localhost:5175/dashboard`，`final_title`:
+  `Dashboard — Validation Site`
+- `elapsed_ms`: 7080，`total_steps`: 4
+
+### Supervisor summary（原文）
+
+> Login form submitted with valid credentials (admin/123456). The
+> page navigated from /login to /dashboard, with the title updating
+> to "Dashboard — Validation Site". The dashboard confirmed the
+> successful sign-in: "Signed in as admin" and "You have
+> successfully signed in." No error surfaces were rendered.
+
+### 沉淀产物（本迭代关键证据）
+
+- **`run_id`**: `6c97c030-5aae-4f93-8abd-91c4446df9d7`
+- **`learned_path_id`**: `31d3cf58-65a8-4298-bafc-9feee1ed6a90`
+- **`page_template`**: `/login`
+- **`scenario`**: `valid_credentials`
+- **`trust`**: `provisional`（自动写回的初始态，符合预期）
+- **`source_run_id` 与 run_id 匹配** ✅
+- 通过 `GET /exploration/learned-paths/list` 可查到该条 ✅
+
+**自动写回链路从 0 → 1 完整跑通**。本迭代 7 条成功标准全部达成，
+正式 closed。
