@@ -25,7 +25,9 @@ docs/iterations/
     ├── 01-<slug>/
     │   ├── intent.md                    # 做什么 + 为什么 + 不做什么（迭代开始时写）
     │   ├── plan.md                      # 涉及文件 + 步骤 + 验收标准（动手前写）
-    │   └── review.md                    # codex-review / 用户反馈 / 最终差异（迭代结束时或过程中追加）
+    │   ├── review.md                    # codex-review / 用户反馈 / 最终差异（迭代结束时或过程中追加）
+    │   ├── summary.md                   # （可选）迭代收尾摘要：一句话 + 关键决策表 + 主要交付 + commit 序列
+    │   └── changes.txt                  # （可选）`git diff --name-status <base>..HEAD` 输出，跟 summary 配套
     ├── 02-<slug>/
     │   └── …
     └── …
