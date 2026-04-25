@@ -28,7 +28,9 @@
 - [01-learned-path-persistence](./01-learned-path-persistence/) ——
   LearnedPath 表、page signature 三件套、`pass_gate=pass` 自动写回、
   信用生命周期、history 详情页的 Confirm / Mark wrong 按钮。
-  状态：进行中。
+  状态：**完成（2026-04-25）**。端到端证据见迭代 review.md：
+  `pass_gate=pass` / 5/5 / `run_id=6c97c030-…` /
+  `learned_path_id=31d3cf58-…`。
 
 > 后续迭代在启动时在本文件追加一行，不预先创建空目录。不删已完成或
 > 已放弃的迭代目录（见 `docs/iterations/README.md` §"三条实操约定"）。
