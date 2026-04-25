@@ -161,9 +161,16 @@ def _maybe_ingest_learned_path(
     url = analysis.url or payload.url or ""
     actions = _trim_actions_for_learned_path(final_data.get("steps") or [])
     if not actions:
-        # No replay-worthy steps survived trimming — don't pollute the
-        # store with empty rows.
-        return None
+        # Observational pass — the run cleared pass_gate without
+        # needing an interactive step (e.g. "open page, content
+        # confirms"). We still persist a LearnedPath with an empty
+        # action list so future Phase 3 planning has the signal that
+        # this (template, scenario) is reachable on a bare visit; we
+        # just log so empty-action rows are easy to audit.
+        logger.info(
+            "Ingesting observational LearnedPath (no actions) for run %s",
+            run.id,
+        )
 
     path = LearnedPathRepository(db).ingest_run(
         page_template=path_template(url),

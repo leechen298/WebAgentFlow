@@ -53,7 +53,9 @@ def path_template(url_or_path: str) -> str:
     - Pure-digit segments → ``:num``
     - UUID v4 segments   → ``:uuid``
     - Trailing slash is removed except for the root.
-    - Empty / malformed input returns ``"/"``.
+    - Empty / malformed input (no scheme, doesn't start with ``/``)
+      returns ``"/"`` per the spec — concrete paths must be at least
+      ``/something``.
     """
     if not url_or_path:
         return "/"
@@ -62,13 +64,21 @@ def path_template(url_or_path: str) -> str:
     except ValueError:
         return "/"
 
-    raw_path = parsed.path if parsed.scheme or parsed.netloc else url_or_path
+    has_scheme_or_host = bool(parsed.scheme or parsed.netloc)
+    raw_path = parsed.path if has_scheme_or_host else url_or_path
     if "?" in raw_path:
         raw_path = raw_path.split("?", 1)[0]
     if "#" in raw_path:
         raw_path = raw_path.split("#", 1)[0]
 
     if not raw_path or raw_path == "/":
+        return "/"
+
+    # Reject inputs that don't look like paths at all — bare strings
+    # without a leading slash and without a scheme/host can't be made
+    # into a meaningful template, so we collapse to "/" rather than
+    # echo garbage back.
+    if not has_scheme_or_host and not raw_path.startswith("/"):
         return "/"
 
     segments = raw_path.split("/")

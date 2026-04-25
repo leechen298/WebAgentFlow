@@ -308,9 +308,13 @@ Phase 3 执行过程中，**大模型只在边界处介入** —— 开始时规
   5 项验证评分卡 + Supervisor 总结都有了，但这些都是**探索阶段的
   产物**。**面向最终产品的用户可读学习报告仍在探索形态** —— 当前
   的输出更像开发者调试面板，不是 Agent C 应该最终产出的东西。
-  **"落成学习路径"还没做** —— autonomous run 只是写入
-  `exploration_runs` 当历史，不是可复用的学习路径。LearnedPath
-  持久化是 Phase 10 的标志性交付物。
+  **"落成学习路径"在交付阶段 10 第 01 迭代已交付** —— `pass_gate
+  = pass` 的运行自动写入 `learned_paths`，主键为
+  (page_template, query_signature, dom_fingerprint, scenario)，并
+  携带 trust 生命周期（`provisional` / `confirmed` / `flaky` /
+  `deprecated`），由操作者在 run 详情页推动状态变化。基于学过路径
+  的 replay / drift detection 尚未实现 —— 是交付阶段 10 的下一个
+  迭代目标。
 - **Phase 2（用户引导学习）**：未开工。2026-04-20 清理把旧的
   Chrome 扩展移除了；Phase 2 会从零开始基于**可视化** Playwright
   浏览器（见 §5.1）搭建，不再依赖扩展。当前还没有引导学习模式。

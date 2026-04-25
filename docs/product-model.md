@@ -355,10 +355,14 @@ visible. Keep this section updated as phases ship.
   exist as exploration-stage artifacts. A **product-form,
   user-facing learning report is still exploratory** — current
   output is a developer-oriented debug surface, not the final shape
-  Agent C should produce. **Persist-as-learned-record does not exist
-  yet** — autonomous runs only land in `exploration_runs` as run
-  history, not as reusable learned paths. LearnedPath persistence
-  is the headline Phase 10 deliverable.
+  Agent C should produce. **Persist-as-learned-record shipped in
+  delivery phase 10 iter 01** — `pass_gate = pass` runs
+  auto-ingest as `learned_paths` rows keyed by
+  (page_template, query_signature, dom_fingerprint, scenario), with
+  a trust lifecycle (`provisional` / `confirmed` / `flaky` /
+  `deprecated`) the operator drives via the run-detail page.
+  Replay / drift detection against stored paths is not yet built —
+  that is the next deliverable in delivery phase 10.
 - **Phase 2 (User-Guided Learning)**: not started. The 2026-04-20
   cleanup removed the old Chrome extension; Phase 2 will be built
   from scratch on top of a **visible** Playwright browser (per §5.1),

@@ -281,6 +281,55 @@ def test_ingest_hook_identity_tracks_analyzer_url_on_redirect(
     assert row.query_signature == {"status": "active"}
 
 
+def test_ingest_hook_persists_observational_run_with_no_actions(
+    db_session: Session,
+) -> None:
+    """An "observational" pass — ``pass_gate == "pass"`` but the
+    scenario didn't require interactive steps (e.g. open page, content
+    confirms) — must still sink as a LearnedPath with empty actions.
+    Future Phase 3 planners need the signal that this template /
+    scenario is reachable on a bare visit.
+    """
+    from sqlalchemy.orm import sessionmaker
+
+    from app.models.exploration_run import ExplorationRunStatus
+    from app.routers.exploration import (
+        AutonomousExplorePayload,
+        _persist_autonomous_run,
+    )
+
+    TestingSessionLocal = sessionmaker(
+        bind=db_session.bind,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+
+    payload = AutonomousExplorePayload(
+        url="https://example.com/about",
+        scenario="page_loads",
+    )
+    final_data = _final_data_with_pass_gate("pass")
+    final_data["page_analysis"]["url"] = "https://example.com/about"
+    # No interactive steps — the run only navigated and verified.
+    final_data["steps"] = []
+
+    with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
+        run_id = _persist_autonomous_run(
+            payload,
+            final_data,
+            verdict="success",
+            status=ExplorationRunStatus.COMPLETED,
+        )
+
+    assert run_id is not None
+    rows, _, _ = LearnedPathRepository(db_session).list_page()
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.actions == []
+    assert row.scenario == "page_loads"
+    assert row.page_template == "/about"
+
+
 def test_ingest_hook_skips_on_pass_gate_unverified(
     db_session: Session,
 ) -> None:

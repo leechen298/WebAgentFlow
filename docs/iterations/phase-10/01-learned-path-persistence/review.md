@@ -1,5 +1,10 @@
 # 审核与反思
 
+> **阅读须知**：本文件按时间顺序累积，跨多个 commit 写入。当一段
+> "进度"或"分级"看起来和某一个 commit 的 diff 不符时，请以
+> **HEAD 的代码状态**为准 —— 进度记录并非每个 commit 内部都自洽，
+> 而是按"每写一段就记一段"叠加的。
+
 迭代过程中的审核产出、用户反馈、收尾反思按时间顺序追加到本文件。
 
 ## 2026-04-24 环境基线
@@ -259,3 +264,168 @@ plan 明确写了要补 `learnedPathActions.spec.ts` 做"按钮行为 + 状态
 
 **分级 disagree（不做）**：
 - commit 1 critical 的"review.md 过早宣布完成"——语义争议，我已在上面 Disagree 段说明。用 [A6] 的 disclaimer 做最小补救。
+
+---
+
+## 2026-04-24 14:40 codex-review range 1dba861^..d06387f
+
+**范围**: 四个 commit 合并审（1dba861 docs + a16fa53 feat(api) +
+47ad7de feat(console) + d06387f fix）—— 27 文件 / +3184 / -1
+**调用方式**: `git diff 1dba861^..d06387f | codex exec -`，prompt 里
+附带"补充：关于本次审查范围"段说明这是 4 连 commit 的 range 审，以及
+上一轮发现的逐条对应关系。
+**模型**: 默认（codex-cli 0.123.0 · gpt-5.4 · medium effort）
+
+### Codex 原始结论
+
+**Findings**
+
+- `should-fix` `pass_gate=pass` 但裁剪后无 action 的运行仍然被直接
+  丢弃，和 intent/plan 里"非 pass 不写，pass 就 ingest"的语义不
+  一致；这会让 observe-only 或无需交互却通过验证的 run 无法沉淀为
+  LearnedPath。`exploration.py:162-166` / `intent.md:57-63` /
+  `plan.md:193-199`
+- `should-fix` 前端交互测试仍未补上。plan 明确要求
+  `learnedPathActions.spec.ts` 覆盖按钮行为和状态刷新，但当前只有
+  API wrapper 测试，没有对 `AutonomousRunDetailPage.vue` 的
+  `confirmed/deprecated` 禁用逻辑、patch 成功后 tag 刷新、popconfirm
+  触发链路提供回归保护。`plan.md:239-241` /
+  `AutonomousRunDetailPage.vue:124-168` /
+  `__tests__/api/exploration.test.ts:1-104`
+- `should-fix` 这个 feature 还没按 intent/plan 收口到"迭代完成"
+  状态。`review.md` 明写步骤 6 未开始；`product-model.md` / `.zh.md`
+  旧段落仍写"LearnedPath persistence 尚不存在"；`architecture.md`
+  / `.zh.md` 也没补 `page_signature.py` 职责。这会让稳态文档前后
+  自相矛盾，也意味着 success criteria 7 的 verify-scenario 证据
+  并未落进 `review.md`。`review.md:70-72` / `intent.md:34-37,79-83`
+  / `product-model.md:353-361` / `product-model.zh.md:307-313` /
+  `architecture.md:80-91` / `architecture.zh.md:53-56`
+- `nit` `path_template` 对"不规范 URL 返回 `/`"这一条没有按 plan
+  落地；当前实现和测试都把 `"not a url"` 原样保留。不影响主链路，
+  但属于 plan/实现不一致。`plan.md:162-165` /
+  `page_signature.py:50-90` / `test_page_signature.py:36-40`
+- `nit` 上一轮承诺的两个文档小修也没补：`phase-10/README.md` 仍写
+  `approved`，`review.md` 顶部也没有 A6 disclaimer。`phase-10/README.md:12`
+  / `review.md:1-5`
+
+**上一轮 codex-review 回看**
+
+1. c1 critical `review.md` 提前宣布完成：**仍有问题**。作为整个
+   range 看代码确实后来补上了，但 A6 disclaimer 没落，且 `review.md`
+   仍有"进度记录"和"步骤 6 未开始"并存的可读性问题。
+2. c1 should-fix `plan.md` API 自相矛盾：**仍有问题**。实现选了
+   `get_autonomous_run` 带 `learned_path_id` 这条路，方向是对的，
+   但 plan 文字没收口。
+3. c1 nit `phase-10/README.md` approved 术语：**仍有问题**。
+4. c2 #1 empty-actions 默默丢弃：**仍有问题**。
+5. c2 #2 ingest 用 `payload.url`：**已修并验证 OK**。现在优先用
+   `analysis.url`，并补了 redirect 测试。
+6. c2 #3 `query_signature` 未剥 fragment：**已修并验证 OK**。
+7. c2 #4 migration 缺 DB-level server_default：**已修并验证 OK**
+   （20260424_0002 follow-up migration）。
+8. c3 #1 UI 判定应使用 `pass_gate_status`：**已修并验证 OK**。后端
+   已回传，前端也按三档文案分叉。
+9. c3 #2 缺 `learnedPathActions.spec.ts`：**仍有问题**。
+10. c3 nit zh/ja CTA 未本地化：**已修并验证 OK**。
+
+**结论**
+
+从"整个 feature 是否落地正确"看，主实现方向是对的：迁移、ORM、repo、
+`pass_gate=pass` 写回、3 个接口、详情页 Confirm/Mark wrong，以及
+A1/A2/A3/A4/B2 都基本到位，而且**没有偏离 §10.7 的硬约束**。
+`learned_paths` schema 没有 `user_id/scope_id`，router 通过 repo
+访问数据，也没有看到实例外推数据的路径。
+
+但如果标准是"这轮迭代已经完整收尾"，我给不到通过：B1、B3 还悬着，
+文档尾声和 verify-scenario 证据未落，稳态文档还有前后矛盾。审查
+基于这份 range diff 和仓内代码阅读完成，我没有在本地重跑 `pytest`
+/ `pnpm`。
+
+### 分级与处理
+
+**A1-A4 + B2 的验证已全部通过**（5/5 标记为"已修并验证 OK"）—— 本轮
+fix commit 的主要目标达成。
+
+**仍悬而未决的几项**（留给用户讨论）：
+
+- **[Should-fix] B1 empty-actions 丢弃**：Codex 重复上一轮观点。
+  待用户在 (a) 保留 guard + info log / (b) 允许空 actions 入库 /
+  (c) 加 observational trust 态 三者之间拍板。
+- **[Should-fix] B3 `learnedPathActions.spec.ts` 组件测试**：Codex
+  重复上一轮观点。待用户决定"现在补"还是"挂下一迭代"。
+- **[Should-fix] 迭代收口（plan step 6）**：`product-model.md §9` /
+  `.zh.md §9` 说"LearnedPath 尚不存在"的那行该改；`architecture.md
+  §G` / `.zh.md §G` 该加 `page_signature.py` 职责一行；本迭代
+  `review.md` 需要收尾反思 + verify-scenario 的 run_id 证据。按
+  intent 7 条成功标准还差这几步。建议本迭代内收口。
+- **[Nit] `path_template("not a url")` 现在返回原串 `"not a url"`，
+  plan 里写的是返回 `/`**。轻微偏差，要么改 impl 要么改 plan。
+  建议改 impl（更保守：无效输入一律归一），顺手加一个测试。
+- **[Nit] 上一轮 A5 / A6 没落**：本批显式选了"先修真实 bug，A5/A6
+  稍后"。没变，等用户同意就顺手补。
+
+§10.7 对齐：**Codex 明确确认未违反**（"没有 `user_id/scope_id`、
+router 通过 repo 访问、没有实例外推数据"）。
+
+---
+
+## 2026-04-25 收尾迭代
+
+按用户决策一次性处理上一轮 codex range 审查留下的 5 项遗留：
+
+- **B1 empty-actions 不再丢弃** ——
+  `_maybe_ingest_learned_path` 去掉 `if not actions: return None` 短路，
+  改为对空 actions 走"observational"语义入库（带 `logger.info`
+  审计标记）。理由用户原话："打开一个单纯查看的页面也是一个常规
+  操作"。新增单测 `test_ingest_hook_persists_observational_run_with_no_actions`
+  覆盖。
+  popup / modal 类操作天然带至少一次 click step，已在原有路径里覆盖；
+  本次改动主要为"纯导航后内容验证"的 0-step 场景。
+
+- **B3 组件测试** —— 新增
+  `apps/console/src/__tests__/components/AutonomousRunDetailPage.test.ts`，
+  7 条 case 覆盖：trust tag 渲染 / Confirm → confirmed 刷新 /
+  Mark wrong → deprecated 刷新 / 已 confirmed 时 Confirm 按钮禁用 /
+  已 deprecated 时 Mark wrong 按钮禁用 / pass-but-missing 文案分支 /
+  not-pass 文案分支。
+
+- **path_template 兜底归一** —— 无 scheme/host 且不以 `/` 开头的
+  输入（`"not a url"`、`"garbage"`）现在统一返回 `"/"`，与 plan
+  对齐；测试同步更新。
+
+- **稳态文档收口** —— `product-model.md` / `.zh.md` §9 把
+  "Persist-as-learned-record does not exist yet" 改成"已交付"，并
+  说明 trust 生命周期 + replay 留给后续迭代；
+  `architecture.md` / `.zh.md` §G 在 `services/learning/` 列表里加
+  `page_signature.py` 一行说明它是 LearnedPath 身份四元组的计算入口。
+
+- **A5 / A6 小笔误** —— `phase-10/README.md` 的 "approved 运行"
+  改成 "`pass_gate = pass` 的运行自动落成可复用记录"（统一术语）；
+  本文件顶部加了一段"阅读须知"说明本文跨 commit 累积写入，应以 HEAD
+  代码为准。
+
+### 实际产出 vs intent.md / plan.md
+
+- 7 条成功标准，前 6 条全部交付且自动化测试覆盖到位（73 后端 + 55
+  前端 vitest 全绿、`vue-tsc --noEmit` 干净、`build:console` 成功）。
+- 第 7 条（`verify-scenario` skill 真跑 `login.valid_credentials` +
+  把 run_id / learned_path_id 写进本文件）**仍未完成**：当前
+  Postgres 容器停止状态（`/health` 503，5432 端口空），无法走端到
+  端验证。等用户拉起 docker compose + 跑 `pnpm run db:migrate:api`
+  之后，由我或用户用 `verify-scenario` skill 跑一次，再回到这里
+  补一段 run 证据。
+- 计划里没的偏离：(a) 多了 `20260424_0002` follow-up migration 给
+  `provenance` / `trust` 加 DB-level server_default（来自 codex
+  c2 #4 nit）；(b) 详情页"未沉淀"分支按 `pass_gate_status` 三档
+  分叉文案（来自 codex c3 #1 should-fix），原 plan 没考虑
+  pre-hook / ingest-failure 这类 edge case。两者都比 plan 更严谨，
+  没有缩水承诺。
+
+### 下一步
+
+- 用户拉起 DB → 跑 `verify-scenario --spec-id login --scenario
+  valid_credentials` → 把 run_id + 沉淀出的 learned_path_id 追加到
+  本文件下方，正式收口本迭代。
+- 进入 Phase 10 第 02 迭代（候选：popup-based control 支持 / 或
+  replay execution + drift detection；按 `phase-10/README.md` 的
+  六项交付物挑下一个）。

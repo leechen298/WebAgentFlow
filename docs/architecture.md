@@ -290,6 +290,10 @@ groups. Everything here backs the autonomous exploration path.
   code-side verdict derivation.
 - `page_verification.py` — spec-baseline comparator producing a
   five-part scorecard.
+- `page_signature.py` — pure functions
+  (`path_template` / `query_signature` / `dom_fingerprint`) that
+  compute the LearnedPath identity quadruple. Called by the
+  exploration router's ingest hook on `pass_gate = pass`.
 
 **`services/analysis/`** — analyzer helpers (e.g. `form_label_extractor.py`).
 

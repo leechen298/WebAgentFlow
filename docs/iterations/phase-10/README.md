@@ -9,7 +9,7 @@
 从"引擎能开一个页面"过渡到"引擎能复用学过的东西并覆盖更多控件形
 态"。六个交付项（并非必须同一迭代完成）：
 
-1. **LearnedPath 持久化** —— approved 运行落成可复用记录。
+1. **LearnedPath 持久化** —— `pass_gate = pass` 的运行自动落成可复用记录。
 2. **Popup-based control 支持** —— 两段式"点触发 → 弹层内操作"。
 3. **Custom click-toggle 控件** —— Tag-as-filter 这类伪控件。
 4. **Form-label extractor 扩展** —— +6 个 UI 库 handler。

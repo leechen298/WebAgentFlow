@@ -203,6 +203,9 @@ exploration。
 - `action_planner.py` —— 规则驱动的多字段规划器。
 - `supervisor_observations.py` —— LLM 观察原子 schema + 代码侧裁决推导。
 - `page_verification.py` —— spec 基线对照器，输出 5 项评分。
+- `page_signature.py` —— 纯函数（`path_template` / `query_signature`
+  / `dom_fingerprint`），计算 LearnedPath 身份四元组。由 exploration
+  路由的 `pass_gate = pass` 写回 hook 调用。
 
 **`services/analysis/`** —— 分析辅助（如 `form_label_extractor.py`）。
 

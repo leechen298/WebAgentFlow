@@ -34,7 +34,8 @@ from app.services.learning.page_signature import (
         ("http://a/b?q=1", "/b"),
         ("http://a/b#frag", "/b"),
         ("", "/"),
-        ("not a url", "not a url"),
+        ("not a url", "/"),                # garbage in → root
+        ("garbage", "/"),                  # bare token, no slash, no scheme
     ],
 )
 def test_path_template_normalises(input_: str, expected: str) -> None:
