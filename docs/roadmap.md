@@ -118,13 +118,13 @@ With Phase 9 closed, the focus shifts from "can the engine drive a
 page" to "can it reuse what it learned and cover more control
 shapes":
 
-- **LearnedPath persistence — SHIPPED 2026-04-25 (iter 01)**.
+- **LearnedPath persistence — SHIPPED 2026-04-25 (10.1)**.
   `pass_gate = pass` runs auto-ingest as `learned_paths` rows keyed
   by `(page_template, query_signature, dom_fingerprint, scenario)`,
   with a four-state trust lifecycle (`provisional` / `confirmed` /
   `flaky` / `deprecated`) the operator drives via the run-detail
   page. Iteration record:
-  [`docs/iterations/phase-10/01-learned-path-persistence/`](./iterations/phase-10/01-learned-path-persistence/).
+  [`docs/iterations/phase-10/10.1-learned-path-persistence/`](./iterations/phase-10/10.1-learned-path-persistence/).
   End-to-end evidence: `run_id=6c97c030-5aae-4f93-8abd-91c4446df9d7`
   → `learned_path_id=31d3cf58-65a8-4298-bafc-9feee1ed6a90`,
   scorecard 5/5, supervisor source `llm`. The product framing for

@@ -113,7 +113,7 @@
 
 **Findings**
 
-- `critical` [docs/iterations/phase-10/01-learned-path-persistence/review.md](./review.md:45)
+- `critical` [docs/iterations/phase-10/10.1-learned-path-persistence/review.md](./review.md:45)
   这个 commit 只有文档骨架与产品文档补充，没有任何 `apps/api` / `apps/console` / migration / test 文件实现；但 `review.md:45-72` 已写成"步骤 1-5 已完成、若干测试全绿、build 成功"。这会直接误导后续 reviewer / AI 接手者，把尚未发生的实现当成既成事实。`review.md` 可以预置模板或记录真实审核产出，但不应提前写入与当前 diff 不符的完成状态。
 - `should-fix` [plan.md](./plan.md:227)
   前端接线方案在 `plan.md:227-232` 自相矛盾：先写 `listLearnedPaths({ source_run_id: run.id })`，紧接着又说 list 接口"不需要支持 `source_run_id` 过滤"，并且"更倾向"在 `get_autonomous_run` 里加 `learned_path_id`。这不是细节留白，而是两个不同 API contract。既然这份计划会被后续实现和 review 当上下文，建议在这里先定一种，否则很容易造成实现偏离 success criteria。对照 [intent.md:64](./intent.md:64) 的成功标准，公开承诺的新接口也只有 `page_template / scenario / trust` 过滤，没有 `source_run_id`。
@@ -427,9 +427,9 @@ router 通过 repo 访问、没有实例外推数据"）。
   valid_credentials` → 把 run_id + 沉淀出的 learned_path_id 追加到
   本文件下方，正式收口本迭代。~~ **已完成，见下方"2026-04-25
   verify-scenario 端到端证据"。**
-- 进入 Phase 10 第 02 迭代（候选：popup-based control 支持 / 或
-  replay execution + drift detection；按 `phase-10/README.md` 的
-  六项交付物挑下一个）。
+- 进入 Phase 10 后续执行包：先补 `10.1.1` 自主探索用例目录，或按
+  `phase-10/README.md` 进入 `10.2` replay / drift detection 及后续
+  主线任务。
 
 ---
 

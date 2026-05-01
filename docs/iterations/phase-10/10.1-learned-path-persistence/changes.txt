@@ -22,9 +22,9 @@ M	apps/console/src/pages/AutonomousRunDetailPage.vue
 M	docs/architecture.md
 M	docs/architecture.zh.md
 A	docs/iterations/README.md
-A	docs/iterations/phase-10/01-learned-path-persistence/intent.md
-A	docs/iterations/phase-10/01-learned-path-persistence/plan.md
-A	docs/iterations/phase-10/01-learned-path-persistence/review.md
+A	docs/iterations/phase-10/10.1-learned-path-persistence/intent.md
+A	docs/iterations/phase-10/10.1-learned-path-persistence/plan.md
+A	docs/iterations/phase-10/10.1-learned-path-persistence/review.md
 A	docs/iterations/phase-10/README.md
 M	docs/product-model.md
 M	docs/product-model.zh.md

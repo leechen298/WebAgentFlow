@@ -308,7 +308,7 @@ Phase 3 执行过程中，**大模型只在边界处介入** —— 开始时规
   5 项验证评分卡 + Supervisor 总结都有了，但这些都是**探索阶段的
   产物**。**面向最终产品的用户可读学习报告仍在探索形态** —— 当前
   的输出更像开发者调试面板，不是 Agent C 应该最终产出的东西。
-  **"落成学习路径"在交付阶段 10 第 01 迭代已交付** —— `pass_gate
+  **"落成学习路径"在交付阶段 10.1 已交付** —— `pass_gate
   = pass` 的运行自动写入 `learned_paths`，主键为
   (page_template, query_signature, dom_fingerprint, scenario)，并
   携带 trust 生命周期（`provisional` / `confirmed` / `flaky` /

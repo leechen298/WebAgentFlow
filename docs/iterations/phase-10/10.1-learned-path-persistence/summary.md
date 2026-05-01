@@ -1,8 +1,8 @@
-# Phase 10 · iter 01 — LearnedPath persistence
+# Phase 10 · 10.1 — LearnedPath persistence
 
 **Iteration window**: 2026-04-23 → 2026-04-25
 **Branch**: `v0.1-local`（local-only，未推远端）
-**Iteration record**: `docs/iterations/phase-10/01-learned-path-persistence/`
+**Iteration record**: `docs/iterations/phase-10/10.1-learned-path-persistence/`
 **Live evidence run_id**: `6c97c030-5aae-4f93-8abd-91c4446df9d7`
 **Sunk learned_path_id**: `31d3cf58-65a8-4298-bafc-9feee1ed6a90`
 **Status**: closed
@@ -63,7 +63,7 @@
 ### 文档
 - `docs/iterations/README.md`（迭代规范，本仓库首次启用）
 - `docs/iterations/phase-10/README.md`（Phase 索引 + 六项交付物）
-- `docs/iterations/phase-10/01-learned-path-persistence/`
+- `docs/iterations/phase-10/10.1-learned-path-persistence/`
   `intent.md` + `plan.md` + `review.md`（review 累积写入：codex
   per-commit + range 两轮审查 + 收尾反思 + verify-scenario 端到端
   证据）

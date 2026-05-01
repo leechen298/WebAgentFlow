@@ -356,7 +356,7 @@ visible. Keep this section updated as phases ship.
   user-facing learning report is still exploratory** — current
   output is a developer-oriented debug surface, not the final shape
   Agent C should produce. **Persist-as-learned-record shipped in
-  delivery phase 10 iter 01** — `pass_gate = pass` runs
+  delivery phase 10.1** — `pass_gate = pass` runs
   auto-ingest as `learned_paths` rows keyed by
   (page_template, query_signature, dom_fingerprint, scenario), with
   a trust lifecycle (`provisional` / `confirmed` / `flaky` /

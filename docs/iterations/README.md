@@ -37,9 +37,14 @@ docs/iterations/
 
 - **Phase 目录**：`phase-<N>`，`<N>` 是整数，对齐 `docs/roadmap.md` 里的 Phase 编号。
   当前在 Phase 10，新迭代放 `docs/iterations/phase-10/`。
-- **迭代目录**：`<NN>-<slug>`。`<NN>` 是两位数字（`01` / `02` / …），**在 Phase 内部递增**，不跨 Phase。
+- **迭代目录**：默认使用 `<NN>-<slug>`。`<NN>` 是两位数字（`01` / `02` / …），**在 Phase 内部递增**，不跨 Phase。
   `<slug>` 是简短 kebab-case 英文名，3–5 个词，和 git 分支名或 commit 主题呼应。
   例子：`01-codex-review-skill`、`02-supervisor-retry-policy`。
+  如果某个 Phase 已经有更明确的阶段内语义编号，也可以使用
+  `<phase-item-number>-<slug>`，例如
+  `10.1.1-autonomous-use-case-catalog/`。使用这种形式时，Phase
+  README 里的任务编号和目录名前缀必须完全一致，避免“目录 03 对应
+  任务 10.2”这类映射。
 - **文件名**：`intent.md` / `plan.md` / `review.md` 三个固定名字，不要改。
 
 ### 什么时候新开一个迭代目录
