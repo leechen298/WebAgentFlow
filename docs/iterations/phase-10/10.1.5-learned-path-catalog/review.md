@@ -29,14 +29,24 @@
   - 移除该页面对 `patchLearnedPathTrust` 的调用。
   - 更新 `AutonomousRunDetailPage.test.ts`，断言 LearnedPath 区块只读，
     run review 按钮仍保留。
+- 补充 history 列表上的 run review 入口
+  - `AutonomousRunHistoryPage.vue` 列表新增审核状态列。
+  - 每条 run 增加 `确认` / `标记错误` 按钮，调用 run review API。
+  - 这些按钮只修改当前 run 的 `operator_review_status`，不修改
+    LearnedPath trust。
 
-## 后端改动
+## 后端 / 接口投影改动
 
-无。完全复用现有接口：
+LearnedPath catalog 本身完全复用现有接口：
 
 - `GET /exploration/learned-paths`
 - `GET /exploration/learned-paths/{path_id}`
 - `PATCH /exploration/learned-paths/{path_id}/trust`
+
+为支持 history 列表直接显示和操作 run review，列表投影补充返回：
+
+- `GET /exploration/autonomous-runs`
+  - `operator_review_status`
 
 ## 验证命令与结果
 

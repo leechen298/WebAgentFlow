@@ -7,12 +7,18 @@
 **Sunk learned_path_id**: `31d3cf58-65a8-4298-bafc-9feee1ed6a90`
 **Status**: closed
 
+> 当前有效口径：本文件记录的是 `10.1` 初版交付。后续 `10.1.3`
+> 和 `10.1.5` 已把 run review 与 LearnedPath trust 拆开：history
+> detail 只保留 run 级审核和 LearnedPath 只读关联信息；路径级
+> `confirmed` / `flaky` / `deprecated` 操作在 LearnedPath catalog
+> 中完成。
+
 ## 一句话
 
 `pass_gate = pass` 的 autonomous 运行从此自动落成 `learned_paths`
-行，带四态信用生命周期，详情页可由用户 Confirm / Mark wrong；同时
-显式写进 product-model.md §10.7 "引擎数据是 instance-local，不引入
-账号 / 多租户" 这条产品级硬约束。
+行，带四态信用生命周期；后续迭代已把 run 级审核和路径级 trust
+操作拆成两个入口。同时显式写进 product-model.md §10.7 "引擎数据
+是 instance-local，不引入账号 / 多租户" 这条产品级硬约束。
 
 ## 关键决策（开工前对齐用户拍板的）
 
@@ -20,7 +26,7 @@
 |---|---|---|
 | LearnedPath 粒度 | A：`(page, scenario)` | 暴力存，由 Phase 3 Planner Agent 选 |
 | page_signature | URL（path 模板 + query 白名单）+ DOM 指纹 | 双要素抗 redirect / 抗动态路由 / 抗改版 |
-| 写回时机 | 自动（`pass_gate = pass`）+ 用户事后 Confirm/Mark wrong | 大部分场景自学，少数人工纠偏 |
+| 写回时机 | 自动（`pass_gate = pass`）+ 用户事后路径级 trust 管理 | 大部分场景自学，少数人工纠偏；当前路径级操作入口在 LearnedPath catalog |
 | 数据归属 | instance-local，引擎不认识"用户" | 用户体系是壳层职责，§10.7 显式化 |
 | schema 不引入 | `user_id` / `scope_id` 多租户列 | 防止现在猜未来的壳层形态 |
 | empty-actions | 也存（observational） | 单纯打开页面看一眼也是合法成功，给 Phase 3 信号 |
@@ -52,9 +58,10 @@
 ### 前端
 - `api/exploration.ts`：`listLearnedPaths` / `getLearnedPath` /
   `patchLearnedPathTrust` + 类型定义
-- `AutonomousRunDetailPage.vue` 新增 LearnedPath 区块：trust tag +
-  Confirm / Mark wrong（`a-popconfirm` 二次确认 + per-button loading
-  + 已 confirmed / deprecated 时禁用对应按钮）；未沉淀时按
+- `AutonomousRunDetailPage.vue` 新增 LearnedPath 区块：初版包含
+  trust tag + Confirm / Mark wrong；当前实现已在后续 `10.1.5`
+  中把 trust 操作迁到 LearnedPath catalog，history detail 只保留
+  只读关联信息。未沉淀时按
   `pass_gate_status` 三档分叉文案（pass-but-missing / not-pass /
   pre-hook unknown）
 - en / zh / ja 三份 locale 同步加 13 个新 key；CTA 按钮在 zh / ja

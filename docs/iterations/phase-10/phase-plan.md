@@ -32,7 +32,10 @@
 
 - `learned_paths` 表与 repo。
 - `pass_gate = pass` 自动 ingest。
-- history 详情页的 LearnedPath 信用操作。
+- LearnedPath trust 生命周期与 API。初版 UI 曾把 trust 操作放在
+  history detail；当前有效口径是：history detail 只做 run review
+  和 LearnedPath 只读关联展示，路径级 trust 操作迁到 `10.1.5`
+  LearnedPath catalog。
 
 证据见
 [`10.1-learned-path-persistence/review.md`](./10.1-learned-path-persistence/review.md)。
@@ -99,7 +102,7 @@
 
 ### 10.1.5 · LearnedPath catalog
 
-状态：可执行。执行包：
+状态：完成。执行包：
 [`10.1.5-learned-path-catalog/`](./10.1.5-learned-path-catalog/)。
 
 目标：

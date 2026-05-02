@@ -37,8 +37,9 @@
 
 [`docs/product-model.md` §10.7 Instance-local data & the shell boundary](../../product-model.md)
 在本 Phase 开局一并写入 —— 约束 LearnedPath 的 schema（不加多租户
-列）和反馈回路（在 history 详情里做 Confirm / Mark wrong，不做任何
-账号体系）。新增持久化类表**必须**遵守此节。
+列）和反馈回路（run review 在 history 中完成，LearnedPath trust
+在独立 catalog 中完成，不做任何账号体系）。新增持久化类表**必须**
+遵守此节。
 
 ## Phase 10 主线清单
 
@@ -52,7 +53,7 @@
   级人工审核和 LearnedPath trust 拆成两个独立概念。
 - **10.1.4 RESTful route cleanup** —— 已完成。把 run 端点统一到
   `/exploration/autonomous-runs` 等 RESTful 路径。
-- **10.1.5 LearnedPath catalog** —— 可执行。给 LearnedPath 增加
+- **10.1.5 LearnedPath catalog** —— 已完成。给 LearnedPath 增加
   独立列表页和路径级 trust 操作入口。
 - **10.2 Replay execution + drift detection** —— draft。消费
   LearnedPath，做回放和漂移判断。
@@ -69,7 +70,9 @@
 
 - [10.1-learned-path-persistence](./10.1-learned-path-persistence/) ——
   LearnedPath 表、page signature 三件套、`pass_gate=pass` 自动写回、
-  信用生命周期、history 详情页的 Confirm / Mark wrong 按钮。
+  信用生命周期。初版 trust 操作曾在 history detail，当前有效入口已
+  在 `10.1.5` 迁移到 LearnedPath catalog；history detail 只保留
+  run review 和 LearnedPath 只读关联信息。
   状态：**完成（2026-04-25）**。端到端证据见迭代 review.md：
   `pass_gate=pass` / 5/5 / `run_id=6c97c030-…` /
   `learned_path_id=31d3cf58-…`。
@@ -84,7 +87,7 @@
   统一 exploration router 到 RESTful 路径。状态：**完成**。
 - [10.1.5-learned-path-catalog](./10.1.5-learned-path-catalog/) ——
   LearnedPath 独立列表页、trust 过滤、actions 查看和路径级操作入口。
-  状态：**可执行**。
+  状态：**完成**。
 - [10.2-replay-execution-drift-detection](./10.2-replay-execution-drift-detection/) ——
   状态：**draft only，不可直接施工**。
 - [10.3-popup-based-control-support](./10.3-popup-based-control-support/) ——

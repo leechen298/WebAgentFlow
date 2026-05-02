@@ -67,9 +67,11 @@
   `learned_path_trust`；12 条 API + hook 端到端单测全绿。
 - ✅ **步骤 5** 前端：`exploration.ts` 加 `listLearnedPaths /
   getLearnedPath / patchLearnedPathTrust` + 类型定义；
-  `AutonomousRunDetailPage.vue` 加 LearnedPath 区块（trust tag +
+  `AutonomousRunDetailPage.vue` 初版加 LearnedPath 区块（trust tag +
   Confirm / Mark wrong 按钮 + popconfirm 二次确认 + loading 状态 +
-  空态提示）；en/zh/ja 三个 locale 同步添加 10 个新 key；
+  空态提示；后续 `10.1.5` 已把 trust 操作迁到 LearnedPath catalog，
+  history detail 只保留只读关联信息）；en/zh/ja 三个 locale 同步添加
+  10 个新 key；
   4 条 API 单测 + 全套 vitest 48 条全绿；`vue-tsc --noEmit` 清；
   `pnpm run build:console` 成功。
 - ⏳ **步骤 6** 文档尾声（未开始）：`product-model.md §9`（把
