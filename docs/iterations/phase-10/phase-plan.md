@@ -97,6 +97,28 @@
   `/exploration/autonomous-runs`、`/exploration/learned-paths` 等。
 - 移除旧 singular 路由的兼容层。
 
+### 10.1.5 · LearnedPath catalog
+
+状态：可执行。执行包：
+[`10.1.5-learned-path-catalog/`](./10.1.5-learned-path-catalog/)。
+
+目标：
+
+- 给 LearnedPath 增加独立 console 列表页，回答“系统已经学会了
+  哪些可复用路径资产”。
+- 支持 trust 过滤、source run 跳转、actions 查看。
+- 把路径级 trust 操作放到 LearnedPath 资产页：
+  `确认路径` / `标记为不稳定` / `废弃路径`。
+
+边界：
+
+- 不改 autonomous engine。
+- 不实现 replay execution / drift detection。
+- 不触发 live autonomous run。
+- 默认复用现有 `GET /exploration/learned-paths`、
+  `GET /exploration/learned-paths/{path_id}` 和
+  `PATCH /exploration/learned-paths/{path_id}/trust`。
+
 ### 10.2 · Replay execution + drift detection
 
 状态：draft only，不可直接施工。执行包：

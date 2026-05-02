@@ -52,6 +52,8 @@
   级人工审核和 LearnedPath trust 拆成两个独立概念。
 - **10.1.4 RESTful route cleanup** —— 已完成。把 run 端点统一到
   `/exploration/autonomous-runs` 等 RESTful 路径。
+- **10.1.5 LearnedPath catalog** —— 可执行。给 LearnedPath 增加
+  独立列表页和路径级 trust 操作入口。
 - **10.2 Replay execution + drift detection** —— draft。消费
   LearnedPath，做回放和漂移判断。
 - **10.3 Popup-based control support** —— draft。支持 Cascader /
@@ -80,6 +82,9 @@
   拆分 run 级人工审核与 LearnedPath trust。状态：**完成**。
 - [10.1.4-restful-route-cleanup](./10.1.4-restful-route-cleanup/) ——
   统一 exploration router 到 RESTful 路径。状态：**完成**。
+- [10.1.5-learned-path-catalog](./10.1.5-learned-path-catalog/) ——
+  LearnedPath 独立列表页、trust 过滤、actions 查看和路径级操作入口。
+  状态：**可执行**。
 - [10.2-replay-execution-drift-detection](./10.2-replay-execution-drift-detection/) ——
   状态：**draft only，不可直接施工**。
 - [10.3-popup-based-control-support](./10.3-popup-based-control-support/) ——
