@@ -62,16 +62,6 @@
             <template #icon><caret-right-outlined /></template>
             {{ $t('autonomousUseCases.runSelected') }}
           </a-button>
-          <a-button
-            v-if="isRunning"
-            type="primary"
-            danger
-            size="small"
-            @click="abortRunning"
-          >
-            <template #icon><pause-circle-outlined /></template>
-            {{ $t('autonomousUseCases.abortRunning') }}
-          </a-button>
         </a-space>
         <div v-if="isRunning || hasCompletedTasks" class="batch-summary">
           <a-space wrap size="small">
@@ -87,9 +77,7 @@
             <a-tag v-if="failedCount > 0" color="error" size="small">
               {{ $t('autonomousUseCases.statusFailed') }}: {{ failedCount }}
             </a-tag>
-            <a-tag v-if="abortedCount > 0" color="warning" size="small">
-              {{ $t('autonomousUseCases.statusAborted') }}: {{ abortedCount }}
-            </a-tag>
+
           </a-space>
         </div>
       </div>
@@ -231,7 +219,7 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { ReloadOutlined, CaretRightOutlined, PauseCircleOutlined } from '@ant-design/icons-vue';
+import { ReloadOutlined, CaretRightOutlined } from '@ant-design/icons-vue';
 import { listSpecs, type SpecSummary, type SpecScenarioSummary } from '@/api/exploration';
 import {
   streamAutonomousRun,
@@ -252,10 +240,9 @@ interface BatchTask {
   specId: string;
   scenarioKey: string;
   description: string;
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'aborted';
+  status: 'queued' | 'running' | 'completed' | 'failed';
   error?: string;
   runId?: string;
-  abort: (() => void) | null;
 }
 
 const batchTasks = ref<Record<string, BatchTask>>({});
@@ -300,10 +287,6 @@ const completedCount = computed(() =>
 const failedCount = computed(() =>
   Object.values(batchTasks.value).filter((t) => t.status === 'failed').length,
 );
-const abortedCount = computed(() =>
-  Object.values(batchTasks.value).filter((t) => t.status === 'aborted').length,
-);
-
 const scenarioColumns = computed(() => [
   { title: '', key: 'checkbox', width: 40 },
   { title: t('autonomousUseCases.scenario'), key: 'key', width: 160 },
@@ -437,7 +420,6 @@ function startBatchRun(): void {
       scenarioKey,
       description: scenario.description,
       status: 'queued',
-      abort: null,
     };
   }
   batchTasks.value = tasks;
@@ -465,9 +447,8 @@ function processQueue(): void {
     task.status = 'running';
     started++;
 
-    const abort = streamAutonomousRun(batchPayload(spec, scenario), {
+    streamAutonomousRun(batchPayload(spec, scenario), {
       onEvent: (evt) => {
-        if (task.status === 'aborted') return;
         if (evt.event === 'run_completed') {
           task.status = 'completed';
           if (
@@ -488,10 +469,8 @@ function processQueue(): void {
         }
       },
       onError: (err) => {
-        if (task.status === 'aborted') return;
         task.status = 'failed';
         task.error = err.message;
-        task.abort = null;
         batchTasks.value = { ...batchTasks.value };
         processQueue();
       },
@@ -499,25 +478,10 @@ function processQueue(): void {
         if (task.status === 'running') {
           task.status = 'completed';
         }
-        task.abort = null;
         batchTasks.value = { ...batchTasks.value };
         processQueue();
       },
     });
-    task.abort = abort;
-  }
-  batchTasks.value = { ...batchTasks.value };
-}
-
-function abortRunning(): void {
-  for (const task of Object.values(batchTasks.value)) {
-    if (task.status === 'queued') {
-      task.status = 'aborted';
-    } else if (task.status === 'running' && task.abort) {
-      task.abort();
-      task.status = 'aborted';
-      task.abort = null;
-    }
   }
   batchTasks.value = { ...batchTasks.value };
 }
@@ -540,8 +504,7 @@ function statusTagColor(s: string): string {
       return 'success';
     case 'failed':
       return 'error';
-    case 'aborted':
-      return 'warning';
+
     default:
       return 'default';
   }
@@ -557,8 +520,7 @@ function statusLabel(s: string): string {
       return t('autonomousUseCases.statusCompleted');
     case 'failed':
       return t('autonomousUseCases.statusFailed');
-    case 'aborted':
-      return t('autonomousUseCases.statusAborted');
+
     default:
       return s;
   }
@@ -571,11 +533,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  for (const task of Object.values(batchTasks.value)) {
-    if (task.status === 'running' && task.abort) {
-      task.abort();
-    }
-  }
+  // noop — batch runs are fire-and-forget; no graceful abort
 });
 </script>
 
