@@ -39,13 +39,13 @@ Codex 等）主要负责写代码。AI 也可以通过项目提供的
 目内 Supervisor Agent 产出，AI 只是中转原样呈现。
 
 **不得**通过其他任何方式驱动引擎 —— 直接 `curl`
-`/exploration/autonomous-run`、内联 Playwright 脚本、直接导入
+`/exploration/autonomous-runs`、内联 Playwright 脚本、直接导入
 `run_autonomous_exploration` 都在禁止范围内。
 
 ### 禁止做
 
 - 用 curl、fetch、httpx 或除 `verify-scenario` skill 的 CLI 以外的任何
-  HTTP 客户端调用 `POST /exploration/autonomous-run` 或 `.../stream`。
+  HTTP 客户端调用 `POST /exploration/autonomous-runs` 或 `.../stream`。
 - 导入 `run_autonomous_exploration` 并在进程内直接驱动 Playwright。
 - 用"通过了"/"跑过了"/"works"之类的总结概括结果，**而不引用**这次运行
   的 `supervisor.verdict` 原值和 5 项 scorecard 得分原值。
@@ -192,9 +192,9 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/api/app/services/learning/page_verification.py` —— 基线对照器，输出
   5 项评分。
 - `apps/api/app/routers/exploration.py` ——
-  `/exploration/autonomous-run[/stream]`、
+  `/exploration/autonomous-runs[/stream]`、
   `/exploration/specs[/{id}]`（workbench 拉 spec 做预填用）、
-  `/exploration/autonomous-runs/list|get`（落库后的 run 历史）。
+  `/exploration/autonomous-runs[/{run_id}]`（落库后的 run 历史）。
 - `apps/api/app/routers/validation_api.py` —— 验证站点 mock 后端。
 - `apps/validation-site/specs/<page>.{md,assertions.json}` —— 基线定义。
 - `apps/validation-site/src/pages/IndexPage.vue` —— `/` 下的测试页目录。
@@ -225,10 +225,10 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 ### 路由规范
 
-- `POST /exploration/autonomous-run[/stream]` —— 跑一次场景（SSE
+- `POST /exploration/autonomous-runs[/stream]` —— 跑一次场景（SSE
   流式版为主）。
 - `GET /exploration/specs[/{id}]` —— workbench 拉 spec 做预填。
-- `GET /exploration/autonomous-runs/list|get` —— 落库后的 run 历史。
+- `GET /exploration/autonomous-runs[/{run_id}]` —— 落库后的 run 历史。
 - `GET /exploration/screenshots/{filename}` —— 截图文件服务。
 
 ### 数据库

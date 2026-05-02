@@ -136,7 +136,7 @@ export async function listLearnedPaths(params: {
   scenario?: string | null;
   trust?: LearnedPathTrust | null;
 } = {}): Promise<LearnedPathListPage> {
-  return (await apiClient.get('/exploration/learned-paths/list', {
+  return (await apiClient.get('/exploration/learned-paths', {
     params: {
       limit: params.limit ?? 20,
       cursor: params.cursor ?? undefined,
@@ -169,7 +169,7 @@ export async function listAutonomousRuns(params: {
   spec_id?: string | null;
   scenario?: string | null;
 } = {}): Promise<AutonomousRunListPage> {
-  return (await apiClient.get('/exploration/autonomous-runs/list', {
+  return (await apiClient.get('/exploration/autonomous-runs', {
     params: {
       limit: params.limit ?? 20,
       cursor: params.cursor ?? undefined,
@@ -180,9 +180,9 @@ export async function listAutonomousRuns(params: {
 }
 
 export async function getAutonomousRun(runId: string): Promise<AutonomousRunDetail> {
-  return (await apiClient.get('/exploration/autonomous-runs/get', {
-    params: { run_id: runId },
-  })) as unknown as AutonomousRunDetail;
+  return (await apiClient.get(
+    `/exploration/autonomous-runs/${runId}`,
+  )) as unknown as AutonomousRunDetail;
 }
 
 export interface AutonomousRunDeleteResult {

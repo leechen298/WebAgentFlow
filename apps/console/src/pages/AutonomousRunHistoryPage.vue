@@ -235,7 +235,7 @@ async function loadNextPage(): Promise<void> {
 }
 
 async function copyRunJson(runId: string): Promise<void> {
-  // Fetches the full run detail from /autonomous-runs/get and writes
+  // Fetches the full run detail from /autonomous-runs/{run_id} and writes
   // its JSON-stringified form to the clipboard. The intent is "give
   // the whole run to Claude Code for analysis" — one click instead of
   // navigating to a detail view and hunting through a <pre> block.

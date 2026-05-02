@@ -69,7 +69,7 @@ Phases 1–7 are complete (see [`architecture.md`](./architecture.md)).
 - **Autonomous-run result persistence** — SHIPPED. Every autonomous run
   is written to `exploration_runs` with
   `strategy_json.kind == "autonomous"`. List + detail via
-  `GET /exploration/autonomous-runs/list|get`, filterable by `spec_id`
+  `GET /exploration/autonomous-runs[/{run_id}]`, filterable by `spec_id`
   and `scenario`. Still out of scope: LearnedPath write-back on approve.
 - **Cross-device / cloud sync of task definitions** — local-first is
   the current stance; cross-device sync is out of scope for this phase.

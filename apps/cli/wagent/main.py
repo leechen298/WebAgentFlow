@@ -35,7 +35,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # wagent verify
     verify_parser = subparsers.add_parser(
         "verify",
-        help="Run a scenario via /exploration/autonomous-run.",
+        help="Run a scenario via /exploration/autonomous-runs.",
     )
     verify.configure_parser(verify_parser)
     verify_parser.set_defaults(func=verify.run)

@@ -199,7 +199,7 @@ export default {
     copyFailed: '复制失败：',
     // SSE 原始事件流
     sseRawTitle: 'SSE 原始事件流',
-    sseRawNote: '来自 /exploration/autonomous-run/stream 的每一条事件，带时间戳，完整审计，不做任何隐藏。',
+    sseRawNote: '来自 /exploration/autonomous-runs/stream 的每一条事件，带时间戳，完整审计，不做任何隐藏。',
     sseEventsReceived: '已收到事件',
     copyAllEvents: '复制全部',
     copyThisEvent: '复制此事件',

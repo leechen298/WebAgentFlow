@@ -393,7 +393,7 @@ class AutonomousExplorePayload(BaseModel):
     )
 
 
-@router.post("/autonomous-run")
+@router.post("/autonomous-runs")
 def autonomous_exploration_endpoint(
     payload: AutonomousExplorePayload,
 ) -> ApiResponse[dict[str, Any]]:
@@ -536,7 +536,7 @@ def _normalize_event_screenshots(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-@router.post("/autonomous-run/stream")
+@router.post("/autonomous-runs/stream")
 def autonomous_exploration_stream(
     payload: AutonomousExplorePayload,
 ):
@@ -554,7 +554,7 @@ def autonomous_exploration_stream(
       - self_assessment_done
       - supervisor_done
       - verification_done (only if spec_id provided)
-      - run_completed (final payload, same shape as POST /autonomous-run)
+      - run_completed (final payload, same shape as POST /autonomous-runs)
       - run_failed (on exception)
     """
     import asyncio
@@ -661,7 +661,7 @@ def autonomous_exploration_stream(
                     logger.exception("Verification failed: %s", exc)
                     emit("verification_done", {"error": str(exc)[:300]})
 
-            # Final payload — same shape as /autonomous-run response.data
+            # Final payload — same shape as /autonomous-runs response.data
             final_data = result.model_dump()
             if verification_payload is not None:
                 final_data["verification"] = verification_payload
@@ -855,7 +855,7 @@ class AutonomousRunDeleteResult(BaseModel):
 
 
 @router.get(
-    "/autonomous-runs/list",
+    "/autonomous-runs",
     response_model=ApiResponse[CursorPage[AutonomousRunSummary]],
 )
 def list_autonomous_runs(
@@ -931,12 +931,12 @@ def list_autonomous_runs(
 
 
 @router.get(
-    "/autonomous-runs/get",
+    "/autonomous-runs/{run_id}",
     response_model=ApiResponse[dict[str, Any]],
 )
 def get_autonomous_run(
     db: DbSession,
-    run_id: Annotated[str, Query(...)],
+    run_id: str,
 ) -> ApiResponse[dict[str, Any]]:
     """Return one persisted autonomous run with its full result snapshot."""
     repo = ExplorationRunRepository(db)
@@ -1026,7 +1026,7 @@ def _learned_path_to_detail(row: Any) -> LearnedPathDetail:
 
 
 @router.get(
-    "/learned-paths/list",
+    "/learned-paths",
     response_model=ApiResponse[CursorPage[LearnedPathSummary]],
 )
 def list_learned_paths(

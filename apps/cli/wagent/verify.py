@@ -1,6 +1,6 @@
 """``wagent verify`` — run one autonomous exploration via the HTTP API.
 
-Thin client around ``/exploration/autonomous-run``. Used as the backing
+Thin client around ``/exploration/autonomous-runs``. Used as the backing
 command for the ``verify-scenario`` Claude Code skill so that an AI
 coding agent can ask WebAgentFlow to verify a scenario without
 participating in the run itself.
@@ -215,7 +215,7 @@ def _trim_result(result: dict[str, Any]) -> dict[str, Any]:
     supervisor `_thinking`, screenshots.
 
     The full payload is still accessible via ``--full`` or
-    ``GET /exploration/autonomous-runs/get?run_id=…``.
+    ``GET /exploration/autonomous-runs/{run_id}``.
     """
     verification = result.get("verification") or {}
     scorecard = verification.get("scorecard") or {}
@@ -497,7 +497,7 @@ def run(args: argparse.Namespace) -> int:
         payload = _build_payload(args)
 
         try:
-            response = client.post("/exploration/autonomous-run", json=payload)
+            response = client.post("/exploration/autonomous-runs", json=payload)
         except httpx.ConnectError as exc:
             print(
                 f"wagent verify: cannot reach API at {api_base}. "

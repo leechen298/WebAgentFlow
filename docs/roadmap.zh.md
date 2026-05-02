@@ -34,8 +34,8 @@
 - `supervisor_observations.py` —— LLM 只产出观察原子，verdict 在代码
   侧推导；`pass_gate` 三态（`pass` / `fail` / `unverified`）
 - `page_verification.py` —— 基线对照器，5 项独立评分
-- `routers/exploration.py` —— `/autonomous-run[/stream]`、
-  `/specs[/{id}]`、`/autonomous-runs/list|get`、`/screenshots/{file}`
+- `routers/exploration.py` —— `/autonomous-runs[/stream]`、
+  `/specs[/{id}]`、`/autonomous-runs[/{run_id}]`、`/screenshots/{file}`
 - 持久化：每次 run 都写入 `exploration_runs` 表，
   `strategy_json.kind = "autonomous"` + `spec_id / scenario / verdict`
 

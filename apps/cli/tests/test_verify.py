@@ -1,7 +1,7 @@
 """Tests for ``wagent verify``.
 
 The verify subcommand is a thin HTTP client around
-/exploration/autonomous-run. These tests pin its contract with the
+/exploration/autonomous-runs. These tests pin its contract with the
 generated skill (and therefore Claude Code):
 
     - stdout is exactly one JSON object (no log noise)

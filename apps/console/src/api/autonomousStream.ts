@@ -1,5 +1,5 @@
 /**
- * Minimal SSE client for the /exploration/autonomous-run/stream endpoint.
+ * Minimal SSE client for the /exploration/autonomous-runs/stream endpoint.
  *
  * The native EventSource API only supports GET. Since our endpoint is POST
  * with a JSON payload, we use fetch + a ReadableStream reader and parse
@@ -51,7 +51,7 @@ export function streamAutonomousRun(
 ): () => void {
   const controller = new AbortController();
   const { baseURL } = resolveApiConfig();
-  const url = `${baseURL}/exploration/autonomous-run/stream`;
+  const url = `${baseURL}/exploration/autonomous-runs/stream`;
 
   (async () => {
     try {

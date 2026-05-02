@@ -41,12 +41,12 @@ HTTP API, persists to `exploration_runs`, emits the raw Supervisor verdict
 Supervisor Agent produces the verdict, and the AI merely relays it.
 
 Running the engine via any other means — direct `curl` to
-`/exploration/autonomous-run`, an inline Playwright script, importing
+`/exploration/autonomous-runs`, an inline Playwright script, importing
 `run_autonomous_exploration` directly — is NOT permitted.
 
 ### MUST NOT
 
-- Call `POST /exploration/autonomous-run` or `.../stream` via curl, fetch,
+- Call `POST /exploration/autonomous-runs` or `.../stream` via curl, fetch,
   httpx, or any HTTP client other than the `verify-scenario` skill's CLI.
 - Import `run_autonomous_exploration` and drive Playwright in-process on
   the user's behalf.
@@ -189,9 +189,9 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   observation-atom schema + code-side verdict derivation.
 - `apps/api/app/services/learning/page_verification.py` — spec-baseline
   comparator; 5-score scorecard.
-- `apps/api/app/routers/exploration.py` — `/exploration/autonomous-run[/stream]`
+- `apps/api/app/routers/exploration.py` — `/exploration/autonomous-runs[/stream]`
   plus `/exploration/specs[/{id}]` (spec metadata for workbench prefill)
-  and `/exploration/autonomous-runs/list|get` (persisted run history).
+  and `/exploration/autonomous-runs[/{run_id}]` (persisted run history).
 - `apps/api/app/routers/validation_api.py` — validation-site mock backend.
 - `apps/validation-site/specs/<page>.{md,assertions.json}` — authored baselines.
 - `apps/validation-site/src/pages/IndexPage.vue` — fixture catalogue at `/`.
@@ -223,10 +223,10 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 
 ### Route conventions
 
-- `POST /exploration/autonomous-run[/stream]` — run a scenario (SSE
+- `POST /exploration/autonomous-runs[/stream]` — run a scenario (SSE
   streaming variant is primary).
 - `GET /exploration/specs[/{id}]` — spec metadata for workbench prefill.
-- `GET /exploration/autonomous-runs/list|get` — persisted run history.
+- `GET /exploration/autonomous-runs[/{run_id}]` — persisted run history.
 - `GET /exploration/screenshots/{filename}` — screenshot file server.
 
 ### Database

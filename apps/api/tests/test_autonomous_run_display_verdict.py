@@ -111,7 +111,7 @@ def test_history_detail_does_not_rewrite_old_snapshot_verdict(
 ) -> None:
     run_id = _insert_autonomous_run(db_session, result_verdict="failure")
 
-    resp = client.get(f"/exploration/autonomous-runs/get?run_id={run_id}")
+    resp = client.get(f"/exploration/autonomous-runs/{run_id}")
 
     assert resp.status_code == 200
     data = resp.json()["data"]
@@ -126,7 +126,7 @@ def test_history_list_does_not_rewrite_old_strategy_verdict(
 ) -> None:
     _insert_autonomous_run(db_session, strategy_verdict="failure")
 
-    resp = client.get("/exploration/autonomous-runs/list")
+    resp = client.get("/exploration/autonomous-runs")
 
     assert resp.status_code == 200
     item = resp.json()["data"]["items"][0]

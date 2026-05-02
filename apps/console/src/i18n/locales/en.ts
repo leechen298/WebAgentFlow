@@ -199,7 +199,7 @@ export default {
     copyFailed: 'Copy failed: ',
     // SSE raw data viewer
     sseRawTitle: 'SSE raw event stream',
-    sseRawNote: 'Every event that arrived from /exploration/autonomous-run/stream, timestamped. Nothing is hidden here.',
+    sseRawNote: 'Every event that arrived from /exploration/autonomous-runs/stream, timestamped. Nothing is hidden here.',
     sseEventsReceived: 'events received',
     copyAllEvents: 'Copy all',
     copyThisEvent: 'Copy this event',

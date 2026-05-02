@@ -59,7 +59,7 @@ def _ingest_sample(db_session: Session, **overrides) -> str:
 
 
 def test_list_learned_paths_returns_empty_initially(client: TestClient) -> None:
-    resp = client.get("/exploration/learned-paths/list")
+    resp = client.get("/exploration/learned-paths")
     assert resp.status_code == 200
     body = resp.json()
     assert body["code"] == 0
@@ -73,7 +73,7 @@ def test_list_learned_paths_returns_inserted_rows(
     _ingest_sample(db_session)
     _ingest_sample(db_session, dom_fingerprint="b" * 64, scenario="filter_by_name")
 
-    resp = client.get("/exploration/learned-paths/list")
+    resp = client.get("/exploration/learned-paths")
     assert resp.status_code == 200
     items = resp.json()["data"]["items"]
     assert len(items) == 2
@@ -91,13 +91,13 @@ def test_list_learned_paths_filters_by_trust(
         json={"status": "confirmed", "reason": "ok"},
     )
 
-    resp = client.get("/exploration/learned-paths/list?trust=confirmed")
+    resp = client.get("/exploration/learned-paths?trust=confirmed")
     items = resp.json()["data"]["items"]
     assert [item["id"] for item in items] == [promoted]
 
 
 def test_list_learned_paths_rejects_unknown_trust(client: TestClient) -> None:
-    resp = client.get("/exploration/learned-paths/list?trust=bogus")
+    resp = client.get("/exploration/learned-paths?trust=bogus")
     assert resp.status_code == 422
 
 
@@ -371,7 +371,7 @@ def test_get_autonomous_run_links_repeated_pass_to_deduped_learned_path(
     assert path.source_run_id == first_run_id
     assert path.hit_count == 2
 
-    resp = client.get(f"/exploration/autonomous-runs/get?run_id={second_run_id}")
+    resp = client.get(f"/exploration/autonomous-runs/{second_run_id}")
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert data["learned_path_id"] == path.id
@@ -508,3 +508,33 @@ def test_ingest_hook_skips_on_pass_gate_unverified(
         )
 
     assert LearnedPathRepository(db_session).count() == 0
+
+
+# ---------------------------------------------------------------------------
+# Old-path 404 checks — routes removed by 10.1.4 restful cleanup
+# ---------------------------------------------------------------------------
+
+
+def test_old_autonomous_runs_list_returns_404(client: TestClient) -> None:
+    resp = client.get("/exploration/autonomous-runs/list")
+    assert resp.status_code == 404
+
+
+def test_old_autonomous_runs_get_returns_404(client: TestClient) -> None:
+    resp = client.get("/exploration/autonomous-runs/get?run_id=anything")
+    assert resp.status_code == 404
+
+
+def test_old_learned_paths_list_returns_404(client: TestClient) -> None:
+    resp = client.get("/exploration/learned-paths/list")
+    assert resp.status_code == 404
+
+
+def test_old_autonomous_run_singular_returns_404(client: TestClient) -> None:
+    resp = client.post("/exploration/autonomous-run", json={"url": "https://example.com"})
+    assert resp.status_code == 404
+
+
+def test_old_autonomous_run_stream_singular_returns_404(client: TestClient) -> None:
+    resp = client.post("/exploration/autonomous-run/stream", json={"url": "https://example.com"})
+    assert resp.status_code == 404

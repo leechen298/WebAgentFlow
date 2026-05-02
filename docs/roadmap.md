@@ -41,8 +41,8 @@ Autonomous exploration pipeline (end-to-end):
   `unverified`)
 - `page_verification.py` — spec-baseline comparator, 5 independent
   scores
-- `routers/exploration.py` — `/autonomous-run[/stream]`,
-  `/specs[/{id}]`, `/autonomous-runs/list|get`, `/screenshots/{file}`
+- `routers/exploration.py` — `/autonomous-runs[/stream]`,
+  `/specs[/{id}]`, `/autonomous-runs[/{run_id}]`, `/screenshots/{file}`
 - Persistence: every run lands in the `exploration_runs` table with
   `strategy_json.kind = "autonomous"` + `spec_id / scenario / verdict`
 

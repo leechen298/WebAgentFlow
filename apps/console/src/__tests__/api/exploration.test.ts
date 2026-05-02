@@ -37,7 +37,7 @@ describe('LearnedPath API', () => {
       }),
     ).resolves.toEqual(page);
 
-    expect(get).toHaveBeenCalledWith('/exploration/learned-paths/list', {
+    expect(get).toHaveBeenCalledWith('/exploration/learned-paths', {
       params: {
         limit: 50,
         cursor: undefined,
@@ -51,7 +51,7 @@ describe('LearnedPath API', () => {
   it('listLearnedPaths defaults limit to 20', async () => {
     get.mockResolvedValueOnce({ items: [], has_next: false, next_cursor: null });
     await listLearnedPaths();
-    expect(get).toHaveBeenCalledWith('/exploration/learned-paths/list', {
+    expect(get).toHaveBeenCalledWith('/exploration/learned-paths', {
       params: {
         limit: 20,
         cursor: undefined,

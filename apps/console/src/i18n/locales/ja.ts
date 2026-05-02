@@ -199,7 +199,7 @@ export default {
     copyFailed: 'コピー失敗：',
     // SSE 生イベントストリーム
     sseRawTitle: 'SSE 生イベントストリーム',
-    sseRawNote: '/exploration/autonomous-run/stream から届いたすべてのイベントをタイムスタンプ付きで記録。',
+    sseRawNote: '/exploration/autonomous-runs/stream から届いたすべてのイベントをタイムスタンプ付きで記録。',
     sseEventsReceived: '受信イベント',
     copyAllEvents: 'すべてコピー',
     copyThisEvent: 'このイベントをコピー',
