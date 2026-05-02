@@ -23,7 +23,7 @@ vi.mock('@/api/autonomousStream', () => ({
 const stubs = {
   'a-card': {
     props: ['title', 'bordered', 'size'],
-    template: '<section><header>{{ title }}</header><slot name="extra" /><slot /></section>',
+    template: '<section><header><slot name="title">{{ title }}</slot></header><slot name="extra" /><slot /></section>',
   },
   'a-tag': { props: ['size', 'color'], template: '<span><slot /></span>' },
   'a-button': {

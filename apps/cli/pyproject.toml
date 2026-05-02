@@ -24,3 +24,10 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["wagent*"]
+
+[tool.coverage.run]
+source = ["wagent"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

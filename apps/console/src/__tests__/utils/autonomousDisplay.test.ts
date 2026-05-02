@@ -3,6 +3,10 @@ import {
   effectiveStatus,
   effectiveStatusColor,
   verdictColor,
+  toScreenshotUrl,
+  stepColor,
+  bucketLabel,
+  groupElementsByBucket,
 } from '@/utils/autonomousDisplay';
 
 describe('autonomousDisplay effectiveStatus', () => {
@@ -79,5 +83,103 @@ describe('autonomousDisplay verdictColor (unchanged legacy mapping)', () => {
     expect(verdictColor('uncertain')).toBe('default');
     expect(verdictColor(null)).toBe('default');
     expect(verdictColor('legacy_other')).toBe('default');
+  });
+});
+
+describe('passGateStatus path in effectiveStatus', () => {
+  it('pass gate returns success', () => {
+    expect(effectiveStatus({ passGateStatus: 'pass' })).toBe('success');
+  });
+
+  it('fail gate returns failure', () => {
+    expect(effectiveStatus({ passGateStatus: 'fail' })).toBe('failure');
+  });
+
+  it('unverified gate returns unverified', () => {
+    expect(effectiveStatus({ passGateStatus: 'unverified' })).toBe('unverified');
+  });
+
+  it('pass gate overrides mismatched scenarioMatched', () => {
+    expect(effectiveStatus({ passGateStatus: 'pass', scenarioMatched: false, verdict: 'failure' })).toBe('success');
+  });
+});
+
+describe('toScreenshotUrl', () => {
+  it('returns empty string for null/undefined/empty', () => {
+    expect(toScreenshotUrl(null)).toBe('');
+    expect(toScreenshotUrl(undefined)).toBe('');
+    expect(toScreenshotUrl('')).toBe('');
+  });
+
+  it('passes through http URLs unchanged', () => {
+    expect(toScreenshotUrl('http://cdn/img.png')).toBe('http://cdn/img.png');
+    expect(toScreenshotUrl('https://cdn/img.png')).toBe('https://cdn/img.png');
+  });
+
+  it('prepends API base for relative refs', () => {
+    const result = toScreenshotUrl('/exploration/screenshots/x.png');
+    expect(result).toContain('/exploration/screenshots/x.png');
+    expect(result).not.toEqual('/exploration/screenshots/x.png');
+  });
+});
+
+describe('stepColor', () => {
+  it('green for ok=true', () => {
+    expect(stepColor({ ok: true })).toBe('green');
+  });
+
+  it('red for ok=false', () => {
+    expect(stepColor({ ok: false })).toBe('red');
+  });
+
+  it('blue for ok=null/undefined', () => {
+    expect(stepColor({ ok: null })).toBe('blue');
+    expect(stepColor({})).toBe('blue');
+  });
+});
+
+describe('bucketLabel', () => {
+  it('returns translated label for known buckets', () => {
+    // "fillable" → "autonomous.countFillable" which should be in en.ts
+    const label = bucketLabel('fillable');
+    expect(typeof label).toBe('string');
+    expect(label.length).toBeGreaterThan(0);
+  });
+
+  it('falls back to raw key for unknown buckets', () => {
+    expect(bucketLabel('nonexistent_bucket_xyz')).toBe('nonexistent_bucket_xyz');
+  });
+});
+
+describe('groupElementsByBucket', () => {
+  it('returns empty object for null/undefined analysis', () => {
+    expect(groupElementsByBucket(null)).toEqual({});
+    expect(groupElementsByBucket(undefined)).toEqual({});
+  });
+
+  it('groups elements by visible buckets, omitting empty ones', () => {
+    const analysis = {
+      fillable: [{ id: 'a' }, { id: 'b' }],
+      toggle: [{ id: 'c' }],
+      submit: [],
+      other: [],
+      hidden_category: [{ id: 'x' }],
+    };
+    const grouped = groupElementsByBucket(analysis);
+    expect(Object.keys(grouped)).toEqual(['fillable', 'toggle']);
+    expect(grouped.fillable).toHaveLength(2);
+    expect(grouped.toggle).toHaveLength(1);
+    // hidden_category is not in _VISIBLE_BUCKETS
+    expect(grouped.hidden_category).toBeUndefined();
+  });
+
+  it('preserves bucket order', () => {
+    const analysis = {
+      other: [{ id: 'o' }],
+      fillable: [{ id: 'f' }],
+      navigation: [{ id: 'n' }],
+    };
+    const grouped = groupElementsByBucket(analysis);
+    expect(Object.keys(grouped)).toEqual(['fillable', 'navigation', 'other']);
   });
 });
