@@ -3,7 +3,7 @@
     <a-card :title="$t('autonomousUseCases.title')" :bordered="false">
       <template #extra>
         <a-space>
-          <a-button size="small" @click="loadSpecs" :disabled="isRunning">
+          <a-button size="small" :disabled="isRunning" @click="loadSpecs">
             <template #icon><reload-outlined /></template>
             {{ $t('autonomousUseCases.refresh') }}
           </a-button>
@@ -33,10 +33,10 @@
             /
             {{ $t('autonomousUseCases.runnableCount', { n: runnableScenarios.length }) }}
           </span>
-          <a-button size="small" @click="selectAllRunnable" :disabled="isRunning">
+          <a-button size="small" :disabled="isRunning" @click="selectAllRunnable">
             {{ $t('autonomousUseCases.selectAllRunnable') }}
           </a-button>
-          <a-button size="small" @click="clearSelection" :disabled="isRunning || selectedKeys.size === 0">
+          <a-button size="small" :disabled="isRunning || selectedKeys.size === 0" @click="clearSelection">
             {{ $t('autonomousUseCases.clearSelection') }}
           </a-button>
           <a-tooltip
@@ -123,6 +123,16 @@
               size="small"
               row-key="key"
             >
+              <template #headerCell="{ column }">
+                <template v-if="column.key === 'checkbox'">
+                  <a-checkbox
+                    :indeterminate="isSpecIndeterminate(spec)"
+                    :checked="isSpecAllSelected(spec)"
+                    :disabled="isRunning || !spec.url_pattern"
+                    @change="toggleSelectAllForSpec(spec)"
+                  />
+                </template>
+              </template>
               <template #bodyCell="{ column, record }">
                 <template v-if="column.key === 'checkbox'">
                   <a-tooltip
@@ -333,6 +343,32 @@ function selectAllRunnable(): void {
 
 function clearSelection(): void {
   selectedKeys.value = new Set();
+}
+
+function isSpecAllSelected(spec: SpecSummary): boolean {
+  if (!spec.url_pattern || spec.scenarios.length === 0) return false;
+  return spec.scenarios.every((sc) => isSelected(spec.spec_id, sc.key));
+}
+
+function isSpecIndeterminate(spec: SpecSummary): boolean {
+  if (!spec.url_pattern || spec.scenarios.length === 0) return false;
+  const selectedCount = spec.scenarios.filter((sc) => isSelected(spec.spec_id, sc.key)).length;
+  return selectedCount > 0 && selectedCount < spec.scenarios.length;
+}
+
+function toggleSelectAllForSpec(spec: SpecSummary): void {
+  if (!spec.url_pattern) return;
+  const allSelected = isSpecAllSelected(spec);
+  const next = new Set(selectedKeys.value);
+  for (const scenario of spec.scenarios) {
+    const key = batchKey(spec.spec_id, scenario.key);
+    if (allSelected) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+  }
+  selectedKeys.value = next;
 }
 
 // ─── Spec loading ───────────────────────────────────────────
