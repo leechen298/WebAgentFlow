@@ -223,54 +223,6 @@
                 <code>{{ learnedPath.source_run_id || '—' }}</code>
               </a-descriptions-item>
             </a-descriptions>
-            <div class="learned-path-actions">
-              <a-popconfirm
-                v-if="canConfirmLearnedPath"
-                :title="$t('autonomousHistory.learnedPathConfirmPrompt')"
-                :ok-text="$t('autonomousHistory.learnedPathConfirm')"
-                :cancel-text="$t('common.cancel')"
-                @confirm="onConfirmPath"
-              >
-                <a-button
-                  type="primary"
-                  :loading="updatingTrust && pendingPathAction === 'confirmed'"
-                >
-                  {{ $t('autonomousHistory.learnedPathConfirm') }}
-                </a-button>
-              </a-popconfirm>
-              <a-button
-                v-else
-                type="primary"
-                disabled
-                :loading="updatingTrust && pendingPathAction === 'confirmed'"
-              >
-                {{ $t('autonomousHistory.learnedPathConfirm') }}
-              </a-button>
-              <a-popconfirm
-                v-if="canDeprecateLearnedPath"
-                :title="$t('autonomousHistory.learnedPathRejectPrompt')"
-                :ok-text="$t('autonomousHistory.learnedPathMarkWrong')"
-                :cancel-text="$t('common.cancel')"
-                @confirm="onDeprecatePath"
-              >
-                <a-button
-                  danger
-                  :loading="updatingTrust && pendingPathAction === 'deprecated'"
-                  style="margin-left: 8px"
-                >
-                  {{ $t('autonomousHistory.learnedPathMarkWrong') }}
-                </a-button>
-              </a-popconfirm>
-              <a-button
-                v-else
-                danger
-                disabled
-                :loading="updatingTrust && pendingPathAction === 'deprecated'"
-                style="margin-left: 8px"
-              >
-                {{ $t('autonomousHistory.learnedPathMarkWrong') }}
-              </a-button>
-            </div>
           </div>
           <div v-else class="learned-path-absent">
             {{ $t(absentMessageKey) }}
@@ -309,10 +261,8 @@ import { message } from 'ant-design-vue';
 import {
   getAutonomousRun,
   deleteAutonomousRun,
-  patchLearnedPathTrust,
   patchRunReview,
   type AutonomousRunDetail,
-  type LearnedPathPatchStatus,
   type LearnedPathTrust,
   type OperatorReviewStatus,
   type RunLearnedPathProjection,
@@ -335,8 +285,6 @@ const passGateStatus = ref<'pass' | 'fail' | 'unverified' | null>(null);
 const operatorReviewStatus = ref<OperatorReviewStatus>('unreviewed');
 const operatorReviewNote = ref<string | null>(null);
 
-const updatingTrust = ref(false);
-const pendingPathAction = ref<LearnedPathPatchStatus | null>(null);
 const updatingReview = ref(false);
 const pendingReviewAction = ref<OperatorReviewStatus | null>(null);
 const deleting = ref(false);
@@ -422,14 +370,6 @@ const canAcceptRun = computed(
 
 const canRejectRun = computed(
   () => operatorReviewStatus.value !== 'rejected' && !updatingReview.value,
-);
-
-const canConfirmLearnedPath = computed(
-  () => Boolean(learnedPath.value) && learnedPathTrust.value !== 'confirmed' && !updatingTrust.value,
-);
-
-const canDeprecateLearnedPath = computed(
-  () => Boolean(learnedPath.value) && learnedPathTrust.value !== 'deprecated' && !updatingTrust.value,
 );
 
 // ─── Derived views over detail.result ────────────────────────
@@ -599,34 +539,6 @@ function onRejectRun(): void {
   void updateReview('rejected');
 }
 
-async function updatePathTrust(status: LearnedPathPatchStatus): Promise<void> {
-  const pathId = learnedPath.value?.id;
-  if (!pathId || updatingTrust.value) return;
-  updatingTrust.value = true;
-  pendingPathAction.value = status;
-  try {
-    const updated = await patchLearnedPathTrust(pathId, { status });
-    learnedPathTrust.value = updated.trust as LearnedPathTrust;
-    if (learnedPath.value) {
-      learnedPath.value = { ...learnedPath.value, trust: updated.trust as LearnedPathTrust };
-    }
-    message.success(t('autonomousHistory.learnedPathUpdated'));
-  } catch (err) {
-    message.error((err as Error).message || String(err));
-  } finally {
-    updatingTrust.value = false;
-    pendingPathAction.value = null;
-  }
-}
-
-function onConfirmPath(): void {
-  void updatePathTrust('confirmed');
-}
-
-function onDeprecatePath(): void {
-  void updatePathTrust('deprecated');
-}
-
 async function handleDelete(): Promise<void> {
   const runId = String(route.params.run_id || '');
   if (!runId) return;
@@ -693,9 +605,6 @@ onMounted(load);
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-.learned-path-actions {
-  margin-top: 8px;
 }
 .learned-path-hint {
   font-size: 12px;

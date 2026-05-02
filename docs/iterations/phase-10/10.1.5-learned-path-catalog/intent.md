@@ -75,6 +75,8 @@ LearnedPath 资产。
   - `确认路径`
   - `标记为不稳定`
   - `废弃路径`
+- history detail 里的 LearnedPath 区块改为只读关联信息，不再提供
+  trust 修改按钮。
 - 文案必须明确：这些操作影响未来复用，不代表某条 run 被确认或标错。
 
 ## 非目标
@@ -97,10 +99,13 @@ LearnedPath 资产。
 3. `trust` 过滤可用，并且不会误过滤其他字段。
 4. 路径级操作调用 `PATCH /exploration/learned-paths/{path_id}/trust`，
    不调用 run review API。
-5. source run 跳转只作为关联入口；source run 不存在时页面仍可正常
+5. history detail 不再渲染 `确认路径` / `标记为不稳定` / `废弃路径`
+   等 LearnedPath trust 修改按钮；它只展示关联信息和可选的 catalog
+   跳转。
+6. source run 跳转只作为关联入口；source run 不存在时页面仍可正常
    展示 LearnedPath。
-6. 页面文案清楚区分：
+7. 页面文案清楚区分：
    - use case：可跑的 authored scenario
    - run：一次历史运行
    - LearnedPath：可复用路径资产
-7. 不新增或调用 `/exploration/autonomous-runs` run 创建接口。
+8. 不新增或调用 `/exploration/autonomous-runs` run 创建接口。

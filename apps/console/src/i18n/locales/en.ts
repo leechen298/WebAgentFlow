@@ -276,6 +276,7 @@ export default {
     colSpec: 'Spec',
     colScenario: 'Scenario',
     colVerdict: 'Outcome',
+    colReviewStatus: 'Review Status',
     colStatus: 'Status',
     colRunId: 'Run ID',
     colSummary: 'Summary',

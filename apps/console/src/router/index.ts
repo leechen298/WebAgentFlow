@@ -5,6 +5,7 @@ import AutonomousWorkbenchPage from '@/pages/AutonomousWorkbenchPage.vue';
 import AutonomousRunHistoryPage from '@/pages/AutonomousRunHistoryPage.vue';
 import AutonomousRunDetailPage from '@/pages/AutonomousRunDetailPage.vue';
 import AutonomousUseCasesPage from '@/pages/AutonomousUseCasesPage.vue';
+import LearnedPathCatalogPage from '@/pages/LearnedPathCatalogPage.vue';
 import i18n from '@/i18n';
 
 const router = createRouter({
@@ -55,6 +56,15 @@ const router = createRouter({
             titleKey: 'nav.autonomousHistory',
             // Keep the history link highlighted when viewing a run.
             menuKey: '/exploration/autonomous/history',
+          },
+        },
+        {
+          path: 'exploration/learned-paths',
+          name: 'exploration-learned-paths',
+          component: LearnedPathCatalogPage,
+          meta: {
+            titleKey: 'nav.learnedPaths',
+            menuKey: '/exploration/learned-paths',
           },
         },
       ],

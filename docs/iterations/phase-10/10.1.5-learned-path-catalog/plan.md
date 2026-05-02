@@ -181,6 +181,39 @@ LearnedPath 是未来复用的路径资产，不是某一次历史运行的人�
 
 不要在本页面提供 run review 操作。run review 只属于 history detail。
 
+### History detail 清理
+
+更新：
+
+```text
+apps/console/src/pages/AutonomousRunDetailPage.vue
+apps/console/src/__tests__/components/AutonomousRunDetailPage.test.ts
+```
+
+10.1.3 为了先拆清 run review 和 LearnedPath trust，在 history detail
+里保留了一个“路径级操作”区。10.1.5 做完 LearnedPath catalog 后，
+这个操作区应该移走。
+
+history detail 的 LearnedPath 区块只保留只读关联信息：
+
+- path id
+- trust 当前状态
+- relation
+- hit_count
+- source_run_id
+- 可选：跳转到 LearnedPath catalog / detail 的入口
+
+必须移除：
+
+- `确认路径`
+- `标记为不稳定`
+- `废弃路径`
+- 任何会调用 `patchLearnedPathTrust` 的按钮
+
+保留 `trust` 当前状态展示是合理的，因为它解释这次 run 关联到的
+路径资产目前是否可复用；但修改 trust 的动作应只出现在
+LearnedPath catalog。
+
 ### actions 展示
 
 最低实现可以用 drawer / modal 展示 `getLearnedPath(pathId)` 返回的
@@ -247,6 +280,15 @@ apps/console/src/__tests__/components/LearnedPathCatalogPage.test.ts
 11. 点击 `标记为不稳定` 调用 `patchLearnedPathTrust(... flaky ...)`。
 12. 点击 `废弃路径` 调用 `patchLearnedPathTrust(... deprecated ...)`。
 13. 当前 trust 已经是目标状态时，不触发无效 patch。
+
+更新 `AutonomousRunDetailPage.test.ts`：
+
+1. history detail 的 LearnedPath 区块仍显示 id / trust / relation /
+   hit_count / source_run_id。
+2. history detail 不再渲染 `确认路径` / `标记为不稳定` / `废弃路径`
+   按钮。
+3. history detail 不再调用 `patchLearnedPathTrust`。
+4. run review 按钮仍然存在，并继续调用 run review API。
 
 更新：
 

@@ -276,6 +276,7 @@ export default {
     colSpec: '仕様',
     colScenario: 'シナリオ',
     colVerdict: '結果',
+    colReviewStatus: 'レビューステータス',
     colStatus: 'ステータス',
     colRunId: '実行 ID',
     colSummary: '要約',

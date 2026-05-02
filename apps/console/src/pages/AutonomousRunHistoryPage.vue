@@ -49,6 +49,11 @@
             </a-tooltip>
             <span v-else class="muted">—</span>
           </template>
+          <template v-else-if="column.key === 'operator_review_status'">
+            <a-tag :color="reviewStatusColor(record.operator_review_status)">
+              {{ reviewStatusLabel(record.operator_review_status) }}
+            </a-tag>
+          </template>
           <template v-else-if="column.key === 'status'">
             <a-tag :color="statusColor(record.status)">{{ record.status }}</a-tag>
           </template>
@@ -188,6 +193,7 @@ const columns = [
   { key: 'spec_id', dataIndex: 'spec_id', title: t('autonomousHistory.colSpec'), width: 140 },
   { key: 'scenario', dataIndex: 'scenario', title: t('autonomousHistory.colScenario'), width: 150 },
   { key: 'verdict', dataIndex: 'verdict', title: t('autonomousHistory.colVerdict'), width: 130 },
+  { key: 'operator_review_status', dataIndex: 'operator_review_status', title: t('autonomousHistory.colReviewStatus'), width: 110 },
   { key: 'status', dataIndex: 'status', title: t('autonomousHistory.colStatus'), width: 110 },
   { key: 'url', dataIndex: 'url', title: 'URL', ellipsis: true },
   { key: 'run_id', dataIndex: 'run_id', title: t('autonomousHistory.colRunId'), width: 100 },
@@ -207,6 +213,18 @@ function statusColor(status: string): string {
   if (status === 'failed' || status === 'error') return 'red';
   if (status === 'running' || status === 'pending') return 'blue';
   return 'default';
+}
+
+function reviewStatusColor(status: string | null | undefined): string {
+  if (status === 'accepted') return 'green';
+  if (status === 'rejected') return 'red';
+  return 'default';
+}
+
+function reviewStatusLabel(status: string | null | undefined): string {
+  if (status === 'accepted') return t('autonomousHistory.reviewAccepted');
+  if (status === 'rejected') return t('autonomousHistory.reviewRejected');
+  return t('autonomousHistory.reviewUnreviewed');
 }
 
 async function loadRuns(cursor: string | null): Promise<void> {

@@ -109,6 +109,8 @@
 - 支持 trust 过滤、source run 跳转、actions 查看。
 - 把路径级 trust 操作放到 LearnedPath 资产页：
   `确认路径` / `标记为不稳定` / `废弃路径`。
+- history detail 的 LearnedPath 区块降为只读关联信息，不再提供
+  trust 修改按钮。
 
 边界：
 

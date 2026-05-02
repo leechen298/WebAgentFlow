@@ -845,6 +845,7 @@ class AutonomousRunSummary(BaseModel):
     # UI reads this as the authoritative status. Null for pre-gate
     # rows; the list row then falls back to scenario_matched + verdict.
     pass_gate_status: str | None = None
+    operator_review_status: str | None = None
     status: str
     url: str | None = None
     summary: str | None = None
@@ -934,6 +935,7 @@ def list_autonomous_runs(
             verdict=(item.strategy_json or {}).get("verdict"),
             scenario_matched=_scenario_matched_for(item),
             pass_gate_status=_pass_gate_status_for(item),
+            operator_review_status=str(item.operator_review_status),
             status=str(item.status),
             url=(item.strategy_json or {}).get("url"),
             summary=item.summary,

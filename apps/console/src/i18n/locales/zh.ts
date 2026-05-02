@@ -276,6 +276,7 @@ export default {
     colSpec: '规范',
     colScenario: '场景',
     colVerdict: '结果',
+    colReviewStatus: '审核状态',
     colStatus: '状态',
     colRunId: '运行 ID',
     colSummary: '摘要',

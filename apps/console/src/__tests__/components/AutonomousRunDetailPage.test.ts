@@ -2,7 +2,6 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 
 const getAutonomousRun = vi.fn();
-const patchLearnedPathTrust = vi.fn();
 const patchRunReview = vi.fn();
 
 vi.mock('vue-router', () => ({
@@ -12,7 +11,6 @@ vi.mock('vue-router', () => ({
 
 vi.mock('@/api/exploration', () => ({
   getAutonomousRun,
-  patchLearnedPathTrust,
   patchRunReview,
 }));
 
@@ -236,11 +234,10 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
   beforeEach(() => {
     vi.resetModules();
     getAutonomousRun.mockReset();
-    patchLearnedPathTrust.mockReset();
     patchRunReview.mockReset();
   });
 
-  it('renders the trust tag and path-level action buttons when ingested', async () => {
+  it('renders read-only association metadata when ingested', async () => {
     getAutonomousRun.mockResolvedValueOnce(buildDetail());
 
     const Page = await loadDetailPage();
@@ -251,105 +248,10 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
     // scope to the LearnedPath card to avoid the run-status tag.
     const tag = wrapper.find('.learned-path-card .tag');
     expect(tag.attributes('data-color')).toBe('blue');
-    // Both action buttons present and enabled at provisional state
-    const buttons = wrapper.findAll('button');
-    const labels = buttons.map((b) => b.text());
-    expect(labels.some((t) => /Confirm path/i.test(t))).toBe(true);
-    expect(labels.some((t) => /Deprecate path/i.test(t))).toBe(true);
-  });
-
-  it('Confirm path button promotes trust and refreshes the tag', async () => {
-    getAutonomousRun.mockResolvedValueOnce(buildDetail());
-    patchLearnedPathTrust.mockResolvedValueOnce({
-      id: 'lp-1',
-      trust: 'confirmed',
-    });
-
-    const Page = await loadDetailPage();
-    const wrapper = mount(Page, { global: { stubs } });
-    await flushPromises();
-
-    // Drive the confirmed path via the component's exposed callback —
-    // the popconfirm wrapper is library code, trust it; we test the
-    // onConfirmPath handler.
-    const vm = (wrapper.vm as unknown as {
-      $: { setupState: { onConfirmPath: () => void } };
-    }).$.setupState;
-    vm.onConfirmPath();
-    await flushPromises();
-
-    expect(patchLearnedPathTrust).toHaveBeenCalledWith('lp-1', {
-      status: 'confirmed',
-    });
-    // Trust tag should now reflect the new state.
-    expect(
-      wrapper.find('.learned-path-card .tag').attributes('data-color'),
-    ).toBe('green');
-  });
-
-  it('Deprecate path button deprecates trust', async () => {
-    getAutonomousRun.mockResolvedValueOnce(buildDetail());
-    patchLearnedPathTrust.mockResolvedValueOnce({
-      id: 'lp-1',
-      trust: 'deprecated',
-    });
-
-    const Page = await loadDetailPage();
-    const wrapper = mount(Page, { global: { stubs } });
-    await flushPromises();
-
-    const vm = (wrapper.vm as unknown as {
-      $: { setupState: { onDeprecatePath: () => void } };
-    }).$.setupState;
-    vm.onDeprecatePath();
-    await flushPromises();
-
-    expect(patchLearnedPathTrust).toHaveBeenCalledWith('lp-1', {
-      status: 'deprecated',
-    });
-    expect(
-      wrapper.find('.learned-path-card .tag').attributes('data-color'),
-    ).toBe('red');
-  });
-
-  it('disables Confirm path when trust is already confirmed', async () => {
-    getAutonomousRun.mockResolvedValueOnce(
-      buildDetail({ learned_path_trust: 'confirmed', learned_path: { ...buildDetail().learned_path, trust: 'confirmed' } }),
-    );
-
-    const Page = await loadDetailPage();
-    const wrapper = mount(Page, { global: { stubs } });
-    await flushPromises();
-
-    const buttons = wrapper.findAll('button');
-    const confirmBtn = buttons.find((b) =>
-      /Confirm path/i.test(b.text()),
-    );
-    const markWrongBtn = buttons.find((b) =>
-      /Deprecate path/i.test(b.text()),
-    );
-    expect(confirmBtn?.attributes('disabled')).toBeDefined();
-    expect(markWrongBtn?.attributes('disabled')).toBeUndefined();
-  });
-
-  it('disables Deprecate path when trust is already deprecated', async () => {
-    getAutonomousRun.mockResolvedValueOnce(
-      buildDetail({ learned_path_trust: 'deprecated', learned_path: { ...buildDetail().learned_path, trust: 'deprecated' } }),
-    );
-
-    const Page = await loadDetailPage();
-    const wrapper = mount(Page, { global: { stubs } });
-    await flushPromises();
-
-    const buttons = wrapper.findAll('button');
-    const confirmBtn = buttons.find((b) =>
-      /Confirm path/i.test(b.text()),
-    );
-    const markWrongBtn = buttons.find((b) =>
-      /Deprecate path/i.test(b.text()),
-    );
-    expect(confirmBtn?.attributes('disabled')).toBeUndefined();
-    expect(markWrongBtn?.attributes('disabled')).toBeDefined();
+    expect(wrapper.text()).toContain('lp-1');
+    expect(wrapper.text()).toContain('run-1');
+    expect(wrapper.text()).not.toMatch(/Confirm path/i);
+    expect(wrapper.text()).not.toMatch(/Deprecate path/i);
   });
 
   it('shows the "pass but missing" copy when gate=pass and no learned_path', async () => {

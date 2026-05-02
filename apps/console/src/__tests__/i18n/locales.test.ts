@@ -38,6 +38,7 @@ describe('locale bundles', () => {
       expect(locale).toHaveProperty('home');
       expect(locale).toHaveProperty('autonomous');
       expect(locale).toHaveProperty('autonomousHistory');
+      expect(locale).toHaveProperty('learnedPaths');
     }
   });
 

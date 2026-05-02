@@ -35,6 +35,10 @@
           <history-outlined />
           <span>{{ $t('nav.autonomousHistory') }}</span>
         </a-menu-item>
+        <a-menu-item key="/exploration/learned-paths">
+          <book-outlined />
+          <span>{{ $t('nav.learnedPaths') }}</span>
+        </a-menu-item>
       </a-menu>
     </a-layout-sider>
 
@@ -65,6 +69,7 @@ import {
   HistoryOutlined,
   ThunderboltOutlined,
   UnorderedListOutlined,
+  BookOutlined,
 } from '@ant-design/icons-vue';
 import { useAppStore } from '@/stores';
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue';

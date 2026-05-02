@@ -57,6 +57,7 @@ export interface AutonomousRunSummary {
    * (the list falls back to scenario_matched in that case).
    */
   pass_gate_status?: 'pass' | 'fail' | 'unverified' | null;
+  operator_review_status?: OperatorReviewStatus | null;
   status: string;
   url?: string | null;
   summary?: string | null;

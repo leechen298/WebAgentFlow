@@ -58,6 +58,7 @@ config.global.stubs = {
   'a-input-number-group': true,
   'a-tooltip': true,
   'a-checkbox': true,
+  'a-drawer': true,
 };
 
 config.global.plugins = [i18n];
