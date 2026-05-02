@@ -1,7 +1,16 @@
 # 实施计划
 
-状态：Draft only，不可直接外包执行。执行前先读完 `10.1` /
+状态：Draft only，不可直接施工。执行前先读完 `10.1` /
 `10.1.1` 的 review 与当前代码，再把本计划收敛成可执行版本。
+
+## 执行前必读与硬约束
+
+修订成本轮可执行计划前，请先读 `AGENTS.md`、`docs/product-model.md`、
+`docs/iterations/phase-10/phase-plan.md`，再读本目录的 `intent.md`
+和 `plan.md`。
+
+本包转为可执行前，不得直接施工；施工时只做 `10.2`，不顺手做
+`10.3+`。
 
 ## 预期触及的模块
 

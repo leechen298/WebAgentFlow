@@ -1,6 +1,13 @@
 # 10.5 · Form-label extractor coverage expansion
 
-状态：Draft only，不可直接外包执行。开工前必须重新核对当前
+## 执行前必读
+
+本包当前是 draft only，不能直接施工。后续修订为可
+执行状态前，请先阅读 `AGENTS.md`、`docs/product-model.md`、
+`docs/iterations/phase-10/phase-plan.md`，再读本目录的 `intent.md`
+和 `plan.md`。
+
+状态：Draft only，不可直接施工。开工前必须重新核对当前
 `form_label_extractor` 已支持的 handler 和测试覆盖。
 
 ## 目标

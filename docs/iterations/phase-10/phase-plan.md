@@ -1,12 +1,15 @@
 # Phase 10 全量计划
 
 本文是 Phase 10 的阶段级执行计划，用来回答“接下来按什么顺序做、每
-一包交付什么、哪些可以外包”。Phase 10 使用语义编号目录，目录名前缀
+一包交付什么、哪些已经可执行”。Phase 10 使用语义编号目录，目录名前缀
 与任务编号一致，例如 `10.2-replay-execution-drift-detection/`。
 每个真正开始执行的工作仍然要有 `intent.md` + `plan.md`，本文件不
 替代迭代三件套。
 
 ## 权威输入
+
+开发 Phase 10 任务前，请先读完本节列出的权威输入，再读对应执行包
+的 `intent.md` 和 `plan.md`。
 
 - [`docs/product-model.md`](../../product-model.md) —— 产品边界：
   AI 编码 Agent 只写代码；真实运行由 WebAgentFlow 引擎和内部
@@ -60,7 +63,7 @@
 
 ### 10.2 · Replay execution + drift detection
 
-状态：draft only，不可直接外包执行。执行包：
+状态：draft only，不可直接施工。执行包：
 [`10.2-replay-execution-drift-detection/`](./10.2-replay-execution-drift-detection/)。
 
 目标：
@@ -89,7 +92,7 @@
 
 ### 10.3 · Popup-based control support
 
-状态：draft only，不可直接外包执行。执行包：
+状态：draft only，不可直接施工。执行包：
 [`10.3-popup-based-control-support/`](./10.3-popup-based-control-support/)。
 
 目标：
@@ -114,7 +117,7 @@
 
 ### 10.4 · Custom click-toggle controls
 
-状态：draft only，不可直接外包执行。执行包：
+状态：draft only，不可直接施工。执行包：
 [`10.4-custom-click-toggle-controls/`](./10.4-custom-click-toggle-controls/)。
 
 目标：
@@ -136,7 +139,7 @@
 
 ### 10.5 · Form-label extractor coverage expansion
 
-状态：draft only，不可直接外包执行。执行包：
+状态：draft only，不可直接施工。执行包：
 [`10.5-form-label-extractor-expansion/`](./10.5-form-label-extractor-expansion/)。
 
 目标：
@@ -158,7 +161,7 @@
 
 ### 10.6 · Cross-page pattern mining
 
-状态：draft only，不可直接外包执行。执行包：
+状态：draft only，不可直接施工。执行包：
 [`10.6-cross-page-pattern-mining/`](./10.6-cross-page-pattern-mining/)。
 
 目标：
@@ -178,19 +181,21 @@
   metadata。
 - 不在运行时“凭空发明”路径；pattern 只能来自已验证 / 已确认数据。
 
-## 外包执行规则
+## 执行规则
 
-给 DeepSeek 或其他外部编码 Agent 时，最小上下文应包含：
+开始任一执行包前，最小上下文应包含：
 
 1. 仓库根目录的 `AGENTS.md`。
 2. `docs/product-model.md`。
 3. 本文件。
 4. 对应执行包目录下的 `intent.md` 和 `plan.md`。
 
+施工指令应直接写出上述阅读顺序。
+
 硬边界：
 
-- 外部 Agent 只能实现当前迭代包，不顺手做后续 Phase 10 项。
-- `draft only` 执行包不能直接外包；开工前必须重新核对当前代码和上
+- 每次只能实现当前迭代包，不顺手做后续 Phase 10 项。
+- `draft only` 执行包不能直接施工；开工前必须重新核对当前代码和上
   一个迭代结果，并把 `plan.md` 修订成可执行状态。
 - 需要 live autonomous run 时，只能走 `verify-scenario` skill；不得
   curl / fetch `/exploration/autonomous-run`。

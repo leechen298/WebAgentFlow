@@ -1,6 +1,13 @@
 # 10.2 · Replay execution + drift detection
 
-状态：Draft only，不可直接外包执行。开工前必须重新核对当前代码、
+## 执行前必读
+
+本包当前是 draft only，不能直接施工。后续修订为可
+执行状态前，请先阅读 `AGENTS.md`、`docs/product-model.md`、
+`docs/iterations/phase-10/phase-plan.md`，再读本目录的 `intent.md`
+和 `plan.md`。
+
+状态：Draft only，不可直接施工。开工前必须重新核对当前代码、
 `10.1` 和 `10.1.1` 的最终结果，并把 `plan.md` 修订成可执行状态。
 
 ## 目标

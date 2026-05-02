@@ -4,7 +4,22 @@
 [`docs/roadmap.md` § "Next — Phase 10"](../../roadmap.md)；本文件是
 **迭代索引**。Phase 10 使用语义编号目录，目录前缀与任务编号保持
 一致，例如 `10.1.1-autonomous-use-case-catalog/`。阶段级拆分与
-外包执行顺序见 [`phase-plan.md`](./phase-plan.md)。
+执行顺序见 [`phase-plan.md`](./phase-plan.md)。
+
+## 开发前必读
+
+开发任何 Phase 10 执行包前，请先按顺序阅读：
+
+1. `AGENTS.md`
+2. `docs/product-model.md`
+3. `docs/iterations/phase-10/phase-plan.md`
+4. 对应执行包目录下的 `intent.md`
+5. 对应执行包目录下的 `plan.md`
+
+`draft only` 执行包不能直接施工。每次只实现当前执行包，不顺手做
+后续编号任务；需要 live autonomous run 时只能通过
+`verify-scenario` skill，不能直接调用 `/exploration/autonomous-run`
+或 stream 接口。
 
 ## 本 Phase 的总目标（摘自 roadmap）
 
@@ -52,19 +67,19 @@
   `pass_gate=pass` / 5/5 / `run_id=6c97c030-…` /
   `learned_path_id=31d3cf58-…`。
 - [10.1.1-autonomous-use-case-catalog](./10.1.1-autonomous-use-case-catalog/) ——
-  在 workbench 之前补一个“当前可跑自主探索用例”的目录页，让外部执行者
+  在 workbench 之前补一个“当前可跑自主探索用例”的目录页，让操作员
   能从 authored specs 直接进入对应场景的 workbench。状态：
   **可执行**。
 - [10.2-replay-execution-drift-detection](./10.2-replay-execution-drift-detection/) ——
-  状态：**draft only，不可直接外包执行**。
+  状态：**draft only，不可直接施工**。
 - [10.3-popup-based-control-support](./10.3-popup-based-control-support/) ——
-  状态：**draft only，不可直接外包执行**。
+  状态：**draft only，不可直接施工**。
 - [10.4-custom-click-toggle-controls](./10.4-custom-click-toggle-controls/) ——
-  状态：**draft only，不可直接外包执行**。
+  状态：**draft only，不可直接施工**。
 - [10.5-form-label-extractor-expansion](./10.5-form-label-extractor-expansion/) ——
-  状态：**draft only，不可直接外包执行**。
+  状态：**draft only，不可直接施工**。
 - [10.6-cross-page-pattern-mining](./10.6-cross-page-pattern-mining/) ——
-  状态：**draft only，不可直接外包执行**。
+  状态：**draft only，不可直接施工**。
 
 > 后续新增执行包时，目录名必须和任务编号一致。不删已完成或已放弃的
 > 迭代目录（见 `docs/iterations/README.md` §"三条实操约定"）。

@@ -1,6 +1,13 @@
 # 10.4 · Custom click-toggle controls
 
-状态：Draft only，不可直接外包执行。开工前必须重新核对 `users`
+## 执行前必读
+
+本包当前是 draft only，不能直接施工。后续修订为可
+执行状态前，请先阅读 `AGENTS.md`、`docs/product-model.md`、
+`docs/iterations/phase-10/phase-plan.md`，再读本目录的 `intent.md`
+和 `plan.md`。
+
+状态：Draft only，不可直接施工。开工前必须重新核对 `users`
 fixture 中 Tag / pill 类控件的实际 DOM 与当前 analyzer 输出。
 
 ## 目标
