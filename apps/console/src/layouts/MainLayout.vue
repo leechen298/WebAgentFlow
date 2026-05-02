@@ -22,6 +22,10 @@
           <thunderbolt-outlined />
           <span>{{ $t('nav.autonomousExploration') }}</span>
         </a-menu-item>
+        <a-menu-item key="/exploration/autonomous/cases">
+          <unordered-list-outlined />
+          <span>{{ $t('nav.autonomousUseCases') }}</span>
+        </a-menu-item>
         <a-menu-item key="/exploration/autonomous/history">
           <history-outlined />
           <span>{{ $t('nav.autonomousHistory') }}</span>
@@ -55,6 +59,7 @@ import {
   DashboardOutlined,
   HistoryOutlined,
   ThunderboltOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons-vue';
 import { useAppStore } from '@/stores';
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue';

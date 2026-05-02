@@ -4,6 +4,7 @@ import HomePage from '@/pages/HomePage.vue';
 import AutonomousWorkbenchPage from '@/pages/AutonomousWorkbenchPage.vue';
 import AutonomousRunHistoryPage from '@/pages/AutonomousRunHistoryPage.vue';
 import AutonomousRunDetailPage from '@/pages/AutonomousRunDetailPage.vue';
+import AutonomousUseCasesPage from '@/pages/AutonomousUseCasesPage.vue';
 import i18n from '@/i18n';
 
 const router = createRouter({
@@ -26,6 +27,15 @@ const router = createRouter({
           meta: {
             titleKey: 'nav.autonomousExploration',
             menuKey: '/exploration/autonomous',
+          },
+        },
+        {
+          path: 'exploration/autonomous/cases',
+          name: 'exploration-autonomous-cases',
+          component: AutonomousUseCasesPage,
+          meta: {
+            titleKey: 'nav.autonomousUseCases',
+            menuKey: '/exploration/autonomous/cases',
           },
         },
         {

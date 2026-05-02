@@ -56,6 +56,8 @@ config.global.stubs = {
   'a-radio-group': true,
   'a-radio-button': true,
   'a-input-number-group': true,
+  'a-tooltip': true,
+  'a-checkbox': true,
 };
 
 config.global.plugins = [i18n];

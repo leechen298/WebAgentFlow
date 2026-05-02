@@ -13,6 +13,7 @@ describe('router', () => {
     expect(names).toEqual(expect.arrayContaining([
       'home',
       'exploration-autonomous',
+      'exploration-autonomous-cases',
       'exploration-autonomous-history',
       'exploration-autonomous-run-detail',
     ]));
