@@ -201,28 +201,36 @@ describe('autonomousStream', () => {
     expect(errors[0].message).toContain('no body');
   });
 
-  it('calls onDone when abort is triggered (fetch rejects with AbortError)', async () => {
-    const abortErr = new DOMException('aborted', 'AbortError');
-    globalThis.fetch = vi.fn().mockRejectedValue(abortErr);
+  it('aborts the fetch signal and calls onDone when stop is called', async () => {
+    let capturedSignal: AbortSignal | undefined;
+    globalThis.fetch = vi.fn((_url: string | URL | Request, init?: RequestInit) => {
+      capturedSignal = init?.signal ?? undefined;
+      return new Promise((_resolve, reject) => {
+        capturedSignal?.addEventListener('abort', () => {
+          reject(new DOMException('aborted', 'AbortError'));
+        });
+      });
+    }) as typeof globalThis.fetch;
 
     const { streamAutonomousRun } = await import('@/api/autonomousStream');
-    let doneCalled = false;
-
-    const stop = streamAutonomousRun(
-      { url: 'http://x' },
-      {
-        onEvent: vi.fn(),
-        onDone: () => {
-          doneCalled = true;
+    const done = new Promise<void>((resolve) => {
+      const stop = streamAutonomousRun(
+        { url: 'http://x' },
+        {
+          onEvent: vi.fn(),
+          onDone: resolve,
         },
-      },
-    );
+      );
 
-    stop();
+      expect(capturedSignal).toBeInstanceOf(AbortSignal);
+      expect(capturedSignal?.aborted).toBe(false);
 
-    // The async IIFE catches AbortError and calls onDone.
-    await new Promise((r) => setTimeout(r, 50));
-    expect(doneCalled).toBe(true);
+      stop();
+
+      expect(capturedSignal?.aborted).toBe(true);
+    });
+
+    await done;
   });
 
   it('calls onError for non-abort fetch errors', async () => {

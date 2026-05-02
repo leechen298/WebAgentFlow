@@ -33,12 +33,13 @@ const stubs = {
     props: ['size', 'type', 'danger', 'loading', 'disabled'],
     emits: ['click'],
     template:
-      '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+      '<button :disabled="disabled" :data-danger="danger" @click="$emit(\'click\')"><slot /></button>',
   },
   'a-space': { props: ['size'], template: '<div><slot /></div>' },
   'a-table': {
     props: ['columns', 'dataSource', 'pagination', 'loading', 'rowKey', 'size'],
-    template: '<table><slot name="bodyCell" :column="{}" :record="dataSource?.[0]" /><slot name="emptyText" /></table>',
+    template:
+      '<table><tbody><tr v-for="record in dataSource" :key="record[rowKey]"><td v-for="column in columns" :key="column.key"><slot name="bodyCell" :column="column" :record="record" /></td></tr></tbody><slot v-if="!dataSource || dataSource.length === 0" name="emptyText" /></table>',
   },
   'a-tag': {
     props: ['color'],
@@ -109,25 +110,22 @@ describe('AutonomousRunHistoryPage', () => {
     const buttons = wrapper.findAll('button');
     // Second button is "Open Workbench"
     const workbenchBtn = buttons.find((b) => b.text().includes('Workbench') || b.text().includes('workbench'));
-    if (workbenchBtn) {
-      await workbenchBtn.trigger('click');
-      expect(mockPush).toHaveBeenCalledWith('/exploration/autonomous');
-    }
+    expect(workbenchBtn).toBeDefined();
+    await workbenchBtn!.trigger('click');
+    expect(mockPush).toHaveBeenCalledWith('/exploration/autonomous');
   });
 
   it('viewDetail navigates to detail page', async () => {
-    // We need to exercise the viewDetail function. Since it's called via
-    // the actions column slot, we test it through the component's methods.
     const wrapper = await loadPage();
     await flushPromises();
-    // The table stub passes dataSource[0] to the bodyCell slot.
-    // Find the "View Detail" button.
+
     const buttons = wrapper.findAll('button');
-    const viewBtn = buttons.find((b) => b.text().includes('Detail') || b.text().includes('detail'));
-    if (viewBtn) {
-      await viewBtn.trigger('click');
-      expect(mockPush).toHaveBeenCalledWith('/exploration/autonomous/history/run-001');
-    }
+    const viewBtn = buttons.find((b) =>
+      ['View', 'view', '查看', '詳細'].some((label) => b.text().includes(label)),
+    );
+    expect(viewBtn).toBeDefined();
+    await viewBtn!.trigger('click');
+    expect(mockPush).toHaveBeenCalledWith('/exploration/autonomous/history/run-001');
   });
 
   it('copyRunJson fetches detail and writes to clipboard', async () => {
@@ -141,12 +139,11 @@ describe('AutonomousRunHistoryPage', () => {
 
     const buttons = wrapper.findAll('button');
     const copyBtn = buttons.find((b) => b.text().includes('Copy') || b.text().includes('copy'));
-    if (copyBtn) {
-      await copyBtn.trigger('click');
-      await flushPromises();
-      expect(getAutonomousRun).toHaveBeenCalledWith('run-001');
-      expect(writeText).toHaveBeenCalled();
-    }
+    expect(copyBtn).toBeDefined();
+    await copyBtn!.trigger('click');
+    await flushPromises();
+    expect(getAutonomousRun).toHaveBeenCalledWith('run-001');
+    expect(writeText).toHaveBeenCalled();
   });
 
   it('handleDelete calls API and refreshes list', async () => {
@@ -163,11 +160,10 @@ describe('AutonomousRunHistoryPage', () => {
     // Find the delete button (danger button).
     const buttons = wrapper.findAll('button');
     const deleteBtn = buttons.find((b) => b.attributes('data-danger') === 'true' || b.text().includes('Delete') || b.text().includes('delete'));
-    if (deleteBtn) {
-      await deleteBtn.trigger('click');
-      await flushPromises();
-      expect(deleteAutonomousRun).toHaveBeenCalledWith('run-001');
-    }
+    expect(deleteBtn).toBeDefined();
+    await deleteBtn!.trigger('click');
+    await flushPromises();
+    expect(deleteAutonomousRun).toHaveBeenCalledWith('run-001');
   });
 
   it('refresh button reloads first page', async () => {
@@ -182,11 +178,10 @@ describe('AutonomousRunHistoryPage', () => {
 
     const buttons = wrapper.findAll('button');
     const refreshBtn = buttons.find((b) => b.text().includes('Refresh') || b.text().includes('refresh'));
-    if (refreshBtn) {
-      await refreshBtn.trigger('click');
-      await flushPromises();
-      expect(listAutonomousRuns).toHaveBeenCalledWith({ limit: 20, cursor: null });
-    }
+    expect(refreshBtn).toBeDefined();
+    await refreshBtn!.trigger('click');
+    await flushPromises();
+    expect(listAutonomousRuns).toHaveBeenCalledWith({ limit: 20, cursor: null });
   });
 
   it('pagination: next page loads with cursor', async () => {
@@ -206,11 +201,10 @@ describe('AutonomousRunHistoryPage', () => {
 
     const buttons = wrapper.findAll('button');
     const nextBtn = buttons.find((b) => b.text().includes('Next') || b.text().includes('next'));
-    if (nextBtn) {
-      await nextBtn.trigger('click');
-      await flushPromises();
-      expect(listAutonomousRuns).toHaveBeenCalledWith({ limit: 20, cursor: 'cursor-1' });
-    }
+    expect(nextBtn).toBeDefined();
+    await nextBtn!.trigger('click');
+    await flushPromises();
+    expect(listAutonomousRuns).toHaveBeenCalledWith({ limit: 20, cursor: 'cursor-1' });
   });
 
   it('handles listAutonomousRuns error gracefully', async () => {
