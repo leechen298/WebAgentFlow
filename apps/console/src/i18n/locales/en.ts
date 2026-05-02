@@ -271,7 +271,7 @@ export default {
     passGate: 'pass gate',
     learnedPathTitle: 'LearnedPath',
     learnedPathIngested:
-      'This run was sunk into a LearnedPath. Confirm to promote it, or mark it wrong to block it.',
+      'This run is linked to a LearnedPath record. These actions only update that LearnedPath; they do not change this run record or the authored use case.',
     learnedPathAbsent:
       'No LearnedPath was stored for this run.',
     learnedPathAbsentNotPass:
@@ -281,13 +281,17 @@ export default {
     learnedPathConfirm: 'Confirm',
     learnedPathMarkWrong: 'Mark wrong',
     learnedPathConfirmPrompt:
-      'Promote this LearnedPath to confirmed? A future Phase 3 planner will prefer this path.',
+      'Mark this LearnedPath record as confirmed? This does not change this run record or the authored use case. A future Phase 3 planner will prefer this path.',
     learnedPathRejectPrompt:
-      'Mark this LearnedPath as deprecated? It will be excluded from future planning.',
+      'Mark this LearnedPath record as deprecated? This does not change this run record or the authored use case. It will be excluded from future planning.',
     learnedPathUpdated: 'LearnedPath updated',
     trustProvisional: 'provisional',
     trustConfirmed: 'confirmed',
     trustFlaky: 'flaky',
     trustDeprecated: 'deprecated',
+    deleteRun: 'Delete',
+    deleteConfirmPrompt: 'Delete this run? Associated LearnedPaths will also be removed.',
+    deleteSuccess: 'Run deleted',
+    deleteFailed: 'Failed to delete run',
   },
 }

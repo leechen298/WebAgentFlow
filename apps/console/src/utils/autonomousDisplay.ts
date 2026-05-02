@@ -36,12 +36,12 @@ export function stepColor(step: { ok?: boolean | null }): string {
 }
 
 /**
- * Color for a verdict tag (self-assessment or supervisor).
+ * Color for a public verdict tag (self-assessment or supervisor).
  *
- * Both rule-side and LLM-side now share one OutcomeVerdict vocabulary
- * (success / partial_success / failure / uncertain). Anything outside
- * that set falls through to the neutral default color — keeps the UI
- * from colouring stale / legacy verdict strings as pass/fail.
+ * Spec-driven API payloads expose scenario-relative verdicts: a matched
+ * negative-path scenario is `success`. Anything outside the known
+ * vocabulary falls through to neutral so stale / legacy verdict strings
+ * do not get coloured as pass/fail.
  */
 export function verdictColor(v: string | null | undefined): string {
   if (!v) return 'default';
@@ -63,8 +63,8 @@ export function verdictColor(v: string | null | undefined): string {
  *
  * Legacy inputs without a pass_gate (ad-hoc runs, older persisted
  * rows, workbench SSE before the comparator finishes) fall back to
- * the old verdict / scenarioMatched logic — that way the status
- * surface is coherent across mid-run states.
+ * verdict / scenarioMatched logic — that way the status surface is
+ * coherent across mid-run states.
  *
  * Returns:
  *   - 'success'     — pass_gate.status === 'pass'

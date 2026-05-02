@@ -724,6 +724,22 @@ function handleEvent(evt: { event: string; data: any }) {
       setPhase('verify', 'done');
       break;
     case 'run_completed':
+      if (data?.verdict || data?.summary) {
+        selfAssessment.value = {
+          verdict: data.verdict,
+          summary: data.summary,
+          final_url: data.final_url,
+          final_title: data.final_title,
+        };
+        setPhase('assess', 'done', data.verdict || '');
+      }
+      if (data?.supervisor) {
+        supervisor.value = data.supervisor;
+        setPhase('supervisor', 'done', data.supervisor?.verdict || '');
+      }
+      if (data?.verification?.scorecard) {
+        scorecard.value = data.verification.scorecard;
+      }
       setPhase('verify', 'done');
       setPhase('done', 'done');
       running.value = false;

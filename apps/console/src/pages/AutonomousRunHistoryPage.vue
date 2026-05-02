@@ -61,26 +61,34 @@
             </span>
           </template>
           <template v-else-if="column.key === 'actions'">
-            <a-space size="small">
-              <!-- Copy JSON: fetches full run detail and writes it to
-                   the clipboard. Use case: paste into Claude Code for
-                   analysis. -->
+            <a-space :size="4">
               <a-button
-                type="link"
                 size="small"
                 :loading="copyingRunId === record.run_id"
                 @click="copyRunJson(record.run_id)"
               >
                 {{ $t('autonomousHistory.copyData') }}
               </a-button>
-              <!-- View: navigate to dedicated detail page. -->
               <a-button
-                type="link"
                 size="small"
                 @click="viewDetail(record.run_id)"
               >
                 {{ $t('autonomousHistory.viewDetail') }}
               </a-button>
+              <a-popconfirm
+                :title="$t('autonomousHistory.deleteConfirmPrompt')"
+                :ok-text="$t('common.confirm')"
+                :cancel-text="$t('common.cancel')"
+                @confirm="handleDelete(record.run_id)"
+              >
+                <a-button
+                  size="small"
+                  danger
+                  :loading="deletingRunId === record.run_id"
+                >
+                  {{ $t('autonomousHistory.deleteRun') }}
+                </a-button>
+              </a-popconfirm>
             </a-space>
           </template>
         </template>
@@ -110,6 +118,7 @@ import { message } from 'ant-design-vue';
 import {
   listAutonomousRuns,
   getAutonomousRun,
+  deleteAutonomousRun,
   type AutonomousRunSummary,
 } from '@/api/exploration';
 import {
@@ -172,6 +181,7 @@ const hasNext = ref(false);
 const nextCursor = ref<string | null>(null);
 const cursorStack = ref<(string | null)[]>([]); // tracks previous cursors for "first" reset
 const copyingRunId = ref<string | null>(null);
+const deletingRunId = ref<string | null>(null);
 
 const columns = [
   { key: 'created_at', dataIndex: 'created_at', title: t('autonomousHistory.colCreated'), width: 180 },
@@ -181,7 +191,7 @@ const columns = [
   { key: 'status', dataIndex: 'status', title: t('autonomousHistory.colStatus'), width: 110 },
   { key: 'url', dataIndex: 'url', title: 'URL', ellipsis: true },
   { key: 'run_id', dataIndex: 'run_id', title: t('autonomousHistory.colRunId'), width: 100 },
-  { key: 'actions', title: t('common.actions'), width: 180, fixed: 'right' as const },
+  { key: 'actions', title: t('common.actions'), width: 240, fixed: 'right' as const },
 ];
 
 function formatDate(iso: string): string {
@@ -246,6 +256,19 @@ async function copyRunJson(runId: string): Promise<void> {
 
 function viewDetail(runId: string): void {
   void router.push(`/exploration/autonomous/history/${runId}`);
+}
+
+async function handleDelete(runId: string): Promise<void> {
+  deletingRunId.value = runId;
+  try {
+    await deleteAutonomousRun(runId);
+    message.success(t('autonomousHistory.deleteSuccess'));
+    await loadRuns(cursorStack.value.length ? cursorStack.value[cursorStack.value.length - 1] : null);
+  } catch (err) {
+    message.error((err as Error).message || t('autonomousHistory.deleteFailed'));
+  } finally {
+    deletingRunId.value = null;
+  }
 }
 
 function openWorkbench(): void {

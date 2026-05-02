@@ -45,33 +45,16 @@
             <a-tag color="blue">{{ $t('autonomous.badgeProjectCode') }}</a-tag>
           </template>
           <div v-if="selfAssessment">
-            <!-- Self-assessment tile shows the RAW rule-side verdict
-                 (success/failure/partial_success/uncertain) once the
-                 run's evaluation is settled. While ``isEvaluating``,
-                 the verdict tag is hidden entirely — showing a red
-                 "failure" chip here mid-stream was reading to
-                 operators as a decided bad outcome, even though the
-                 comparator + LLM hadn't weighed in yet. The summary +
-                 final URL below are still visible so the tile isn't
-                 empty during the wait. -->
+            <!-- This field is the backend's public, scenario-relative
+                 verdict once the final payload arrives. While
+                 ``isEvaluating``, hide the chip so an early mechanical
+                 verdict cannot be mistaken for the settled result. -->
             <a-tag
               v-if="!isEvaluating"
               :color="verdictColor(selfAssessment.verdict)"
             >
               {{ selfAssessment.verdict }}
             </a-tag>
-            <div
-              v-if="scenarioMatched === true && selfAssessment.verdict !== 'success'"
-              class="scenario-note"
-            >
-              {{ $t('autonomous.scenarioExpectNegativeNote', { verdict: selfAssessment.verdict }) }}
-            </div>
-            <div
-              v-else-if="scenarioMatched === false"
-              class="scenario-note scenario-note-warn"
-            >
-              {{ $t('autonomous.scenarioDeviationNote', { verdict: selfAssessment.verdict }) }}
-            </div>
             <div class="summary">{{ selfAssessment.summary }}</div>
             <div v-if="selfAssessment.final_url" class="final-meta">
               {{ $t('autonomous.finalUrl') }}:
@@ -91,9 +74,7 @@
           </template>
           <div v-if="supervisor">
             <!-- Same pattern as the self-assessment tile: show the
-                 raw mechanical verdict once evaluation is settled,
-                 hide the chip while ``isEvaluating`` so a brief
-                 "failure" flash doesn't spook the operator. -->
+                 backend's public verdict once evaluation is settled. -->
             <a-tag
               v-if="!isEvaluating"
               :color="verdictColor(supervisor.verdict)"
@@ -123,12 +104,6 @@
             >
               {{ $t('autonomous.supervisorPartial') }}
             </a-tag>
-            <div
-              v-if="scenarioMatched === true && supervisor.verdict && supervisor.verdict !== 'success'"
-              class="scenario-note"
-            >
-              {{ $t('autonomous.scenarioExpectNegativeNote', { verdict: supervisor.verdict }) }}
-            </div>
             <div class="summary">{{ supervisor.summary }}</div>
             <div v-if="supervisor.anomalies?.length">
               <strong>{{ $t('autonomous.anomalies') }}:</strong>
@@ -290,10 +265,6 @@ interface ScorecardBlockShape {
   score?: number;
 }
 
-interface VerdictCheckShape {
-  matches_expectation?: boolean;
-}
-
 interface PassGateShape {
   status?: 'pass' | 'fail' | 'unverified';
   reasons?: string[];
@@ -305,7 +276,6 @@ interface ScorecardShape {
   verdict_accuracy?: ScorecardBlockShape;
   distraction_avoidance?: ScorecardBlockShape;
   supervisor_agreement?: ScorecardBlockShape;
-  verdict_check?: VerdictCheckShape;
   pass_gate?: PassGateShape | null;
   [key: string]: unknown;
 }
@@ -326,12 +296,6 @@ const props = withDefaults(
   }>(),
   { isRunning: false },
 );
-
-const scenarioMatched = computed<boolean | null>(() => {
-  const vc = props.scorecard?.verdict_check;
-  if (!vc || typeof vc.matches_expectation !== 'boolean') return null;
-  return vc.matches_expectation;
-});
 
 const passGateStatus = computed<string | null>(() => {
   return props.scorecard?.pass_gate?.status ?? null;
@@ -483,16 +447,6 @@ async function copyThinking(): Promise<void> {
   margin-top: 8px;
   font-size: 13px;
   color: #595959;
-}
-.scenario-note {
-  margin-top: 6px;
-  font-size: 11px;
-  color: #8c8c8c;
-  font-style: italic;
-  line-height: 1.4;
-}
-.scenario-note-warn {
-  color: #d4380d;
 }
 .pass-gate-banner {
   padding: 10px 12px;

@@ -289,5 +289,9 @@ export default {
     trustConfirmed: '確認済み',
     trustFlaky: '不安定',
     trustDeprecated: '非推奨',
+    deleteRun: '削除',
+    deleteConfirmPrompt: 'この実行を削除しますか？関連する LearnPath も削除されます。',
+    deleteSuccess: '実行を削除しました',
+    deleteFailed: '実行の削除に失敗しました',
   },
 }

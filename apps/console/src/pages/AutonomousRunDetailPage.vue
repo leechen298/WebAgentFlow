@@ -13,6 +13,16 @@
         >
           {{ $t('autonomousHistory.reopenInWorkbench') }}
         </a-button>
+        <a-popconfirm
+          :title="$t('autonomousHistory.deleteConfirmPrompt')"
+          :ok-text="$t('common.confirm')"
+          :cancel-text="$t('common.cancel')"
+          @confirm="handleDelete"
+        >
+          <a-button danger :loading="deleting">
+            {{ $t('autonomousHistory.deleteRun') }}
+          </a-button>
+        </a-popconfirm>
       </template>
     </a-page-header>
 
@@ -130,6 +140,7 @@
             </a-space>
             <div class="learned-path-actions">
               <a-popconfirm
+                v-if="canConfirmLearnedPath"
                 :title="$t('autonomousHistory.learnedPathConfirmPrompt')"
                 :ok-text="$t('autonomousHistory.learnedPathConfirm')"
                 :cancel-text="$t('common.cancel')"
@@ -137,13 +148,21 @@
               >
                 <a-button
                   type="primary"
-                  :disabled="learnedPathTrust === 'confirmed' || updatingTrust"
                   :loading="updatingTrust && pendingAction === 'confirmed'"
                 >
                   {{ $t('autonomousHistory.learnedPathConfirm') }}
                 </a-button>
               </a-popconfirm>
+              <a-button
+                v-else
+                type="primary"
+                disabled
+                :loading="updatingTrust && pendingAction === 'confirmed'"
+              >
+                {{ $t('autonomousHistory.learnedPathConfirm') }}
+              </a-button>
               <a-popconfirm
+                v-if="canDeprecateLearnedPath"
                 :title="$t('autonomousHistory.learnedPathRejectPrompt')"
                 :ok-text="$t('autonomousHistory.learnedPathMarkWrong')"
                 :cancel-text="$t('common.cancel')"
@@ -151,13 +170,21 @@
               >
                 <a-button
                   danger
-                  :disabled="learnedPathTrust === 'deprecated' || updatingTrust"
                   :loading="updatingTrust && pendingAction === 'deprecated'"
                   style="margin-left: 8px"
                 >
                   {{ $t('autonomousHistory.learnedPathMarkWrong') }}
                 </a-button>
               </a-popconfirm>
+              <a-button
+                v-else
+                danger
+                disabled
+                :loading="updatingTrust && pendingAction === 'deprecated'"
+                style="margin-left: 8px"
+              >
+                {{ $t('autonomousHistory.learnedPathMarkWrong') }}
+              </a-button>
             </div>
             <div class="learned-path-id">
               <code>{{ learnedPathId }}</code>
@@ -199,6 +226,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import {
   getAutonomousRun,
+  deleteAutonomousRun,
   patchLearnedPathTrust,
   type AutonomousRunDetail,
   type LearnedPathPatchStatus,
@@ -221,6 +249,7 @@ const learnedPathTrust = ref<LearnedPathTrust | null>(null);
 const passGateStatus = ref<'pass' | 'fail' | 'unverified' | null>(null);
 const updatingTrust = ref(false);
 const pendingAction = ref<LearnedPathPatchStatus | null>(null);
+const deleting = ref(false);
 
 /**
  * Pick the right "no LearnedPath" copy based on the run's gate
@@ -263,6 +292,14 @@ const trustTagColor = computed(() => {
       return 'blue';
   }
 });
+
+const canConfirmLearnedPath = computed(
+  () => Boolean(learnedPathId.value) && learnedPathTrust.value !== 'confirmed' && !updatingTrust.value,
+);
+
+const canDeprecateLearnedPath = computed(
+  () => Boolean(learnedPathId.value) && learnedPathTrust.value !== 'deprecated' && !updatingTrust.value,
+);
 
 // ─── Derived views over detail.result ────────────────────────
 // `result` is the full AutonomousExplorationResult snapshot produced
@@ -425,6 +462,21 @@ function onConfirm(): void {
 
 function onMarkWrong(): void {
   void updateTrust('deprecated');
+}
+
+async function handleDelete(): Promise<void> {
+  const runId = String(route.params.run_id || '');
+  if (!runId) return;
+  deleting.value = true;
+  try {
+    await deleteAutonomousRun(runId);
+    message.success(t('autonomousHistory.deleteSuccess'));
+    void router.push('/exploration/autonomous/history');
+  } catch (err) {
+    message.error((err as Error).message || t('autonomousHistory.deleteFailed'));
+  } finally {
+    deleting.value = false;
+  }
 }
 
 onMounted(load);

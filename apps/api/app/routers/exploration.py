@@ -99,6 +99,58 @@ def _pass_gate_from_final_data(final_data: dict[str, Any]) -> str | None:
     return gate.get("status")
 
 
+def _scenario_verdict_from_pass_gate(status: str | None) -> str | None:
+    """Map the spec-level pass gate to the public verdict vocabulary.
+
+    The rule-side engine still computes a mechanical page outcome first:
+    a negative-path scenario like ``invalid_credentials`` mechanically
+    ends on a login failure. Once the comparator proves that this is the
+    expected outcome, the public run verdict should be scenario-relative:
+    matching the spec is ``success``; deviating from it is ``failure``.
+    """
+    if status == "pass":
+        return "success"
+    if status == "fail":
+        return "failure"
+    if status == "unverified":
+        return "uncertain"
+    return None
+
+
+def _apply_scenario_relative_verdicts(
+    final_data: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Rewrite public verdict fields from mechanical to scenario-relative.
+
+    Internal audit details are preserved under ``mechanical_verdict`` so
+    the raw browser outcome is still inspectable. The scorecard keeps
+    ``verdict_check.self_verdict`` unchanged because it is the comparator
+    evidence used to decide whether the scenario expectation matched.
+    """
+    if not isinstance(final_data, dict):
+        return final_data
+
+    status = _pass_gate_from_final_data(final_data)
+    scenario_verdict = _scenario_verdict_from_pass_gate(status)
+    if scenario_verdict is None:
+        return final_data
+
+    current = final_data.get("verdict")
+    if current != scenario_verdict:
+        final_data.setdefault("mechanical_verdict", current)
+        final_data["verdict"] = scenario_verdict
+        final_data["success"] = scenario_verdict == "success"
+
+    supervisor = final_data.get("supervisor")
+    if isinstance(supervisor, dict):
+        current_supervisor = supervisor.get("verdict")
+        if current_supervisor != scenario_verdict:
+            supervisor.setdefault("mechanical_verdict", current_supervisor)
+            supervisor["verdict"] = scenario_verdict
+
+    return final_data
+
+
 _ACTION_KEEP_KEYS = (
     "step",
     "action_type",
@@ -181,6 +233,45 @@ def _maybe_ingest_learned_path(
         source_run_id=str(run.id),
     )[0]
     return str(path.id)
+
+
+def _learned_path_for_run(db: Session, run: ExplorationRun) -> Any | None:
+    """Resolve the LearnedPath a run contributed to.
+
+    Fresh rows are linked by ``source_run_id``. Repeated successful runs
+    hit the LearnedPath dedup key instead, so their ``source_run_id``
+    remains the first run that created the path. For detail pages those
+    repeated pass runs should still expose the existing LearnedPath so
+    the operator can confirm or mark it wrong.
+    """
+    repo = LearnedPathRepository(db)
+    linked = repo.find_by_source_run(str(run.id))
+    if linked is not None:
+        return linked
+
+    final_data = run.result_snapshot_json
+    if not isinstance(final_data, dict):
+        return None
+    if _pass_gate_from_final_data(final_data) != "pass":
+        return None
+
+    page_analysis_dict = final_data.get("page_analysis")
+    if not isinstance(page_analysis_dict, dict):
+        return None
+    try:
+        analysis = PageAnalysis.model_validate(page_analysis_dict)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("LearnedPath: failed to rehydrate PageAnalysis: %s", exc)
+        return None
+
+    strategy = run.strategy_json or {}
+    url = analysis.url or strategy.get("url") or ""
+    return repo.find_by_identity(
+        page_template=path_template(url),
+        query_signature=query_signature(url),
+        dom_fingerprint=dom_fingerprint(analysis),
+        scenario=strategy.get("scenario") or "",
+    )
 
 
 def _persist_autonomous_run(
@@ -393,6 +484,7 @@ def autonomous_exploration_endpoint(
     data = result.model_dump()
     if verification_payload is not None:
         data["verification"] = verification_payload
+        _apply_scenario_relative_verdicts(data)
 
     # Top-level screenshot
     if data.get("final_screenshot_ref"):
@@ -573,6 +665,7 @@ def autonomous_exploration_stream(
             final_data = result.model_dump()
             if verification_payload is not None:
                 final_data["verification"] = verification_payload
+                _apply_scenario_relative_verdicts(final_data)
             if final_data.get("final_screenshot_ref"):
                 final_data["final_screenshot_ref"] = _to_screenshot_url(
                     final_data["final_screenshot_ref"],
@@ -755,6 +848,12 @@ class AutonomousRunSummary(BaseModel):
     summary: str | None = None
 
 
+class AutonomousRunDeleteResult(BaseModel):
+    run_id: str
+    deleted: bool
+    deleted_learned_path_ids: list[str] = Field(default_factory=list)
+
+
 @router.get(
     "/autonomous-runs/list",
     response_model=ApiResponse[CursorPage[AutonomousRunSummary]],
@@ -844,7 +943,7 @@ def get_autonomous_run(
     run = repo.get(run_id)
     if run is None or (run.strategy_json or {}).get("kind") != "autonomous":
         raise HTTPException(status_code=404, detail=f"Autonomous run not found: {run_id}")
-    learned = LearnedPathRepository(db).find_by_source_run(str(run.id))
+    learned = _learned_path_for_run(db, run)
     return ApiResponse(
         data={
             "run_id": str(run.id),
@@ -858,6 +957,40 @@ def get_autonomous_run(
             "learned_path_id": str(learned.id) if learned else None,
             "learned_path_trust": str(learned.trust) if learned else None,
         }
+    )
+
+
+@router.delete(
+    "/autonomous-runs/{run_id}",
+    response_model=ApiResponse[AutonomousRunDeleteResult],
+)
+def delete_autonomous_run(
+    db: DbSession,
+    run_id: str,
+) -> ApiResponse[AutonomousRunDeleteResult]:
+    """Delete one autonomous run and its source LearnedPath, if any."""
+    repo = ExplorationRunRepository(db)
+    run = repo.get(run_id)
+    if run is None or (run.strategy_json or {}).get("kind") != "autonomous":
+        raise HTTPException(status_code=404, detail=f"Autonomous run not found: {run_id}")
+
+    learned_path_ids = LearnedPathRepository(db).delete_by_source_run(
+        str(run.id),
+        commit=False,
+    )
+    try:
+        db.delete(run)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    return ApiResponse(
+        data=AutonomousRunDeleteResult(
+            run_id=run_id,
+            deleted=True,
+            deleted_learned_path_ids=learned_path_ids,
+        )
     )
 
 
@@ -984,5 +1117,3 @@ def get_screenshot(filename: str) -> FileResponse:
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail=f"Screenshot not found: {filename}")
     return FileResponse(path, media_type="image/png")
-
-

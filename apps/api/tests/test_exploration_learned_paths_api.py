@@ -2,12 +2,46 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.models.exploration_run import (
+    ExplorationMode,
+    ExplorationRun,
+    ExplorationRunStatus,
+)
+from app.models.learned_path import LearnedPath
 from app.repos.learned_paths_repo import LearnedPathRepository
+
+
+def _insert_run(
+    db_session: Session,
+    *,
+    kind: str | None = "autonomous",
+) -> str:
+    strategy = {
+        "url": "https://example.com/users",
+        "spec_id": "users",
+        "scenario": "filter_by_status",
+        "verdict": "success",
+    }
+    if kind is not None:
+        strategy["kind"] = kind
+    run = ExplorationRun(
+        page_signature="https://example.com/users",
+        mode=ExplorationMode.FORM,
+        status=ExplorationRunStatus.COMPLETED,
+        strategy_json=strategy,
+        summary="ok",
+        result_snapshot_json={"verdict": "success"},
+    )
+    db_session.add(run)
+    db_session.commit()
+    db_session.refresh(run)
+    return str(run.id)
 
 
 def _ingest_sample(db_session: Session, **overrides) -> str:
@@ -137,6 +171,64 @@ def test_patch_trust_unknown_id_is_404(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Autonomous run deletion
+# ---------------------------------------------------------------------------
+
+
+def test_delete_autonomous_run_removes_run_and_source_learned_path(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session)
+    learned_path_id = _ingest_sample(db_session, source_run_id=run_id)
+
+    resp = client.delete(f"/exploration/autonomous-runs/{run_id}")
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data == {
+        "run_id": run_id,
+        "deleted": True,
+        "deleted_learned_path_ids": [learned_path_id],
+    }
+    assert db_session.get(ExplorationRun, run_id) is None
+    assert db_session.get(LearnedPath, learned_path_id) is None
+
+
+def test_delete_autonomous_run_without_learned_path_returns_empty_ids(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session)
+
+    resp = client.delete(f"/exploration/autonomous-runs/{run_id}")
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["deleted"] is True
+    assert data["deleted_learned_path_ids"] == []
+    assert db_session.get(ExplorationRun, run_id) is None
+
+
+def test_delete_autonomous_run_unknown_id_is_404(client: TestClient) -> None:
+    resp = client.delete("/exploration/autonomous-runs/missing-id")
+
+    assert resp.status_code == 404
+
+
+def test_delete_autonomous_run_rejects_non_autonomous_run(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session, kind="candidate")
+
+    resp = client.delete(f"/exploration/autonomous-runs/{run_id}")
+
+    assert resp.status_code == 404
+    assert db_session.get(ExplorationRun, run_id) is not None
+
+
+# ---------------------------------------------------------------------------
 # Ingest hook
 # ---------------------------------------------------------------------------
 
@@ -230,6 +322,60 @@ def test_ingest_hook_writes_on_pass_gate_pass(
     assert row.query_signature == {"status": "active"}
     # screenshot_ref must have been stripped from actions.
     assert "screenshot_ref" not in row.actions[0]
+
+
+def test_get_autonomous_run_links_repeated_pass_to_deduped_learned_path(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    """Repeated passes dedupe to the first LearnedPath, but every
+    matching run detail should still expose that path for trust edits.
+    """
+    from sqlalchemy.orm import sessionmaker
+
+    from app.routers.exploration import (
+        AutonomousExplorePayload,
+        _persist_autonomous_run,
+    )
+
+    TestingSessionLocal = sessionmaker(
+        bind=db_session.bind,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+
+    payload = AutonomousExplorePayload(
+        url="https://example.com/users?status=active",
+        scenario="filter_by_status",
+    )
+    final_data = _final_data_with_pass_gate("pass")
+    final_data["page_analysis"]["url"] = "https://example.com/users?status=active"
+
+    with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
+        first_run_id = _persist_autonomous_run(
+            payload,
+            deepcopy(final_data),
+            verdict="success",
+            status=ExplorationRunStatus.COMPLETED,
+        )
+        second_run_id = _persist_autonomous_run(
+            payload,
+            deepcopy(final_data),
+            verdict="success",
+            status=ExplorationRunStatus.COMPLETED,
+        )
+
+    rows, _, _ = LearnedPathRepository(db_session).list_page()
+    assert len(rows) == 1
+    path = rows[0]
+    assert path.source_run_id == first_run_id
+    assert path.hit_count == 2
+
+    resp = client.get(f"/exploration/autonomous-runs/get?run_id={second_run_id}")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["learned_path_id"] == path.id
+    assert data["learned_path_trust"] == "provisional"
 
 
 def test_ingest_hook_identity_tracks_analyzer_url_on_redirect(

@@ -167,6 +167,34 @@ class LearnedPathRepository:
         )
         return self.session.scalars(stmt).first()
 
+    def find_by_identity(
+        self,
+        *,
+        page_template: str,
+        query_signature: dict[str, str],
+        dom_fingerprint: str,
+        scenario: str,
+    ) -> LearnedPath | None:
+        """Find the deduped LearnedPath for a page/scenario identity."""
+        key = compute_dedup_key(
+            page_template=page_template,
+            query_signature=query_signature,
+            dom_fingerprint=dom_fingerprint,
+            scenario=scenario,
+        )
+        return self._find_by_dedup_key(key)
+
+    def delete_by_source_run(self, run_id: str, *, commit: bool = True) -> list[str]:
+        """Delete LearnedPaths sourced from a run and return their ids."""
+        stmt = select(LearnedPath).where(LearnedPath.source_run_id == run_id)
+        rows = list(self.session.scalars(stmt).all())
+        ids = [str(row.id) for row in rows]
+        for row in rows:
+            self.session.delete(row)
+        if commit:
+            self.session.commit()
+        return ids
+
     def list_page(
         self,
         *,

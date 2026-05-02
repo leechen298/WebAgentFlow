@@ -184,3 +184,15 @@ export async function getAutonomousRun(runId: string): Promise<AutonomousRunDeta
     params: { run_id: runId },
   })) as unknown as AutonomousRunDetail;
 }
+
+export interface AutonomousRunDeleteResult {
+  run_id: string;
+  deleted: boolean;
+  deleted_learned_path_ids: string[];
+}
+
+export async function deleteAutonomousRun(runId: string): Promise<AutonomousRunDeleteResult> {
+  return (await apiClient.delete(
+    `/exploration/autonomous-runs/${runId}`,
+  )) as unknown as AutonomousRunDeleteResult;
+}

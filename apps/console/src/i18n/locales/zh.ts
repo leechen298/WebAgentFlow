@@ -271,7 +271,7 @@ export default {
     passGate: '通过闸门',
     learnedPathTitle: 'LearnedPath',
     learnedPathIngested:
-      '这次运行已经沉淀为一条 LearnedPath。点「确认」提升为 confirmed，或「标记错误」让它进入 deprecated。',
+      '这次运行已关联到一条 LearnedPath 数据。下面的操作只会修改这条 LearnedPath，不会修改当前运行记录，也不会修改 authored use case。',
     learnedPathAbsent:
       '这次运行没有对应的 LearnedPath。',
     learnedPathAbsentNotPass:
@@ -280,12 +280,18 @@ export default {
       '这次运行通过了 pass_gate，但没有关联的 LearnedPath —— 写入 hook 可能失败了，或者这条记录早于 hook 上线。请到服务端日志里搜 "LearnedPath ingest failed"。',
     learnedPathConfirm: '确认',
     learnedPathMarkWrong: '标记错误',
-    learnedPathConfirmPrompt: '把这条 LearnedPath 提升为 confirmed？未来 Phase 3 规划会优先选它。',
-    learnedPathRejectPrompt: '把这条 LearnedPath 标记为 deprecated？未来规划不再使用它。',
+    learnedPathConfirmPrompt:
+      '把这条 LearnedPath 数据标记为 confirmed？这不会修改当前运行记录或用例定义，未来 Phase 3 规划会优先选它。',
+    learnedPathRejectPrompt:
+      '把这条 LearnedPath 数据标记为 deprecated？这不会修改当前运行记录或用例定义，未来规划不再使用它。',
     learnedPathUpdated: 'LearnedPath 已更新',
     trustProvisional: '暂存',
     trustConfirmed: '已确认',
     trustFlaky: '不稳定',
     trustDeprecated: '已废弃',
+    deleteRun: '删除',
+    deleteConfirmPrompt: '确定删除此运行？关联的 LearnedPath 也将被移除。',
+    deleteSuccess: '运行已删除',
+    deleteFailed: '删除运行失败',
   },
 }

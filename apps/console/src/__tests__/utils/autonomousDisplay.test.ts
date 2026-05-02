@@ -6,10 +6,10 @@ import {
 } from '@/utils/autonomousDisplay';
 
 describe('autonomousDisplay effectiveStatus', () => {
-  // Core of the fix: for negative-path scenarios the raw verdict is
-  // "failure" by design. scenario_matched is the reconciliation —
-  // UI components must key off THIS, not the verdict, so
-  // invalid_credentials runs don't show up red when they passed spec.
+  // Legacy fallback: old persisted rows may still carry a mechanical
+  // failure verdict for negative-path scenarios. New API payloads
+  // rewrite public verdicts to scenario-relative values, but the helper
+  // keeps older rows readable.
 
   it('scenario matched=true overrides a failure verdict', () => {
     expect(
@@ -69,9 +69,9 @@ describe('autonomousDisplay effectiveStatus', () => {
 });
 
 describe('autonomousDisplay verdictColor (unchanged legacy mapping)', () => {
-  // Still exported + used in places that intentionally render the
-  // raw verdict (e.g. the self-assessment tile inside VerificationBlock
-  // which shows rule-side mechanics alongside the scenario-match badge).
+  // Still exported + used by verdict tags. Spec-driven payloads should
+  // already be scenario-relative; legacy / ad-hoc payloads may still use
+  // the older mechanical vocabulary.
   it('maps the shared OutcomeVerdict vocabulary', () => {
     expect(verdictColor('success')).toBe('green');
     expect(verdictColor('failure')).toBe('red');
