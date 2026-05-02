@@ -1,28 +1,32 @@
 # Scope Boundaries — What's Explicitly Out of Scope
 
 This document lists capabilities that are **deliberately not** part of the
-current phase. When in doubt, check here before proposing or implementing
-them. Items on this list are deferred until a prerequisite phase validates.
+current delivery milestone. When in doubt, check here before proposing or
+implementing them. Items on this list are deferred until a prerequisite
+milestone validates.
 
-For **what the product is** (the three-phase model and the Agents),
+For **what the product is** (the L1/L2/L3 lifecycle model and the Agents),
 see [`product-model.md`](./product-model.md). If a proposal isn't
 in that document AND isn't listed here as out-of-scope, pause and
 ask — don't invent.
 
-## Current Phase
+## Current Delivery Milestone
 
-Phase 9 — exploration loop, success evaluation, autonomous workbench.
-Phases 1–7 are complete (see [`architecture.md`](./architecture.md)).
+M10 — Path Asset Foundation. Historical iteration folders still use
+`phase-10`, but new planning language uses M10 to avoid confusion with
+Lifecycle Stage L1/L2/L3.
+
+Current executable package: `10.2-replay-execution-drift-detection`.
 
 ## Not in Scope
 
 ### Execution & Orchestration
 
-- **Full CLI tool for end-user task execution** — not this phase. A
+- **Full CLI tool for end-user task execution** — not this milestone. A
   user-facing CLI to drive LearnedPaths / skills from the shell is a
   long-term delivery direction in
   [`product-model.md`](./product-model.md) §10.3; its priority sits
-  below landing the three-phase main loop. The narrow `wagent` CLI
+  below landing the L1/L2/L3 main loop. The narrow `wagent` CLI
   shipped today (in `apps/cli/`, with subcommands `wagent verify` and
   `wagent skill install`) only backs the `verify-scenario` Claude
   Code skill (AI coding agents asking the engine to verify a
@@ -35,8 +39,11 @@ Phases 1–7 are complete (see [`architecture.md`](./architecture.md)).
   so an AI coding agent can run scenarios without bypassing the
   Supervisor Agent. A broader registry for third-party Agents is
   still a long-term direction in `product-model.md` §10.3.
-- **Replay execution strategies** — replaying recorded steps
-  deterministically across environments is a later concern (Phase 10).
+- **Task-to-Path Planning MVP** — user task / chat input, Agent D Path
+  Planner, path retrieval / ranking, slot binding, execution
+  confirmation, and Agent E result reporting are M11, not M10.2.
+- **Recovery / abort dialogue** — Agent F Recovery Dialogue and Agent G
+  Abort Dialogue are M12, not M10.2.
 
 ### Supervision
 
@@ -48,10 +55,15 @@ Phases 1–7 are complete (see [`architecture.md`](./architecture.md)).
 
 ### Learning & Abstraction
 
-- **User behavior ↔ page change causal modeling** — future work under
-  Phase 10.
-- **Historical path template caching** — Phase 10 / 11.
-- **User correction & behavior teaching** — Phase 11.
+- **User-guided learning and correction** — visible-browser takeover,
+  real user-action recording, provenance write-back, and path correction
+  are M13.
+- **Control coverage expansion and pattern mining** — popup controls,
+  custom click-toggle controls, additional label handlers, and
+  cross-page pattern mining are M14 unless explicitly reprioritized.
+- **Learning Reporter product surface** — Agent C's user-facing learning
+  report is M14. Current workbench/history output is developer-oriented
+  evidence, not the final Agent C report.
 
 ### Parser / AST
 
@@ -63,27 +75,30 @@ Phases 1–7 are complete (see [`architecture.md`](./architecture.md)).
 
 ### Data / Persistence
 
-- **Approve / reject full persistence** (autonomous and task-driven
-  exploration) — currently MVP placeholders; the authoritative LearnedPath
-  write-back is deferred.
+- **Full external interface suite** — stable API / CLI / Skill / Tool
+  surfaces for external schedulers are M16.
 - **Autonomous-run result persistence** — SHIPPED. Every autonomous run
   is written to `exploration_runs` with
   `strategy_json.kind == "autonomous"`. List + detail via
   `GET /exploration/autonomous-runs[/{run_id}]`, filterable by `spec_id`
-  and `scenario`. Still out of scope: LearnedPath write-back on approve.
+  and `scenario`.
+- **LearnedPath write-back** — SHIPPED in M10.1 for `pass_gate = pass`
+  autonomous runs. Further write-back from user-guided learning belongs
+  to M13.
 - **Cross-device / cloud sync of task definitions** — local-first is
-  the current stance; cross-device sync is out of scope for this phase.
+  the current stance; cross-device sync is out of scope for this
+  milestone.
 
 ## Re-evaluation Triggers
 
 Open this list whenever:
 
-- A phase completes and you're asking "what's next?" — check prerequisites
+- A milestone completes and you're asking "what's next?" — check prerequisites
   and entry criteria for deferred items.
 - A user asks for a feature that "feels obvious" but isn't in the codebase —
   it's probably deliberately deferred.
 - Working on a feature that seems to require one of these — consider whether
-  a smaller alternative would unblock the current phase without pulling in
+  a smaller alternative would unblock the current milestone without pulling in
   the deferred work.
 
 ## Related

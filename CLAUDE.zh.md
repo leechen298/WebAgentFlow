@@ -249,11 +249,11 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 ## 另见
 
 - [`docs/product-model.zh.md`](./docs/product-model.zh.md) —— **产品形态
-  权威文档**：三个阶段（自主学习 / 用户引导学习 / 实际工作）、七个
-  Agent、跨阶段不变量。**先看这份**。
+  权威文档**：L1/L2/L3 生命周期阶段（自主学习 / 用户引导学习 /
+  实际工作）、七个 Agent、跨阶段不变量。**先看这份**。
 - [`docs/architecture.zh.md`](./docs/architecture.zh.md) —— AST 双轨、
   服务子包结构、iframe 处理。
-- [`docs/scope-boundaries.zh.md`](./docs/scope-boundaries.zh.md) —— 当前阶段
+- [`docs/scope-boundaries.zh.md`](./docs/scope-boundaries.zh.md) —— 当前交付里程碑
   **明确不做**的内容。
 - [`docs/roadmap.zh.md`](./docs/roadmap.zh.md) —— v0.1 阶段里程碑。
 - [`docs/dev-setup.zh.md`](./docs/dev-setup.zh.md) —— 完整的开发环境

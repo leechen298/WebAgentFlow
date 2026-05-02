@@ -2,11 +2,13 @@
 
 ## 目标
 
-WebAgentFlow 提供一个结构化平台：捕获 web 交互、自主分析页面、规划与执行动作、对照人工编写的基线验证结果 —— 所有这一切由 Vue 控制台、FastAPI 后端、Python worker、浏览器扩展共同协作完成。
+WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 LearnedPath、
+基于学习数据规划任务执行，并对照人工编写的基线验证结果 —— 由 Vue
+控制台、FastAPI 后端、Python worker 脚手架和 Playwright runtime 协作。
 
 ## 系统分层
 
-1. **表示层** —— Vue 控制台 + Chrome 扩展，提供面向操作者的界面。
+1. **表示层** —— Vue 控制台提供面向操作者的界面。
 2. **应用层** —— FastAPI 服务承载 API 契约、编排入口、集成边界。
 3. **执行层** —— Playwright runtime + 异步 worker，负责浏览器自动化。
 4. **基础设施层** —— PostgreSQL、Redis、MinIO 分别提供持久化、缓存、对象存储。
@@ -21,9 +23,15 @@ WebAgentFlow 提供一个结构化平台：捕获 web 交互、自主分析页�
 
 ---
 
-## 当前阶段与进展
+## 当前进展
 
-项目按 12 阶段路线图推进。Phases 1–7 已完成。exploration + autonomous workbench 正在 active development。
+下面的旧 12 阶段列表记录的是技术路线历史。当前规划术语以
+[`product-model.zh.md`](./product-model.zh.md) 和
+[`roadmap.zh.md`](./roadmap.zh.md) 为准：产品生命周期阶段是 L1 / L2 /
+L3，交付里程碑是 M10 / M11 / ...
+
+当前交付里程碑：**M10 Path Asset Foundation / 路径资产基础**。当前
+可执行包：`10.2-replay-execution-drift-detection`。
 
 **已完成阶段：**
 
@@ -117,7 +125,7 @@ WebAgentFlow 提供一个结构化平台：捕获 web 交互、自主分析页�
 - **不**做早期语义压缩或信息丢失。
 - 由客户端抓取的 HTML 在服务端生成。
 
-**Simplified AST**（未来，**不是**当前阶段）：
+**Simplified AST**（未来，**不是**当前交付里程碑）：
 
 - Full AST 的**结构保留投影** —— 不是改写。
 - 保持与 Full AST 相同的树形。
@@ -150,7 +158,10 @@ WebAgentFlow 提供一个结构化平台：捕获 web 交互、自主分析页�
 
 ---
 
-## E. 开发时间线（12 阶段）
+## E. 历史开发时间线（旧 12 步视图）
+
+这份列表保留作架构历史，不是当前路线图术语。向前规划请使用
+`roadmap.zh.md` 的 M10 / M11 / ...。
 
 1. ~~Page fact foundation~~ ✅
 2. ~~User event recording~~ ✅
@@ -159,18 +170,19 @@ WebAgentFlow 提供一个结构化平台：捕获 web 交互、自主分析页�
 5. ~~Operation Step building~~ ✅
 6. ~~Agent initial understanding of pages and steps~~ ✅
 7. ~~Full execution capability (Playwright)~~ ✅
-8. Wait-for-expected-change 机制 + 自动化测试（并行轨道）
-9. **Exploration loop + success evaluation + autonomous workbench** ← 当前
-10. Path abstraction & 经验累积（exploration 验证之后起步）
-11. User correction & 行为教学
-12. 自动化评估 & 持续优化体系
+8. Wait-for-expected-change 机制 + 自动化测试（部分已被 `pass_gate`、
+   scorecard、page verification 吸收）
+9. ~~Exploration loop + success evaluation + autonomous workbench~~ ✅
+10. Path abstraction & 经验累积（当前交付里程碑 M10）
+11. User correction & 行为教学（已重塑为 M13）
+12. 自动化评估 & 持续优化体系（已重塑为 M15）
 
 **关键并行关系：**
 
 - **Phase 7 执行**已完成 —— 为 exploration 提供原子动作层。
 - **Exploration 子系统**建在 Phase 7 之上 —— TaskDefinition → `run_exploration` → success evaluation → supervisor 评估。
-- **自主探索子系统**是当前焦点 —— URL → `autonomous_explorer.run_autonomous_exploration` → page verification 评分卡 → 用户在 workbench 审核。
-- **Path abstraction（Phase 10）**在 exploration 验证通过之后起步。
+- **自主探索子系统**仍是学习基础 —— URL → `autonomous_explorer.run_autonomous_exploration` → page verification 评分卡 → 用户在 workbench 审核。
+- **Path abstraction（M10）**在 exploration 验证通过之后起步。
 
 ---
 
@@ -235,7 +247,7 @@ Docker Compose（`infra/docker/docker-compose.yml`）提供：
 - [`product-model.zh.md`](./product-model.zh.md) —— **产品形态权威文档**。
   本文讲"代码怎么组织"，产品形态讲"代码要实现什么"。在决定**做什么**
   之前先看产品形态。
-- [`scope-boundaries.zh.md`](./scope-boundaries.zh.md) —— 当前阶段**刻意不做**的事。
+- [`scope-boundaries.zh.md`](./scope-boundaries.zh.md) —— 当前交付里程碑**刻意不做**的事。
 - [`roadmap.zh.md`](./roadmap.zh.md) —— v0.1 发布切出的运营里程碑。
 - [`../CLAUDE.zh.md`](../CLAUDE.zh.md) —— 给 AI 编码 Agent 的会话级指引。
 

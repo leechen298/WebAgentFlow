@@ -261,12 +261,12 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 ## See Also
 
 - [`docs/product-model.md`](./docs/product-model.md) — **authoritative
-  product model**: three phases (autonomous learning, user-guided
-  learning, actual work), seven Agents, invariants. Read first.
+  product model**: L1/L2/L3 lifecycle stages (autonomous learning,
+  user-guided learning, actual work), seven Agents, invariants. Read first.
 - [`docs/architecture.md`](./docs/architecture.md) — AST dual-track,
   services sub-package structure, iframe handling.
 - [`docs/scope-boundaries.md`](./docs/scope-boundaries.md) — what's
-  deliberately NOT in scope for the current phase.
+  deliberately NOT in scope for the current delivery milestone.
 - [`docs/roadmap.md`](./docs/roadmap.md) — v0.1 operational milestones.
 - [`docs/dev-setup.md`](./docs/dev-setup.md) — full environment setup
   walkthrough (more detailed than the Common Commands above, useful

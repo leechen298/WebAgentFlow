@@ -4,34 +4,37 @@
 > understanding of what WebAgentFlow is. Treat it as a general outline,
 > not a rigid constitution.
 >
-> - When the **product direction** changes (a new phase, a new Agent
+> - When the **product direction** changes (a new lifecycle stage, a new Agent
 >   role, an invariant shifts), update this doc first, then the code.
 > - Day-to-day implementation details don't need to round-trip through
 >   this doc — just keep the overall shape consistent.
-> - If a proposal doesn't fit any phase / Agent here and feels like a
+> - If a proposal doesn't fit any lifecycle stage / Agent here and feels like a
 >   product-level addition rather than an implementation detail, pause
 >   and check with the user before writing code.
 
 ---
 
-## Terminology (three numbering systems — don't mix)
+## Terminology (lifecycle stages vs. delivery milestones)
 
-Three different numbering systems live near this document and look alike
-at a glance. They are not the same:
+The word "phase" previously described two different things: the product
+lifecycle of a page, and the engineering roadmap. That made planning
+ambiguous. From this document forward, use these names:
 
-- **Product phase 1 / 2 / 3** — the three lifecycle stages a page goes
-  through in WebAgentFlow (autonomous learning → user-guided learning →
-  actual work). Defined in §3–§6 of this document. The count is fixed
-  at three.
-- **Delivery phase N** — engineering milestones tracked in
-  [`roadmap.md`](./roadmap.md) and realized as `docs/iterations/phase-N/`
-  folders. Currently at delivery phase 10; the count grows over time.
+- **Lifecycle Stage L1 / L2 / L3** — the fixed product lifecycle a page
+  goes through in WebAgentFlow:
+  autonomous learning → user-guided learning → actual work. Defined in
+  §3–§6. The count is fixed at three.
+- **Delivery Milestone M10 / M11 / ...** — engineering milestones tracked
+  in [`roadmap.md`](./roadmap.md). The count grows over time. Existing
+  iteration directories keep their legacy names such as
+  `docs/iterations/phase-10/` to avoid churn, but the roadmap should call
+  the milestone **M10**.
 - **§N** — section number *within this document*, used for
-  cross-references only. Unrelated to either "phase" concept.
+  cross-references only.
 
-When in doubt, spell out the full form — "product phase 2",
-"delivery phase 10", "product-model.md §7" — rather than a bare
-"phase 2" or "§7".
+Do not write a bare "Phase 3" or "Phase 10" in new product planning.
+Use "L3 Actual Work" for the product lifecycle stage, and "M10 Path
+Asset Foundation" for the delivery milestone.
 
 ---
 
@@ -44,7 +47,7 @@ browser — not by asking an LLM to click things step-by-step.
 
 ## 2. System Role Boundaries
 
-Before the phases, a note on **who does what**. These boundaries are
+Before the lifecycle stages, a note on **who does what**. These boundaries are
 easy to forget mid-session and lead to the system quietly drifting
 into the wrong shape.
 
@@ -57,7 +60,7 @@ into the wrong shape.
   rejects** results. It's not the engine; it's the glass in front of
   the engine.
 - **User** — the operator. Triggers runs, reviews results, gives
-  corrections. During Phase 2 (user-guided learning) the user is the
+  corrections. During L2 (user-guided learning) the user is the
   actual operator of the page, not a reviewer.
 - **AI coding agents** (Claude Code, Codex, …) — build and maintain
   the engine. They are **not** in the runtime loop. They must not
@@ -84,23 +87,24 @@ When in doubt about where a new feature belongs, place it on this
 axis first: is it engine logic, workbench glass, operator workflow,
 or developer tooling? Different axes, different review standards.
 
-## 3. Three Phases of a Page
+## 3. Three Lifecycle Stages of a Page
 
-Every page goes through three phases in WebAgentFlow's lifetime.
-Features belong to exactly one phase. Don't blur them.
+Every page goes through three lifecycle stages in WebAgentFlow's
+lifetime. Features belong to exactly one lifecycle stage. Don't blur
+them.
 
-| # | Phase | Who drives | Does an LLM read raw HTML per step? |
+| ID | Lifecycle stage | Who drives | Does an LLM read raw HTML per step? |
 |---|---|---|---|
-| 1 | Autonomous Learning | System | Yes — bounded, during learning only |
-| 2 | User-Guided Learning | User (in a visible browser) | No — system records the user |
-| 3 | Actual Work | System, from learned data | **NO** — this is the core invariant |
+| L1 | Autonomous Learning | System | Yes — bounded, during learning only |
+| L2 | User-Guided Learning | User (in a visible browser) | No — system records the user |
+| L3 | Actual Work | System, from learned data | **NO** — this is the core invariant |
 
-The rest of this document fills in each phase, the Agents involved, and
-the invariants that must not be violated.
+The rest of this document fills in each lifecycle stage, the Agents
+involved, and the invariants that must not be violated.
 
 ---
 
-## 4. Phase 1 · Autonomous Learning
+## 4. L1 · Autonomous Learning
 
 **Trigger**: The system encounters a page it has not learned (or the
 user forces re-learning).
@@ -115,7 +119,7 @@ components can be replaced independently.
 2. **Full AST → Simplified AST** (structure-preserving projection).
    Simplified AST removes noise but preserves node boundaries and
    sibling order. It is NOT a "page summary".
-3. **Agent A · Page-Intent Agent** reads the Simplified AST plus a
+3. **Agent A · Page Intent Agent** reads the Simplified AST plus a
    screenshot and writes down what the page is for.
    - Output: a short page-purpose description, persisted with the
      page signature.
@@ -126,10 +130,10 @@ components can be replaced independently.
 5. **Code** drives Playwright to try operations on those elements and
    records what happened — including the failures. Failure paths are
    kept as negative knowledge, not discarded.
-6. **Agent B · Attempt-Evaluation Agent** judges each attempt's
+6. **Agent B · Attempt Evaluator Agent** judges each attempt's
    outcome and flags anomalies.
    - Output: per-attempt verdict + summary. Independent of Agent A.
-7. **Agent C · Learning-Report Agent** (presentation layer, low
+7. **Agent C · Learning Reporter Agent** (presentation layer, low
    priority) compiles the full learning session into a report for
    the user.
    - Output: user-facing report (what the page is, what the system
@@ -146,7 +150,7 @@ components can be replaced independently.
    - failed paths (from step 5, verdict≠success) — kept as negative
      knowledge to avoid repeating mistakes.
 
-### 4.2 What Phase 1 deliberately is not
+### 4.2 What L1 deliberately is not
 
 - Not a skill registry. The learned record is a data blob keyed by
   page signature, not a named skill.
@@ -157,13 +161,13 @@ components can be replaced independently.
 
 ---
 
-## 5. Phase 2 · User-Guided Learning
+## 5. L2 · User-Guided Learning
 
 **Trigger** (either):
 
 - The user explicitly enters guided-learning mode for a page the
   system already knows partially (to fill a gap).
-- The user **takes over** during Phase 3 execution (error recovery or
+- The user **takes over** during L3 execution (error recovery or
   explicit hand-off). Take-over automatically becomes guided learning
   — the system records everything the user does from that point.
 
@@ -177,28 +181,28 @@ components can be replaced independently.
    - what value was typed / what was clicked
    - what observable state changed after the interaction
 4. Captured operations are appended to the page's learned record,
-   marked with `provenance = user`, and participate in Phase 3 route
-   planning the same way Phase-1 paths do.
+   marked with `provenance = user`, and participate in L3 route
+   planning the same way L1 paths do.
 
 ### 5.2 Invariant
 
-Phase 2 records the user's real actions. It does **not** infer intent
+L2 records the user's real actions. It does **not** infer intent
 via LLM, and it does **not** retroactively rewrite what the user did.
 Provenance is preserved so later reviews can trust it.
 
 ---
 
-## 6. Phase 3 · Actual Work
+## 6. L3 · Actual Work
 
-This is the phase that matters to the end user. Everything in Phases
-1 and 2 exists to make Phase 3 cheap, fast, and reliable.
+This is the lifecycle stage that matters to the end user. Everything in
+L1 and L2 exists to make L3 cheap, fast, and reliable.
 
 **Trigger**: The user submits a task ("log into X and download the
 weekly report as CSV", etc.).
 
 ### 6.1 Run shape — happy path is not the whole picture
 
-A real Phase 3 run is **not** a straight line from plan to report.
+A real L3 run is **not** a straight line from plan to report.
 It's a loop that can branch any time the page disagrees with what
 the learned record expected:
 
@@ -208,7 +212,7 @@ plan (D) → execute → observe → ok?  ─── yes ──→ report (E)
                                 └── no ──→ recovery dialogue (F)
                                              ├── re-plan   ──→ back to execute
                                              ├── re-run    ──→ back to plan
-                                             └── hand off  ──→ Phase 2 mode
+                                             └── hand off  ──→ L2 mode
 ```
 
 Triggers that flip a run off the happy path:
@@ -224,7 +228,7 @@ not exception cases.
 
 ### 6.2 Happy-path pipeline
 
-1. **Agent D · Planner Agent** reads:
+1. **Agent D · Path Planner Agent** reads:
    - the user's task description
    - the learned record(s) for the target page(s)
 
@@ -241,13 +245,13 @@ not exception cases.
    - Each action's observation (URL before/after, DOM signals, etc.)
      is recorded for the reporting Agent.
 
-3. **Agent E · Result-Reporting Agent** summarizes the outcome for
+3. **Agent E · Result Reporter Agent** summarizes the outcome for
    the user. Output: natural-language result + structured fields the
    UI can render.
 
 ### 6.3 The core invariant
 
-During Phase 3 execution, **LLMs are only invoked at boundaries** —
+During L3 execution, **LLMs are only invoked at boundaries** —
 planning at the start, reporting at the end, and dialogue on error
 or abort. They are **never** invoked to decide the next click, the
 next keystroke, or which field to fill, because those decisions are
@@ -263,7 +267,7 @@ When an action fails (page error, element not found, observable state
 didn't change, server returned 5xx, etc.):
 
 1. Execution **pauses**. It does NOT silently retry.
-2. **Agent F · Recovery-Dialogue Agent** opens a dialogue with the
+2. **Agent F · Recovery Dialogue Agent** opens a dialogue with the
    user:
    - what happened
    - which step failed
@@ -272,7 +276,7 @@ didn't change, server returned 5xx, etc.):
    - **Re-plan and continue**: Agent D re-picks a route, taking the
      new context into account. Execution resumes.
    - **Re-execute from start**: used when partial state is unsafe.
-   - **Hand off to the user**: enters Phase 2 mode. The user finishes
+   - **Hand off to the user**: enters L2 mode. The user finishes
      the task manually; their actions are recorded and fed back into
      the learned record.
 
@@ -281,7 +285,7 @@ didn't change, server returned 5xx, etc.):
 The user can stop the run at any time. When they do:
 
 1. Execution pauses immediately.
-2. **Agent G · Abort-Dialogue Agent** opens a dialogue:
+2. **Agent G · Abort Dialogue Agent** opens a dialogue:
    - what was done so far
    - what state the page is in
    - what the user wants next (resume / restart / hand over / drop)
@@ -298,15 +302,15 @@ different tone.
 These are separate Agents. Don't merge them. Different prompts,
 different inputs, different outputs, different models over time.
 
-| ID | Name | Phase | Reads | Produces |
+| ID | Name | Lifecycle stage | Reads | Produces |
 |---|---|---|---|---|
-| A | Page-Intent | 1 | Simplified AST + screenshot | Page purpose description |
-| B | Attempt-Evaluation | 1 | Attempt log + before/after state | Per-attempt verdict + anomalies |
-| C | Learning-Report *(low priority, presentation)* | 1 | Full learning session | User-facing learning report |
-| D | Planner | 3 | User task + learned record | Chosen concrete route |
-| E | Result-Reporting | 3 | Execution outcome | User-facing result |
-| F | Recovery-Dialogue | 3 (error) | Error context + recent steps | Dialogue transcript + next action |
-| G | Abort-Dialogue | 3 (user abort) | Current state + abort signal | Dialogue transcript + next action |
+| A | Page Intent Agent | L1 | Simplified AST + screenshot | Page purpose description |
+| B | Attempt Evaluator Agent | L1 | Attempt log + before/after state | Per-attempt verdict + anomalies |
+| C | Learning Reporter Agent *(low priority, presentation)* | L1 | Full learning session | User-facing learning report |
+| D | Path Planner Agent | L3 | User task + learned record | Chosen concrete route |
+| E | Result Reporter Agent | L3 | Execution outcome | User-facing result |
+| F | Recovery Dialogue Agent | L3 (error) | Error context + recent steps | Dialogue transcript + next action |
+| G | Abort Dialogue Agent | L3 (user abort) | Current state + abort signal | Dialogue transcript + next action |
 
 When adding a new capability, first ask: **which Agent does this
 belong to?** If the answer is "a new one", that's a product-level
@@ -316,21 +320,21 @@ decision — update this document before adding it.
 
 ## 8. Cross-Cutting Invariants
 
-Invariants that apply across all phases. Violations are product bugs,
+Invariants that apply across all lifecycle stages. Violations are product bugs,
 not implementation details.
 
-1. **LLMs never drive per-step execution in Phase 3.** Only planning
+1. **LLMs never drive per-step execution in L3.** Only planning
    / reporting / dialogue.
-2. **Failure is data.** Failed attempts in Phase 1 are persisted, not
+2. **Failure is data.** Failed attempts in L1 are persisted, not
    discarded.
 3. **Provenance is preserved.** Every learned action knows whether
-   it came from Phase 1 (system) or Phase 2 (user).
+   it came from L1 (system) or L2 (user).
 4. **Re-learning is allowed.** A page can be re-learned when it
    drifts; the system must not assume learned data is permanent.
 5. **No silent retries.** Errors produce dialogue, not hidden
    back-off loops.
 6. **Learning and execution are different code paths.** Reusing
-   Phase-1 orchestration to run Phase-3 tasks is a smell; Phase-3
+   L1 orchestration to run L3 tasks is a smell; L3
    should be boring and deterministic.
 
 ---
@@ -338,40 +342,59 @@ not implementation details.
 ## 9. Where the current codebase sits
 
 Honest mapping, so the gap between the vision and the code is
-visible. Keep this section updated as phases ship.
+visible. Keep this section updated as lifecycle stages and milestones ship.
 
-- **Phase 1 steps 1–2 (HTML → AST → Simplified AST)**: shipped as
+- **L1 steps 1–2 (HTML → AST → Simplified AST)**: shipped as
   server-side parsing (`html_ast_parser.py` + `ast_simplifier.py`).
   Autonomous exploration currently uses a live-page analyzer
   (`page_analyzer.py`) rather than the offline AST pipeline;
   reconciling the two views is open work.
-- **Phase 1 step 3 (Page-Intent Agent)**: not yet built as a
+- **L1 step 3 (Page Intent Agent)**: not yet built as a
   separate Agent. Today's Supervisor mixes intent-understanding and
   evaluation concerns.
-- **Phase 1 steps 4–5 (element extraction + trial)**: shipped in the
+- **L1 steps 4–5 (element extraction + trial)**: shipped in the
   autonomous exploration subsystem.
-- **Phase 1 steps 6–8 (evaluation + report + persist)**: partial.
+- **L1 steps 6–8 (evaluation + report + persist)**: partial.
   Verdict + 5-score verification scorecard + Supervisor summary
   exist as exploration-stage artifacts. A **product-form,
   user-facing learning report is still exploratory** — current
   output is a developer-oriented debug surface, not the final shape
   Agent C should produce. **Persist-as-learned-record shipped in
-  delivery phase 10.1** — `pass_gate = pass` runs
+  delivery milestone M10.1** — `pass_gate = pass` runs
   auto-ingest as `learned_paths` rows keyed by
   (page_template, query_signature, dom_fingerprint, scenario), with
   a trust lifecycle (`provisional` / `confirmed` / `flaky` /
   `deprecated`) the operator drives via the run-detail page.
-  Replay / drift detection against stored paths is not yet built —
-  that is the next deliverable in delivery phase 10.
-- **Phase 2 (User-Guided Learning)**: not started. The 2026-04-20
-  cleanup removed the old Chrome extension; Phase 2 will be built
+  Replay / drift detection against stored paths is being planned in
+  M10.2.
+- **L2 (User-Guided Learning)**: not started. The 2026-04-20
+  cleanup removed the old Chrome extension; L2 will be built
   from scratch on top of a **visible** Playwright browser (per §5.1),
   not on the extension. No guided-learning mode exists today.
-- **Phase 3 (Actual Work)**: not started. No Planner Agent, no
-  replay, no recovery dialogue. This is the next big bet after
-  Phase 10's LearnedPath foundation lands.
+- **L3 (Actual Work)**: not started. No Path Planner Agent, no
+  task-to-path execution loop, no recovery dialogue. Replay / drift is
+  the M10 foundation; M11 is the first planned L3 happy-path MVP.
 
-When a phase fully lands, update this section to reflect it.
+When a lifecycle stage fully lands, update this section to reflect it.
+
+### 9.1 Delivery milestone alignment
+
+The current delivery plan intentionally separates path assets from real
+task execution:
+
+| Milestone | Product role | Internal Agents |
+|---|---|---|
+| M10 · Path Asset Foundation | Make LearnedPaths reusable: persistence, catalog, replay, drift detection. | No new Agent; provides execution substrate. |
+| M11 · Task-to-Path Planning MVP | First L3 happy path: user task → choose / bind LearnedPath → execute → report. | Agent D · Path Planner Agent; Agent E · Result Reporter Agent. |
+| M12 · Recovery & Handoff | L3 failure and abort branches: pause, explain, re-plan, re-run, or hand off. | Agent F · Recovery Dialogue Agent; Agent G · Abort Dialogue Agent. |
+| M13 · User-Guided Learning & Correction | L2 visible-browser takeover plus path correction / provenance write-back. | No new Agent by default; preserve user provenance. |
+| M14 · Learning Quality Agents & Coverage | Revisit L1 quality: page purpose, simple attempt evaluation, learning report, richer controls and patterns. | Agent A · Page Intent Agent; Agent B · Attempt Evaluator Agent; Agent C · Learning Reporter Agent. |
+| M15 · Automated Evaluation & Continuous Optimization | Regression runs, drift alerts, quality trend tracking. | Reuses Agent B / Supervisor-style evaluation; no new Agent by default. |
+| M16 · External Interfaces | Stable API / CLI / Skill / Tool surface for external schedulers. | No new product Agent; exposes existing capabilities. |
+
+M10.2 replay is still valuable after this reshuffle: it is the first
+deterministic consumer of LearnedPath data. It does **not** implement
+Agent D or L3 task planning; it gives M11 something safe to call.
 
 ---
 
@@ -380,7 +403,7 @@ When a phase fully lands, update this section to reflect it.
 WebAgentFlow is not only a UI-fronted application — it should also
 exist as an **independently runnable, externally callable open-source
 tool**. This section describes *how the engine's capabilities can be
-opened up to the outside world*, not a new product phase.
+opened up to the outside world*, not a new lifecycle stage.
 
 ### 10.1 Two delivery shapes
 
@@ -448,7 +471,7 @@ Even with a CLI / Skill / API, the role relationship does not change:
 - **External Agents** are schedulers — they decide what to call and
   when, but they do not step-by-step operate the browser themselves.
 - **The user** is the final confirmer, and can take over at any
-  point — which re-enters Phase 2 user-guided learning.
+  point — which re-enters L2 user-guided learning.
 
 A third-party Agent may call WebAgentFlow, but should not replace
 WebAgentFlow with its own per-step browser automation.
@@ -457,7 +480,7 @@ WebAgentFlow with its own per-step browser automation.
 > don't confuse them**:
 >
 > 1. **Product-internal Agents A–G** (§7) — roles that run *inside*
->    WebAgentFlow at runtime (Page-Intent, Planner, Recovery-Dialogue,
+>    WebAgentFlow at runtime (Page Intent, Path Planner, Recovery Dialogue,
 >    …). Defined by this document.
 > 2. **Third-party Agent** (this §10) — an *external* runtime
 >    scheduler that calls WebAgentFlow's CLI / Skill / API to get
@@ -471,11 +494,11 @@ WebAgentFlow with its own per-step browser automation.
 
 Opening capabilities outward does NOT relax the existing invariants:
 
-- In Phase 3 actual work, LLMs still don't enter the per-step
+- In L3 actual work, LLMs still don't enter the per-step
   execution loop.
 - Execution is still done by code + browser automation.
 - Failure, take-over, and recovery dialogue still follow the
-  three-phase model.
+  L1/L2/L3 lifecycle model.
 - External interfaces are a different *way to call*, not a different
   *product logic*.
 
@@ -483,7 +506,7 @@ Opening capabilities outward does NOT relax the existing invariants:
 
 This section describes a **long-term delivery direction**. Not all of
 it is shipped, and **its current priority sits below landing the
-three-phase main loop itself** — Phase 3 actual work must be stable
+L1/L2/L3 main loop itself** — L3 actual work must be stable
 and useful before heavy investment in CLI / Skill / API surface area
 is justified.
 
@@ -509,9 +532,9 @@ records, feedback history — belongs to whoever runs that instance, by
 construction.
 
 "Real-user data fine-tuning" is not a separate mechanism. It is the
-three-phase product model operating on *this instance's* pages: the
-user demos during product phase 2, confirms or rejects during product
-phase 3 review, and the engine's LearnedPath store adapts over time.
+L1/L2/L3 lifecycle model operating on *this instance's* pages: the
+user demos during L2, confirms or rejects during L3 review, and the
+engine's LearnedPath store adapts over time.
 More usage on an instance → more signal → better behavior, scoped to
 that instance.
 
@@ -528,13 +551,13 @@ Invariants:
 - The engine MUST NOT push learned data out of the instance on its own.
 - Persistence code SHOULD leave obvious interception points (the repo
   layer) where a future shell can plug in encryption / sync, but does
-  not implement any shell code in this phase.
+  not implement any shell code in M10.
 - Schema MUST NOT add multi-tenant columns (no `user_id`, no
   `scope_id`). If a shell later needs tenancy, that is the shell's
   job — or at worst a justified future schema change, not a
   speculative one today.
 
-This framing was made explicit in delivery phase 10 alongside
+This framing was made explicit in delivery milestone M10 alongside
 LearnedPath persistence. Before that, "one instance = one user's data"
 was implicit.
 
@@ -554,5 +577,5 @@ was implicit.
 ---
 
 §10 describes *how WebAgentFlow's capabilities can be opened up for
-external use*, not a new product phase. It sits on top of the
-three-phase product model; it does not replace it.
+external use*, not a new lifecycle stage. It sits on top of the
+L1/L2/L3 lifecycle model; it does not replace it.

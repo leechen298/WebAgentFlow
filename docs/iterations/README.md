@@ -8,7 +8,8 @@
 
 - `docs/product-model.md`、`docs/architecture.md` 是**稳态文档**（回答"我们是谁、怎么长的"），
   改动缓慢、成本高。
-- `docs/roadmap.md` 是**阶段路线图**（回答"这个阶段要交付什么"），按 Phase 粒度。
+- `docs/roadmap.md` 是**交付里程碑路线图**（回答"这个里程碑要交付什么"），
+  按 M10 / M11 / ... 粒度。
 - `.dev-logs/` 是**运行证据**（scenario 的 autonomous 执行日志存档），给调试用。
 - 中间缺了一块：**每次具体迭代的意图、计划、审核**。之前这些散在对话里、提交信息里、
   聊天记录里，切一次 chat 就丢了。`docs/iterations/` 就是补这块。
@@ -21,7 +22,7 @@
 docs/iterations/
 ├── README.md                            # 你正在看这份
 └── phase-<N>/
-    ├── README.md                        # 本 Phase 的总目标 + 迭代索引
+    ├── README.md                        # 本交付里程碑的总目标 + 迭代索引
     ├── 01-<slug>/
     │   ├── intent.md                    # 做什么 + 为什么 + 不做什么（迭代开始时写）
     │   ├── plan.md                      # 涉及文件 + 步骤 + 验收标准（动手前写）
@@ -35,14 +36,17 @@ docs/iterations/
 
 ### 命名规则
 
-- **Phase 目录**：`phase-<N>`，`<N>` 是整数，对齐 `docs/roadmap.md` 里的 Phase 编号。
-  当前在 Phase 10，新迭代放 `docs/iterations/phase-10/`。
-- **迭代目录**：默认使用 `<NN>-<slug>`。`<NN>` 是两位数字（`01` / `02` / …），**在 Phase 内部递增**，不跨 Phase。
+- **里程碑目录**：历史目录仍命名为 `phase-<N>`，`<N>` 是整数，对齐
+  `docs/roadmap.md` 里的交付里程碑编号。当前活跃里程碑是 M10；为
+  避免目录迁移噪音，新迭代仍放 `docs/iterations/phase-10/`。
+  文档正文里请写 M10 / M11，而不是把交付里程碑和产品生命周期 L1/L2/L3
+  都叫 Phase。
+- **迭代目录**：默认使用 `<NN>-<slug>`。`<NN>` 是两位数字（`01` / `02` / …），**在里程碑内部递增**，不跨里程碑。
   `<slug>` 是简短 kebab-case 英文名，3–5 个词，和 git 分支名或 commit 主题呼应。
   例子：`01-codex-review-skill`、`02-supervisor-retry-policy`。
-  如果某个 Phase 已经有更明确的阶段内语义编号，也可以使用
+  如果某个里程碑已经有更明确的阶段内语义编号，也可以使用
   `<phase-item-number>-<slug>`，例如
-  `10.1.1-autonomous-use-case-catalog/`。使用这种形式时，Phase
+  `10.1.1-autonomous-use-case-catalog/`。使用这种形式时，里程碑
   README 里的任务编号和目录名前缀必须完全一致，避免“目录 03 对应
   任务 10.2”这类映射。
 - **文件名**：`intent.md` / `plan.md` / `review.md` 三个固定名字，不要改。
@@ -62,7 +66,7 @@ docs/iterations/
 回答三个问题，不要写代码细节：
 
 1. **目标** —— 这次迭代的成功状态是什么？一句话概括即可。
-2. **动机** —— 为什么现在做？背后的约束 / 用户痛点 / 技术债 / 阶段目标是什么？
+2. **动机** —— 为什么现在做？背后的约束 / 用户痛点 / 技术债 / 里程碑目标是什么？
 3. **边界** —— **明确不做什么**。列 2–3 条"虽然相关但这轮不碰"的事，防止范围蔓延。
 
 模板：
@@ -74,7 +78,7 @@ docs/iterations/
 <一句话>
 
 ## 动机
-<背景、为什么这个时机做、和 Phase 目标的关系>
+<背景、为什么这个时机做、和当前交付里程碑目标的关系>
 
 ## 边界（本轮不做）
 - <不做的事 1>
@@ -146,7 +150,7 @@ docs/iterations/
 | `docs/product-model.md` | 稳态 | 极少 | 迭代开始前读；迭代**不得**隐式改变产品模型 |
 | `docs/architecture.md` | 稳态 | 少 | 架构演进完**后**再回写这里 |
 | `docs/scope-boundaries.md` | 稳态 | 少 | intent.md 的"边界"章节应和它一致 |
-| `docs/roadmap.md` | 阶段级 | 每 Phase 更新 | Phase README 应该链回 roadmap 里对应的 Phase 段落 |
+| `docs/roadmap.md` | 里程碑级 | 每个交付里程碑更新 | 里程碑 README 应该链回 roadmap 里对应的 M 段落 |
 | `docs/iterations/phase-N/` | 过程 | 每次迭代 | **本文档** |
 | `.dev-logs/` | 运行证据 | 每次 autonomous run | scenario 调试证据，和迭代无直接绑定 |
 
@@ -162,21 +166,22 @@ docs/iterations/
 所以：**intent.md 写得越清楚，Codex 审核质量越高。** 特别是"边界（本轮不做）"那一节，是
 Codex 判断"这里偏离范围了"的主要依据。
 
-## Phase README 怎么写
+## 里程碑 README 怎么写
 
-每个 `phase-<N>/README.md` 是本 Phase 的索引页。结构：
+每个 `phase-<N>/README.md` 是本交付里程碑的索引页。目录名保留
+`phase-<N>` 是历史兼容；正文请称 M<N>。结构：
 
 ```markdown
-# Phase <N>: <标题>
+# M<N>: <标题>
 
-<一段话说明本 Phase 的总目标，引用 docs/roadmap.md 的对应段落>
+<一段话说明本交付里程碑的总目标，引用 docs/roadmap.md 的对应段落>
 
 ## 迭代索引
 - [01-<slug>](./01-<slug>/) —— <一句话>（状态：进行中 / 完成 / 放弃）
 - [02-<slug>](./02-<slug>/) —— <一句话>
 ```
 
-Phase 开启时建空骨架，每次新迭代追加一行。迭代完成后更新状态标记，不要删除。
+里程碑开启时建空骨架，每次新迭代追加一行。迭代完成后更新状态标记，不要删除。
 
 ## 三条实操约定
 

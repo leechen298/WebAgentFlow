@@ -2,15 +2,15 @@
 
 ## Goal
 
-WebAgentFlow provides a structured platform for capturing web interactions,
-analysing pages autonomously, planning and executing actions, and verifying
-results against authored baselines — all coordinated between a Vue console,
-FastAPI backend, Python worker, and browser extension.
+WebAgentFlow provides a structured platform for learning web pages,
+reusing verified LearnedPaths, planning task execution from learned data,
+and verifying results against authored baselines — coordinated between a
+Vue console, FastAPI backend, Python worker scaffold, and Playwright
+runtime.
 
 ## System Layers
 
-1. **Presentation** — Vue console + Chrome extension provide operator-facing
-   interfaces.
+1. **Presentation** — Vue console provides operator-facing interfaces.
 2. **Application** — FastAPI service owns API contracts, orchestration entry
    points, integration boundaries.
 3. **Execution** — Playwright runtime + async worker for browser automation.
@@ -31,10 +31,16 @@ FastAPI backend, Python worker, and browser extension.
 
 ---
 
-## Current Phase & Progress
+## Current Progress
 
-The project follows a 12-phase development timeline. Phases 1–7 complete.
-Exploration + autonomous workbench in active development.
+The old architecture timeline below records historical technical
+accumulation. The current planning vocabulary lives in
+[`product-model.md`](./product-model.md) and [`roadmap.md`](./roadmap.md):
+product lifecycle stages are L1 / L2 / L3, delivery milestones are M10 /
+M11 / ...
+
+Current delivery milestone: **M10 Path Asset Foundation**. Current
+executable package: `10.2-replay-execution-drift-detection`.
 
 **Completed phases:**
 
@@ -185,7 +191,7 @@ are **not in conflict**, but their boundaries must be respected.
 - Does NOT do early semantic compression or information loss.
 - Produced server-side from captured HTML.
 
-**Simplified AST** (future, NOT this phase):
+**Simplified AST** (future, NOT the current delivery milestone):
 
 - A **structure-preserving projection** of the Full AST — not a rewrite.
 - Keeps the same tree shape as the Full AST.
@@ -225,7 +231,11 @@ Consequences:
 
 ---
 
-## E. Development Timeline (12 phases)
+## E. Historical Development Timeline (legacy 12-step view)
+
+This list is retained as architecture history. It is not the current
+roadmap vocabulary; use `roadmap.md` M10 / M11 / ... for forward
+planning.
 
 1. ~~Page fact foundation~~ ✅
 2. ~~User event recording~~ ✅
@@ -234,12 +244,14 @@ Consequences:
 5. ~~Operation Step building~~ ✅
 6. ~~Agent initial understanding of pages and steps~~ ✅
 7. ~~Full execution capability (Playwright)~~ ✅
-8. Wait-for-expected-change mechanism + automated testing (parallel tracks)
-9. **Exploration loop + success evaluation + autonomous workbench** ← current
-10. Path abstraction & experience accumulation (starts after exploration
-    validates)
-11. User correction & behavior teaching
-12. Automated evaluation & continuous optimization system
+8. Wait-for-expected-change mechanism + automated testing (partially
+   absorbed into `pass_gate`, scorecards, and page verification)
+9. ~~Exploration loop + success evaluation + autonomous workbench~~ ✅
+10. Path abstraction & experience accumulation (current delivery
+    milestone M10)
+11. User correction & behavior teaching (reshaped into M13)
+12. Automated evaluation & continuous optimization system (reshaped into
+    M15)
 
 **Key parallel relationships:**
 
@@ -247,10 +259,10 @@ Consequences:
   exploration.
 - **Exploration subsystem** is built on Phase 7 — TaskDefinition →
   `run_exploration` → success evaluation → supervisor assessment.
-- **Autonomous exploration subsystem** is the current focus — URL →
+- **Autonomous exploration subsystem** remains the learning foundation — URL →
   `autonomous_explorer.run_autonomous_exploration` → page verification
   scorecard → user review in the workbench.
-- **Path abstraction (Phase 10)** starts after exploration validates.
+- **Path abstraction (M10)** starts after exploration validates.
 
 ---
 
@@ -331,7 +343,7 @@ heartbeat logging is implemented but job execution logic is not yet built out.
   model describes what the code is supposed to do. Read product model
   first when deciding *what* to build.
 - [`docs/scope-boundaries.md`](./scope-boundaries.md) — what's explicitly
-  NOT part of the current phase.
+  NOT part of the current delivery milestone.
 - [`docs/roadmap.md`](./roadmap.md) — operational milestones for the v0.1
   release cut.
 - [`../CLAUDE.md`](../CLAUDE.md) — session-level guidance for AI coding

@@ -2,10 +2,14 @@
 
 Operational view of what's shipped, what's current, and what's next.
 
-- For what the product **is** (three phases, seven Agents, invariants),
+- For what the product **is** (L1/L2/L3 lifecycle stages, seven
+  internal Agents, invariants),
   see [`product-model.md`](./product-model.md). That's the authoritative
   product reference.
-- For the 12-phase architectural timeline, see
+- Historical iteration folders may still be named `phase-N`, but new
+  roadmap language uses **Delivery Milestone M<N>** to avoid confusing
+  delivery planning with lifecycle stage L1/L2/L3.
+- For the historical 12-step architectural timeline, see
   [`architecture.md`](./architecture.md) §E.
 
 ## Shipped (foundation + autonomous exploration subsystem)
@@ -14,7 +18,7 @@ Post-2026-04-20 cleanup, the only product surface in the repo is the
 autonomous-Playwright pipeline. Earlier iterations (recording, Chrome
 extension, task-driven exploration, skills / runs / learning-debug UI)
 have been removed from the code — see
-`memory/project_legacy_stack_removed.md`. For the historical 12-phase
+`memory/project_legacy_stack_removed.md`. For the historical 12-step
 timeline, see [`architecture.md`](./architecture.md) §E.
 
 Foundation:
@@ -72,7 +76,7 @@ Authored specs:
 - `login.{valid_credentials, invalid_credentials}`
 - `users.{filter_by_name, filter_by_status, no_match}`
 
-## Phase 9 — closed 2026-04-21
+## Legacy delivery Phase 9 — closed 2026-04-21
 
 Autonomous exploration, user-driven verification. Closure gate: all 5
 authored scenarios re-ran on 2026-04-21 via the `verify-scenario`
@@ -97,7 +101,7 @@ Notable closures during Phase 9:
     (radio group) to prove the planner isn't text-only.
   - Popup-based controls (Cascader, all Picker variants, Tag filter,
     column sort / filter) are intentionally on the page but **not**
-    asserted on — their scenarios are a Phase 10 deliverable.
+    asserted on — their scenarios moved into the M14 coverage backlog.
 - [x] Tier-A polish: selector builder now skips Ant Design 5's
   `css-dev-only-do-not-override-<hash>` class; `no_match` re-verified
   after the empty-state placeholder fix.
@@ -110,13 +114,14 @@ Notable closures during Phase 9:
   / Chrome extension / task-driven exploration deleted from code,
   DB, and docs; `exploration_runs` is the only surviving table.
 
-No remaining Phase 9 items. Phase 10 is now open.
+No remaining Phase 9 items. The active delivery milestone is M10.
 
-## Phase 10 — Path abstraction & experience accumulation (in progress)
+## M10 — Path Asset Foundation (in progress)
 
-With Phase 9 closed, the focus shifts from "can the engine drive a
-page" to "can it reuse what it learned and cover more control
-shapes":
+M10 focuses on making LearnedPath a reusable asset. It does **not**
+implement L3 Actual Work yet: no user-task chat, no Agent D Path
+Planner, no task-to-path execution loop. It builds the deterministic
+substrate that M11 will call.
 
 - **LearnedPath persistence — SHIPPED 2026-04-25 (10.1)**.
   `pass_gate = pass` runs auto-ingest as `learned_paths` rows keyed
@@ -131,59 +136,137 @@ shapes":
   this — engine data is instance-local, no multi-tenant columns,
   shell concerns stay outside the engine — was made explicit in
   [`product-model.md` §10.7](./product-model.md) at the same time.
-- **Cross-page pattern mining** — detect when distinct pages share an
-  action shape (login, search, CRUD).
-- **Replay execution against stored paths** with drift detection
-  against current page analysis.
-- **Popup-based control support** — extend `page_analyzer` +
-  `action_planner` to handle components that reveal their interactive
-  surface only after a click (Cascader, DatePicker, RangePicker,
-  MonthPicker, column sort / filter inside a table header).
-  The engine needs to first click the trigger, then operate the
-  surfaced popup surface. Native inline non-text controls (radio /
-  checkbox groups) are in Phase 9 scope — Phase 10 only adds the
-  popup shape on top of that foundation.
-- **Custom click-toggle controls** — Tag-as-filter and similar
-  `<span>` / `<div>`-based pills that are not native form inputs.
-  Separate from popup support because the trigger IS the interactive
-  surface; no popup to operate. Folded into this phase because they
-  share the "click changes a query param" contract with popup
-  filters.
-- **Form-label extractor · coverage expansion** — the analyzer's
-  `form_label_extractor` currently ships handlers for Ant Design
-  (matches `.ant-form-item` → `.ant-form-item-label`) and native
-  HTML5 `<label for>`. Before Phase 10 closes, add handlers for the
-  other widely-used Vue/React form libraries that follow the same
-  Form.Item idiom but with a different class prefix. Candidates and
-  their characteristic classes:
-  - Element Plus (`el-form-item`)
-  - Naive UI (`n-form-item`)
-  - Arco Design (`arco-form-item`)
-  - TDesign (`t-form-item`)
-  - Quasar (`q-field__label`) — shape differs slightly, may need its
-    own handler
-  - Material UI / MUI v5 (`MuiFormControl-root` wrapping
-    `MuiInputLabel-root`) — different idiom, separate handler
-  Each new handler is ~15 LOC; the dispatcher in `extract_label`
-  already picks the first hit. Ship as needed when fixture pages or
-  user-reported real pages fall outside the current coverage. Once
-  the code lands, backfill
-  `apps/validation-site/specs/users.assertions.json` with the Tier 2
-  scenarios that exercise each control, using the `users` fixture
-  already on the page — so the scorecard flipping green becomes the
-  quantitative evidence of the improvement.
+- **Replay execution + drift detection — CURRENT (10.2)**.
+  A user can pick one LearnedPath from the catalog, provide a URL, and
+  ask the engine to replay the stored actions. The result is a replay
+  status plus drift reasons such as page mismatch, signature changed,
+  target missing, or unsupported action. This is not `pass_gate`, not a
+  Supervisor verdict, and not task planning.
 
-## Further (Phases 11–12)
+M10 closes when LearnedPath can be persisted, inspected, trusted /
+deprecated, and deterministically replayed with explainable drift.
 
-- Phase 11 — User correction & behavior teaching (the user edits a
-  LearnedPath; the system learns what the user changed and why).
-- Phase 12 — Automated evaluation & continuous optimization system
-  (regression runs against the full fixture catalogue, drift alerts).
+## M11 — Task-to-Path Planning & Execution MVP
 
-## Explicit non-goals (for current phase)
+M11 is the first L3 Actual Work milestone. The user describes a task in
+natural language; WebAgentFlow selects and parameterizes learned paths,
+executes them, and reports the result.
+
+Internal Agents introduced / made concrete:
+
+- **Agent D · Path Planner Agent** — reads the user task plus learned
+  data, selects / composes a route, binds task parameters into
+  replaceable action values, and never reads raw HTML.
+- **Agent E · Result Reporter Agent** — reads the execution outcome and
+  returns a user-facing result with structured fields the UI can render.
+
+Expected delivery:
+
+- Task input / chat-style entry for one target page or known page set.
+- LearnedPath retrieval and ranking for the task.
+- Slot binding: map task terms such as names, dates, statuses, export
+  formats, or search terms into learned action values.
+- Pre-execution confirmation when the planner's route or bound values
+  are ambiguous.
+- Execution through the M10 replay engine, not through autonomous
+  exploration.
+- User-facing result report with artifacts / final state references
+  where available.
+
+Explicit non-goals for M11: no hidden autonomous relearning, no
+per-step LLM browser control, no full recovery dialogue beyond
+returning a clear failure state.
+
+## M12 — Recovery & Handoff
+
+M12 turns failures and user aborts into first-class product flows.
+
+Internal Agents introduced / made concrete:
+
+- **Agent F · Recovery Dialogue Agent** — explains a failed step, offers
+  re-plan / re-run / handoff options, and produces the next action.
+- **Agent G · Abort Dialogue Agent** — handles user-initiated aborts
+  with resume / restart / handover / drop options.
+
+Expected delivery:
+
+- Pause-on-failure semantics for L3 execution.
+- Re-plan and re-run hooks that call Agent D only at the boundary.
+- Handoff into visible-browser user-guided mode when automation cannot
+  safely continue.
+- Audit trail that distinguishes engine failure, user abort, and user
+  takeover.
+
+## M13 — User-Guided Learning & Correction
+
+M13 implements the L2 user-guided learning path for real, replacing the
+old extension-era recording idea with a visible Playwright browser.
+
+Expected delivery:
+
+- Visible-browser takeover mode.
+- Recording of real user interactions: selector, value, click target,
+  and observable state change.
+- Provenance-preserving write-back into LearnedPath actions
+  (`provenance = user`).
+- Path correction UI for editing or replacing an existing LearnedPath.
+- Trust updates driven by user correction.
+
+No new product Agent is required by default. Add one only if the work
+cannot fit the existing A-G roles.
+
+## M14 — Learning Quality Agents & Coverage Expansion
+
+M14 revisits L1 quality after the L3 happy path and handoff loop exist.
+It also absorbs the earlier M10 draft backlog for richer controls
+and pattern generalization.
+
+Internal Agents introduced / made concrete:
+
+- **Agent A · Page Intent Agent** — separate page-purpose understanding
+  from Supervisor evaluation.
+- **Agent B · Attempt Evaluator Agent** — keep attempt evaluation simple:
+  output observations / anomalies; let code derive durable verdicts.
+- **Agent C · Learning Reporter Agent** — produce a user-facing report:
+  what the page is, what paths are reliable, what failed, what needs
+  user teaching, and how trust states changed.
+
+Coverage backlog moved here:
+
+- Popup-based controls: Cascader, DatePicker, RangePicker, MonthPicker,
+  table header sort / filter.
+- Custom click-toggle controls: Tag-as-filter, pill filters,
+  non-native checkbox / radio shapes.
+- Form-label extractor expansion for Element Plus, Naive UI, Arco
+  Design, TDesign, Quasar, and MUI where fixture or real-page evidence
+  justifies the handler.
+- Cross-page pattern mining for login / search / CRUD metadata that
+  Agent D can consume later.
+
+## M15 — Automated Evaluation & Continuous Optimization
+
+- Regression replay against the full fixture catalogue.
+- Drift alerts for confirmed / provisional LearnedPaths.
+- Quality trend tracking by page template, scenario, trust state, and
+  control type.
+- Scheduled checks that never silently rewrite paths; they create
+  reviewable evidence.
+
+## M16 — External Interfaces / Open Tooling
+
+Expose stable capability units after the main L1/L2/L3 loop is useful:
+
+- API contracts for page learning, path planning, execution,
+  verification, and user-guided recording.
+- CLI commands for local debugging and batch execution.
+- Skill / Tool form for third-party Agent schedulers.
+
+External Agents may schedule WebAgentFlow, but they must not replace it
+with their own per-step browser automation.
+
+## Explicit non-goals (for current milestone)
 
 See [`scope-boundaries.md`](./scope-boundaries.md) for the canonical
-list. Highlights: no real-time per-step LLM supervision in Phase 3, no
-cross-device sync. CLI / Skill / external-Agent interfaces are **not
-in this phase** either, but they are a long-term delivery direction —
-see [`product-model.md`](./product-model.md) §10.
+list. Highlights: no real-time per-step LLM supervision in L3, no
+cross-device sync, and no external-Agent interface work before M16
+unless explicitly reprioritized.

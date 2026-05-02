@@ -1,14 +1,20 @@
-# Phase 10 · Path abstraction & experience accumulation
+# M10 · Path Asset Foundation
 
-本 Phase 的权威范围与动机见
-[`docs/roadmap.md` § "Next — Phase 10"](../../roadmap.md)；本文件是
-**迭代索引**。Phase 10 使用语义编号目录，目录前缀与任务编号保持
-一致，例如 `10.1.1-autonomous-use-case-catalog/`。阶段级拆分与
-执行顺序见 [`phase-plan.md`](./phase-plan.md)。
+> Directory note: this folder keeps the legacy path
+> `docs/iterations/phase-10/` to avoid moving historical iteration
+> records. In roadmap language this is **delivery milestone M10**, not a
+> product lifecycle stage. Product lifecycle stages are L1 / L2 / L3 in
+> `docs/product-model.md`.
+
+M10 的权威范围与动机见
+[`docs/roadmap.md` § "M10 — Path Asset Foundation"](../../roadmap.md)；
+本文件是**迭代索引**。M10 使用语义编号目录，目录前缀与任务编号保持
+一致，例如 `10.1.1-autonomous-use-case-catalog/`。里程碑级拆分与执行
+顺序见 [`phase-plan.md`](./phase-plan.md)。
 
 ## 开发前必读
 
-开发任何 Phase 10 执行包前，请先按顺序阅读：
+开发任何 M10 执行包前，请先按顺序阅读：
 
 1. `AGENTS.md`
 2. `docs/product-model.md`
@@ -21,27 +27,30 @@
 `verify-scenario` skill，不能直接调用 `/exploration/autonomous-runs`
 或 `/exploration/autonomous-runs/stream`。
 
-## 本 Phase 的总目标（摘自 roadmap）
+## M10 的总目标（摘自 roadmap）
 
-从"引擎能开一个页面"过渡到"引擎能复用学过的东西并覆盖更多控件形
-态"。六个交付项（并非必须同一迭代完成）：
+从"引擎已经学会一条路"过渡到"这条 LearnedPath 是可查看、可信任、
+可重跑、可解释漂移的路径资产"。
 
 1. **LearnedPath 持久化** —— `pass_gate = pass` 的运行自动落成可复用记录。
-2. **Popup-based control 支持** —— 两段式"点触发 → 弹层内操作"。
-3. **Custom click-toggle 控件** —— Tag-as-filter 这类伪控件。
-4. **Form-label extractor 扩展** —— +6 个 UI 库 handler。
-5. **Cross-page pattern mining** —— 识别 login / search / CRUD 共性。
-6. **Replay execution + drift detection** —— 依学过的 path 回放。
+2. **LearnedPath catalog** —— 路径资产主入口、trust 操作、actions 查看。
+3. **Replay execution + drift detection** —— 指定一条已学 path 回放，
+   页面变化 / 目标缺失时返回可解释状态。
 
-## Phase 10 同时显式化的产品约束
+原 `10.3`–`10.6` 的 popup / click-toggle / label / pattern 草案仍保留
+在本目录中，但不再是 M10 关闭的主线前置条件；它们被重新归入 roadmap
+的 **M14 Learning Quality Agents & Coverage Expansion** backlog，除非
+用户显式要求提前执行。
+
+## M10 同时显式化的产品约束
 
 [`docs/product-model.md` §10.7 Instance-local data & the shell boundary](../../product-model.md)
-在本 Phase 开局一并写入 —— 约束 LearnedPath 的 schema（不加多租户
+在 M10 开局一并写入 —— 约束 LearnedPath 的 schema（不加多租户
 列）和反馈回路（run review 在 history 中完成，LearnedPath trust
 在独立 catalog 中完成，不做任何账号体系）。新增持久化类表**必须**
 遵守此节。
 
-## Phase 10 主线清单
+## M10 主线清单
 
 - **10.1 LearnedPath persistence** —— 已完成。`pass_gate = pass`
   的运行沉淀为 LearnedPath，并提供 trust 生命周期。
@@ -55,16 +64,14 @@
   `/exploration/autonomous-runs` 等 RESTful 路径。
 - **10.1.5 LearnedPath catalog** —— 已完成。给 LearnedPath 增加
   独立列表页和路径级 trust 操作入口。
-- **10.2 Replay execution + drift detection** —— draft。消费
-  LearnedPath，做回放和漂移判断。
-- **10.3 Popup-based control support** —— draft。支持 Cascader /
-  DatePicker / 表头筛选等弹层控件。
-- **10.4 Custom click-toggle controls** —— draft。支持 Tag / pill
-  等非原生点击切换控件。
-- **10.5 Form-label extractor coverage expansion** —— draft。扩展
-  常见 UI 库的 label handler。
-- **10.6 Cross-page pattern mining** —— draft。归纳 login / search /
-  CRUD 等跨页面共性。
+- **10.2 Replay execution + drift detection** —— 可执行。消费
+  LearnedPath，指定一条已学路径做 replay，并返回页面变化 / 目标缺失
+  等可解释状态。它不实现 Agent D，不实现 L3 task runner。
+- **10.3 Popup-based control support** —— draft，已迁入 M14 backlog。
+- **10.4 Custom click-toggle controls** —— draft，已迁入 M14 backlog。
+- **10.5 Form-label extractor coverage expansion** —— draft，已迁入
+  M14 backlog。
+- **10.6 Cross-page pattern mining** —— draft，已迁入 M14 backlog。
 
 ## 执行包索引
 
@@ -89,15 +96,16 @@
   LearnedPath 独立列表页、trust 过滤、actions 查看和路径级操作入口。
   状态：**完成**。
 - [10.2-replay-execution-drift-detection](./10.2-replay-execution-drift-detection/) ——
-  状态：**draft only，不可直接施工**。
+  指定 LearnedPath replay、drift 状态、step log 和 catalog 薄入口。
+  状态：**可执行**。
 - [10.3-popup-based-control-support](./10.3-popup-based-control-support/) ——
-  状态：**draft only，不可直接施工**。
+  状态：**draft only，不可直接施工；M14 backlog**。
 - [10.4-custom-click-toggle-controls](./10.4-custom-click-toggle-controls/) ——
-  状态：**draft only，不可直接施工**。
+  状态：**draft only，不可直接施工；M14 backlog**。
 - [10.5-form-label-extractor-expansion](./10.5-form-label-extractor-expansion/) ——
-  状态：**draft only，不可直接施工**。
+  状态：**draft only，不可直接施工；M14 backlog**。
 - [10.6-cross-page-pattern-mining](./10.6-cross-page-pattern-mining/) ——
-  状态：**draft only，不可直接施工**。
+  状态：**draft only，不可直接施工；M14 backlog**。
 
 > 后续新增执行包时，目录名必须和任务编号一致。不删已完成或已放弃的
 > 迭代目录（见 `docs/iterations/README.md` §"三条实操约定"）。

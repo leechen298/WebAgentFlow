@@ -1,21 +1,25 @@
-# Phase 10 全量计划
+# M10 全量计划
 
-本文是 Phase 10 的阶段级执行计划，用来回答“接下来按什么顺序做、每
-一包交付什么、哪些已经可执行”。Phase 10 使用语义编号目录，目录名前缀
-与任务编号一致，例如 `10.2-replay-execution-drift-detection/`。
+本文是 M10 的里程碑级执行计划，用来回答“接下来按什么顺序做、每
+一包交付什么、哪些已经可执行”。目录仍沿用历史路径
+`docs/iterations/phase-10/`，但路线图术语是 **M10**，不是产品生命周期
+阶段。产品生命周期阶段用 `L1` / `L2` / `L3`。
+
+M10 使用语义编号目录，目录名前缀与任务编号一致，例如
+`10.2-replay-execution-drift-detection/`。
 每个真正开始执行的工作仍然要有 `intent.md` + `plan.md`，本文件不
 替代迭代三件套。
 
 ## 权威输入
 
-开发 Phase 10 任务前，请先读完本节列出的权威输入，再读对应执行包
+开发 M10 任务前，请先读完本节列出的权威输入，再读对应执行包
 的 `intent.md` 和 `plan.md`。
 
 - [`docs/product-model.md`](../../product-model.md) —— 产品边界：
   AI 编码 Agent 只写代码；真实运行由 WebAgentFlow 引擎和内部
-  Supervisor 完成。
-- [`docs/roadmap.md` § Phase 10](../../roadmap.md) —— Phase 10 的
-  阶段范围。
+  Supervisor 完成；生命周期阶段是 L1 / L2 / L3。
+- [`docs/roadmap.md` § M10](../../roadmap.md) —— M10 的
+  里程碑范围。
 - [`docs/iterations/README.md`](../README.md) —— 每个迭代目录的
   写法和收尾要求。
 - [`AGENTS.md`](../../../AGENTS.md) / [`CLAUDE.md`](../../../CLAUDE.md)
@@ -126,36 +130,47 @@
 
 ### 10.2 · Replay execution + drift detection
 
-状态：draft only，不可直接施工。执行包：
+状态：可执行。执行包：
 [`10.2-replay-execution-drift-detection/`](./10.2-replay-execution-drift-detection/)。
 
 目标：
 
-- 读取 `confirmed` / `provisional` LearnedPath。
-- 对当前页面重新做 page analysis，和存储的 `dom_fingerprint` /
-  actions 做 drift check。
-- drift 低时按存储 path 执行；drift 高时回退到 autonomous learning
-  或产出需要用户处理的状态。
+- 从 LearnedPath catalog 指定一条已学路径做 replay。
+- 对当前页面重新做 page analysis，和存储的 signature / actions 做
+  drift check。
+- selector 和 action 类型仍可用时按存储 actions 执行；不可用时返回
+  page mismatch、signature changed、target missing、unsupported action
+  等可解释状态。
+- replay 不回退到 autonomous learning，不静默重试。
+- 本包是 M11 Task-to-Path Planning MVP 的执行底座，但**不**实现
+  Agent D · Path Planner Agent、task input、slot binding 或 L3 task
+  runner。
 
 预期触及：
 
 - `apps/api/app/repos/learned_paths_repo.py`
+- `apps/api/app/schemas/learned_path_replay.py`
+- `apps/api/app/services/learning/learned_path_replay.py`
 - `apps/api/app/services/learning/page_signature.py`
-- `apps/api/app/services/execution/`
+- `apps/api/app/services/execution/action_executor.py`
 - `apps/api/app/routers/exploration.py`
-- console history / LearnedPath 展示面
+- `apps/console/src/pages/LearnedPathCatalogPage.vue`
+- `apps/console/src/api/exploration.ts`
 
 验收方向：
 
-- 有 repo / service 单测覆盖 hit、miss、drift。
+- 有 repo / service / API 单测覆盖 candidate selection、explicit replay、
+  drift、selector missing、unsupported action、`actions=[]`。
 - replay 失败不会静默重试；必须返回可解释状态。
+- catalog 中能对一条 LearnedPath 发起 replay，并展示 drift reason 和
+  step log。
 - 若使用 live run，只能通过 `verify-scenario` skill，并按
   `pass_gate.status`、Supervisor verdict、5 项 scorecard、`run_id`
   原样汇报。
 
 ### 10.3 · Popup-based control support
 
-状态：draft only，不可直接施工。执行包：
+状态：draft only，不可直接施工；已迁入 M14 backlog。执行包：
 [`10.3-popup-based-control-support/`](./10.3-popup-based-control-support/)。
 
 目标：
@@ -180,7 +195,7 @@
 
 ### 10.4 · Custom click-toggle controls
 
-状态：draft only，不可直接施工。执行包：
+状态：draft only，不可直接施工；已迁入 M14 backlog。执行包：
 [`10.4-custom-click-toggle-controls/`](./10.4-custom-click-toggle-controls/)。
 
 目标：
@@ -202,7 +217,7 @@
 
 ### 10.5 · Form-label extractor coverage expansion
 
-状态：draft only，不可直接施工。执行包：
+状态：draft only，不可直接施工；已迁入 M14 backlog。执行包：
 [`10.5-form-label-extractor-expansion/`](./10.5-form-label-extractor-expansion/)。
 
 目标：
@@ -224,7 +239,7 @@
 
 ### 10.6 · Cross-page pattern mining
 
-状态：draft only，不可直接施工。执行包：
+状态：draft only，不可直接施工；已迁入 M14 backlog。执行包：
 [`10.6-cross-page-pattern-mining/`](./10.6-cross-page-pattern-mining/)。
 
 目标：
@@ -257,7 +272,7 @@
 
 硬边界：
 
-- 每次只能实现当前迭代包，不顺手做后续 Phase 10 项。
+- 每次只能实现当前迭代包，不顺手做后续 M10 / M14 / M11 项。
 - `draft only` 执行包不能直接施工；开工前必须重新核对当前代码和上
   一个迭代结果，并把 `plan.md` 修订成可执行状态。
 - 需要 live autonomous run 时，只能走 `verify-scenario` skill；不得
