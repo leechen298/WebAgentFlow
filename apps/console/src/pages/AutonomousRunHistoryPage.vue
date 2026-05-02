@@ -20,6 +20,7 @@
         :data-source="runs"
         :pagination="false"
         :loading="loading"
+        :scroll="{ x: true }"
         row-key="run_id"
         size="middle"
       >
@@ -57,16 +58,8 @@
           <template v-else-if="column.key === 'status'">
             <a-tag :color="statusColor(record.status)">{{ record.status }}</a-tag>
           </template>
-          <template v-else-if="column.key === 'run_id'">
-            <code class="run-id">{{ record.run_id.slice(0, 8) }}</code>
-          </template>
-          <template v-else-if="column.key === 'url'">
-            <span class="truncate" :title="record.url || ''">
-              {{ record.url || '—' }}
-            </span>
-          </template>
           <template v-else-if="column.key === 'actions'">
-            <a-space :size="4">
+            <a-space :size="4" :wrap="true">
               <a-button
                 size="small"
                 :loading="copyingRunId === record.run_id"
@@ -76,10 +69,55 @@
               </a-button>
               <a-button
                 size="small"
+                :loading="copyingUrlRunId === record.run_id"
+                :disabled="!record.url"
+                @click="copyRunUrl(record.run_id, record.url)"
+              >
+                {{ $t('autonomousHistory.copyUrl') }}
+              </a-button>
+              <a-button
+                size="small"
+                :loading="copyingIdRunId === record.run_id"
+                @click="copyRunId(record.run_id)"
+              >
+                {{ $t('autonomousHistory.copyId') }}
+              </a-button>
+              <a-button
+                size="small"
                 @click="viewDetail(record.run_id)"
               >
                 {{ $t('autonomousHistory.viewDetail') }}
               </a-button>
+              <a-popconfirm
+                :title="$t('autonomousHistory.runReviewAcceptPrompt')"
+                :ok-text="$t('common.confirm')"
+                :cancel-text="$t('common.cancel')"
+                @confirm="handleReview(record.run_id, 'accepted')"
+              >
+                <a-button
+                  size="small"
+                  type="primary"
+                  :disabled="record.operator_review_status === 'accepted'"
+                  :loading="reviewingRunId === record.run_id"
+                >
+                  {{ $t('autonomousHistory.reviewAcceptBtn') }}
+                </a-button>
+              </a-popconfirm>
+              <a-popconfirm
+                :title="$t('autonomousHistory.runReviewRejectPrompt')"
+                :ok-text="$t('common.confirm')"
+                :cancel-text="$t('common.cancel')"
+                @confirm="handleReview(record.run_id, 'rejected')"
+              >
+                <a-button
+                  size="small"
+                  danger
+                  :disabled="record.operator_review_status === 'rejected'"
+                  :loading="reviewingRunId === record.run_id"
+                >
+                  {{ $t('autonomousHistory.reviewRejectBtn') }}
+                </a-button>
+              </a-popconfirm>
               <a-popconfirm
                 :title="$t('autonomousHistory.deleteConfirmPrompt')"
                 :ok-text="$t('common.confirm')"
@@ -89,6 +127,7 @@
                 <a-button
                   size="small"
                   danger
+                  ghost
                   :loading="deletingRunId === record.run_id"
                 >
                   {{ $t('autonomousHistory.deleteRun') }}
@@ -124,6 +163,7 @@ import {
   listAutonomousRuns,
   getAutonomousRun,
   deleteAutonomousRun,
+  patchRunReview,
   type AutonomousRunSummary,
 } from '@/api/exploration';
 import {
@@ -186,18 +226,19 @@ const hasNext = ref(false);
 const nextCursor = ref<string | null>(null);
 const cursorStack = ref<(string | null)[]>([]); // tracks previous cursors for "first" reset
 const copyingRunId = ref<string | null>(null);
+const copyingUrlRunId = ref<string | null>(null);
+const copyingIdRunId = ref<string | null>(null);
 const deletingRunId = ref<string | null>(null);
+const reviewingRunId = ref<string | null>(null);
 
 const columns = [
   { key: 'created_at', dataIndex: 'created_at', title: t('autonomousHistory.colCreated'), width: 180 },
-  { key: 'spec_id', dataIndex: 'spec_id', title: t('autonomousHistory.colSpec'), width: 140 },
+  { key: 'spec_id', dataIndex: 'spec_id', title: t('autonomousHistory.colSpec'), width: 100 },
   { key: 'scenario', dataIndex: 'scenario', title: t('autonomousHistory.colScenario'), width: 150 },
-  { key: 'verdict', dataIndex: 'verdict', title: t('autonomousHistory.colVerdict'), width: 130 },
+  { key: 'verdict', dataIndex: 'verdict', title: t('autonomousHistory.colVerdict'), width: 100 },
   { key: 'operator_review_status', dataIndex: 'operator_review_status', title: t('autonomousHistory.colReviewStatus'), width: 110 },
   { key: 'status', dataIndex: 'status', title: t('autonomousHistory.colStatus'), width: 110 },
-  { key: 'url', dataIndex: 'url', title: 'URL', ellipsis: true },
-  { key: 'run_id', dataIndex: 'run_id', title: t('autonomousHistory.colRunId'), width: 100 },
-  { key: 'actions', title: t('common.actions'), width: 240, fixed: 'right' as const },
+  { key: 'actions', title: t('common.actions'), minWidth: 200, fixed: 'right' as const },
 ];
 
 function formatDate(iso: string): string {
@@ -272,6 +313,31 @@ async function copyRunJson(runId: string): Promise<void> {
   }
 }
 
+async function copyRunUrl(runId: string, url: string | null | undefined): Promise<void> {
+  if (!url) return;
+  copyingUrlRunId.value = runId;
+  try {
+    await navigator.clipboard.writeText(url);
+    message.success(t('autonomousHistory.copiedUrl'));
+  } catch (err) {
+    message.error((err as Error).message || t('error.network'));
+  } finally {
+    copyingUrlRunId.value = null;
+  }
+}
+
+async function copyRunId(runId: string): Promise<void> {
+  copyingIdRunId.value = runId;
+  try {
+    await navigator.clipboard.writeText(runId);
+    message.success(t('autonomousHistory.copiedId'));
+  } catch (err) {
+    message.error((err as Error).message || t('error.network'));
+  } finally {
+    copyingIdRunId.value = null;
+  }
+}
+
 function viewDetail(runId: string): void {
   void router.push(`/exploration/autonomous/history/${runId}`);
 }
@@ -286,6 +352,23 @@ async function handleDelete(runId: string): Promise<void> {
     message.error((err as Error).message || t('autonomousHistory.deleteFailed'));
   } finally {
     deletingRunId.value = null;
+  }
+}
+
+async function handleReview(
+  runId: string,
+  status: 'accepted' | 'rejected',
+): Promise<void> {
+  reviewingRunId.value = runId;
+  try {
+    await patchRunReview(runId, { status });
+    message.success(t('autonomousHistory.runReviewUpdated'));
+    // Refresh the current page so the new review status is reflected.
+    await loadRuns(cursorStack.value.length ? cursorStack.value[cursorStack.value.length - 1] : null);
+  } catch (err) {
+    message.error((err as Error).message || t('error.network'));
+  } finally {
+    reviewingRunId.value = null;
   }
 }
 
