@@ -39,7 +39,7 @@
 
 ### 10.1.1 · Autonomous use-case catalog
 
-状态：可执行。执行包：
+状态：完成。执行包：
 [`10.1.1-autonomous-use-case-catalog/`](./10.1.1-autonomous-use-case-catalog/)。
 
 目标：
@@ -52,7 +52,7 @@
 边界：
 
 - 不改 autonomous engine。
-- 不调用 `/exploration/autonomous-run`。
+- 不调用 `/exploration/autonomous-runs` 或 `/exploration/autonomous-runs/stream`。
 - 不新增后端接口，除非执行时发现 `/exploration/specs` 缺少必要字段。
 
 定位：
@@ -60,6 +60,42 @@
 - 这是插入在 `10.1` 与 `10.2` 之间的 supporting iteration。
 - 它解决“当前有哪些 authored use cases 可跑”的入口问题，不改变
   engine、不消费 LearnedPath。
+
+### 10.1.2 · Scenario-relative verdict cleanup
+
+状态：完成。执行包：
+[`10.1.2-scenario-relative-verdict-cleanup/`](./10.1.2-scenario-relative-verdict-cleanup/)。
+
+目标：
+
+- 把机械 verdict（success / failure）映射到 scenario-relative 公开
+  词汇：matching spec → `success`，deviating → `failure`，
+  `unverified` → `uncertain`。
+- 保留 `mechanical_verdict` 供审计追溯。
+
+### 10.1.3 · Run review vs LearnedPath trust
+
+状态：完成。执行包：
+[`10.1.3-run-review-vs-learned-path-trust/`](./10.1.3-run-review-vs-learned-path-trust/)。
+
+目标：
+
+- 拆分 run 级人工审核（`accepted` / `rejected` / `unreviewed`）与
+  LearnedPath trust（`confirmed` / `deprecated` / …）。
+- 标记某条 run 错误不再污染其他命中同一 LearnedPath 的 run。
+- history detail 主按钮改为 run 级操作，LearnedPath 信息降为只读
+  关联区。
+
+### 10.1.4 · RESTful route cleanup
+
+状态：完成。执行包：
+[`10.1.4-restful-route-cleanup/`](./10.1.4-restful-route-cleanup/)。
+
+目标：
+
+- 统一 exploration router 到 RESTful 复数路径：
+  `/exploration/autonomous-runs`、`/exploration/learned-paths` 等。
+- 移除旧 singular 路由的兼容层。
 
 ### 10.2 · Replay execution + drift detection
 
@@ -198,7 +234,7 @@
 - `draft only` 执行包不能直接施工；开工前必须重新核对当前代码和上
   一个迭代结果，并把 `plan.md` 修订成可执行状态。
 - 需要 live autonomous run 时，只能走 `verify-scenario` skill；不得
-  curl / fetch `/exploration/autonomous-run`。
+  curl / fetch `/exploration/autonomous-runs` 或 `/exploration/autonomous-runs/stream`。
 - 汇报 live run 必须以 `pass_gate.status` 开头，并原样给出
   Supervisor verdict、5 项 scorecard 和 `run_id`。
 - 如果只是前端页面 / 文档整理，不需要 live run。

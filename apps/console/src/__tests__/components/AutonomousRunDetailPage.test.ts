@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 
 const getAutonomousRun = vi.fn();
 const patchLearnedPathTrust = vi.fn();
+const patchRunReview = vi.fn();
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { run_id: 'run-1' } }),
@@ -12,6 +13,7 @@ vi.mock('vue-router', () => ({
 vi.mock('@/api/exploration', () => ({
   getAutonomousRun,
   patchLearnedPathTrust,
+  patchRunReview,
 }));
 
 // The LearnedPath block sits below the existing Page/Step/Verification
@@ -95,20 +97,150 @@ function buildDetail(overrides: Record<string, unknown> = {}) {
       verification: { scorecard: { pass_gate: { status: 'pass' } } },
     },
     pass_gate_status: 'pass',
+    operator_review_status: 'unreviewed',
+    operator_review_note: null,
+    operator_reviewed_at: null,
     learned_path_id: 'lp-1',
     learned_path_trust: 'provisional',
+    learned_path: {
+      id: 'lp-1',
+      trust: 'provisional',
+      source_run_id: 'run-1',
+      hit_count: 1,
+      relation: 'source',
+    },
     ...overrides,
   };
 }
+
+describe('AutonomousRunDetailPage · Run review block', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    getAutonomousRun.mockReset();
+    patchRunReview.mockReset();
+  });
+
+  it('renders run review status tag and action buttons', async () => {
+    getAutonomousRun.mockResolvedValueOnce(buildDetail());
+
+    const Page = await loadDetailPage();
+    const wrapper = mount(Page, { global: { stubs } });
+    await flushPromises();
+
+    const tag = wrapper.find('.run-review-card .tag');
+    expect(tag.attributes('data-color')).toBe('default');
+    const buttons = wrapper.findAll('button');
+    const labels = buttons.map((b) => b.text());
+    expect(labels.some((t) => /Accept this run/i.test(t))).toBe(true);
+    expect(labels.some((t) => /Reject this run/i.test(t))).toBe(true);
+  });
+
+  it('accepts run and updates review tag', async () => {
+    getAutonomousRun.mockResolvedValueOnce(buildDetail());
+    patchRunReview.mockResolvedValueOnce({
+      run_id: 'run-1',
+      operator_review_status: 'accepted',
+      operator_review_note: null,
+      operator_reviewed_at: '2026-04-25T11:00:00Z',
+      learned_path: buildDetail().learned_path,
+    });
+
+    const Page = await loadDetailPage();
+    const wrapper = mount(Page, { global: { stubs } });
+    await flushPromises();
+
+    const vm = (wrapper.vm as unknown as {
+      $: { setupState: { onAcceptRun: () => void } };
+    }).$.setupState;
+    vm.onAcceptRun();
+    await flushPromises();
+
+    expect(patchRunReview).toHaveBeenCalledWith('run-1', {
+      status: 'accepted',
+    });
+    expect(
+      wrapper.find('.run-review-card .tag').attributes('data-color'),
+    ).toBe('green');
+  });
+
+  it('rejects run and updates review tag', async () => {
+    getAutonomousRun.mockResolvedValueOnce(buildDetail());
+    patchRunReview.mockResolvedValueOnce({
+      run_id: 'run-1',
+      operator_review_status: 'rejected',
+      operator_review_note: 'wrong path',
+      operator_reviewed_at: '2026-04-25T11:00:00Z',
+      learned_path: buildDetail().learned_path,
+    });
+
+    const Page = await loadDetailPage();
+    const wrapper = mount(Page, { global: { stubs } });
+    await flushPromises();
+
+    const vm = (wrapper.vm as unknown as {
+      $: { setupState: { onRejectRun: () => void } };
+    }).$.setupState;
+    vm.onRejectRun();
+    await flushPromises();
+
+    expect(patchRunReview).toHaveBeenCalledWith('run-1', {
+      status: 'rejected',
+    });
+    expect(
+      wrapper.find('.run-review-card .tag').attributes('data-color'),
+    ).toBe('red');
+  });
+
+  it('disables Accept when already accepted', async () => {
+    getAutonomousRun.mockResolvedValueOnce(
+      buildDetail({ operator_review_status: 'accepted' }),
+    );
+
+    const Page = await loadDetailPage();
+    const wrapper = mount(Page, { global: { stubs } });
+    await flushPromises();
+
+    const buttons = wrapper.findAll('button');
+    const acceptBtn = buttons.find((b) =>
+      /Accept this run/i.test(b.text()),
+    );
+    const rejectBtn = buttons.find((b) =>
+      /Reject this run/i.test(b.text()),
+    );
+    expect(acceptBtn?.attributes('disabled')).toBeDefined();
+    expect(rejectBtn?.attributes('disabled')).toBeUndefined();
+  });
+
+  it('disables Reject when already rejected', async () => {
+    getAutonomousRun.mockResolvedValueOnce(
+      buildDetail({ operator_review_status: 'rejected' }),
+    );
+
+    const Page = await loadDetailPage();
+    const wrapper = mount(Page, { global: { stubs } });
+    await flushPromises();
+
+    const buttons = wrapper.findAll('button');
+    const acceptBtn = buttons.find((b) =>
+      /Accept this run/i.test(b.text()),
+    );
+    const rejectBtn = buttons.find((b) =>
+      /Reject this run/i.test(b.text()),
+    );
+    expect(acceptBtn?.attributes('disabled')).toBeUndefined();
+    expect(rejectBtn?.attributes('disabled')).toBeDefined();
+  });
+});
 
 describe('AutonomousRunDetailPage · LearnedPath block', () => {
   beforeEach(() => {
     vi.resetModules();
     getAutonomousRun.mockReset();
     patchLearnedPathTrust.mockReset();
+    patchRunReview.mockReset();
   });
 
-  it('renders the trust tag and both action buttons when ingested', async () => {
+  it('renders the trust tag and path-level action buttons when ingested', async () => {
     getAutonomousRun.mockResolvedValueOnce(buildDetail());
 
     const Page = await loadDetailPage();
@@ -122,13 +254,11 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
     // Both action buttons present and enabled at provisional state
     const buttons = wrapper.findAll('button');
     const labels = buttons.map((b) => b.text());
-    expect(labels.some((t) => /Confirm|确认|確認/.test(t))).toBe(true);
-    expect(labels.some((t) => /Mark wrong|标记错误|誤りとして報告/.test(t))).toBe(
-      true,
-    );
+    expect(labels.some((t) => /Confirm path/i.test(t))).toBe(true);
+    expect(labels.some((t) => /Deprecate path/i.test(t))).toBe(true);
   });
 
-  it('Confirm button promotes trust and refreshes the tag', async () => {
+  it('Confirm path button promotes trust and refreshes the tag', async () => {
     getAutonomousRun.mockResolvedValueOnce(buildDetail());
     patchLearnedPathTrust.mockResolvedValueOnce({
       id: 'lp-1',
@@ -141,11 +271,11 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
 
     // Drive the confirmed path via the component's exposed callback —
     // the popconfirm wrapper is library code, trust it; we test the
-    // onConfirm handler.
+    // onConfirmPath handler.
     const vm = (wrapper.vm as unknown as {
-      $: { setupState: { onConfirm: () => void } };
+      $: { setupState: { onConfirmPath: () => void } };
     }).$.setupState;
-    vm.onConfirm();
+    vm.onConfirmPath();
     await flushPromises();
 
     expect(patchLearnedPathTrust).toHaveBeenCalledWith('lp-1', {
@@ -157,7 +287,7 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
     ).toBe('green');
   });
 
-  it('Mark-wrong button deprecates trust', async () => {
+  it('Deprecate path button deprecates trust', async () => {
     getAutonomousRun.mockResolvedValueOnce(buildDetail());
     patchLearnedPathTrust.mockResolvedValueOnce({
       id: 'lp-1',
@@ -169,9 +299,9 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
     await flushPromises();
 
     const vm = (wrapper.vm as unknown as {
-      $: { setupState: { onMarkWrong: () => void } };
+      $: { setupState: { onDeprecatePath: () => void } };
     }).$.setupState;
-    vm.onMarkWrong();
+    vm.onDeprecatePath();
     await flushPromises();
 
     expect(patchLearnedPathTrust).toHaveBeenCalledWith('lp-1', {
@@ -182,9 +312,9 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
     ).toBe('red');
   });
 
-  it('disables Confirm when trust is already confirmed', async () => {
+  it('disables Confirm path when trust is already confirmed', async () => {
     getAutonomousRun.mockResolvedValueOnce(
-      buildDetail({ learned_path_trust: 'confirmed' }),
+      buildDetail({ learned_path_trust: 'confirmed', learned_path: { ...buildDetail().learned_path, trust: 'confirmed' } }),
     );
 
     const Page = await loadDetailPage();
@@ -193,18 +323,18 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
 
     const buttons = wrapper.findAll('button');
     const confirmBtn = buttons.find((b) =>
-      /Confirm|确认|確認/.test(b.text()),
+      /Confirm path/i.test(b.text()),
     );
     const markWrongBtn = buttons.find((b) =>
-      /Mark wrong|标记错误|誤りとして報告/.test(b.text()),
+      /Deprecate path/i.test(b.text()),
     );
     expect(confirmBtn?.attributes('disabled')).toBeDefined();
     expect(markWrongBtn?.attributes('disabled')).toBeUndefined();
   });
 
-  it('disables Mark-wrong when trust is already deprecated', async () => {
+  it('disables Deprecate path when trust is already deprecated', async () => {
     getAutonomousRun.mockResolvedValueOnce(
-      buildDetail({ learned_path_trust: 'deprecated' }),
+      buildDetail({ learned_path_trust: 'deprecated', learned_path: { ...buildDetail().learned_path, trust: 'deprecated' } }),
     );
 
     const Page = await loadDetailPage();
@@ -213,10 +343,10 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
 
     const buttons = wrapper.findAll('button');
     const confirmBtn = buttons.find((b) =>
-      /Confirm|确认|確認/.test(b.text()),
+      /Confirm path/i.test(b.text()),
     );
     const markWrongBtn = buttons.find((b) =>
-      /Mark wrong|标记错误|誤りとして報告/.test(b.text()),
+      /Deprecate path/i.test(b.text()),
     );
     expect(confirmBtn?.attributes('disabled')).toBeUndefined();
     expect(markWrongBtn?.attributes('disabled')).toBeDefined();
@@ -227,6 +357,7 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
       buildDetail({
         learned_path_id: null,
         learned_path_trust: null,
+        learned_path: null,
         pass_gate_status: 'pass',
       }),
     );
@@ -243,6 +374,7 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
       buildDetail({
         learned_path_id: null,
         learned_path_trust: null,
+        learned_path: null,
         pass_gate_status: 'fail',
       }),
     );

@@ -9,8 +9,9 @@ Provides the backend for the Exploration Workbench frontend:
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
@@ -22,6 +23,7 @@ from app.models.exploration_run import (
     ExplorationMode,
     ExplorationRun,
     ExplorationRunStatus,
+    OperatorReviewStatus,
 )
 from app.models.learned_path import TrustStatus
 from app.repos.exploration_run_repo import ExplorationRunRepository
@@ -854,6 +856,25 @@ class AutonomousRunDeleteResult(BaseModel):
     deleted_learned_path_ids: list[str] = Field(default_factory=list)
 
 
+class RunReviewPatchRequest(BaseModel):
+    status: Literal["accepted", "rejected", "unreviewed"]
+    note: str | None = Field(default=None, max_length=500)
+
+
+class RunLearnedPathProjection(BaseModel):
+    id: str
+    trust: str
+    source_run_id: str | None = None
+    hit_count: int
+    relation: Literal["source", "dedup_hit", "none"]
+
+
+# Rebuild models that use Literal under ``from __future__ import annotations``
+# so FastAPI's TypeAdapter can resolve them at import time.
+RunReviewPatchRequest.model_rebuild()
+RunLearnedPathProjection.model_rebuild()
+
+
 @router.get(
     "/autonomous-runs",
     response_model=ApiResponse[CursorPage[AutonomousRunSummary]],
@@ -930,6 +951,44 @@ def list_autonomous_runs(
     )
 
 
+def _learned_path_relation_for_run(
+    db: Session,
+    run: ExplorationRun,
+) -> tuple[Any | None, Literal["source", "dedup_hit", "none"]]:
+    """Resolve the LearnedPath associated with a run and the relation type."""
+    repo = LearnedPathRepository(db)
+    linked = repo.find_by_source_run(str(run.id))
+    if linked is not None:
+        return linked, "source"
+
+    final_data = run.result_snapshot_json
+    if not isinstance(final_data, dict):
+        return None, "none"
+    if _pass_gate_from_final_data(final_data) != "pass":
+        return None, "none"
+
+    page_analysis_dict = final_data.get("page_analysis")
+    if not isinstance(page_analysis_dict, dict):
+        return None, "none"
+    try:
+        analysis = PageAnalysis.model_validate(page_analysis_dict)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("LearnedPath: failed to rehydrate PageAnalysis: %s", exc)
+        return None, "none"
+
+    strategy = run.strategy_json or {}
+    url = analysis.url or strategy.get("url") or ""
+    matched = repo.find_by_identity(
+        page_template=path_template(url),
+        query_signature=query_signature(url),
+        dom_fingerprint=dom_fingerprint(analysis),
+        scenario=strategy.get("scenario") or "",
+    )
+    if matched is not None:
+        return matched, "dedup_hit"
+    return None, "none"
+
+
 @router.get(
     "/autonomous-runs/{run_id}",
     response_model=ApiResponse[dict[str, Any]],
@@ -943,7 +1002,16 @@ def get_autonomous_run(
     run = repo.get(run_id)
     if run is None or (run.strategy_json or {}).get("kind") != "autonomous":
         raise HTTPException(status_code=404, detail=f"Autonomous run not found: {run_id}")
-    learned = _learned_path_for_run(db, run)
+    learned, relation = _learned_path_relation_for_run(db, run)
+    learned_path_projection = None
+    if learned is not None:
+        learned_path_projection = RunLearnedPathProjection(
+            id=str(learned.id),
+            trust=str(learned.trust),
+            source_run_id=learned.source_run_id,
+            hit_count=learned.hit_count,
+            relation=relation,
+        )
     return ApiResponse(
         data={
             "run_id": str(run.id),
@@ -954,8 +1022,72 @@ def get_autonomous_run(
             "summary": run.summary,
             "result": run.result_snapshot_json,
             "pass_gate_status": _pass_gate_status_for(run),
+            "operator_review_status": str(run.operator_review_status),
+            "operator_review_note": run.operator_review_note,
+            "operator_reviewed_at": (
+                run.operator_reviewed_at.isoformat() if run.operator_reviewed_at else None
+            ),
             "learned_path_id": str(learned.id) if learned else None,
             "learned_path_trust": str(learned.trust) if learned else None,
+            "learned_path": (
+                learned_path_projection.model_dump() if learned_path_projection else None
+            ),
+        }
+    )
+
+
+@router.patch(
+    "/autonomous-runs/{run_id}/review",
+    response_model=ApiResponse[dict[str, Any]],
+)
+def patch_autonomous_run_review(
+    db: DbSession,
+    run_id: str,
+    body: RunReviewPatchRequest,
+) -> ApiResponse[dict[str, Any]]:
+    """Update the operator review status of a single autonomous run.
+
+    Does not modify any associated LearnedPath.
+    """
+    repo = ExplorationRunRepository(db)
+    run = repo.get(run_id)
+    if run is None or (run.strategy_json or {}).get("kind") != "autonomous":
+        raise HTTPException(status_code=404, detail=f"Autonomous run not found: {run_id}")
+
+    try:
+        run.operator_review_status = OperatorReviewStatus(body.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    run.operator_review_note = body.note
+    if run.operator_review_status == OperatorReviewStatus.UNREVIEWED:
+        run.operator_reviewed_at = None
+    else:
+        run.operator_reviewed_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(run)
+
+    learned, relation = _learned_path_relation_for_run(db, run)
+    learned_path_projection = None
+    if learned is not None:
+        learned_path_projection = RunLearnedPathProjection(
+            id=str(learned.id),
+            trust=str(learned.trust),
+            source_run_id=learned.source_run_id,
+            hit_count=learned.hit_count,
+            relation=relation,
+        )
+
+    return ApiResponse(
+        data={
+            "run_id": str(run.id),
+            "operator_review_status": str(run.operator_review_status),
+            "operator_review_note": run.operator_review_note,
+            "operator_reviewed_at": (
+                run.operator_reviewed_at.isoformat() if run.operator_reviewed_at else None
+            ),
+            "learned_path": (
+                learned_path_projection.model_dump() if learned_path_projection else None
+            ),
         }
     )
 
@@ -968,28 +1100,25 @@ def delete_autonomous_run(
     db: DbSession,
     run_id: str,
 ) -> ApiResponse[AutonomousRunDeleteResult]:
-    """Delete one autonomous run and its source LearnedPath, if any."""
+    """Delete one autonomous run.
+
+    Does NOT delete associated LearnedPaths — those may be shared by
+    multiple runs via dedup and must be managed through the LearnedPath
+    surface instead.
+    """
     repo = ExplorationRunRepository(db)
     run = repo.get(run_id)
     if run is None or (run.strategy_json or {}).get("kind") != "autonomous":
         raise HTTPException(status_code=404, detail=f"Autonomous run not found: {run_id}")
 
-    learned_path_ids = LearnedPathRepository(db).delete_by_source_run(
-        str(run.id),
-        commit=False,
-    )
-    try:
-        db.delete(run)
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
+    db.delete(run)
+    db.commit()
 
     return ApiResponse(
         data=AutonomousRunDeleteResult(
             run_id=run_id,
             deleted=True,
-            deleted_learned_path_ids=learned_path_ids,
+            deleted_learned_path_ids=[],
         )
     )
 

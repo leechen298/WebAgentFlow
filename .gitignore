@@ -32,3 +32,4 @@ apps/worker/.coverage
 .playwright-cli/
 .dev-logs/
 /data/
+.coverage

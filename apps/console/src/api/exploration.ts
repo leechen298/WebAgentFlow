@@ -68,6 +68,16 @@ export interface AutonomousRunListPage {
   next_cursor: string | null;
 }
 
+export type OperatorReviewStatus = 'unreviewed' | 'accepted' | 'rejected';
+
+export interface RunLearnedPathProjection {
+  id: string;
+  trust: LearnedPathTrust;
+  source_run_id: string | null;
+  hit_count: number;
+  relation: 'source' | 'dedup_hit' | 'none';
+}
+
 export interface AutonomousRunDetail {
   run_id: string;
   created_at: string;
@@ -84,6 +94,9 @@ export interface AutonomousRunDetail {
    * to be absent.
    */
   pass_gate_status?: 'pass' | 'fail' | 'unverified' | null;
+  operator_review_status?: OperatorReviewStatus;
+  operator_review_note?: string | null;
+  operator_reviewed_at?: string | null;
   /**
    * LearnedPath auto-sunk from this run's `pass_gate = pass` outcome,
    * if any. Null means the run wasn't a clean pass or pre-dates the
@@ -91,6 +104,7 @@ export interface AutonomousRunDetail {
    */
   learned_path_id?: string | null;
   learned_path_trust?: LearnedPathTrust | null;
+  learned_path?: RunLearnedPathProjection | null;
 }
 
 // ─── LearnedPath ────────────────────────────────────────────
@@ -189,6 +203,28 @@ export interface AutonomousRunDeleteResult {
   run_id: string;
   deleted: boolean;
   deleted_learned_path_ids: string[];
+}
+
+export async function patchRunReview(
+  runId: string,
+  payload: { status: OperatorReviewStatus; note?: string | null },
+): Promise<{
+  run_id: string;
+  operator_review_status: OperatorReviewStatus;
+  operator_review_note: string | null;
+  operator_reviewed_at: string | null;
+  learned_path: RunLearnedPathProjection | null;
+}> {
+  return (await apiClient.patch(
+    `/exploration/autonomous-runs/${runId}/review`,
+    payload,
+  )) as unknown as {
+    run_id: string;
+    operator_review_status: OperatorReviewStatus;
+    operator_review_note: string | null;
+    operator_reviewed_at: string | null;
+    learned_path: RunLearnedPathProjection | null;
+  };
 }
 
 export async function deleteAutonomousRun(runId: string): Promise<AutonomousRunDeleteResult> {

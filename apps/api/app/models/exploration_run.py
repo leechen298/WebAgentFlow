@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import JSON, String, Text
+from sqlalchemy import JSON, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -22,6 +23,12 @@ class ExplorationRunStatus(StrEnum):
     PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class OperatorReviewStatus(StrEnum):
+    UNREVIEWED = "unreviewed"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
 
 
 class ExplorationRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -58,4 +65,14 @@ class ExplorationRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Stores prioritized exploration suggestions and inferred action types.
     interaction_hints_json: Mapped[list[dict[str, Any]] | None] = mapped_column(
         JSON, nullable=True
+    )
+    # Run-level operator review — independent of LearnedPath trust.
+    operator_review_status: Mapped[OperatorReviewStatus] = mapped_column(
+        String(16),
+        default=OperatorReviewStatus.UNREVIEWED,
+        nullable=False,
+    )
+    operator_review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    operator_reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )

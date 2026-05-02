@@ -18,8 +18,8 @@
 
 `draft only` 执行包不能直接施工。每次只实现当前执行包，不顺手做
 后续编号任务；需要 live autonomous run 时只能通过
-`verify-scenario` skill，不能直接调用 `/exploration/autonomous-run`
-或 stream 接口。
+`verify-scenario` skill，不能直接调用 `/exploration/autonomous-runs`
+或 `/exploration/autonomous-runs/stream`。
 
 ## 本 Phase 的总目标（摘自 roadmap）
 
@@ -44,9 +44,14 @@
 
 - **10.1 LearnedPath persistence** —— 已完成。`pass_gate = pass`
   的运行沉淀为 LearnedPath，并提供 trust 生命周期。
-- **10.1.1 Autonomous use-case catalog** —— 可执行。当前插入的
-  辅助入口需求，不改变 engine，只把 authored specs 展示成可进入
-  workbench 的用例目录。
+- **10.1.1 Autonomous use-case catalog** —— 已完成。在 workbench
+  之前补一个“当前可跑自主探索用例”的目录页。
+- **10.1.2 Scenario-relative verdict cleanup** —— 已完成。把
+  pass_gate 的机械 verdict 映射到 scenario-relative 公开词汇。
+- **10.1.3 Run review vs LearnedPath trust** —— 已完成。把 run
+  级人工审核和 LearnedPath trust 拆成两个独立概念。
+- **10.1.4 RESTful route cleanup** —— 已完成。把 run 端点统一到
+  `/exploration/autonomous-runs` 等 RESTful 路径。
 - **10.2 Replay execution + drift detection** —— draft。消费
   LearnedPath，做回放和漂移判断。
 - **10.3 Popup-based control support** —— draft。支持 Cascader /
@@ -67,9 +72,14 @@
   `pass_gate=pass` / 5/5 / `run_id=6c97c030-…` /
   `learned_path_id=31d3cf58-…`。
 - [10.1.1-autonomous-use-case-catalog](./10.1.1-autonomous-use-case-catalog/) ——
-  在 workbench 之前补一个“当前可跑自主探索用例”的目录页，让操作员
-  能从 authored specs 直接进入对应场景的 workbench。状态：
-  **可执行**。
+  在 workbench 之前补一个“当前可跑自主探索用例”的目录页。状态：
+  **完成**。
+- [10.1.2-scenario-relative-verdict-cleanup](./10.1.2-scenario-relative-verdict-cleanup/) ——
+  机械 verdict → scenario-relative 公开词汇。状态：**完成**。
+- [10.1.3-run-review-vs-learned-path-trust](./10.1.3-run-review-vs-learned-path-trust/) ——
+  拆分 run 级人工审核与 LearnedPath trust。状态：**完成**。
+- [10.1.4-restful-route-cleanup](./10.1.4-restful-route-cleanup/) ——
+  统一 exploration router 到 RESTful 路径。状态：**完成**。
 - [10.2-replay-execution-drift-detection](./10.2-replay-execution-drift-detection/) ——
   状态：**draft only，不可直接施工**。
 - [10.3-popup-based-control-support](./10.3-popup-based-control-support/) ——

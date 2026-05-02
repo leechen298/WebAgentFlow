@@ -125,30 +125,115 @@
           style="margin-top: 16px"
         />
 
+        <!-- Run review — operator-level acceptance / rejection. -->
+        <a-card
+          :title="$t('autonomousHistory.runReviewTitle')"
+          :bordered="false"
+          style="margin-top: 16px"
+          class="run-review-card"
+        >
+          <a-space :size="12" align="center" wrap>
+            <span>{{ $t('autonomousHistory.runReviewStatus') }}:</span>
+            <a-tag :color="reviewTagColor">
+              {{ $t(reviewI18nKey) }}
+            </a-tag>
+          </a-space>
+          <div v-if="operatorReviewNote" class="run-review-note">
+            <span class="note-label">{{ $t('autonomousHistory.runReviewNoteLabel') }}:</span>
+            {{ operatorReviewNote }}
+          </div>
+          <div class="run-review-actions">
+            <a-popconfirm
+              v-if="canAcceptRun"
+              :title="$t('autonomousHistory.runReviewAcceptPrompt')"
+              :ok-text="$t('autonomousHistory.runReviewAccept')"
+              :cancel-text="$t('common.cancel')"
+              @confirm="onAcceptRun"
+            >
+              <a-button
+                type="primary"
+                :loading="updatingReview && pendingReviewAction === 'accepted'"
+              >
+                {{ $t('autonomousHistory.runReviewAccept') }}
+              </a-button>
+            </a-popconfirm>
+            <a-button
+              v-else
+              type="primary"
+              disabled
+              :loading="updatingReview && pendingReviewAction === 'accepted'"
+            >
+              {{ $t('autonomousHistory.runReviewAccept') }}
+            </a-button>
+            <a-popconfirm
+              v-if="canRejectRun"
+              :title="$t('autonomousHistory.runReviewRejectPrompt')"
+              :ok-text="$t('autonomousHistory.runReviewReject')"
+              :cancel-text="$t('common.cancel')"
+              @confirm="onRejectRun"
+            >
+              <a-button
+                danger
+                :loading="updatingReview && pendingReviewAction === 'rejected'"
+                style="margin-left: 8px"
+              >
+                {{ $t('autonomousHistory.runReviewReject') }}
+              </a-button>
+            </a-popconfirm>
+            <a-button
+              v-else
+              danger
+              disabled
+              :loading="updatingReview && pendingReviewAction === 'rejected'"
+              style="margin-left: 8px"
+            >
+              {{ $t('autonomousHistory.runReviewReject') }}
+            </a-button>
+          </div>
+          <div class="run-review-hint">
+            {{ $t('autonomousHistory.runReviewHint') }}
+          </div>
+        </a-card>
+
+        <!-- LearnedPath — read-only association info. -->
         <a-card
           :title="$t('autonomousHistory.learnedPathTitle')"
           :bordered="false"
           style="margin-top: 16px"
           class="learned-path-card"
         >
-          <div v-if="learnedPathId">
-            <a-space :size="12" align="center" wrap>
-              <span>{{ $t('autonomousHistory.learnedPathIngested') }}</span>
-              <a-tag :color="trustTagColor">
-                {{ $t(trustI18nKey) }}
-              </a-tag>
-            </a-space>
+          <div v-if="learnedPath">
+            <div class="learned-path-hint">
+              {{ $t('autonomousHistory.learnedPathHint') }}
+            </div>
+            <a-descriptions :column="{ xs: 1, sm: 2 }" size="small" bordered>
+              <a-descriptions-item :label="$t('common.id')">
+                <code>{{ learnedPath.id }}</code>
+              </a-descriptions-item>
+              <a-descriptions-item :label="$t('common.status')">
+                <a-tag :color="trustTagColor">{{ $t(trustI18nKey) }}</a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item :label="$t('autonomousHistory.learnedPathRelation')">
+                {{ $t(relationI18nKey) }}
+              </a-descriptions-item>
+              <a-descriptions-item :label="$t('autonomousHistory.learnedPathHitCount')">
+                {{ learnedPath.hit_count }}
+              </a-descriptions-item>
+              <a-descriptions-item :label="$t('common.source')">
+                <code>{{ learnedPath.source_run_id || '—' }}</code>
+              </a-descriptions-item>
+            </a-descriptions>
             <div class="learned-path-actions">
               <a-popconfirm
                 v-if="canConfirmLearnedPath"
                 :title="$t('autonomousHistory.learnedPathConfirmPrompt')"
                 :ok-text="$t('autonomousHistory.learnedPathConfirm')"
                 :cancel-text="$t('common.cancel')"
-                @confirm="onConfirm"
+                @confirm="onConfirmPath"
               >
                 <a-button
                   type="primary"
-                  :loading="updatingTrust && pendingAction === 'confirmed'"
+                  :loading="updatingTrust && pendingPathAction === 'confirmed'"
                 >
                   {{ $t('autonomousHistory.learnedPathConfirm') }}
                 </a-button>
@@ -157,7 +242,7 @@
                 v-else
                 type="primary"
                 disabled
-                :loading="updatingTrust && pendingAction === 'confirmed'"
+                :loading="updatingTrust && pendingPathAction === 'confirmed'"
               >
                 {{ $t('autonomousHistory.learnedPathConfirm') }}
               </a-button>
@@ -166,11 +251,11 @@
                 :title="$t('autonomousHistory.learnedPathRejectPrompt')"
                 :ok-text="$t('autonomousHistory.learnedPathMarkWrong')"
                 :cancel-text="$t('common.cancel')"
-                @confirm="onMarkWrong"
+                @confirm="onDeprecatePath"
               >
                 <a-button
                   danger
-                  :loading="updatingTrust && pendingAction === 'deprecated'"
+                  :loading="updatingTrust && pendingPathAction === 'deprecated'"
                   style="margin-left: 8px"
                 >
                   {{ $t('autonomousHistory.learnedPathMarkWrong') }}
@@ -180,14 +265,11 @@
                 v-else
                 danger
                 disabled
-                :loading="updatingTrust && pendingAction === 'deprecated'"
+                :loading="updatingTrust && pendingPathAction === 'deprecated'"
                 style="margin-left: 8px"
               >
                 {{ $t('autonomousHistory.learnedPathMarkWrong') }}
               </a-button>
-            </div>
-            <div class="learned-path-id">
-              <code>{{ learnedPathId }}</code>
             </div>
           </div>
           <div v-else class="learned-path-absent">
@@ -228,9 +310,12 @@ import {
   getAutonomousRun,
   deleteAutonomousRun,
   patchLearnedPathTrust,
+  patchRunReview,
   type AutonomousRunDetail,
   type LearnedPathPatchStatus,
   type LearnedPathTrust,
+  type OperatorReviewStatus,
+  type RunLearnedPathProjection,
 } from '@/api/exploration';
 import PageAnalysisBlock from '@/components/autonomous/PageAnalysisBlock.vue';
 import StepTimelineBlock from '@/components/autonomous/StepTimelineBlock.vue';
@@ -244,11 +329,16 @@ const detail = ref<AutonomousRunDetail | null>(null);
 const loading = ref(false);
 const loadError = ref<string>('');
 
-const learnedPathId = ref<string | null>(null);
+const learnedPath = ref<RunLearnedPathProjection | null>(null);
 const learnedPathTrust = ref<LearnedPathTrust | null>(null);
 const passGateStatus = ref<'pass' | 'fail' | 'unverified' | null>(null);
+const operatorReviewStatus = ref<OperatorReviewStatus>('unreviewed');
+const operatorReviewNote = ref<string | null>(null);
+
 const updatingTrust = ref(false);
-const pendingAction = ref<LearnedPathPatchStatus | null>(null);
+const pendingPathAction = ref<LearnedPathPatchStatus | null>(null);
+const updatingReview = ref(false);
+const pendingReviewAction = ref<OperatorReviewStatus | null>(null);
 const deleting = ref(false);
 
 /**
@@ -265,6 +355,28 @@ const absentMessageKey = computed(() => {
     return 'autonomousHistory.learnedPathAbsentNotPass';
   }
   return 'autonomousHistory.learnedPathAbsent';
+});
+
+const reviewI18nKey = computed(() => {
+  switch (operatorReviewStatus.value) {
+    case 'accepted':
+      return 'autonomousHistory.reviewAccepted';
+    case 'rejected':
+      return 'autonomousHistory.reviewRejected';
+    default:
+      return 'autonomousHistory.reviewUnreviewed';
+  }
+});
+
+const reviewTagColor = computed(() => {
+  switch (operatorReviewStatus.value) {
+    case 'accepted':
+      return 'green';
+    case 'rejected':
+      return 'red';
+    default:
+      return 'default';
+  }
 });
 
 const trustI18nKey = computed(() => {
@@ -293,12 +405,31 @@ const trustTagColor = computed(() => {
   }
 });
 
+const relationI18nKey = computed(() => {
+  switch (learnedPath.value?.relation) {
+    case 'source':
+      return 'autonomousHistory.relationSource';
+    case 'dedup_hit':
+      return 'autonomousHistory.relationDedupHit';
+    default:
+      return 'autonomousHistory.relationNone';
+  }
+});
+
+const canAcceptRun = computed(
+  () => operatorReviewStatus.value !== 'accepted' && !updatingReview.value,
+);
+
+const canRejectRun = computed(
+  () => operatorReviewStatus.value !== 'rejected' && !updatingReview.value,
+);
+
 const canConfirmLearnedPath = computed(
-  () => Boolean(learnedPathId.value) && learnedPathTrust.value !== 'confirmed' && !updatingTrust.value,
+  () => Boolean(learnedPath.value) && learnedPathTrust.value !== 'confirmed' && !updatingTrust.value,
 );
 
 const canDeprecateLearnedPath = computed(
-  () => Boolean(learnedPathId.value) && learnedPathTrust.value !== 'deprecated' && !updatingTrust.value,
+  () => Boolean(learnedPath.value) && learnedPathTrust.value !== 'deprecated' && !updatingTrust.value,
 );
 
 // ─── Derived views over detail.result ────────────────────────
@@ -430,9 +561,11 @@ async function load(): Promise<void> {
   try {
     const fetched = await getAutonomousRun(runId);
     detail.value = fetched;
-    learnedPathId.value = fetched.learned_path_id ?? null;
-    learnedPathTrust.value = (fetched.learned_path_trust as LearnedPathTrust | null) ?? null;
+    learnedPath.value = fetched.learned_path ?? null;
+    learnedPathTrust.value = fetched.learned_path_trust ?? null;
     passGateStatus.value = fetched.pass_gate_status ?? null;
+    operatorReviewStatus.value = fetched.operator_review_status ?? 'unreviewed';
+    operatorReviewNote.value = fetched.operator_review_note ?? null;
   } catch (err) {
     loadError.value = (err as Error).message || String(err);
   } finally {
@@ -440,28 +573,58 @@ async function load(): Promise<void> {
   }
 }
 
-async function updateTrust(status: LearnedPathPatchStatus): Promise<void> {
-  if (!learnedPathId.value || updatingTrust.value) return;
-  updatingTrust.value = true;
-  pendingAction.value = status;
+async function updateReview(status: OperatorReviewStatus): Promise<void> {
+  const runId = String(route.params.run_id || '');
+  if (!runId || updatingReview.value) return;
+  updatingReview.value = true;
+  pendingReviewAction.value = status;
   try {
-    const updated = await patchLearnedPathTrust(learnedPathId.value, { status });
-    learnedPathTrust.value = updated.trust;
+    const updated = await patchRunReview(runId, { status });
+    operatorReviewStatus.value = updated.operator_review_status;
+    operatorReviewNote.value = updated.operator_review_note;
+    message.success(t('autonomousHistory.runReviewUpdated'));
+  } catch (err) {
+    message.error((err as Error).message || String(err));
+  } finally {
+    updatingReview.value = false;
+    pendingReviewAction.value = null;
+  }
+}
+
+function onAcceptRun(): void {
+  void updateReview('accepted');
+}
+
+function onRejectRun(): void {
+  void updateReview('rejected');
+}
+
+async function updatePathTrust(status: LearnedPathPatchStatus): Promise<void> {
+  const pathId = learnedPath.value?.id;
+  if (!pathId || updatingTrust.value) return;
+  updatingTrust.value = true;
+  pendingPathAction.value = status;
+  try {
+    const updated = await patchLearnedPathTrust(pathId, { status });
+    learnedPathTrust.value = updated.trust as LearnedPathTrust;
+    if (learnedPath.value) {
+      learnedPath.value = { ...learnedPath.value, trust: updated.trust as LearnedPathTrust };
+    }
     message.success(t('autonomousHistory.learnedPathUpdated'));
   } catch (err) {
     message.error((err as Error).message || String(err));
   } finally {
     updatingTrust.value = false;
-    pendingAction.value = null;
+    pendingPathAction.value = null;
   }
 }
 
-function onConfirm(): void {
-  void updateTrust('confirmed');
+function onConfirmPath(): void {
+  void updatePathTrust('confirmed');
 }
 
-function onMarkWrong(): void {
-  void updateTrust('deprecated');
+function onDeprecatePath(): void {
+  void updatePathTrust('deprecated');
 }
 
 async function handleDelete(): Promise<void> {
@@ -506,6 +669,26 @@ onMounted(load);
   white-space: pre-wrap;
   word-break: break-word;
 }
+.run-review-card :deep(.ant-card-body) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.run-review-actions {
+  margin-top: 8px;
+}
+.run-review-hint {
+  font-size: 12px;
+  color: #888;
+}
+.run-review-note {
+  font-size: 12px;
+  color: #555;
+  margin-top: 4px;
+}
+.run-review-note .note-label {
+  font-weight: 500;
+}
 .learned-path-card :deep(.ant-card-body) {
   display: flex;
   flex-direction: column;
@@ -514,10 +697,9 @@ onMounted(load);
 .learned-path-actions {
   margin-top: 8px;
 }
-.learned-path-id {
-  font-size: 11px;
+.learned-path-hint {
+  font-size: 12px;
   color: #888;
-  margin-top: 4px;
 }
 .learned-path-absent {
   color: #888;

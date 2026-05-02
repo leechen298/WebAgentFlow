@@ -175,7 +175,7 @@ def test_patch_trust_unknown_id_is_404(client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_delete_autonomous_run_removes_run_and_source_learned_path(
+def test_delete_autonomous_run_removes_run_and_preserves_learned_path(
     client: TestClient,
     db_session: Session,
 ) -> None:
@@ -189,10 +189,10 @@ def test_delete_autonomous_run_removes_run_and_source_learned_path(
     assert data == {
         "run_id": run_id,
         "deleted": True,
-        "deleted_learned_path_ids": [learned_path_id],
+        "deleted_learned_path_ids": [],
     }
     assert db_session.get(ExplorationRun, run_id) is None
-    assert db_session.get(LearnedPath, learned_path_id) is None
+    assert db_session.get(LearnedPath, learned_path_id) is not None
 
 
 def test_delete_autonomous_run_without_learned_path_returns_empty_ids(
@@ -208,6 +208,213 @@ def test_delete_autonomous_run_without_learned_path_returns_empty_ids(
     assert data["deleted"] is True
     assert data["deleted_learned_path_ids"] == []
     assert db_session.get(ExplorationRun, run_id) is None
+
+
+# ---------------------------------------------------------------------------
+# Run review
+# ---------------------------------------------------------------------------
+
+
+def test_patch_run_review_accepts_run(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session)
+    resp = client.patch(
+        f"/exploration/autonomous-runs/{run_id}/review",
+        json={"status": "accepted", "note": "looks good"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["operator_review_status"] == "accepted"
+    assert data["operator_review_note"] == "looks good"
+    assert data["operator_reviewed_at"] is not None
+
+    run = db_session.get(ExplorationRun, run_id)
+    assert run is not None
+    assert str(run.operator_review_status) == "accepted"
+
+
+def test_patch_run_review_rejects_run(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session)
+    resp = client.patch(
+        f"/exploration/autonomous-runs/{run_id}/review",
+        json={"status": "rejected", "note": "wrong path"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["operator_review_status"] == "rejected"
+    assert data["operator_review_note"] == "wrong path"
+
+
+def test_patch_run_review_does_not_modify_learned_path(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session)
+    path_id = _ingest_sample(db_session, source_run_id=run_id)
+
+    resp = client.patch(
+        f"/exploration/autonomous-runs/{run_id}/review",
+        json={"status": "rejected"},
+    )
+    assert resp.status_code == 200
+
+    path = db_session.get(LearnedPath, path_id)
+    assert path is not None
+    assert str(path.trust) == "provisional"
+
+
+def test_patch_run_review_unknown_run_is_404(client: TestClient) -> None:
+    resp = client.patch(
+        "/exploration/autonomous-runs/missing-id/review",
+        json={"status": "accepted"},
+    )
+    assert resp.status_code == 404
+
+
+def test_patch_run_review_rejects_non_autonomous_run(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session, kind="candidate")
+    resp = client.patch(
+        f"/exploration/autonomous-runs/{run_id}/review",
+        json={"status": "accepted"},
+    )
+    assert resp.status_code == 404
+
+
+def test_patch_run_review_rejects_invalid_status(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session)
+    resp = client.patch(
+        f"/exploration/autonomous-runs/{run_id}/review",
+        json={"status": "bogus"},
+    )
+    assert resp.status_code == 422
+
+
+def test_patch_run_review_to_unreviewed_clears_reviewed_at(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session)
+    # First accept
+    client.patch(
+        f"/exploration/autonomous-runs/{run_id}/review",
+        json={"status": "accepted", "note": "ok"},
+    )
+    run = db_session.get(ExplorationRun, run_id)
+    assert run is not None
+    assert run.operator_reviewed_at is not None
+
+    # Then reset to unreviewed
+    resp = client.patch(
+        f"/exploration/autonomous-runs/{run_id}/review",
+        json={"status": "unreviewed"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["operator_review_status"] == "unreviewed"
+    assert data["operator_reviewed_at"] is None
+
+    run = db_session.get(ExplorationRun, run_id)
+    assert run is not None
+    assert run.operator_reviewed_at is None
+
+
+# ---------------------------------------------------------------------------
+# Detail learned_path relation projection
+# ---------------------------------------------------------------------------
+
+
+def test_get_autonomous_run_shows_learned_path_relation_source(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session)
+    path_id = _ingest_sample(db_session, source_run_id=run_id)
+
+    resp = client.get(f"/exploration/autonomous-runs/{run_id}")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["learned_path"]["id"] == path_id
+    assert data["learned_path"]["relation"] == "source"
+
+
+def test_get_autonomous_run_shows_learned_path_relation_dedup_hit(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    from sqlalchemy.orm import sessionmaker
+
+    from app.models.exploration_run import ExplorationRunStatus
+    from app.routers.exploration import (
+        AutonomousExplorePayload,
+        _persist_autonomous_run,
+    )
+
+    TestingSessionLocal = sessionmaker(
+        bind=db_session.bind,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+
+    payload = AutonomousExplorePayload(
+        url="https://example.com/users?status=active",
+        scenario="filter_by_status",
+    )
+    final_data = {
+        "page_analysis": {
+            "url": "https://example.com/users?status=active",
+            "title": "Users",
+            "fillable": [],
+            "submit": [],
+        },
+        "steps": [],
+        "verdict": "success",
+        "verification": {"scorecard": {"pass_gate": {"status": "pass"}}},
+    }
+
+    with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
+        _persist_autonomous_run(
+            payload,
+            deepcopy(final_data),
+            verdict="success",
+            status=ExplorationRunStatus.COMPLETED,
+        )
+        second_run_id = _persist_autonomous_run(
+            payload,
+            deepcopy(final_data),
+            verdict="success",
+            status=ExplorationRunStatus.COMPLETED,
+        )
+
+    # First run is source, second is dedup_hit
+    resp = client.get(f"/exploration/autonomous-runs/{second_run_id}")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["learned_path"]["relation"] == "dedup_hit"
+    assert data["learned_path"]["hit_count"] == 2
+
+
+def test_get_autonomous_run_shows_operator_review_fields(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session)
+    resp = client.get(f"/exploration/autonomous-runs/{run_id}")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["operator_review_status"] == "unreviewed"
+    assert data["operator_review_note"] is None
+    assert data["operator_reviewed_at"] is None
 
 
 def test_delete_autonomous_run_unknown_id_is_404(client: TestClient) -> None:
