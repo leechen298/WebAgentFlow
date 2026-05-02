@@ -1,6 +1,11 @@
 <template>
-  <a-layout style="min-height: 100vh">
-    <a-layout-sider v-model:collapsed="collapsed" collapsible width="240">
+  <a-layout style="height: 100vh; overflow: hidden">
+    <a-layout-sider
+      v-model:collapsed="collapsed"
+      collapsible
+      width="240"
+      style="height: 100vh; overflow-y: auto"
+    >
       <div class="brand">
         <span class="brand-mark">WF</span>
         <div v-if="!collapsed" class="brand-copy">
@@ -33,8 +38,8 @@
       </a-menu>
     </a-layout-sider>
 
-    <a-layout>
-      <a-layout-header style="background: #fff; padding: 0 24px; border-bottom: 1px solid #f0f0f0">
+    <a-layout style="height: 100vh; overflow: hidden; display: flex; flex-direction: column">
+      <a-layout-header style="background: #fff; padding: 0 24px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0">
         <div class="header-left">
           <div class="eyebrow">{{ $t('header.eyebrow') }}</div>
           <h1>{{ pageTitle }}</h1>
@@ -44,7 +49,7 @@
           <a-badge :status="apiStatus" :text="apiStatusText" />
         </div>
       </a-layout-header>
-      <a-layout-content style="padding: 24px; background: #f0f2f5">
+      <a-layout-content style="padding: 24px; background: #f0f2f5; overflow-y: auto; flex: 1">
         <router-view />
       </a-layout-content>
     </a-layout>
