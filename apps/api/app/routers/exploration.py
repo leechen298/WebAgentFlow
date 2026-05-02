@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -541,6 +541,7 @@ def _normalize_event_screenshots(data: dict[str, Any]) -> dict[str, Any]:
 @router.post("/autonomous-runs/stream")
 def autonomous_exploration_stream(
     payload: AutonomousExplorePayload,
+    request: Request,
 ):
     """Streaming variant of autonomous-run via Server-Sent Events.
 
@@ -573,8 +574,12 @@ def autonomous_exploration_stream(
         )
 
     event_queue: queue.Queue[tuple[str, dict[str, Any]] | None] = queue.Queue()
+    cancel_event = threading.Event()
+    runtime_holder: dict[str, Any] = {}
 
     def emit(event_type: str, data: dict[str, Any]) -> None:
+        if cancel_event.is_set():
+            raise RuntimeError("cancelled")
         # Normalize screenshot paths so the browser can load them directly.
         try:
             data = _normalize_event_screenshots(dict(data))
@@ -625,6 +630,7 @@ def autonomous_exploration_stream(
                 screenshot_dir=str(_SCREENSHOT_DIR),
             )
             with create_execution_runtime(config=runtime_config) as runtime:
+                runtime_holder["runtime"] = runtime
                 result = run_autonomous_exploration(
                     url=payload.url,
                     runtime=runtime,
@@ -703,7 +709,11 @@ def autonomous_exploration_stream(
                 status=ExplorationRunStatus.FAILED,
                 error=err_text,
             )
-            emit("run_failed", {"error": err_text})
+            try:
+                emit("run_failed", {"error": err_text})
+            except RuntimeError as re:
+                if str(re) == "cancelled":
+                    pass
         finally:
             event_queue.put(None)  # sentinel
 
@@ -711,7 +721,19 @@ def autonomous_exploration_stream(
 
     async def event_generator():
         while True:
-            item = await asyncio.to_thread(event_queue.get)
+            try:
+                item = await asyncio.to_thread(event_queue.get, timeout=1.0)
+            except queue.Empty:
+                if await request.is_disconnected():
+                    cancel_event.set()
+                    runtime = runtime_holder.get("runtime")
+                    if runtime:
+                        try:
+                            runtime.stop()
+                        except Exception:
+                            pass
+                    break
+                continue
             if item is None:
                 break
             event_type, data = item
