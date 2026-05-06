@@ -113,10 +113,10 @@ does not need to implement the complete negative-knowledge store.
 - **Full external interface suite** — stable API / CLI / Skill / Tool
   surfaces for external schedulers are M16.
 - **User data management** — WebAgentFlow engine does not implement its
-  own user account model, tenant model, credential vault, cloud-hosted
-  user data management, billing, or quotas. The default assumption is
-  that the WebAgentFlow operator already has permission to operate the
-  target website.
+  own operator identity model, tenant model, credential vault, hosted
+  operator-data management, commercial charging, or usage-entitlement
+  management. The default assumption is that the WebAgentFlow operator
+  already has permission to operate the target website.
 - **Target-site session state** — cookies, `localStorage`, session
   state, and target-site permissions are owned by the user and the
   target website. Session expiry, permission denial, target-site auth

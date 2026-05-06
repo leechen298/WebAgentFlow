@@ -92,7 +92,7 @@ Current code status:
    - 7E: `observe_post_action()` / `execute_and_observe()`, change detection,
      target post-state.
 
-**Exploration subsystem** (built on top of Phase 7):
+**Exploration subsystem** (built on top of legacy Phase 7):
 
 - **Success evaluator** — rule-based evaluation of 6 condition types
   (url_changed, url_contains, title_contains, element_present, html_changed,
@@ -279,9 +279,9 @@ planning.
 
 **Key parallel relationships:**
 
-- **Phase 7 execution** is complete — provides the atomic action layer for
+- **Legacy Phase 7 execution** is complete — provides the atomic action layer for
   exploration.
-- **Exploration subsystem** is built on Phase 7 — TaskDefinition →
+- **Exploration subsystem** is built on legacy Phase 7 — TaskDefinition →
   `run_exploration` → success evaluation → supervisor assessment.
 - **Autonomous exploration subsystem** remains the learning foundation — URL →
   `autonomous_explorer.run_autonomous_exploration` → page verification

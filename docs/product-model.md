@@ -90,8 +90,9 @@ not the user's own browser. In order of importance:
 
 WebAgentFlow does **not** maintain its own user / account model. It
 does not implement a credential vault, multi-tenant authorization,
-cross-user authorization, cloud-hosted user data management, billing,
-or quotas. These are not new account-system roadmap items.
+cross-user authorization, hosted operator-data management, commercial
+charging, or usage-entitlement management. These are not roadmap items
+for a project-owned identity layer.
 
 Session state is handled by the operator and the target website. If a
 page requires an existing session, the operator establishes or refreshes
@@ -541,7 +542,8 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
   task-to-path execution loop, no runtime conversation surface, no
   Conversation Orchestrator, no result verification loop, and no
   recovery dialogue. Replay / drift is the M10 foundation; M11 is the
-  first planned L3 happy-path MVP.
+  runtime-conversation foundation, and M11.1 is the first planned L3
+  happy-path MVP.
 
 When a lifecycle stage fully lands, update this section to reflect it.
 
@@ -553,18 +555,19 @@ task execution:
 | Milestone | Product role | Internal Agents |
 |---|---|---|
 | M10 · Path Asset Foundation | Make LearnedPaths reusable: persistence, catalog, replay, drift detection. | No new Agent; provides execution substrate. |
-| M11 · Runtime Conversation & Task-to-Path MVP | CLI-first runtime conversation surface, Conversation Orchestrator, and first L3 happy path: user task → choose / bind LearnedPath → consent gate → execute → verify → report. | Agent D · Path Planner Agent; Agent E · Result Reporter Agent. |
+| M11.0 · Runtime Conversation Shell & Orchestration | CLI-first runtime conversation surface, Conversation Orchestrator, session state, user messages, engine events, confirmation, pause, resume, abort, takeover, and teaching-mode routing. | No new Agent by default; routes to Agent D / E / F / G / H as those capabilities land. |
+| M11.1 · Task-to-Path Planning & Execution MVP | First L3 happy path: user task → choose / bind LearnedPath → consent gate → execute → verify → report. | Agent D · Path Planner Agent; Agent E · Result Reporter Agent. |
 | M12 · Recovery & Handoff | L3 failure and abort branches: pause, explain, re-plan, re-run, or hand off. | Agent F · Recovery Dialogue Agent; Agent G · Abort Dialogue Agent. |
 | M13 · User-Guided Learning & Teaching | L2 visible-browser takeover, user demonstration, guided teaching, path correction, and provenance write-back. | Agent H · Teaching Guide Agent; preserve user provenance. |
 | M14 · Learning Quality Agents & Negative Knowledge | Revisit L1 quality: page purpose, simple attempt evaluation, learning report, richer controls, patterns, and failure evidence. | Agent A · Page Intent Agent; Agent B · Attempt Evaluator Agent; Agent C · Learning Reporter Agent. |
 | M15 · Automated Evaluation & Continuous Optimization | Regression runs, drift alerts, quality trend tracking. | Reuses Agent B / Supervisor-style evaluation; no new Agent by default. |
 | M16 · External Interfaces | Stable API / CLI / Skill / Tool surface for external schedulers after the runtime loop is useful. | No new product Agent; exposes existing capabilities. |
 | M17 · Multi-Page Workflow Composition | Compose multiple LearnedPaths into larger workflows without inventing paths from raw HTML. | Extends Agent D planning inputs; no new Agent by default. |
-| M18 · Artifact Lifecycle & Engine Hygiene | Capture, return, retain, clean up, redact, and audit artifacts / logs / screenshots / prompt payloads inside the running instance. | No new product Agent by default. |
+| M18 · CLI Distribution & Integration Readiness | Stable CLI distribution, local packaging, API / CLI examples, scripting / batch usage, integration cookbook, and versioned CLI / API contracts. | No new product Agent by default. |
 
 M10.2 replay is still valuable after this reshuffle: it is the first
 deterministic consumer of LearnedPath data. It does **not** implement
-Agent D or L3 task planning; it gives M11 something safe to call.
+Agent D or L3 task planning; it gives M11.1 something safe to call.
 
 ---
 
@@ -716,7 +719,7 @@ The engine also needs basic hygiene for conversations, logs,
 screenshots, artifacts, and LLM prompt payloads: what is recorded, how
 long it is retained, how it is deleted, what can be redacted, and what
 is auditable. This is engine hygiene inside the running instance, not a
-user-account or cloud data governance system.
+project-owned identity or hosted data-governance system.
 
 Invariants:
 

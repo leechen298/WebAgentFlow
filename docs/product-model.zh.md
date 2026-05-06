@@ -73,8 +73,8 @@ WebAgentFlow 的目标是代替用户在网页上敲键盘点鼠标：先把页�
    留出注入面，也方便以后装插件或做更深的浏览器定制。
 
 WebAgentFlow **不**维护自己的 user / account model。它不实现
-credential vault、多租户授权、跨用户授权、云端用户数据管理、计费或
-额度。这些不是新的账号系统路线图。
+credential vault、多租户授权、跨用户授权、托管式操作者数据管理、
+商业化收费或用量管控。这些不是项目自有身份层的路线图。
 
 Session 状态由操作者和目标网页负责。页面需要既有 session 时，操作者
 通过目标网页自己的流程，在引擎控制的浏览器上下文中建立或刷新状态。
@@ -466,7 +466,8 @@ Agent H 边界：
 - **L3（实际工作）**：未开工。没有 Path Planner Agent / 路径规划
   Agent，没有 task-to-path 执行闭环，没有 runtime conversation
   surface，没有 Conversation Orchestrator，没有结果验证闭环，也没有
-  恢复对话。Replay / drift 是 M10 基础；M11 是第一版 L3 快乐路径 MVP。
+  恢复对话。Replay / drift 是 M10 基础；M11 是运行时沟通基础，M11.1
+  是第一版 L3 快乐路径 MVP。
 
 某个生命周期阶段完整落地后，回来更新本段。
 
@@ -477,18 +478,19 @@ Agent H 边界：
 | 里程碑 | 产品作用 | 产品内部 Agent |
 |---|---|---|
 | M10 · Path Asset Foundation / 路径资产基础 | 让 LearnedPath 可复用：持久化、目录、replay、drift detection。 | 不新增 Agent；提供执行底座。 |
-| M11 · Runtime Conversation & Task-to-Path MVP / 运行时对话与任务到路径 MVP | CLI-first 运行时沟通入口、Conversation Orchestrator、第一版 L3 快乐路径：用户任务 → 选择 / 绑定 LearnedPath → consent gate → 执行 → 验证 → 汇报。 | Agent D · Path Planner Agent；Agent E · Result Reporter Agent。 |
+| M11.0 · Runtime Conversation Shell & Orchestration / 运行时沟通与编排 | CLI-first 运行时沟通入口、Conversation Orchestrator、session state、用户消息、engine events、confirmation、pause、resume、abort、takeover 和 teaching-mode routing。 | 默认不新增 Agent；随能力落地路由到 Agent D / E / F / G / H。 |
+| M11.1 · Task-to-Path Planning & Execution MVP / 任务到路径规划与执行 MVP | 第一版 L3 快乐路径：用户任务 → 选择 / 绑定 LearnedPath → consent gate → 执行 → 验证 → 汇报。 | Agent D · Path Planner Agent；Agent E · Result Reporter Agent。 |
 | M12 · Recovery & Handoff / 恢复与接管 | L3 失败和中断分支：暂停、解释、重新规划、重跑或交给用户。 | Agent F · Recovery Dialogue Agent；Agent G · Abort Dialogue Agent。 |
 | M13 · User-Guided Learning & Teaching / 用户引导学习与教学 | L2 可视化浏览器接管、用户演示、引导式教学、路径纠正 / provenance 写回。 | Agent H · Teaching Guide Agent；保留用户来源。 |
 | M14 · Learning Quality Agents & Negative Knowledge / 学习质量与负面知识 | 回到 L1 质量：页面用途、简单尝试评估、学习报告、更丰富控件和 pattern，以及 failure evidence。 | Agent A · Page Intent Agent；Agent B · Attempt Evaluator Agent；Agent C · Learning Reporter Agent。 |
 | M15 · Automated Evaluation & Continuous Optimization / 自动评估与持续优化 | 回归运行、漂移告警、质量趋势。 | 复用 Agent B / Supervisor 式评估；默认不新增 Agent。 |
 | M16 · External Interfaces / 对外接口 | 在运行时主链路可用后，稳定 API / CLI / Skill / Tool，供外部调度者调用。 | 不新增产品 Agent；暴露既有能力。 |
 | M17 · Multi-Page Workflow Composition / 多页工作流组合 | 把多个 LearnedPath 组合成更大的 workflow，但不从 raw HTML 凭空发明路径。 | 扩展 Agent D 的规划输入；默认不新增 Agent。 |
-| M18 · Artifact Lifecycle & Engine Hygiene / Artifact 生命周期与引擎卫生 | 在运行实例内 capture、return、retain、cleanup、redact、audit artifact / log / screenshot / prompt payload。 | 默认不新增产品 Agent。 |
+| M18 · CLI Distribution & Integration Readiness / CLI 分发与集成就绪 | 稳定 CLI 分发、local packaging、API / CLI examples、scripting / batch usage、integration cookbook，以及版本化 CLI / API contract。 | 默认不新增产品 Agent。 |
 
 M10.2 replay 在这次重排后仍然有价值：它是 LearnedPath 数据的第一个
 确定性消费者。它**不**实现 Agent D，也**不**实现 L3 任务规划；它给
-M11 提供一个可安全调用的执行底座。
+M11.1 提供一个可安全调用的执行底座。
 
 ---
 
@@ -617,8 +619,7 @@ Session 过期、跳转、权限拒绝或授权缺失，都是运行时恢复 / 
 
 引擎还需要对对话、日志、截图、artifact 和 LLM prompt payload 做基础
 卫生设计：记录什么、保留多久、如何删除、什么可以脱敏、什么可以审计。
-这是运行实例内的 engine hygiene，不是 user-account 或 cloud data
-governance system。
+这是运行实例内的 engine hygiene，不是项目自有身份层或托管数据治理系统。
 
 不变量：
 

@@ -112,7 +112,8 @@ Notable closures during Phase 9:
   (`pass` / `fail` / `unverified`) surfaced in UI + CLI.
 - [x] Legacy stack removal (2026-04-20) — recordings / skills / runs
   / Chrome extension / task-driven exploration deleted from code,
-  DB, and docs; `exploration_runs` is the only surviving table.
+  DB, and docs; at that cleanup point, `exploration_runs` was the only
+  surviving table. M10 later added `learned_paths`.
 
 No remaining Phase 9 items. The active delivery milestone is M10.
 
@@ -375,8 +376,9 @@ Expected delivery:
   systems or operator consoles.
 - Versioned CLI / API contract and compatibility policy.
 
-M18 does not add user/account/tenant management, credential storage,
-cloud-hosted user data management, billing, or quotas.
+M18 does not add project-owned operator identity / tenant management,
+credential storage, hosted operator-data management, commercial charging,
+or usage-entitlement management.
 
 ## Explicit non-goals (for current milestone)
 
@@ -389,5 +391,5 @@ list. Current M10.2 highlights:
 - No artifact lifecycle.
 - No multi-page workflow composition.
 - No action risk gate.
-- No user-account, credential-vault, cloud user data, billing, or quota
-  work.
+- No project-owned operator identity, credential-vault, hosted
+  operator-data, commercial charging, or usage-entitlement work.

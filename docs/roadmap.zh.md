@@ -101,7 +101,8 @@ Phase 9 期间值得记的里程碑：
   在 UI + CLI 都能看到。
 - [x] 老功能清理（2026-04-20）—— 录制 / 技能 / 执行记录 / Chrome
   扩展 / 任务驱动探索从代码、数据库、文档中一并移除；
-  `exploration_runs` 是唯一留下的表。
+  在当时的清理点上，仅保留 `exploration_runs`；M10 后续新增了
+  `learned_paths`。
 
 Phase 9 没有剩余待办。当前活跃交付里程碑是 M10。
 
@@ -334,8 +335,8 @@ M18 在 runtime loop 和 workflow composition 可用之后，稳定 CLI / API
 - 接入用户自建系统或操作台的 integration cookbook。
 - 版本化 CLI / API contract 和兼容策略。
 
-M18 不新增 user/account/tenant management、credential storage、
-cloud-hosted user data management、billing 或 quotas。
+M18 不新增项目自有 operator identity / tenant management、credential
+storage、托管式操作者数据管理、商业化收费或用量管控。
 
 ## 当前交付里程碑的非目标
 
@@ -348,8 +349,8 @@ M10.2 要点：
 - 不做 artifact lifecycle。
 - 不做 multi-page workflow composition。
 - 不做 action risk gate。
-- 不做 user-account、credential-vault、cloud user data、billing 或 quota
-  工作。
+- 不做项目自有 operator identity、credential-vault、托管式操作者数据、
+  商业化收费或用量管控工作。
 
 ---
 

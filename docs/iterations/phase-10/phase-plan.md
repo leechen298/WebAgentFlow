@@ -208,7 +208,7 @@ M10.2 是 LearnedPath 的确定性消费者：它只消费已经存在的路径�
 
 - `users` fixture 中至少一个 popup 控件 scenario 变绿。
 - 不把 popup 控件伪装成普通 text input。
-- 不影响 Phase 9 已覆盖的 plain text / native radio path。
+- 不影响历史 Phase 9 已覆盖的 plain text / native radio path。
 
 ### 10.4 · Custom click-toggle controls
 
