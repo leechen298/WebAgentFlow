@@ -51,6 +51,8 @@ WebAgentFlow 的目标是代替用户在网页上敲键盘点鼠标：先把页�
 - **用户** —— 操作者。触发运行、复核结果、做纠正。在 L2（用户
   引导学习）里用户是**页面的真正操作者**，不只是复核者。默认前提是：
   操作者有权操作他要求 WebAgentFlow 操作的目标网页。
+- **目标网页** —— 拥有自己的 cookies、`localStorage`、session 状态、
+  权限与授权结果。WebAgentFlow 不替代这些职责。
 - **AI 编码 Agent**（Claude Code、Codex 等）—— 负责**开发和维护
   引擎**。**不在运行时链路里**。不得代替用户跑应用再把结果汇报
   回去 —— 那会毁掉用户区分"应用真的在工作"和"AI 编码 Agent 用脚手架
@@ -70,13 +72,58 @@ WebAgentFlow 的目标是代替用户在网页上敲键盘点鼠标：先把页�
 3. **扩展空间** —— 为引擎自己的交互层（Agent 聊天 overlay、探针）
    留出注入面，也方便以后装插件或做更深的浏览器定制。
 
+WebAgentFlow **不**维护自己的 user / account model。它不实现
+credential vault、多租户授权、跨用户授权、云端用户数据管理、计费或
+额度。这些不是新的账号系统路线图。
+
 Session 状态由操作者和目标网页负责。页面需要既有 session 时，操作者
 通过目标网页自己的流程，在引擎控制的浏览器上下文中建立或刷新状态。
-Cookies、`localStorage` 和 session 过期都属于目标网页的职责；它们
-失效或跳转时，运行进入恢复 / 用户沟通流程。
+Cookies、`localStorage`、session 过期和目标网页权限都属于目标网页的
+职责。登录态失效、页面跳回登录、权限不足或操作失败时，运行进入
+恢复 / 用户沟通流程。
 
 拿不准一个新功能归谁时，先把它放到这根轴上：是引擎逻辑、workbench
 玻璃、用户工作流，还是开发者工具？不同轴，不同的评审标准。
+
+### 2.1 Runtime Conversation Surface / 运行时沟通入口
+
+用户始终和 **WebAgentFlow** 这个应用沟通，而不是直接和 Agent D、
+Agent F、Agent G、Agent H 或其他内部子 Agent 沟通。内部 Agent 名称
+是实现角色；运行时产品表面以统一的 WebAgentFlow 视角说话。
+
+第一版有用的沟通入口可以 **CLI-first**。CLI-first 是为了先跑通完整
+产品闭环：任务输入、执行前确认、失败恢复、用户中断、教学模式对话和
+最终结果汇报。有开发能力的用户也可以通过 CLI / API 把 WebAgentFlow
+接入自己的系统，或自建操作台。
+
+这个运行时沟通入口不是 M16 的外部调度接口，也不是今天的
+`verify-scenario` 开发验证工具。它是产品运行时入口。
+
+### 2.2 Conversation Orchestrator / Dispatcher / 会话编排器
+
+运行时对话需要一个代码侧 **Conversation Orchestrator / Dispatcher**。
+它不是新的万能 LLM Agent，而是 session controller 和内部 Agent router。
+
+职责：
+
+- 维护 session state
+- 接收用户消息和 engine events
+- 在正确边界把工作路由给 Agent D / E / F / G / H
+- 管理 confirmation、pause、resume、abort、takeover 和 teaching mode
+- 强制执行 L3 不变量：大模型不进入逐步浏览器执行循环
+- 用 WebAgentFlow 视角统一输出给用户，而不是暴露各个内部 Agent 的口吻
+
+示例状态：
+
+- `idle`
+- `task_planning`
+- `awaiting_confirmation`
+- `executing_path`
+- `recovery_dialogue`
+- `abort_dialogue`
+- `guided_teaching`
+- `user_demonstration`
+- `reporting_result`
 
 ## 3. 页面的三个生命周期阶段
 
@@ -150,7 +197,9 @@ Cookies、`localStorage` 和 session 过期都属于目标网页的职责；它�
 - 用户在 L3 执行过程中**接管**（错误恢复或主动交接）。接管
   自动进入引导学习 —— 从那一刻起系统记录用户的所有操作。
 
-### 5.1 流水线
+L2 分成两个子模式。
+
+### 5.1 User Demonstration / 用户演示记录
 
 1. 系统在**可视化**（非 headless）Playwright 浏览器里打开页面 ——
    用户在开。
@@ -162,7 +211,23 @@ Cookies、`localStorage` 和 session 过期都属于目标网页的职责；它�
 4. 记录的操作追加到页面的学习记录里，标 `provenance = user`。
    这些操作和 L1 路径一起参与 L3 的路径规划。
 
-### 5.2 不变量
+### 5.2 Guided Teaching / 引导式教学
+
+引导式教学仍然是 L2：用户执行真实浏览器动作，系统记录用户实际做了
+什么。
+
+1. 系统在可视化 Playwright 浏览器里打开页面。
+2. Agent H · Teaching Guide Agent / 教学引导 Agent 和用户沟通下一步建议。
+3. UI 可以给目标元素加高亮、阴影、指示器、tooltip 或下一步提示。
+4. 用户点击、输入、选择或以其他方式操作页面。
+5. 系统记录真实事件 target、value 和可观测状态变化。
+6. 只有记录到的用户动作才能追加到学习记录，并标记为
+   `provenance = user`。
+
+Agent H 的建议是引导，不是证据。除非用户实际执行了该动作，否则不能
+把建议写成 LearnedPath action。
+
+### 5.3 不变量
 
 L2 记录的是**用户真实操作**。
 - **不**用大模型去推测用户意图。
@@ -197,7 +262,7 @@ L3 **便宜、快、可靠**。
 - 动作报错（超时、找不到元素、5xx）
 - 可观测状态没有按学习路径预期的方式变化
 - 页面漂移（元素移位、selector 失效、布局变化）
-- 用户中断（§6.5）
+- 用户中断（§6.9）
 
 下面几节分别讲每条支路。**"快乐路径"只是晴天子集**；错误 / 漂移 /
 接管都是一等公民，不是异常情况。
@@ -222,7 +287,27 @@ L3 **便宜、快、可靠**。
 3. **Agent E · Result Reporter Agent / 结果报告 Agent** 把结果总结给用户。
    输出：自然语言结果 + UI 可渲染的结构化字段。
 
-### 6.3 核心不变量
+### 6.3 任务结果验证
+
+L3 不只是“路径执行完了”。它还必须判断用户任务的 postconditions 是否
+成立。
+
+Agent E 不能只根据执行日志干净就脑补成功。它应基于执行结果、
+postcondition check、artifact 状态、可见错误，以及可用的 rule / spec
+信号来汇报。如果 WebAgentFlow 无法验证结果，必须向用户明确报告
+`uncertain` / `needs review`，而不是宣称完成。
+
+Postconditions 可以来自选定的 LearnedPath、Agent D 的任务计划、用户
+显式确认，或 rule / spec 信号。例如：
+
+- final URL 或路由
+- DOM 文本或可见状态
+- row count 或筛选结果数量
+- 下载 artifact 存在
+- 最终页面状态
+- 可见错误或警告
+
+### 6.4 核心不变量
 
 L3 执行过程中，**大模型只在边界处介入** —— 开始时规划，
 结束时报告，恢复 / 中断对话，或用户教学 / 接管边界。
@@ -232,7 +317,41 @@ L3 执行过程中，**大模型只在边界处介入** —— 开始时规划�
 **这一条不可商量**。这就是 WebAgentFlow 跟"大模型盯着浏览器乱点"
 的根本区别。破坏这一条，你就做的是另一个产品了。
 
-### 6.4 错误处理
+### 6.5 Action Risk & Consent Gate / 操作风险与确认门
+
+规划不确定时，执行前需要确认。有些操作即使 planner 很确定，也仍然
+需要确认：危险或不可逆操作、对外发送、删除、类似付款的流程、权限
+修改、批量修改，或任何用户自定义的敏感操作。
+
+第一版应使用 deterministic policy gate 加 user-configurable rules。
+Conversation Orchestrator 在执行前插入这个 consent gate。未来可以扩展
+成 Risk / Consent Advisor，但本文不为此新增正式 Agent。
+
+### 6.6 Artifact 生命周期
+
+真实任务经常产生或消费 artifact：下载文件、截图、生成的证据、导出的
+CSV / PDF / Excel 文件、上传文件，或最终任务结果附件。
+
+WebAgentFlow 最终需要 artifact 生命周期：
+
+- capture
+- storage
+- display / return 给用户
+- retention
+- cleanup
+
+这是未来路线图能力，不要求 M10.2 replay / drift 实现。
+
+### 6.7 Multi-Page / Multi-Path Workflow
+
+终局任务可能需要跨一个或多个页面组合多个 LearnedPath。Agent D 未来
+可以把多条已学路径组合成 workflow，但不能在运行时从 raw HTML 凭空
+发明路径。
+
+Multi-page workflow composition 是后续能力。M11 MVP 不需要完整覆盖
+所有 workflow 场景。
+
+### 6.8 错误处理
 
 动作失败时（页面报错、找不到元素、可观测状态没变化、5xx 等等）：
 
@@ -247,7 +366,7 @@ L3 执行过程中，**大模型只在边界处介入** —— 开始时规划�
    - **交给用户**：进入 L2。用户手动完成任务，动作被记录、
      反哺学习记录。
 
-### 6.5 用户主动中断
+### 6.9 用户主动中断
 
 用户可以随时停止运行。停下时：
 
@@ -277,6 +396,13 @@ L3 执行过程中，**大模型只在边界处介入** —— 开始时规划�
 | E | Result Reporter Agent / 结果报告 Agent | L3 | 执行结果 | 给用户看的结果 |
 | F | Recovery Dialogue Agent / 恢复对话 Agent | L3（错误） | 错误上下文 + 近期步骤 | 对话记录 + 下一步动作 |
 | G | Abort Dialogue Agent / 中断对话 Agent | L3（用户中断） | 当前状态 + 中断信号 | 对话记录 + 下一步动作 |
+| H | Teaching Guide Agent / 教学引导 Agent | L2 | teaching goal + 当前页面分析 + 已知 LearnedPath + 近期用户动作日志 + 可选失败 / 恢复上下文 | 自然语言指令 + highlight target + 预期用户动作 + 澄清问题 |
+
+Agent H 边界：
+
+- 不 click / fill / 操作浏览器。
+- 不伪造用户动作。
+- 引导内容和记录下来的 `provenance = user` 动作是两回事。
 
 加新能力时先问：**这属于哪个 Agent？** 如果答案是"新的一个"，那
 是产品级决策，**先更新本文档**再写代码。
@@ -289,7 +415,11 @@ L3 执行过程中，**大模型只在边界处介入** —— 开始时规划�
 
 1. **L3 执行过程中，大模型永远不在逐步循环里。** 只在规划 /
    报告 / 对话三处出现。
-2. **失败是数据。** L1 失败的尝试要持久化，不能丢。
+2. **失败是数据。** 这不只是说 `exploration_runs` 存在。Failed
+   attempts、replay drift、`target_missing`、`unsupported_action` 和
+   user corrections 未来都应该沉淀成 failure evidence / negative
+   knowledge。Planner、learning quality、evaluation 和 optimization
+   都可以消费这些负面知识。M10.2 不需要一次性实现全部。
 3. **Provenance 永远保留。** 每个学过的动作都知道自己来自 L1
    （系统）还是 L2（用户）。
 4. **允许重新学习。** 页面漂移了可以重学，系统不能假定学到的东西
@@ -297,6 +427,13 @@ L3 执行过程中，**大模型只在边界处介入** —— 开始时规划�
 5. **绝不偷偷重试。** 错误触发对话，不触发隐藏的重试循环。
 6. **学习路径和执行路径是两条代码路径。** 用 L1 的编排器去跑
    L3 的任务是坏味道；L3 应该是**无聊的、确定的**。
+7. **会话编排归代码所有。** Session state、consent gate、recovery
+   routing、abort handling 和 teaching-mode switch 由 Conversation
+   Orchestrator 控制，不交给不受约束的 LLM 循环。
+8. **引擎卫生很重要。** 对话、日志、截图、artifact 和 LLM prompt
+   payload 未来都需要在运行实例内设计 retention、deletion、redaction
+   和 audit。这是 engine hygiene，不是 user-account 或 data-governance
+   system。
 
 ---
 
@@ -324,10 +461,12 @@ L3 执行过程中，**大模型只在边界处介入** —— 开始时规划�
   的 replay / drift detection 正在 M10.2 中规划。
 - **L2（用户引导学习）**：未开工。2026-04-20 清理把旧的
   Chrome 扩展移除了；L2 会从零开始基于**可视化** Playwright
-  浏览器（见 §5.1）搭建，不再依赖扩展。当前还没有引导学习模式。
+  浏览器（见 §5.1）搭建，不再依赖扩展。User Demonstration、Guided
+  Teaching 和 Agent H 当前都尚未实现。
 - **L3（实际工作）**：未开工。没有 Path Planner Agent / 路径规划
-  Agent，没有 task-to-path 执行闭环，没有恢复对话。Replay / drift
-  是 M10 基础；M11 是第一版 L3 快乐路径 MVP。
+  Agent，没有 task-to-path 执行闭环，没有 runtime conversation
+  surface，没有 Conversation Orchestrator，没有结果验证闭环，也没有
+  恢复对话。Replay / drift 是 M10 基础；M11 是第一版 L3 快乐路径 MVP。
 
 某个生命周期阶段完整落地后，回来更新本段。
 
@@ -338,12 +477,14 @@ L3 执行过程中，**大模型只在边界处介入** —— 开始时规划�
 | 里程碑 | 产品作用 | 产品内部 Agent |
 |---|---|---|
 | M10 · Path Asset Foundation / 路径资产基础 | 让 LearnedPath 可复用：持久化、目录、replay、drift detection。 | 不新增 Agent；提供执行底座。 |
-| M11 · Task-to-Path Planning MVP / 任务到路径规划 MVP | 第一版 L3 快乐路径：用户任务 → 选择 / 绑定 LearnedPath → 执行 → 汇报。 | Agent D · Path Planner Agent；Agent E · Result Reporter Agent。 |
+| M11 · Runtime Conversation & Task-to-Path MVP / 运行时对话与任务到路径 MVP | CLI-first 运行时沟通入口、Conversation Orchestrator、第一版 L3 快乐路径：用户任务 → 选择 / 绑定 LearnedPath → consent gate → 执行 → 验证 → 汇报。 | Agent D · Path Planner Agent；Agent E · Result Reporter Agent。 |
 | M12 · Recovery & Handoff / 恢复与接管 | L3 失败和中断分支：暂停、解释、重新规划、重跑或交给用户。 | Agent F · Recovery Dialogue Agent；Agent G · Abort Dialogue Agent。 |
-| M13 · User-Guided Learning & Correction / 用户引导学习与纠正 | L2 可视化浏览器接管 + 路径纠正 / provenance 写回。 | 默认不新增 Agent；保留用户来源。 |
-| M14 · Learning Quality Agents & Coverage / 学习质量与覆盖扩展 | 回到 L1 质量：页面用途、简单尝试评估、学习报告、更丰富控件和 pattern。 | Agent A · Page Intent Agent；Agent B · Attempt Evaluator Agent；Agent C · Learning Reporter Agent。 |
+| M13 · User-Guided Learning & Teaching / 用户引导学习与教学 | L2 可视化浏览器接管、用户演示、引导式教学、路径纠正 / provenance 写回。 | Agent H · Teaching Guide Agent；保留用户来源。 |
+| M14 · Learning Quality Agents & Negative Knowledge / 学习质量与负面知识 | 回到 L1 质量：页面用途、简单尝试评估、学习报告、更丰富控件和 pattern，以及 failure evidence。 | Agent A · Page Intent Agent；Agent B · Attempt Evaluator Agent；Agent C · Learning Reporter Agent。 |
 | M15 · Automated Evaluation & Continuous Optimization / 自动评估与持续优化 | 回归运行、漂移告警、质量趋势。 | 复用 Agent B / Supervisor 式评估；默认不新增 Agent。 |
-| M16 · External Interfaces / 对外接口 | 稳定 API / CLI / Skill / Tool，供外部调度者调用。 | 不新增产品 Agent；暴露既有能力。 |
+| M16 · External Interfaces / 对外接口 | 在运行时主链路可用后，稳定 API / CLI / Skill / Tool，供外部调度者调用。 | 不新增产品 Agent；暴露既有能力。 |
+| M17 · Multi-Page Workflow Composition / 多页工作流组合 | 把多个 LearnedPath 组合成更大的 workflow，但不从 raw HTML 凭空发明路径。 | 扩展 Agent D 的规划输入；默认不新增 Agent。 |
+| M18 · Artifact Lifecycle & Engine Hygiene / Artifact 生命周期与引擎卫生 | 在运行实例内 capture、return、retain、cleanup、redact、audit artifact / log / screenshot / prompt payload。 | 默认不新增产品 Agent。 |
 
 M10.2 replay 在这次重排后仍然有价值：它是 LearnedPath 数据的第一个
 确定性消费者。它**不**实现 Agent D，也**不**实现 L3 任务规划；它给
@@ -399,8 +540,9 @@ WebAgentFlow 至少支持两种使用形态：
    - 供其他系统通过 HTTP / streaming 方式调用。
    - 机器到机器的标准入口。
 2. **CLI**
-   - 供开发者直接在终端中调用某项能力。
-   - 适合调试、批处理、集成到脚本或 CI 流程。
+   - 供运行时沟通入口使用，也供开发者直接在终端中调用某项能力。
+   - 适合第一版 CLI-first 产品闭环、调试、批处理、脚本，或集成到
+     自建操作台。
 3. **Skill / Tool 形态**
    - 供第三方 Agent 框架把 WebAgentFlow 当作一个"可调用工具"。
    - 外部 Agent 负责决定"什么时候调用"。
@@ -421,7 +563,7 @@ WebAgentFlow 至少支持两种使用形态：
 
 > **澄清 —— 本文周围会出现三种"Agent"，不要混在一起**：
 >
-> 1. **产品内部 A–G Agent**（§7）—— 运行时跑在 WebAgentFlow **内部**
+> 1. **产品内部 A–H Agent**（§7）—— 运行时跑在 WebAgentFlow **内部**
 >    的角色（页面意图、规划、恢复对话…）。由本文定义。
 > 2. **第三方 Agent**（本 §10）—— 运行时的**外部调度者**，通过
 >    WebAgentFlow 的 CLI / Skill / API 来让浏览器干活。不是
@@ -442,9 +584,9 @@ WebAgentFlow 至少支持两种使用形态：
 
 ### 10.6 当前状态与优先级
 
-本节描述的是**长期交付形态**，不代表当前已经全部完成，而且
-**当前优先级低于 L1/L2/L3 主链路本身的落地** —— L3 实际工作
-稳定可用之前，不值得在 CLI / Skill / API 面上大举投入。
+本节描述的是**长期交付形态**，不代表当前已经全部完成。§2.1 的
+CLI-first 运行时沟通入口可以更早出现，因为它是跑通核心产品闭环的一部分。
+M16 则是之后对外部调度接口和更广义 tooling contract 的稳定化。
 
 当前代码库已经具备部分基础：
 
@@ -454,7 +596,8 @@ WebAgentFlow 至少支持两种使用形态：
 
 后续需要逐步补齐：
 
-- 更稳定的 CLI 入口。
+- 运行时 CLI 沟通入口。
+- 更稳定的外部 CLI 入口。
 - 更清晰的 Skill / Tool 接口定义。
 - 面向第三方 Agent 的调用约定。
 - 面向外部调用的能力边界与输入输出协议。
@@ -471,6 +614,11 @@ WebAgentFlow 至少支持两种使用形态：
 
 Session 过期、跳转、权限拒绝或授权缺失，都是运行时恢复 / 用户沟通
 事件。
+
+引擎还需要对对话、日志、截图、artifact 和 LLM prompt payload 做基础
+卫生设计：记录什么、保留多久、如何删除、什么可以脱敏、什么可以审计。
+这是运行实例内的 engine hygiene，不是 user-account 或 cloud data
+governance system。
 
 不变量：
 

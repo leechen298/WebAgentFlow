@@ -64,6 +64,9 @@ into the wrong shape.
   actual operator of the page, not a reviewer. The operator is assumed
   to have the right to operate the target website they ask
   WebAgentFlow to operate.
+- **Target website** — owns its own cookies, `localStorage`, session
+  state, permissions, and authorization outcomes. WebAgentFlow does
+  not replace that responsibility.
 - **AI coding agents** (Claude Code, Codex, …) — build and maintain
   the engine. They are **not** in the runtime loop. They must not
   run the app on the user's behalf and report results back, because
@@ -85,16 +88,69 @@ not the user's own browser. In order of importance:
    (Agent chat overlay, instrumentation) and to install plugins or
    apply deeper browser customization later.
 
+WebAgentFlow does **not** maintain its own user / account model. It
+does not implement a credential vault, multi-tenant authorization,
+cross-user authorization, cloud-hosted user data management, billing,
+or quotas. These are not new account-system roadmap items.
+
 Session state is handled by the operator and the target website. If a
 page requires an existing session, the operator establishes or refreshes
 that state through the target website's own flow in the engine-controlled
-browser context. Cookies, `localStorage`, and session expiry remain
-target-site concerns; when they expire or redirect, the run enters
-recovery / user-communication flow.
+browser context. Cookies, `localStorage`, session expiry, and target-site
+permissions remain target-site concerns. When login state expires, the
+page redirects back to login, permission is denied, or an operation
+fails, the run enters recovery / user-communication flow.
 
 When in doubt about where a new feature belongs, place it on this
 axis first: is it engine logic, workbench glass, operator workflow,
 or developer tooling? Different axes, different review standards.
+
+### 2.1 Runtime Conversation Surface
+
+The user always talks to **WebAgentFlow** as the application, not
+directly to Agent D, Agent F, Agent G, Agent H, or any other internal
+Agent. Internal Agent names are implementation roles; the runtime
+product surface speaks in the unified WebAgentFlow voice.
+
+The first useful conversation surface can be **CLI-first**. CLI-first is
+about getting the full product loop working end to end: task input,
+pre-execution confirmation, failure recovery, user abort, teaching-mode
+dialogue, and final result reporting. A developer-capable user can also
+use CLI / API to embed WebAgentFlow into their own system or build their
+own operator console around it.
+
+This runtime conversation surface is not M16's external scheduler
+interface, and it is not today's `verify-scenario` development
+verification tool. It is the product's runtime entrypoint.
+
+### 2.2 Conversation Orchestrator / Dispatcher
+
+Runtime conversation needs a code-side **Conversation Orchestrator /
+Dispatcher**. It is not a new all-purpose LLM Agent. It is a session
+controller and internal Agent router.
+
+Responsibilities:
+
+- maintain session state
+- receive user messages and engine events
+- route work to Agent D / E / F / G / H at the correct boundary
+- manage confirmation, pause, resume, abort, takeover, and teaching mode
+- enforce the L3 invariant that LLMs do not enter the step-by-step
+  browser execution loop
+- produce user-facing text from the WebAgentFlow perspective, not from
+  individual internal Agents
+
+Example states:
+
+- `idle`
+- `task_planning`
+- `awaiting_confirmation`
+- `executing_path`
+- `recovery_dialogue`
+- `abort_dialogue`
+- `guided_teaching`
+- `user_demonstration`
+- `reporting_result`
 
 ## 3. Three Lifecycle Stages of a Page
 
@@ -180,7 +236,9 @@ components can be replaced independently.
   explicit hand-off). Take-over automatically becomes guided learning
   — the system records everything the user does from that point.
 
-### 5.1 Pipeline
+L2 has two sub-modes.
+
+### 5.1 User Demonstration
 
 1. System opens the page in a **visible** Playwright browser (not
    headless — the user is driving).
@@ -193,7 +251,25 @@ components can be replaced independently.
    marked with `provenance = user`, and participate in L3 route
    planning the same way L1 paths do.
 
-### 5.2 Invariant
+### 5.2 Guided Teaching
+
+Guided Teaching is still L2: the user performs the real browser action,
+and the system records what the user actually did.
+
+1. The system opens the page in a visible Playwright browser.
+2. Agent H · Teaching Guide Agent communicates the next suggested step.
+3. The UI may highlight target elements, add shadows, indicators,
+   tooltips, or next-step prompts.
+4. The user clicks, types, selects, or otherwise operates the page.
+5. The system records the real event target, value, and observed state
+   change.
+6. Only the recorded user action can be appended to the learned record
+   with `provenance = user`.
+
+Agent H's suggestion is guidance, not evidence. It must not be written
+as a LearnedPath action unless the user actually performs the action.
+
+### 5.3 Invariant
 
 L2 records the user's real actions. It does **not** infer intent
 via LLM, and it does **not** retroactively rewrite what the user did.
@@ -229,7 +305,7 @@ Triggers that flip a run off the happy path:
 - action hits an error (timeout, not-found, server 5xx)
 - observable state doesn't change when the learned path said it should
 - page has drifted (element moved, selector stale, layout changed)
-- user aborts (§6.5)
+- user aborts (§6.9)
 
 The sections below describe each arm. "Happy path" is just the
 sunny-day subset; the error / drift / handoff arms are first-class,
@@ -258,7 +334,28 @@ not exception cases.
    the user. Output: natural-language result + structured fields the
    UI can render.
 
-### 6.3 The core invariant
+### 6.3 Task Result Verification
+
+L3 does not stop at "the path executed". It must also decide whether
+the task's postconditions were satisfied.
+
+Agent E must not infer success from a clean execution log alone. It
+reports from execution results, postcondition checks, artifact status,
+visible errors, and any rule / spec signals available. If WebAgentFlow
+cannot verify the outcome, it must tell the user `uncertain` /
+`needs review` instead of claiming completion.
+
+Postconditions can come from the selected LearnedPath, Agent D's task
+plan, explicit user confirmation, or rule / spec signals. Examples:
+
+- final URL or route
+- DOM text or visible state
+- row count or filtered-result count
+- downloaded artifact exists
+- final page state
+- visible error or warning
+
+### 6.4 The core invariant
 
 During L3 execution, **LLMs are only invoked at boundaries** —
 planning at the start, reporting at the end, recovery / abort
@@ -271,7 +368,46 @@ This is non-negotiable. It is the thing that makes WebAgentFlow
 different from "LLM watches the browser and clicks around". Break
 this and you've built a different product.
 
-### 6.4 Error handling
+### 6.5 Action Risk & Consent Gate
+
+Ambiguous plans require confirmation before execution. Some operations
+also require confirmation even when the planner is confident: dangerous
+or irreversible actions, external sending, deletion, payment-like flows,
+permission changes, bulk modification, or any user-defined sensitive
+operation.
+
+The first version should be a deterministic policy gate with
+user-configurable rules. The Conversation Orchestrator inserts this
+consent gate before execution. A future Risk / Consent Advisor may
+exist, but this document does not add a new Agent for it.
+
+### 6.6 Artifact Lifecycle
+
+Real tasks often create or consume artifacts: downloaded files,
+screenshots, generated evidence, exported CSV / PDF / Excel files,
+uploaded files, or final task-output attachments.
+
+WebAgentFlow eventually needs an artifact lifecycle:
+
+- capture
+- storage
+- display / return to the user
+- retention
+- cleanup
+
+This is future roadmap work, not a requirement for M10.2 replay /
+drift.
+
+### 6.7 Multi-Page / Multi-Path Workflow
+
+End-state tasks may require multiple LearnedPaths across one or more
+pages. Agent D may eventually compose several learned paths into a
+workflow, but it must not invent a path from raw HTML at runtime.
+
+Multi-page workflow composition is a later capability. The M11 MVP does
+not need to cover the full workflow space.
+
+### 6.8 Error handling
 
 When an action fails (page error, element not found, observable state
 didn't change, server returned 5xx, etc.):
@@ -290,7 +426,7 @@ didn't change, server returned 5xx, etc.):
      the task manually; their actions are recorded and fed back into
      the learned record.
 
-### 6.5 User-initiated abort
+### 6.9 User-initiated abort
 
 The user can stop the run at any time. When they do:
 
@@ -321,6 +457,13 @@ different inputs, different outputs, different models over time.
 | E | Result Reporter Agent | L3 | Execution outcome | User-facing result |
 | F | Recovery Dialogue Agent | L3 (error) | Error context + recent steps | Dialogue transcript + next action |
 | G | Abort Dialogue Agent | L3 (user abort) | Current state + abort signal | Dialogue transcript + next action |
+| H | Teaching Guide Agent | L2 | Teaching goal + current page analysis + known LearnedPaths + recent user action log + optional failure / recovery context | Natural-language instruction + highlight targets + expected user action + clarification questions |
+
+Agent H boundaries:
+
+- It does not click, fill, or operate the browser.
+- It does not fabricate user actions.
+- Its guidance is separate from recorded `provenance = user` actions.
 
 When adding a new capability, first ask: **which Agent does this
 belong to?** If the answer is "a new one", that's a product-level
@@ -335,8 +478,12 @@ not implementation details.
 
 1. **LLMs never drive per-step execution in L3.** Only planning
    / reporting / dialogue.
-2. **Failure is data.** Failed attempts in L1 are persisted, not
-   discarded.
+2. **Failure is data.** This means more than `exploration_runs`
+   existing. Failed attempts, replay drift, `target_missing`,
+   `unsupported_action`, and user corrections should become failure
+   evidence / negative knowledge over time. Planner, learning-quality,
+   evaluation, and optimization work can consume that negative
+   knowledge. M10.2 does not need to implement all of this.
 3. **Provenance is preserved.** Every learned action knows whether
    it came from L1 (system) or L2 (user).
 4. **Re-learning is allowed.** A page can be re-learned when it
@@ -346,6 +493,14 @@ not implementation details.
 6. **Learning and execution are different code paths.** Reusing
    L1 orchestration to run L3 tasks is a smell; L3
    should be boring and deterministic.
+7. **Conversation orchestration is code-owned.** Session state,
+   consent gates, recovery routing, abort handling, and teaching-mode
+   switches are controlled by the Conversation Orchestrator, not by an
+   unconstrained LLM loop.
+8. **Engine hygiene matters.** Conversations, logs, screenshots,
+   artifacts, and LLM prompt payloads need future retention, deletion,
+   redaction, and audit design inside the running instance. This is
+   engine hygiene, not a user-account or data-governance system.
 
 ---
 
@@ -380,10 +535,13 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
 - **L2 (User-Guided Learning)**: not started. The 2026-04-20
   cleanup removed the old Chrome extension; L2 will be built
   from scratch on top of a **visible** Playwright browser (per §5.1),
-  not on the extension. No guided-learning mode exists today.
+  not on the extension. User Demonstration, Guided Teaching, and
+  Agent H are not implemented today.
 - **L3 (Actual Work)**: not started. No Path Planner Agent, no
-  task-to-path execution loop, no recovery dialogue. Replay / drift is
-  the M10 foundation; M11 is the first planned L3 happy-path MVP.
+  task-to-path execution loop, no runtime conversation surface, no
+  Conversation Orchestrator, no result verification loop, and no
+  recovery dialogue. Replay / drift is the M10 foundation; M11 is the
+  first planned L3 happy-path MVP.
 
 When a lifecycle stage fully lands, update this section to reflect it.
 
@@ -395,12 +553,14 @@ task execution:
 | Milestone | Product role | Internal Agents |
 |---|---|---|
 | M10 · Path Asset Foundation | Make LearnedPaths reusable: persistence, catalog, replay, drift detection. | No new Agent; provides execution substrate. |
-| M11 · Task-to-Path Planning MVP | First L3 happy path: user task → choose / bind LearnedPath → execute → report. | Agent D · Path Planner Agent; Agent E · Result Reporter Agent. |
+| M11 · Runtime Conversation & Task-to-Path MVP | CLI-first runtime conversation surface, Conversation Orchestrator, and first L3 happy path: user task → choose / bind LearnedPath → consent gate → execute → verify → report. | Agent D · Path Planner Agent; Agent E · Result Reporter Agent. |
 | M12 · Recovery & Handoff | L3 failure and abort branches: pause, explain, re-plan, re-run, or hand off. | Agent F · Recovery Dialogue Agent; Agent G · Abort Dialogue Agent. |
-| M13 · User-Guided Learning & Correction | L2 visible-browser takeover plus path correction / provenance write-back. | No new Agent by default; preserve user provenance. |
-| M14 · Learning Quality Agents & Coverage | Revisit L1 quality: page purpose, simple attempt evaluation, learning report, richer controls and patterns. | Agent A · Page Intent Agent; Agent B · Attempt Evaluator Agent; Agent C · Learning Reporter Agent. |
+| M13 · User-Guided Learning & Teaching | L2 visible-browser takeover, user demonstration, guided teaching, path correction, and provenance write-back. | Agent H · Teaching Guide Agent; preserve user provenance. |
+| M14 · Learning Quality Agents & Negative Knowledge | Revisit L1 quality: page purpose, simple attempt evaluation, learning report, richer controls, patterns, and failure evidence. | Agent A · Page Intent Agent; Agent B · Attempt Evaluator Agent; Agent C · Learning Reporter Agent. |
 | M15 · Automated Evaluation & Continuous Optimization | Regression runs, drift alerts, quality trend tracking. | Reuses Agent B / Supervisor-style evaluation; no new Agent by default. |
-| M16 · External Interfaces | Stable API / CLI / Skill / Tool surface for external schedulers. | No new product Agent; exposes existing capabilities. |
+| M16 · External Interfaces | Stable API / CLI / Skill / Tool surface for external schedulers after the runtime loop is useful. | No new product Agent; exposes existing capabilities. |
+| M17 · Multi-Page Workflow Composition | Compose multiple LearnedPaths into larger workflows without inventing paths from raw HTML. | Extends Agent D planning inputs; no new Agent by default. |
+| M18 · Artifact Lifecycle & Engine Hygiene | Capture, return, retain, clean up, redact, and audit artifacts / logs / screenshots / prompt payloads inside the running instance. | No new product Agent by default. |
 
 M10.2 replay is still valuable after this reshuffle: it is the first
 deterministic consumer of LearnedPath data. It does **not** implement
@@ -465,8 +625,10 @@ entry shapes:
    - For machine-to-machine calls over HTTP / streaming.
    - The standard remote entry.
 2. **CLI**
-   - For developers to invoke a capability directly from the terminal.
-   - Fits debugging, batch jobs, script or CI integration.
+   - For the runtime conversation surface and for developers to invoke
+     a capability directly from the terminal.
+   - Fits the initial CLI-first product loop, debugging, batch jobs,
+     scripts, or integration into a custom operator console.
 3. **Skill / Tool form**
    - For third-party Agent frameworks to treat WebAgentFlow as an
      invokable tool.
@@ -489,7 +651,7 @@ WebAgentFlow with its own per-step browser automation.
 > **Clarification — three kinds of "Agent" appear near this document,
 > don't confuse them**:
 >
-> 1. **Product-internal Agents A–G** (§7) — roles that run *inside*
+> 1. **Product-internal Agents A–H** (§7) — roles that run *inside*
 >    WebAgentFlow at runtime (Page Intent, Path Planner, Recovery Dialogue,
 >    …). Defined by this document.
 > 2. **Third-party Agent** (this §10) — an *external* runtime
@@ -514,11 +676,11 @@ Opening capabilities outward does NOT relax the existing invariants:
 
 ### 10.6 Current state and priority
 
-This section describes a **long-term delivery direction**. Not all of
-it is shipped, and **its current priority sits below landing the
-L1/L2/L3 main loop itself** — L3 actual work must be stable
-and useful before heavy investment in CLI / Skill / API surface area
-is justified.
+This section describes a **long-term delivery direction**. The
+CLI-first runtime conversation surface in §2.1 can arrive earlier
+because it is part of getting the core product loop working. M16 is the
+later stabilization of external scheduler interfaces and broader
+tooling contracts.
 
 Current codebase has part of the foundation:
 
@@ -528,7 +690,8 @@ Current codebase has part of the foundation:
 
 Pending:
 
-- A more stable CLI entry.
+- Runtime CLI conversation entry.
+- A more stable external CLI entry.
 - A clearer Skill / Tool interface definition.
 - Calling conventions oriented at third-party Agents.
 - Capability boundaries and I/O contracts for external callers.
@@ -548,6 +711,12 @@ that instance.
 
 Session expiry, redirects, permission denial, or missing authorization
 are runtime recovery / user-communication events.
+
+The engine also needs basic hygiene for conversations, logs,
+screenshots, artifacts, and LLM prompt payloads: what is recorded, how
+long it is retained, how it is deleted, what can be redacted, and what
+is auditable. This is engine hygiene inside the running instance, not a
+user-account or cloud data governance system.
 
 Invariants:
 
