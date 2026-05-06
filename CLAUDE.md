@@ -14,14 +14,48 @@ WebAgentFlow — monorepo for an agent-driven web workflow engine.
 - `apps/api` — FastAPI backend (routes, services, schemas, LLM provider).
 - `apps/worker` — async worker (currently scaffold).
 - `apps/validation-site` — self-hosted page fixtures for autonomous exploration.
-- `apps/cli` — Python CLI (`wagent`) + the `verify-scenario` Claude Code skill.
+- `apps/cli` — Python CLI (`wagent`). Today it backs the `verify-scenario`
+  development verification skill; future M11.0 may add a runtime
+  conversation CLI, and M16 may expose stable external CLI / Skill / Tool
+  interfaces.
 - `packages/` — shared TypeScript packages.
 
 **Product model** (what WebAgentFlow actually is):
 [`docs/product-model.md`](./docs/product-model.md). Read this before
-proposing any new feature or phase of work. If a proposal isn't in
-that document, pause and ask — don't invent a new Agent, phase, or
-loop and retrofit code to it.
+proposing any new feature or delivery milestone. If a proposal isn't in
+that document, pause and ask — don't invent a new Agent, lifecycle stage,
+or loop and retrofit code to it.
+
+Current planning vocabulary:
+
+- Product lifecycle stages are **L1 / L2 / L3**.
+- Delivery milestones are **M10 / M11 / ...**.
+- Do not use bare "Phase 3" or "Phase 10" to describe future product
+  planning. Historical iteration folders may still be named `phase-N`.
+
+Current delivery status:
+
+- Active milestone: **M10 Path Asset Foundation**.
+- **10.1 LearnedPath persistence** and **10.1.5 LearnedPath catalog** have
+  shipped.
+- **10.2 replay execution + drift detection** is the current task.
+- Runtime Conversation Surface, Conversation Orchestrator / Dispatcher,
+  L3 task runner, L2 guided teaching, and Agent H Teaching Guide Agent are
+  planned future work, not current implementation.
+
+CLI terminology:
+
+- Current `wagent verify` / `verify-scenario` is a development verification
+  skill backend.
+- M11.0 may introduce a runtime conversation CLI where the user talks to
+  WebAgentFlow.
+- M16 may expose stable external CLI / Skill / Tool interfaces for external
+  schedulers and integrations.
+- Keep those three surfaces distinct.
+
+Product direction: the early goal is CLI-first closure of the complete
+functional loop. Developer-capable users should be able to integrate
+WebAgentFlow into their own systems or operator consoles through CLI / API.
 
 Deep architecture / history: [`docs/architecture.md`](./docs/architecture.md).
 
@@ -34,7 +68,7 @@ emitting observation atoms defined in
 `apps/api/app/services/learning/supervisor_observations.py`.
 
 The app operates. The user is the operator. The AI coding agent (Claude Code,
-Codex, …) primarily writes code. The AI MAY also trigger a run via the
+Codex, Cursor, …) primarily writes code. The AI MAY also trigger a run via the
 project-provided **`verify-scenario` skill** — but only under the contract
 below. The skill invocation is auditable (it goes through the HTTP API,
 persists to `exploration_runs`, emits the raw Supervisor verdict +
@@ -44,6 +78,10 @@ Supervisor Agent produces the verdict, and the AI merely relays it.
 Running the engine via any other means — direct `curl` to
 `/exploration/autonomous-runs`, an inline Playwright script, importing
 `run_autonomous_exploration` directly — is NOT permitted.
+
+For documentation-only work or ordinary code edits that do not explicitly
+request a live run, do not trigger `verify-scenario`. This repository treats
+each live autonomous run as auditable product evidence, not as a casual test.
 
 ### MUST NOT
 
@@ -190,7 +228,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 ## Key File Locations
 
-**Current focus — autonomous exploration subsystem:**
+**Current focus — autonomous exploration + M10 path assets:**
 
 - `apps/api/app/services/learning/autonomous_explorer.py` — orchestrator,
   SSE event emitter, Supervisor LLM call.
@@ -202,13 +240,21 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   observation-atom schema + code-side verdict derivation.
 - `apps/api/app/services/learning/page_verification.py` — spec-baseline
   comparator; 5-score scorecard.
+- `apps/api/app/models/learned_path.py` — M10.1 LearnedPath ORM model.
+- `apps/api/app/repos/learned_paths_repo.py` — LearnedPath persistence,
+  catalog, trust, and lookup data access.
+- `apps/api/app/services/learning/page_signature.py` — LearnedPath identity
+  helpers (`path_template`, `query_signature`, `dom_fingerprint`).
 - `apps/api/app/routers/exploration.py` — `/exploration/autonomous-runs[/stream]`
   plus `/exploration/specs[/{id}]` (spec metadata for workbench prefill)
-  and `/exploration/autonomous-runs[/{run_id}]` (persisted run history).
+  and `/exploration/autonomous-runs[/{run_id}]` (persisted run history), plus
+  LearnedPath catalog routes.
 - `apps/api/app/routers/validation_api.py` — validation-site mock backend.
 - `apps/validation-site/specs/<page>.{md,assertions.json}` — authored baselines.
 - `apps/validation-site/src/pages/IndexPage.vue` — fixture catalogue at `/`.
 - `apps/console/src/pages/AutonomousWorkbenchPage.vue` — user-driven workbench.
+- `apps/console/src/pages/LearnedPathCatalogPage.vue` — M10.1.5 LearnedPath
+  catalog UI.
 - `apps/console/src/api/autonomousStream.ts` — SSE client (POST + fetch stream).
 
 **Stable foundations:**
@@ -218,6 +264,13 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   chromium lifecycle wrapper used by autonomous_explorer.
 - `apps/api/app/schemas/` — Pydantic contracts (page_analysis,
   page_verification, llm, ast, common).
+
+**Planned service areas (not implemented file paths yet):**
+
+- Runtime conversation / orchestration session state and Agent routing.
+- L2 teaching support, highlight targets, and user action recording.
+- Artifact lifecycle handling.
+- Failure evidence / negative knowledge.
 
 ## Architecture Summary
 
@@ -245,8 +298,13 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 ### Database
 
 - PostgreSQL 16, SQLAlchemy 2.x, Alembic migrations.
-- Single table: `exploration_runs` (autonomous run history). All other
-  tables from the earlier product iteration have been dropped.
+- Core tables currently include at least `exploration_runs` and
+  `learned_paths`.
+- `exploration_runs` stores autonomous run history.
+- `learned_paths` is the M10.1 path asset table for reusable learned actions
+  and trust state.
+- Do not add `user_id`, `scope_id`, or a project-owned operator identity
+  model unless the product model is explicitly changed first.
 - `ExplorationRun` inherits `UUIDPrimaryKeyMixin` + `TimestampMixin` and
   keeps flexible payloads in JSON columns
   (`strategy_json`, `result_snapshot_json`, …).
@@ -262,7 +320,7 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 
 - [`docs/product-model.md`](./docs/product-model.md) — **authoritative
   product model**: L1/L2/L3 lifecycle stages (autonomous learning,
-  user-guided learning, actual work), seven Agents, invariants. Read first.
+  user-guided learning, actual work), Agents A-H, invariants. Read first.
 - [`docs/architecture.md`](./docs/architecture.md) — AST dual-track,
   services sub-package structure, iframe handling.
 - [`docs/scope-boundaries.md`](./docs/scope-boundaries.md) — what's
@@ -272,7 +330,7 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
   walkthrough (more detailed than the Common Commands above, useful
   for new contributors).
 - [`docs/iterations/README.md`](./docs/iterations/README.md) —
-  **per-iteration doc convention** (phase-scoped folders with
+  **per-iteration doc convention** (historical phase-scoped folders with
   `intent.md` / `plan.md` / `review.md`). Write `intent.md` before
   starting non-trivial work; the `codex-review` skill reads these as
   context.

@@ -13,13 +13,43 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - `apps/api` —— FastAPI 后端（routes / services / schemas / LLM provider）。
 - `apps/worker` —— 异步 worker（当前是骨架）。
 - `apps/validation-site` —— 自主探索的自建验证站点。
-- `apps/cli` —— Python CLI（`wagent`）与 `verify-scenario` Claude Code skill。
+- `apps/cli` —— Python CLI（`wagent`）。当前它是 `verify-scenario` 开发验证
+  skill 的后端；未来 M11.0 可能新增 runtime conversation CLI，M16 可能开放
+  稳定 external CLI / Skill / Tool 接口。
 - `packages/` —— 共享 TypeScript 包。
 
 **产品形态**（WebAgentFlow 到底是什么）：
 [`docs/product-model.zh.md`](./docs/product-model.zh.md)。提议任何
-新功能 / 新阶段前**先读这份**。如果你的提议在那份文档里找不到位置，
-**先停下问用户**，不要擅自发明新 Agent / 新阶段 / 新循环再反向改代码。
+新功能 / 新交付里程碑前**先读这份**。如果你的提议在那份文档里找不到
+位置，**先停下问用户**，不要擅自发明新 Agent / 新生命周期阶段 / 新循环
+再反向改代码。
+
+当前规划术语：
+
+- 产品生命周期阶段是 **L1 / L2 / L3**。
+- 交付里程碑是 **M10 / M11 / ...**。
+- 不要用裸写的 "Phase 3" 或 "Phase 10" 指代未来产品规划。历史迭代目录
+  仍可能叫 `phase-N`。
+
+当前交付状态：
+
+- 活跃里程碑：**M10 Path Asset Foundation / 路径资产基础**。
+- **10.1 LearnedPath persistence** 和 **10.1.5 LearnedPath catalog** 已交付。
+- **10.2 replay execution + drift detection** 是当前任务。
+- Runtime Conversation Surface、Conversation Orchestrator / Dispatcher、
+  L3 task runner、L2 guided teaching、Agent H Teaching Guide Agent 都是后续
+  规划，不是当前已实现。
+
+CLI 术语：
+
+- 当前 `wagent verify` / `verify-scenario` 是开发验证 skill 后端。
+- M11.0 未来可能引入 runtime conversation CLI，用户在这里和 WebAgentFlow
+  沟通。
+- M16 未来可能开放稳定 external CLI / Skill / Tool 接口，供外部调度和集成。
+- 这三类入口必须区分清楚，不要混用。
+
+产品方向：早期目标是 CLI-first 跑通完整功能闭环。有开发能力的用户应能
+通过 CLI / API 把 WebAgentFlow 接入自己的系统或自建操作台。
 
 深度架构 / 演进：[`docs/architecture.zh.md`](./docs/architecture.zh.md)。
 
@@ -41,6 +71,10 @@ Codex 等）主要负责写代码。AI 也可以通过项目提供的
 **不得**通过其他任何方式驱动引擎 —— 直接 `curl`
 `/exploration/autonomous-runs`、内联 Playwright 脚本、直接导入
 `run_autonomous_exploration` 都在禁止范围内。
+
+文档更新或普通代码修改如果没有明确要求 live run，不要触发
+`verify-scenario`。本仓库把每一次 live autonomous run 都当作可审计的产品
+证据，不是随手跑的普通测试。
 
 ### 禁止做
 
@@ -179,7 +213,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 ## 关键文件位置
 
-**当前焦点 —— 自主探索子系统：**
+**当前焦点 —— 自主探索 + M10 路径资产：**
 
 - `apps/api/app/services/learning/autonomous_explorer.py` —— 编排器 +
   SSE 事件分发 + Supervisor LLM 调用。
@@ -191,14 +225,22 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   LLM 观察原子 schema + 代码侧裁决推导。
 - `apps/api/app/services/learning/page_verification.py` —— 基线对照器，输出
   5 项评分。
+- `apps/api/app/models/learned_path.py` —— M10.1 LearnedPath ORM model。
+- `apps/api/app/repos/learned_paths_repo.py` —— LearnedPath 持久化、catalog、
+  trust 和 lookup 数据访问。
+- `apps/api/app/services/learning/page_signature.py` —— LearnedPath 身份计算
+  helper（`path_template`、`query_signature`、`dom_fingerprint`）。
 - `apps/api/app/routers/exploration.py` ——
   `/exploration/autonomous-runs[/stream]`、
   `/exploration/specs[/{id}]`（workbench 拉 spec 做预填用）、
-  `/exploration/autonomous-runs[/{run_id}]`（落库后的 run 历史）。
+  `/exploration/autonomous-runs[/{run_id}]`（落库后的 run 历史），以及
+  LearnedPath catalog routes。
 - `apps/api/app/routers/validation_api.py` —— 验证站点 mock 后端。
 - `apps/validation-site/specs/<page>.{md,assertions.json}` —— 基线定义。
 - `apps/validation-site/src/pages/IndexPage.vue` —— `/` 下的测试页目录。
 - `apps/console/src/pages/AutonomousWorkbenchPage.vue` —— 用户驱动的工作台。
+- `apps/console/src/pages/LearnedPathCatalogPage.vue` —— M10.1.5 LearnedPath
+  catalog UI。
 - `apps/console/src/api/autonomousStream.ts` —— SSE 客户端（POST + fetch 流）。
 
 **稳定基础：**
@@ -208,6 +250,13 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   autonomous_explorer 用的 Playwright chromium 生命周期封装。
 - `apps/api/app/schemas/` —— Pydantic 契约（page_analysis、
   page_verification、llm、ast、common）。
+
+**规划中的服务区域（尚不是已实现文件路径）：**
+
+- Runtime conversation / orchestration session state 和 Agent routing。
+- L2 teaching support、highlight targets 和 user action recording。
+- Artifact lifecycle handling。
+- Failure evidence / negative knowledge。
 
 ## 架构总览
 
@@ -234,8 +283,12 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 ### 数据库
 
 - PostgreSQL 16 + SQLAlchemy 2.x + Alembic。
-- 仅一张表：`exploration_runs`（autonomous 运行历史）。旧产品形态
-  留下的其他表已全部删除。
+- 当前核心表至少包括 `exploration_runs` 和 `learned_paths`。
+- `exploration_runs` 存 autonomous run history。
+- `learned_paths` 是 M10.1 路径资产表，用于可复用 learned actions 和 trust
+  state。
+- 除非产品模型先明确改变，否则不要新增 `user_id`、`scope_id` 或项目自己的
+  operator identity model。
 - `ExplorationRun` 继承 `UUIDPrimaryKeyMixin` + `TimestampMixin`，灵活
   字段走 JSON 列（`strategy_json`、`result_snapshot_json` 等）。
 
@@ -250,7 +303,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 - [`docs/product-model.zh.md`](./docs/product-model.zh.md) —— **产品形态
   权威文档**：L1/L2/L3 生命周期阶段（自主学习 / 用户引导学习 /
-  实际工作）、七个 Agent、跨阶段不变量。**先看这份**。
+  实际工作）、Agents A-H、跨阶段不变量。**先看这份**。
 - [`docs/architecture.zh.md`](./docs/architecture.zh.md) —— AST 双轨、
   服务子包结构、iframe 处理。
 - [`docs/scope-boundaries.zh.md`](./docs/scope-boundaries.zh.md) —— 当前交付里程碑
@@ -259,7 +312,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - [`docs/dev-setup.zh.md`](./docs/dev-setup.zh.md) —— 完整的开发环境
   搭建步骤（比上面的"常用命令"更详细，面向新 contributor）。
 - [`docs/iterations/README.md`](./docs/iterations/README.md) ——
-  **迭代文档规范**（按 Phase 组织的目录，每次迭代留 `intent.md` /
+  **迭代文档规范**（历史上按 phase 组织的目录，每次迭代留 `intent.md` /
   `plan.md` / `review.md` 三件套）。开始一轮非平凡工作前先写 `intent.md`；
   `codex-review` skill 会自动把这些作为上下文喂给 Codex。
 - [`CLAUDE.md`](./CLAUDE.md) —— 英文原版。
