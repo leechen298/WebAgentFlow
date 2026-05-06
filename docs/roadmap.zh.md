@@ -2,7 +2,7 @@
 
 运营视角下"已交付 / 正在做 / 下一步"的全景。
 
-- 产品**是什么**（L1/L2/L3 生命周期阶段、七个产品内部 Agent、跨阶段不变量）见
+- 产品**是什么**（L1/L2/L3 生命周期阶段、产品内部 Agent A-H、跨阶段不变量）见
   [`product-model.zh.md`](./product-model.zh.md) —— 权威产品参考。
 - 历史迭代目录仍可能叫 `phase-N`，但新路线图正文使用
   **交付里程碑 M<N>**，避免和生命周期阶段 L1/L2/L3 混淆。
@@ -107,86 +107,145 @@ Phase 9 没有剩余待办。当前活跃交付里程碑是 M10。
 
 ## M10 —— Path Asset Foundation / 路径资产基础（进行中）
 
-M10 的目标是让 LearnedPath 成为可复用资产。它**不**实现 L3 实际工作：
-没有用户任务对话入口，没有 Agent D Path Planner，也没有 task-to-path
-执行闭环。它搭建的是 M11 会调用的确定性执行底座。
+M10 的目标是让 LearnedPath 成为可复用资产。它仍然是基础里程碑，不是
+L3 task runner：不做运行时 conversation shell、不做 Agent D Path
+Planner、不做 Agent H Teaching Guide Agent，也不做 task-to-path 执行
+闭环。它搭建的是 M11 会调用的确定性执行底座。
 
 - **LearnedPath 落库 —— 已于 2026-04-25 交付（10.1）**。
   `pass_gate = pass` 的运行自动写入 `learned_paths`，按
   `(page_template, query_signature, dom_fingerprint, scenario)` 归档，
   并带 `provisional` / `confirmed` / `flaky` / `deprecated` 四态 trust。
+  迭代记录：
+  [`docs/iterations/phase-10/10.1-learned-path-persistence/`](./iterations/phase-10/10.1-learned-path-persistence/)。
+  端到端证据：`run_id=6c97c030-5aae-4f93-8abd-91c4446df9d7`
+  -> `learned_path_id=31d3cf58-65a8-4298-bafc-9feee1ed6a90`，
+  scorecard 5/5，supervisor source `llm`。
+- **LearnedPath catalog —— 已交付（10.1.5）**。
+  console 已有资产级 LearnedPath catalog，用来查看路径、source run、
+  已存 actions 和 trust 状态。路径级 trust 操作放在 catalog；run
+  history 继续区分 run review 和只读 LearnedPath 关联。
 - **Replay execution + drift detection —— 当前任务（10.2）**。
   用户从 LearnedPath catalog 指定一条路径，输入 URL，让引擎按已存
   actions 重跑。结果返回 replay status 和页面变化原因，例如 page
   mismatch、signature changed、target missing、unsupported action。
   这不是 `pass_gate`，不是 Supervisor verdict，也不是任务规划。
 
-M10 关闭标准：LearnedPath 能被持久化、查看、确认 / 废弃，并能确定性
-replay；页面变化能以可解释状态返回。
+10.2 replay / drift 结果未来会成为 failure evidence 和 drift evidence
+的来源，但 10.2 本身不要求完整实现 negative knowledge store。M10 关闭
+标准：LearnedPath 能被持久化、查看、确认 / 废弃，并能确定性 replay；
+页面变化能以可解释状态返回。
 
-## M11 —— Task-to-Path Planning & Execution MVP
+## M11.0 —— Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排
 
-M11 是第一版 L3 实际工作里程碑。用户用自然语言描述任务，WebAgentFlow
-从已学路径中选择并绑定参数，执行，然后汇报结果。
+M11.0 建立第一版运行时产品入口，让用户可以和 WebAgentFlow 沟通。这个
+阶段 CLI 即可，因为目标是先跑通完整功能闭环，再打磨更丰富的操作员
+界面。
+
+预期交付：
+
+- CLI-first 的运行时沟通入口；用户和 **WebAgentFlow** 沟通，而不是
+  直接和 Agent D / E / F / G / H 沟通。
+- 代码侧 Conversation Orchestrator / Dispatcher，维护 session state，
+  并把用户消息和 engine events 路由到 Agent D / E / F / G / H 边界；
+  这些能力随对应里程碑逐步上线。
+- 支持任务输入、确认、暂停、继续、abort、takeover 的基础消息或命令。
+- 先服务 M11.1 快乐路径，同时为 M12 恢复 / 中断对话和 M13 教学流程
+  铺好状态结构。
+- 统一从 WebAgentFlow 视角输出给用户。
+
+这是运行时产品入口。它不是 M16 external CLI / API surface，也不是当前
+`verify-scenario` 开发验证工具。
+
+## M11.1 —— Task-to-Path Planning & Execution MVP / 任务到路径规划与执行 MVP
+
+M11.1 是第一版 L3 实际工作里程碑。用户通过 M11.0 conversation surface
+描述任务；WebAgentFlow 从已学路径中选择并绑定参数，通过 M10 replay
+engine 执行，在能力范围内验证任务结果，然后汇报结果。
 
 纳入 / 明确的产品内部 Agent：
 
 - **Agent D · Path Planner Agent / 路径规划 Agent** —— 读取用户任务和
   学习数据，选择 / 组合路线，把任务参数绑定到可替换 action value，
   并且绝不读取 raw HTML。
-- **Agent E · Result Reporter Agent / 结果报告 Agent** —— 读取执行结果，
-  输出用户可读报告和 UI 可渲染结构化字段。
+- **Agent E · Result Reporter Agent / 结果报告 Agent** —— 读取执行结果、
+  postcondition check、artifact status 和 final-state signals，输出
+  用户可读报告和 UI 可渲染结构化字段。
 
 预期交付：
 
-- 面向一个目标页面或已知页面集合的任务输入 / chat 入口。
 - LearnedPath 检索和排序。
 - Slot binding：把姓名、日期、状态、导出格式、搜索词等任务参数填入
   学过的动作值。
 - planner 路线或绑定参数不确定时，执行前让用户确认。
 - 通过 M10 replay engine 执行，不走 autonomous exploration。
-- 用户视角结果报告，必要时关联 artifact / 最终状态。
+- task result verification MVP：postcondition check、artifact status、
+  final-state signals；无法验证时明确报告 `uncertain` / `needs review`。
+- basic artifact capture / return：下载文件、导出、截图、最终 artifact
+  reference。
+- action risk & consent gate MVP：危险、不可逆、外部发送、批量修改、
+  权限修改或用户自定义敏感操作，在执行前需要确认。
 
-M11 明确不做：隐藏式自主重学、不做逐步 LLM 浏览器控制、不做完整恢复
-对话；失败先返回清晰状态。
+第一版 risk gate 可以由 Orchestrator 持有的 deterministic policy + 用户
+可配置规则完成。本里程碑不新增新的 Agent。
 
-## M12 —— Recovery & Handoff / 恢复与接管
+M11.1 明确不做：隐藏式自主重学、不做逐步 LLM 浏览器控制、不做完整恢复
+对话；失败先返回清晰状态，并交给后续 M12 能力处理。
 
-M12 把失败和用户中断做成一等产品流程。
+## M12 —— Recovery & Abort Dialogue / 恢复与中断对话
+
+M12 把失败和用户中断做成一等产品流程。它依赖 M11.0 conversation shell，
+因为恢复和中断是运行时对话，不是孤立的执行状态。
 
 纳入 / 明确的产品内部 Agent：
 
 - **Agent F · Recovery Dialogue Agent / 恢复对话 Agent** —— 解释失败步骤，
-  给出重新规划 / 从头重跑 / 交给用户的选项，并产出下一步动作。
+  给出 continue / rerun / replan / takeover / abandon 选项，并产出下一
+  个边界动作。
 - **Agent G · Abort Dialogue Agent / 中断对话 Agent** —— 处理用户主动
-  中断，给出继续 / 重跑 / 接管 / 放弃等选项。
+  中断，给出 continue / rerun / replan / takeover / abandon 选项。
 
 预期交付：
 
 - L3 执行失败即暂停。
-- 重新规划和重跑只在边界处调用 Agent D。
-- 自动化无法安全继续时，交给用户进入可视化浏览器引导模式。
-- 审计记录区分 engine failure、user abort、user takeover。
+- 恢复对话只在规划边界处调用 Agent D。
+- 用户主动中断和用户请求停止的 abort dialogue。
+- 自动化无法安全继续时，交给 M13 的 User Demonstration 或 Guided
+  Teaching。
+- 审计记录区分 engine failure、user abort、recovery choice、user
+  takeover。
 
-## M13 —— User-Guided Learning & Correction / 用户引导学习与纠正
+如果 M13 尚未实现，M12 MVP 可以先停在 pause + explanation + user
+choice，不承诺完整 recording 或教学模式写回。
 
-M13 真正实现 L2 用户引导学习，不复活旧 Chrome extension 录制路线，而
-是基于可视化 Playwright 浏览器。
+## M13 —— User-Guided Learning, Teaching & Correction / 用户引导学习、教学与纠正
+
+M13 真正实现 L2 用户引导学习。它包含两个子模式：User Demonstration 和
+Guided Teaching。
+
+纳入 / 明确的产品内部 Agent：
+
+- **Agent H · Teaching Guide Agent / 教学引导 Agent** —— 沟通下一步教学
+  动作，提出 highlight target，询问澄清问题，但不直接操作浏览器。
 
 预期交付：
 
-- 可视化浏览器接管模式。
-- 记录用户真实交互：selector、value、click target、可观测状态变化。
-- 带 provenance 写回 LearnedPath actions（`provenance = user`）。
+- 可视化 Playwright 浏览器，用于 takeover / teaching mode。
+- User Demonstration recording：用户操作页面，系统记录真实 interaction、
+  selector、value、click target 和可观测状态变化。
+- Guided Teaching：WebAgentFlow 通过元素 highlight、shadow、
+  indicator、tooltip 或下一步提示引导用户；真实 click / input /
+  selection 仍由用户执行。
+- 只有用户真实动作可以带 provenance 写回 LearnedPath actions
+  （`provenance = user`）。
+- Agent H 的建议只是 guidance，不能直接写成 LearnedPath action。
 - 路径纠正 UI：编辑或替换既有 LearnedPath。
-- 用户纠正驱动 trust 更新。
-
-默认不新增产品 Agent；除非确实无法放入 A-G 角色。
+- 用户纠正和 correction evidence 驱动 trust 更新。
 
 ## M14 —— Learning Quality Agents & Coverage Expansion / 学习质量与覆盖扩展
 
 M14 在 L3 快乐路径和接管闭环存在之后，回到 L1 学习质量。同时吸收原
-M10 draft backlog：更丰富控件和跨页模式。
+M10 draft backlog：更丰富控件、模式泛化和负面知识。
 
 纳入 / 明确的产品内部 Agent：
 
@@ -209,29 +268,88 @@ M10 draft backlog：更丰富控件和跨页模式。
 - Cross-page pattern mining：login / search / CRUD metadata，供 Agent D
   后续消费。
 
+Negative knowledge / failure evidence 在这里正式化：
+
+- 存储 failed attempts、replay drift、`target_missing`、
+  `unsupported_action` 和 user correction evidence。
+- 供 Agent D planning、Agent B evaluation、learning quality report 和
+  M15 automated evaluation 消费。
+- 更丰富的 postcondition pattern 和 artifact verification pattern 可以
+  放在 M14 或 M15，取决于实现范围。
+
 ## M15 —— Automated Evaluation & Continuous Optimization / 自动评估与持续优化
 
-- 对完整 fixture catalogue 做回归 replay。
-- 对 confirmed / provisional LearnedPath 做漂移告警。
-- 按 page template、scenario、trust state、control type 跟踪质量趋势。
+- 对 confirmed / provisional LearnedPath 做 fixture catalogue 和选定真实
+  页面基线的回归 replay。
+- 按 page template、scenario、trust state、control type、drift reason
+  跟踪 failure evidence 趋势。
+- 对 confirmed / provisional LearnedPath 做 drift alert。
+- task result verification trend tracking。
+- artifact existence 和 retention check。
+- conversation、recovery、teaching session audit。
+- data、log、screenshot、artifact、LLM prompt payload 的 retention /
+  cleanup policy。
 - 定时检查不得静默改写路径，只产出可审核证据。
 
 ## M16 —— External Interfaces / Open Tooling / 对外接口
 
-主 L1/L2/L3 闭环可用之后，再稳定开放能力：
+M16 在主 L1/L2/L3 闭环可用之后稳定开放能力。它不是 M11.0 runtime
+conversation CLI。
 
-- 页面学习、路径规划、执行、验证、用户引导记录的 API contract。
-- 面向本地调试和批处理的 CLI 命令。
+预期交付：
+
+- 页面学习、路径规划、执行、验证、artifact、用户引导记录的版本化 API
+  contract。
+- 面向外部调度、本地脚本和批处理的稳定 CLI 命令。
 - 面向第三方 Agent 调度者的 Skill / Tool 形态。
+- 有开发能力的用户可以通过 CLI / API 把 WebAgentFlow 接入自己的系统或
+  自建操作台。
 
 外部 Agent 可以调度 WebAgentFlow，但不得替代 WebAgentFlow 自己做逐步
 浏览器自动化。
 
+## M17 —— Multi-page Workflow Composition / 多页面工作流编排
+
+M17 把 L3 从单路径执行扩展到 workflow composition。
+
+预期交付：
+
+- 把多个 LearnedPath 编排成更大的 workflow。
+- 跨页面传递状态，例如 search -> detail -> export。
+- 支持跨页面的 workflow-level recovery、takeover 和 teaching mode。
+- Agent D 可以组合已经学会的路径，但不能从 raw HTML 凭空发明浏览器
+  路径。
+
+## M18 —— CLI Distribution & Integration Readiness / CLI 分发与集成就绪
+
+M18 在 runtime loop 和 workflow composition 可用之后，稳定 CLI / API
+分发和集成能力。
+
+预期交付：
+
+- 稳定 CLI 分发。
+- Docker / local packaging。
+- API / CLI examples。
+- scripting 和 batch-usage recipes。
+- 接入用户自建系统或操作台的 integration cookbook。
+- 版本化 CLI / API contract 和兼容策略。
+
+M18 不新增 user/account/tenant management、credential storage、
+cloud-hosted user data management、billing 或 quotas。
+
 ## 当前交付里程碑的非目标
 
-规范列表见 [`scope-boundaries.zh.md`](./scope-boundaries.zh.md)。要点：
-L3 不做实时逐步 LLM 监督；M16 前不做对外 Agent 接口，除非显式重新
-排优先级。
+规范列表见 [`scope-boundaries.zh.md`](./scope-boundaries.zh.md)。当前
+M10.2 要点：
+
+- 不做运行时 conversation shell。
+- 不做 Agent D、Agent H 或 L3 task runner。
+- 不做 L3 task result verification。
+- 不做 artifact lifecycle。
+- 不做 multi-page workflow composition。
+- 不做 action risk gate。
+- 不做 user-account、credential-vault、cloud user data、billing 或 quota
+  工作。
 
 ---
 
