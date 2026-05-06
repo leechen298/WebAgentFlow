@@ -47,8 +47,10 @@ Current executable package: `10.2-replay-execution-drift-detection`.
 
 ### Supervision
 
-- **Real-time per-step LLM supervision (Layer 1)** — post-run assessment
-  (Layer 2) first, since it's cheaper to reason about.
+- **Real-time per-step LLM supervision in L3** — LLMs may participate at
+  planning, reporting, recovery / abort dialogue, or user-teaching /
+  handoff boundaries only. They must not decide browser actions step by
+  step during L3 execution.
 - **External AI-coding-agent supervision** — the AI coding tool (Claude Code,
   Codex, …) must not act as supervisor. See `CLAUDE.md` §
   "AI Coding Agent — Execution Boundary".
@@ -85,10 +87,6 @@ Current executable package: `10.2-replay-execution-drift-detection`.
 - **LearnedPath write-back** — SHIPPED in M10.1 for `pass_gate = pass`
   autonomous runs. Further write-back from user-guided learning belongs
   to M13.
-- **Cross-device / cloud sync of task definitions** — local-first is
-  the current stance; cross-device sync is out of scope for this
-  milestone.
-
 ## Re-evaluation Triggers
 
 Open this list whenever:

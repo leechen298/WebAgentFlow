@@ -1,18 +1,14 @@
-"""LearnedPath ORM — delivery phase 10 headline deliverable.
+"""LearnedPath ORM — delivery milestone M10 headline deliverable.
 
 A LearnedPath is a reusable exploration outcome: after a successful
 autonomous run (`pass_gate = pass`), the (page_template,
 query_signature, dom_fingerprint, scenario) quadruple plus the action
-sequence that produced the pass are persisted here. A future Phase 3
+sequence that produced the pass are persisted here. A future L3
 planner Agent reads these rows to pick a concrete route for a user
 task without ever reading raw HTML.
 
 Schema notes (see docs/iterations/phase-10/01-learned-path-persistence):
 
-- No ``user_id`` / ``scope_id`` columns. Per product-model.md §10.7
-  "Instance-local data & the shell boundary" the engine does not
-  maintain a user-account model; all persisted data implicitly
-  belongs to whoever runs the instance.
 - ``dedup_key`` is a sha256 of the key quadruple; the unique
   constraint lets ``ingest_run`` stay idempotent across DB backends
   without relying on JSONB expression indexes.

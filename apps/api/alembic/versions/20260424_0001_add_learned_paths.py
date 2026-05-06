@@ -5,9 +5,7 @@ outcomes. Populated automatically on ``pass_gate = pass`` runs by
 ``exploration``'s ``_persist_autonomous_run`` → ingest hook.
 
 See docs/iterations/phase-10/01-learned-path-persistence for intent
-and design. Key constraint: per product-model.md §10.7 the schema has
-no ``user_id`` / ``scope_id`` columns — "who is running the instance"
-is out of the engine's knowledge.
+and design.
 
 Revision ID: 20260424_0001
 Revises: 20260420_0001

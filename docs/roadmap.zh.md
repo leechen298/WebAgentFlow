@@ -230,8 +230,8 @@ M10 draft backlog：更丰富控件和跨页模式。
 ## 当前交付里程碑的非目标
 
 规范列表见 [`scope-boundaries.zh.md`](./scope-boundaries.zh.md)。要点：
-L3 不做实时逐步 LLM 监督、不做跨设备同步；M16 前不做对外 Agent
-接口，除非显式重新排优先级。
+L3 不做实时逐步 LLM 监督；M16 前不做对外 Agent 接口，除非显式重新
+排优先级。
 
 ---
 

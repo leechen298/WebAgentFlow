@@ -61,7 +61,9 @@ into the wrong shape.
   the engine.
 - **User** — the operator. Triggers runs, reviews results, gives
   corrections. During L2 (user-guided learning) the user is the
-  actual operator of the page, not a reviewer.
+  actual operator of the page, not a reviewer. The operator is assumed
+  to have the right to operate the target website they ask
+  WebAgentFlow to operate.
 - **AI coding agents** (Claude Code, Codex, …) — build and maintain
   the engine. They are **not** in the runtime loop. They must not
   run the app on the user's behalf and report results back, because
@@ -82,6 +84,13 @@ not the user's own browser. In order of importance:
 3. **Room for extension** — surfaces to inject the engine's own UX
    (Agent chat overlay, instrumentation) and to install plugins or
    apply deeper browser customization later.
+
+Session state is handled by the operator and the target website. If a
+page requires an existing session, the operator establishes or refreshes
+that state through the target website's own flow in the engine-controlled
+browser context. Cookies, `localStorage`, and session expiry remain
+target-site concerns; when they expire or redirect, the run enters
+recovery / user-communication flow.
 
 When in doubt about where a new feature belongs, place it on this
 axis first: is it engine logic, workbench glass, operator workflow,
@@ -252,10 +261,11 @@ not exception cases.
 ### 6.3 The core invariant
 
 During L3 execution, **LLMs are only invoked at boundaries** —
-planning at the start, reporting at the end, and dialogue on error
-or abort. They are **never** invoked to decide the next click, the
-next keystroke, or which field to fill, because those decisions are
-already encoded in the learned record.
+planning at the start, reporting at the end, recovery / abort
+dialogue, or a user-teaching / handoff boundary. They are **never**
+invoked to decide the next click, the next keystroke, or which field
+to fill, because those decisions are already encoded in the learned
+record.
 
 This is non-negotiable. It is the thing that makes WebAgentFlow
 different from "LLM watches the browser and clicks around". Break
@@ -523,13 +533,11 @@ Pending:
 - Calling conventions oriented at third-party Agents.
 - Capability boundaries and I/O contracts for external callers.
 
-### 10.7 Instance-local data & the shell boundary
+### 10.7 Instance-local data
 
 The engine's data boundary is **one running instance**. WebAgentFlow
-does not maintain a user-account model and does not know "who" is using
-it. Everything persisted inside an instance — LearnedPaths, trust
-records, feedback history — belongs to whoever runs that instance, by
-construction.
+persists only engine artifacts inside that instance: LearnedPaths,
+trust records, and feedback history.
 
 "Real-user data fine-tuning" is not a separate mechanism. It is the
 L1/L2/L3 lifecycle model operating on *this instance's* pages: the
@@ -538,24 +546,16 @@ engine's LearnedPath store adapts over time.
 More usage on an instance → more signal → better behavior, scoped to
 that instance.
 
-Anything that needs the concept of "user" — account system,
-cross-device sync, cross-instance collaboration, at-rest encryption,
-tenant isolation — is a **shell concern** outside the engine. A future
-shell layer may wrap the engine to provide these; the engine must not
-assume one exists.
+Session expiry, redirects, permission denial, or missing authorization
+are runtime recovery / user-communication events.
 
 Invariants:
 
 - The engine MUST NOT embed instance identity into LLM prompts, logs,
   SSE events, or outbound reports.
 - The engine MUST NOT push learned data out of the instance on its own.
-- Persistence code SHOULD leave obvious interception points (the repo
-  layer) where a future shell can plug in encryption / sync, but does
-  not implement any shell code in M10.
-- Schema MUST NOT add multi-tenant columns (no `user_id`, no
-  `scope_id`). If a shell later needs tenancy, that is the shell's
-  job — or at worst a justified future schema change, not a
-  speculative one today.
+- Persistence code SHOULD stay behind ordinary repository boundaries,
+  without speculative ownership or storage abstractions.
 
 This framing was made explicit in delivery milestone M10 alongside
 LearnedPath persistence. Before that, "one instance = one user's data"

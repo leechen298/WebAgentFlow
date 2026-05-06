@@ -133,8 +133,8 @@ substrate that M11 will call.
   End-to-end evidence: `run_id=6c97c030-5aae-4f93-8abd-91c4446df9d7`
   → `learned_path_id=31d3cf58-65a8-4298-bafc-9feee1ed6a90`,
   scorecard 5/5, supervisor source `llm`. The product framing for
-  this — engine data is instance-local, no multi-tenant columns,
-  shell concerns stay outside the engine — was made explicit in
+  this — engine data is instance-local and session expiry is handled as
+  recovery / user communication — was made explicit in
   [`product-model.md` §10.7](./product-model.md) at the same time.
 - **Replay execution + drift detection — CURRENT (10.2)**.
   A user can pick one LearnedPath from the catalog, provide a URL, and
@@ -268,5 +268,4 @@ with their own per-step browser automation.
 
 See [`scope-boundaries.md`](./scope-boundaries.md) for the canonical
 list. Highlights: no real-time per-step LLM supervision in L3, no
-cross-device sync, and no external-Agent interface work before M16
-unless explicitly reprioritized.
+external-Agent interface work before M16 unless explicitly reprioritized.

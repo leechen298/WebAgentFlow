@@ -77,7 +77,6 @@ engine 的浏览器执行策略；不触发 live autonomous run。
 - 不实现 replay execution / drift detection。
 - 不改变 `pass_gate`、Supervisor verdict 或 scorecard 的计算方式。
 - 不把人工 review 结果回写到 authored specs。
-- 不新增账号 / 多租户 / reviewer identity 字段。
 - 不触发新的 autonomous run。
 - 不在本轮做批量审核、批量废弃或自动清理任务。
 

@@ -178,7 +178,7 @@
    个默认值本来应该在 schema 层成立；现在如果走 SQL 回填/脚本插入，
    就和设计不一致。
 
-§10.7 未被破坏：无 `user_id/scope_id`、repo 为唯一写入入口。
+§10.7 未被破坏：repo 为唯一写入入口，未看到实例外推数据路径。
 
 ### 分级与处理
 
@@ -230,7 +230,7 @@ plan 明确写了要补 `learnedPathActions.spec.ts` 做"按钮行为 + 状态
 中文和日文 locale 里正文已经本地化了，但 CTA 仍直接写 `Confirm` /
 `Mark wrong`。不影响功能但在 detail 页显得不一致。
 
-§10.7 未被破坏：前端消费层改动，没绕过 repo / 没引入多租户 / 没外推数据。
+§10.7 未被破坏：前端消费层改动，没绕过 repo / 没外推数据。
 
 ### 分级与处理
 
@@ -335,8 +335,7 @@ plan 明确写了要补 `learnedPathActions.spec.ts` 做"按钮行为 + 状态
 从"整个 feature 是否落地正确"看，主实现方向是对的：迁移、ORM、repo、
 `pass_gate=pass` 写回、3 个接口、详情页 Confirm/Mark wrong，以及
 A1/A2/A3/A4/B2 都基本到位，而且**没有偏离 §10.7 的硬约束**。
-`learned_paths` schema 没有 `user_id/scope_id`，router 通过 repo
-访问数据，也没有看到实例外推数据的路径。
+router 通过 repo 访问数据，也没有看到实例外推数据的路径。
 
 但如果标准是"这轮迭代已经完整收尾"，我给不到通过：B1、B3 还悬着，
 文档尾声和 verify-scenario 证据未落，稳态文档还有前后矛盾。审查
@@ -366,8 +365,8 @@ fix commit 的主要目标达成。
 - **[Nit] 上一轮 A5 / A6 没落**：本批显式选了"先修真实 bug，A5/A6
   稍后"。没变，等用户同意就顺手补。
 
-§10.7 对齐：**Codex 明确确认未违反**（"没有 `user_id/scope_id`、
-router 通过 repo 访问、没有实例外推数据"）。
+§10.7 对齐：**Codex 明确确认未违反**（"router 通过 repo 访问、
+没有实例外推数据"）。
 
 ---
 

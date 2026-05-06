@@ -17,8 +17,8 @@
 
 `pass_gate = pass` 的 autonomous 运行从此自动落成 `learned_paths`
 行，带四态信用生命周期；后续迭代已把 run 级审核和路径级 trust
-操作拆成两个入口。同时显式写进 product-model.md §10.7 "引擎数据
-是 instance-local，不引入账号 / 多租户" 这条产品级硬约束。
+操作拆成两个入口。同时显式写进 product-model.md §10.7 的实例内
+数据边界。
 
 ## 关键决策（开工前对齐用户拍板的）
 
@@ -27,8 +27,6 @@
 | LearnedPath 粒度 | A：`(page, scenario)` | 暴力存，由 Phase 3 Planner Agent 选 |
 | page_signature | URL（path 模板 + query 白名单）+ DOM 指纹 | 双要素抗 redirect / 抗动态路由 / 抗改版 |
 | 写回时机 | 自动（`pass_gate = pass`）+ 用户事后路径级 trust 管理 | 大部分场景自学，少数人工纠偏；当前路径级操作入口在 LearnedPath catalog |
-| 数据归属 | instance-local，引擎不认识"用户" | 用户体系是壳层职责，§10.7 显式化 |
-| schema 不引入 | `user_id` / `scope_id` 多租户列 | 防止现在猜未来的壳层形态 |
 | empty-actions | 也存（observational） | 单纯打开页面看一眼也是合法成功，给 Phase 3 信号 |
 
 ## 主要交付
@@ -38,7 +36,7 @@
   `20260424_0002` 给 `provenance` / `trust` 加 DB-level
   server_default）
 - ORM `LearnedPath` + `TrustStatus` / `Provenance` `StrEnum` + 状态机
-- `LearnedPathRepository`（壳层拦截点）：`ingest_run` 幂等去重 /
+- `LearnedPathRepository`：`ingest_run` 幂等去重 /
   `list_page` 游标分页 / `get` / `find_by_source_run` / `set_trust`
   非法转换抛 `ValueError`
 - `services/learning/page_signature.py` 三个纯函数
@@ -77,7 +75,7 @@
 - `docs/product-model.md` / `.zh.md` 顶部加 Terminology 块
   （区分"产品阶段 1/2/3"vs"交付阶段 N"vs"§N"）；§9 把 LearnedPath
   从"未交付"改成"已交付，replay 待后续"；新增 **§10.7
-  Instance-local data & the shell boundary**
+  Instance-local data**
 - `docs/architecture.md` / `.zh.md` §G 在 `services/learning/`
   列表里加 `page_signature.py` 一行
 - `docs/roadmap.md` Phase 10 章节把 LearnedPath 那条改成 SHIPPED

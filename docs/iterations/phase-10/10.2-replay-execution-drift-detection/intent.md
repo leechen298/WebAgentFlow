@@ -78,7 +78,6 @@ Agent D · Path Planner Agent 之后可以调用 replay 能力，但 10.2 自身
   pre-execution confirmation 或 Agent E 结果报告；这些属于 M11。
 - 不引入 LLM 对每一步 replay 结果做判断。
 - 不自动调用 autonomous learning 兜底；drift 是结果，不是隐藏重试入口。
-- 不新增账号、多租户、reviewer identity 或数据隔离字段。
 
 ## 成功标准
 

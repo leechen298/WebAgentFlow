@@ -85,7 +85,6 @@ LearnedPath 资产。
 - 不实现 drift detection。
 - 不改变 LearnedPath dedup 规则。
 - 不新增 run-to-LearnedPath 关系表。
-- 不新增账号 / 多租户 / reviewer identity 字段。
 - 不删除 LearnedPath 数据；本轮只提供 trust 管理。
 - 不把 LearnedPath catalog 做成 authored use-case catalog 的替代品。
 - 不触发新的 autonomous run。

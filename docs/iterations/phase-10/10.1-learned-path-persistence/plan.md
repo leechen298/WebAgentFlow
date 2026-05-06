@@ -11,8 +11,8 @@
 - `apps/api/app/schemas/learned_path.py` —— Pydantic 请求 / 响应
   模型。
 - `apps/api/app/repos/learned_paths_repo.py` —— 数据访问。本迭代是
-  §10.7 指定的"壳层拦截点"，未来加密 / 同步只会在此层包一层，现在
-  只暴露 `ingest_run / list / get / set_trust`，不要把 SQL 漏到
+  §10.7 指定的数据访问边界，现在只暴露
+  `ingest_run / list / get / set_trust`，不要把 SQL 漏到
   routers。
 - `apps/api/app/services/learning/page_signature.py` —— 三个纯函数
   `path_template / query_signature / dom_fingerprint`。
@@ -270,7 +270,6 @@ if _pass_gate_status_for(run) == "pass":
 
 迭代收尾时逐条核对：
 
-- [ ] 新表**没有** `user_id` / `scope_id` 或任何"多租户留位"列。
 - [ ] `LearnedPathRepository` 是唯一数据访问入口；router 不直接
       写 SQL。
 - [ ] 写回 / 查询 / trust 切换都**没有**向实例外推数据（没有

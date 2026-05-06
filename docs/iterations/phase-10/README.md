@@ -44,11 +44,11 @@ M10 的权威范围与动机见
 
 ## M10 同时显式化的产品约束
 
-[`docs/product-model.md` §10.7 Instance-local data & the shell boundary](../../product-model.md)
-在 M10 开局一并写入 —— 约束 LearnedPath 的 schema（不加多租户
-列）和反馈回路（run review 在 history 中完成，LearnedPath trust
-在独立 catalog 中完成，不做任何账号体系）。新增持久化类表**必须**
-遵守此节。
+[`docs/product-model.md` §10.7 Instance-local data](../../product-model.md)
+在 M10 开局一并写入 —— 约束 LearnedPath 的实例内数据边界、session
+失效后的恢复 / 用户沟通路径，以及反馈回路（run review 在 history 中
+完成，LearnedPath trust 在独立 catalog 中完成）。新增持久化类表
+**必须**遵守此节。
 
 ## M10 主线清单
 

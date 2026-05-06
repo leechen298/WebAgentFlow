@@ -224,9 +224,6 @@ def test_model_collected_in_metadata() -> None:
 
     assert "learned_paths" in Base.metadata.tables
     tbl = Base.metadata.tables["learned_paths"]
-    # §10.7 guardrail — no multi-tenant columns
-    assert "user_id" not in tbl.c
-    assert "scope_id" not in tbl.c
 
     # sanity: expected columns present
     expected = {

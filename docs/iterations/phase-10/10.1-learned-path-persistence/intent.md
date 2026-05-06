@@ -12,10 +12,9 @@
 - 产品模型 §9 把 LearnedPath 持久化列为**交付阶段 10 的 headline
   deliverable**；缺了它，产品阶段 3 "实际工作"没有可执行输入，产品
   主链路无法继续。
-- 同时在本迭代里把 [`docs/product-model.md` §10.7 Instance-local data
-  & the shell boundary](../../../product-model.md) 的约束
-  显式化 —— 新表的 schema 和反馈回路都必须对齐这条不变量：不引入
-  多租户列、不向实例外推送数据、repo 层留壳层拦截点。
+- 同时在本迭代里把 [`docs/product-model.md` §10.7 Instance-local data](../../../product-model.md)
+  的约束显式化 —— 新表的 schema 和反馈回路都必须对齐这条不变量：
+  不向实例外推送数据。
 - 用户已经明确"真实用户数据微调"就是三阶段模型在一个实例内持续发生
   的结果；本迭代是这件事第一次真正有数据落盘。
 
@@ -25,12 +24,8 @@
   只**写入** LearnedPath，不消费它。
 - **不**做跨页面 pattern mining（login / search / CRUD 模板抽象）——
   留给 Phase 10 的后续迭代。
-- **不**加任何壳层能力（加密、同步、多租户、账号体系）—— §10.7
-  明确是引擎之外的事。
 - **不**扩展 `page_analyzer` / `action_planner` 去支持 popup /
   click-toggle 控件 —— 那是并行的 Phase 10 迭代。
-- **不**在 schema 里加 `user_id` / `scope_id` 之类的"多租户留位"列，
-  §10.7 明确禁止。
 - **不**改稳态文档 `roadmap.md` / `scope-boundaries.md`（整个 Phase
   收尾时再一起刷新）。`architecture.md` §G 的一行描述在本迭代尾声
   补上。`product-model.md` §9 里"LearnedPath 持久化尚不存在"的表述
@@ -39,8 +34,7 @@
 ## 成功标准
 
 1. Alembic 迁移新增 `learned_paths` 表；`alembic upgrade head` 干净
-   通过，`alembic downgrade -1` 可逆；迁移脚本内容和 §10.7 一致
-   （无 user_id / scope_id 列）。
+   通过，`alembic downgrade -1` 可逆；迁移脚本内容和 §10.7 一致。
 2. 新模块 `apps/api/app/services/learning/page_signature.py` 导出
    `path_template / query_signature / dom_fingerprint` 三个纯函数，
    单测覆盖下列**至少** case：
