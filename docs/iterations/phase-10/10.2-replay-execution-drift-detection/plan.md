@@ -6,9 +6,10 @@
 “还能不能用、哪里变了、哪一步失败”返回给用户。实现时必须保持
 learning 和 replay 的边界：replay 不重新规划、不重新学习、不静默重试。
 
-上位定位：本包属于 **M10 Path Asset Foundation**。它会给 **M11
-Task-to-Path Planning MVP** 提供可调用的 replay engine，但本包不实现
-Agent D · Path Planner Agent，不做用户任务理解，也不做参数绑定。
+上位定位：本包属于 **M10 Path Asset Foundation**。它会给 **M11.1
+Task-to-Path Planning & Execution MVP** 提供可调用的 replay engine，但
+本包不实现 Agent D · Path Planner Agent，不做用户任务理解，也不做参数
+绑定。
 
 ## 施工范围
 
@@ -88,7 +89,7 @@ find_replay_candidates(page_template, scenario)
    - `created_at` 新
 
 第一版 UI 主入口是“指定某一条 LearnedPath replay”；候选选择主要给
-后端服务和后续 M11 的 task-to-path planning 能力打基础。
+后端服务和后续 M11.1 的 task-to-path planning 能力打基础。
 
 ### 后端 replay service
 
@@ -278,13 +279,27 @@ apps/console/src/i18n/locales/ja.ts
 10.2 是 replay / drift，不是 task planner。不要在本包里加入：
 
 - task input / chat 入口。
+- Runtime Conversation Surface / CLI。
+- Conversation Orchestrator / Dispatcher。
 - 根据用户自然语言任务检索、选择、组合 LearnedPath。
 - slot binding（把“张三”“本周”“导出 CSV”等任务参数绑定到 actions）。
 - Agent D · Path Planner Agent。
 - Agent E · Result Reporter Agent。
+- Agent F / G recovery / abort dialogue。
+- Agent H Teaching Guide Agent 或 teaching mode。
 - 执行前确认流。
+- action risk / consent gate 或用户自定义 risk policy。
+- artifact lifecycle（download / export / screenshot 的 capture /
+  storage / display / retention / cleanup）。
+- task postcondition verification；本包只返回 replay final state 和
+  drift / failure result，不判断“用户任务是否完成”。
+- multi-page workflow composition；本包不编排多个 LearnedPath。
+- user-account / credential / session / cloud-data / quota / billing
+  management。Cookie、`localStorage`、session state 和目标站点权限由用户
+  与目标网页负责；失效或权限不足只表现为 replay 的 drift / failure /
+  runtime result，恢复对话留给后续里程碑。
 
-这些能力统一留给 M11 Task-to-Path Planning MVP。
+这些能力统一留给 M11.0 / M11.1 及后续里程碑。
 
 ## 实施步骤
 
@@ -424,6 +439,10 @@ apps/api/tests/test_learned_path_replay.py
 7. selector missing。
 8. unsupported action。
 9. runtime navigation error。
+10. replay result 暴露足够结构化的 drift / failure evidence，供未来
+    consumers 使用。
+11. 不要求任何 user-account / session / cloud-data / quota / billing
+    行为。
 
 更新：
 

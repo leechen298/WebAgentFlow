@@ -14,11 +14,12 @@
 
 硬边界：只执行 M10 `10.2`；不做 `10.3+`；不扩展 popup /
 custom click-toggle / form-label extractor；不触发 autonomous run 创建
-接口；不把 replay 结果伪装成 `pass_gate` 或 Supervisor verdict。
+接口；不把 replay 结果伪装成 `pass_gate` 或 Supervisor verdict；不把
+replay / drift 扩成 task planner。
 
 术语边界：M10 是交付里程碑；L1 / L2 / L3 是产品生命周期阶段。本包
-服务于未来的 **M11 Task-to-Path Planning MVP**，但不实现 L3 task
-runner。
+服务于未来的 **M11.1 Task-to-Path Planning & Execution MVP**，但不实现
+L3 task runner。
 
 ## 当前关系
 
@@ -64,6 +65,9 @@ Agent D · Path Planner Agent 之后可以调用 replay 能力，但 10.2 自身
 - replay 返回独立结果，不混用 autonomous exploration 的 `pass_gate`、
   Supervisor verdict 或历史 run review。
 - replay 失败不会静默重试，也不会自动转入重新学习。
+- replay / drift 结果未来可以作为 failure evidence / negative knowledge
+  的输入；本迭代只保证结构化输出足够后续消费，不实现完整 negative
+  knowledge store。
 
 ## 边界（本轮不做）
 
@@ -75,7 +79,23 @@ Agent D · Path Planner Agent 之后可以调用 replay 能力，但 10.2 自身
 - 不实现完整 L3 task runner；本轮只验证 LearnedPath 能否复刻。
 - 不实现 Agent D · Path Planner Agent。
 - 不做用户自然语言任务入口、path retrieval / ranking、slot binding、
-  pre-execution confirmation 或 Agent E 结果报告；这些属于 M11。
+  pre-execution confirmation、task result verification 或 Agent E 结果
+  报告；这些属于 M11.1。
+- 不做 Runtime Conversation Surface / CLI。
+- 不做 Conversation Orchestrator / Dispatcher。
+- 不实现 Agent F / G 的 recovery / abort dialogue。
+- 不实现 Agent H / teaching mode，不做 visible browser teaching overlay，
+  不记录用户真实操作。
+- 不做 artifact lifecycle；下载、导出、截图等 artifact 的 capture /
+  storage / display / retention / cleanup 属于后续里程碑。
+- 不做 action risk / consent gate，不分类危险操作，不实现用户自定义
+  risk policy。
+- 不做 multi-page workflow composition；一条 replay 只消费指定
+  LearnedPath，不编排多个路径。
+- 不做 user-account / credential / session / cloud-data / quota / billing
+  management。Cookie、`localStorage`、session state 和目标站点权限由用户
+  与目标网页负责；session 失效、登录态回退、权限不足或目标站点操作失败
+  时，M10.2 只返回 drift / failure / runtime result，后续可进入恢复流程。
 - 不引入 LLM 对每一步 replay 结果做判断。
 - 不自动调用 autonomous learning 兜底；drift 是结果，不是隐藏重试入口。
 

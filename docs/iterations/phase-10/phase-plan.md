@@ -142,9 +142,9 @@ M10 使用语义编号目录，目录名前缀与任务编号一致，例如
   page mismatch、signature changed、target missing、unsupported action
   等可解释状态。
 - replay 不回退到 autonomous learning，不静默重试。
-- 本包是 M11 Task-to-Path Planning MVP 的执行底座，但**不**实现
-  Agent D · Path Planner Agent、task input、slot binding 或 L3 task
-  runner。
+- 本包是 M11.1 Task-to-Path Planning & Execution MVP 的执行底座，但
+  **不**实现 Agent D · Path Planner Agent、task input、slot binding 或
+  L3 task runner。
 
 预期触及：
 
@@ -167,6 +167,23 @@ M10 使用语义编号目录，目录名前缀与任务编号一致，例如
 - 若使用 live run，只能通过 `verify-scenario` skill，并按
   `pass_gate.status`、Supervisor verdict、5 项 scorecard、`run_id`
   原样汇报。
+
+### Post-M10 alignment note
+
+M10.2 是 LearnedPath 的确定性消费者：它只消费已经存在的路径资产，验证
+这些 actions 能否在当前页面上 replay，并把 drift / failure 以结构化
+结果返回。它是后续能力的执行底座，不是后续能力本身。
+
+后续里程碑边界：
+
+- Runtime Conversation Shell / Conversation Orchestrator 属于 M11.0。
+- Agent D / Agent E 的 task runner、task-to-path planning、task result
+  verification 属于 M11.1。
+- Recovery / Abort 对话属于 M12。
+- Guided Teaching / Agent H Teaching Guide Agent 属于 M13。
+- Negative knowledge / failure evidence 的正式 store 属于 M14 / M15。
+- Artifact lifecycle、action risk / consent gate、multi-page workflow
+  composition 都属于后续里程碑，不进入 M10.2。
 
 ### 10.3 · Popup-based control support
 
@@ -272,7 +289,7 @@ M10 使用语义编号目录，目录名前缀与任务编号一致，例如
 
 硬边界：
 
-- 每次只能实现当前迭代包，不顺手做后续 M10 / M14 / M11 项。
+- 每次只能实现当前迭代包，不顺手做后续 M10 / M11 / M14 项。
 - `draft only` 执行包不能直接施工；开工前必须重新核对当前代码和上
   一个迭代结果，并把 `plan.md` 修订成可执行状态。
 - 需要 live autonomous run 时，只能走 `verify-scenario` skill；不得
