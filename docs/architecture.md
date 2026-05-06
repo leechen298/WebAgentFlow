@@ -13,21 +13,36 @@ runtime.
 1. **Presentation** — Vue console provides operator-facing interfaces.
 2. **Application** — FastAPI service owns API contracts, orchestration entry
    points, integration boundaries.
-3. **Execution** — Playwright runtime + async worker for browser automation.
-4. **Infrastructure** — PostgreSQL, Redis, MinIO for persistence, cache, object
+3. **Conversation / Orchestration** — planned runtime layer near the
+   FastAPI application boundary. It will connect user messages, Agent
+   calls, browser execution events, confirmation gates, abort / recovery
+   dialogue, takeover, and teaching mode. It is a code-side session
+   controller / dispatcher, not an LLM controller that chooses browser
+   actions step by step. The Runtime Conversation Surface can start as
+   a CLI and later be called by user-owned systems or operator consoles
+   through stable CLI / API contracts.
+4. **Execution** — Playwright runtime + async worker for browser automation.
+5. **Infrastructure** — PostgreSQL, Redis, MinIO for persistence, cache, object
    storage.
 
 ## App Responsibilities
 
 - `apps/console` — operator UI: autonomous workbench, run history,
-  overview landing page.
+  LearnedPath catalog, and overview landing page. Planned future
+  responsibilities may include teaching overlays, operator review
+  surfaces, artifact display, and richer workbench panels.
 - `apps/api` — HTTP API, LLM provider layer, autonomous exploration,
-  page verification, validation-api mock backend.
-- `apps/worker` — async execution shell (currently scaffold).
+  LearnedPath persistence / replay, page verification, validation-api
+  mock backend. Planned future responsibilities include conversation
+  sessions, orchestrator endpoints, Agent routing, artifact metadata,
+  and failure-evidence APIs.
+- `apps/worker` — async execution scaffold (currently scaffold).
 - `apps/validation-site` — self-hosted test fixtures (login, users, …)
   that autonomous exploration runs against.
 - `apps/cli` — Python CLI (`wagent`) plus the `verify-scenario`
-  Claude Code skill that invokes it.
+  Claude Code skill that invokes it. It may later host the M11.0
+  runtime conversation CLI, but that runtime surface is not implemented
+  today.
 
 ---
 
@@ -41,6 +56,15 @@ M11 / ...
 
 Current delivery milestone: **M10 Path Asset Foundation**. Current
 executable package: `10.2-replay-execution-drift-detection`.
+
+Current code status:
+
+- M10 Path Asset Foundation is the active milestone.
+- `10.2` replay / drift is the current task.
+- `apps/worker` is still a scaffold.
+- L2 user-guided learning, L3 task execution, runtime conversation,
+  Conversation Orchestrator, Agent routing for D / E / F / G / H, and
+  Agent H Teaching Guide Agent are planned but not implemented.
 
 **Completed phases:**
 
@@ -285,7 +309,10 @@ hardcoded in Python code.**
 ## G. Services Sub-Package Structure
 
 `apps/api/app/services/` is organized into a small number of capability
-groups. Everything here backs the autonomous exploration path.
+groups. Current implemented services mostly back autonomous exploration
+and M10 Path Asset Foundation. The later conversation, teaching,
+artifact, and evidence services below are planned service areas unless
+explicitly marked as implemented.
 
 **`services/execution/`** — Playwright runtime:
 
@@ -315,6 +342,107 @@ groups. Everything here backs the autonomous exploration path.
 **Compat re-export stubs** exist at old paths (e.g.
 `services/execution_runtime.py`) so existing imports keep working. New code
 should use the sub-package paths.
+
+### Planned Service Areas
+
+These service areas are architecture placeholders for M11+ work; they
+should not be read as existing packages:
+
+**`services/conversation/`** — planned runtime conversation and
+orchestration:
+
+- session state
+- Conversation Orchestrator / Dispatcher
+- user message and engine event routing
+- message log
+- confirmation, abort, recovery, takeover, and teaching-mode state
+
+**`services/teaching/`** — planned L2 teaching support:
+
+- highlight target generation
+- Agent H Teaching Guide integration
+- visible-browser teaching event handling
+- user action recorder integration
+
+**`services/artifacts/`** — planned artifact handling:
+
+- download / export / screenshot capture
+- artifact metadata
+- artifact display / return hooks
+- retention and cleanup hooks
+
+**Failure evidence / negative knowledge** — planned learning and
+evaluation input:
+
+- failed attempts
+- replay drift
+- `target_missing` / `unsupported_action` evidence
+- user correction evidence
+
+M10.2 replay / drift may emit the raw evidence signals, but it does not
+implement the full negative-knowledge store.
+
+---
+
+## H. Planned Runtime Event Flow
+
+The future runtime loop should preserve a single user-facing
+WebAgentFlow conversation while routing internally through bounded
+Agents and deterministic services:
+
+```text
+User message
+-> Runtime Conversation Surface
+-> Conversation Orchestrator / Dispatcher
+-> Agent D / F / G / H or execution service
+-> Browser runtime / replay engine / teaching recorder
+-> result event
+-> Conversation Orchestrator / Dispatcher
+-> Agent E / F / G / H response
+-> user
+```
+
+Important invariant: the Orchestrator owns session state and routing.
+LLMs can participate at planning, reporting, recovery / abort, and
+teaching boundaries, but they must not become a per-step browser action
+controller.
+
+---
+
+## I. Planned Teaching Mode Architecture
+
+Teaching mode is an L2 capability planned for M13. It is not part of
+the current M10.2 replay / drift package.
+
+Planned pieces:
+
+- visible Playwright browser
+- overlay / highlight layer for target elements
+- indicator / tooltip / next-step prompt rendering in the operator UI
+- user event recorder that captures real clicks, inputs, selections,
+  navigation, and observable state changes
+- Agent H Teaching Guide Agent producing natural-language guidance and
+  highlight targets
+
+Recorded LearnedPath actions must come from real user events. Agent H
+suggestions are guidance, not provenance, and cannot be written directly
+as LearnedPath actions.
+
+---
+
+## J. Planned Artifacts and Failure Evidence
+
+Future L3 execution should treat artifacts as first-class task outputs:
+downloaded files, exports, screenshots, generated evidence, and final
+task attachments should have capture, metadata, display / return,
+retention, and cleanup paths.
+
+Failure evidence / negative knowledge should also become first-class
+learning and evaluation input. Failed attempts, replay drift,
+`target_missing`, `unsupported_action`, visible errors, and user
+corrections should feed planning, learning quality, regression
+evaluation, and optimization. M10.2 can produce replay / drift evidence,
+but it does not implement the full store.
 
 ---
 

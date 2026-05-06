@@ -10,16 +10,28 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
 
 1. **表示层** —— Vue 控制台提供面向操作者的界面。
 2. **应用层** —— FastAPI 服务承载 API 契约、编排入口、集成边界。
-3. **执行层** —— Playwright runtime + 异步 worker，负责浏览器自动化。
-4. **基础设施层** —— PostgreSQL、Redis、MinIO 分别提供持久化、缓存、对象存储。
+3. **Conversation / Orchestration 层** —— 规划中的运行时层，靠近
+   FastAPI application 边界。它连接用户消息、Agent 调用、浏览器执行
+   事件、确认门、中断 / 恢复对话、接管和教学模式。它是代码侧 session
+   controller / dispatcher，不是逐步选择浏览器动作的 LLM controller。
+   Runtime Conversation Surface 初期可以是 CLI，后续也可以通过稳定
+   CLI / API contract 被用户自建系统或操作台调用。
+4. **执行层** —— Playwright runtime + 异步 worker，负责浏览器自动化。
+5. **基础设施层** —— PostgreSQL、Redis、MinIO 分别提供持久化、缓存、对象存储。
 
 ## 各 app 职责
 
-- `apps/console` —— 操作者 UI：autonomous workbench、运行历史、引导首页。
-- `apps/api` —— HTTP API、LLM provider 层、autonomous exploration、page verification、validation-api mock 后端。
+- `apps/console` —— 操作者 UI：autonomous workbench、运行历史、LearnedPath
+  catalog、引导首页。未来可承载 teaching overlay、operator review surface、
+  artifact display 和更丰富的 workbench 面板。
+- `apps/api` —— HTTP API、LLM provider 层、autonomous exploration、
+  LearnedPath persistence / replay、page verification、validation-api mock
+  后端。未来可承载 conversation sessions、orchestrator endpoints、Agent
+  routing、artifact metadata 和 failure-evidence APIs。
 - `apps/worker` —— 异步执行骨架（当前是脚手架）。
 - `apps/validation-site` —— 自主探索的自建测试 fixture（login、users 等）。
-- `apps/cli` —— Python CLI（`wagent`）与 `verify-scenario` Claude Code skill。
+- `apps/cli` —— Python CLI（`wagent`）与 `verify-scenario` Claude Code
+  skill。未来可能承载 M11.0 runtime conversation CLI，但当前尚未实现。
 
 ---
 
@@ -32,6 +44,15 @@ L3，交付里程碑是 M10 / M11 / ...
 
 当前交付里程碑：**M10 Path Asset Foundation / 路径资产基础**。当前
 可执行包：`10.2-replay-execution-drift-detection`。
+
+当前代码状态：
+
+- M10 Path Asset Foundation / 路径资产基础是活跃里程碑。
+- `10.2` replay / drift 是当前任务。
+- `apps/worker` 仍是脚手架。
+- L2 用户引导学习、L3 task execution、runtime conversation、
+  Conversation Orchestrator、Agent D / E / F / G / H routing，以及 Agent H
+  Teaching Guide Agent 都是 planned，尚未实现。
 
 **已完成阶段：**
 
@@ -200,8 +221,10 @@ L3，交付里程碑是 M10 / M11 / ...
 
 ## G. Services 子包结构
 
-`apps/api/app/services/` 下只有少数几组能力，全部服务于 autonomous
-exploration。
+`apps/api/app/services/` 下只有少数几组能力。当前已实现的 services 主要
+服务于 autonomous exploration 和 M10 Path Asset Foundation。下面列出的
+conversation、teaching、artifact、evidence 服务是 planned service areas，
+除非明确标注为已实现，否则不要解读成现有包。
 
 **`services/execution/`** —— Playwright runtime：
 
@@ -223,6 +246,100 @@ exploration。
 
 **顶层平铺 services**：`html_ast_parser.py`、`ast_simplifier.py`、
 `llm_provider.py`。
+
+### Planned Service Areas / 规划中的服务区域
+
+这些服务区域是 M11+ 的架构占位，不应被理解为当前已经存在的 package：
+
+**`services/conversation/`** —— 规划中的 runtime conversation 和
+orchestration：
+
+- session state
+- Conversation Orchestrator / Dispatcher
+- 用户消息和 engine event routing
+- message log
+- confirmation、abort、recovery、takeover、teaching-mode state
+
+**`services/teaching/`** —— 规划中的 L2 teaching 支撑：
+
+- highlight target generation
+- Agent H Teaching Guide integration
+- visible-browser teaching event handling
+- user action recorder integration
+
+**`services/artifacts/`** —— 规划中的 artifact handling：
+
+- download / export / screenshot capture
+- artifact metadata
+- artifact display / return hooks
+- retention 和 cleanup hooks
+
+**Failure evidence / negative knowledge** —— 规划中的 learning 和 evaluation
+输入：
+
+- failed attempts
+- replay drift
+- `target_missing` / `unsupported_action` evidence
+- user correction evidence
+
+M10.2 replay / drift 可以产出原始 evidence signals，但不实现完整的
+negative-knowledge store。
+
+---
+
+## H. Planned Runtime Event Flow / 规划中的运行时事件流
+
+未来 runtime loop 应该保留用户视角的一条 WebAgentFlow 对话，同时在内部
+通过有边界的 Agent 和确定性服务路由：
+
+```text
+User message
+-> Runtime Conversation Surface
+-> Conversation Orchestrator / Dispatcher
+-> Agent D / F / G / H or execution service
+-> Browser runtime / replay engine / teaching recorder
+-> result event
+-> Conversation Orchestrator / Dispatcher
+-> Agent E / F / G / H response
+-> user
+```
+
+关键不变量：Orchestrator 拥有 session state 和 routing。LLM 可以在规划、
+报告、恢复 / 中断、教学边界处介入，但不能成为逐步浏览器动作 controller。
+
+---
+
+## I. Planned Teaching Mode Architecture / 规划中的教学模式架构
+
+Teaching mode 是规划在 M13 的 L2 能力，不属于当前 M10.2 replay / drift
+包。
+
+规划组件：
+
+- visible Playwright browser
+- 面向目标元素的 overlay / highlight layer
+- operator UI 中的 indicator / tooltip / next-step prompt rendering
+- user event recorder，记录真实 click、input、selection、navigation 和
+  可观测状态变化
+- Agent H Teaching Guide Agent，产出自然语言 guidance 和 highlight
+  targets
+
+写入 LearnedPath 的 recorded action 必须来自真实用户事件。Agent H 的建议
+只是 guidance，不是 provenance，不能直接写成 LearnedPath action。
+
+---
+
+## J. Planned Artifacts and Failure Evidence / 规划中的 Artifact 与失败证据
+
+未来 L3 execution 应把 artifact 作为一等 task output：downloaded files、
+exports、screenshots、generated evidence 和 final task attachments 都应有
+capture、metadata、display / return、retention、cleanup 路径。
+
+Failure evidence / negative knowledge 也应成为一等 learning 和 evaluation
+输入。Failed attempts、replay drift、`target_missing`、`unsupported_action`、
+visible errors 和 user corrections 应供 planning、learning quality、
+regression evaluation、optimization 消费。M10.2 可以产出 replay / drift
+evidence，但不实现完整 store。
 
 ---
 
