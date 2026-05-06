@@ -294,11 +294,9 @@ apps/console/src/i18n/locales/ja.ts
 - task postcondition verification；本包只返回 replay final state 和
   drift / failure result，不判断“用户任务是否完成”。
 - multi-page workflow composition；本包不编排多个 LearnedPath。
-- project-owned operator identity / credential / session / hosted-data /
-  commercial charging / usage-entitlement management。Cookie、
-  `localStorage`、session state 和目标站点权限由用户与目标网页负责；
-  失效或权限不足只表现为 replay 的 drift / failure / runtime result，
-  恢复对话留给后续里程碑。
+- 目标网页 Cookie、`localStorage`、session state 或目标站点权限托管。
+  这些状态由操作者与目标网页负责；失效或权限不足只表现为 replay 的
+  drift / failure / runtime result，恢复对话留给后续里程碑。
 
 这些能力统一留给 M11.0 / M11.1 及后续里程碑。
 
@@ -442,8 +440,7 @@ apps/api/tests/test_learned_path_replay.py
 9. runtime navigation error。
 10. replay result 暴露足够结构化的 drift / failure evidence，供未来
     consumers 使用。
-11. 不要求任何 project-owned operator identity / session / hosted-data /
-    commercial charging / usage-entitlement 行为。
+11. 不要求任何 WebAgentFlow 自有 session / 权限托管行为。
 
 更新：
 

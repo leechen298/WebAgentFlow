@@ -377,10 +377,6 @@ Expected delivery:
   systems or operator consoles.
 - Versioned CLI / API contract and compatibility policy.
 
-M18 does not add project-owned operator identity / tenant management,
-credential storage, hosted operator-data management, commercial charging,
-or usage-entitlement management.
-
 ## Explicit non-goals (for current milestone)
 
 See [`scope-boundaries.md`](./scope-boundaries.md) for the canonical
@@ -392,5 +388,6 @@ list. Current M10.2 highlights:
 - No artifact lifecycle.
 - No multi-page workflow composition.
 - No action risk gate.
-- No project-owned operator identity, credential-vault, hosted
-  operator-data, commercial charging, or usage-entitlement work.
+- No target-site session or permission custody; login expiry,
+  permission denial, auth redirects, and operation failures remain
+  runtime failure / recovery issues.

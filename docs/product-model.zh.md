@@ -72,15 +72,14 @@ WebAgentFlow 的目标是代替用户在网页上敲键盘点鼠标：先把页�
 3. **扩展空间** —— 为引擎自己的交互层（Agent 聊天 overlay、探针）
    留出注入面，也方便以后装插件或做更深的浏览器定制。
 
-WebAgentFlow **不**维护自己的 user / account model。它不实现
-credential vault、多租户授权、跨用户授权、托管式操作者数据管理、
-商业化收费或用量管控。这些不是项目自有身份层的路线图。
+WebAgentFlow 只关心如何操作目标网页。默认假设 WebAgentFlow 的操作者
+已经有权在目标网页上执行对应动作。
 
 Session 状态由操作者和目标网页负责。页面需要既有 session 时，操作者
 通过目标网页自己的流程，在引擎控制的浏览器上下文中建立或刷新状态。
 Cookies、`localStorage`、session 过期和目标网页权限都属于目标网页的
 职责。登录态失效、页面跳回登录、权限不足或操作失败时，运行进入
-恢复 / 用户沟通流程。
+runtime failure / recovery / 用户沟通流程。
 
 拿不准一个新功能归谁时，先把它放到这根轴上：是引擎逻辑、workbench
 玻璃、用户工作流，还是开发者工具？不同轴，不同的评审标准。
@@ -432,8 +431,7 @@ Agent H 边界：
    Orchestrator 控制，不交给不受约束的 LLM 循环。
 8. **引擎卫生很重要。** 对话、日志、截图、artifact 和 LLM prompt
    payload 未来都需要在运行实例内设计 retention、deletion、redaction
-   和 audit。这是 engine hygiene，不是 user-account 或 data-governance
-   system。
+   和 audit。这是 WebAgentFlow 运行时证据的 engine hygiene。
 
 ---
 
@@ -619,7 +617,7 @@ Session 过期、跳转、权限拒绝或授权缺失，都是运行时恢复 / 
 
 引擎还需要对对话、日志、截图、artifact 和 LLM prompt payload 做基础
 卫生设计：记录什么、保留多久、如何删除、什么可以脱敏、什么可以审计。
-这是运行实例内的 engine hygiene，不是项目自有身份层或托管数据治理系统。
+这是运行实例内面向 WebAgentFlow 运行时证据的 engine hygiene。
 
 不变量：
 

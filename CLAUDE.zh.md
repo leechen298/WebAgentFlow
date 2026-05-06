@@ -287,8 +287,8 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `exploration_runs` 存 autonomous run history。
 - `learned_paths` 是 M10.1 路径资产表，用于可复用 learned actions 和 trust
   state。
-- 除非产品模型先明确改变，否则不要新增 `user_id`、`scope_id` 或项目自己的
-  operator identity model。
+- `learned_paths` 保持路径资产表。除非产品模型先明确改变，否则不要新增
+  ownership、scope 或路线图外字段。
 - `ExplorationRun` 继承 `UUIDPrimaryKeyMixin` + `TimestampMixin`，灵活
   字段走 JSON 列（`strategy_json`、`result_snapshot_json` 等）。
 

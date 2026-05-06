@@ -92,11 +92,10 @@ Agent D · Path Planner Agent 之后可以调用 replay 能力，但 10.2 自身
   risk policy。
 - 不做 multi-page workflow composition；一条 replay 只消费指定
   LearnedPath，不编排多个路径。
-- 不做 project-owned operator identity / credential / session /
-  hosted-data / commercial charging / usage-entitlement management。
-  Cookie、`localStorage`、session state 和目标站点权限由用户与目标网页
-  负责；session 失效、登录态回退、权限不足或目标站点操作失败时，M10.2
-  只返回 drift / failure / runtime result，后续可进入恢复流程。
+- 不托管目标网页 Cookie、`localStorage`、session state 或目标站点权限。
+  这些状态由操作者与目标网页负责；session 失效、登录态回退、权限不足
+  或目标站点操作失败时，M10.2 只返回 drift / failure / runtime result，
+  后续可进入恢复流程。
 - 不引入 LLM 对每一步 replay 结果做判断。
 - 不自动调用 autonomous learning 兜底；drift 是结果，不是隐藏重试入口。
 

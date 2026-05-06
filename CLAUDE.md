@@ -303,8 +303,8 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 - `exploration_runs` stores autonomous run history.
 - `learned_paths` is the M10.1 path asset table for reusable learned actions
   and trust state.
-- Do not add `user_id`, `scope_id`, or a project-owned operator identity
-  model unless the product model is explicitly changed first.
+- Keep `learned_paths` as a path-asset table. Do not add new ownership,
+  scope, or roadmap-external columns unless the product model changes first.
 - `ExplorationRun` inherits `UUIDPrimaryKeyMixin` + `TimestampMixin` and
   keeps flexible payloads in JSON columns
   (`strategy_json`, `result_snapshot_json`, …).

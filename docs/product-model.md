@@ -88,11 +88,9 @@ not the user's own browser. In order of importance:
    (Agent chat overlay, instrumentation) and to install plugins or
    apply deeper browser customization later.
 
-WebAgentFlow does **not** maintain its own user / account model. It
-does not implement a credential vault, multi-tenant authorization,
-cross-user authorization, hosted operator-data management, commercial
-charging, or usage-entitlement management. These are not roadmap items
-for a project-owned identity layer.
+WebAgentFlow only cares about how to operate the target web page. The
+default assumption is that the WebAgentFlow operator is already allowed
+to perform the intended actions on that page.
 
 Session state is handled by the operator and the target website. If a
 page requires an existing session, the operator establishes or refreshes
@@ -100,7 +98,8 @@ that state through the target website's own flow in the engine-controlled
 browser context. Cookies, `localStorage`, session expiry, and target-site
 permissions remain target-site concerns. When login state expires, the
 page redirects back to login, permission is denied, or an operation
-fails, the run enters recovery / user-communication flow.
+fails, the run enters runtime failure / recovery / user-communication
+flow.
 
 When in doubt about where a new feature belongs, place it on this
 axis first: is it engine logic, workbench glass, operator workflow,
@@ -501,7 +500,7 @@ not implementation details.
 8. **Engine hygiene matters.** Conversations, logs, screenshots,
    artifacts, and LLM prompt payloads need future retention, deletion,
    redaction, and audit design inside the running instance. This is
-   engine hygiene, not a user-account or data-governance system.
+   engine hygiene for WebAgentFlow runtime evidence.
 
 ---
 
@@ -718,8 +717,8 @@ are runtime recovery / user-communication events.
 The engine also needs basic hygiene for conversations, logs,
 screenshots, artifacts, and LLM prompt payloads: what is recorded, how
 long it is retained, how it is deleted, what can be redacted, and what
-is auditable. This is engine hygiene inside the running instance, not a
-project-owned identity or hosted data-governance system.
+is auditable. This is engine hygiene inside the running instance for
+WebAgentFlow runtime evidence.
 
 Invariants:
 

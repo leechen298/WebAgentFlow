@@ -92,13 +92,10 @@ knowledge store。
 
 - **完整对外接口套件** —— 面向外部调度者的稳定 API / CLI / Skill /
   Tool 属于 M16。
-- **用户数据管理** —— WebAgentFlow engine 不实现自己的 operator identity
-  model、tenant model、credential vault、托管式操作者数据管理、商业化收费
-  或用量管控。默认假设 WebAgentFlow 操作者已经拥有操作目标网页的权限。
-- **目标站点 session state** —— cookies、`localStorage`、session state 和
-  目标站点权限由用户和目标网页负责。session 失效、权限不足、目标站点
-  认证页回退、操作失败，属于 runtime failure / recovery 问题，不属于
-  WebAgentFlow 用户管理问题。
+- **目标站点权限 / session 边界** —— 默认假设 WebAgentFlow 操作者已经拥有
+  操作目标网页的权限。cookies、`localStorage`、session state 和目标站点
+  权限由操作者和目标网页负责。session 失效、权限不足、目标站点认证页
+  回退、操作失败，属于 runtime failure / recovery 问题。
 - **Artifact lifecycle / Artifact 生命周期** —— download / export /
   upload / screenshot artifact 的 capture、storage、display / return、
   retention、cleanup 属于后续 M11 / M15 / M16 / M18 工作。M10.2 只返回

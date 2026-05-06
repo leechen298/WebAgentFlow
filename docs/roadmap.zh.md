@@ -336,9 +336,6 @@ M18 在 runtime loop 和 workflow composition 可用之后，稳定 CLI / API
 - 接入用户自建系统或操作台的 integration cookbook。
 - 版本化 CLI / API contract 和兼容策略。
 
-M18 不新增项目自有 operator identity / tenant management、credential
-storage、托管式操作者数据管理、商业化收费或用量管控。
-
 ## 当前交付里程碑的非目标
 
 规范列表见 [`scope-boundaries.zh.md`](./scope-boundaries.zh.md)。当前
@@ -350,8 +347,8 @@ M10.2 要点：
 - 不做 artifact lifecycle。
 - 不做 multi-page workflow composition。
 - 不做 action risk gate。
-- 不做项目自有 operator identity、credential-vault、托管式操作者数据、
-  商业化收费或用量管控工作。
+- 不托管目标网页 session 或权限；登录态失效、权限不足、认证页回退和
+  操作失败都属于 runtime failure / recovery 问题。
 
 ---
 

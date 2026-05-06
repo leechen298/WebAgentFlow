@@ -112,16 +112,12 @@ does not need to implement the complete negative-knowledge store.
 
 - **Full external interface suite** — stable API / CLI / Skill / Tool
   surfaces for external schedulers are M16.
-- **User data management** — WebAgentFlow engine does not implement its
-  own operator identity model, tenant model, credential vault, hosted
-  operator-data management, commercial charging, or usage-entitlement
-  management. The default assumption is that the WebAgentFlow operator
-  already has permission to operate the target website.
-- **Target-site session state** — cookies, `localStorage`, session
-  state, and target-site permissions are owned by the user and the
-  target website. Session expiry, permission denial, target-site auth
-  redirects, and operation failures are runtime failure / recovery
-  issues, not WebAgentFlow user-management work.
+- **Target-site authority / session boundary** — the default assumption
+  is that the WebAgentFlow operator already has permission to operate
+  the target website. Cookies, `localStorage`, session state, and
+  target-site permissions are owned by the operator and the target
+  website. Session expiry, permission denial, target-site auth redirects,
+  and operation failures are runtime failure / recovery issues.
 - **Artifact lifecycle** — download / export / upload / screenshot
   artifact capture, storage, display / return, retention, and cleanup
   are later M11 / M15 / M16 / M18 work. M10.2 only returns replay
