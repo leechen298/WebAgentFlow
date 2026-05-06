@@ -243,7 +243,7 @@ Guided Teaching。
 - 路径纠正 UI：编辑或替换既有 LearnedPath。
 - 用户纠正和 correction evidence 驱动 trust 更新。
 
-## M14 —— Learning Quality Agents & Coverage Expansion / 学习质量与覆盖扩展
+## M14 —— Learning Quality, Coverage & Negative Knowledge / 学习质量、覆盖与负面知识
 
 M14 在 L3 快乐路径和接管闭环存在之后，回到 L1 学习质量。同时吸收原
 M10 draft backlog：更丰富控件、模式泛化和负面知识。
@@ -278,7 +278,7 @@ Negative knowledge / failure evidence 在这里正式化：
 - 更丰富的 postcondition pattern 和 artifact verification pattern 可以
   放在 M14 或 M15，取决于实现范围。
 
-## M15 —— Automated Evaluation & Continuous Optimization / 自动评估与持续优化
+## M15 —— Automated Evaluation, Audit & Hygiene / 自动评估、审计与卫生
 
 - 对 confirmed / provisional LearnedPath 做 fixture catalogue 和选定真实
   页面基线的回归 replay。
@@ -292,7 +292,7 @@ Negative knowledge / failure evidence 在这里正式化：
   cleanup policy。
 - 定时检查不得静默改写路径，只产出可审核证据。
 
-## M16 —— External Interfaces / Open Tooling / 对外接口
+## M16 —— External Interfaces / 对外接口
 
 M16 在主 L1/L2/L3 闭环可用之后稳定开放能力。它不是 M11.0 runtime
 conversation CLI。
@@ -303,6 +303,7 @@ conversation CLI。
   contract。
 - 面向外部调度、本地脚本和批处理的稳定 CLI 命令。
 - 面向第三方 Agent 调度者的 Skill / Tool 形态。
+- 第三方 scheduler interface。
 - 有开发能力的用户可以通过 CLI / API 把 WebAgentFlow 接入自己的系统或
   自建操作台。
 

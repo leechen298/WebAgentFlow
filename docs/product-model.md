@@ -554,14 +554,14 @@ task execution:
 
 | Milestone | Product role | Internal Agents |
 |---|---|---|
-| M10 · Path Asset Foundation | Make LearnedPaths reusable: persistence, catalog, replay, drift detection. | No new Agent; provides execution substrate. |
-| M11.0 · Runtime Conversation Shell & Orchestration | CLI-first runtime conversation surface, Conversation Orchestrator, session state, user messages, engine events, confirmation, pause, resume, abort, takeover, and teaching-mode routing. | No new Agent by default; routes to Agent D / E / F / G / H as those capabilities land. |
-| M11.1 · Task-to-Path Planning & Execution MVP | First L3 happy path: user task → choose / bind LearnedPath → consent gate → execute → verify → report. | Agent D · Path Planner Agent; Agent E · Result Reporter Agent. |
-| M12 · Recovery & Handoff | L3 failure and abort branches: pause, explain, re-plan, re-run, or hand off. | Agent F · Recovery Dialogue Agent; Agent G · Abort Dialogue Agent. |
-| M13 · User-Guided Learning & Teaching | L2 visible-browser takeover, user demonstration, guided teaching, path correction, and provenance write-back. | Agent H · Teaching Guide Agent; preserve user provenance. |
-| M14 · Learning Quality Agents & Negative Knowledge | Revisit L1 quality: page purpose, simple attempt evaluation, learning report, richer controls, patterns, and failure evidence. | Agent A · Page Intent Agent; Agent B · Attempt Evaluator Agent; Agent C · Learning Reporter Agent. |
-| M15 · Automated Evaluation & Continuous Optimization | Regression runs, drift alerts, quality trend tracking. | Reuses Agent B / Supervisor-style evaluation; no new Agent by default. |
-| M16 · External Interfaces | Stable API / CLI / Skill / Tool surface for external schedulers after the runtime loop is useful. | No new product Agent; exposes existing capabilities. |
+| M10 · Path Asset Foundation | LearnedPath persistence, catalog, replay execution, and drift detection. | No new Agent; provides execution substrate. |
+| M11.0 · Runtime Conversation Shell & Agent Orchestration | CLI MVP, session state, Conversation Orchestrator, user message routing, and confirmation / pause / abort / takeover basics. | No new Agent by default; routes to Agent D / E / F / G / H as those capabilities land. |
+| M11.1 · Task-to-Path Planning & Execution MVP | Agent D / E, LearnedPath retrieval / ranking, slot binding, task result verification MVP, basic artifact capture, and risk / consent gate MVP. | Agent D · Path Planner Agent; Agent E · Result Reporter Agent. |
+| M12 · Recovery & Abort Dialogue | Failure recovery, user interrupt handling, and continue / replan / rerun / takeover / abandon choices. | Agent F · Recovery Dialogue Agent; Agent G · Abort Dialogue Agent. |
+| M13 · User-Guided Learning, Teaching & Correction | Visible browser, user demonstration recording, Agent H teaching guidance, highlight / shadow / indicator / tooltip, provenance=user write-back, and correction UI. | Agent H · Teaching Guide Agent; preserve user provenance. |
+| M14 · Learning Quality, Coverage & Negative Knowledge | Agent A / B / C, popup controls, custom click-toggle, label extractor expansion, cross-page pattern mining, and failure evidence / negative knowledge store. | Agent A · Page Intent Agent; Agent B · Attempt Evaluator Agent; Agent C · Learning Reporter Agent. |
+| M15 · Automated Evaluation, Audit & Hygiene | Replay regression, drift alerts, trust trend, result verification trend, artifact / log / screenshot retention cleanup, and conversation / recovery / teaching audit. | Reuses Agent B / Supervisor-style evaluation; no new Agent by default. |
+| M16 · External Interfaces | Stable API, external CLI, Skill / Tool, third-party scheduler interface, and integration hooks for user-built systems. | No new product Agent; exposes existing capabilities. |
 | M17 · Multi-Page Workflow Composition | Compose multiple LearnedPaths into larger workflows without inventing paths from raw HTML. | Extends Agent D planning inputs; no new Agent by default. |
 | M18 · CLI Distribution & Integration Readiness | Stable CLI distribution, local packaging, API / CLI examples, scripting / batch usage, integration cookbook, and versioned CLI / API contracts. | No new product Agent by default. |
 

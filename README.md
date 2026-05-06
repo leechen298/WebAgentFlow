@@ -59,12 +59,12 @@ CLI/API surface belongs to M16.
 ## Roadmap Snapshot
 
 - **M10** — Path Asset Foundation: persistence, catalog, replay, drift detection.
-- **M11.0** — Runtime Conversation Shell & Orchestrator.
+- **M11.0** — Runtime Conversation Shell & Agent Orchestration.
 - **M11.1** — Task-to-Path Planning & Execution MVP.
 - **M12** — Recovery / Abort Dialogue.
 - **M13** — User-guided learning, guided teaching, and Agent H.
-- **M14** — Learning quality and negative knowledge.
-- **M15** — Automated evaluation and hygiene.
+- **M14** — Learning quality, coverage, and negative knowledge.
+- **M15** — Automated evaluation, audit, and hygiene.
 - **M16** — External interfaces.
 - **M17** — Multi-page workflow composition.
 - **M18** — CLI distribution and integration readiness.

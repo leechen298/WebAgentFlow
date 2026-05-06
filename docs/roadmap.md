@@ -277,7 +277,7 @@ Expected delivery:
 - Path correction UI for editing or replacing an existing LearnedPath.
 - Trust updates driven by user correction and correction evidence.
 
-## M14 — Learning Quality Agents & Coverage Expansion
+## M14 — Learning Quality, Coverage & Negative Knowledge
 
 M14 revisits L1 quality after the L3 happy path and handoff loop exist.
 It also absorbs the earlier M10 draft backlog for richer controls,
@@ -314,7 +314,7 @@ Negative knowledge / failure evidence becomes formal here:
 - Add richer postcondition patterns and artifact verification patterns
   here or in M15, depending on implementation scope.
 
-## M15 — Automated Evaluation & Continuous Optimization
+## M15 — Automated Evaluation, Audit & Hygiene
 
 - Regression replay for confirmed / provisional LearnedPaths against
   the fixture catalogue and selected real-page baselines.
@@ -329,7 +329,7 @@ Negative knowledge / failure evidence becomes formal here:
 - Scheduled checks that never silently rewrite paths; they create
   reviewable evidence.
 
-## M16 — External Interfaces / Open Tooling
+## M16 — External Interfaces
 
 M16 exposes stable capability units after the main L1/L2/L3 loop is
 useful. It is not the M11.0 runtime conversation CLI.
@@ -341,6 +341,7 @@ Expected delivery:
 - Stable CLI commands for external schedulers, local scripting, and
   batch usage.
 - Skill / Tool form for third-party Agent schedulers.
+- Third-party scheduler interface.
 - Integration points for developer-capable users to connect
   WebAgentFlow to their own systems or operator consoles through
   CLI / API.

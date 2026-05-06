@@ -477,14 +477,14 @@ Agent H 边界：
 
 | 里程碑 | 产品作用 | 产品内部 Agent |
 |---|---|---|
-| M10 · Path Asset Foundation / 路径资产基础 | 让 LearnedPath 可复用：持久化、目录、replay、drift detection。 | 不新增 Agent；提供执行底座。 |
-| M11.0 · Runtime Conversation Shell & Orchestration / 运行时沟通与编排 | CLI-first 运行时沟通入口、Conversation Orchestrator、session state、用户消息、engine events、confirmation、pause、resume、abort、takeover 和 teaching-mode routing。 | 默认不新增 Agent；随能力落地路由到 Agent D / E / F / G / H。 |
-| M11.1 · Task-to-Path Planning & Execution MVP / 任务到路径规划与执行 MVP | 第一版 L3 快乐路径：用户任务 → 选择 / 绑定 LearnedPath → consent gate → 执行 → 验证 → 汇报。 | Agent D · Path Planner Agent；Agent E · Result Reporter Agent。 |
-| M12 · Recovery & Handoff / 恢复与接管 | L3 失败和中断分支：暂停、解释、重新规划、重跑或交给用户。 | Agent F · Recovery Dialogue Agent；Agent G · Abort Dialogue Agent。 |
-| M13 · User-Guided Learning & Teaching / 用户引导学习与教学 | L2 可视化浏览器接管、用户演示、引导式教学、路径纠正 / provenance 写回。 | Agent H · Teaching Guide Agent；保留用户来源。 |
-| M14 · Learning Quality Agents & Negative Knowledge / 学习质量与负面知识 | 回到 L1 质量：页面用途、简单尝试评估、学习报告、更丰富控件和 pattern，以及 failure evidence。 | Agent A · Page Intent Agent；Agent B · Attempt Evaluator Agent；Agent C · Learning Reporter Agent。 |
-| M15 · Automated Evaluation & Continuous Optimization / 自动评估与持续优化 | 回归运行、漂移告警、质量趋势。 | 复用 Agent B / Supervisor 式评估；默认不新增 Agent。 |
-| M16 · External Interfaces / 对外接口 | 在运行时主链路可用后，稳定 API / CLI / Skill / Tool，供外部调度者调用。 | 不新增产品 Agent；暴露既有能力。 |
+| M10 · Path Asset Foundation / 路径资产基础 | LearnedPath persistence、catalog、replay execution 和 drift detection。 | 不新增 Agent；提供执行底座。 |
+| M11.0 · Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排 | CLI MVP、session state、Conversation Orchestrator、user message routing，以及 confirmation / pause / abort / takeover basics。 | 默认不新增 Agent；随能力落地路由到 Agent D / E / F / G / H。 |
+| M11.1 · Task-to-Path Planning & Execution MVP / 任务到路径规划与执行 MVP | Agent D / E、LearnedPath retrieval / ranking、slot binding、task result verification MVP、basic artifact capture、risk / consent gate MVP。 | Agent D · Path Planner Agent；Agent E · Result Reporter Agent。 |
+| M12 · Recovery & Abort Dialogue / 恢复与中断对话 | Failure recovery、user interrupt handling，以及 continue / replan / rerun / takeover / abandon choices。 | Agent F · Recovery Dialogue Agent；Agent G · Abort Dialogue Agent。 |
+| M13 · User-Guided Learning, Teaching & Correction / 用户引导学习、教学与纠正 | Visible browser、user demonstration recording、Agent H teaching guidance、highlight / shadow / indicator / tooltip、provenance=user write-back、correction UI。 | Agent H · Teaching Guide Agent；保留用户来源。 |
+| M14 · Learning Quality, Coverage & Negative Knowledge / 学习质量、覆盖与负面知识 | Agent A / B / C、popup controls、custom click-toggle、label extractor expansion、cross-page pattern mining、failure evidence / negative knowledge store。 | Agent A · Page Intent Agent；Agent B · Attempt Evaluator Agent；Agent C · Learning Reporter Agent。 |
+| M15 · Automated Evaluation, Audit & Hygiene / 自动评估、审计与卫生 | Replay regression、drift alerts、trust trend、result verification trend、artifact / log / screenshot retention cleanup、conversation / recovery / teaching audit。 | 复用 Agent B / Supervisor 式评估；默认不新增 Agent。 |
+| M16 · External Interfaces / 对外接口 | Stable API、external CLI、Skill / Tool、third-party scheduler interface，以及 user-built systems integration hooks。 | 不新增产品 Agent；暴露既有能力。 |
 | M17 · Multi-Page Workflow Composition / 多页工作流组合 | 把多个 LearnedPath 组合成更大的 workflow，但不从 raw HTML 凭空发明路径。 | 扩展 Agent D 的规划输入；默认不新增 Agent。 |
 | M18 · CLI Distribution & Integration Readiness / CLI 分发与集成就绪 | 稳定 CLI 分发、local packaging、API / CLI examples、scripting / batch usage、integration cookbook，以及版本化 CLI / API contract。 | 默认不新增产品 Agent。 |
 
