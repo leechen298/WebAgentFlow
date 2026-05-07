@@ -66,7 +66,7 @@ Current code status:
   Conversation Orchestrator, Agent routing for D / E / F / G / H, and
   Agent H Teaching Guide Agent are planned but not implemented.
 
-**Completed phases:**
+**Completed legacy steps:**
 
 1. **Page fact foundation** — raw HTML capture, HTML → Full AST (server-side,
    lxml), Full AST schema.
@@ -92,7 +92,7 @@ Current code status:
    - 7E: `observe_post_action()` / `execute_and_observe()`, change detection,
      target post-state.
 
-**Exploration subsystem** (built on top of legacy Phase 7):
+**Exploration subsystem** (built on top of legacy step 7):
 
 - **Success evaluator** — rule-based evaluation of 6 condition types
   (url_changed, url_contains, title_contains, element_present, html_changed,
@@ -116,7 +116,7 @@ Current code status:
   fillable; fallback submit picker scores nearby clickables when no structural
   submit exists.
 - **Autonomous explorer** (`services/learning/autonomous_explorer.py`) —
-  orchestrator emitting phase events to SSE. Outcome verdict is
+  orchestrator emitting progress events to SSE. Outcome verdict is
   `success | incomplete | no_progress | uncertain`.
 - **Page verification comparator** (`services/learning/page_verification.py`) —
   compares an autonomous run against an authored spec
@@ -124,7 +124,7 @@ Current code status:
   scorecard (element_recognition / action_coverage / verdict_accuracy /
   distraction_avoidance / supervisor_agreement). No aggregate total.
 - **Autonomous Workbench** (`pages/AutonomousWorkbenchPage.vue`) — user-driven
-  UI with SSE live progress; **7 blocks**: run config, live phase status,
+  UI with SSE live progress; **7 blocks**: run config, live progress status,
   page analysis, execution timeline (with click-to-preview step screenshots
   via `<a-image>`), verification (self verdict + supervisor + 5-score
   scorecard), raw SSE event audit (every event captured with copy button +
@@ -279,9 +279,9 @@ planning.
 
 **Key parallel relationships:**
 
-- **Legacy Phase 7 execution** is complete — provides the atomic action layer for
+- **Legacy step 7 execution** is complete — provides the atomic action layer for
   exploration.
-- **Exploration subsystem** is built on legacy Phase 7 — TaskDefinition →
+- **Exploration subsystem** is built on legacy step 7 — TaskDefinition →
   `run_exploration` → success evaluation → supervisor assessment.
 - **Autonomous exploration subsystem** remains the learning foundation — URL →
   `autonomous_explorer.run_autonomous_exploration` → page verification

@@ -28,8 +28,8 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 
 - 产品生命周期阶段是 **L1 / L2 / L3**。
 - 交付里程碑是 **M10 / M11 / ...**。
-- 不要用裸写的 "Phase 3" 或 "Phase 10" 指代未来产品规划。历史迭代目录
-  仍可能叫 `phase-N`。
+- 生命周期阶段写 **L<N>**，交付里程碑写 **M<N>**。
+- 里程碑迭代目录使用 `docs/iterations/m<N>/`。
 
 当前交付状态：
 
@@ -312,7 +312,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - [`docs/dev-setup.zh.md`](./docs/dev-setup.zh.md) —— 完整的开发环境
   搭建步骤（比上面的"常用命令"更详细，面向新 contributor）。
 - [`docs/iterations/README.md`](./docs/iterations/README.md) ——
-  **迭代文档规范**（历史上按 phase 组织的目录，每次迭代留 `intent.md` /
+  **迭代文档规范**（按里程碑组织目录，每次迭代留 `intent.md` /
   `plan.md` / `review.md` 三件套）。开始一轮非平凡工作前先写 `intent.md`；
   `codex-review` skill 会自动把这些作为上下文喂给 Codex。
 - [`CLAUDE.md`](./CLAUDE.md) —— 英文原版。

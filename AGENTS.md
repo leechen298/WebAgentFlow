@@ -29,8 +29,8 @@ Current planning vocabulary:
 
 - Product lifecycle stages are **L1 / L2 / L3**.
 - Delivery milestones are **M10 / M11 / ...**.
-- Do not use bare "Phase 3" or "Phase 10" to describe future product
-  planning. Historical iteration folders may still be named `phase-N`.
+- Use **L<N>** for lifecycle stages and **M<N>** for delivery milestones.
+- Milestone iteration folders use `docs/iterations/m<N>/`.
 
 Current delivery status:
 
@@ -329,7 +329,7 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
   walkthrough (more detailed than the Common Commands above, useful
   for new contributors).
 - [`docs/iterations/README.md`](./docs/iterations/README.md) —
-  **per-iteration doc convention** (historical phase-scoped folders with
+  **per-iteration doc convention** (milestone-scoped folders with
   `intent.md` / `plan.md` / `review.md`). Write `intent.md` before
   starting non-trivial work; the `codex-review` skill reads these as
   context.

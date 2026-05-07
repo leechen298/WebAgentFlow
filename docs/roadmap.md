@@ -6,8 +6,8 @@ Operational view of what's shipped, what's current, and what's next.
   Agents A-H, invariants),
   see [`product-model.md`](./product-model.md). That's the authoritative
   product reference.
-- Historical iteration folders may still be named `phase-N`, but new
-  roadmap language uses **Delivery Milestone M<N>** to avoid confusing
+- Iteration folders use milestone names such as `docs/iterations/m10/`.
+  Roadmap language uses **Delivery Milestone M<N>** to avoid confusing
   delivery planning with lifecycle stage L1/L2/L3.
 - For the historical 12-step architectural timeline, see
   [`architecture.md`](./architecture.md) §E.
@@ -76,7 +76,7 @@ Authored specs:
 - `login.{valid_credentials, invalid_credentials}`
 - `users.{filter_by_name, filter_by_status, no_match}`
 
-## Legacy delivery Phase 9 — closed 2026-04-21
+## Legacy Delivery M9 — closed 2026-04-21
 
 Autonomous exploration, user-driven verification. Closure gate: all 5
 authored scenarios re-ran on 2026-04-21 via the `verify-scenario`
@@ -85,7 +85,7 @@ skill, every one `pass_gate = pass` with supervisor source `llm` and
 verdict_accuracy, distraction_avoidance, supervisor_agreement). Run
 IDs live in `exploration_runs`.
 
-Notable closures during Phase 9:
+Notable closures during M9:
 
 - [x] Run persistence + spec-driven workbench prefill + free-form
   scenario keys.
@@ -115,7 +115,7 @@ Notable closures during Phase 9:
   DB, and docs; at that cleanup point, `exploration_runs` was the only
   surviving table. M10 later added `learned_paths`.
 
-No remaining Phase 9 items. The active delivery milestone is M10.
+No remaining M9 items. The active delivery milestone is M10.
 
 ## M10 — Path Asset Foundation (in progress)
 
@@ -130,7 +130,7 @@ M11 will call.
   by `(page_template, query_signature, dom_fingerprint, scenario)`,
   with a four-state trust lifecycle (`provisional` / `confirmed` /
   `flaky` / `deprecated`). Iteration record:
-  [`docs/iterations/phase-10/10.1-learned-path-persistence/`](./iterations/phase-10/10.1-learned-path-persistence/).
+  [`docs/iterations/m10/10.1-learned-path-persistence/`](./iterations/m10/10.1-learned-path-persistence/).
   End-to-end evidence: `run_id=6c97c030-5aae-4f93-8abd-91c4446df9d7`
   -> `learned_path_id=31d3cf58-65a8-4298-bafc-9feee1ed6a90`,
   scorecard 5/5, supervisor source `llm`.

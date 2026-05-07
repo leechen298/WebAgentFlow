@@ -7,7 +7,7 @@ Guidance for Claude Code when working under `docs/`.
 ## Scope
 
 This file applies to documentation work under `docs/`, especially deep
-iteration folders such as `docs/iterations/phase-10/10.1.5-*/`.
+iteration folders such as `docs/iterations/m10/10.1.5-*/`.
 
 The repository-level execution rules in `../CLAUDE.md` still apply. In
 particular, do not trigger autonomous runs except through the permitted
@@ -20,8 +20,8 @@ Before changing iteration documents, read:
 1. `../CLAUDE.md`
 2. `product-model.md`
 3. `iterations/README.md`
-4. The relevant Phase index, for example `iterations/phase-10/README.md`
-5. The relevant Phase plan, for example `iterations/phase-10/phase-plan.md`
+4. The relevant milestone index, for example `iterations/m10/README.md`
+5. The relevant milestone plan, for example `iterations/m10/m10-plan.md`
 6. The specific iteration `intent.md`, `plan.md`, and `review.md`
 
 Do not rely on an older chat summary when these files are cheap to read.
@@ -49,20 +49,20 @@ Examples:
   update the earlier summary or review with a "current valid behavior" note.
 - If a plan said "no backend changes" but implementation added a projection
   field, record that as a deliberate deviation in `review.md`.
-- If a Phase index says an item is "executable" but its review is complete,
-  update the Phase index and plan to "completed".
+- If a milestone index says an item is "executable" but its review is
+  complete, update the milestone index and plan to "completed".
 
 The goal is not to rewrite history. Keep historical notes, but mark which
 behavior is current so future agents do not implement against an obsolete
 plan.
 
-## Phase Index Sync
+## Milestone Index Sync
 
 When adding, completing, renaming, or superseding an iteration under
-`docs/iterations/phase-N/`, check and update:
+`docs/iterations/m<N>/`, check and update:
 
-- `docs/iterations/phase-N/README.md`
-- `docs/iterations/phase-N/phase-plan.md` when it exists
+- `docs/iterations/m<N>/README.md`
+- `docs/iterations/m<N>/m<N>-plan.md` when it exists
 - The iteration's own `intent.md`, `plan.md`, and `review.md`
 - Any earlier summary or review that now contains misleading current-state
   wording

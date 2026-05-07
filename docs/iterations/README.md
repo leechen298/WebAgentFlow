@@ -21,7 +21,7 @@
 ```
 docs/iterations/
 ├── README.md                            # 你正在看这份
-└── phase-<N>/
+└── m<N>/
     ├── README.md                        # 本交付里程碑的总目标 + 迭代索引
     ├── 01-<slug>/
     │   ├── intent.md                    # 做什么 + 为什么 + 不做什么（迭代开始时写）
@@ -36,16 +36,15 @@ docs/iterations/
 
 ### 命名规则
 
-- **里程碑目录**：历史目录仍命名为 `phase-<N>`，`<N>` 是整数，对齐
-  `docs/roadmap.md` 里的交付里程碑编号。当前活跃里程碑是 M10；为
-  避免目录迁移噪音，新迭代仍放 `docs/iterations/phase-10/`。
-  文档正文里请写 M10 / M11，而不是把交付里程碑和产品生命周期 L1/L2/L3
-  都叫 Phase。
+- **里程碑目录**：命名为 `m<N>`，`<N>` 是整数，对齐
+  `docs/roadmap.md` 里的交付里程碑编号。当前活跃里程碑是 M10，
+  文档放在 `docs/iterations/m10/`。
+  文档正文里请写 M10 / M11，产品生命周期则写 L1/L2/L3。
 - **迭代目录**：默认使用 `<NN>-<slug>`。`<NN>` 是两位数字（`01` / `02` / …），**在里程碑内部递增**，不跨里程碑。
   `<slug>` 是简短 kebab-case 英文名，3–5 个词，和 git 分支名或 commit 主题呼应。
   例子：`01-codex-review-skill`、`02-supervisor-retry-policy`。
   如果某个里程碑已经有更明确的阶段内语义编号，也可以使用
-  `<phase-item-number>-<slug>`，例如
+  `<milestone-item-number>-<slug>`，例如
   `10.1.1-autonomous-use-case-catalog/`。使用这种形式时，里程碑
   README 里的任务编号和目录名前缀必须完全一致，避免“目录 03 对应
   任务 10.2”这类映射。
@@ -151,14 +150,14 @@ docs/iterations/
 | `docs/architecture.md` | 稳态 | 少 | 架构演进完**后**再回写这里 |
 | `docs/scope-boundaries.md` | 稳态 | 少 | intent.md 的"边界"章节应和它一致 |
 | `docs/roadmap.md` | 里程碑级 | 每个交付里程碑更新 | 里程碑 README 应该链回 roadmap 里对应的 M 段落 |
-| `docs/iterations/phase-N/` | 过程 | 每次迭代 | **本文档** |
+| `docs/iterations/m<N>/` | 过程 | 每次迭代 | **本文档** |
 | `.dev-logs/` | 运行证据 | 每次 autonomous run | scenario 调试证据，和迭代无直接绑定 |
 
 ## 与 codex-review skill 的联动
 
 全局 skill `~/.claude/skills/codex-review/` 会在执行时：
 
-1. 自动扫 `docs/iterations/phase-*/*/intent.md`，取**最近修改**的那一份作为"当前迭代"。
+1. 自动扫 `docs/iterations/m*/*/intent.md`，取**最近修改**的那一份作为"当前迭代"。
 2. 把同目录的 `intent.md` + `plan.md` 作为前置上下文喂给 Codex，让它基于"作者想做什么"
    来审 diff，而不是空猜。
 3. 审核完把原始结论 + Claude 的分级追加到同目录的 `review.md`。
@@ -168,8 +167,7 @@ Codex 判断"这里偏离范围了"的主要依据。
 
 ## 里程碑 README 怎么写
 
-每个 `phase-<N>/README.md` 是本交付里程碑的索引页。目录名保留
-`phase-<N>` 是历史兼容；正文请称 M<N>。结构：
+每个 `m<N>/README.md` 是本交付里程碑的索引页。正文请称 M<N>。结构：
 
 ```markdown
 # M<N>: <标题>

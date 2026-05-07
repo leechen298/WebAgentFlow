@@ -16,25 +16,23 @@
 
 ## Terminology (lifecycle stages vs. delivery milestones)
 
-The word "phase" previously described two different things: the product
-lifecycle of a page, and the engineering roadmap. That made planning
-ambiguous. From this document forward, use these names:
+Earlier docs used one label for two different things: the product lifecycle
+of a page, and the engineering roadmap. That made planning ambiguous. From
+this document forward, use these names:
 
 - **Lifecycle Stage L1 / L2 / L3** — the fixed product lifecycle a page
   goes through in WebAgentFlow:
   autonomous learning → user-guided learning → actual work. Defined in
   §3–§6. The count is fixed at three.
 - **Delivery Milestone M10 / M11 / ...** — engineering milestones tracked
-  in [`roadmap.md`](./roadmap.md). The count grows over time. Existing
-  iteration directories keep their legacy names such as
-  `docs/iterations/phase-10/` to avoid churn, but the roadmap should call
-  the milestone **M10**.
+  in [`roadmap.md`](./roadmap.md). The count grows over time. Iteration
+  directories use milestone names such as `docs/iterations/m10/`.
 - **§N** — section number *within this document*, used for
   cross-references only.
 
-Do not write a bare "Phase 3" or "Phase 10" in new product planning.
-Use "L3 Actual Work" for the product lifecycle stage, and "M10 Path
-Asset Foundation" for the delivery milestone.
+Use the L/M vocabulary in new product planning: "L3 Actual Work" for the
+product lifecycle stage, and "M10 Path Asset Foundation" for the delivery
+milestone.
 
 ---
 

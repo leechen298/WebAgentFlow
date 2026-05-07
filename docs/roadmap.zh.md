@@ -4,7 +4,7 @@
 
 - 产品**是什么**（L1/L2/L3 生命周期阶段、产品内部 Agent A-H、跨阶段不变量）见
   [`product-model.zh.md`](./product-model.zh.md) —— 权威产品参考。
-- 历史迭代目录仍可能叫 `phase-N`，但新路线图正文使用
+- 迭代目录使用 `docs/iterations/m10/` 这类里程碑路径。路线图正文使用
   **交付里程碑 M<N>**，避免和生命周期阶段 L1/L2/L3 混淆。
 - 历史 12 步架构时间线请见 [`architecture.zh.md`](./architecture.zh.md) §E。
 
@@ -66,7 +66,7 @@
 - `login.{valid_credentials, invalid_credentials}`
 - `users.{filter_by_name, filter_by_status, no_match}`
 
-## 历史交付 Phase 9 —— 已于 2026-04-21 关闭
+## 历史交付 M9 —— 已于 2026-04-21 关闭
 
 主题：自主探索 + 用户驱动验证。关门验证：2026-04-21 通过
 `verify-scenario` skill 把 5 个 scenario 各跑了一次，全部
@@ -75,7 +75,7 @@
 distraction_avoidance / supervisor_agreement）。run_id 都在
 `exploration_runs` 表里。
 
-Phase 9 期间值得记的里程碑：
+M9 期间值得记的里程碑：
 
 - [x] Run 落库 + workbench 按 spec 预填 + 自由 scenario key。
 - [x] 登录页用户验证 —— `valid_credentials` 与 `invalid_credentials`
@@ -104,7 +104,7 @@ Phase 9 期间值得记的里程碑：
   在当时的清理点上，仅保留 `exploration_runs`；M10 后续新增了
   `learned_paths`。
 
-Phase 9 没有剩余待办。当前活跃交付里程碑是 M10。
+M9 没有剩余待办。当前活跃交付里程碑是 M10。
 
 ## M10 —— Path Asset Foundation / 路径资产基础（进行中）
 
@@ -118,7 +118,7 @@ Planner、不做 Agent H Teaching Guide Agent，也不做 task-to-path 执行
   `(page_template, query_signature, dom_fingerprint, scenario)` 归档，
   并带 `provisional` / `confirmed` / `flaky` / `deprecated` 四态 trust。
   迭代记录：
-  [`docs/iterations/phase-10/10.1-learned-path-persistence/`](./iterations/phase-10/10.1-learned-path-persistence/)。
+  [`docs/iterations/m10/10.1-learned-path-persistence/`](./iterations/m10/10.1-learned-path-persistence/)。
   端到端证据：`run_id=6c97c030-5aae-4f93-8abd-91c4446df9d7`
   -> `learned_path_id=31d3cf58-65a8-4298-bafc-9feee1ed6a90`，
   scorecard 5/5，supervisor source `llm`。

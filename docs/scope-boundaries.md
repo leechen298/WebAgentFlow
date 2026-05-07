@@ -12,9 +12,9 @@ ask — don't invent.
 
 ## Current Delivery Milestone
 
-M10 — Path Asset Foundation. Historical iteration folders still use
-`phase-10`, but new planning language uses M10 to avoid confusion with
-Lifecycle Stage L1/L2/L3.
+M10 — Path Asset Foundation. Iteration documents live under
+`docs/iterations/m10/`; planning language uses M10 for the delivery
+milestone and L1/L2/L3 for lifecycle stages.
 
 Current executable package: `10.2-replay-execution-drift-detection`.
 M10.2 only implements LearnedPath replay plus drift detection:

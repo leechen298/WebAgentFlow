@@ -8,8 +8,9 @@
 
 ## 当前交付里程碑
 
-**M10 —— Path Asset Foundation / 路径资产基础**。历史迭代目录仍沿用
-`phase-10`，但新规划语言使用 M10，避免和生命周期阶段 L1/L2/L3 混淆。
+**M10 —— Path Asset Foundation / 路径资产基础**。迭代文档位于
+`docs/iterations/m10/`；规划语言使用 M10 指交付里程碑，使用 L1/L2/L3
+指生命周期阶段。
 
 当前可执行包：`10.2-replay-execution-drift-detection`。
 M10.2 只实现 LearnedPath replay 和 drift detection：

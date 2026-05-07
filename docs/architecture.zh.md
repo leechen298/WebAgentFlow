@@ -69,7 +69,7 @@ L3，交付里程碑是 M10 / M11 / ...
    - 7D：`execute_action()`，支持 click / fill / select / check / uncheck / hover / press / navigate / scroll。
    - 7E：`observe_post_action()` / `execute_and_observe()`、变化检测、目标元素后置状态。
 
-**探索子系统**（建在历史 Phase 7 之上）：
+**探索子系统**（建在历史步骤 7 之上）：
 
 - **Success evaluator** —— 规则式，评估 6 类条件（url_changed / url_contains / title_contains / element_present / html_changed / no_error），三态语义（success / failure / uncertain）。
 - **Task definitions** —— `data/tasks/` 下的外部 JSON 文件，描述站点特定任务，带溯源信息。
@@ -200,8 +200,8 @@ L3，交付里程碑是 M10 / M11 / ...
 
 **关键并行关系：**
 
-- **历史 Phase 7 执行**已完成 —— 为 exploration 提供原子动作层。
-- **Exploration 子系统**建在历史 Phase 7 之上 —— TaskDefinition → `run_exploration` → success evaluation → supervisor 评估。
+- **历史步骤 7 执行**已完成 —— 为 exploration 提供原子动作层。
+- **Exploration 子系统**建在历史步骤 7 之上 —— TaskDefinition → `run_exploration` → success evaluation → supervisor 评估。
 - **自主探索子系统**仍是学习基础 —— URL → `autonomous_explorer.run_autonomous_exploration` → page verification 评分卡 → 用户在 workbench 审核。
 - **Path abstraction（M10）**在 exploration 验证通过之后起步。
 
