@@ -1,8 +1,8 @@
-"""Tests for the LearnedPath replay drift checker."""
+"""Tests for the LearnedPath replay drift checker and full replay."""
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from app.models.learned_path import LearnedPath, TrustStatus
 from app.schemas.page_analysis import PageAnalysis
@@ -10,6 +10,7 @@ from app.services.learning.learned_path_replay import (
     SUPPORTED_ACTION_TYPES,
     _build_replay_actions,
     run_drift_precheck,
+    run_replay,
 )
 from app.services.learning.page_signature import (
     dom_fingerprint,
@@ -290,3 +291,120 @@ def test_observational_path_page_mismatch() -> None:
     assert result.drift_status == "page_mismatch"
     assert result.blocked is True
     assert result.blocked_status == "drifted"
+
+
+# ── run_replay ───────────────────────────────────────────────────────────────
+
+
+def test_run_replay_runtime_error_on_navigate() -> None:
+    path = _make_learned_path(actions=[])
+
+    mock_runtime = MagicMock()
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock(side_effect=Exception("connection refused"))
+    mock_runtime.stop = MagicMock()
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        result = run_replay(path, "http://127.0.0.1:5175/users")
+
+    assert result.status == "runtime_error"
+    assert "connection refused" in result.drift_reasons[0]
+    mock_runtime.stop.assert_called_once()
+
+
+def test_run_replay_success_with_structured_result() -> None:
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(_make_page_analysis()),
+        actions=[
+            {
+                "step": 0,
+                "action_type": "fill",
+                "target_selector": "#q",
+                "value": "hello",
+            }
+        ],
+    )
+
+    mock_locator = MagicMock()
+    mock_locator.count.return_value = 1
+    mock_locator.first.fill = MagicMock()
+    mock_locator.first.input_value.return_value = "hello"
+    mock_locator.first.wait_for = MagicMock()
+
+    mock_page = MagicMock()
+    mock_page.locator.return_value = mock_locator
+    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.title.return_value = "Users"
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop = MagicMock()
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_title.return_value = "Users"
+    mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
+
+    mock_analysis = _make_page_analysis()
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=mock_analysis,
+        ):
+            result = run_replay(path, "http://127.0.0.1:5175/users")
+
+    assert result.status == "succeeded"
+    assert result.drift_status == "none"
+    assert result.learned_path_id == path.id
+    assert "page_template" in result.stored_signature
+    assert "page_template" in result.current_signature
+    assert len(result.steps) == 1
+    assert result.steps[0].action_type == "fill"
+    assert result.steps[0].ok is True
+    assert result.final_url == "http://127.0.0.1:5175/users"
+    assert result.final_title == "Users"
+    mock_runtime.stop.assert_called_once()
+
+
+def test_run_replay_observational_path() -> None:
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(_make_page_analysis()),
+        actions=[],
+    )
+
+    mock_page = MagicMock()
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop = MagicMock()
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_title.return_value = "Users"
+    mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
+
+    mock_analysis = _make_page_analysis()
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=mock_analysis,
+        ):
+            result = run_replay(path, "http://127.0.0.1:5175/users")
+
+    assert result.status == "observed"
+    assert result.drift_status == "none"
+    assert result.steps == []
+    mock_runtime.stop.assert_called_once()

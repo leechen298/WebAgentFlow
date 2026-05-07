@@ -21,6 +21,8 @@ from app.schemas.learned_path_replay import (
     ReplayStepLog,
 )
 from app.schemas.page_analysis import PageAnalysis
+from app.services.execution.execution_runtime import create_execution_runtime
+from app.services.learning.page_analyzer import analyze_page
 from app.services.learning.page_signature import (
     build_signature_dict,
 )
@@ -240,9 +242,6 @@ def run_replay(
     leaked on unexpected exceptions.
     """
     from app.services.execution.action_executor import execute_action
-    from app.services.execution.execution_runtime import create_execution_runtime
-    from app.services.learning.page_analyzer import analyze_page
-    from app.services.learning.page_signature import build_signature_dict
 
     # ── Start runtime ──
     runtime = None
