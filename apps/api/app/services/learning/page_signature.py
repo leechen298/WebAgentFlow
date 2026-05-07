@@ -25,6 +25,7 @@ import hashlib
 import json
 import re
 from collections.abc import Iterable
+from typing import Any
 from urllib.parse import parse_qsl, urlsplit
 
 from app.schemas.page_analysis import DiscoveredElement, PageAnalysis

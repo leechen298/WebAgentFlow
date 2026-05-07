@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from app.models.learned_path import LearnedPath, TrustStatus
 from app.schemas.page_analysis import PageAnalysis
 from app.services.learning.learned_path_replay import (
@@ -15,8 +13,6 @@ from app.services.learning.learned_path_replay import (
 )
 from app.services.learning.page_signature import (
     dom_fingerprint,
-    path_template,
-    query_signature,
 )
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -192,7 +188,6 @@ def test_signature_changed_query_mismatch() -> None:
 
 
 def test_signature_changed_dom_mismatch() -> None:
-    real_fp = dom_fingerprint(_make_page_analysis())
     path = _make_learned_path(
         dom_fingerprint="different-fingerprint",
     )

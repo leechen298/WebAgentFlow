@@ -21,7 +21,6 @@ from app.schemas.learned_path_replay import (
 from app.schemas.page_analysis import PageAnalysis
 from app.services.learning.page_signature import (
     build_signature_dict,
-    path_template,
 )
 
 SUPPORTED_ACTION_TYPES = {"fill", "click", "press", "observe"}
