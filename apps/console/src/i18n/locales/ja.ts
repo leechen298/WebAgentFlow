@@ -287,6 +287,7 @@ export default {
     replayStatusFailed: '実行失敗',
     replayStatusUnsupported: '未対応のアクション',
     replayStatusRuntimeError: '実行時エラー',
+    replayStatusCandidateNotFound: '候補パスが見つかりません',
     driftStatusNone: '変化なし',
     driftStatusSignatureChanged: '署名が変化',
     driftStatusTargetMissing: '対象要素が見つかりません',

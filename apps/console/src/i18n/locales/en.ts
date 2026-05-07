@@ -287,6 +287,7 @@ export default {
     replayStatusFailed: 'Execution failed',
     replayStatusUnsupported: 'Unsupported action type',
     replayStatusRuntimeError: 'Runtime error',
+    replayStatusCandidateNotFound: 'Candidate not found',
     driftStatusNone: 'No drift',
     driftStatusSignatureChanged: 'Signature changed',
     driftStatusTargetMissing: 'Target element not found',

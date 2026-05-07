@@ -287,6 +287,7 @@ export default {
     replayStatusFailed: '执行失败',
     replayStatusUnsupported: '这类动作当前还不能重跑',
     replayStatusRuntimeError: '运行时错误',
+    replayStatusCandidateNotFound: '未找到候选路径',
     driftStatusNone: '无变化',
     driftStatusSignatureChanged: '签名已变化',
     driftStatusTargetMissing: '找不到当初记录的按钮或输入框',

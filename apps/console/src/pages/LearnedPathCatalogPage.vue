@@ -452,7 +452,7 @@ async function handleReplay(): Promise<void> {
 }
 
 function replayStatusText(status: string): string {
-  const key = `learnedPaths.replayStatus${status.charAt(0).toUpperCase() + status.slice(1)}` as const;
+  const key = `learnedPaths.replayStatus${status.split('_').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('')}` as const;
   return t(key) || status;
 }
 
