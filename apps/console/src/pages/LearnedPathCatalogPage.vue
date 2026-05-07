@@ -245,6 +245,13 @@
                 </a-descriptions-item>
               </a-descriptions>
 
+              <div v-if="Object.keys(replayResult.stored_signature).length || Object.keys(replayResult.current_signature).length" class="signature-section">
+                <h5>{{ $t('learnedPaths.storedSignature') }}</h5>
+                <pre class="signature-json">{{ JSON.stringify(replayResult.stored_signature, null, 2) }}</pre>
+                <h5>{{ $t('learnedPaths.currentSignature') }}</h5>
+                <pre class="signature-json">{{ JSON.stringify(replayResult.current_signature, null, 2) }}</pre>
+              </div>
+
               <div v-if="replayResult.steps.length" class="steps-section">
                 <h5>{{ $t('learnedPaths.stepLogs') }}</h5>
                 <a-timeline>
@@ -599,5 +606,22 @@ onMounted(() => {
 .compact-list {
   margin: 0;
   padding-left: 16px;
+}
+
+.signature-section h5 {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+}
+
+.signature-json {
+  font-size: 11px;
+  background: #fafafa;
+  padding: 8px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 4px 0 0;
 }
 </style>
