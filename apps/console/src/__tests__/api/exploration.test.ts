@@ -9,18 +9,21 @@ import {
   listLearnedPaths,
   getLearnedPath,
   patchLearnedPathTrust,
+  replayLearnedPath,
   type LearnedPathDetail,
   type LearnedPathListPage,
+  type ReplayResult,
 } from '@/api/exploration';
 
-const { get, patch, delete: del } = vi.hoisted(() => ({
+const { get, patch, delete: del, post } = vi.hoisted(() => ({
   get: vi.fn(),
   patch: vi.fn(),
   delete: vi.fn(),
+  post: vi.fn(),
 }));
 
 vi.mock('@/api/client', () => ({
-  default: { get, patch, delete: del },
+  default: { get, patch, delete: del, post },
 }));
 
 describe('LearnedPath API', () => {
@@ -106,6 +109,33 @@ describe('LearnedPath API', () => {
     expect(patch).toHaveBeenCalledWith(
       '/exploration/learned-paths/abc/trust',
       { status: 'confirmed', reason: 'ok' },
+    );
+  });
+
+  it('replayLearnedPath POSTs to the replay endpoint', async () => {
+    const result: ReplayResult = {
+      learned_path_id: 'abc',
+      source_run_id: null,
+      trust: 'confirmed',
+      status: 'succeeded',
+      drift_status: 'none',
+      drift_reasons: [],
+      warnings: [],
+      stored_signature: {},
+      current_signature: {},
+      steps: [],
+      final_url: 'http://127.0.0.1:5175/users',
+      final_title: 'Users',
+    };
+    post.mockResolvedValueOnce(result);
+
+    await expect(
+      replayLearnedPath('abc', { url: 'http://127.0.0.1:5175/users' }),
+    ).resolves.toEqual(result);
+
+    expect(post).toHaveBeenCalledWith(
+      '/exploration/learned-paths/abc/replay',
+      { url: 'http://127.0.0.1:5175/users' },
     );
   });
 });

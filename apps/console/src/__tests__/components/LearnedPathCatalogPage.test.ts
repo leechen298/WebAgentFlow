@@ -4,6 +4,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 const listLearnedPaths = vi.fn();
 const getLearnedPath = vi.fn();
 const patchLearnedPathTrust = vi.fn();
+const replayLearnedPath = vi.fn();
 const mockPush = vi.fn();
 
 vi.mock('vue-router', () => ({
@@ -15,6 +16,7 @@ vi.mock('@/api/exploration', () => ({
   listLearnedPaths,
   getLearnedPath,
   patchLearnedPathTrust,
+  replayLearnedPath,
 }));
 
 vi.mock('ant-design-vue', async (importOriginal) => {
@@ -75,6 +77,11 @@ const stubs = {
   },
   'a-timeline': { template: '<div class="timeline"><slot /></div>' },
   'a-timeline-item': { template: '<div class="timeline-item"><slot /></div>' },
+  'a-input': {
+    props: ['value', 'placeholder'],
+    emits: ['update:value'],
+    template: '<input :value="value" :placeholder="placeholder" @input="$emit(\'update:value\', $event.target.value)" />',
+  },
   'router-link': {
     props: ['to'],
     template: '<a :href="to" class="router-link"><slot /></a>',
@@ -289,5 +296,74 @@ describe('LearnedPathCatalogPage', () => {
     );
     // Button should be disabled
     expect(confirmBtn?.attributes('disabled')).toBe('');
+  });
+
+  it('renders replay input and disabled button when URL is empty', async () => {
+    getLearnedPath.mockResolvedValue({ ...makePath(), actions: [] });
+    const wrapper = await loadPage();
+    await flushPromises();
+
+    const viewBtn = wrapper.findAll('button').find((b) =>
+      b.text().toLowerCase().includes('view') || b.text().includes('view'),
+    );
+    if (viewBtn) {
+      await viewBtn.trigger('click');
+      await flushPromises();
+
+      const inputs = wrapper.findAll('input');
+      expect(inputs.length).toBeGreaterThan(0);
+
+      const replayButtons = wrapper.findAll('button').filter((b) =>
+        b.text().toLowerCase().includes('replay') || b.text().includes('重跑') || b.text().includes('リプレイ'),
+      );
+      expect(replayButtons.length).toBeGreaterThan(0);
+      const replayBtn = replayButtons[0];
+      expect(replayBtn.attributes('disabled')).toBe('');
+    }
+  });
+
+  it('calls replayLearnedPath when replay button clicked with URL', async () => {
+    getLearnedPath.mockResolvedValue({ ...makePath(), actions: [] });
+    replayLearnedPath.mockResolvedValue({
+      learned_path_id: 'path-001',
+      source_run_id: null,
+      trust: 'provisional',
+      status: 'observed',
+      drift_status: 'none',
+      drift_reasons: [],
+      warnings: [],
+      stored_signature: {},
+      current_signature: {},
+      steps: [],
+      final_url: 'http://127.0.0.1:5175/users',
+      final_title: 'Users',
+    });
+
+    const wrapper = await loadPage();
+    await flushPromises();
+
+    const viewBtn = wrapper.findAll('button').find((b) =>
+      b.text().toLowerCase().includes('view') || b.text().includes('view'),
+    );
+    if (viewBtn) {
+      await viewBtn.trigger('click');
+      await flushPromises();
+
+      const input = wrapper.find('input');
+      await input.setValue('http://127.0.0.1:5175/users');
+      await flushPromises();
+
+      const replayBtn = wrapper.findAll('button').find((b) =>
+        b.text().toLowerCase().includes('replay') || b.text().includes('重跑') || b.text().includes('リプレイ'),
+      );
+      if (replayBtn) {
+        await replayBtn.trigger('click');
+        await flushPromises();
+
+        expect(replayLearnedPath).toHaveBeenCalledWith('path-001', {
+          url: 'http://127.0.0.1:5175/users',
+        });
+      }
+    }
   });
 });

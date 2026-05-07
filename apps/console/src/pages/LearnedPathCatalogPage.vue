@@ -191,6 +191,77 @@
             </a-descriptions-item>
           </a-descriptions>
 
+          <div class="replay-section">
+            <h4>{{ $t('learnedPaths.replayTitle') }}</h4>
+            <a-space direction="vertical" style="width: 100%">
+              <a-input
+                v-model:value="replayUrl"
+                :placeholder="$t('learnedPaths.replayUrl')"
+              />
+              <a-button
+                type="primary"
+                :disabled="!replayUrl.trim()"
+                :loading="replayLoading"
+                @click="handleReplay"
+              >
+                {{ $t('learnedPaths.replayButton') }}
+              </a-button>
+            </a-space>
+
+            <a-alert
+              v-if="replayError"
+              type="error"
+              show-icon
+              :message="$t('learnedPaths.replayError')"
+              :description="replayError"
+              style="margin-top: 12px"
+            />
+
+            <div v-if="replayResult" class="replay-result">
+              <a-descriptions :column="1" size="small" bordered>
+                <a-descriptions-item :label="$t('learnedPaths.replayStatus')">
+                  <a-tag :color="replayResult.status === 'succeeded' ? 'green' : replayResult.status === 'observed' ? 'blue' : 'red'">
+                    {{ replayStatusText(replayResult.status) }}
+                  </a-tag>
+                </a-descriptions-item>
+                <a-descriptions-item :label="$t('learnedPaths.driftStatusLabel')">
+                  {{ driftStatusText(replayResult.drift_status) }}
+                </a-descriptions-item>
+                <a-descriptions-item v-if="replayResult.drift_reasons.length" :label="$t('learnedPaths.driftReasons')">
+                  <ul class="compact-list">
+                    <li v-for="(reason, idx) in replayResult.drift_reasons" :key="idx">{{ reason }}</li>
+                  </ul>
+                </a-descriptions-item>
+                <a-descriptions-item v-if="replayResult.warnings.length" :label="$t('learnedPaths.warnings')">
+                  <ul class="compact-list">
+                    <li v-for="(w, idx) in replayResult.warnings" :key="idx">{{ w }}</li>
+                  </ul>
+                </a-descriptions-item>
+                <a-descriptions-item :label="$t('learnedPaths.finalUrl')">
+                  {{ replayResult.final_url || '—' }}
+                </a-descriptions-item>
+                <a-descriptions-item :label="$t('learnedPaths.finalTitle')">
+                  {{ replayResult.final_title || '—' }}
+                </a-descriptions-item>
+              </a-descriptions>
+
+              <div v-if="replayResult.steps.length" class="steps-section">
+                <h5>{{ $t('learnedPaths.stepLogs') }}</h5>
+                <a-timeline>
+                  <a-timeline-item v-for="(step, idx) in replayResult.steps" :key="idx">
+                    <div class="step-log">
+                      <strong>Step {{ step.step }}</strong>
+                      <a-tag :color="step.ok ? 'green' : 'red'">{{ step.ok ? 'OK' : 'FAIL' }}</a-tag>
+                      <div v-if="step.error" class="step-error">{{ step.error }}</div>
+                      <div v-if="step.selector" class="step-meta">selector: <code>{{ step.selector }}</code></div>
+                    </div>
+                  </a-timeline-item>
+                </a-timeline>
+              </div>
+              <a-empty v-else-if="!replayResult.drift_reasons.length" :description="$t('learnedPaths.noSteps')" />
+            </div>
+          </div>
+
           <div class="actions-section">
             <h4>{{ $t('learnedPaths.actions') }}</h4>
             <a-empty v-if="!selectedPath.actions || selectedPath.actions.length === 0" :description="$t('learnedPaths.noActions')" />
@@ -217,10 +288,12 @@ import {
   listLearnedPaths,
   getLearnedPath,
   patchLearnedPathTrust,
+  replayLearnedPath,
   type LearnedPathSummary,
   type LearnedPathDetail,
   type LearnedPathTrust,
   type LearnedPathPatchStatus,
+  type ReplayResult,
 } from '@/api/exploration';
 
 const { t } = useI18n();
@@ -237,6 +310,11 @@ const drawerOpen = ref(false);
 const drawerLoading = ref(false);
 const drawerError = ref('');
 const selectedPath = ref<LearnedPathDetail | null>(null);
+
+const replayUrl = ref('');
+const replayLoading = ref(false);
+const replayError = ref('');
+const replayResult = ref<ReplayResult | null>(null);
 
 const updatingId = ref<string | null>(null);
 const pendingStatus = ref<LearnedPathPatchStatus | null>(null);
@@ -344,6 +422,10 @@ async function openActionsDrawer(pathId: string): Promise<void> {
   drawerLoading.value = true;
   drawerError.value = '';
   selectedPath.value = null;
+  replayUrl.value = '';
+  replayError.value = '';
+  replayResult.value = null;
+  replayLoading.value = false;
   try {
     selectedPath.value = await getLearnedPath(pathId);
   } catch (err) {
@@ -351,6 +433,32 @@ async function openActionsDrawer(pathId: string): Promise<void> {
   } finally {
     drawerLoading.value = false;
   }
+}
+
+async function handleReplay(): Promise<void> {
+  if (!selectedPath.value || !replayUrl.value.trim()) return;
+  replayLoading.value = true;
+  replayError.value = '';
+  replayResult.value = null;
+  try {
+    replayResult.value = await replayLearnedPath(selectedPath.value.id, {
+      url: replayUrl.value.trim(),
+    });
+  } catch (err) {
+    replayError.value = (err as Error).message || String(err);
+  } finally {
+    replayLoading.value = false;
+  }
+}
+
+function replayStatusText(status: string): string {
+  const key = `learnedPaths.replayStatus${status.charAt(0).toUpperCase() + status.slice(1)}` as const;
+  return t(key) || status;
+}
+
+function driftStatusText(status: string): string {
+  const key = `learnedPaths.driftStatus${status.split('_').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('')}` as const;
+  return t(key) || status;
 }
 
 async function updateTrust(pathId: string, status: LearnedPathPatchStatus): Promise<void> {
@@ -446,5 +554,50 @@ onMounted(() => {
   white-space: pre-wrap;
   word-break: break-word;
   margin: 4px 0 0;
+}
+
+.replay-section {
+  margin-top: 16px;
+}
+
+.replay-section h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.replay-result {
+  margin-top: 12px;
+}
+
+.steps-section {
+  margin-top: 12px;
+}
+
+.steps-section h5 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.step-log {
+  margin-bottom: 8px;
+}
+
+.step-error {
+  color: #cf1322;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.step-meta {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.compact-list {
+  margin: 0;
+  padding-left: 16px;
 }
 </style>

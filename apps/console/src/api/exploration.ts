@@ -144,6 +144,35 @@ export interface LearnedPathListPage {
   next_cursor: string | null;
 }
 
+export interface ReplayStepLog {
+  step: number;
+  action_type: string;
+  selector: string | null;
+  ok: boolean;
+  error: string | null;
+  matched_count: number | null;
+  url_before: string | null;
+  title_before: string | null;
+  url_after: string | null;
+  title_after: string | null;
+  screenshot_ref: string | null;
+}
+
+export interface ReplayResult {
+  learned_path_id: string;
+  source_run_id: string | null;
+  trust: string;
+  status: string;
+  drift_status: string;
+  drift_reasons: string[];
+  warnings: string[];
+  stored_signature: Record<string, unknown>;
+  current_signature: Record<string, unknown>;
+  steps: ReplayStepLog[];
+  final_url: string | null;
+  final_title: string | null;
+}
+
 export async function listLearnedPaths(params: {
   limit?: number;
   cursor?: string | null;
@@ -176,6 +205,16 @@ export async function patchLearnedPathTrust(
     `/exploration/learned-paths/${pathId}/trust`,
     payload,
   )) as unknown as LearnedPathDetail;
+}
+
+export async function replayLearnedPath(
+  pathId: string,
+  payload: { url: string },
+): Promise<ReplayResult> {
+  return (await apiClient.post(
+    `/exploration/learned-paths/${pathId}/replay`,
+    payload,
+  )) as unknown as ReplayResult;
 }
 
 export async function listAutonomousRuns(params: {
