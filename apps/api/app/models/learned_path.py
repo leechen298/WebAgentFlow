@@ -7,7 +7,7 @@ sequence that produced the pass are persisted here. A future L3
 planner Agent reads these rows to pick a concrete route for a user
 task without ever reading raw HTML.
 
-Schema notes (see docs/iterations/phase-10/01-learned-path-persistence):
+Schema notes (see docs/iterations/m10/10.1-learned-path-persistence/):
 
 - ``dedup_key`` is a sha256 of the key quadruple; the unique
   constraint lets ``ingest_run`` stay idempotent across DB backends

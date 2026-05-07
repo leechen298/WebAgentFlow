@@ -218,7 +218,7 @@ def _maybe_ingest_learned_path(
         # Observational pass — the run cleared pass_gate without
         # needing an interactive step (e.g. "open page, content
         # confirms"). We still persist a LearnedPath with an empty
-        # action list so future Phase 3 planning has the signal that
+        # action list so future M11.1 path planner has the signal that
         # this (template, scenario) is reachable on a bare visit; we
         # just log so empty-action rows are easy to audit.
         logger.info(
