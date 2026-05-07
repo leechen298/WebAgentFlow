@@ -97,6 +97,8 @@ HTTP 行为：
   warning。
 - body 缺 URL：`422`。
 - Playwright 启动或导航失败：返回 `status = runtime_error`。
+- 本轮显式 path replay 中，path id 不存在始终是 HTTP `404`，不是
+  `candidate_not_found`。
 
 ### ReplayStatus
 
@@ -108,6 +110,15 @@ HTTP 行为：
 - `candidate_not_found`
 - `runtime_error`
 
+`failed` 用于 drift precheck 没有阻断、selector 存在、action type 支持，
+但执行 `fill` / `click` / `press` / `observe` 时失败的情况，例如
+Playwright timeout、元素不可见、click 被遮挡或 action 抛错。对应 step
+log 必须记录 `ok = false` 和 error。
+
+`candidate_not_found` 只服务 repo / service candidate helper 或未来 M11.1
+自动候选路径；本轮显式 `POST /exploration/learned-paths/{path_id}/replay`
+通常不会返回它。
+
 ### ReplayDriftStatus
 
 - `none`
@@ -116,6 +127,9 @@ HTTP 行为：
 - `page_mismatch`
 - `unsupported_action`
 - `no_candidate`
+
+`no_candidate` 只服务 candidate helper 或未来 M11.1 自动候选路径；本轮
+显式 path replay 通常不会返回它。
 
 ### Action 支持范围
 
@@ -156,6 +170,11 @@ HTTP 行为：
    - 不继续执行，`status = unsupported`。
 5. `none`
    - signature 一致，并且所有目标可定位。
+
+如果 drift precheck 没有阻断执行，但实际动作执行失败，返回
+`status = failed`。`drift_status` 保留 precheck 已计算出的结果，例如
+`none` 或 `signature_changed`。不要把这种执行失败改写成
+`target_missing`、`unsupported_action` 或 `runtime_error`。
 
 `actions=[]` 是合法 observational LearnedPath：
 

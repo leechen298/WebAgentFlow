@@ -54,6 +54,13 @@
   repo、drift、executor、API、UI、测试顺序推进。
 - 这次仍然只做文档整理，尚未开始实现。
 
+## 2026-05-07 状态语义补丁
+
+- 将 `intent.md` 中的 Agent D 引用对齐到 M11.1。
+- 明确 `ReplayStatus.failed` 表示 drift precheck 未阻断但动作执行失败。
+- 明确 `candidate_not_found` / `no_candidate` 只服务 candidate helper 或
+  未来 M11.1 自动候选路径，显式 path replay 的 path 不存在仍是 HTTP 404。
+
 ## 收尾反思
 
 待实现完成后追加。

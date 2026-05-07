@@ -59,6 +59,11 @@ replay 参数。
 - path 是 `flaky`：允许显式 replay，但 `warnings` 必须包含 trust warning。
 - body 缺 URL：`422`。
 - Playwright 启动或导航失败：返回 `status = runtime_error`，不要吞掉错误。
+- 本轮显式 path replay 中，path id 不存在始终是 HTTP `404`，不是
+  `candidate_not_found`。
+
+`candidate_not_found` / `no_candidate` 只服务 repo / service candidate
+helper 或未来 M11.1 自动候选路径。本轮不做自动候选 replay API / UI。
 
 ## 禁止事项
 

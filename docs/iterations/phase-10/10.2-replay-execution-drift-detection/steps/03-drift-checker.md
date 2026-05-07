@@ -35,6 +35,11 @@
 5. `none`
    - signature 一致，并且所有目标可定位。
 
+如果 drift precheck 没有阻断执行，但后续动作执行失败，返回
+`status = failed`。`drift_status` 保留 precheck 已计算出的结果，例如
+`none` 或 `signature_changed`。不要把这种执行失败误归类为
+`target_missing`、`unsupported_action` 或 `runtime_error`。
+
 ## `actions=[]`
 
 - 不执行浏览器动作。
@@ -55,4 +60,5 @@ page mismatch、signature changed、target missing、unsupported action。
 - dom hash 不一致但 selector 都在时返回 `signature_changed`，允许继续。
 - selector 找不到时返回 `target_missing`，不执行。
 - unsupported action 返回 `unsupported_action`，不执行。
+- selector 存在且 action 支持，但执行中失败时返回 `failed`。
 - `actions=[]` 走 observational 分支。

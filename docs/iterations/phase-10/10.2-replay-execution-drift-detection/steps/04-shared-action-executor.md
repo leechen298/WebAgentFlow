@@ -48,9 +48,21 @@ observe_step(runtime, step_index=...) -> dict
 unsupported action 由 replay service 在执行前拦截；executor 仍要对未知
 动作保持防御性返回，不能抛出未处理异常。
 
+执行失败语义：
+
+- selector 存在且 action type 支持，但 `fill` / `click` / `press` /
+  `observe` 执行失败时，executor 返回 step log：`ok = false` 和 error。
+- replay service 将这类失败映射为 `status = failed`。
+- `drift_status` 保留 drift precheck 的结果，例如 `none` 或
+  `signature_changed`。
+- 不把这类执行失败改写成 `target_missing`、`unsupported_action` 或
+  `runtime_error`。
+
 ## 验收
 
 - 原 autonomous 相关单测不因抽取破坏 step log 字段。
 - executor 单测覆盖 fill / click / press / observe。
 - selector missing 能返回结构化失败。
+- action 执行 timeout / 元素不可见 / click 被遮挡时，step log 记录
+  `ok = false` 和 error。
 - unknown action 不造成 500。
