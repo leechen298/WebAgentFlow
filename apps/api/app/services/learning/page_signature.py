@@ -15,7 +15,7 @@ Three pure functions back the LearnedPath dedup quadruple:
   data values).
 
 These three functions are the only signature producers in the codebase;
-the LearnedPath repo and any future Phase 3 lookup path must call them
+the LearnedPath repo and any future M11.1 lookup path must call them
 rather than inventing local variants.
 """
 
@@ -33,8 +33,22 @@ __all__ = [
     "path_template",
     "query_signature",
     "dom_fingerprint",
+    "build_signature_dict",
     "QUERY_KEEP_MAX_LEN",
 ]
+
+
+def build_signature_dict(*, url: str, analysis: PageAnalysis) -> dict[str, Any]:
+    """Return the canonical page signature as a plain dict.
+
+    This is the shape stored in ``ReplayResult.stored_signature`` and
+    ``ReplayResult.current_signature``.
+    """
+    return {
+        "page_template": path_template(url),
+        "query_signature": query_signature(url),
+        "dom_fingerprint": dom_fingerprint(analysis),
+    }
 
 # ---------------------------------------------------------------------------
 # path_template
