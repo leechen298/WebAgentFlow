@@ -235,7 +235,9 @@ def run_replay(
     """Run a full LearnedPath replay against *url*.
 
     Playwright lifecycle or navigation errors surface as
-    ``status = runtime_error`` rather than raising.
+    ``status = runtime_error`` rather than raising.  The runtime is
+    always stopped via ``try/finally`` so browser processes are never
+    leaked on unexpected exceptions.
     """
     from app.services.execution.action_executor import execute_action
     from app.services.execution.execution_runtime import create_execution_runtime
@@ -257,108 +259,128 @@ def run_replay(
             drift_reasons=[f"Failed to start Playwright runtime: {exc}"],
         )
 
-    # ── Navigate ──
+    # Everything after start() is wrapped in try/finally so
+    # runtime.stop() always runs.
     try:
-        runtime.navigate(url)
-    except Exception as exc:
-        runtime.stop()
-        return ReplayResult(
-            learned_path_id=str(learned_path.id),
-            source_run_id=learned_path.source_run_id,
-            trust=str(learned_path.trust),
-            status="runtime_error",
-            drift_status="none",
-            drift_reasons=[f"Navigation to {url!r} failed: {exc}"],
+        # ── Navigate ──
+        try:
+            runtime.navigate(url)
+        except Exception as exc:
+            return ReplayResult(
+                learned_path_id=str(learned_path.id),
+                source_run_id=learned_path.source_run_id,
+                trust=str(learned_path.trust),
+                status="runtime_error",
+                drift_status="none",
+                drift_reasons=[f"Navigation to {url!r} failed: {exc}"],
+            )
+
+        # ── Analyze page ──
+        try:
+            analysis = analyze_page(runtime)
+        except Exception as exc:
+            return ReplayResult(
+                learned_path_id=str(learned_path.id),
+                source_run_id=learned_path.source_run_id,
+                trust=str(learned_path.trust),
+                status="runtime_error",
+                drift_status="none",
+                drift_reasons=[f"Page analysis failed: {exc}"],
+            )
+
+        current_url = runtime.current_url() if runtime.page else url
+
+        # ── Drift precheck ──
+        precheck = run_drift_precheck(
+            learned_path, current_url, analysis, runtime.page
         )
 
-    # ── Analyze page ──
-    try:
-        analysis = analyze_page(runtime)
-    except Exception as exc:
-        runtime.stop()
+        stored_sig = {
+            "page_template": learned_path.page_template,
+            "query_signature": learned_path.query_signature or {},
+            "dom_fingerprint": learned_path.dom_fingerprint,
+        }
+        current_sig = build_signature_dict(url=current_url, analysis=analysis)
+
+        if precheck.blocked:
+            return ReplayResult(
+                learned_path_id=str(learned_path.id),
+                source_run_id=learned_path.source_run_id,
+                trust=str(learned_path.trust),
+                status=precheck.blocked_status or "drifted",
+                drift_status=precheck.drift_status,
+                drift_reasons=precheck.drift_reasons,
+                warnings=precheck.warnings,
+                stored_signature=stored_sig,
+                current_signature=current_sig,
+                steps=[],
+                final_url=current_url,
+                final_title=analysis.title if analysis else None,
+            )
+
+        # ── Observational path ──
+        if not precheck.actions:
+            return ReplayResult(
+                learned_path_id=str(learned_path.id),
+                source_run_id=learned_path.source_run_id,
+                trust=str(learned_path.trust),
+                status="observed",
+                drift_status=precheck.drift_status,
+                warnings=precheck.warnings,
+                stored_signature=stored_sig,
+                current_signature=current_sig,
+                steps=[],
+                final_url=current_url,
+                final_title=analysis.title if analysis else None,
+            )
+
+        # ── Execute actions ──
+        step_logs: list[dict[str, Any]] = []
+        failed = False
+        try:
+            for action in precheck.actions:
+                log = execute_action(action, runtime)
+                step_logs.append(log)
+                if not log.get("ok", False) and action.action_type != "observe":
+                    failed = True
+                    break
+        except Exception as exc:
+            # Unexpected failure during action execution — map to failed
+            # so the endpoint never returns a raw 500.
+            return ReplayResult(
+                learned_path_id=str(learned_path.id),
+                source_run_id=learned_path.source_run_id,
+                trust=str(learned_path.trust),
+                status="failed",
+                drift_status=precheck.drift_status,
+                drift_reasons=[f"Action execution interrupted: {exc}"],
+                warnings=precheck.warnings,
+                stored_signature=stored_sig,
+                current_signature=current_sig,
+                steps=[_step_log_to_replay_step(sl) for sl in step_logs],
+                final_url=current_url,
+                final_title=analysis.title if analysis else None,
+            )
+
+        final_url = runtime.current_url() if runtime.page else current_url
+        final_title = runtime.current_title() if runtime.page else ""
+
+        replay_steps = [_step_log_to_replay_step(sl) for sl in step_logs]
+
         return ReplayResult(
             learned_path_id=str(learned_path.id),
             source_run_id=learned_path.source_run_id,
             trust=str(learned_path.trust),
-            status="runtime_error",
-            drift_status="none",
-            drift_reasons=[f"Page analysis failed: {exc}"],
-        )
-
-    current_url = runtime.current_url() if runtime.page else url
-
-    # ── Drift precheck ──
-    precheck = run_drift_precheck(
-        learned_path, current_url, analysis, runtime.page
-    )
-
-    stored_sig = {
-        "page_template": learned_path.page_template,
-        "query_signature": learned_path.query_signature or {},
-        "dom_fingerprint": learned_path.dom_fingerprint,
-    }
-    current_sig = build_signature_dict(url=current_url, analysis=analysis)
-
-    if precheck.blocked:
-        runtime.stop()
-        return ReplayResult(
-            learned_path_id=str(learned_path.id),
-            source_run_id=learned_path.source_run_id,
-            trust=str(learned_path.trust),
-            status=precheck.blocked_status or "drifted",
+            status="failed" if failed else "succeeded",
             drift_status=precheck.drift_status,
-            drift_reasons=precheck.drift_reasons,
             warnings=precheck.warnings,
             stored_signature=stored_sig,
             current_signature=current_sig,
-            steps=[],
-            final_url=current_url,
-            final_title=analysis.title if analysis else None,
+            steps=replay_steps,
+            final_url=final_url,
+            final_title=final_title,
         )
 
-    # ── Observational path ──
-    if not precheck.actions:
-        runtime.stop()
-        return ReplayResult(
-            learned_path_id=str(learned_path.id),
-            source_run_id=learned_path.source_run_id,
-            trust=str(learned_path.trust),
-            status="observed",
-            drift_status=precheck.drift_status,
-            warnings=precheck.warnings,
-            stored_signature=stored_sig,
-            current_signature=current_sig,
-            steps=[],
-            final_url=current_url,
-            final_title=analysis.title if analysis else None,
-        )
-
-    # ── Execute actions ──
-    step_logs: list[dict[str, Any]] = []
-    failed = False
-    for action in precheck.actions:
-        log = execute_action(action, runtime)
-        step_logs.append(log)
-        if not log.get("ok", False) and action.action_type != "observe":
-            failed = True
-            break
-
-    final_url = runtime.current_url() if runtime.page else current_url
-    final_title = runtime.current_title() if runtime.page else ""
-    runtime.stop()
-
-    replay_steps = [_step_log_to_replay_step(sl) for sl in step_logs]
-
-    return ReplayResult(
-        learned_path_id=str(learned_path.id),
-        source_run_id=learned_path.source_run_id,
-        trust=str(learned_path.trust),
-        status="failed" if failed else "succeeded",
-        drift_status=precheck.drift_status,
-        warnings=precheck.warnings,
-        stored_signature=stored_sig,
-        current_signature=current_sig,
-        steps=replay_steps,
-        final_url=final_url,
-        final_title=final_title,
-    )
+    finally:
+        if runtime is not None:
+            runtime.stop()
