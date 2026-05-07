@@ -247,7 +247,7 @@ def run_autonomous_exploration(
     emit: EventEmitter = event_emitter or _noop_emitter
     t0 = int(time.time() * 1000)
 
-    # ── Phase 1: Navigate ──
+    # ── Step 1: Navigate ──
     emit("navigate_started", {"url": url})
     logger.info("Autonomous exploration: navigating to %s", url)
     runtime.navigate(url)
@@ -257,7 +257,7 @@ def run_autonomous_exploration(
         "title": runtime.current_title() if runtime.page else "",
     })
 
-    # ── Phase 2: Analyze ──
+    # ── Step 2: Analyze ──
     emit("analysis_started", {})
     logger.info("Autonomous exploration: analyzing page")
     analysis = analyze_page(runtime)
@@ -285,7 +285,7 @@ def run_autonomous_exploration(
         "screenshot_ref": analysis.screenshot_ref,
     })
 
-    # ── Phase 3: Plan ──
+    # ── Step 3: Plan actions ──
     logger.info("Autonomous exploration: planning actions")
     planned = plan_actions(
         analysis,
@@ -301,7 +301,7 @@ def run_autonomous_exploration(
         "actions": [a.model_dump() for a in planned],
     })
 
-    # ── Phase 4: Execute ──
+    # ── Step 4: Execute ──
     logger.info("Autonomous exploration: executing %d actions", len(planned))
     step_logs: list[dict[str, Any]] = []
     for action in planned:
@@ -320,7 +320,7 @@ def run_autonomous_exploration(
             logger.warning("  Step %d failed: %s", action.step, step_log.get("error"))
         emit("step_done", step_log)
 
-    # ── Phase 5: Final state ──
+    # ── Step 5: Final state ──
     final_url = runtime.current_url() if runtime.page else ""
     final_title = runtime.current_title() if runtime.page else ""
     final_screenshot = safe_screenshot(runtime)
@@ -338,7 +338,7 @@ def run_autonomous_exploration(
         "final_state": final_state,
     })
 
-    # ── Phase 6: Supervisor verification (project-internal Agent) ──
+    # ── Step 6: Supervisor verification (project-internal Agent) ──
     supervisor_output = _run_supervisor(
         analysis, step_logs, verdict, summary, final_url, final_title, elapsed,
         scenario_name=scenario_name,
@@ -706,7 +706,7 @@ def _run_supervisor(
 
     # One retry on transient / retryable errors (rate_limit, timeout,
     # 5xx provider errors). Tight sequential usage — 5 scenarios back-
-    # to-back in the Phase 9 runner — routinely triggered a single
+    # to-back in the exploration runner — routinely triggered a single
     # blip that a one-shot retry covers without re-exercising Playwright.
     # The delay is short because rate-limit windows on our providers
     # tend to be sub-second; long back-off here would balloon run time
