@@ -35,6 +35,16 @@
   Task-to-Path Planning MVP。
 - 10.2 的 replay engine 是 M11 后续可调用的执行底座。
 
+## 2026-05-07 可施工细化
+
+- 将 `plan.md` 中影响实现的“建议 / 可选”收口为固定 contract。
+- 固定第一版只做显式 path replay：
+  `POST /exploration/learned-paths/{path_id}/replay`，request body 只含
+  `url`，不做自动候选 replay API / UI。
+- 固定 replay / drift status 枚举、`flaky` / `deprecated` 行为、
+  action 重建规则、UI loading / error / result 三态。
+- 这次只是文档细化，尚未开始实现。
+
 ## 收尾反思
 
 待实现完成后追加。

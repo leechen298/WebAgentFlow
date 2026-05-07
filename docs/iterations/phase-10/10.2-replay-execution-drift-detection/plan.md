@@ -15,25 +15,32 @@ Task-to-Path Planning & Execution MVP** 提供可调用的 replay engine，但
 
 ### 后端 schema
 
-新增或扩展 schema，建议优先放在独立文件，避免 `learned_path.py`
-继续膨胀：
+新增独立 schema 文件，避免 `learned_path.py` 继续膨胀：
 
 ```text
 apps/api/app/schemas/learned_path_replay.py
 ```
 
-需要定义的核心对象：
+本轮固定 contract 如下：
 
 - `ReplayAction`
   - 从 LearnedPath `actions` 里重建出来的稳定动作类型。
-  - 支持第一版已有动作：`fill` / `click` / `press` / `observe`。
-  - 必须校验 `target_selector`，除 `observe` 外不能为空。
+  - 输入来源是当前已存 action dict，字段来自 `_ACTION_KEEP_KEYS`：
+    `step`、`action_type`、`target_selector`、`target_description`、
+    `value`。
+  - `action_type` 先按字符串接收；service 层判断是否属于
+    `fill` / `click` / `press` / `observe`。未知值返回
+    `unsupported_action`，不能在 schema 层炸成 500。
+  - 对已支持的非 `observe` action，`target_selector` 不能为空；为空时
+    service 返回 `target_missing`。
+  - `step` 缺失时按 action list index 从 0 补齐；`target_description`
+    和 `value` 可为空。
 - `ReplayStepLog`
   - 单步执行结果。
   - 包含 step index、action type、selector、ok、error、matched_count、
     URL / title before-after、screenshot ref。
 - `ReplayDriftStatus`
-  - 建议值：
+  - 固定枚举：
     - `none`
     - `signature_changed`
     - `target_missing`
@@ -41,7 +48,7 @@ apps/api/app/schemas/learned_path_replay.py
     - `unsupported_action`
     - `no_candidate`
 - `ReplayStatus`
-  - 建议值：
+  - 固定枚举：
     - `succeeded`
     - `observed`
     - `drifted`
@@ -51,10 +58,11 @@ apps/api/app/schemas/learned_path_replay.py
     - `runtime_error`
 - `ReplayResult`
   - 包含 selected path、当前 signature、stored signature、drift status、
-    drift reasons、step logs、final state。
+    drift reasons、warnings、step logs、final state。
 - `ReplayRequest`
-  - 第一版显式 path replay 可以只需要 URL。
-  - 如支持自动候选 replay，再加 `scenario` 和可选 `learned_path_id`。
+  - 第一版只有一个字段：`url`。
+  - 本轮不在 request body 加 `scenario`、`learned_path_id`、`force` 或
+    自动候选 replay 参数。
 
 注意：这些状态是 replay 自己的状态，不是 `pass_gate.status`。
 
@@ -79,7 +87,7 @@ find_replay_candidates(page_template, scenario)
 2. 排序优先级：
    - `confirmed`
    - `provisional`
-3. 默认跳过：
+3. 自动候选列表固定跳过：
    - `deprecated`
    - `flaky`
 4. `flaky` 只允许显式指定 path id 时 replay，用于人工调试。
@@ -88,8 +96,9 @@ find_replay_candidates(page_template, scenario)
    - `updated_at` 新
    - `created_at` 新
 
-第一版 UI 主入口是“指定某一条 LearnedPath replay”；候选选择主要给
-后端服务和后续 M11.1 的 task-to-path planning 能力打基础。
+第一版 UI 主入口固定为“指定某一条 LearnedPath replay”。候选选择只
+作为 repo/service 能力和后续 M11.1 的 task-to-path planning 底座；
+本轮不新增自动候选 replay API，也不做自动候选 replay UI。
 
 ### 后端 replay service
 
@@ -119,7 +128,7 @@ apps/api/app/services/learning/learned_path_replay.py
 
 第一版不要说“轻微漂移 / 严重漂移”这种无法从 hash 里证明的词。
 
-建议规则：
+固定规则：
 
 1. `page_mismatch`
    - 当前 `page_template` 和 stored `page_template` 不一致。
@@ -128,21 +137,26 @@ apps/api/app/services/learning/learned_path_replay.py
    - `page_template` 一致，但 `query_signature` 或 `dom_fingerprint`
      不一致。
    - 继续检查 selector。
-   - selector 都能定位时允许 replay，但在结果里保留 drift warning。
+   - selector 都能定位时允许 replay；如果执行成功，`status` 仍为
+     `succeeded` 或 `observed`，但 `drift_status` 保留
+     `signature_changed`，并在 `warnings` 中写明页面签名已变化。
 3. `target_missing`
    - 任一非 observe action 的 selector 找不到。
-   - 不继续执行。
+   - 不继续执行，`status = drifted`。
 4. `unsupported_action`
    - action 类型不是 `fill` / `click` / `press` / `observe`。
-   - 不继续执行。
+   - 不继续执行，`status = unsupported`。
 5. `none`
    - signature 一致，并且所有目标可定位。
 
 `actions=[]`：
 
 - 不执行浏览器动作。
-- 如果页面能打开且 signature 可接受，返回 `ReplayStatus.observed`。
-- 如果页面 template 不一致，仍返回 drift。
+- 如果页面能打开且 template 一致，返回 `ReplayStatus.observed`。
+- 如果页面 template 不一致，返回 `status = drifted`、
+  `drift_status = page_mismatch`。
+- 如果 template 一致但 signature 变化，返回 `status = observed`、
+  `drift_status = signature_changed`，并附带 warning。
 
 ### Shared action executor
 
@@ -159,7 +173,7 @@ pipeline。需要抽成共享模块：
 apps/api/app/services/execution/action_executor.py
 ```
 
-建议暴露：
+固定暴露：
 
 ```text
 execute_action(action, runtime) -> dict
@@ -171,8 +185,12 @@ observe_step(runtime, step_index=...) -> dict
 - `autonomous_explorer.py` 调用共享 executor。
 - `learned_path_replay.py` 也调用共享 executor。
 
-抽取时保持原有 step log 字段尽量不变，避免破坏 history / workbench
-已有展示。
+抽取边界：
+
+- `autonomous_explorer.py` 原有 step log 字段必须保持兼容，不借机重构
+  planner、Supervisor、pass gate 或 workbench history。
+- `action_executor.py` 只承接单步动作执行和 observe，不做 replay drift
+  判断，不读取 LearnedPath，不触发 autonomous run。
 
 ### API
 
@@ -188,7 +206,7 @@ apps/api/app/routers/exploration.py
 POST /exploration/learned-paths/{path_id}/replay
 ```
 
-请求体建议：
+请求体固定为：
 
 ```json
 {
@@ -204,9 +222,12 @@ POST /exploration/learned-paths/{path_id}/replay
   "msg": "ok",
   "data": {
     "learned_path_id": "...",
+    "source_run_id": "...",
+    "trust": "confirmed",
     "status": "succeeded",
     "drift_status": "none",
     "drift_reasons": [],
+    "warnings": [],
     "stored_signature": {},
     "current_signature": {},
     "steps": [],
@@ -219,8 +240,8 @@ POST /exploration/learned-paths/{path_id}/replay
 HTTP 行为：
 
 - path 不存在：`404`
-- path 是 `deprecated`：默认 `422`，除非后续明确支持 force replay。
-- path 是 `flaky`：第一版可以允许显式 replay，但结果里标记 trust warning。
+- path 是 `deprecated`：`422`；本轮不支持 `force replay`。
+- path 是 `flaky`：允许显式 replay，但 `warnings` 必须包含 trust warning。
 - body 缺 URL：`422`
 - Playwright 启动或导航失败：返回 `ReplayStatus.runtime_error`，不要吞掉错误。
 
@@ -240,21 +261,26 @@ apps/console/src/i18n/locales/ja.ts
 
 入口放在 LearnedPath catalog 的 actions drawer 里。
 
-建议交互：
+固定交互：
 
 1. 用户打开某条 LearnedPath 的 actions drawer。
 2. drawer 顶部展示 Replay 区块：
-   - URL 输入框，默认值可以为空。
-   - Replay 按钮。
+   - URL 输入框，默认值为空。
+   - Replay 按钮；URL 为空时按钮 disabled。
 3. 点击后调用：
    - `replayLearnedPath(pathId, { url })`
 4. 在 drawer 内展示：
    - replay status
    - drift status
    - drift reasons
+   - warnings
    - 当前 signature vs stored signature
    - step logs timeline
    - final URL / title
+5. 展示三种 UI 状态：
+   - loading：按钮 loading，输入框保留当前 URL。
+   - error：HTTP / runtime error 以 drawer 内 alert 展示。
+   - result：展示 status、drift、warnings、steps、final state。
 
 第一版不新开复杂 workbench 页面；catalog 是路径资产入口，replay 也放
 在这里最直观。
@@ -317,8 +343,10 @@ apps/console/src/i18n/locales/ja.ts
 
 验证：
 
-- schema 能校验合法 `fill` / `click` / `press` / `observe`。
-- schema 会拒绝缺少 selector 的非 observe action。
+- schema 能从已存 action dict 重建 `fill` / `click` / `press` /
+  `observe`。
+- supported 非 observe action 缺少 selector 时，不产生 500；service
+  返回 `target_missing`。
 - unsupported action 不在 schema 层直接炸成 500，而是能被 service
   转成 `unsupported_action`。
 
@@ -334,8 +362,8 @@ apps/console/src/i18n/locales/ja.ts
 验证：
 
 - `confirmed` 排在 `provisional` 前。
-- `deprecated` 不进入默认候选。
-- `flaky` 不进入默认候选。
+- `deprecated` 不进入自动候选。
+- `flaky` 不进入自动候选。
 - 同一 trust 下按 `hit_count` / 更新时间排序。
 
 ### 10.2.3 Drift checker
@@ -384,7 +412,8 @@ apps/console/src/i18n/locales/ja.ts
 验证：
 
 - path 不存在返回 404。
-- deprecated path 默认拒绝。
+- deprecated path 返回 422。
+- flaky path 允许显式 replay，并返回 trust warning。
 - valid path 返回 `ReplayResult`。
 - runtime error 返回结构化 `runtime_error`。
 
@@ -421,7 +450,7 @@ apps/console/src/i18n/locales/ja.ts
 
 ### 后端单测
 
-建议新增：
+新增：
 
 ```text
 apps/api/tests/test_learned_path_replay.py
@@ -431,7 +460,7 @@ apps/api/tests/test_learned_path_replay.py
 
 1. 显式 path replay 成功。
 2. `actions=[]` 返回 observed。
-3. `deprecated` path 默认拒绝。
+3. `deprecated` path 返回 422。
 4. `flaky` path 显式 replay 时返回 trust warning。
 5. page template mismatch。
 6. query / dom signature changed but selectors still locatable。
@@ -503,6 +532,6 @@ git diff --check
 - 实际新增/修改了哪些前端入口。
 - replay status / drift status 是否和本计划一致。
 - 哪些验证命令通过。
-- 如果没有做自动候选 replay UI，明确写成后续事项。
-- 如果发现当前 action schema 仍不够稳定，记录后续 schema migration
-  风险。
+- 明确记录自动候选 replay UI 未进入本轮。
+- 如果实现中发现当前 action schema 仍不够稳定，记录后续 schema
+  migration 风险。
