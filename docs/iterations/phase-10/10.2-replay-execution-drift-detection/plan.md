@@ -1,206 +1,59 @@
-# 实施计划
+# 10.2 实施总纲
 
-状态：**可执行**。
+状态：**可施工**。
 
-本迭代的主线是：复用已有 LearnedPath，复刻一次同样的行为，并把
-“还能不能用、哪里变了、哪一步失败”返回给用户。实现时必须保持
-learning 和 replay 的边界：replay 不重新规划、不重新学习、不静默重试。
+本目录把原来的长计划拆成总纲 + 分步施工文档。AI 编码 Agent 开工前仍
+必须阅读本文件；具体实现时按 `steps/` 顺序逐份执行。
 
-上位定位：本包属于 **M10 Path Asset Foundation**。它会给 **M11.1
-Task-to-Path Planning & Execution MVP** 提供可调用的 replay engine，但
-本包不实现 Agent D · Path Planner Agent，不做用户任务理解，也不做参数
-绑定。
+## 快速入口
 
-## 施工范围
+- [brief.md](./brief.md) —— 极简版，1 屏内看懂本轮要做什么。
+- [simple.md](./simple.md) —— 通俗版，给非实现阅读。
+- [steps/01-replay-schema.md](./steps/01-replay-schema.md)
+- [steps/02-candidate-selection.md](./steps/02-candidate-selection.md)
+- [steps/03-drift-checker.md](./steps/03-drift-checker.md)
+- [steps/04-shared-action-executor.md](./steps/04-shared-action-executor.md)
+- [steps/05-replay-api.md](./steps/05-replay-api.md)
+- [steps/06-catalog-ui.md](./steps/06-catalog-ui.md)
+- [steps/07-tests-and-review.md](./steps/07-tests-and-review.md)
 
-### 后端 schema
+## 主线
 
-新增独立 schema 文件，避免 `learned_path.py` 继续膨胀：
+10.2 属于 **M10 Path Asset Foundation**。它复用已有 LearnedPath，重新
+打开页面，照着已存 actions 重跑一次，并返回“还能不能用、哪里变了、
+哪一步失败”的结构化结果。
 
-```text
-apps/api/app/schemas/learned_path_replay.py
-```
+10.2 会给未来 **M11.1 Task-to-Path Planning & Execution MVP** 提供
+replay engine，但本轮不实现 Agent D、自然语言任务理解、slot binding
+或 L3 task runner。
 
-本轮固定 contract 如下：
+## 固定边界
 
-- `ReplayAction`
-  - 从 LearnedPath `actions` 里重建出来的稳定动作类型。
-  - 输入来源是当前已存 action dict，字段来自 `_ACTION_KEEP_KEYS`：
-    `step`、`action_type`、`target_selector`、`target_description`、
-    `value`。
-  - `action_type` 先按字符串接收；service 层判断是否属于
-    `fill` / `click` / `press` / `observe`。未知值返回
-    `unsupported_action`，不能在 schema 层炸成 500。
-  - 对已支持的非 `observe` action，`target_selector` 不能为空；为空时
-    service 返回 `target_missing`。
-  - `step` 缺失时按 action list index 从 0 补齐；`target_description`
-    和 `value` 可为空。
-- `ReplayStepLog`
-  - 单步执行结果。
-  - 包含 step index、action type、selector、ok、error、matched_count、
-    URL / title before-after、screenshot ref。
-- `ReplayDriftStatus`
-  - 固定枚举：
-    - `none`
-    - `signature_changed`
-    - `target_missing`
-    - `page_mismatch`
-    - `unsupported_action`
-    - `no_candidate`
-- `ReplayStatus`
-  - 固定枚举：
-    - `succeeded`
-    - `observed`
-    - `drifted`
-    - `failed`
-    - `unsupported`
-    - `candidate_not_found`
-    - `runtime_error`
-- `ReplayResult`
-  - 包含 selected path、当前 signature、stored signature、drift status、
-    drift reasons、warnings、step logs、final state。
-- `ReplayRequest`
-  - 第一版只有一个字段：`url`。
-  - 本轮不在 request body 加 `scenario`、`learned_path_id`、`force` 或
-    自动候选 replay 参数。
+本轮只做 LearnedPath replay execution + drift detection。
 
-注意：这些状态是 replay 自己的状态，不是 `pass_gate.status`。
+明确不做：
 
-### 后端 repo
+- task input / chat 入口。
+- Runtime Conversation Surface / CLI。
+- Conversation Orchestrator / Dispatcher。
+- 根据用户自然语言任务检索、选择、组合 LearnedPath。
+- slot binding。
+- Agent D / E / F / G / H。
+- recovery / abort dialogue。
+- teaching mode。
+- 执行前确认流。
+- action risk / consent gate。
+- artifact lifecycle。
+- task postcondition verification。
+- multi-page workflow composition。
+- 目标网页 Cookie、`localStorage`、session state 或目标站点权限托管。
+- 调用 `/exploration/autonomous-runs` 或
+  `/exploration/autonomous-runs/stream`。
+- 把 replay 结果伪装成 `pass_gate` 或 Supervisor verdict。
 
-更新：
+## 核心 Contract
 
-```text
-apps/api/app/repos/learned_paths_repo.py
-```
-
-新增候选选择能力：
-
-```text
-find_replay_candidates(page_template, scenario)
-```
-
-规则：
-
-1. 只按 `page_template + scenario` 找候选，不要求
-   `dom_fingerprint` 完全一致。
-2. 排序优先级：
-   - `confirmed`
-   - `provisional`
-3. 自动候选列表固定跳过：
-   - `deprecated`
-   - `flaky`
-4. `flaky` 只允许显式指定 path id 时 replay，用于人工调试。
-5. 同一 trust 内部优先：
-   - `hit_count` 高
-   - `updated_at` 新
-   - `created_at` 新
-
-第一版 UI 主入口固定为“指定某一条 LearnedPath replay”。候选选择只
-作为 repo/service 能力和后续 M11.1 的 task-to-path planning 底座；
-本轮不新增自动候选 replay API，也不做自动候选 replay UI。
-
-### 后端 replay service
-
-新增服务：
-
-```text
-apps/api/app/services/learning/learned_path_replay.py
-```
-
-职责：
-
-1. 接收 URL 和 LearnedPath。
-2. 启动 `ExecutionRuntime` 并导航到 URL。
-3. 调用 `analyze_page(runtime)` 得到当前页面分析。
-4. 用 `page_signature.py` 计算当前：
-   - `page_template`
-   - `query_signature`
-   - `dom_fingerprint`
-5. 对比 stored signature 和 current signature。
-6. 检查 actions 是否支持。
-7. 检查每个非 observe action 的 `target_selector` 是否能定位。
-8. drift 不阻断时，按原 actions 顺序执行。
-9. 捕获最终 URL、title、screenshot、必要 final state。
-10. 返回 `ReplayResult`。
-
-### Drift 判断规则
-
-第一版不要说“轻微漂移 / 严重漂移”这种无法从 hash 里证明的词。
-
-固定规则：
-
-1. `page_mismatch`
-   - 当前 `page_template` 和 stored `page_template` 不一致。
-   - 不继续执行。
-2. `signature_changed`
-   - `page_template` 一致，但 `query_signature` 或 `dom_fingerprint`
-     不一致。
-   - 继续检查 selector。
-   - selector 都能定位时允许 replay；如果执行成功，`status` 仍为
-     `succeeded` 或 `observed`，但 `drift_status` 保留
-     `signature_changed`，并在 `warnings` 中写明页面签名已变化。
-3. `target_missing`
-   - 任一非 observe action 的 selector 找不到。
-   - 不继续执行，`status = drifted`。
-4. `unsupported_action`
-   - action 类型不是 `fill` / `click` / `press` / `observe`。
-   - 不继续执行，`status = unsupported`。
-5. `none`
-   - signature 一致，并且所有目标可定位。
-
-`actions=[]`：
-
-- 不执行浏览器动作。
-- 如果页面能打开且 template 一致，返回 `ReplayStatus.observed`。
-- 如果页面 template 不一致，返回 `status = drifted`、
-  `drift_status = page_mismatch`。
-- 如果 template 一致但 signature 变化，返回 `status = observed`、
-  `drift_status = signature_changed`，并附带 warning。
-
-### Shared action executor
-
-现在单步执行逻辑在：
-
-```text
-apps/api/app/services/learning/autonomous_explorer.py::_execute_step
-```
-
-10.2 不应该直接 import 这个私有函数，也不应该复用整个 autonomous
-pipeline。需要抽成共享模块：
-
-```text
-apps/api/app/services/execution/action_executor.py
-```
-
-固定暴露：
-
-```text
-execute_action(action, runtime) -> dict
-observe_step(runtime, step_index=...) -> dict
-```
-
-然后：
-
-- `autonomous_explorer.py` 调用共享 executor。
-- `learned_path_replay.py` 也调用共享 executor。
-
-抽取边界：
-
-- `autonomous_explorer.py` 原有 step log 字段必须保持兼容，不借机重构
-  planner、Supervisor、pass gate 或 workbench history。
-- `action_executor.py` 只承接单步动作执行和 observe，不做 replay drift
-  判断，不读取 LearnedPath，不触发 autonomous run。
-
-### API
-
-更新：
-
-```text
-apps/api/app/routers/exploration.py
-```
-
-第一版新增显式路径 replay：
+### Replay API
 
 ```text
 POST /exploration/learned-paths/{path_id}/replay
@@ -214,290 +67,113 @@ POST /exploration/learned-paths/{path_id}/replay
 }
 ```
 
-响应：
+本轮不在 request body 加 `scenario`、`learned_path_id`、`force` 或自动
+候选 replay 参数。
+
+响应 data 至少包含：
 
 ```json
 {
-  "code": 0,
-  "msg": "ok",
-  "data": {
-    "learned_path_id": "...",
-    "source_run_id": "...",
-    "trust": "confirmed",
-    "status": "succeeded",
-    "drift_status": "none",
-    "drift_reasons": [],
-    "warnings": [],
-    "stored_signature": {},
-    "current_signature": {},
-    "steps": [],
-    "final_url": "...",
-    "final_title": "..."
-  }
+  "learned_path_id": "...",
+  "source_run_id": "...",
+  "trust": "confirmed",
+  "status": "succeeded",
+  "drift_status": "none",
+  "drift_reasons": [],
+  "warnings": [],
+  "stored_signature": {},
+  "current_signature": {},
+  "steps": [],
+  "final_url": "...",
+  "final_title": "..."
 }
 ```
 
 HTTP 行为：
 
-- path 不存在：`404`
-- path 是 `deprecated`：`422`；本轮不支持 `force replay`。
-- path 是 `flaky`：允许显式 replay，但 `warnings` 必须包含 trust warning。
-- body 缺 URL：`422`
-- Playwright 启动或导航失败：返回 `ReplayStatus.runtime_error`，不要吞掉错误。
-
-不要新增或调用 autonomous run 创建接口。
-
-### Console UI
-
-更新：
-
-```text
-apps/console/src/api/exploration.ts
-apps/console/src/pages/LearnedPathCatalogPage.vue
-apps/console/src/i18n/locales/zh.ts
-apps/console/src/i18n/locales/en.ts
-apps/console/src/i18n/locales/ja.ts
-```
-
-入口放在 LearnedPath catalog 的 actions drawer 里。
-
-固定交互：
-
-1. 用户打开某条 LearnedPath 的 actions drawer。
-2. drawer 顶部展示 Replay 区块：
-   - URL 输入框，默认值为空。
-   - Replay 按钮；URL 为空时按钮 disabled。
-3. 点击后调用：
-   - `replayLearnedPath(pathId, { url })`
-4. 在 drawer 内展示：
-   - replay status
-   - drift status
-   - drift reasons
-   - warnings
-   - 当前 signature vs stored signature
-   - step logs timeline
-   - final URL / title
-5. 展示三种 UI 状态：
-   - loading：按钮 loading，输入框保留当前 URL。
-   - error：HTTP / runtime error 以 drawer 内 alert 展示。
-   - result：展示 status、drift、warnings、steps、final state。
-
-第一版不新开复杂 workbench 页面；catalog 是路径资产入口，replay 也放
-在这里最直观。
-
-### 文案要求
-
-中文文案要说人话：
-
-- `Replay`：重跑这条路径
-- `drift`：页面变化
-- `target_missing`：找不到当初记录的按钮或输入框
-- `unsupported_action`：这类动作当前还不能重跑
-
-必须避免：
-
-- “已通过”这类容易和 `pass_gate` 混淆的文案。
-- “Supervisor 验证成功”这类 replay 并没有做的事。
-- “重新学习”暗示。10.2 不自动学习。
-
-### 明确不做 M11 能力
-
-10.2 是 replay / drift，不是 task planner。不要在本包里加入：
-
-- task input / chat 入口。
-- Runtime Conversation Surface / CLI。
-- Conversation Orchestrator / Dispatcher。
-- 根据用户自然语言任务检索、选择、组合 LearnedPath。
-- slot binding（把“张三”“本周”“导出 CSV”等任务参数绑定到 actions）。
-- Agent D · Path Planner Agent。
-- Agent E · Result Reporter Agent。
-- Agent F / G recovery / abort dialogue。
-- Agent H Teaching Guide Agent 或 teaching mode。
-- 执行前确认流。
-- action risk / consent gate 或用户自定义 risk policy。
-- artifact lifecycle（download / export / screenshot 的 capture /
-  storage / display / retention / cleanup）。
-- task postcondition verification；本包只返回 replay final state 和
-  drift / failure result，不判断“用户任务是否完成”。
-- multi-page workflow composition；本包不编排多个 LearnedPath。
-- 目标网页 Cookie、`localStorage`、session state 或目标站点权限托管。
-  这些状态由操作者与目标网页负责；失效或权限不足只表现为 replay 的
-  drift / failure / runtime result，恢复对话留给后续里程碑。
-
-这些能力统一留给 M11.0 / M11.1 及后续里程碑。
-
-## 实施步骤
-
-### 10.2.1 Replay schema
-
-目标：先把 replay 的输入和输出长什么样定下来。
-
-产出：
-
-- `ReplayRequest`
-- `ReplayAction`
-- `ReplayStepLog`
-- `ReplayStatus`
-- `ReplayDriftStatus`
-- `ReplayResult`
-
-验证：
-
-- schema 能从已存 action dict 重建 `fill` / `click` / `press` /
-  `observe`。
-- supported 非 observe action 缺少 selector 时，不产生 500；service
-  返回 `target_missing`。
-- unsupported action 不在 schema 层直接炸成 500，而是能被 service
-  转成 `unsupported_action`。
-
-### 10.2.2 Candidate selection
-
-目标：明确系统自动找路径时该优先用哪条。
-
-产出：
-
-- repo 方法：按 `page_template + scenario` 返回 replay candidates。
-- 排序规则测试。
-
-验证：
-
-- `confirmed` 排在 `provisional` 前。
-- `deprecated` 不进入自动候选。
-- `flaky` 不进入自动候选。
-- 同一 trust 下按 `hit_count` / 更新时间排序。
-
-### 10.2.3 Drift checker
-
-目标：在执行前先判断这条旧路径现在还对不对得上。
-
-产出：
-
-- drift 计算函数。
-- selector 定位检查函数。
-
-验证：
-
-- page template 不一致时返回 `page_mismatch`。
-- dom hash 不一致但 selector 都在时返回 `signature_changed`，允许继续。
-- 任一 selector 找不到时返回 `target_missing`，不执行。
-- unsupported action 返回 `unsupported_action`，不执行。
-- `actions=[]` 能走 observational 分支。
-
-### 10.2.4 Shared action executor
-
-目标：把“填输入框 / 点按钮 / 按键 / observe”抽成 replay 和 autonomous
-都能共用的执行器。
-
-产出：
-
-- `apps/api/app/services/execution/action_executor.py`
-- `autonomous_explorer.py` 改为调用共享 executor。
-- replay service 调用同一个 executor。
-
-验证：
-
-- 原 autonomous 相关单测不因为抽取破坏 step log 字段。
-- executor 单测覆盖 fill / click / press / observe / selector missing /
-  unsupported action。
-
-### 10.2.5 Replay API
-
-目标：给前端一个明确入口，能指定某条 LearnedPath 重跑。
-
-产出：
-
-- `POST /exploration/learned-paths/{path_id}/replay`
-- API wrapper 类型。
-
-验证：
-
-- path 不存在返回 404。
-- deprecated path 返回 422。
-- flaky path 允许显式 replay，并返回 trust warning。
-- valid path 返回 `ReplayResult`。
-- runtime error 返回结构化 `runtime_error`。
-
-### 10.2.6 Catalog UI
-
-目标：让用户在 LearnedPath catalog 里直接试跑某条路径。
-
-产出：
-
-- actions drawer 增加 replay 区块。
-- 支持 URL 输入。
-- 展示 replay / drift / step log。
-
-验证：
-
-- 点击 Replay 调用 API。
-- loading / error / result 状态都有展示。
-- `target_missing` 能显示“找不到当初记录的按钮或输入框”。
-- `observed` 能显示“这条路径没有动作，已完成页面观察”。
-
-### 10.2.7 Tests and docs
-
-目标：覆盖本轮的关键误判风险，并在 review 里记录实际偏差。
-
-产出：
-
-- 后端 repo / service / API 单测。
-- 前端 catalog 单测更新。
-- `review.md` 追加实际实现和验证结果。
-
-验证命令见下方。
-
-## 测试计划
-
-### 后端单测
-
-新增：
-
-```text
-apps/api/tests/test_learned_path_replay.py
-```
-
-覆盖：
-
-1. 显式 path replay 成功。
-2. `actions=[]` 返回 observed。
-3. `deprecated` path 返回 422。
-4. `flaky` path 显式 replay 时返回 trust warning。
-5. page template mismatch。
-6. query / dom signature changed but selectors still locatable。
-7. selector missing。
-8. unsupported action。
-9. runtime navigation error。
-10. replay result 暴露足够结构化的 drift / failure evidence，供未来
-    consumers 使用。
-11. 不要求任何 WebAgentFlow 自有 session / 权限托管行为。
-
-更新：
-
-```text
-apps/api/tests/test_learned_paths_repo.py
-apps/api/tests/test_exploration_learned_paths_api.py
-```
-
-覆盖候选选择和新 API contract。
-
-### 前端单测
-
-更新：
-
-```text
-apps/console/src/__tests__/components/LearnedPathCatalogPage.test.ts
-apps/console/src/__tests__/api/exploration.test.ts
-apps/console/src/__tests__/i18n/locales.test.ts
-```
-
-覆盖：
-
-1. drawer 中渲染 replay 区块。
-2. URL 输入后点击 Replay 调用 API。
-3. replay 成功展示 status / drift / steps。
-4. target missing 展示友好文案。
-5. loading 和 error 状态。
-6. 三语 i18n key 齐全。
+- path 不存在：`404`。
+- path 是 `deprecated`：`422`。
+- path 是 `flaky`：允许显式 replay，但 `warnings` 必须包含 trust
+  warning。
+- body 缺 URL：`422`。
+- Playwright 启动或导航失败：返回 `status = runtime_error`。
+
+### ReplayStatus
+
+- `succeeded`
+- `observed`
+- `drifted`
+- `failed`
+- `unsupported`
+- `candidate_not_found`
+- `runtime_error`
+
+### ReplayDriftStatus
+
+- `none`
+- `signature_changed`
+- `target_missing`
+- `page_mismatch`
+- `unsupported_action`
+- `no_candidate`
+
+### Action 支持范围
+
+本轮只支持：
+
+- `fill`
+- `click`
+- `press`
+- `observe`
+
+已存 action dict 的读取字段固定为：
+
+- `step`
+- `action_type`
+- `target_selector`
+- `target_description`
+- `value`
+
+`step` 缺失时按 action list index 从 0 补齐。unsupported action 由 service
+转成 `unsupported_action`，不能炸成 500。
+
+## Drift 规则
+
+1. `page_mismatch`
+   - current `page_template` 与 stored `page_template` 不一致。
+   - 不继续执行，`status = drifted`。
+2. `signature_changed`
+   - `page_template` 一致，但 `query_signature` 或 `dom_fingerprint`
+     不一致。
+   - selector 都能定位时允许 replay。
+   - 执行成功后 `status` 仍可为 `succeeded` 或 `observed`，但
+     `drift_status = signature_changed`，并写入 warning。
+3. `target_missing`
+   - 任一 supported 非 `observe` action 的 selector 找不到。
+   - 不继续执行，`status = drifted`。
+4. `unsupported_action`
+   - action 类型不在支持范围内。
+   - 不继续执行，`status = unsupported`。
+5. `none`
+   - signature 一致，并且所有目标可定位。
+
+`actions=[]` 是合法 observational LearnedPath：
+
+- template 一致时返回 `status = observed`。
+- template 不一致时返回 `status = drifted`、
+  `drift_status = page_mismatch`。
+- template 一致但 signature 变化时返回 `status = observed`、
+  `drift_status = signature_changed`，并附带 warning。
+
+## 施工顺序
+
+1. **Replay schema**：定义 request / result / status / step log contract。
+2. **Candidate selection**：新增 repo 候选排序能力；不做自动候选 UI。
+3. **Drift checker**：实现 signature 对比、selector 检查和 drift 结果。
+4. **Shared action executor**：从 autonomous explorer 抽单步执行能力。
+5. **Replay API**：新增显式 path replay endpoint。
+6. **Catalog UI**：在 LearnedPath catalog drawer 里加 replay 区块。
+7. **Tests and review**：补后端 / 前端测试并更新 `review.md`。
 
 ## 验证命令
 
@@ -517,21 +193,9 @@ pnpm run build:console
 git diff --check
 ```
 
-如执行过 live autonomous run，只能通过 `verify-scenario` skill，并在
+本迭代理论上不需要 live autonomous run。replay API 自身的浏览器执行用
+service / API 测试和手工 catalog 点击验证即可。
+
+如果执行过 live autonomous run，只能通过 `verify-scenario` skill，并在
 `review.md` 里按 `pass_gate.status`、Supervisor verdict、五项 scorecard、
 `run_id` 原样记录。
-
-本迭代理论上不需要 live autonomous run；replay API 自身的浏览器执行
-用服务/API 测试和手工 catalog 点击验证即可。
-
-## 收尾要求
-
-完成实现后更新本目录 `review.md`：
-
-- 实际新增/修改了哪些后端模块。
-- 实际新增/修改了哪些前端入口。
-- replay status / drift status 是否和本计划一致。
-- 哪些验证命令通过。
-- 明确记录自动候选 replay UI 未进入本轮。
-- 如果实现中发现当前 action schema 仍不够稳定，记录后续 schema
-  migration 风险。

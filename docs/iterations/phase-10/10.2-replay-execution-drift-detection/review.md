@@ -45,6 +45,15 @@
   action 重建规则、UI loading / error / result 三态。
 - 这次只是文档细化，尚未开始实现。
 
+## 2026-05-07 文档拆分
+
+- 保留 `plan.md` 作为总纲 / 索引 / 核心 contract，避免 codex-review
+  上下文变弱。
+- 新增 `brief.md` 和 `simple.md`，分别提供极简版和通俗版。
+- 新增 `steps/01` 到 `steps/07` 分步施工文档，让实现可以按 schema、
+  repo、drift、executor、API、UI、测试顺序推进。
+- 这次仍然只做文档整理，尚未开始实现。
+
 ## 收尾反思
 
 待实现完成后追加。
