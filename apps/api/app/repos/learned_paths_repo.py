@@ -12,7 +12,7 @@ import hashlib
 import json
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -239,6 +239,46 @@ class LearnedPathRepository:
             tail = windowed[-1]
             next_cursor = encode_cursor(tail.created_at, tail.id)
         return windowed, has_next, next_cursor
+
+    def find_replay_candidates(
+        self,
+        *,
+        page_template: str,
+        scenario: str,
+    ) -> list[LearnedPath]:
+        """Return ordered candidate paths for automatic replay selection.
+
+        Only ``confirmed`` and ``provisional`` paths are included;
+        ``deprecated`` and ``flaky`` are skipped.
+
+        Ordering:
+        1. ``confirmed`` before ``provisional``
+        2. Higher ``hit_count`` first
+        3. Newer ``updated_at`` first
+        4. Newer ``created_at`` first
+        """
+        trust_order = case(
+            (LearnedPath.trust == TrustStatus.CONFIRMED, 0),
+            (LearnedPath.trust == TrustStatus.PROVISIONAL, 1),
+            else_=2,
+        )
+        stmt = (
+            select(LearnedPath)
+            .where(
+                LearnedPath.page_template == page_template,
+                LearnedPath.scenario == scenario,
+                LearnedPath.trust.in_(
+                    [TrustStatus.CONFIRMED, TrustStatus.PROVISIONAL]
+                ),
+            )
+            .order_by(
+                trust_order.asc(),
+                LearnedPath.hit_count.desc(),
+                LearnedPath.updated_at.desc().nullslast(),
+                LearnedPath.created_at.desc(),
+            )
+        )
+        return list(self.session.scalars(stmt).all())
 
     def count(self) -> int:
         return int(self.session.scalar(select(func.count(LearnedPath.id))) or 0)

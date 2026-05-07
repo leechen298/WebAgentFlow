@@ -253,3 +253,73 @@ def test_learned_path_returns_orm_row(
     fetched = db_session.get(LearnedPath, row.id)
     assert fetched is not None
     assert fetched.page_template == "/users"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# find_replay_candidates
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def test_find_replay_candidates_confirmed_before_provisional(
+    repo: LearnedPathRepository,
+) -> None:
+    prov, _ = repo.ingest_run(**_sample_ingest_kwargs(dom_fingerprint="p" * 64))
+    conf, _ = repo.ingest_run(**_sample_ingest_kwargs(dom_fingerprint="c" * 64))
+    repo.set_trust(conf.id, TrustStatus.CONFIRMED, reason=None)
+
+    candidates = repo.find_replay_candidates(
+        page_template="/users", scenario="filter_by_status"
+    )
+    assert [c.id for c in candidates] == [conf.id, prov.id]
+
+
+def test_find_replay_candidates_skips_deprecated_and_flaky(
+    repo: LearnedPathRepository,
+) -> None:
+    dep, _ = repo.ingest_run(**_sample_ingest_kwargs(dom_fingerprint="d" * 64))
+    flaky, _ = repo.ingest_run(**_sample_ingest_kwargs(dom_fingerprint="f" * 64))
+    repo.set_trust(dep.id, TrustStatus.DEPRECATED, reason=None)
+    repo.set_trust(flaky.id, TrustStatus.FLAKY, reason=None)
+
+    candidates = repo.find_replay_candidates(
+        page_template="/users", scenario="filter_by_status"
+    )
+    assert len(candidates) == 0
+
+
+def test_find_replay_candidates_sorts_by_hit_count(
+    repo: LearnedPathRepository,
+) -> None:
+    low, _ = repo.ingest_run(**_sample_ingest_kwargs(dom_fingerprint="a" * 64))
+    high, _ = repo.ingest_run(**_sample_ingest_kwargs(dom_fingerprint="b" * 64))
+    repo.set_trust(low.id, TrustStatus.CONFIRMED, reason=None)
+    repo.set_trust(high.id, TrustStatus.CONFIRMED, reason=None)
+    # bump high hit_count twice
+    repo.ingest_run(**_sample_ingest_kwargs(dom_fingerprint="b" * 64))
+    repo.ingest_run(**_sample_ingest_kwargs(dom_fingerprint="b" * 64))
+
+    candidates = repo.find_replay_candidates(
+        page_template="/users", scenario="filter_by_status"
+    )
+    assert candidates[0].id == high.id
+    assert candidates[1].id == low.id
+    assert candidates[0].hit_count > candidates[1].hit_count
+
+
+def test_find_replay_candidates_filters_by_page_template_and_scenario(
+    repo: LearnedPathRepository,
+) -> None:
+    match, _ = repo.ingest_run(**_sample_ingest_kwargs())
+    repo.set_trust(match.id, TrustStatus.CONFIRMED, reason=None)
+    mismatch, _ = repo.ingest_run(
+        **_sample_ingest_kwargs(
+            page_template="/orders", scenario="filter_by_date"
+        )
+    )
+    repo.set_trust(mismatch.id, TrustStatus.CONFIRMED, reason=None)
+
+    candidates = repo.find_replay_candidates(
+        page_template="/users", scenario="filter_by_status"
+    )
+    assert len(candidates) == 1
+    assert candidates[0].id == match.id
