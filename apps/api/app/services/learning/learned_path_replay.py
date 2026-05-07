@@ -19,6 +19,7 @@ from app.schemas.learned_path_replay import (
     ReplayStatus,
 )
 from app.schemas.page_analysis import PageAnalysis
+from app.services.execution.execution_runtime import ExecutionRuntime
 from app.services.learning.page_signature import (
     build_signature_dict,
 )
@@ -197,3 +198,28 @@ def run_drift_precheck(
         blocked=False,
         actions=replay_actions,
     )
+
+
+# ---------------------------------------------------------------------------
+# Action execution
+# ---------------------------------------------------------------------------
+
+
+def run_replay_actions(
+    actions: list[ReplayAction],
+    runtime: ExecutionRuntime,
+) -> list[dict[str, Any]]:
+    """Execute a sequence of replay actions and return step logs.
+
+    Stops on the first non-observe failure so the caller can report
+    ``status = failed`` with the exact step that broke.
+    """
+    from app.services.execution.action_executor import execute_action
+
+    logs: list[dict[str, Any]] = []
+    for action in actions:
+        log = execute_action(action, runtime)
+        logs.append(log)
+        if not log.get("ok", False) and action.action_type != "observe":
+            break
+    return logs

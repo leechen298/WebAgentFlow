@@ -22,178 +22,16 @@ from app.schemas.page_analysis import (
     AutonomousExplorationResult,
     DiscoveredElement,
     PageAnalysis,
-    PlannedAction,
+)
+from app.services.execution.action_executor import (
+    execute_action,
+    safe_screenshot,
 )
 from app.services.execution.execution_runtime import ExecutionRuntime
 from app.services.learning.action_planner import plan_actions
 from app.services.learning.page_analyzer import analyze_page
 
 logger = logging.getLogger(__name__)
-
-
-def _execute_step(
-    action: PlannedAction,
-    runtime: ExecutionRuntime,
-) -> dict[str, Any]:
-    """Execute a single planned action and return the step log."""
-    page = runtime.page
-    ts = int(time.time() * 1000)
-
-    step_log: dict[str, Any] = {
-        "step_index": action.step,
-        "action_type": action.action_type,
-        "target_selector": action.target_selector,
-        "target_description": action.target_description,
-        "value": action.value,
-        "plan_reason": action.reason,
-        "timestamp_ms": ts,
-    }
-
-    if action.action_type == "observe":
-        return _observe_step(step_log, runtime)
-
-    if page is None or page.is_closed():
-        step_log["ok"] = False
-        step_log["error"] = "No page available"
-        return step_log
-
-    # Capture before state
-    before_url = page.url
-    before_title = page.title()
-
-    try:
-        locator = page.locator(action.target_selector)
-
-        # Verify element exists and is visible
-        count = locator.count()
-        if count == 0:
-            step_log["ok"] = False
-            step_log["error"] = f"Selector '{action.target_selector}' matched 0 elements"
-            step_log["screenshot_ref"] = _safe_screenshot(runtime)
-            return step_log
-
-        step_log["matched_count"] = count
-
-        if action.action_type == "fill":
-            locator.first.wait_for(state="visible", timeout=5000)
-            locator.first.fill(action.value or "")
-            time.sleep(0.5)
-            step_log["ok"] = True
-            step_log["actual_value"] = locator.first.input_value()
-
-        elif action.action_type == "click":
-            locator.first.wait_for(state="visible", timeout=5000)
-            locator.first.click()
-            time.sleep(2.0)  # Wait for navigation / page change
-            step_log["ok"] = True
-
-        elif action.action_type == "press":
-            locator.first.wait_for(state="visible", timeout=5000)
-            locator.first.press(action.value or "Enter")
-            time.sleep(2.0)
-            step_log["ok"] = True
-
-        else:
-            step_log["ok"] = False
-            step_log["error"] = f"Unknown action type: {action.action_type}"
-            return step_log
-
-    except Exception as exc:
-        step_log["ok"] = False
-        step_log["error"] = str(exc)[:300]
-        step_log["screenshot_ref"] = _safe_screenshot(runtime)
-        return step_log
-
-    # Capture after state
-    after_url = page.url
-    after_title = page.title()
-    step_log["url_before"] = before_url
-    step_log["url_after"] = after_url
-    step_log["title_before"] = before_title
-    step_log["title_after"] = after_title
-    step_log["url_changed"] = after_url != before_url
-    step_log["title_changed"] = after_title != before_title
-    step_log["screenshot_ref"] = _safe_screenshot(runtime)
-
-    return step_log
-
-
-def _observe_step(
-    step_log: dict[str, Any],
-    runtime: ExecutionRuntime,
-) -> dict[str, Any]:
-    """Capture final page state without performing any action."""
-    page = runtime.page
-    time.sleep(2.0)  # Wait for any pending navigation
-
-    step_log["ok"] = True
-    if page and not page.is_closed():
-        step_log["url"] = page.url
-        step_log["title"] = page.title()
-
-        # Discover elements on the result page to check for content
-        try:
-            result_signals = page.evaluate("""() => {
-                const signals = {};
-
-                // Count real data rows.
-                //  - <tbody><tr>: standard HTML tables (Ant Table, plain tables)
-                //  - [role="row"]: ARIA grids, excluding rows that hold a
-                //    column header (i.e. thead analogues)
-                // Filter out empty-state placeholder rows — Ant Design
-                // Table renders <tr class="ant-table-placeholder"> when
-                // there's no data, Element Plus uses "el-table__empty-row",
-                // Naive UI similar. Counting those as "1 row" would make
-                // empty results look identical to a single-row result,
-                // which is what the previous version did.
-                function isPlaceholderRow(tr) {
-                    const cls = (tr.className && tr.className.toString)
-                        ? tr.className.toString() : '';
-                    return cls.indexOf('placeholder') !== -1
-                        || cls.indexOf('empty-row') !== -1;
-                }
-
-                let rowCount = 0;
-                for (const tr of document.querySelectorAll('tbody tr')) {
-                    if (tr.getAttribute('aria-hidden') === 'true') continue;
-                    if (isPlaceholderRow(tr)) continue;
-                    rowCount++;
-                }
-                for (const row of document.querySelectorAll('[role="row"]')) {
-                    if (row.querySelector('[role="columnheader"]')) continue;
-                    // Don't double-count <tr> that also has role="row".
-                    if (row.tagName === 'TR' && row.closest('tbody')) continue;
-                    if (isPlaceholderRow(row)) continue;
-                    rowCount++;
-                }
-                signals.result_row_count = rowCount;
-
-                signals.has_captcha = !!(
-                    document.title.match(/验证|captcha|challenge|security/i)
-                    || document.URL.match(/captcha|verify|sorry|challenge/i)
-                );
-                signals.has_login_wall = !!(
-                    document.title.match(/登录|login|sign.?in/i)
-                    || document.querySelector('[class*=login-wall], [class*=login-modal]')
-                );
-                signals.visible_text_length = document.body
-                    ? document.body.innerText.length : 0;
-                return signals;
-            }""")
-            step_log["result_signals"] = result_signals
-        except Exception:
-            pass
-
-    step_log["screenshot_ref"] = _safe_screenshot(runtime)
-    return step_log
-
-
-def _safe_screenshot(runtime: ExecutionRuntime) -> str | None:
-    """Take a screenshot, return path or None on failure."""
-    try:
-        return runtime.screenshot()
-    except Exception:
-        return None
 
 
 def _capture_final_state(runtime: ExecutionRuntime) -> dict[str, Any]:
@@ -475,7 +313,7 @@ def run_autonomous_exploration(
             "value": action.value,
         })
         logger.info("  Step %d: %s %s", action.step, action.action_type, action.target_selector)
-        step_log = _execute_step(action, runtime)
+        step_log = execute_action(action, runtime)
         step_logs.append(step_log)
 
         if not step_log.get("ok", False) and action.action_type != "observe":
@@ -485,7 +323,7 @@ def run_autonomous_exploration(
     # ── Phase 5: Final state ──
     final_url = runtime.current_url() if runtime.page else ""
     final_title = runtime.current_title() if runtime.page else ""
-    final_screenshot = _safe_screenshot(runtime)
+    final_screenshot = safe_screenshot(runtime)
     final_state = _capture_final_state(runtime)
 
     elapsed = int(time.time() * 1000) - t0
