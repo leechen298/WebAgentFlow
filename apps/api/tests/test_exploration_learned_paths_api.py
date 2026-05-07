@@ -13,7 +13,7 @@ from app.models.exploration_run import (
     ExplorationRun,
     ExplorationRunStatus,
 )
-from app.models.learned_path import LearnedPath
+from app.models.learned_path import LearnedPath, TrustStatus
 from app.repos.learned_paths_repo import LearnedPathRepository
 
 
@@ -745,3 +745,128 @@ def test_old_autonomous_run_singular_returns_404(client: TestClient) -> None:
 def test_old_autonomous_run_stream_singular_returns_404(client: TestClient) -> None:
     resp = client.post("/exploration/autonomous-run/stream", json={"url": "https://example.com"})
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Replay
+# ---------------------------------------------------------------------------
+
+
+def test_replay_unknown_path_is_404(client: TestClient) -> None:
+    resp = client.post(
+        "/exploration/learned-paths/not-a-real-id/replay",
+        json={"url": "http://127.0.0.1:5175/users"},
+    )
+    assert resp.status_code == 404
+
+
+def test_replay_deprecated_path_is_422(
+    client: TestClient, db_session: Session
+) -> None:
+    path_id = _ingest_sample(db_session)
+    LearnedPathRepository(db_session).set_trust(
+        path_id, TrustStatus.DEPRECATED, reason="old"
+    )
+    resp = client.post(
+        f"/exploration/learned-paths/{path_id}/replay",
+        json={"url": "http://127.0.0.1:5175/users"},
+    )
+    assert resp.status_code == 422
+
+
+def test_replay_missing_url_is_422(
+    client: TestClient, db_session: Session
+) -> None:
+    path_id = _ingest_sample(db_session)
+    resp = client.post(
+        f"/exploration/learned-paths/{path_id}/replay",
+        json={},
+    )
+    assert resp.status_code == 422
+
+
+def test_replay_flaky_path_includes_warning(
+    client: TestClient, db_session: Session
+) -> None:
+    from unittest.mock import patch
+
+    from app.schemas.learned_path_replay import ReplayResult
+
+    path_id = _ingest_sample(db_session)
+    LearnedPathRepository(db_session).set_trust(
+        path_id, TrustStatus.FLAKY, reason="unstable"
+    )
+
+    mock_result = ReplayResult(
+        learned_path_id=path_id,
+        source_run_id=None,
+        trust="flaky",
+        status="succeeded",
+        drift_status="none",
+        drift_reasons=[],
+        warnings=[],
+        stored_signature={},
+        current_signature={},
+        steps=[],
+        final_url="http://127.0.0.1:5175/users",
+        final_title="Users",
+    )
+
+    with patch(
+        "app.services.learning.learned_path_replay.run_replay",
+        return_value=mock_result,
+    ):
+        resp = client.post(
+            f"/exploration/learned-paths/{path_id}/replay",
+            json={"url": "http://127.0.0.1:5175/users"},
+        )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert "Path trust is flaky" in data["warnings"]
+
+
+def test_replay_valid_path_returns_result(
+    client: TestClient, db_session: Session
+) -> None:
+    from unittest.mock import patch
+
+    from app.schemas.learned_path_replay import ReplayResult, ReplayStepLog
+
+    path_id = _ingest_sample(db_session)
+    mock_result = ReplayResult(
+        learned_path_id=path_id,
+        source_run_id=None,
+        trust="provisional",
+        status="succeeded",
+        drift_status="none",
+        drift_reasons=[],
+        warnings=[],
+        stored_signature={"page_template": "/users"},
+        current_signature={"page_template": "/users"},
+        steps=[
+            ReplayStepLog(
+                step=1,
+                action_type="fill",
+                selector="#q",
+                ok=True,
+            )
+        ],
+        final_url="http://127.0.0.1:5175/users",
+        final_title="Users",
+    )
+
+    with patch(
+        "app.services.learning.learned_path_replay.run_replay",
+        return_value=mock_result,
+    ):
+        resp = client.post(
+            f"/exploration/learned-paths/{path_id}/replay",
+            json={"url": "http://127.0.0.1:5175/users"},
+        )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["learned_path_id"] == path_id
+    assert data["status"] == "succeeded"
+    assert data["drift_status"] == "none"
+    assert len(data["steps"]) == 1
+    assert data["steps"][0]["action_type"] == "fill"

@@ -34,6 +34,7 @@ from app.schemas.learned_path import (
     LearnedPathSummary,
     TrustPatchRequest,
 )
+from app.schemas.learned_path_replay import ReplayRequest, ReplayResult
 from app.schemas.page_analysis import PageAnalysis
 from app.services.learning.page_signature import (
     dom_fingerprint,
@@ -1226,6 +1227,42 @@ def patch_learned_path_trust(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return ApiResponse(data=_learned_path_to_detail(updated))
+
+
+@router.post(
+    "/learned-paths/{path_id}/replay",
+    response_model=ApiResponse[ReplayResult],
+)
+def replay_learned_path(
+    db: DbSession,
+    path_id: str,
+    body: ReplayRequest,
+) -> ApiResponse[ReplayResult]:
+    """Replay a stored LearnedPath against a live URL."""
+    from app.models.learned_path import TrustStatus
+    from app.services.learning.learned_path_replay import run_replay
+
+    row = LearnedPathRepository(db).get(path_id)
+    if row is None:
+        raise HTTPException(
+            status_code=404, detail=f"learned_path not found: {path_id}"
+        )
+
+    if row.trust == TrustStatus.DEPRECATED:
+        raise HTTPException(
+            status_code=422, detail="learned_path is deprecated"
+        )
+
+    if not body.url:
+        raise HTTPException(status_code=422, detail="url is required")
+
+    result = run_replay(row, body.url)
+
+    # Flaky paths are allowed but must carry a trust warning
+    if row.trust == TrustStatus.FLAKY:
+        result.warnings.insert(0, "Path trust is flaky")
+
+    return ApiResponse(data=result)
 
 
 # ───────────────────────────────────────────────────────────────────
