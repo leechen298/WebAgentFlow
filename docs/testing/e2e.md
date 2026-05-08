@@ -24,6 +24,18 @@ The first version assumes the developer starts the required services manually:
 The Playwright config intentionally does not orchestrate all servers with
 `webServer` yet. That can come later after the regression track is stable.
 
+Run the deterministic E2E stack in this order:
+
+1. Start Docker infrastructure with `pnpm run docker:up`.
+2. Apply API migrations with `pnpm run db:migrate:api`.
+3. Start the API server with `API_PORT=8001 pnpm run dev:api`.
+4. Start the validation site with `pnpm run dev:validation`.
+5. Start the console with
+   `VITE_USE_DEV_PROXY=true API_PORT=8001 CONSOLE_PORT=5174 pnpm run dev:console`.
+6. Seed replay fixtures with
+   `.venv/bin/python apps/e2e/scripts/seed-replay-fixtures.py`.
+7. Run E2E with `pnpm run test:e2e`.
+
 ## Seed Strategy
 
 E2E fixtures are inserted directly into `learned_paths`.

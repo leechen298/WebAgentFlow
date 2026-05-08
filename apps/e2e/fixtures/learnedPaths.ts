@@ -1,9 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { APIRequestContext } from '@playwright/test';
-
-import { apiUrl } from './config';
 
 export type ReplayFixtureName =
   | 'happy'
@@ -28,13 +25,6 @@ export interface ReplayFixtureFile {
   fixtures: Record<ReplayFixtureName, ReplayFixture>;
 }
 
-export interface LearnedPathSummary {
-  id: string;
-  page_template: string;
-  scenario: string;
-  trust: string;
-}
-
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fixtureFile = path.resolve(here, '../.tmp/replay-fixtures.json');
 
@@ -49,29 +39,4 @@ export async function loadReplayFixtures(): Promise<ReplayFixtureFile> {
         `Original error: ${(error as Error).message}`,
     );
   }
-}
-
-export async function fetchSeededLearnedPathByScenario(
-  request: APIRequestContext,
-  scenario: string,
-): Promise<LearnedPathSummary> {
-  const response = await request.get(apiUrl('/exploration/learned-paths'), {
-    params: { scenario, limit: '1' },
-  });
-  if (!response.ok()) {
-    throw new Error(
-      `Failed to fetch LearnedPath scenario=${scenario}: ` +
-        `${response.status()} ${await response.text()}`,
-    );
-  }
-
-  const body = (await response.json()) as {
-    code: number;
-    data?: { items?: LearnedPathSummary[] };
-  };
-  const item = body.data?.items?.[0];
-  if (!item) {
-    throw new Error(`Seeded LearnedPath not found for scenario=${scenario}`);
-  }
-  return item;
 }
