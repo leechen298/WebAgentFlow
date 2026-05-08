@@ -1,38 +1,45 @@
 # WebAgentFlow E2E
 
-This workspace contains deterministic Playwright Test coverage for
-WebAgentFlow. The first suite targets M10.2 LearnedPath replay API and catalog
-UI behavior.
+本 workspace 存放 WebAgentFlow 的确定性 Playwright Test E2E 覆盖。
+第一批套件面向 M10.2 LearnedPath replay API 和 catalog UI 行为。
 
-It does not depend on an LLM provider, does not call autonomous-run endpoints,
-and does not create live autonomous runs.
+它不依赖 LLM 服务，不调用 autonomous-run 接口，也不创建 live autonomous run。
 
-## One-time Setup
+`apps/e2e/tests/` 下的测试按产品能力域组织。Replay 覆盖放在
+`apps/e2e/tests/replay/`。这些是跨 console、API、数据库、validation-site
+和后端 Playwright replay 的 E2E 测试，不是
+`apps/console/src/__tests__/` 下的 console 单元测试。
 
-Install workspace dependencies and the Playwright Test Chromium browser:
+## 一次性设置
+
+安装 workspace 依赖和 Playwright Test Chromium 浏览器：
 
 ```bash
 pnpm install
 pnpm run test:e2e:install
 ```
 
-The replay API itself uses the Python Playwright runtime. If that browser is
-not installed in the API environment yet, also run:
+`pnpm run test:e2e:install` 会为 Playwright Test 安装 Chromium。
+如果它在浏览器下载阶段卡住，可以稍后重试。如果本机已有浏览器缓存，
+确定性 E2E 套件仍可能正常运行。
+
+Replay API 本身使用 Python Playwright runtime。如果 API 环境里还没有安装
+对应浏览器，也需要运行：
 
 ```bash
 .venv/bin/python -m playwright install chromium
 ```
 
-## Start Dependencies
+## 启动依赖
 
-Run infrastructure and migrations:
+启动基础设施并执行迁移：
 
 ```bash
 pnpm run docker:up
 pnpm run db:migrate:api
 ```
 
-Start the three app services in separate terminals:
+分别在三个终端启动应用服务：
 
 ```bash
 API_PORT=8001 pnpm run dev:api
@@ -40,32 +47,31 @@ pnpm run dev:validation
 VITE_USE_DEV_PROXY=true API_PORT=8001 CONSOLE_PORT=5174 pnpm run dev:console
 ```
 
-The first E2E version assumes these services are already running. It does not
-use Playwright `webServer` orchestration yet.
+第一版 E2E 默认这些服务已经运行，不使用 Playwright `webServer` 自动编排。
 
-## Seed Replay Fixtures
+## 写入 Replay 固定数据
 
-Seed deterministic LearnedPath fixtures:
+写入确定性 LearnedPath 固定数据：
 
 ```bash
 .venv/bin/python apps/e2e/scripts/seed-replay-fixtures.py
 ```
 
-The seed script:
+seed 脚本会：
 
-- Deletes only rows whose `dedup_key` starts with `e2e:replay:`.
-- Inserts fixed LearnedPath replay fixtures.
-- Writes generated ids to `apps/e2e/.tmp/replay-fixtures.json`.
-- Uses the API-side page analyzer to compute the current `/users` signature.
-- Does not call `/exploration/autonomous-runs`.
+- 只删除 `dedup_key` 以 `e2e:replay:` 开头的行。
+- 插入固定 LearnedPath replay 数据。
+- 将生成的 ID 写入 `apps/e2e/.tmp/replay-fixtures.json`。
+- 使用 API 侧 page analyzer 计算当前 `/users` 签名。
+- 不调用 `/exploration/autonomous-runs`。
 
-Reset the E2E rows when needed:
+需要清理 E2E 数据时运行：
 
 ```bash
 .venv/bin/python apps/e2e/scripts/reset-e2e-db.py
 ```
 
-## Run E2E
+## 运行 E2E
 
 ```bash
 pnpm run test:e2e
@@ -73,13 +79,13 @@ pnpm run test:e2e:headed
 pnpm run test:e2e:ui
 ```
 
-Default service URLs:
+默认服务地址：
 
-- API: `http://127.0.0.1:8001`
-- Console: `http://127.0.0.1:5174`
-- Validation site: `http://127.0.0.1:5175`
+- API：`http://127.0.0.1:8001`
+- Console：`http://127.0.0.1:5174`
+- Validation site：`http://127.0.0.1:5175`
 
-Override with:
+可以通过环境变量覆盖：
 
 ```bash
 E2E_API_BASE_URL=http://127.0.0.1:8001 \
@@ -88,10 +94,17 @@ E2E_VALIDATION_BASE_URL=http://127.0.0.1:5175 \
 pnpm run test:e2e
 ```
 
-## Trace Output
+## Trace 输出
 
-Traces are enabled on the first retry. On failure, inspect:
+首次 retry 时会启用 trace。失败后可查看：
 
 ```bash
 pnpm --filter @web-agent-flow/e2e exec playwright show-report
 ```
+
+Playwright 原始输出保存在 gitignored 路径：
+
+- `apps/e2e/test-results/`
+- `apps/e2e/playwright-report/`
+
+人类可读的测试运行摘要放在 `docs/testing/results/`。

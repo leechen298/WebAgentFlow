@@ -1,29 +1,26 @@
-# Codex Exploratory Validation
+# Codex 探索式验证
 
-Codex exploratory validation is a second-stage testing workflow. It cannot
-replace deterministic E2E regression.
+Codex 探索式验证是第二阶段测试工作流，不能替代确定性 E2E 回归。
 
-The purpose is to let Codex read product and API contracts, propose boundary
-cases, run local deterministic E2E, observe the console and validation-site,
-and identify gaps that should become permanent tests.
+它的目标是让 Codex 阅读产品和 API contract，提出边界用例，运行本地确定性
+E2E，观察 console 和 validation-site，并识别后续应该沉淀为长期测试的缺口。
 
-## Hard Boundaries
+## 硬边界
 
-Codex exploratory validation must not:
+Codex 探索式验证不能：
 
-- Call `/exploration/autonomous-runs`.
-- Call `/exploration/autonomous-runs/stream`.
-- Import or directly run the autonomous explorer.
-- Depend on an LLM provider.
+- 调用 `/exploration/autonomous-runs`。
+- 调用 `/exploration/autonomous-runs/stream`。
+- import 或直接运行 autonomous explorer。
+- 依赖 LLM 服务。
 
-## Allowed Activities
+## 允许的活动
 
-It may:
+Codex 探索式验证可以：
 
-- Run deterministic E2E suites.
-- Use headed Playwright to inspect the local console and validation-site.
-- Propose new deterministic E2E cases.
-- Convert stable findings into permanent Playwright Test cases.
+- 运行确定性 E2E 套件。
+- 使用 headed Playwright 查看本地 console 和 validation-site。
+- 提出新的确定性 E2E 用例。
+- 把稳定发现转成长期 Playwright Test 用例。
 
-No automatic exploratory script is implemented in the current testing
-infrastructure pass.
+当前测试基础设施阶段不实现自动探索脚本。

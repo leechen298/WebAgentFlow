@@ -1,11 +1,11 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
-import { apiUrl, validationUrl } from '../fixtures/config';
+import { apiUrl, validationUrl } from '../../fixtures/config';
 import {
   loadReplayFixtures,
   type ReplayFixtureFile,
   type ReplayFixtureName,
-} from '../fixtures/learnedPaths';
+} from '../../fixtures/learnedPaths';
 
 interface ApiEnvelope<T> {
   code: number;

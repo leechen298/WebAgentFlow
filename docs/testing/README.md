@@ -1,30 +1,25 @@
-# Testing Infrastructure
+# 测试基础设施
 
-This directory contains long-lived testing infrastructure documentation for
-WebAgentFlow.
+本目录存放 WebAgentFlow 长期测试基础设施文档。
 
-`docs/iterations/` stays milestone-scoped. It should hold delivery intent,
-plans, step documents, and reviews for M10/M11/etc. It should not become the
-home for permanent test-system documentation.
+`docs/iterations/` 只保留里程碑施工文档，用来记录 M10/M11 等交付的
+intent、plan、step 文档和 review。长期测试体系文档不放在
+`docs/iterations/` 下。
 
-## Current Test Lines
+## 当前测试线
 
-WebAgentFlow has two planned validation tracks:
+WebAgentFlow 规划两条验证线：
 
-- Deterministic E2E regression: stable Playwright Test suites that exercise
-  already-shipped behavior.
-- Codex exploratory validation: a later workflow where Codex proposes boundary
-  cases from contracts and turns stable findings into permanent E2E coverage.
+- 确定性 E2E 回归：稳定的 Playwright Test 套件，用来覆盖已经交付的行为。
+- Codex 探索式验证：后续阶段的工作流，由 Codex 基于产品/API contract 提出边界用例，
+  并把稳定发现沉淀为长期 E2E 用例。
 
-The current implementation starts with deterministic E2E. Codex exploratory
-validation is documented as a second stage only.
+当前先实现确定性 E2E。Codex 探索式验证目前只保留方案文档。
 
-The E2E suite is deliberately independent of LLM providers. It does not call
-`/exploration/autonomous-runs`, does not call
-`/exploration/autonomous-runs/stream`, and does not create live autonomous
-runs.
+E2E 套件不依赖 LLM 服务，不调用 `/exploration/autonomous-runs`，
+不调用 `/exploration/autonomous-runs/stream`，也不创建 live autonomous run。
 
-## Main Commands
+## 常用命令
 
 ```bash
 pnpm run test:e2e
@@ -32,12 +27,17 @@ pnpm run test:e2e:headed
 pnpm run test:e2e:ui
 ```
 
-Install the Playwright Test browser once when setting up the E2E workspace:
+首次设置 E2E workspace 时安装 Playwright Test 浏览器：
 
 ```bash
 pnpm run test:e2e:install
 ```
 
-See [e2e.md](./e2e.md) for the deterministic E2E design and
-[codex-exploratory.md](./codex-exploratory.md) for the deferred exploratory
-validation plan.
+查看 [e2e.md](./e2e.md) 了解确定性 E2E 设计；
+查看 [results/2026-05-08-replay-e2e-first-run.md](./results/2026-05-08-replay-e2e-first-run.md)
+了解 M10.2 replay E2E 首次实跑结果；
+查看 [codex-exploratory.md](./codex-exploratory.md) 了解后续探索式验证方案。
+
+人类可读的测试运行摘要放在 `docs/testing/results/`。
+Playwright 原始输出保留在 `apps/e2e/test-results/` 和
+`apps/e2e/playwright-report/`，并由 gitignore 忽略。

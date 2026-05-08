@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-import { consoleUrl, validationUrl } from '../fixtures/config';
-import { loadReplayFixtures, type ReplayFixtureFile } from '../fixtures/learnedPaths';
+import { consoleUrl, validationUrl } from '../../fixtures/config';
+import { loadReplayFixtures, type ReplayFixtureFile } from '../../fixtures/learnedPaths';
 
 let seeded: ReplayFixtureFile;
 
