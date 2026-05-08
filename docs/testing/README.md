@@ -14,7 +14,14 @@ WebAgentFlow 规划两条验证线：
 - Codex 探索式验证：后续阶段的工作流，由 Codex 基于产品/API contract 提出边界用例，
   并把稳定发现沉淀为长期 E2E 用例。
 
-当前先实现确定性 E2E。Codex 探索式验证目前只保留方案文档。
+当前已建立的测试域是 M10.2 replay。后续核心产品能力域可以继续在
+`docs/testing/features/` 下建立自己的测试矩阵，例如 conversation、
+task-execution、recovery、teaching、multi-page-workflow。不是每个小功能都需要
+完整 E2E；小功能应归入所属能力域，只有跨模块、用户可见、真实浏览器链路等核心
+行为才需要 E2E 或探索式验证。
+
+当前先实现 replay 的确定性 E2E。Codex 探索式验证的第一批目标也只针对
+M10.2 replay，不是 WebAgentFlow 全项目自动测试。
 
 E2E 套件不依赖 LLM 服务，不调用 `/exploration/autonomous-runs`，
 不调用 `/exploration/autonomous-runs/stream`，也不创建 live autonomous run。
@@ -34,6 +41,8 @@ pnpm run test:e2e:install
 ```
 
 查看 [e2e.md](./e2e.md) 了解确定性 E2E 设计；
+查看 [features/replay.md](./features/replay.md) 了解 M10.2 replay 测试域；
+查看 [exploratory/README.md](./exploratory/README.md) 了解 replay 探索式验证提示词和用例矩阵；
 查看 [results/2026-05-08-replay-e2e-first-run.md](./results/2026-05-08-replay-e2e-first-run.md)
 了解 M10.2 replay E2E 首次实跑结果；
 查看 [codex-exploratory.md](./codex-exploratory.md) 了解后续探索式验证方案。

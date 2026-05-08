@@ -5,6 +5,15 @@ Codex 探索式验证是第二阶段测试工作流，不能替代确定性 E2E 
 它的目标是让 Codex 阅读产品和 API contract，提出边界用例，运行本地确定性
 E2E，观察 console 和 validation-site，并识别后续应该沉淀为长期测试的缺口。
 
+当前第一批 Codex 探索式验证只针对 M10.2 replay 测试域，不是 WebAgentFlow
+全项目自动测试。后续如果 conversation、task-execution、recovery、teaching、
+multi-page-workflow 等能力进入实现，应分别建立各自的用例矩阵。
+
+Replay 探索式验证资料位于：
+
+- `docs/testing/exploratory/replay-e2e-cases.md`
+- `docs/testing/exploratory/replay-e2e-run-prompt.md`
+
 ## 硬边界
 
 Codex 探索式验证不能：

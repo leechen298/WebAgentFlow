@@ -17,6 +17,10 @@ validation-site 和后端 Playwright replay 的产品闭环测试。
 
 这不会新增产品行为，也不会扩大 M10.2 范围。
 
+Replay 测试域的长期矩阵见 [features/replay.md](./features/replay.md)。
+Codex 探索式补充用例见
+[exploratory/replay-e2e-cases.md](./exploratory/replay-e2e-cases.md)。
+
 ## 环境组成
 
 第一版默认由开发者手动启动依赖服务：
@@ -82,7 +86,7 @@ seed 脚本通过 API 侧 page analyzer 和 execution runtime 计算当前 `/use
 ## 暂缓项
 
 - 真实 DOM 遮挡导致的 failed action。
-- live autonomous learning 到 replay 的 smoke coverage。
+- live autonomous learning 到 replay 的冒烟覆盖。
 - multi-page workflow。
 - task postcondition verification。
 
