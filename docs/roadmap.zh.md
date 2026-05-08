@@ -147,6 +147,9 @@ M11.0 建立第一版运行时产品入口，让用户可以和 WebAgentFlow 沟
 阶段 CLI 即可，因为目标是先跑通完整功能闭环，再打磨更丰富的操作员
 界面。
 
+迭代文档：
+[`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/)。
+
 预期交付：
 
 - CLI-first 的运行时沟通入口；用户和 **WebAgentFlow** 沟通，而不是
@@ -340,13 +343,14 @@ M18 在 runtime loop 和 workflow composition 可用之后，稳定 CLI / API
 - 接入用户自建系统或操作台的 integration cookbook。
 - 版本化 CLI / API contract 和兼容策略。
 
-## M10 收口后的过渡非目标
+## M11.0 明确非目标
 
-规范列表见 [`scope-boundaries.zh.md`](./scope-boundaries.zh.md)。在 M11.0
-迭代文档写出之前，刚完成的 M10.2 边界仍作为历史参考。要点：
+规范列表见 [`scope-boundaries.zh.md`](./scope-boundaries.zh.md)。M11.0
+是 runtime conversation 与 orchestration foundation；刚完成的 M10.2
+replay 边界仍作为历史参考。要点：
 
-- 不做运行时 conversation shell。
-- 不做 Agent D、Agent H 或 L3 task runner。
+- 不做 Agent D / E / F / G / H 具体实现。
+- 不做 L3 task runner 或 task-to-path planning。
 - 不做 L3 task result verification。
 - 不做 artifact lifecycle。
 - 不做 multi-page workflow composition。

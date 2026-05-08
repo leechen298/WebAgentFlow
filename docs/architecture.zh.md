@@ -52,7 +52,9 @@ Agent 编排**。刚完成的 M10 可执行包是
 - M10 Path Asset Foundation / 路径资产基础已交付 LearnedPath persistence、
   catalog 和 replay / drift。
 - M11.0 Runtime Conversation Shell & Agent Orchestration 是下一步计划，
-  但迭代文档尚未创建。
+  迭代文档已在
+  `docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`
+  初始化。
 - `apps/worker` 仍是脚手架。
 - L2 用户引导学习、L3 task execution、runtime conversation、
   Conversation Orchestrator、Agent D / E / F / G / H routing，以及 Agent H

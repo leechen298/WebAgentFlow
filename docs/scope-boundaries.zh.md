@@ -8,15 +8,25 @@
 
 ## 当前交付里程碑
 
-M10.2 已完成。下一步计划交付包是 **M11.0 · Runtime Conversation Shell &
-Agent Orchestration / 运行时沟通与 Agent 编排**。
+当前执行包是 **M11.0 · Runtime Conversation Shell & Agent Orchestration /
+运行时沟通与 Agent 编排**。迭代文档：
+[`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/)。
 
-在 M11.0 迭代文档写出之前，本文保留刚完成的 M10.2 边界作为历史参考；
-下一里程碑以 roadmap 为准。迭代文档位于 `docs/iterations/m<N>/`；规划
-语言使用 M<N> 指交付里程碑，使用 L1/L2/L3 指生命周期阶段。
+M11.0 是 runtime loop foundation。本轮范围是：
+
+- CLI-first runtime conversation surface，让用户和 WebAgentFlow 沟通
+- Conversation Orchestrator / Dispatcher 骨架
+- session state
+- 最小 message / event / audit log 结构
+- 基础 slash commands 或等价结构化消息
+- 显式 replay hook：`learned_path_id + url`
+
+M11.0 不做 path selection、不做 task planning、不做 slot binding，也不实现
+Agent D / E / F / G / H 行为。规划语言使用 M<N> 指交付里程碑，使用
+L1/L2/L3 指生命周期阶段。
 
 刚完成的执行包：`10.2-replay-execution-drift-detection`。
-M10.2 实现了 LearnedPath replay 和 drift detection：
+M10.2 现在作为历史参考。它实现了 LearnedPath replay 和 drift detection：
 
 - 从 catalog 消费一条已有 LearnedPath
 - 针对用户提供的 URL 回放已存 actions
@@ -31,15 +41,12 @@ knowledge store。
 
 ### 执行与编排
 
-- **Runtime conversation CLI / 运行时沟通 CLI** —— 不属于 M10.2。这里要区分
-  三类 CLI：
+- **CLI surface 混淆** —— 这里要区分三类 CLI：
   - 当前 `wagent verify` / `verify-scenario`：已经存在的开发验证 skill
     后端，用于可审计的 scenario check；
-  - M11.0 Runtime Conversation CLI：未来 WebAgentFlow 运行时产品入口，用户
-    在这里和 WebAgentFlow 沟通；
+  - M11.0 Runtime Conversation CLI：当前规划中的 WebAgentFlow 运行时产品
+    入口，用户在这里和 WebAgentFlow 沟通；
   - M16 External CLI：后续面向外部调度、本地脚本和集成的稳定工具接口。
-  M10.2 期间只有现有 `verify-scenario` 后端存在；M11.0 和 M16 的 CLI
-  都不属于本包。
 - **Skill / Tool 接口（给第三方 Agent）** —— 对外接口仍然是 HTTP API。
   唯一例外是 `verify-scenario` Claude Code skill（由 `wagent` CLI 通过
   `wagent skill install` 生成到 `~/.claude/skills/`），包装同一个 HTTP
@@ -48,19 +55,22 @@ knowledge store。
   里程碑。
 - **Task-to-Path Planning MVP** —— 用户任务 / chat 入口、Agent D Path
   Planner、路径检索 / 排序、slot binding、执行前确认、task result
-  verification、Agent E 结果汇报属于 M11.1，不属于 M10.2。
+  verification、Agent E 结果汇报属于 M11.1，不属于 M11.0。
 - **Recovery / abort 对话** —— Agent F Recovery Dialogue 和 Agent G
-  Abort Dialogue 属于 M12，不属于 M10.2。
+  Abort Dialogue 属于 M12，不属于 M11.0。
 - **Agent H Teaching Guide Agent / 教学引导 Agent** —— guided teaching 属于
-  M13，不属于 M10.2。
-- **Runtime Agent orchestration / 运行时 Agent 编排** —— M10.2 不实现 Agent
-  D / E / F / G / H，不实现 session controller，不实现暂停 / 继续 /
-  abort 命令，不实现 takeover 路由，也不实现面向用户的运行时对话。
+  M13，不属于 M11.0。
+- **Runtime Agent 具体实现** —— M11.0 可以定义 routing 边界，但不实现
+  Agent D / E / F / G / H 逻辑，不做 L3 task runner、slot binding、
+  recovery dialogue 或 teaching behavior。
 - **Multi-page workflow composition / 多页面工作流编排** —— 多个 LearnedPath
-  组成跨页面 workflow 属于 M17，不属于 M10.2。
+  组成跨页面 workflow 属于 M17，不属于 M11.0。
 - **Action risk & consent gate / 操作风险与确认门** —— 风险分类、
   destructive action 拦截、用户自定义 risk policy、执行前 consent gate
-  属于 M11 / M12 后续工作，不属于 M10.2。
+  属于后续工作，不属于 M11.0。
+- **Autonomous learning 或隐藏式重新学习** —— M11.0 不能在用户背后调用
+  autonomous run endpoints 学习路径。它只能通过显式
+  `learned_path_id + url` replay hook 使用已有 M10 replay 能力。
 
 ### 监督
 
@@ -74,7 +84,7 @@ knowledge store。
   provenance 写回、路径纠正属于 M13。
 - **Guided teaching / 引导式教学模式** —— guided teaching、元素
   highlight、indicator / tooltip overlay，以及 Teaching Guide Agent 交互
-  属于 M13。M10.2 不做 visible browser teaching overlay，也不记录用户
+  属于 M13。M11.0 不做 visible browser teaching overlay，也不记录用户
   真实操作。
 - **控件覆盖扩展与模式归纳** —— popup 控件、自定义 click-toggle
   控件、更多 label handler、跨页面 pattern mining 属于 M14，除非明确
@@ -84,7 +94,7 @@ knowledge store。
   最终报告。
 - **Negative knowledge store / 负面知识资产化** —— failed attempts、
   replay drift、`target_missing`、`unsupported_action` 和 user corrections
-  的正式资产化属于 M14 / M15。M10.2 可以产出 replay / drift evidence，
+  的正式资产化属于 M14 / M15。M10.2 已经可以产出 replay / drift evidence，
   但不实现完整 store。
 
 ### Parser / AST
@@ -102,11 +112,11 @@ knowledge store。
   回退、操作失败，属于 runtime failure / recovery 问题。
 - **Artifact lifecycle / Artifact 生命周期** —— download / export /
   upload / screenshot artifact 的 capture、storage、display / return、
-  retention、cleanup 属于后续 M11 / M15 / M16 / M18 工作。M10.2 只返回
-  replay result 和可审计状态。
+  retention、cleanup 属于后续 M11 / M15 / M16 / M18 工作。M11.0 可以定义
+  audit event，但不实现 artifact lifecycle handling。
 - **Engine data hygiene / 引擎数据卫生** —— logs、screenshots、artifacts、
   conversation records、LLM prompt payloads 的 retention、cleanup、
-  redaction、audit policy 属于后续 hygiene 工作，不属于 M10.2。
+  redaction、audit policy 属于后续 hygiene 工作，不属于 M11.0。
 - **Autonomous-run 结果落库** —— 已交付。每次 autonomous run 都写入
   `exploration_runs`，`strategy_json.kind == "autonomous"`。列表 / 详情通过
   `GET /exploration/autonomous-runs[/{run_id}]`，支持按 `spec_id` / `scenario`

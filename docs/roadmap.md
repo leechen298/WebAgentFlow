@@ -163,6 +163,9 @@ M11.0 creates the first runtime product surface for talking to
 WebAgentFlow. A CLI is enough at this stage because the goal is to close
 the full functional loop before polishing richer operator surfaces.
 
+Iteration docs:
+[`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/).
+
 Expected delivery:
 
 - A CLI-first runtime conversation surface where the user talks to
@@ -382,14 +385,15 @@ Expected delivery:
   systems or operator consoles.
 - Versioned CLI / API contract and compatibility policy.
 
-## Explicit non-goals (transition after M10)
+## Explicit non-goals (M11.0)
 
 See [`scope-boundaries.md`](./scope-boundaries.md) for the canonical
-list. Last completed M10.2 boundaries remain useful historical
-reference until M11.0 iteration documents are written. Highlights:
+list. M11.0 is the runtime conversation and orchestration foundation;
+the completed M10.2 replay boundaries remain useful historical
+reference. Highlights:
 
-- No runtime conversation shell.
-- No Agent D, Agent H, or L3 task runner.
+- No Agent D / E / F / G / H implementations.
+- No L3 task runner or task-to-path planning.
 - No L3 task result verification.
 - No artifact lifecycle.
 - No multi-page workflow composition.

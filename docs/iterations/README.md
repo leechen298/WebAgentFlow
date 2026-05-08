@@ -38,7 +38,8 @@ docs/iterations/
 
 - **里程碑目录**：命名为 `m<N>`，`<N>` 是整数，对齐
   `docs/roadmap.md` 里的交付里程碑编号。最近关闭的 M10
-  文档放在 `docs/iterations/m10/`；下一步 M11.0 尚未创建迭代目录。
+  文档放在 `docs/iterations/m10/`；M11.0 迭代目录已初始化在
+  `docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`。
   文档正文里请写 M10 / M11，产品生命周期则写 L1/L2/L3。
 - **迭代目录**：默认使用 `<NN>-<slug>`。`<NN>` 是两位数字（`01` / `02` / …），**在里程碑内部递增**，不跨里程碑。
   `<slug>` 是简短 kebab-case 英文名，3–5 个词，和 git 分支名或 commit 主题呼应。

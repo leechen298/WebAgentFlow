@@ -63,8 +63,9 @@ Current code status:
 
 - M10 Path Asset Foundation has shipped LearnedPath persistence,
   catalog, and replay / drift.
-- M11.0 Runtime Conversation Shell & Agent Orchestration is planned next,
-  but its iteration documents have not been created yet.
+- M11.0 Runtime Conversation Shell & Agent Orchestration is planned next;
+  its iteration docs are initialized under
+  `docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`.
 - `apps/worker` is still a scaffold.
 - L2 user-guided learning, L3 task execution, runtime conversation,
   Conversation Orchestrator, Agent routing for D / E / F / G / H, and
