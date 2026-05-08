@@ -8,12 +8,15 @@
 
 ## 当前交付里程碑
 
-**M10 —— Path Asset Foundation / 路径资产基础**。迭代文档位于
-`docs/iterations/m10/`；规划语言使用 M10 指交付里程碑，使用 L1/L2/L3
-指生命周期阶段。
+M10.2 已完成。下一步计划交付包是 **M11.0 · Runtime Conversation Shell &
+Agent Orchestration / 运行时沟通与 Agent 编排**。
 
-当前可执行包：`10.2-replay-execution-drift-detection`。
-M10.2 只实现 LearnedPath replay 和 drift detection：
+在 M11.0 迭代文档写出之前，本文保留刚完成的 M10.2 边界作为历史参考；
+下一里程碑以 roadmap 为准。迭代文档位于 `docs/iterations/m<N>/`；规划
+语言使用 M<N> 指交付里程碑，使用 L1/L2/L3 指生命周期阶段。
+
+刚完成的执行包：`10.2-replay-execution-drift-detection`。
+M10.2 实现了 LearnedPath replay 和 drift detection：
 
 - 从 catalog 消费一条已有 LearnedPath
 - 针对用户提供的 URL 回放已存 actions
@@ -21,7 +24,7 @@ M10.2 只实现 LearnedPath replay 和 drift detection：
   `target_missing`、`unsupported_action` 等 drift reasons
 
 M10.2 不是 L3 task runner。Replay / drift 结果未来可以成为 failure
-evidence 和 drift evidence 的来源，但本包不要求实现完整的 negative
+evidence 和 drift evidence 的来源，但本包没有实现完整的 negative
 knowledge store。
 
 ## 不在范围内

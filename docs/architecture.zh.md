@@ -42,13 +42,17 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
 [`roadmap.zh.md`](./roadmap.zh.md) 为准：产品生命周期阶段是 L1 / L2 /
 L3，交付里程碑是 M10 / M11 / ...
 
-当前交付里程碑：**M10 Path Asset Foundation / 路径资产基础**。当前
-可执行包：`10.2-replay-execution-drift-detection`。
+M10 Path Asset Foundation / 路径资产基础已完成。下一步计划交付包是
+**M11.0 Runtime Conversation Shell & Agent Orchestration / 运行时沟通与
+Agent 编排**。刚完成的 M10 可执行包是
+`10.2-replay-execution-drift-detection`。
 
 当前代码状态：
 
-- M10 Path Asset Foundation / 路径资产基础是活跃里程碑。
-- `10.2` replay / drift 是当前任务。
+- M10 Path Asset Foundation / 路径资产基础已交付 LearnedPath persistence、
+  catalog 和 replay / drift。
+- M11.0 Runtime Conversation Shell & Agent Orchestration 是下一步计划，
+  但迭代文档尚未创建。
 - `apps/worker` 仍是脚手架。
 - L2 用户引导学习、L3 task execution、runtime conversation、
   Conversation Orchestrator、Agent D / E / F / G / H routing，以及 Agent H

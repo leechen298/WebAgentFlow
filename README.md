@@ -14,11 +14,14 @@ The product model uses three lifecycle stages:
 - **L2 User-Guided Learning** — planned user demonstration and guided teaching.
 - **L3 Actual Work** — planned task-to-path execution from learned paths.
 
-The active delivery milestone is **M10 Path Asset Foundation**.
+**M10 Path Asset Foundation** has completed. The next planned delivery
+package is **M11.0 Runtime Conversation Shell & Agent Orchestration**.
 
 - **10.1 LearnedPath persistence** — shipped.
 - **10.1.5 LearnedPath catalog** — shipped.
-- **10.2 Replay execution + drift detection** — current task.
+- **10.2 Replay execution + drift detection** — shipped, with replay API,
+  catalog replay UI, deterministic E2E, and a first Codex exploratory
+  evidence report.
 
 Not yet implemented:
 

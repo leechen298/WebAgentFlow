@@ -54,13 +54,17 @@ accumulation. The current planning vocabulary lives in
 product lifecycle stages are L1 / L2 / L3, delivery milestones are M10 /
 M11 / ...
 
-Current delivery milestone: **M10 Path Asset Foundation**. Current
-executable package: `10.2-replay-execution-drift-detection`.
+M10 Path Asset Foundation has completed. The next planned delivery
+package is **M11.0 Runtime Conversation Shell & Agent Orchestration**.
+The last completed M10 executable package was
+`10.2-replay-execution-drift-detection`.
 
 Current code status:
 
-- M10 Path Asset Foundation is the active milestone.
-- `10.2` replay / drift is the current task.
+- M10 Path Asset Foundation has shipped LearnedPath persistence,
+  catalog, and replay / drift.
+- M11.0 Runtime Conversation Shell & Agent Orchestration is planned next,
+  but its iteration documents have not been created yet.
 - `apps/worker` is still a scaffold.
 - L2 user-guided learning, L3 task execution, runtime conversation,
   Conversation Orchestrator, Agent routing for D / E / F / G / H, and

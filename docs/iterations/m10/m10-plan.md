@@ -1,7 +1,7 @@
 # M10 全量计划
 
-本文是 M10 的里程碑级执行计划，用来回答“接下来按什么顺序做、每
-一包交付什么、哪些已经可执行”。本计划位于
+本文是 M10 的里程碑级执行计划和收口记录，用来回答“按什么顺序做、每
+一包交付什么、哪些已经完成”。本计划位于
 `docs/iterations/m10/`；路线图术语是 **M10**，不是产品生命周期阶段。
 产品生命周期阶段用 `L1` / `L2` / `L3`。
 
@@ -9,6 +9,16 @@ M10 使用语义编号目录，目录名前缀与任务编号一致，例如
 `10.2-replay-execution-drift-detection/`。
 每个真正开始执行的工作仍然要有 `intent.md` + `plan.md`，本文件不
 替代迭代三件套。
+
+## M10 closure note
+
+截至 2026-05-08，M10 已完成路径资产基础能力。LearnedPath 已经可以
+持久化、进入 catalog 查看、执行 trust 操作、显式 replay，并在页面变化
+或目标缺失时返回可解释 drift。M10 的下一步不是 10.3，而是进入
+**M11.0 Runtime Conversation Shell & Agent Orchestration**。
+
+`10.3`–`10.6` 目录继续保留为历史 draft，但它们仍是 **draft only，
+不可直接施工；M14 backlog**。
 
 ## 权威输入
 
@@ -130,7 +140,7 @@ M10 使用语义编号目录，目录名前缀与任务编号一致，例如
 
 ### 10.2 · Replay execution + drift detection
 
-状态：可执行。执行包：
+状态：完成。执行包：
 [`10.2-replay-execution-drift-detection/`](./10.2-replay-execution-drift-detection/)。
 
 目标：
@@ -146,35 +156,46 @@ M10 使用语义编号目录，目录名前缀与任务编号一致，例如
   **不**实现 Agent D · Path Planner Agent、task input、slot binding 或
   L3 task runner。
 
-预期触及：
+实际交付：
 
+- `apps/api/app/schemas/learned_path_replay.py` — replay request /
+  action / step log / result schema，以及 replay status / drift status
+  枚举。
 - `apps/api/app/repos/learned_paths_repo.py`
-- `apps/api/app/schemas/learned_path_replay.py`
-- `apps/api/app/services/learning/learned_path_replay.py`
-- `apps/api/app/services/learning/page_signature.py`
-- `apps/api/app/services/execution/action_executor.py`
-- `apps/api/app/routers/exploration.py`
-- `apps/console/src/pages/LearnedPathCatalogPage.vue`
-- `apps/console/src/api/exploration.ts`
+- `apps/api/app/services/learning/learned_path_replay.py` — drift
+  precheck、完整 replay service、step log 到 `ReplayStepLog` 的转换。
+- `apps/api/app/services/execution/action_executor.py` — 共享 action
+  executor，供 autonomous explorer 与 replay 复用。
+- `POST /exploration/learned-paths/{path_id}/replay` — 显式 path replay
+  API。
+- LearnedPath catalog drawer replay section — URL 输入、Replay 按钮、
+  loading / error / result 三态、drift reasons、warnings、step timeline、
+  final URL / title。
+- replay status / drift status / step logs — 作为 replay 自有 contract，
+  不包装成 `pass_gate` 或 Supervisor verdict。
 
-验收方向：
+验收证据：
 
-- 有 repo / service / API 单测覆盖 candidate selection、explicit replay、
-  drift、selector missing、unsupported action、`actions=[]`。
-- replay 失败不会静默重试；必须返回可解释状态。
-- catalog 中能对一条 LearnedPath 发起 replay，并展示 drift reason 和
-  step log。
-- 若使用 live run，只能通过 `verify-scenario` skill，并按
-  `pass_gate.status`、Supervisor verdict、5 项 scorecard、`run_id`
-  原样汇报。
+- backend tests 已覆盖 replay service / API / action executor：
+  `test_learned_path_replay.py`、`test_exploration_learned_paths_api.py`、
+  `test_action_executor.py`，以及 repo candidate selection 覆盖。
+- console tests 已覆盖 replay API client、catalog replay UI 基础和 i18n。
+- deterministic E2E：`pnpm run test:e2e`，`9 passed`。
+- Codex exploratory validation：
+  `PASS 12 / FAIL 0 / BLOCKED 0 / NOT_RUN 4`。
+- 证据文档：
+  [`docs/testing/features/replay.md`](../../testing/features/replay.md)、
+  [`2026-05-08-replay-e2e-first-run.md`](../../testing/results/2026-05-08-replay-e2e-first-run.md)、
+  [`2026-05-08-replay-e2e-codex-exploratory.md`](../../testing/results/2026-05-08-replay-e2e-codex-exploratory.md)。
 
 ### Post-M10 alignment note
 
-M10.2 是 LearnedPath 的确定性消费者：它只消费已经存在的路径资产，验证
-这些 actions 能否在当前页面上 replay，并把 drift / failure 以结构化
+M10.2 已完成 LearnedPath 的确定性消费能力：它只消费已经存在的路径资产，
+验证这些 actions 能否在当前页面上 replay，并把 drift / failure 以结构化
 结果返回。它是后续能力的执行底座，不是后续能力本身。
 
-后续里程碑边界：
+下一步进入 **M11.0 Runtime Conversation Shell & Agent Orchestration**。
+后续里程碑边界保持如下：
 
 - Runtime Conversation Shell / Conversation Orchestrator 属于 M11.0。
 - Agent D / Agent E 的 task runner、task-to-path planning、task result

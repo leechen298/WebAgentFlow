@@ -36,10 +36,27 @@ M10 的权威范围与动机见
 3. **Replay execution + drift detection** —— 指定一条已学 path 回放，
    页面变化 / 目标缺失时返回可解释状态。
 
+## M10 closure note
+
+M10 已完成路径资产基础能力。LearnedPath 现在可以持久化、查看、执行
+trust 操作、显式 replay，并在页面变化或目标缺失时返回可解释 drift。
+
+M10 收口证据包括 10.1 LearnedPath persistence、10.1.5 catalog、10.2
+replay execution + drift detection、deterministic E2E，以及 Codex
+exploratory validation 的首轮证据型报告。下一步进入 **M11.0 Runtime
+Conversation Shell & Agent Orchestration**，不是继续施工 10.3。
+
+测试证据：
+
+- [Replay 测试域](../../testing/features/replay.md)
+- [10.2 Replay E2E 首次实跑结果](../../testing/results/2026-05-08-replay-e2e-first-run.md)
+- [M10.2 Replay E2E Codex 探索式验证报告](../../testing/results/2026-05-08-replay-e2e-codex-exploratory.md)
+
 原 `10.3`–`10.6` 的 popup / click-toggle / label / pattern 草案仍保留
 在本目录中，但不再是 M10 关闭的主线前置条件；它们被重新归入 roadmap
 的 **M14 Learning Quality Agents & Coverage Expansion** backlog，除非
-用户显式要求提前执行。
+用户显式要求重新评估。它们仍是 **draft only，不可直接施工；M14
+backlog**。
 
 ## M10 同时显式化的产品约束
 
@@ -63,9 +80,11 @@ M10 的权威范围与动机见
   `/exploration/autonomous-runs` 等 RESTful 路径。
 - **10.1.5 LearnedPath catalog** —— 已完成。给 LearnedPath 增加
   独立列表页和路径级 trust 操作入口。
-- **10.2 Replay execution + drift detection** —— 可执行。消费
+- **10.2 Replay execution + drift detection** —— 已完成。消费
   LearnedPath，指定一条已学路径做 replay，并返回页面变化 / 目标缺失
-  等可解释状态。它不实现 Agent D，不实现 L3 task runner。
+  等可解释状态。replay API、LearnedPath catalog replay UI、
+  deterministic E2E、Codex exploratory validation 首轮证据报告均已交付。
+  它不实现 Agent D，不实现 L3 task runner。
 - **10.3 Popup-based control support** —— draft，已迁入 M14 backlog。
 - **10.4 Custom click-toggle controls** —— draft，已迁入 M14 backlog。
 - **10.5 Form-label extractor coverage expansion** —— draft，已迁入
@@ -96,7 +115,9 @@ M10 的权威范围与动机见
   状态：**完成**。
 - [10.2-replay-execution-drift-detection](./10.2-replay-execution-drift-detection/) ——
   指定 LearnedPath replay、drift 状态、step log 和 catalog 薄入口。
-  状态：**可执行**。
+  状态：**完成（2026-05-08）**。交付包括 replay API、catalog drawer
+  replay 区块、deterministic E2E，以及 Codex exploratory validation
+  首轮证据型报告。
 - [10.3-popup-based-control-support](./10.3-popup-based-control-support/) ——
   状态：**draft only，不可直接施工；M14 backlog**。
 - [10.4-custom-click-toggle-controls](./10.4-custom-click-toggle-controls/) ——

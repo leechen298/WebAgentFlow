@@ -33,9 +33,11 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 
 当前交付状态：
 
-- 活跃里程碑：**M10 Path Asset Foundation / 路径资产基础**。
-- **10.1 LearnedPath persistence** 和 **10.1.5 LearnedPath catalog** 已交付。
-- **10.2 replay execution + drift detection** 是当前任务。
+- **M10 Path Asset Foundation / 路径资产基础** 已完成。
+- **10.1 LearnedPath persistence**、**10.1.5 LearnedPath catalog** 和
+  **10.2 replay execution + drift detection** 已交付。
+- 下一步计划交付包：**M11.0 Runtime Conversation Shell & Agent
+  Orchestration / 运行时沟通与 Agent 编排**。
 - Runtime Conversation Surface、Conversation Orchestrator / Dispatcher、
   L3 task runner、L2 guided teaching、Agent H Teaching Guide Agent 都是后续
   规划，不是当前已实现。

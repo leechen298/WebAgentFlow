@@ -104,14 +104,14 @@ M9 期间值得记的里程碑：
   在当时的清理点上，仅保留 `exploration_runs`；M10 后续新增了
   `learned_paths`。
 
-M9 没有剩余待办。当前活跃交付里程碑是 M10。
+M9 没有剩余待办。M10 现已关闭；下一步交付里程碑是 M11.0。
 
-## M10 —— Path Asset Foundation / 路径资产基础（进行中）
+## M10 —— Path Asset Foundation / 路径资产基础（已于 2026-05-08 完成）
 
-M10 的目标是让 LearnedPath 成为可复用资产。它仍然是基础里程碑，不是
-L3 task runner：不做运行时 conversation shell、不做 Agent D Path
-Planner、不做 Agent H Teaching Guide Agent，也不做 task-to-path 执行
-闭环。它搭建的是 M11 会调用的确定性执行底座。
+M10 已经让 LearnedPath 成为可复用资产。它仍然是基础里程碑，不是 L3
+task runner：不做运行时 conversation shell、不做 Agent D Path Planner、
+不做 Agent H Teaching Guide Agent，也不做 task-to-path 执行闭环。它
+搭建的是 M11 会调用的确定性执行底座。
 
 - **LearnedPath 落库 —— 已于 2026-04-25 交付（10.1）**。
   `pass_gate = pass` 的运行自动写入 `learned_paths`，按
@@ -126,16 +126,20 @@ Planner、不做 Agent H Teaching Guide Agent，也不做 task-to-path 执行
   console 已有资产级 LearnedPath catalog，用来查看路径、source run、
   已存 actions 和 trust 状态。路径级 trust 操作放在 catalog；run
   history 继续区分 run review 和只读 LearnedPath 关联。
-- **Replay execution + drift detection —— 当前任务（10.2）**。
+- **Replay execution + drift detection —— 已交付 / 已于 2026-05-08 完成（10.2）**。
   用户从 LearnedPath catalog 指定一条路径，输入 URL，让引擎按已存
   actions 重跑。结果返回 replay status 和页面变化原因，例如 page
   mismatch、signature changed、target missing、unsupported action。
   这不是 `pass_gate`，不是 Supervisor verdict，也不是任务规划。
 
-10.2 replay / drift 结果未来会成为 failure evidence 和 drift evidence
-的来源，但 10.2 本身不要求完整实现 negative knowledge store。M10 关闭
-标准：LearnedPath 能被持久化、查看、确认 / 废弃，并能确定性 replay；
-页面变化能以可解释状态返回。
+M10 收口时，LearnedPath 已经可以持久化、进入 catalog、执行 trust 操作、
+显式 replay，并返回可解释 drift。deterministic E2E 已建立并通过
+（`pnpm run test:e2e`，9 passed）。Codex exploratory validation 已完成
+首轮证据报告（`PASS 12 / FAIL 0 / BLOCKED 0 / NOT_RUN 4`）。10.2 replay /
+drift 结果未来会成为 failure evidence 和 drift evidence 的来源，但 10.2
+本身没有实现完整 negative knowledge store。
+
+下一步：**M11.0 Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排**。
 
 ## M11.0 —— Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排
 
@@ -336,10 +340,10 @@ M18 在 runtime loop 和 workflow composition 可用之后，稳定 CLI / API
 - 接入用户自建系统或操作台的 integration cookbook。
 - 版本化 CLI / API contract 和兼容策略。
 
-## 当前交付里程碑的非目标
+## M10 收口后的过渡非目标
 
-规范列表见 [`scope-boundaries.zh.md`](./scope-boundaries.zh.md)。当前
-M10.2 要点：
+规范列表见 [`scope-boundaries.zh.md`](./scope-boundaries.zh.md)。在 M11.0
+迭代文档写出之前，刚完成的 M10.2 边界仍作为历史参考。要点：
 
 - 不做运行时 conversation shell。
 - 不做 Agent D、Agent H 或 L3 task runner。

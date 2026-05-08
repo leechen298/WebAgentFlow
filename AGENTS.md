@@ -34,10 +34,11 @@ Current planning vocabulary:
 
 Current delivery status:
 
-- Active milestone: **M10 Path Asset Foundation**.
-- **10.1 LearnedPath persistence** and **10.1.5 LearnedPath catalog** have
-  shipped.
-- **10.2 replay execution + drift detection** is the current task.
+- **M10 Path Asset Foundation** has completed.
+- **10.1 LearnedPath persistence**, **10.1.5 LearnedPath catalog**, and
+  **10.2 replay execution + drift detection** have shipped.
+- Next planned delivery package: **M11.0 Runtime Conversation Shell & Agent
+  Orchestration**.
 - Runtime Conversation Surface, Conversation Orchestrator / Dispatcher,
   L3 task runner, L2 guided teaching, and Agent H Teaching Guide Agent are
   planned future work, not current implementation.

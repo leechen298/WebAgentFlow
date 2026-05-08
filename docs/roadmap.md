@@ -115,14 +115,15 @@ Notable closures during M9:
   DB, and docs; at that cleanup point, `exploration_runs` was the only
   surviving table. M10 later added `learned_paths`.
 
-No remaining M9 items. The active delivery milestone is M10.
+No remaining M9 items. M10 is now closed; the next delivery milestone is
+M11.0.
 
-## M10 — Path Asset Foundation (in progress)
+## M10 — Path Asset Foundation (completed 2026-05-08)
 
-M10 focuses on making LearnedPath a reusable asset. It remains a
-foundation milestone, not an L3 task runner: no runtime conversation
-shell, no Agent D Path Planner, no Agent H Teaching Guide Agent, and no
-task-to-path execution loop. It builds the deterministic substrate that
+M10 made LearnedPath a reusable asset. It remained a foundation
+milestone, not an L3 task runner: no runtime conversation shell, no
+Agent D Path Planner, no Agent H Teaching Guide Agent, and no
+task-to-path execution loop. It built the deterministic substrate that
 M11 will call.
 
 - **LearnedPath persistence — SHIPPED 2026-04-25 (10.1)**.
@@ -139,18 +140,22 @@ M11 will call.
   paths, source runs, stored actions, and trust state. Path-level trust
   operations live in the catalog; run history keeps run review and
   read-only LearnedPath references separate.
-- **Replay execution + drift detection — CURRENT (10.2)**.
+- **Replay execution + drift detection — SHIPPED / completed 2026-05-08 (10.2)**.
   A user can pick one LearnedPath from the catalog, provide a URL, and
   ask the engine to replay the stored actions. The result is a replay
   status plus drift reasons such as page mismatch, signature changed,
   target missing, or unsupported action. This is not `pass_gate`, not a
   Supervisor verdict, and not task planning.
 
+M10 closed with LearnedPath persisted, cataloged, trusted / deprecated,
+explicitly replayed, and drift-explained. Deterministic E2E is in place
+and passed (`pnpm run test:e2e`, 9 passed). Codex exploratory validation
+has a first evidence report (`PASS 12 / FAIL 0 / BLOCKED 0 / NOT_RUN 4`).
 10.2 replay / drift results will become a future source of failure
-evidence and drift evidence, but 10.2 does not need to implement a full
-negative-knowledge store. M10 closes when LearnedPath can be persisted,
-inspected, trusted / deprecated, and deterministically replayed with
-explainable drift.
+evidence and drift evidence, but 10.2 did not implement a full
+negative-knowledge store.
+
+Next: **M11.0 Runtime Conversation Shell & Agent Orchestration**.
 
 ## M11.0 — Runtime Conversation Shell & Agent Orchestration
 
@@ -377,10 +382,11 @@ Expected delivery:
   systems or operator consoles.
 - Versioned CLI / API contract and compatibility policy.
 
-## Explicit non-goals (for current milestone)
+## Explicit non-goals (transition after M10)
 
 See [`scope-boundaries.md`](./scope-boundaries.md) for the canonical
-list. Current M10.2 highlights:
+list. Last completed M10.2 boundaries remain useful historical
+reference until M11.0 iteration documents are written. Highlights:
 
 - No runtime conversation shell.
 - No Agent D, Agent H, or L3 task runner.

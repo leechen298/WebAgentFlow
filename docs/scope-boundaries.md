@@ -12,12 +12,17 @@ ask — don't invent.
 
 ## Current Delivery Milestone
 
-M10 — Path Asset Foundation. Iteration documents live under
-`docs/iterations/m10/`; planning language uses M10 for the delivery
-milestone and L1/L2/L3 for lifecycle stages.
+M10.2 has completed. The next planned delivery package is
+**M11.0 · Runtime Conversation Shell & Agent Orchestration**.
 
-Current executable package: `10.2-replay-execution-drift-detection`.
-M10.2 only implements LearnedPath replay plus drift detection:
+Until the M11.0 iteration documents are written, this file keeps the
+last completed M10.2 boundaries as historical reference and the roadmap
+as the source for the next milestone. Iteration documents live under
+`docs/iterations/m<N>/`; planning language uses M<N> for delivery
+milestones and L1/L2/L3 for lifecycle stages.
+
+Last completed package: `10.2-replay-execution-drift-detection`.
+M10.2 implemented LearnedPath replay plus drift detection:
 
 - consume an existing LearnedPath from the catalog
 - replay its stored actions against a provided URL
@@ -27,7 +32,7 @@ M10.2 only implements LearnedPath replay plus drift detection:
 
 M10.2 is not an L3 task runner. Replay / drift results may become a
 future source of failure evidence and drift evidence, but this package
-does not need to implement the complete negative-knowledge store.
+did not implement the complete negative-knowledge store.
 
 ## Not in Scope
 
