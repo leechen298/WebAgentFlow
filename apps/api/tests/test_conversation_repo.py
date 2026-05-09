@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.conversation import ConversationEvent, ConversationMessage, ConversationSession
 from app.repos.conversation_repo import ConversationRepository
+from app.schemas.conversation import ConversationEventType, ConversationRole, ConversationStatus
 
 
 @pytest.fixture
@@ -41,6 +42,11 @@ def test_create_session_stores_metadata(repo: ConversationRepository) -> None:
     assert session.status == "task_intake"
     assert session.current_mode == "replay"
     assert session.metadata_json == {"source": "cli"}
+
+
+def test_create_session_rejects_invalid_status(repo: ConversationRepository) -> None:
+    with pytest.raises(ValueError, match="initial_status.*not_a_status"):
+        repo.create_session(initial_status="not_a_status")
 
 
 def test_get_session_by_id(repo: ConversationRepository) -> None:
@@ -102,6 +108,13 @@ def test_update_session_unknown_id_raises(repo: ConversationRepository) -> None:
         repo.update_session_status("not-a-real-id", status="idle")
 
 
+def test_update_session_rejects_invalid_status(repo: ConversationRepository) -> None:
+    session = repo.create_session()
+
+    with pytest.raises(ValueError, match="status.*not_a_status"):
+        repo.update_session_status(session.id, status="not_a_status")
+
+
 # ── Messages ──────────────────────────────────────────────────────────────────
 
 
@@ -136,6 +149,25 @@ def test_append_engine_message(repo: ConversationRepository) -> None:
     assert msg.role == "engine"
 
 
+def test_append_message_accepts_conversation_role_enum(repo: ConversationRepository) -> None:
+    session = repo.create_session()
+    msg = repo.append_message(session.id, role=ConversationRole.USER, content="hello")
+
+    assert msg.role == "user"
+
+
+def test_append_message_rejects_invalid_role(repo: ConversationRepository) -> None:
+    session = repo.create_session()
+
+    with pytest.raises(ValueError, match="role.*operator"):
+        repo.append_message(session.id, role="operator", content="hello")
+
+
+def test_append_message_unknown_session_raises(repo: ConversationRepository) -> None:
+    with pytest.raises(ValueError, match="session not found: missing-session"):
+        repo.append_message("missing-session", role="user", content="hello")
+
+
 def test_list_messages_ordered_by_created_at(repo: ConversationRepository) -> None:
     session = repo.create_session()
     m1 = repo.append_message(session.id, role="user", content="first")
@@ -152,6 +184,13 @@ def test_list_messages_respects_limit(repo: ConversationRepository) -> None:
 
     messages = repo.list_messages(session.id, limit=2)
     assert len(messages) == 2
+
+
+def test_list_messages_with_cursor_raises(repo: ConversationRepository) -> None:
+    session = repo.create_session()
+
+    with pytest.raises(ValueError, match="cursor pagination is not implemented yet"):
+        repo.list_messages(session.id, cursor="cursor-1")
 
 
 def test_get_transcript_returns_messages_only(repo: ConversationRepository) -> None:
@@ -181,6 +220,41 @@ def test_append_event(repo: ConversationRepository) -> None:
     assert event.created_at is not None
 
 
+def test_create_and_update_session_accept_conversation_status_enum(
+    repo: ConversationRepository,
+) -> None:
+    session = repo.create_session(initial_status=ConversationStatus.TASK_INTAKE)
+    updated = repo.update_session_status(
+        session.id,
+        status=ConversationStatus.PAUSED,
+        previous_status=ConversationStatus.TASK_INTAKE,
+    )
+
+    assert updated.status == "paused"
+    assert updated.previous_status == "task_intake"
+
+
+def test_append_event_accepts_conversation_event_type_enum(
+    repo: ConversationRepository,
+) -> None:
+    session = repo.create_session()
+    event = repo.append_event(session.id, type=ConversationEventType.STATE_CHANGED)
+
+    assert event.type == "state_changed"
+
+
+def test_append_event_rejects_invalid_type(repo: ConversationRepository) -> None:
+    session = repo.create_session()
+
+    with pytest.raises(ValueError, match="type.*made_up_event"):
+        repo.append_event(session.id, type="made_up_event")
+
+
+def test_append_event_unknown_session_raises(repo: ConversationRepository) -> None:
+    with pytest.raises(ValueError, match="session not found: missing-session"):
+        repo.append_event("missing-session", type="state_changed")
+
+
 def test_list_events_ordered_by_created_at(repo: ConversationRepository) -> None:
     session = repo.create_session()
     e1 = repo.append_event(session.id, type="message_received")
@@ -197,6 +271,13 @@ def test_list_events_respects_limit(repo: ConversationRepository) -> None:
 
     events = repo.list_events(session.id, limit=2)
     assert len(events) == 2
+
+
+def test_list_events_with_cursor_raises(repo: ConversationRepository) -> None:
+    session = repo.create_session()
+
+    with pytest.raises(ValueError, match="cursor pagination is not implemented yet"):
+        repo.list_events(session.id, cursor="cursor-1")
 
 
 # ── Cascade delete ────────────────────────────────────────────────────────────

@@ -15,7 +15,7 @@
 - `apps/api/app/models/conversation.py` — ORM 模型（3 张表）。
 - `apps/api/app/repos/conversation_repo.py` — repository contract。
 - `apps/api/alembic/versions/a93d26f33594_add_conversation_tables.py` — migration。
-- `apps/api/tests/test_conversation_repo.py` — 21 个 repo 测试全部通过。
+- `apps/api/tests/test_conversation_repo.py` — 32 个 repo 测试全部通过。
 
 ### 修改文件
 
@@ -79,35 +79,69 @@ ConversationRepository(session: Session)
 
 - `previous_status` 使用 sentinel `_UNSET` 区分"不传"与"传 None 以清除"。
 - `get_transcript` 仅返回 messages，events 通过 `list_events` 单独读取。
+- `create_session` / `update_session_status` 验证 `ConversationStatus`。
+- `append_message` 验证 `ConversationRole`，并在写入前检查 session 存在。
+- `append_event` 验证 `ConversationEventType`，并在写入前检查 session 存在。
+- `list_messages` / `list_events` 暂不实现 cursor pagination；传入 cursor 时显式
+  抛 `ValueError("cursor pagination is not implemented yet")`。
 
 ### 测试覆盖
 
-21 个测试全部通过：
+32 个 repo 测试全部通过：
 
 - create session defaults to `idle`
 - create session stores metadata
+- create session rejects invalid status
 - get session by id / unknown returns None
 - update session status
 - update session `previous_status` for pause / resume
 - update session metadata patch merges
 - update session unknown id raises
+- update session rejects invalid status
 - append user / system / engine message
+- append message accepts `ConversationRole`
+- append message rejects invalid role
+- append message unknown session raises `ValueError`
 - list messages ordered by `created_at` + limit
+- list messages with cursor raises
 - get_transcript returns messages only (no events)
 - append event
+- append event accepts `ConversationEventType`
+- append event rejects invalid type
+- append event unknown session raises `ValueError`
 - list events ordered by `created_at` + limit
+- list events with cursor raises
 - session delete cascades messages and events
 - no user / account / tenant fields in models
 - repo does not import replay / autonomous / LLM modules
 - model collected in Base.metadata sanity
 
+### Alembic head check
+
+已运行：
+
+```bash
+cd apps/api && ../../.venv/bin/alembic -c alembic.ini heads
+# a93d26f33594 (head)
+
+cd apps/api && ../../.venv/bin/alembic -c alembic.ini history --verbose
+# Rev: a93d26f33594 (head)
+# Parent: 20260502_0001
+# Path: .../a93d26f33594_add_conversation_tables.py
+```
+
+结论：`a93d26f33594_add_conversation_tables.py` 的 `down_revision =
+"20260502_0001"` 与当前 migration 链匹配。
+
 ### 验证命令
 
 ```bash
 cd apps/api && ../../.venv/bin/pytest tests/test_conversation_repo.py tests/test_conversation_commands.py tests/test_conversation_state.py -v
-# 50 passed
+# 61 passed
 cd apps/api && ../../.venv/bin/ruff check app/models/conversation.py app/repos/conversation_repo.py app/models/__init__.py tests/test_conversation_repo.py alembic/versions/a93d26f33594_add_conversation_tables.py
 # All checks passed!
+cd apps/api && ../../.venv/bin/alembic -c alembic.ini heads
+# a93d26f33594 (head)
 git diff --check
 # clean
 ```
