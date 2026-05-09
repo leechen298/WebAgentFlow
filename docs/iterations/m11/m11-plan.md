@@ -37,7 +37,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 
 ### 11.0.1 · Conversation domain contract
 
-状态：当前可规划 / 下一步执行包。
+状态：完成。
 
 目标：
 
@@ -63,21 +63,50 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 不做 replay hook。
 - 不做 Agent D / E / F / G / H。
 
+交付：
+
+- `apps/api/app/schemas/conversation.py`
+- `apps/api/app/services/conversation/commands.py`
+- `apps/api/app/services/conversation/state.py`
+- `apps/api/tests/test_conversation_commands.py`
+- `apps/api/tests/test_conversation_state.py`
+
+验证：
+
+- `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_commands.py tests/test_conversation_state.py`
+- 结果：`29 passed`
+
 ### 11.0.2 · Conversation session store
 
-状态：future。
+状态：当前规划 / 下一步执行包。
 
 目标：
 
-- 决定并实现 session、message、event 存储。
-- 可选 DB model 或 JSON / event log。
-- 支持 create session、append message、append event、read status。
+- 实现 conversation session / message / event 的持久化存储。
+- 以 11.0.1 的 schema contract 为基础，不改变 command parser 和 state
+  transition contract。
+- 为后续 11.0.3 API、11.0.4 CLI、11.0.5 orchestrator 提供可审计会话数据。
+- 推荐方向：DB-backed store，而不是 JSON / event log。原因是后续 API 查询、
+  CLI session lifecycle、audit、history 和 E2E 都需要稳定查询能力。
+
+预期触及：
+
+- `apps/api/app/models/conversation.py` 或等价 ORM model 文件。
+- `apps/api/app/repos/conversation_repo.py`。
+- Alembic migration。
+- `apps/api/tests/test_conversation_repo.py`。
+- 可能需要轻量调整 `apps/api/app/schemas/conversation.py`，但不能改变 11.0.1
+  已定的核心 enum / command contract。
 
 边界：
 
+- 不做 API endpoint。
 - 不做 CLI。
-- 不做 Agent。
-- 不做 task planning。
+- 不做 orchestrator side effects。
+- 不调用 replay API。
+- 不做 Agent D / E / F / G / H。
+- 不做 task-to-path planning。
+- 不加 user / account / tenant 字段。
 
 ### 11.0.3 · Conversation API
 
