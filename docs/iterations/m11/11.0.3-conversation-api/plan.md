@@ -37,9 +37,10 @@ status；状态变更由后续 orchestrator / dispatcher 包明确引入。
 
 ```text
 ConversationSessionCreateRequest
-- initial_status optional, default idle
 - current_mode optional
 - metadata optional
+
+Created sessions always start with status = idle.
 
 ConversationSessionResponse
 - id
@@ -51,7 +52,7 @@ ConversationSessionResponse
 - updated_at
 
 ConversationMessageCreateRequest
-- role
+- role: user | system | engine
 - content
 - metadata optional
 
@@ -75,6 +76,15 @@ ConversationEventResponse
 - created_at
 ```
 
+`ConversationRepository.create_session(initial_status=...)` 仍然可以支持
+`initial_status`；这是 store / internal / test 能力。11.0.3 public API
+不接受 `initial_status` 字段，避免外部调用方绕过 runtime conversation
+lifecycle 直接创建 `replay_running`、`paused`、`completed` 等状态。
+
+`ConversationRole.AGENT` 已存在于 domain contract，但 11.0.3 public API 不接受
+`agent` role。Agent messages 保留给未来 internal orchestrator / Agent
+integration，避免外部调用方伪造内部 Agent transcript。
+
 列表接口第一版返回简单 list：
 
 ```text
@@ -90,6 +100,8 @@ ApiResponse[list[ConversationEventResponse]]
 - missing session 返回 HTTP 404。
 - invalid enum / body 使用 FastAPI / Pydantic 422。
 - 第一版 list endpoints 只支持 `limit`，不暴露 cursor。
+- `GET /messages`、`GET /events` 和 `GET /transcript` 必须先 resolve
+  session；missing session 返回 HTTP 404，不返回空列表。
 - `ConversationRepository` 的 `ValueError("session not found: ...")` 应映射为
   HTTP 404。
 - 其他 repo validation error 可以映射为 HTTP 422，优先让 request schema 在
@@ -121,22 +133,31 @@ API 只做 store facade：
 
 后续实现阶段至少覆盖：
 
-- `POST /conversation/sessions` creates session，默认 status 为 `idle`。
+- `POST /conversation/sessions` creates session，固定 status 为 `idle`。
+- `POST /conversation/sessions` request schema does not define `initial_status`；
+  实现阶段不得把该字段暴露为 public API contract。
 - `POST /conversation/sessions` accepts metadata。
 - `GET /conversation/sessions/{session_id}` reads session。
 - unknown session returns HTTP 404。
 - `POST /conversation/sessions/{session_id}/messages` appends user message。
 - message role supports user / system / engine。
+- message role `agent` is rejected by public API。
 - invalid message role returns HTTP 422。
 - appending message to unknown session returns HTTP 404。
 - `GET /conversation/sessions/{session_id}/messages` returns messages ordered by
   `created_at`。
+- `GET /conversation/sessions/{session_id}/messages` unknown session returns HTTP
+  404, not `[]`。
 - `GET /conversation/sessions/{session_id}/transcript` returns messages only。
+- `GET /conversation/sessions/{session_id}/transcript` unknown session returns
+  HTTP 404, not `[]`。
 - `POST /conversation/sessions/{session_id}/events` appends event。
 - invalid event type returns HTTP 422。
 - appending event to unknown session returns HTTP 404。
 - `GET /conversation/sessions/{session_id}/events` returns events ordered by
   `created_at`。
+- `GET /conversation/sessions/{session_id}/events` unknown session returns HTTP
+  404, not `[]`。
 - API implementation does not import replay / autonomous / LLM modules。
 - API tests use existing `ApiResponse` envelope assertions。
 

@@ -43,16 +43,22 @@ events。
 - 不做 E2E。
 - 不创建 M11.1 详情目录。
 - 不加入 user / account / tenant 字段。
+- API request 不接受 `initial_status`；session creation 第一版一律从
+  `idle` 开始。
+- public API 不允许直接追加 `agent` role message；`agent` role 保留给未来
+  internal orchestrator / Agent integration。
 
 ## 成功标准
 
 - 有清晰的 conversation API endpoint contract。
-- 能创建 session。
+- 能创建 `status=idle` 的 session，且 request body 不暴露 `initial_status`。
 - 能读取 session。
 - 能追加 user / system / engine message。
 - 能追加 event。
 - 能读取 messages / transcript。
 - 能读取 events。
+- 读取 session、messages、events、transcript 时，missing session 返回 HTTP
+  404，不返回空列表。
 - API response 使用现有 `ApiResponse` envelope。
 - 有 API tests 计划，并在实现阶段补充 `tests/test_conversation_api.py`。
 - API 不调用 autonomous run。

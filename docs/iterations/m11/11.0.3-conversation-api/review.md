@@ -16,5 +16,14 @@
 - transcript 是否长期只返回 messages，还是未来增加 messages + events 混合视图。
 - router tag / name 是否使用 `conversation`，还是对外命名为 runtime conversation。
 - API tests 是否需要覆盖 OpenAPI schema。
-- `ConversationSessionCreateRequest.initial_status` 是否应该允许非 `idle`，还是
-  第一版强制只从 `idle` 创建。
+
+## 已决策
+
+- 第一版 API 强制创建 `status=idle` 的 session。
+- `ConversationSessionCreateRequest` 不接受 `initial_status`；repo / internal /
+  test 可以继续保留 `initial_status` 能力。
+- public message append API 只允许 `user` / `system` / `engine` role。
+- `agent` role 不允许 public append，保留给 future internal orchestrator /
+  Agent integration。
+- `GET messages`、`GET events`、`GET transcript` 对 missing session 必须返回
+  HTTP 404，不能返回空列表。
