@@ -1,0 +1,316 @@
+"""Tests for M11.0 conversation HTTP API (11.0.3)."""
+
+from __future__ import annotations
+
+import inspect
+
+from fastapi.testclient import TestClient
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+def _create_session(client: TestClient, **kwargs) -> str:
+    resp = client.post("/conversation/sessions", json=kwargs)
+    assert resp.status_code == 200
+    return resp.json()["data"]["id"]
+
+
+# ── POST /conversation/sessions ───────────────────────────────────────────────
+
+
+def test_create_session_defaults_to_idle(client: TestClient) -> None:
+    resp = client.post("/conversation/sessions", json={})
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["code"] == 0
+    assert body["data"]["status"] == "idle"
+    assert body["data"]["current_mode"] is None
+    assert body["data"]["metadata"] == {}
+    assert body["data"]["previous_status"] is None
+    assert "id" in body["data"]
+    assert "created_at" in body["data"]
+    assert "updated_at" in body["data"]
+
+
+def test_create_session_accepts_metadata(client: TestClient) -> None:
+    resp = client.post(
+        "/conversation/sessions",
+        json={"current_mode": "replay", "metadata": {"source": "test"}},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["current_mode"] == "replay"
+    assert data["metadata"] == {"source": "test"}
+
+
+def test_create_session_rejects_initial_status(client: TestClient) -> None:
+    resp = client.post(
+        "/conversation/sessions",
+        json={"initial_status": "replay_running"},
+    )
+
+    assert resp.status_code == 422
+
+
+# ── GET /conversation/sessions/{session_id} ───────────────────────────────────
+
+
+def test_get_session_reads_session(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.get(f"/conversation/sessions/{session_id}")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["code"] == 0
+    assert body["data"]["id"] == session_id
+    assert body["data"]["status"] == "idle"
+
+
+def test_get_session_unknown_returns_404(client: TestClient) -> None:
+    resp = client.get("/conversation/sessions/not-a-real-id")
+
+    assert resp.status_code == 404
+
+
+# ── POST /conversation/sessions/{session_id}/messages ─────────────────────────
+
+
+def test_append_user_message(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "user", "content": "hello"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["role"] == "user"
+    assert data["content"] == "hello"
+    assert data["session_id"] == session_id
+    assert "id" in data
+
+
+def test_append_system_message(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "system", "content": "ack"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["data"]["role"] == "system"
+
+
+def test_append_engine_message(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "engine", "content": "done"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["data"]["role"] == "engine"
+
+
+def test_append_agent_role_is_rejected(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "agent", "content": "secret"},
+    )
+
+    assert resp.status_code == 422
+
+
+def test_append_invalid_message_role_returns_422(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "unknown", "content": "x"},
+    )
+
+    assert resp.status_code == 422
+
+
+def test_append_message_unknown_session_returns_404(client: TestClient) -> None:
+    resp = client.post(
+        "/conversation/sessions/not-a-real-id/messages",
+        json={"role": "user", "content": "hello"},
+    )
+
+    assert resp.status_code == 404
+
+
+# ── GET /conversation/sessions/{session_id}/messages ──────────────────────────
+
+
+def test_list_messages_ordered_by_created_at(client: TestClient) -> None:
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "user", "content": "first"},
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "user", "content": "second"},
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/messages")
+    assert resp.status_code == 200
+    messages = resp.json()["data"]
+    assert len(messages) == 2
+    assert messages[0]["content"] == "first"
+    assert messages[1]["content"] == "second"
+
+
+def test_list_messages_unknown_session_returns_404_not_empty(
+    client: TestClient,
+) -> None:
+    resp = client.get("/conversation/sessions/not-a-real-id/messages")
+
+    assert resp.status_code == 404
+
+
+# ── GET /conversation/sessions/{session_id}/transcript ────────────────────────
+
+
+def test_get_transcript_returns_messages_only(client: TestClient) -> None:
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "user", "content": "hi"},
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={"type": "state_changed", "payload": {}},
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/transcript")
+    assert resp.status_code == 200
+    transcript = resp.json()["data"]
+    assert len(transcript) == 1
+    assert transcript[0]["content"] == "hi"
+
+
+def test_get_transcript_unknown_session_returns_404_not_empty(
+    client: TestClient,
+) -> None:
+    resp = client.get("/conversation/sessions/not-a-real-id/transcript")
+
+    assert resp.status_code == 404
+
+
+# ── POST /conversation/sessions/{session_id}/events ───────────────────────────
+
+
+def test_append_event(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={"type": "state_changed", "payload": {"from": "idle", "to": "task_intake"}},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["type"] == "state_changed"
+    assert data["payload"] == {"from": "idle", "to": "task_intake"}
+    assert data["session_id"] == session_id
+
+
+def test_append_invalid_event_type_returns_422(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={"type": "not_a_real_event"},
+    )
+
+    assert resp.status_code == 422
+
+
+def test_append_event_unknown_session_returns_404(client: TestClient) -> None:
+    resp = client.post(
+        "/conversation/sessions/not-a-real-id/events",
+        json={"type": "state_changed"},
+    )
+
+    assert resp.status_code == 404
+
+
+# ── GET /conversation/sessions/{session_id}/events ────────────────────────────
+
+
+def test_list_events_ordered_by_created_at(client: TestClient) -> None:
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={"type": "message_received"},
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={"type": "state_changed"},
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/events")
+    assert resp.status_code == 200
+    events = resp.json()["data"]
+    assert len(events) == 2
+    assert events[0]["type"] == "message_received"
+    assert events[1]["type"] == "state_changed"
+
+
+def test_list_events_unknown_session_returns_404_not_empty(
+    client: TestClient,
+) -> None:
+    resp = client.get("/conversation/sessions/not-a-real-id/events")
+
+    assert resp.status_code == 404
+
+
+# ── Response envelope ─────────────────────────────────────────────────────────
+
+
+def test_api_response_uses_envelope(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.get(f"/conversation/sessions/{session_id}")
+
+    body = resp.json()
+    assert "code" in body
+    assert "data" in body
+    assert "msg" in body
+    assert body["code"] == 0
+    assert body["msg"] == "ok"
+
+
+# ── No identity / tenant fields in response ───────────────────────────────────
+
+
+def test_response_does_not_expose_identity_or_tenant_fields(
+    client: TestClient,
+) -> None:
+    session_id = _create_session(client)
+    resp = client.get(f"/conversation/sessions/{session_id}")
+    data = resp.json()["data"]
+
+    forbidden = {"user", "account", "tenant", "user_id", "account_id", "tenant_id"}
+    assert forbidden.isdisjoint(data.keys())
+
+
+# ── No forbidden imports ──────────────────────────────────────────────────────
+
+
+def test_router_does_not_import_replay_autonomous_or_llm() -> None:
+    from app.routers import conversation as router_module
+
+    source = inspect.getsource(router_module)
+    forbidden_tokens = [
+        "learned_path_replay",
+        "run_replay",
+        "autonomous_explorer",
+        "/exploration/autonomous-runs",
+        "llm_provider",
+        "OpenAI",
+    ]
+    for token in forbidden_tokens:
+        assert token not in source

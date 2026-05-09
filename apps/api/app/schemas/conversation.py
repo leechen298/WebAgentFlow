@@ -3,15 +3,18 @@
 These contracts are pure API/domain shapes for session state, messages,
 events, slash commands, and state transition decisions. They intentionally do
 not define persistence, API routes, replay execution, or LLM behavior.
+
+API request/response schemas added in 11.0.3 are suffix-tagged with
+*Request / *Response to distinguish them from the pure domain models.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ConversationStatus(StrEnum):
@@ -99,6 +102,62 @@ class ConversationMessage(BaseModel):
 
 
 class ConversationEvent(BaseModel):
+    id: str
+    session_id: str
+    type: ConversationEventType
+    payload: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
+# 11.0.3 API request / response schemas
+# ---------------------------------------------------------------------------
+
+PublicConversationMessageRole = Literal["user", "system", "engine"]
+
+
+class ConversationSessionCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    current_mode: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ConversationSessionResponse(BaseModel):
+    id: str
+    status: ConversationStatus
+    current_mode: str | None = None
+    previous_status: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class ConversationMessageCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: PublicConversationMessageRole
+    content: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ConversationMessageResponse(BaseModel):
+    id: str
+    session_id: str
+    role: ConversationRole
+    content: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime | None = None
+
+
+class ConversationEventCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: ConversationEventType
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class ConversationEventResponse(BaseModel):
     id: str
     session_id: str
     type: ConversationEventType
