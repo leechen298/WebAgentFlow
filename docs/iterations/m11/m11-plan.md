@@ -163,21 +163,35 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 结果：`84 passed`
 - `cd apps/api && ../../.venv/bin/ruff check app/routers/conversation.py app/schemas/conversation.py app/routers/__init__.py tests/test_conversation_api.py`
 - 结果：`All checks passed!`
+- `git diff --check`
+- 结果：clean
 
 ### 11.0.4 · Runtime CLI shell
 
-状态：future。
+状态：当前规划 / 下一步执行包。
 
 目标：
 
-- 在 `wagent` 中增加 runtime conversation 入口。
-- 明确区别于当前 `wagent verify` / `verify-scenario`。
-- 支持 session lifecycle 和基础 slash commands。
+- 在 `apps/cli/` 中规划 `wagent conversation` runtime conversation 入口。
+- 让用户可以通过 CLI 创建 conversation session、追加 user message、读取
+  session status、查看 messages / transcript / events。
+- CLI 必须通过 HTTP 调用 11.0.3 Conversation API，不直接操作 DB。
+- CLI 必须区别于当前 `wagent verify` / `verify-scenario`。
+- CLI 仍然不做 orchestrator side effects，不调用 replay，不做 task-to-path。
+- 首版只规划非交互命令，不把 REPL / interactive loop 列为验收项。
 
 边界：
 
-- 不做 task-to-path。
+- 不做 orchestrator dispatcher。
+- 不调用 replay API。
+- 不实现 `/replay` command side effect。
+- 不做 Agent D / E / F / G / H。
+- 不做 natural-language planning。
+- 不做 slot binding。
+- 不调用 autonomous run。
+- 不依赖 LLM provider。
 - 不做 M16 external CLI stabilization。
+- 不加入 user / account / tenant 字段。
 
 ### 11.0.5 · Orchestrator dispatcher
 
