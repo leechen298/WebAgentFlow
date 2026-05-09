@@ -1,3 +1,4 @@
+from app.models.conversation import ConversationEvent, ConversationMessage, ConversationSession
 from app.models.exploration_run import ExplorationMode, ExplorationRun, ExplorationRunStatus
 from app.models.learned_path import (
     LearnedPath,
@@ -7,6 +8,9 @@ from app.models.learned_path import (
 )
 
 __all__ = [
+    "ConversationEvent",
+    "ConversationMessage",
+    "ConversationSession",
     "ExplorationMode",
     "ExplorationRun",
     "ExplorationRunStatus",

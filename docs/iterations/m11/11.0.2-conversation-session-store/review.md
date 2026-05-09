@@ -8,11 +8,138 @@
 - 本包将为 M11.0 后续 API、CLI、orchestrator 提供 session / message /
   event 数据层。
 
-## 待确认问题
+## 实现证据
 
-- `previous_status` 是核心列，还是放入 `metadata_json`。
-- transcript 是否只返回 messages，还是 messages + events 混合视图。
-- session delete 是否 cascade messages / events。
-- `metadata_json` / `payload_json` 是否需要 schema version。
-- `list_messages` / `list_events` 是否第一版需要 cursor，还是先 limit-only。
-- 是否需要 conversation cleanup helper for tests。
+### 新增文件
+
+- `apps/api/app/models/conversation.py` — ORM 模型（3 张表）。
+- `apps/api/app/repos/conversation_repo.py` — repository contract。
+- `apps/api/alembic/versions/a93d26f33594_add_conversation_tables.py` — migration。
+- `apps/api/tests/test_conversation_repo.py` — 21 个 repo 测试全部通过。
+
+### 修改文件
+
+- `apps/api/app/models/__init__.py` — 导出 `ConversationSession` /
+  `ConversationMessage` / `ConversationEvent`。
+
+### 数据模型
+
+#### conversation_sessions
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| `id` | String(36) PK | UUID |
+| `status` | String(32) | 默认 `idle` |
+| `current_mode` | String(32) nullable | 当前模式 |
+| `previous_status` | String(32) nullable | pause / resume 语义 |
+| `metadata_json` | JSON | 扩展字段 |
+| `created_at` | DateTime(tz) | server_default now() |
+| `updated_at` | DateTime(tz) | server_default now() |
+
+索引：`ix_conversation_sessions_updated_at`
+
+#### conversation_messages
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| `id` | String(36) PK | UUID |
+| `session_id` | String(36) FK → sessions.id ON DELETE CASCADE | |
+| `role` | String(16) | user / system / agent / engine |
+| `content` | Text | |
+| `metadata_json` | JSON | |
+| `created_at` | DateTime(tz) | |
+
+索引：`ix_conversation_messages_session_id_created_at`
+
+#### conversation_events
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| `id` | String(36) PK | UUID |
+| `session_id` | String(36) FK → sessions.id ON DELETE CASCADE | |
+| `type` | String(32) | 事件类型 |
+| `payload_json` | JSON | 审计数据 |
+| `created_at` | DateTime(tz) | |
+
+索引：`ix_conversation_events_session_id_created_at`
+
+### Repository contract
+
+```python
+ConversationRepository(session: Session)
+  create_session(initial_status="idle", current_mode=None, metadata=None)
+  get_session(session_id) -> ConversationSession | None
+  update_session_status(session_id, status, previous_status=UNSET, current_mode=UNSET, metadata_patch=None)
+  append_message(session_id, role, content, metadata=None)
+  append_event(session_id, type, payload=None)
+  list_messages(session_id, limit=100, cursor=None)
+  list_events(session_id, limit=100, cursor=None)
+  get_transcript(session_id) -> list[ConversationMessage]
+```
+
+- `previous_status` 使用 sentinel `_UNSET` 区分"不传"与"传 None 以清除"。
+- `get_transcript` 仅返回 messages，events 通过 `list_events` 单独读取。
+
+### 测试覆盖
+
+21 个测试全部通过：
+
+- create session defaults to `idle`
+- create session stores metadata
+- get session by id / unknown returns None
+- update session status
+- update session `previous_status` for pause / resume
+- update session metadata patch merges
+- update session unknown id raises
+- append user / system / engine message
+- list messages ordered by `created_at` + limit
+- get_transcript returns messages only (no events)
+- append event
+- list events ordered by `created_at` + limit
+- session delete cascades messages and events
+- no user / account / tenant fields in models
+- repo does not import replay / autonomous / LLM modules
+- model collected in Base.metadata sanity
+
+### 验证命令
+
+```bash
+cd apps/api && ../../.venv/bin/pytest tests/test_conversation_repo.py tests/test_conversation_commands.py tests/test_conversation_state.py -v
+# 50 passed
+cd apps/api && ../../.venv/bin/ruff check app/models/conversation.py app/repos/conversation_repo.py app/models/__init__.py tests/test_conversation_repo.py alembic/versions/a93d26f33594_add_conversation_tables.py
+# All checks passed!
+git diff --check
+# clean
+```
+
+## 设计决策确认
+
+| 问题 | 决策 |
+|---|---|
+| `previous_status` 是核心列还是放入 metadata_json | **核心列** — 直接放在 `conversation_sessions` 上，便于 pause/resume 查询。 |
+| transcript 是否只返回 messages | **只返回 messages** — `get_transcript` 仅返回 messages；events 通过 `list_events` 单独读取，避免审计事件混入用户 transcript。 |
+| session delete 是否 cascade messages/events | **是** — `relationship` 配置 `cascade="all, delete-orphan"`，FK 也带 `ON DELETE CASCADE`。 |
+| `metadata_json` / `payload_json` 是否需要 schema version | **第一版不需要** — 保持简单，后续如有需要可在 JSON 中嵌入 `v` 字段。 |
+| `list_messages` / `list_events` 是否需要 cursor | **第一版 limit-only** — cursor 参数保留在接口中，暂不实现分页逻辑。 |
+| 是否需要 conversation cleanup helper for tests | **不需要单独 helper** — cascade delete + `reset_database` fixture 已满足测试清理需求。 |
+
+## 边界遵守
+
+本轮未触及：
+
+- API endpoint
+- CLI
+- orchestrator dispatcher
+- replay API
+- Agent D/E/F/G/H
+- task-to-path planning
+- slot binding
+- recovery / abort dialogue
+- teaching mode
+- artifact lifecycle
+- risk gate
+- multi-page workflow
+- autonomous run
+- LLM provider
+- E2E
+- user / account / tenant 字段
