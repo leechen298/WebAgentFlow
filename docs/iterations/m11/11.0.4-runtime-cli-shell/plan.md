@@ -1,37 +1,77 @@
 # 实施计划
 
+## 当前 CLI 结构核对
+
+实现前必须先检查 `apps/cli/` 当前结构，不要凭空假设文件布局。本文只写
+planned files；真正实现时必须遵循现有 CLI stack。
+
+当前已知方向：
+
+- `apps/cli` 是 Python `wagent` CLI workspace。
+- 当前入口是 `apps/cli/wagent/main.py`。
+- 当前已有子命令包括 `verify` 和 `skill`。
+- 如实现时发现结构已经变化，以代码为准，并先更新本 plan。
+
 ## 触及的文件 / 模块
 
-这是后续实现计划，不是本轮文档初始化要改的代码。实现必须遵循现有
-`apps/cli` Python CLI stack。
+这是后续实现计划，不是本轮文档修正要改的代码。
 
-- `apps/cli/wagent/main.py` —— 注册 future `conversation` 子命令。
-- `apps/cli/wagent/conversation.py` —— planned HTTP client + argparse commands。
-- `apps/cli/tests/test_conversation.py` —— planned CLI tests。
-- `docs/iterations/m11/11.0.4-runtime-cli-shell/review.md` —— 实现完成后记录证据。
+- `apps/cli/` —— existing CLI workspace。
+- `apps/cli/wagent/main.py` —— planned registration point for `conversation`
+  subcommands, if current dispatcher structure is unchanged。
+- `apps/cli/wagent/conversation.py` —— planned conversation command module。
+- `apps/cli/tests/test_conversation.py` —— planned CLI tests, following existing
+  CLI test style。
+- `docs/iterations/m11/11.0.4-runtime-cli-shell/review.md` —— implementation
+  evidence after code work。
 
-## CLI command shape
+实现阶段必须先 inspect `apps/cli/`；如果实际路径或测试结构和以上规划不一致，
+按现有结构落地，并在 `review.md` 记录差异。
 
-11.0.4 首版只规划非交互命令，不实现 interactive loop / REPL。
+## CLI 主命名
 
-推荐命令：
+主命名使用：
+
+```text
+wagent conversation
+```
+
+首版不使用 `wagent chat` 作为主命名。`conversation` 更贴合 M11.0 runtime
+conversation surface，也避免和未来 full chat / natural-language loop 混淆。
+
+## 第一版命令形态
+
+11.0.4 首版只规划 non-interactive commands，不实现 interactive REPL。
 
 ```text
 wagent conversation start
 wagent conversation status <session_id>
 wagent conversation send <session_id> --content "..."
-wagent conversation messages <session_id>
+wagent conversation messages <session_id> [--limit N]
 wagent conversation transcript <session_id>
-wagent conversation events <session_id>
+wagent conversation events <session_id> [--limit N]
 ```
 
-`send` 命令首版只追加 `user` message。11.0.3 public API 支持 `system` /
-`engine` role，但 runtime 用户入口不暴露这些 role；`agent` role 保留给未来
-internal orchestrator / Agent integration。
+要求：
 
-## API interaction
+- `send` 首版只追加 `user` message。
+- 不暴露 `--role agent`。
+- 不暴露 `--role system` / `--role engine` 给普通 CLI 用户。
+- 不实现 `/replay`。
+- 不实现 task planning。
+- 不实现 interactive REPL。
 
-CLI 只调用 11.0.3 Conversation API：
+## 输出策略
+
+- 默认 stdout 输出 JSON，方便脚本和测试。
+- 第一版推荐实现通用 `--pretty`，用于格式化 JSON 输出。
+- stderr 只输出错误或简短人类提示。
+- 错误输出必须包含 HTTP status 和 API error msg。
+- 不输出内部 Agent 作为用户直接沟通对象。
+
+## API dependency
+
+CLI 必须调用 11.0.3 API：
 
 ```text
 POST /conversation/sessions
@@ -42,7 +82,7 @@ GET /conversation/sessions/{session_id}/transcript
 GET /conversation/sessions/{session_id}/events
 ```
 
-映射关系：
+命令到 API 的映射：
 
 ```text
 wagent conversation start
@@ -55,41 +95,63 @@ wagent conversation send <session_id> --content "..."
   -> POST /conversation/sessions/{session_id}/messages
      body: { "role": "user", "content": "...", "metadata": {} }
 
-wagent conversation messages <session_id>
-  -> GET /conversation/sessions/{session_id}/messages
+wagent conversation messages <session_id> [--limit N]
+  -> GET /conversation/sessions/{session_id}/messages?limit=N
 
 wagent conversation transcript <session_id>
   -> GET /conversation/sessions/{session_id}/transcript
 
-wagent conversation events <session_id>
-  -> GET /conversation/sessions/{session_id}/events
+wagent conversation events <session_id> [--limit N]
+  -> GET /conversation/sessions/{session_id}/events?limit=N
 ```
 
 禁止：
 
-- 不直接操作 DB。
-- 不调用 replay API。
-- 不调用 `/exploration/autonomous-runs` 或 stream。
-- 不调用 LLM provider。
-- 不做 task-to-path planning。
-- 不实现 orchestrator dispatcher。
+- CLI 不直接操作 DB。
+- CLI 不 import `ConversationRepository`。
+- CLI 不调用 replay API。
+- CLI 不调用 `/exploration/autonomous-runs` 或 stream。
+- CLI 不依赖 LLM provider。
 
-## Output and error policy
+## API base URL 配置
 
-- 默认 stdout 输出一个 JSON object 或 JSON array，保持机器可读。
-- `--pretty` 可以规划为格式化 JSON 输出。
-- stderr 只输出错误或简短人类提示。
-- API HTTP 404 / 422 / 5xx 映射为 CLI exit code `2`。
-- 网络错误映射为 CLI exit code `2`，并提示 API base URL。
-- 成功命令返回 exit code `0`。
-- 本包不定义 task success / failure 语义，因为不执行 task。
+实现前必须检查现有 CLI 配置，不要重复造轮子。
 
-## Configuration
+决策：
 
-- 复用 `WBAF_API_BASE`，默认 `http://localhost:8001`。
-- 每个 conversation 命令支持 `--api-base` 覆盖。
-- 默认 HTTP timeout 可沿用 `wagent verify` 的客户端风格，但不需要继承其
-  autonomous run timeout；实现阶段可选择较短默认值并在 tests 中固定。
+- 优先复用现有 `wagent verify` 的 API base URL 配置方式。
+- 当前 `wagent verify` 使用 `WBAF_API_BASE`，默认
+  `http://localhost:8001`，并支持 `--api-base`。
+- 11.0.4 第一版应保持一致：使用 `WBAF_API_BASE`、默认
+  `http://localhost:8001`、支持 `--api-base`。
+- 不新增另一套 `WAGENT_API_BASE_URL`，避免同一 CLI 出现两个 API base 配置名。
+
+## Timeout 策略
+
+决策：
+
+- conversation CLI 使用短请求 timeout。
+- 推荐默认 `30s`。
+- 不复用 live autonomous / verify-scenario 的长 timeout。
+- 原因：conversation API 是普通 HTTP CRUD，不是长时间 browser / LLM run。
+
+## Metadata 策略
+
+决策：
+
+- `send` 首版不支持 `--metadata`。
+- metadata 默认 `{}`。
+- 后续如果需要再扩展。
+- 原因：降低 CLI 首版复杂度，避免 JSON parsing / escaping 干扰主链路。
+
+## Limit 策略
+
+决策：
+
+- `messages` 和 `events` 第一版支持 `--limit N`。
+- 默认 `100`。
+- 不支持 cursor。
+- `transcript` 第一版不支持 `--limit`，直接调用 transcript endpoint。
 
 ## Relationship to existing CLI surfaces
 
@@ -107,24 +169,25 @@ wagent conversation events <session_id>
    - 未来稳定对外接口。
    - 不属于 11.0.4。
 
-## Test plan
+## 测试计划
 
-后续实现阶段至少覆盖：
+后续实现时至少覆盖：
 
-- `wagent conversation start` POST `/conversation/sessions`，输出 session
-  id / status。
-- `wagent conversation send <id> --content ...` POST `/messages`，role 固定为
-  `user`。
-- `wagent conversation status <id>` GET session。
-- `wagent conversation messages <id>` GET messages。
-- `wagent conversation transcript <id>` GET transcript。
-- `wagent conversation events <id>` GET events。
-- API 404 / 422 / network error 映射为 exit code `2`。
-- stdout 是可解析 JSON；`--pretty` 输出格式化 JSON。
-- CLI 不调用 autonomous endpoint。
-- CLI 不调用 replay API。
-- CLI 不引用 LLM provider。
-- `wagent verify` 现有行为不变。
+- `wagent conversation start` calls API and prints session id。
+- `start` 输出 JSON 可解析。
+- `wagent conversation status <session_id>` calls GET session。
+- `wagent conversation send <session_id> --content "..."` appends user message。
+- `wagent conversation messages <session_id>` lists messages。
+- `wagent conversation messages <session_id> --limit 1` passes limit。
+- `wagent conversation transcript <session_id>` lists transcript。
+- `wagent conversation events <session_id>` lists events。
+- `wagent conversation events <session_id> --limit 1` passes limit。
+- API error is surfaced with status/message and exits `2`。
+- Network error exits `2` and includes API base URL。
+- `--pretty` outputs pretty JSON。
+- CLI does not import DB repo / model。
+- CLI does not import replay / autonomous / LLM modules。
+- Existing `wagent verify` behavior remains unaffected。
 
 ## 验证
 
@@ -136,7 +199,7 @@ cd apps/cli && ../../.venv/bin/ruff check wagent/main.py wagent/conversation.py 
 git diff --check
 ```
 
-当前文档初始化阶段只需要运行：
+当前文档阶段只运行：
 
 ```bash
 git diff --check

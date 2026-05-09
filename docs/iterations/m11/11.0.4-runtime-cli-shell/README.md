@@ -15,6 +15,16 @@
 
 状态：**当前规划中**。
 
+## 当前关系
+
+- 前置：11.0.1 domain contract、11.0.2 session store、11.0.3
+  Conversation API。
+- 本包：规划 runtime conversation CLI shell。
+- 后续：11.0.5 Orchestrator Dispatcher。
+- 当前 `wagent verify` 仍是 development verification skill backend，不属于
+  runtime conversation CLI。
+- M16 external CLI 是未来稳定对外接口，不属于本包。
+
 ## 硬边界
 
 - 不做 orchestrator dispatcher。
@@ -25,12 +35,6 @@
 - 不调用 autonomous run。
 - 不依赖 LLM provider。
 - 不创建 M11.1 详情目录。
-
-## 当前关系
-
-- 前置：11.0.1 domain contract、11.0.2 store、11.0.3 Conversation API。
-- 本包：规划 runtime conversation CLI shell。
-- 后续：11.0.5 Orchestrator Dispatcher。
 
 ## 目标
 
@@ -53,8 +57,8 @@
 - 明确 CLI 和 `wagent verify` 的区别。
 - 明确 CLI 和 M16 external CLI 的区别。
 - CLI 通过 HTTP 调用 11.0.3 Conversation API。
-- 支持 create session、send user message、get session status、
-  list messages、view transcript、list events 的规划。
+- 支持 create session、send user message、get session status、list messages、
+  view transcript、list events 的规划。
 - 有 CLI tests 计划。
 - 不调用 autonomous run。
 - 不依赖 LLM provider。
