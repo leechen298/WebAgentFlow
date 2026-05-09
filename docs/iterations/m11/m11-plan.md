@@ -78,7 +78,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 
 ### 11.0.2 · Conversation session store
 
-状态：当前规划 / 下一步执行包。
+状态：完成。
 
 目标：
 
@@ -108,21 +108,47 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 不做 task-to-path planning。
 - 不加 user / account / tenant 字段。
 
+交付：
+
+- `apps/api/app/models/conversation.py`
+- `apps/api/app/repos/conversation_repo.py`
+- `apps/api/alembic/versions/a93d26f33594_add_conversation_tables.py`
+- `apps/api/tests/test_conversation_repo.py`
+- `docs/iterations/m11/11.0.2-conversation-session-store/review.md`
+
+验证：
+
+- `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_repo.py tests/test_conversation_commands.py tests/test_conversation_state.py -v`
+- 结果：`61 passed`
+- `cd apps/api && ../../.venv/bin/ruff check app/models/conversation.py app/repos/conversation_repo.py app/models/__init__.py tests/test_conversation_repo.py alembic/versions/a93d26f33594_add_conversation_tables.py`
+- 结果：`All checks passed!`
+- `cd apps/api && ../../.venv/bin/alembic -c alembic.ini heads`
+- 结果：`a93d26f33594 (head)`
+
 ### 11.0.3 · Conversation API
 
-状态：future。
+状态：当前规划 / 下一步执行包。
 
 目标：
 
-- 暴露 conversation endpoint。
-- 支持 session create、get、append message、status。
+- 把 11.0.2 的 session / message / event store 暴露为最小 HTTP API
+  contract。
+- 支持 session create / read。
+- 支持 append / read messages。
+- 支持 append / read events。
+- 支持 read transcript。
 - API 对外保持 WebAgentFlow 视角，不直接暴露 internal Agent。
 
 边界：
 
 - 不做 CLI。
 - 不做 natural-language planning。
-- 不做 replay hook，除非前置 store 已完成且当前包明确纳入。
+- 不做 orchestrator dispatcher。
+- 不做 replay hook 或 `/replay` side effect。
+- 不做 Agent D / E / F / G / H。
+- 不做 task-to-path planning。
+- 不做 slot binding。
+- 不加入 user / account / tenant 字段。
 
 ### 11.0.4 · Runtime CLI shell
 

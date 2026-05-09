@@ -22,8 +22,8 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [m11-plan](./m11-plan.md) —— M11 全量计划与 M11.0 执行包拆分。状态：已初始化。
 - [11.0-runtime-conversation-shell-orchestration](./11.0-runtime-conversation-shell-orchestration/) —— M11.0 总纲：Runtime Conversation Shell 与 Conversation Orchestrator 规划。状态：总纲已初始化。
 - [11.0.1-conversation-domain-contract](./11.0.1-conversation-domain-contract/) —— conversation session / message / event / command / state contract。状态：完成。
-- [11.0.2-conversation-session-store](./11.0.2-conversation-session-store/) —— session / message / event persistence。状态：当前规划中。
-- 11.0.3-conversation-api —— conversation API endpoints。状态：future。
+- [11.0.2-conversation-session-store](./11.0.2-conversation-session-store/) —— session / message / event persistence。状态：完成。
+- [11.0.3-conversation-api](./11.0.3-conversation-api/) —— conversation API endpoints。状态：当前规划中。
 - 11.0.4-runtime-cli-shell —— CLI-first runtime conversation shell。状态：future。
 - 11.0.5-orchestrator-dispatcher —— Orchestrator / Dispatcher state routing。状态：future。
 - 11.0.6-explicit-replay-command-hook —— `/replay <learned_path_id> <url>` smoke hook。状态：future。
