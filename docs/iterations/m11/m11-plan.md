@@ -127,7 +127,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 
 ### 11.0.3 · Conversation API
 
-状态：当前规划 / 下一步执行包。
+状态：完成。
 
 目标：
 
@@ -149,6 +149,20 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 不做 task-to-path planning。
 - 不做 slot binding。
 - 不加入 user / account / tenant 字段。
+
+交付：
+
+- `apps/api/app/routers/conversation.py`
+- `apps/api/tests/test_conversation_api.py`
+- `apps/api/app/schemas/conversation.py` (API schema 补充)
+- `apps/api/app/routers/__init__.py` (router 注册)
+
+验证：
+
+- `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_api.py tests/test_conversation_repo.py tests/test_conversation_commands.py tests/test_conversation_state.py -v`
+- 结果：`84 passed`
+- `cd apps/api && ../../.venv/bin/ruff check app/routers/conversation.py app/schemas/conversation.py app/routers/__init__.py tests/test_conversation_api.py`
+- 结果：`All checks passed!`
 
 ### 11.0.4 · Runtime CLI shell
 
