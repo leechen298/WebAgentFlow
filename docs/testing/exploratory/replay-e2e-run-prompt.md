@@ -65,6 +65,12 @@ UI exploratory 执行规则：
 - 如果不修改产品代码或 E2E spec 代码就无法可靠执行，标记 `NOT_RUN` 或 `BLOCKED`。
 - 不添加 `data-testid`。
 - 不修改现有 E2E specs。
+- 如果报告声明 visual UI exploratory PASS，必须使用 Codex Browser panel /
+  in-app browser 或 headed Playwright 打开真实页面并执行可见 UI 操作。
+- Headless Playwright E2E 不能算 visual UI exploratory。
+- API-only 调用不能算 visual UI exploratory。
+- visual UI exploratory 必须记录页面观察、截图、trace、video 或明确的
+  browser observation 证据。
 
 最终回复必须包含：
 

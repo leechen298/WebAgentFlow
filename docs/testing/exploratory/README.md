@@ -22,10 +22,24 @@
 PASS 必须有命令或浏览器操作证据。没有证据只能写 `NOT_RUN` 或 `BLOCKED`。
 禁止 Codex 仅凭主观判断写“测试完成”。
 
+## 证据类型
+
+探索式验证报告必须区分：
+
+- deterministic E2E：Playwright Test 自动化回归，通常 headless。
+- API exploratory：直接 API 调用，并保留命令、退出码和响应摘录。
+- visual UI exploratory：Codex Browser panel / in-app browser 或 headed
+  Playwright 打开真实页面，执行可见 UI 操作。
+
+Headless E2E 不能算 visual UI exploratory。API-only 调用不能算 visual UI
+exploratory。visual UI PASS 必须包含页面观察、截图、trace、video 或明确的
+browser observation 证据。
+
 ## 当前矩阵
 
 - Replay E2E 用例矩阵：`replay-e2e-cases.md`
 - Replay E2E run prompt：`replay-e2e-run-prompt.md`
+- Replay visual UI run prompt：`replay-visual-ui-run-prompt.md`
 
 ## 硬边界
 

@@ -13,6 +13,20 @@ Replay 探索式验证资料位于：
 
 - `docs/testing/exploratory/replay-e2e-cases.md`
 - `docs/testing/exploratory/replay-e2e-run-prompt.md`
+- `docs/testing/exploratory/replay-visual-ui-run-prompt.md`
+
+## 证据边界
+
+Codex 探索式验证必须明确证据类型：
+
+- deterministic E2E：自动化回归证据，通常 headless。
+- API exploratory：API-only 命令证据。
+- visual UI exploratory：Codex Browser panel / in-app browser 或 headed
+  Playwright 打开真实页面并执行可见 UI 操作。
+
+Headless Playwright E2E 不能算 visual UI exploratory。API-only 调用也不能算
+visual UI exploratory。若没有页面观察、截图、trace、video 或明确 browser
+observation 证据，UI case 不能写成 visual UI exploratory PASS。
 
 ## 硬边界
 

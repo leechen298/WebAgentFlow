@@ -26,6 +26,19 @@ M10.2 replay，不是 WebAgentFlow 全项目自动测试。
 E2E 套件不依赖 LLM 服务，不调用 `/exploration/autonomous-runs`，
 不调用 `/exploration/autonomous-runs/stream`，也不创建 live autonomous run。
 
+## 证据类型
+
+- Deterministic E2E：Playwright Test 自动化，通常是 headless。它是适合 CI
+  和稳定回归的证据。
+- API exploratory：使用 curl、Python、Node 等直接调用 API，并保留命令、退出码
+  和原始响应摘录。
+- Visual UI exploratory：使用 Codex Browser panel / in-app browser，或 headed
+  Playwright 打开真实页面，执行可见 UI 操作，并记录页面观察、截图、trace、video
+  或明确的 browser observation 证据。
+
+Headless E2E 不能算 visual UI exploratory。API-only 调用也不能算 visual UI
+exploratory。报告必须清楚写明采用的是哪一种证据类型。
+
 ## 常用命令
 
 ```bash
@@ -45,6 +58,8 @@ pnpm run test:e2e:install
 查看 [exploratory/README.md](./exploratory/README.md) 了解 replay 探索式验证提示词和用例矩阵；
 查看 [results/2026-05-08-replay-e2e-first-run.md](./results/2026-05-08-replay-e2e-first-run.md)
 了解 M10.2 replay E2E 首次实跑结果；
+查看 [results/2026-05-09-replay-visual-ui-exploratory.md](./results/2026-05-09-replay-visual-ui-exploratory.md)
+了解 M10.2 replay 右侧浏览器可视化点击验证结果；
 查看 [codex-exploratory.md](./codex-exploratory.md) 了解后续探索式验证方案。
 
 人类可读的测试运行摘要放在 `docs/testing/results/`。

@@ -63,6 +63,23 @@ E2E，也不能扩大 replay 的产品范围。
 没有命令证据的 case 不能写 PASS；未执行的 case 写 `NOT_RUN`，环境阻塞写
 `BLOCKED`。
 
+### Visual UI exploratory
+
+Replay 域的 visual UI exploratory 是独立证据类型。它要求 Codex Browser panel /
+in-app browser 或 headed Playwright 打开真实 console 页面，逐个操作 LearnedPath
+catalog drawer、输入 URL、点击 replay，并观察页面可见结果。
+
+Headless E2E 不能算 visual UI exploratory。API-only 调用也不能算 visual UI
+exploratory。
+
+Replay visual UI prompt 见：
+
+- `docs/testing/exploratory/replay-visual-ui-run-prompt.md`
+
+已记录的 visual UI exploratory 结果：
+
+- `docs/testing/results/2026-05-09-replay-visual-ui-exploratory.md`
+
 ## 后续可补用例
 
 后续 replay 域可以按实现进展补充：

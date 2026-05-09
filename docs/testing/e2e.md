@@ -21,6 +21,11 @@ Replay 测试域的长期矩阵见 [features/replay.md](./features/replay.md)。
 Codex 探索式补充用例见
 [exploratory/replay-e2e-cases.md](./exploratory/replay-e2e-cases.md)。
 
+注意：确定性 E2E 通常以 headless Playwright Test 运行。它可以证明自动化回归通过，
+但不能冒充 visual UI exploratory。若报告声称完成了 visual UI exploratory，
+必须使用 Codex Browser panel / in-app browser 或 headed Playwright 打开真实页面，
+并记录可见 UI 操作证据。
+
 ## 环境组成
 
 第一版默认由开发者手动启动依赖服务：
