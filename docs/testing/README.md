@@ -29,6 +29,19 @@ task-execution、recovery、teaching、multi-page-workflow。不是每个小功�
 Codex exploratory validation 也按能力域执行，不做一次性全项目自动测试。新增探索式
 用例必须先明确所属能力域、证据类型、是否 CI-safe，以及是否依赖当前里程碑。
 
+测试规划文档分三层：
+
+- [full-test-matrix.md](./full-test-matrix.md)：全测试地图，覆盖 unit /
+  repo / API / component / E2E / exploratory / live smoke 等所有层级，不是一次性
+  施工清单。
+- [current-testing-backlog.md](./current-testing-backlog.md)：已完成功能的测试
+  补全 backlog，可包含普通 API、CLI、component baseline。
+- [e2e-codex-testing-track.md](./e2e-codex-testing-track.md)：只管理
+  deterministic E2E、API exploratory、visual UI exploratory、Codex evidence
+  report 和 release-only manual live smoke。
+- [codex-browser-computer-use.md](./codex-browser-computer-use.md)：定义 Codex
+  使用 Browser Use / Computer Use 自己操作网页并产出 visual UI evidence 的测试规程。
+
 E2E 套件不依赖 LLM 服务，不调用 `/exploration/autonomous-runs`，
 不调用 `/exploration/autonomous-runs/stream`，也不创建 live autonomous run。
 
@@ -59,7 +72,11 @@ pnpm run test:e2e:ui
 pnpm run test:e2e:install
 ```
 
-查看 [full-test-matrix.md](./full-test-matrix.md) 了解经 MiMo draft 收敛后的全量测试地图；
+查看 [full-test-matrix.md](./full-test-matrix.md) 了解全量测试地图；
+查看 [e2e-codex-testing-track.md](./e2e-codex-testing-track.md) 了解 E2E /
+Codex 专项路线图；
+查看 [codex-browser-computer-use.md](./codex-browser-computer-use.md) 了解 Codex
+自主网页操作测试规程；
 查看 [e2e.md](./e2e.md) 了解确定性 E2E 设计；
 查看 [features/replay.md](./features/replay.md) 了解 M10.2 replay 测试域；
 查看 [features/conversation.md](./features/conversation.md) 了解 M11 conversation 测试域；
@@ -70,7 +87,8 @@ pnpm run test:e2e:install
 了解 M10.2 replay 右侧浏览器可视化点击验证结果；
 查看 [results/2026-05-11-conversation-baseline.md](./results/2026-05-11-conversation-baseline.md)
 和 [results/2026-05-11-conversation-runtime-e2e.md](./results/2026-05-11-conversation-runtime-e2e.md)
-了解 M11 conversation baseline 与 runtime E2E 证据；
+以及 [results/2026-05-11-conversation-cli-e2e.md](./results/2026-05-11-conversation-cli-e2e.md)
+了解 M11 conversation baseline、API-request runtime E2E 和 CLI-driven E2E 证据；
 查看 [live-smoke.md](./live-smoke.md) 了解 release-only manual live smoke 规则；
 查看 [codex-exploratory.md](./codex-exploratory.md) 了解后续探索式验证方案。
 查看 [current-testing-backlog.md](./current-testing-backlog.md) 了解当前测试补全计划和状态。

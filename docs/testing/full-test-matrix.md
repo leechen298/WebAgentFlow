@@ -28,6 +28,8 @@ trace 或报告证据时，不能把 case 写成已通过。
 - Live smoke 只手动触发，不进常规 CI。
 - Deterministic E2E 不依赖 LLM，不调用 autonomous run。
 - 详细 case 表只在对应能力域进入施工时展开，不把 MiMo draft 全量复制为永久计划。
+- 如果任务目标专指 E2E / Codex exploratory / visual UI / live smoke，请使用
+  `e2e-codex-testing-track.md`，不要从本矩阵直接推导一次性施工清单。
 
 ## Evidence Types
 
@@ -329,6 +331,7 @@ Recommended next cases：
 | FIRST-P0-01 CV-O dispatcher baseline | existing baseline / keep-running | 11.0.5 service-only dispatcher 已完成，持续运行 baseline；除非发现缺口才新增 | Unit | P0 | yes | 11.0.5 shipped | pytest output，review.md evidence |
 | FIRST-P0-01B CV-RH replay hook baseline | existing baseline / keep-running | 11.0.6 explicit replay hook 已完成，持续运行 baseline | API / integration | P0 | yes | 11.0.6 shipped | pytest output |
 | FIRST-P0-01C CV-E2E conversation runtime smoke | existing baseline / keep-running | 11.0.7 已新增 conversation runtime E2E | Deterministic E2E | P0 | yes | 11.0.7 shipped | Playwright output |
+| FIRST-P0-01D CV-CLI-E2E conversation CLI runtime smoke | existing baseline / keep-running | 已新增真实 `wagent conversation` subprocess E2E，区别于 mocked CLI tests | Deterministic E2E | P0 | yes | 11.0.7 shipped | Playwright output |
 | FIRST-P0-02 Conversation API smoke | existing baseline / keep-running | API 是 CLI 和 orchestrator 的前置 contract；已有 11.0.3 API tests，除非发现缺口才新增 | Repo/API integration | P0 | yes | 11.0.3 shipped | pytest output，HTTP 404/422 覆盖 |
 | FIRST-P0-03 Conversation CLI smoke | existing baseline / keep-running | 11.0.4 CLI tests 已存在；当前任务是持续运行，除非发现缺口才新增 | CLI integration | P0 | yes | 11.0.4 shipped | CLI test output，stdout/stderr / exit code evidence |
 | FIRST-P0-04 Replay deterministic E2E | existing baseline / keep-running | M10.2 replay 是当前稳定浏览器闭环回归轨道 | Deterministic E2E | P0 | yes, once services are orchestrated | M10.2 shipped | `pnpm run test:e2e` output，seed fixture evidence |

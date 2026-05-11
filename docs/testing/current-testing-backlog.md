@@ -8,6 +8,9 @@
 - 不覆盖未来 M11.1 Task-to-Path、M12、M13。
 - 不执行测试，只整理 backlog。
 - 不改产品代码，不改测试代码，不改 package scripts。
+- 本文件会混合 unit / API / CLI / component / E2E；如果任务目标专指
+  E2E、Codex exploratory、Browser Use / Computer Use 自主网页测试，请使用
+  `e2e-codex-testing-track.md` 和 `codex-browser-computer-use.md`。
 
 ## Existing Baselines
 
@@ -55,6 +58,7 @@ Q1 关键发现：
 | KR-11 | Conversation orchestrator tests | `test_conversation_orchestrator.py` | service-only orchestrator / dispatcher baseline |
 | KR-12 | Conversation replay hook tests | `test_conversation_replay_hook.py` | explicit replay hook |
 | KR-13 | Conversation runtime E2E | `apps/e2e/tests/conversation/runtime.spec.ts` | session dispatch `/replay` -> transcript/events |
+| KR-14 | Conversation CLI-driven E2E | `apps/e2e/tests/conversation/cli-runtime.spec.ts` | real `wagent conversation` subprocess -> API -> replay hook |
 
 ### gap — 确认缺口，需补
 
@@ -185,6 +189,19 @@ Q1 关键发现：
 - **Why now**: Baseline already passing. Core regression track.
 - **What not to do**: Don't add conversation E2E here. Don't add live autonomous run cases.
 
+### 7B. CV-CLI-E2E: Conversation CLI-driven E2E (keep-running)
+
+- **Case ID**: CV-CLI-E2E
+- **Reason**: `wagent conversation` 是 M11 runtime conversation CLI 入口。现在已有真实 CLI subprocess E2E，验证 start / send `/replay` / status / transcript / events 打真实 API。
+- **Layer**: Deterministic E2E
+- **Priority**: P0
+- **CI**: yes, once local services and CLI environment are orchestrated
+- **Evidence required**: Playwright output from `apps/e2e/tests/conversation/cli-runtime.spec.ts`
+- **Implementation target**: `apps/e2e/tests/conversation/cli-runtime.spec.ts` (existing)
+- **Why now**: 区分 CLI mocked tests 和真实 runtime CLI E2E，保护用户入口。
+- **What not to do**: Don't call autonomous run. Don't depend on LLM. Don't add M11.1 task-to-path expectations.
+- **Status**: **DONE** (2026-05-11) — scoped CLI E2E 1/1 passed outside sandbox；full `pnpm run test:e2e` 11/11 passed.
+
 ### 8. LP-TRUST-REVIEW: LearnedPath trust / run-review separation smoke
 
 - **Case ID**: FIRST-P1-01 (from full-test-matrix.md)
@@ -253,6 +270,7 @@ Q1 关键发现：
 | CV-O-SMOKE | keep-running | P0 | Unit/integration | yes |
 | CV-RH-SMOKE | keep-running | P0 | API/integration | yes |
 | CV-E2E | keep-running | P0 | Det E2E | yes |
+| CV-CLI-E2E | keep-running | P0 | Det E2E | yes |
 | REPLAY-E2E | keep-running | P0 | Det E2E | yes |
 | LP-TRUST-REVIEW | evaluate gap | P1 | API/Repo | yes |
 | VS-SELECTOR | new | P1 | Unit/API | yes |

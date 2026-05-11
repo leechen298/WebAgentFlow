@@ -64,6 +64,7 @@ Conversation 测试域不覆盖：
 - CV-O：`apps/api/tests/test_conversation_orchestrator.py`。
 - CV-RH：`apps/api/tests/test_conversation_replay_hook.py`。
 - CV-E2E：`apps/e2e/tests/conversation/runtime.spec.ts`。
+- CV-CLI-E2E：`apps/e2e/tests/conversation/cli-runtime.spec.ts`。
 
 这些测试不依赖 LLM provider，不调用 autonomous run。
 
@@ -78,6 +79,7 @@ Conversation 测试域不覆盖：
 | CV-O-P0-02 | Orchestrator Dispatcher state transition + response contract | existing baseline / keep-running | Unit | P0 | yes | pytest output |
 | CV-RH-P0-01 | explicit `/replay` command hook | existing baseline / keep-running | API / integration | P0 | yes | pytest output |
 | CV-E2E-P0-01 | session -> dispatch `/replay` -> transcript/events | existing baseline / keep-running | Deterministic E2E | P0 | yes | Playwright output |
+| CV-CLI-E2E-P0-01 | `wagent conversation` -> `/replay` -> transcript/events | existing baseline / keep-running | Deterministic E2E | P0 | yes | Playwright output |
 | CV-API-SMOKE-01 | session create / read / messages / transcript smoke | existing baseline / keep-running | API integration | P0 | yes | pytest output |
 | CV-CLI-SMOKE-01 | `wagent conversation start/send/status/transcript` smoke | existing baseline / keep-running | CLI tests | P0 | yes | CLI test output |
 
