@@ -9,16 +9,15 @@
 ## 当前交付里程碑
 
 当前包是 **M11.1 Task-to-Path Planning & Execution MVP** 下的
-**11.1.1 Task Planning Domain Contract**。迭代文档：
-[`docs/iterations/m11/11.1.1-task-planning-domain-contract/`](./iterations/m11/11.1.1-task-planning-domain-contract/)。
+**11.1.2 LearnedPath Retrieval and Ranking**。迭代文档：
+[`docs/iterations/m11/11.1.2-learned-path-retrieval-ranking/`](./iterations/m11/11.1.2-learned-path-retrieval-ranking/)。
 
-11.1.1 只做 domain contract。本包范围是规划 task input、intent、candidate
-path、route plan、slot binding proposal、confirmation / consent、
-postcondition、task execution result、Agent D planner input / output，以及
-Agent E reporter input / output schema。
+11.1.2 实现面向给定 task intent 的 LearnedPath retrieval 和 ranking。
+它基于 11.1.1 的 domain contract（`TaskInput`、`TaskIntent`、
+`LearnedPathCandidate`）。
 
-11.1.1 不实现 Agent D / E，不做 retrieval、ranking、slot binding、
-execution、replay side effects、result verification、artifact lifecycle 或 E2E。
+11.1.2 不实现 Agent D / E，不做 slot binding、execution、replay side
+effects、result verification、artifact lifecycle 或 E2E。
 
 M11.0 runtime loop foundation 已完成。已完成范围是：
 
@@ -41,10 +40,15 @@ M11.0 runtime loop foundation 已完成。已完成范围是：
 - `11.0.7-conversation-tests-and-evidence`
 
 刚完成的执行包：`11.0.7-conversation-tests-and-evidence`。
-当前规划包：`11.1.1-task-planning-domain-contract`。
 
-11.1.1 不做 path selection、不做 task planning、不做 slot binding、不执行
-任务，也不实现 Agent D / E / F / G / H 行为。规划语言使用 M<N> 指交付里程碑，使用
+已完成的 M11.1 执行包：
+
+- `11.1.1-task-planning-domain-contract`
+
+当前规划包：`11.1.2-learned-path-retrieval-ranking`。
+
+11.1.2 不组合多步 route、不做 slot binding、不执行任务，也不实现
+Agent D / E / F / G / H 行为。规划语言使用 M<N> 指交付里程碑，使用
 L1/L2/L3 指生命周期阶段。
 
 11.0.7 已建立 conversation 测试证据：API、CLI、orchestrator、replay hook

@@ -62,7 +62,7 @@ def test_learned_path_candidate_accepts_minimal_data() -> None:
         learned_path_id="path-1",
         scenario="users-export",
         page_template="/users",
-        trust="high",
+        trust="confirmed",
     )
 
     assert obj.learned_path_id == "path-1"
@@ -304,3 +304,13 @@ def test_task_planning_module_does_not_import_replay_autonomous_or_llm() -> None
 def test_task_intent_raw_text_is_required() -> None:
     with pytest.raises(ValidationError):
         TaskIntent()  # type: ignore[call-arg]
+
+
+def test_learned_path_candidate_rejects_invalid_trust() -> None:
+    with pytest.raises(ValidationError):
+        LearnedPathCandidate(
+            learned_path_id="path-1",
+            scenario="x",
+            page_template="/x",
+            trust="bogus",  # type: ignore[call-arg]
+        )

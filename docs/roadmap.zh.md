@@ -193,9 +193,15 @@ M11.1 是第一版 L3 实际工作里程碑。用户通过 M11.0 conversation su
 描述任务；WebAgentFlow 从已学路径中选择并绑定参数，通过 M10 replay
 engine 执行，在能力范围内验证任务结果，然后汇报结果。
 
-当前 M11.1 执行包：`11.1.1-task-planning-domain-contract`。它只做文档 /
-domain-contract 规划：不实现 Agent D / E、不做 retrieval、不做 slot
-binding、不执行 replay，也不做 result verification。
+当前 M11.1 执行包：`11.1.2-learned-path-retrieval-ranking`。它基于 11.1.1
+的 domain contract 实现 LearnedPath retrieval 和 ranking。
+
+- 11.1.1 Task Planning Domain Contract 已交付：17 个 schema 定义
+  （`TaskInput`、`TaskIntent`、`LearnedPathCandidate`、`RoutePlan`、
+  `RouteStep`、`SlotBindingProposal`、`ConfirmationRequirement`、
+  `RiskHint`、`ConsentRequirement`、`PostconditionSignal`、
+  `TaskExecutionResult`、`ArtifactReference`、`AgentDPlannerInput/Output`、
+  `AgentEReporterInput/Output`），24 个测试通过，ruff clean。
 
 纳入 / 明确的产品内部 Agent：
 

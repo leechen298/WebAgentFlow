@@ -30,6 +30,8 @@ FailureStage = Literal[
     "unknown",
 ]
 
+TrustLevel = Literal["provisional", "confirmed", "flaky", "deprecated"]
+
 # ---------------------------------------------------------------------------
 # Task intake
 # ---------------------------------------------------------------------------
@@ -73,7 +75,7 @@ class LearnedPathCandidate(BaseModel):
     learned_path_id: str
     scenario: str
     page_template: str
-    trust: str
+    trust: TrustLevel
     hit_count: int = 0
     match_reasons: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
