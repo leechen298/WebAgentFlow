@@ -15,6 +15,8 @@ from app.models.conversation import ConversationSession as ConversationSessionOr
 from app.repos.conversation_repo import ConversationRepository
 from app.schemas.common import ApiResponse
 from app.schemas.conversation import (
+    ConversationDispatchRequest,
+    ConversationDispatchResponse,
     ConversationEventCreateRequest,
     ConversationEventResponse,
     ConversationMessageCreateRequest,
@@ -165,3 +167,41 @@ def list_events(
     _require_session(repo, session_id)
     events = repo.list_events(session_id, limit=limit)
     return ApiResponse(data=[_event_response(e) for e in events])
+
+
+# ── Dispatch (11.0.6) ────────────────────────────────────────────────────────
+
+
+def _dispatch_response(result) -> ConversationDispatchResponse:
+    return ConversationDispatchResponse(
+        session_id=result.session_id,
+        previous_status=result.previous_status,
+        next_status=result.next_status,
+        command_kind=result.command_kind,
+        user_response=result.user_response,
+        events_appended=result.events_appended,
+        message_id=result.message_id,
+        allowed=result.allowed,
+        error=result.error,
+        replay_result=result.replay_result,
+    )
+
+
+@router.post("/sessions/{session_id}/dispatch")
+def dispatch_input(
+    db: DbSession,
+    session_id: str,
+    body: ConversationDispatchRequest,
+) -> ApiResponse[ConversationDispatchResponse]:
+    from app.services.conversation.orchestrator import ConversationOrchestrator
+    from app.services.conversation.replay_hook import run_explicit_replay
+
+    repo = ConversationRepository(db)
+    _require_session(repo, session_id)
+
+    def replay_handler(learned_path_id: str, url: str):
+        return run_explicit_replay(db, learned_path_id, url)
+
+    orchestrator = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orchestrator.dispatch_user_input(session_id, body.input)
+    return ApiResponse(data=_dispatch_response(result))

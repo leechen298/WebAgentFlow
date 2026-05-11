@@ -252,18 +252,59 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 
 ### 11.0.6 · Explicit replay command hook
 
-状态：当前规划 / 下一步执行包。
+状态：完成。
 
 目标：
 
-- `/replay <learned_path_id> <url>` 通过 orchestrator 显式调用 M10 replay。
-- 作为 M11.0 smoke hook，验证 runtime loop 能触发一个已完成的确定性能力。
+- 将显式 `/replay <learned_path_id> <url>` command 接入 M10 replay
+  capability。
+- 复用 11.0.5 `ConversationOrchestrator` 的 dispatcher flow。
+- 只允许使用用户显式给出的 `learned_path_id + url`。
+- 不做 LearnedPath selection。
+- 不做 slot binding。
+- 不做 task-to-path planning。
+- 不调用 autonomous run。
+- 不包装成 `pass_gate` 或 Supervisor verdict。
+- 将 replay result 作为 conversation event / dispatch response 的一部分返回
+  和审计。
 
 边界：
 
+- 不做 Agent D / E / F / G / H。
 - 不做 path selection。
+- 不做 natural-language task planning。
 - 不做 slot binding。
+- 不做 recovery / abort dialogue。
+- 不做 teaching mode。
+- 不做 multi-page workflow。
+- 不做 artifact lifecycle。
+- 不做 risk gate。
 - 不改 M10 replay contract。
+- 不新增 M11.1 目录。
+- 不新增 E2E，本包只规划 service / API / CLI-level tests；conversation E2E
+  归 11.0.7。
+
+交付：
+
+- `apps/api/app/services/conversation/orchestrator.py`
+- `apps/api/app/services/conversation/replay_hook.py`
+- `apps/api/app/routers/conversation.py`
+- `apps/api/app/schemas/conversation.py`
+- `apps/cli/wagent/conversation.py`
+- `apps/api/tests/test_conversation_replay_hook.py`
+- `apps/api/tests/test_conversation_api.py`
+- `apps/cli/tests/test_conversation.py`
+
+验证：
+
+- `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_replay_hook.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py tests/test_conversation_repo.py tests/test_conversation_commands.py tests/test_conversation_state.py tests/test_learned_path_replay.py tests/test_exploration_learned_paths_api.py -v`
+- 结果：`179 passed`
+- `cd apps/cli && ../../.venv/bin/pytest tests/test_conversation.py tests/test_verify.py tests/test_skill.py -v`
+- 结果：`67 passed`
+- `cd apps/api && ../../.venv/bin/ruff check app/services/conversation/orchestrator.py app/services/conversation/replay_hook.py app/routers/conversation.py app/schemas/conversation.py tests/test_conversation_replay_hook.py tests/test_conversation_api.py`
+- 结果：`All checks passed!`
+- `git diff --check`
+- 结果：clean
 
 ### 11.0.7 · Conversation tests and evidence
 

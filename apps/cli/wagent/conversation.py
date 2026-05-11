@@ -213,13 +213,12 @@ def _run_status(args: argparse.Namespace) -> int:
 
 def _run_send(args: argparse.Namespace) -> int:
     payload = {
-        "role": "user",
-        "content": args.content,
+        "input": args.content,
         "metadata": {},
     }
     data = _api_request(
         "post",
-        f"/conversation/sessions/{args.session_id}/messages",
+        f"/conversation/sessions/{args.session_id}/dispatch",
         args,
         json=payload,
     )

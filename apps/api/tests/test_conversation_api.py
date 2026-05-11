@@ -300,13 +300,103 @@ def test_response_does_not_expose_identity_or_tenant_fields(
 # ── No forbidden imports ──────────────────────────────────────────────────────
 
 
+# ── POST /conversation/sessions/{session_id}/dispatch ─────────────────────────
+
+
+def test_dispatch_free_text(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "hello world"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["session_id"] == session_id
+    assert data["command_kind"] == "free_text"
+    assert data["allowed"] is True
+    assert data["next_status"] == "task_intake"
+    assert data["replay_result"] is None
+
+
+def test_dispatch_missing_session_returns_404(client: TestClient) -> None:
+    resp = client.post(
+        "/conversation/sessions/not-a-real-id/dispatch",
+        json={"input": "hello"},
+    )
+
+    assert resp.status_code == 404
+
+
+def test_dispatch_malformed_replay_returns_allowed_false_no_replay(
+    client: TestClient,
+) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "/replay"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["allowed"] is False
+    assert data["command_kind"] == "error"
+    assert data["replay_result"] is None
+
+
+def test_dispatch_replay_with_missing_path_returns_candidate_not_found(
+    client: TestClient,
+) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "/replay non-existent-path http://127.0.0.1:5175/users"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["allowed"] is True
+    assert data["command_kind"] == "replay"
+    assert data["next_status"] == "failed"
+    assert data["replay_result"] is not None
+    assert data["replay_result"]["replay_status"] == "candidate_not_found"
+
+
+def test_dispatch_response_does_not_expose_engine_command(
+    client: TestClient,
+) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "hello"},
+    )
+
+    data = resp.json()["data"]
+    assert "engine_command" not in data
+
+
+def test_dispatch_does_not_expose_identity_or_tenant_fields(
+    client: TestClient,
+) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "hello"},
+    )
+
+    data = resp.json()["data"]
+    forbidden = {"user", "account", "tenant", "user_id", "account_id", "tenant_id"}
+    assert forbidden.isdisjoint(data.keys())
+
+
+# ── No forbidden imports ──────────────────────────────────────────────────────
+
+
 def test_router_does_not_import_replay_autonomous_or_llm() -> None:
     from app.routers import conversation as router_module
 
     source = inspect.getsource(router_module)
     forbidden_tokens = [
-        "learned_path_replay",
-        "run_replay",
         "autonomous_explorer",
         "/exploration/autonomous-runs",
         "llm_provider",

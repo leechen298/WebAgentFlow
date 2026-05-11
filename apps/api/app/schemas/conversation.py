@@ -163,3 +163,43 @@ class ConversationEventResponse(BaseModel):
     type: ConversationEventType
     payload: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
+# 11.0.6 Dispatch request / response schemas
+# ---------------------------------------------------------------------------
+
+
+class ConversationReplaySummary(BaseModel):
+    """Summary of a LearnedPath replay outcome surfaced on the dispatch response."""
+
+    learned_path_id: str
+    url: str
+    replay_status: str
+    drift_status: str
+    drift_reasons: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    final_url: str | None = None
+    final_title: str | None = None
+    step_count: int = 0
+    error: str | None = None
+
+
+class ConversationDispatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    input: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ConversationDispatchResponse(BaseModel):
+    session_id: str
+    previous_status: str
+    next_status: str
+    command_kind: str
+    user_response: str
+    events_appended: list[str] = Field(default_factory=list)
+    message_id: str | None = None
+    allowed: bool
+    error: str | None = None
+    replay_result: ConversationReplaySummary | None = None

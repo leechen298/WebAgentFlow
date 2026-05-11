@@ -98,8 +98,8 @@ def test_status_calls_get_session() -> None:
 # ── send ──────────────────────────────────────────────────────────────────────
 
 
-def test_send_calls_post_messages_with_user_role() -> None:
-    client = _mock_client(data={"id": "msg-1", "role": "user"})
+def test_send_calls_post_dispatch_with_input() -> None:
+    client = _mock_client(data={"session_id": "sess-1", "command_kind": "free_text"})
     with patch.object(conv_module.httpx, "Client", return_value=client):
         stdout = StringIO()
         with redirect_stdout(stdout), redirect_stderr(StringIO()):
@@ -107,11 +107,12 @@ def test_send_calls_post_messages_with_user_role() -> None:
 
     assert rc == 0
     parsed = json.loads(stdout.getvalue())
-    assert parsed["role"] == "user"
+    assert parsed["session_id"] == "sess-1"
     call_kwargs = client.post.call_args.kwargs
-    assert call_kwargs["json"]["role"] == "user"
-    assert call_kwargs["json"]["content"] == "hello"
+    assert call_kwargs["json"]["input"] == "hello"
     assert call_kwargs["json"]["metadata"] == {}
+    # Verify it calls dispatch endpoint, not messages endpoint
+    assert "/dispatch" in client.post.call_args.args[0]
 
 
 # ── messages ──────────────────────────────────────────────────────────────────
