@@ -20,7 +20,7 @@ Current package: **11.1.2 LearnedPath Retrieval and Ranking** within
 It builds on the 11.1.1 domain contract (`TaskInput`, `TaskIntent`,
 `LearnedPathCandidate`).
 
-11.1.2 does not implement Agent D / E, slot binding, execution, replay side
+11.1.2 does not implement Task Path Planner / Task Result Reporter (legacy: Agent D/E), slot binding, execution, replay side
 effects, result verification, artifact lifecycle, or E2E.
 
 M11.0 runtime loop foundation is complete. Its completed scope is:
@@ -52,12 +52,12 @@ Last completed package: `11.1.1-task-planning-domain-contract`.
 Current planning package: `11.1.2-learned-path-retrieval-ranking`.
 
 11.1.2 does not compose multi-step routes, bind slots, execute tasks, or
-implement Agent D / E / F / G / H behavior. Planning language uses M<N> for delivery
+implement Task Path Planner / Task Result Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide Agent (legacy: Agents D-H) behavior. Planning language uses M<N> for delivery
 milestones and L1/L2/L3 for lifecycle stages.
 
 11.0.7 established the conversation test domain: API, CLI, orchestrator, and
 necessary E2E smoke tests with auditable evidence. It does not add path
-selection, slot binding, task-to-path planning, Agent D / E / F / G / H
+selection, slot binding, task-to-path planning, Task Path Planner / Task Result Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide Agent (legacy: Agents D-H)
 implementations, or autonomous learning.
 
 Last completed M10 package: `10.2-replay-execution-drift-detection`.
@@ -96,16 +96,16 @@ did not implement the complete negative-knowledge store.
   Supervisor Agent. A broader registry for third-party Agents is
   still a later milestone.
 - **Task-to-Path implementation** — user task / chat input beyond schema,
-  Agent D Path Planner implementation, path retrieval / ranking, slot
-  binding, execution confirmation, task result verification, and Agent E
-  result reporting belong to later M11.1 packages. 11.1.1 only defines the
-  domain contract.
-- **Recovery / abort dialogue** — Agent F Recovery Dialogue and Agent G
-  Abort Dialogue are M12, not M11.0.
-- **Agent H Teaching Guide Agent** — guided teaching belongs to M13, not
+  Task Path Planner (legacy: Agent D) implementation, path retrieval / ranking,
+  slot binding, execution confirmation, task result verification, and Task
+  Result Reporter (legacy: Agent E) result reporting belong to later M11.1
+  packages. 11.1.1 only defines the domain contract.
+- **Recovery / abort dialogue** — Failure Recovery Agent (legacy: Agent F) and
+  User Abort Handler (legacy: Agent G) are M12, not M11.0.
+- **Teaching Guide Agent (legacy: Agent H)** — guided teaching belongs to M13, not
   M11.0.
 - **Runtime Agent implementations** — M11.0 may define routing
-  boundaries, but it does not implement Agent D / E / F / G / H logic,
+  boundaries, but it does not implement Task Path Planner / Task Result Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide Agent (legacy: Agents D-H) logic,
   L3 task running, slot binding, recovery dialogue, or teaching
   behavior.
 - **Multi-page workflow composition** — composing multiple LearnedPaths
@@ -140,9 +140,9 @@ did not implement the complete negative-knowledge store.
 - **Control coverage expansion and pattern mining** — popup controls,
   custom click-toggle controls, additional label handlers, and
   cross-page pattern mining are M14 unless explicitly reprioritized.
-- **Learning Reporter product surface** — Agent C's user-facing learning
+- **Learning Report product surface** — Learning Report Agent (legacy: Agent C)'s user-facing learning
   report is M14. Current workbench/history output is developer-oriented
-  evidence, not the final Agent C report.
+  evidence, not the final Learning Report Agent (legacy: Agent C) report.
 - **Negative knowledge store** — formal assetization of failed attempts,
   replay drift, `target_missing`, `unsupported_action`, and user
   corrections is M14 / M15. M10.2 emitted replay / drift evidence, but

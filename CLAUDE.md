@@ -45,10 +45,18 @@ Current delivery status:
 - Current delivery package: **11.1.2 LearnedPath Retrieval and Ranking**
   within **M11.1 Task-to-Path Planning & Execution MVP**.
 - M11.1 planning continues. 11.1.1 defined task / candidate / route / binding /
-  verification contracts; 11.1.2 implements retrieval. Agent D / E, slot
-  binding, replay execution, and result verification remain future work.
-- Agent routing, L3 task runner, L2 guided teaching, and Agent H Teaching
-  Guide Agent are planned future work, not current implementation.
+  verification contracts; 11.1.2 implements retrieval. Task Path Planner /
+  Task Result Reporter (legacy: Agent D/E), slot binding, replay execution,
+  and result verification remain future work.
+- Agent routing, L3 task runner, L2 guided teaching, and Teaching Guide Agent
+  (legacy: Agent H) are planned future work, not current implementation.
+
+Internal Agent naming:
+
+- Prefer functional role names in new docs.
+- A-H labels are legacy aliases.
+- First mention example: `Task Path Planner (legacy: Agent D)`.
+- Later mentions should use `Task Path Planner`.
 
 CLI terminology:
 
@@ -299,9 +307,10 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - Conversation domain / store / API / CLI / Orchestrator service skeleton,
   explicit replay hook, public dispatch endpoint, CLI dispatch integration,
   and conversation runtime E2E are implemented through M11.0.7.
-- M11.1 task planning domain schemas shipped in 11.1.1 (24 tests). Agent D /
-  E, retrieval, slot binding, task execution, result verification,
-  confirmation, recovery, and teaching remain future work.
+- M11.1 task planning domain schemas shipped in 11.1.1 (24 tests). Task Path
+  Planner / Task Result Reporter (legacy: Agent D/E), retrieval, slot
+  binding, task execution, result verification, confirmation, recovery, and
+  teaching remain future work.
 - L2 teaching support, highlight targets, and user action recording.
 - Artifact lifecycle handling.
 - Failure evidence / negative knowledge.

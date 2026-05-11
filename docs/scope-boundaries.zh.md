@@ -16,7 +16,7 @@
 它基于 11.1.1 的 domain contract（`TaskInput`、`TaskIntent`、
 `LearnedPathCandidate`）。
 
-11.1.2 不实现 Agent D / E，不做 slot binding、execution、replay side
+11.1.2 不实现 Task Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器（legacy: Agent D/E），不做 slot binding、execution、replay side
 effects、result verification、artifact lifecycle 或 E2E。
 
 M11.0 runtime loop foundation 已完成。已完成范围是：
@@ -48,12 +48,12 @@ M11.0 runtime loop foundation 已完成。已完成范围是：
 当前规划包：`11.1.2-learned-path-retrieval-ranking`。
 
 11.1.2 不组合多步 route、不做 slot binding、不执行任务，也不实现
-Agent D / E / F / G / H 行为。规划语言使用 M<N> 指交付里程碑，使用
+Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 行为。规划语言使用 M<N> 指交付里程碑，使用
 L1/L2/L3 指生命周期阶段。
 
 11.0.7 已建立 conversation 测试证据：API、CLI、orchestrator、replay hook
 baseline，以及 conversation runtime E2E。它仍不做 path selection、slot
-binding、task-to-path planning、不实现 Agent D / E / F / G / H，也不做
+binding、task-to-path planning、不实现 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H），也不做
 autonomous learning。
 
 刚完成的 M10 执行包：`10.2-replay-execution-drift-detection`。
@@ -84,16 +84,18 @@ knowledge store。
   端点并带上可审计的汇报契约，让 AI 编码 Agent 可以跑 scenario 而不
   绕过项目内 Supervisor Agent。更广义的第三方 Agent 注册表属于后续
   里程碑。
-- **Task-to-Path 具体实现** —— schema 以外的用户任务 / chat 入口、Agent
-  D Path Planner 实现、路径检索 / 排序、slot binding、执行前确认、task
-  result verification、Agent E 结果汇报属于后续 M11.1 包。11.1.1 只定义
-  domain contract。
-- **Recovery / abort 对话** —— Agent F Recovery Dialogue 和 Agent G
-  Abort Dialogue 属于 M12，不属于 M11.0。
-- **Agent H Teaching Guide Agent / 教学引导 Agent** —— guided teaching 属于
+- **Task-to-Path 具体实现** —— schema 以外的用户任务 / chat 入口、Task
+  Path Planner / 任务路径规划器（legacy: Agent D）实现、路径检索 / 排序、
+  slot binding、执行前确认、task result verification、Task Result Reporter /
+  任务结果汇报器（legacy: Agent E）结果汇报属于后续 M11.1 包。11.1.1
+  只定义 domain contract。
+- **Recovery / abort 对话** —— Failure Recovery Agent / 失败恢复助手
+  （legacy: Agent F）和 User Abort Handler / 用户中断处理器（legacy: Agent G）
+  属于 M12，不属于 M11.0。
+- **Teaching Guide Agent / 教学引导器（legacy: Agent H）** —— guided teaching 属于
   M13，不属于 M11.0。
 - **Runtime Agent 具体实现** —— M11.0 可以定义 routing 边界，但不实现
-  Agent D / E / F / G / H 逻辑，不做 L3 task runner、slot binding、
+  Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 逻辑，不做 L3 task runner、slot binding、
   recovery dialogue 或 teaching behavior。
 - **Multi-page workflow composition / 多页面工作流编排** —— 多个 LearnedPath
   组成跨页面 workflow 属于 M17，不属于 M11.0。
@@ -121,8 +123,8 @@ knowledge store。
 - **控件覆盖扩展与模式归纳** —— popup 控件、自定义 click-toggle
   控件、更多 label handler、跨页面 pattern mining 属于 M14，除非明确
   重新排优先级。
-- **Learning Reporter 产品表面** —— Agent C 的用户可读学习报告属于
-  M14。当前 workbench / history 输出是开发者取证面，不是 Agent C 的
+- **Learning Report 产品表面** —— Learning Report Agent / 学习报告器（legacy: Agent C） 的用户可读学习报告属于
+  M14。当前 workbench / history 输出是开发者取证面，不是 Learning Report Agent / 学习报告器（legacy: Agent C） 的
   最终报告。
 - **Negative knowledge store / 负面知识资产化** —— failed attempts、
   replay drift、`target_missing`、`unsupported_action` 和 user corrections

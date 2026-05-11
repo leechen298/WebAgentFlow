@@ -24,10 +24,10 @@
 
 | 维度 | 决定 | 理由 |
 |---|---|---|
-| LearnedPath 粒度 | A：`(page, scenario)` | 暴力存，由 M11.1 Agent D 选择 |
+| LearnedPath 粒度 | A：`(page, scenario)` | 暴力存，由 M11.1 Task Path Planner / 任务路径规划器（legacy: Agent D） 选择 |
 | page_signature | URL（path 模板 + query 白名单）+ DOM 指纹 | 双要素抗 redirect / 抗动态路由 / 抗改版 |
 | 写回时机 | 自动（`pass_gate = pass`）+ 用户事后路径级 trust 管理 | 大部分场景自学，少数人工纠偏；当前路径级操作入口在 LearnedPath catalog |
-| empty-actions | 也存（observational） | 单纯打开页面看一眼也是合法成功，给后续 Agent D 信号 |
+| empty-actions | 也存（observational） | 单纯打开页面看一眼也是合法成功，给后续 Task Path Planner / 任务路径规划器（legacy: Agent D） 信号 |
 
 ## 主要交付
 

@@ -15,7 +15,7 @@ completed / failed 证据。
   transition 到 `replay_requested`，不执行 side effect。
 - 11.0.6 是第一个把 runtime conversation 和 M10 确定性能力连接起来的包。
 - 这个连接必须是显式的：只能使用用户提供的 `learned_path_id + url`。
-- 这不是 Agent D Path Planner，不做路径选择，不做任务理解，不做 slot
+- 这不是 Task Path Planner / 任务路径规划器（legacy: Agent D），不做路径选择，不做任务理解，不做 slot
   binding。
 - replay result 不是 `pass_gate`，不是 Supervisor verdict，只是 M10
   replay / drift result。
@@ -27,7 +27,7 @@ completed / failed 证据。
 - 不做 LearnedPath selection。
 - 不做 natural-language task planning。
 - 不做 slot binding。
-- 不实现 Agent D / E / F / G / H。
+- 不实现 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 不做 recovery / abort dialogue。
 - 不做 teaching mode。
 - 不做 artifact lifecycle。

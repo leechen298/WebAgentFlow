@@ -63,8 +63,10 @@ Execution MVP 现在进入规划；当前包是
   E2E evidence（11.0.7，`10 passed` E2E）。
 - `apps/worker` 仍是脚手架。
 - M11.1 task-to-path schema 仍是规划中，尚未实现。L2 用户引导学习、L3
-  task execution、Agent D / E / F / G / H routing，以及 Agent H Teaching
-  Guide Agent 都是 planned，尚未实现。
+  task execution，以及 Task Path Planner / 任务路径规划器、Task Result
+  Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、
+  User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器
+  的 routing（legacy: Agents D-H）都是 planned，尚未实现。
 
 **已完成阶段：**
 
@@ -280,7 +282,7 @@ conversation、teaching、artifact、evidence 服务是 planned service areas，
 **`services/teaching/`** —— 规划中的 L2 teaching 支撑：
 
 - highlight target generation
-- Agent H Teaching Guide integration
+- Teaching Guide Agent / 教学引导器（legacy: Agent H） integration
 - visible-browser teaching event handling
 - user action recorder integration
 
@@ -313,11 +315,11 @@ negative-knowledge store。
 User message
 -> Runtime Conversation Surface
 -> Conversation Orchestrator / Dispatcher
--> Agent D / F / G / H or execution service
+-> Task Path Planner / 任务路径规划器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D/F/G/H）或 execution service
 -> Browser runtime / replay engine / teaching recorder
 -> result event
 -> Conversation Orchestrator / Dispatcher
--> Agent E / F / G / H response
+-> Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents E/F/G/H）response
 -> user
 ```
 
@@ -338,10 +340,11 @@ Teaching mode 是规划在 M13 的 L2 能力，不属于当前 M10.2 replay / dr
 - operator UI 中的 indicator / tooltip / next-step prompt rendering
 - user event recorder，记录真实 click、input、selection、navigation 和
   可观测状态变化
-- Agent H Teaching Guide Agent，产出自然语言 guidance 和 highlight
+- Teaching Guide Agent / 教学引导器（legacy: Agent H），产出自然语言 guidance 和 highlight
   targets
 
-写入 LearnedPath 的 recorded action 必须来自真实用户事件。Agent H 的建议
+写入 LearnedPath 的 recorded action 必须来自真实用户事件。Teaching Guide Agent / 教学引导器
+（legacy: Agent H）的建议
 只是 guidance，不是 provenance，不能直接写成 LearnedPath action。
 
 ---

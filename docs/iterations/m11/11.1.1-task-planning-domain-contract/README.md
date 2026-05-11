@@ -25,8 +25,8 @@
 
 - 不做 retrieval。
 - 不做 slot binding implementation。
-- 不做 Agent D implementation。
-- 不做 Agent E implementation。
+- 不做 Task Path Planner / 任务路径规划器（legacy: Agent D） implementation。
+- 不做 Task Result Reporter / 任务结果汇报器（legacy: Agent E） implementation。
 - 不做 replay execution。
 - 不调用 autonomous run。
 - 不依赖 LLM provider。
@@ -35,13 +35,13 @@
 ## 目标
 
 定义 M11.1 task-to-path planning 的 domain contract，为 retrieval、slot
-binding、Agent D、confirmation、execution、verification、Agent E reporting
+binding、Task Path Planner / 任务路径规划器（legacy: Agent D）、confirmation、execution、verification、Task Result Reporter / 任务结果汇报器（legacy: Agent E） reporting
 提供统一 schema。
 
 ## 非目标
 
 - 不做 retrieval / ranking。
-- 不做 Agent D / E 实现。
+- 不做 Task Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器（legacy: Agent D/E） 实现。
 - 不做 slot binding。
 - 不做 execution。
 - 不做 result verification。

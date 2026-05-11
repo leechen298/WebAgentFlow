@@ -2,7 +2,7 @@
 
 运营视角下"已交付 / 正在做 / 下一步"的全景。
 
-- 产品**是什么**（L1/L2/L3 生命周期阶段、产品内部 Agent A-H、跨阶段不变量）见
+- 产品**是什么**（L1/L2/L3 生命周期阶段、产品内部 功能角色（legacy aliases A-H）、跨阶段不变量）见
   [`product-model.zh.md`](./product-model.zh.md) —— 权威产品参考。
 - 迭代目录使用 `docs/iterations/m10/` 这类里程碑路径。路线图正文使用
   **交付里程碑 M<N>**，避免和生命周期阶段 L1/L2/L3 混淆。
@@ -109,8 +109,8 @@ M9 没有剩余待办。M10 现已关闭；下一步交付里程碑是 M11.0。
 ## M10 —— Path Asset Foundation / 路径资产基础（已于 2026-05-08 完成）
 
 M10 已经让 LearnedPath 成为可复用资产。它仍然是基础里程碑，不是 L3
-task runner：不做运行时 conversation shell、不做 Agent D Path Planner、
-不做 Agent H Teaching Guide Agent，也不做 task-to-path 执行闭环。它
+task runner：不做运行时 conversation shell、不做 Task Path Planner / 任务路径规划器（legacy: Agent D）、
+不做 Teaching Guide Agent / 教学引导器（legacy: Agent H），也不做 task-to-path 执行闭环。它
 搭建的是 M11 会调用的确定性执行底座。
 
 - **LearnedPath 落库 —— 已于 2026-04-25 交付（10.1）**。
@@ -175,9 +175,9 @@ M11.0 建立第一版运行时产品入口，让用户可以和 WebAgentFlow 沟
 预期交付：
 
 - CLI-first 的运行时沟通入口；用户和 **WebAgentFlow** 沟通，而不是
-  直接和 Agent D / E / F / G / H 沟通。
+  直接和 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 沟通。
 - 代码侧 Conversation Orchestrator / Dispatcher，维护 session state，
-  并把用户消息和 engine events 路由到 Agent D / E / F / G / H 边界；
+  并把用户消息和 engine events 路由到 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 边界；
   这些能力随对应里程碑逐步上线。
 - 支持任务输入、确认、暂停、继续、abort、takeover 的基础消息或命令。
 - 先服务 M11.1 快乐路径，同时为 M12 恢复 / 中断对话和 M13 教学流程
@@ -205,10 +205,10 @@ engine 执行，在能力范围内验证任务结果，然后汇报结果。
 
 纳入 / 明确的产品内部 Agent：
 
-- **Agent D · Path Planner Agent / 路径规划 Agent** —— 读取用户任务和
+- **Task Path Planner / 任务路径规划器（legacy: Agent D）** —— 读取用户任务和
   学习数据，选择 / 组合路线，把任务参数绑定到可替换 action value，
   并且绝不读取 raw HTML。
-- **Agent E · Result Reporter Agent / 结果报告 Agent** —— 读取执行结果、
+- **Task Result Reporter / 任务结果汇报器（legacy: Agent E）** —— 读取执行结果、
   postcondition check、artifact status 和 final-state signals，输出
   用户可读报告和 UI 可渲染结构化字段。
 
@@ -239,16 +239,16 @@ M12 把失败和用户中断做成一等产品流程。它依赖 M11.0 conversat
 
 纳入 / 明确的产品内部 Agent：
 
-- **Agent F · Recovery Dialogue Agent / 恢复对话 Agent** —— 解释失败步骤，
+- **Failure Recovery Agent / 失败恢复助手（legacy: Agent F）** —— 解释失败步骤，
   给出 continue / rerun / replan / takeover / abandon 选项，并产出下一
   个边界动作。
-- **Agent G · Abort Dialogue Agent / 中断对话 Agent** —— 处理用户主动
+- **User Abort Handler / 用户中断处理器（legacy: Agent G）** —— 处理用户主动
   中断，给出 continue / rerun / replan / takeover / abandon 选项。
 
 预期交付：
 
 - L3 执行失败即暂停。
-- 恢复对话只在规划边界处调用 Agent D。
+- 恢复对话只在规划边界处调用 Task Path Planner / 任务路径规划器（legacy: Agent D）。
 - 用户主动中断和用户请求停止的 abort dialogue。
 - 自动化无法安全继续时，交给 M13 的 User Demonstration 或 Guided
   Teaching。
@@ -265,7 +265,7 @@ Guided Teaching。
 
 纳入 / 明确的产品内部 Agent：
 
-- **Agent H · Teaching Guide Agent / 教学引导 Agent** —— 沟通下一步教学
+- **Teaching Guide Agent / 教学引导器（legacy: Agent H）** —— 沟通下一步教学
   动作，提出 highlight target，询问澄清问题，但不直接操作浏览器。
 
 预期交付：
@@ -278,7 +278,7 @@ Guided Teaching。
   selection 仍由用户执行。
 - 只有用户真实动作可以带 provenance 写回 LearnedPath actions
   （`provenance = user`）。
-- Agent H 的建议只是 guidance，不能直接写成 LearnedPath action。
+- Teaching Guide Agent / 教学引导器的建议（legacy: Agent H）只是 guidance，不能直接写成 LearnedPath action。
 - 路径纠正 UI：编辑或替换既有 LearnedPath。
 - 用户纠正和 correction evidence 驱动 trust 更新。
 
@@ -289,11 +289,11 @@ M10 draft backlog：更丰富控件、模式泛化和负面知识。
 
 纳入 / 明确的产品内部 Agent：
 
-- **Agent A · Page Intent Agent / 页面意图 Agent** —— 把页面用途理解从
+- **Page Understanding Agent / 页面理解器（legacy: Agent A）** —— 把页面用途理解从
   Supervisor 评估里拆出来。
-- **Agent B · Attempt Evaluator Agent / 尝试评估 Agent** —— 保持简单：
+- **Attempt Evaluation Agent / 尝试评估器（legacy: Agent B）** —— 保持简单：
   输出观察 / 异常，耐久 verdict 仍由代码推导。
-- **Agent C · Learning Reporter Agent / 学习报告 Agent** —— 给用户汇报：
+- **Learning Report Agent / 学习报告器（legacy: Agent C）** —— 给用户汇报：
   页面是什么、哪些路径可靠、哪些失败过、哪里需要用户补教、trust 如何
   变化。
 
@@ -305,14 +305,16 @@ M10 draft backlog：更丰富控件、模式泛化和负面知识。
   checkbox / radio。
 - Form-label extractor 扩展：Element Plus、Naive UI、Arco Design、
   TDesign、Quasar、MUI，按 fixture 或真实页面证据触发。
-- Cross-page pattern mining：login / search / CRUD metadata，供 Agent D
+- Cross-page pattern mining：login / search / CRUD metadata，供 Task Path Planner / 任务路径规划器（legacy: Agent D）
   后续消费。
 
 Negative knowledge / failure evidence 在这里正式化：
 
 - 存储 failed attempts、replay drift、`target_missing`、
   `unsupported_action` 和 user correction evidence。
-- 供 Agent D planning、Agent B evaluation、learning quality report 和
+- 供 Task Path Planner / 任务路径规划器 planning（legacy: Agent D）、
+  Attempt Evaluation Agent / 尝试评估器 evaluation（legacy: Agent B）、
+  learning quality report 和
   M15 automated evaluation 消费。
 - 更丰富的 postcondition pattern 和 artifact verification pattern 可以
   放在 M14 或 M15，取决于实现范围。
@@ -358,7 +360,7 @@ M17 把 L3 从单路径执行扩展到 workflow composition。
 - 把多个 LearnedPath 编排成更大的 workflow。
 - 跨页面传递状态，例如 search -> detail -> export。
 - 支持跨页面的 workflow-level recovery、takeover 和 teaching mode。
-- Agent D 可以组合已经学会的路径，但不能从 raw HTML 凭空发明浏览器
+- Task Path Planner / 任务路径规划器（legacy: Agent D） 可以组合已经学会的路径，但不能从 raw HTML 凭空发明浏览器
   路径。
 
 ## M18 —— CLI Distribution & Integration Readiness / CLI 分发与集成就绪
@@ -381,7 +383,7 @@ M18 在 runtime loop 和 workflow composition 可用之后，稳定 CLI / API
 是 runtime conversation 与 orchestration foundation；刚完成的 M10.2
 replay 边界仍作为历史参考。要点：
 
-- 不做 Agent D / E / F / G / H 具体实现。
+- 不做 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 具体实现。
 - 不做 L3 task runner 或 task-to-path planning。
 - 不做 L3 task result verification。
 - 不做 artifact lifecycle。

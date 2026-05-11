@@ -57,7 +57,7 @@ M11.0 planned session states：
 - `completed`
 - `failed`
 
-这些状态是 M11.0 的 orchestrator 骨架。Agent D / E / F / G / H 相关状态
+这些状态是 M11.0 的 orchestrator 骨架。Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 相关状态
 可以预留边界，但不实现具体 Agent 逻辑。L3 per-step browser control 不允许
 进入状态机。Replay states 只允许显式 path replay，不做 path selection。
 
@@ -77,7 +77,7 @@ CLI-first 初版可支持：
 `/replay` 是 M11.0 最小可执行桥：只调用已完成的 M10 replay API / service。
 `/replay` 需要显式 `learned_path_id + url`，不做 path selection。
 
-Free-form task text 在 M11.0 只记录为 task input，不进入 Agent D planning。
+Free-form task text 在 M11.0 只记录为 task input，不进入 Task Path Planner / 任务路径规划器（legacy: Agent D） planning。
 自然语言 task-to-path 是 M11.1，不在 M11.0。
 
 ## 最小数据结构规划
@@ -153,7 +153,7 @@ Conversation Orchestrator / Dispatcher 的输入：
 3. 设计 CLI command parser
    - 支持 `/status`、`/pause`、`/resume`、`/abort`、`/takeover`、
      `/cancel`、`/replay <learned_path_id> <url>`。
-   - Free-form task text 只入 session，不触发 Agent D。
+   - Free-form task text 只入 session，不触发 Task Path Planner / 任务路径规划器（legacy: Agent D）。
 
 4. 设计 Orchestrator / Dispatcher service boundary
    - 输入 user message / slash command / engine event。
@@ -198,7 +198,7 @@ Conversation Orchestrator / Dispatcher 的输入：
 
 - `git diff --check`
 - 文档中没有出现 10.3 作为下一迭代。
-- 文档中明确 M11.0 不做 Agent D / E / F / G / H。
+- 文档中明确 M11.0 不做 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 文档中明确 CLI runtime conversation、M16 external CLI、当前
   `verify-scenario` CLI 三者不同。
 - 文档中明确不调用 autonomous run。

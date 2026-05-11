@@ -34,7 +34,7 @@ Conversation 测试域覆盖：
 
 Conversation 测试域不覆盖：
 
-- Agent D/E/F/G/H 具体实现。
+- Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 具体实现。
 - task-to-path planning。
 - slot binding。
 - path selection。

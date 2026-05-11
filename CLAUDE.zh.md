@@ -43,10 +43,18 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - 当前交付包：**M11.1 Task-to-Path Planning & Execution MVP** 下的
   **11.1.2 LearnedPath Retrieval and Ranking**。
 - M11.1 规划继续。11.1.1 定义了 task / candidate / route / binding /
-  verification contract；11.1.2 实现 retrieval。Agent D / E、slot binding、
-  replay execution、result verification 仍属后续工作。
-- Agent routing、L3 task runner、L2 guided teaching、Agent H Teaching Guide
-  Agent 都是后续规划，不是当前已实现。
+  verification contract；11.1.2 实现 retrieval。Task Path Planner /
+  任务路径规划器和 Task Result Reporter / 任务结果汇报器（legacy: Agent D/E）、
+  slot binding、replay execution、result verification 仍属后续工作。
+- Agent routing、L3 task runner、L2 guided teaching、Teaching Guide Agent /
+  教学引导器（legacy: Agent H）都是后续规划，不是当前已实现。
+
+内部 Agent 命名规则：
+
+- 新文档优先使用功能性角色名。
+- A-H 标签只作为 legacy alias。
+- 首次出现示例：`Task Path Planner / 任务路径规划器（legacy: Agent D）`。
+- 后续提及时使用 `Task Path Planner / 任务路径规划器`。
 
 CLI 术语：
 
@@ -286,9 +294,10 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - Conversation domain / store / API / CLI / Orchestrator service skeleton、
   explicit replay hook、public dispatch endpoint、CLI dispatch 接入和
   conversation runtime E2E 已通过 M11.0.7 实现。
-- M11.1 task planning domain schema 在 11.1.1 已交付（24 个测试）。Agent D /
-  E、retrieval、slot binding、task execution、result verification、
-  confirmation、recovery、teaching 仍是后续工作。
+- M11.1 task planning domain schema 在 11.1.1 已交付（24 个测试）。Task
+  Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器
+  （legacy: Agent D/E）、retrieval、slot binding、task execution、
+  result verification、confirmation、recovery、teaching 仍是后续工作。
 - L2 teaching support、highlight targets 和 user action recording。
 - Artifact lifecycle handling。
 - Failure evidence / negative knowledge。

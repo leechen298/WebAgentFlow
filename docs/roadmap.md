@@ -122,7 +122,7 @@ M11.0.
 
 M10 made LearnedPath a reusable asset. It remained a foundation
 milestone, not an L3 task runner: no runtime conversation shell, no
-Agent D Path Planner, no Agent H Teaching Guide Agent, and no
+Task Path Planner (legacy: Agent D), no Teaching Guide Agent (legacy: Agent H), and no
 task-to-path execution loop. It built the deterministic substrate that
 M11 will call.
 
@@ -199,10 +199,11 @@ Progress:
 Expected delivery:
 
 - A CLI-first runtime conversation surface where the user talks to
-  **WebAgentFlow**, not directly to Agent D / E / F / G / H.
+  **WebAgentFlow**, not directly to Task Path Planner / Task Result Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide Agent (legacy: Agents D-H).
 - A code-side Conversation Orchestrator / Dispatcher that maintains
-  session state and routes user messages plus engine events to Agent
-  D / E / F / G / H boundaries as those milestone capabilities come
+  session state and routes user messages plus engine events to Task Path
+  Planner, Task Result Reporter, Failure Recovery Agent, User Abort Handler,
+  and Teaching Guide Agent boundaries as those milestone capabilities come
   online.
 - Basic messages or commands for task input, confirmation, pause,
   resume, abort, and takeover.
@@ -228,10 +229,10 @@ ranking for a given task intent.
 
 Internal Agents introduced / made concrete:
 
-- **Agent D · Path Planner Agent** — reads the user task plus learned
+- **Task Path Planner (legacy: Agent D)** — reads the user task plus learned
   data, selects / composes a route, binds task parameters into
   replaceable action values, and never reads raw HTML.
-- **Agent E · Result Reporter Agent** — reads the execution outcome,
+- **Task Result Reporter (legacy: Agent E)** — reads the execution outcome,
   postcondition checks, artifact status, and final-state signals, then
   returns a user-facing result with structured fields the UI can render.
 
@@ -271,16 +272,16 @@ runtime dialogues, not isolated execution statuses.
 
 Internal Agents introduced / made concrete:
 
-- **Agent F · Recovery Dialogue Agent** — explains a failed step, offers
+- **Failure Recovery Agent (legacy: Agent F)** — explains a failed step, offers
   continue / rerun / replan / takeover / abandon options, and produces
   the next boundary action.
-- **Agent G · Abort Dialogue Agent** — handles user-initiated aborts
+- **User Abort Handler (legacy: Agent G)** — handles user-initiated aborts
   with continue / rerun / replan / takeover / abandon options.
 
 Expected delivery:
 
 - Pause-on-failure semantics for L3 execution.
-- Recovery dialogue that can route to Agent D only at planning
+- Recovery dialogue that can route to Task Path Planner (legacy: Agent D) only at planning
   boundaries.
 - Abort dialogue for user interruption and user-requested stop.
 - Takeover handoff into M13 User Demonstration or Guided Teaching when
@@ -299,7 +300,7 @@ sub-modes: User Demonstration and Guided Teaching.
 
 Internal Agent introduced / made concrete:
 
-- **Agent H · Teaching Guide Agent** — communicates the next teaching
+- **Teaching Guide Agent (legacy: Agent H)** — communicates the next teaching
   step, proposes highlight targets, asks clarification questions, and
   never operates the browser directly.
 
@@ -314,7 +315,7 @@ Expected delivery:
   performs the real click / input / selection.
 - Provenance-preserving write-back into LearnedPath actions only from
   real user actions (`provenance = user`).
-- Agent H suggestions remain guidance; they cannot be written directly
+- Teaching Guide Agent suggestions (legacy: Agent H) remain guidance; they cannot be written directly
   as LearnedPath actions.
 - Path correction UI for editing or replacing an existing LearnedPath.
 - Trust updates driven by user correction and correction evidence.
@@ -327,11 +328,11 @@ pattern generalization, and negative knowledge.
 
 Internal Agents introduced / made concrete:
 
-- **Agent A · Page Intent Agent** — separate page-purpose understanding
+- **Page Understanding Agent (legacy: Agent A)** — separate page-purpose understanding
   from Supervisor evaluation.
-- **Agent B · Attempt Evaluator Agent** — keep attempt evaluation simple:
+- **Attempt Evaluation Agent (legacy: Agent B)** — keep attempt evaluation simple:
   output observations / anomalies; let code derive durable verdicts.
-- **Agent C · Learning Reporter Agent** — produce a user-facing report:
+- **Learning Report Agent (legacy: Agent C)** — produce a user-facing report:
   what the page is, what paths are reliable, what failed, what needs
   user teaching, and how trust states changed.
 
@@ -345,13 +346,13 @@ Coverage backlog moved here:
   Design, TDesign, Quasar, and MUI where fixture or real-page evidence
   justifies the handler.
 - Cross-page pattern mining for login / search / CRUD metadata that
-  Agent D can consume later.
+  Task Path Planner (legacy: Agent D) can consume later.
 
 Negative knowledge / failure evidence becomes formal here:
 
 - Store failed attempts, replay drift, `target_missing`,
   `unsupported_action`, and user correction evidence.
-- Feed that evidence to Agent D planning, Agent B evaluation, learning
+- Feed that evidence to Task Path Planner (legacy: Agent D) planning, Attempt Evaluation Agent (legacy: Agent B) evaluation, learning
   quality reports, and M15 automated evaluation.
 - Add richer postcondition patterns and artifact verification patterns
   here or in M15, depending on implementation scope.
@@ -401,7 +402,7 @@ Expected delivery:
 - Carry state across pages, such as search -> detail -> export.
 - Support workflow-level recovery, takeover, and teaching mode across
   page transitions.
-- Let Agent D compose already learned paths, while forbidding it from
+- Let Task Path Planner (legacy: Agent D) compose already learned paths, while forbidding it from
   inventing browser paths from raw HTML.
 
 ## M18 — CLI Distribution & Integration Readiness
@@ -426,7 +427,7 @@ list. M11.0 is the runtime conversation and orchestration foundation;
 the completed M10.2 replay boundaries remain useful historical
 reference. Highlights:
 
-- No Agent D / E / F / G / H implementations.
+- No Task Path Planner / Task Result Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide Agent (legacy: Agents D-H) implementations.
 - No L3 task runner or task-to-path planning.
 - No L3 task result verification.
 - No artifact lifecycle.

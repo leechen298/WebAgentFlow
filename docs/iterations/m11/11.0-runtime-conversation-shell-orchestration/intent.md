@@ -14,7 +14,7 @@ drift detection，以及 replay E2E / Codex exploratory evidence。系统现在
 surface。
 
 不能直接跳到复杂 task planner。用户和系统之间需要先有统一入口、会话状态、
-消息记录、基础命令和 orchestrator 边界，否则后续 Agent D / E / F / G / H
+消息记录、基础命令和 orchestrator 边界，否则后续 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）
 会被暴露成用户直接感知的内部实现。用户认知里只有 WebAgentFlow，而不是
 一组独立子 Agent。
 
@@ -28,7 +28,7 @@ CLI-first 是最小可行入口。后续 Web UI 或 M16 external CLI 都不能�
 
 ## 边界（本轮不做）
 
-- 不做 Agent D / E / F / G / H 的具体实现。
+- 不做 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 的具体实现。
 - 不做自然语言 task-to-path planning。
 - 不做 slot binding。
 - 不做 L3 task execution MVP。
@@ -54,4 +54,4 @@ CLI-first 是最小可行入口。后续 Web UI 或 M16 external CLI 都不能�
 - 明确如何以显式 `learned_path_id + url` 调用 M10 replay 能力作为最小
   smoke hook。
 - 明确哪些只是 placeholder，哪些必须在 M11.0 实现。
-- 明确 M11.0 完成后 M11.1 可以在此基础上接 Agent D / E。
+- 明确 M11.0 完成后 M11.1 可以在此基础上接 Task Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器（legacy: Agent D/E）。

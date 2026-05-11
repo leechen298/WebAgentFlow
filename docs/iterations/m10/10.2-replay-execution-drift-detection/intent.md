@@ -44,7 +44,7 @@ L3 task runner。
   输入框找不到了。
 
 10.2 的位置就是把 LearnedPath 从“记录”推进到“可复用资产”。M11.1 的
-Agent D · Path Planner Agent 之后可以调用 replay 能力，但 10.2 自身
+Task Path Planner / 任务路径规划器（legacy: Agent D） 之后可以调用 replay 能力，但 10.2 自身
 不做任务理解、路径选择或参数绑定。
 
 ## 目标
@@ -77,14 +77,14 @@ Agent D · Path Planner Agent 之后可以调用 replay 能力，但 10.2 自身
   `10.4`。
 - 不做跨页面模式归纳。login / search / CRUD 共性归纳已迁入 M14 backlog。
 - 不实现完整 L3 task runner；本轮只验证 LearnedPath 能否复刻。
-- 不实现 Agent D · Path Planner Agent。
+- 不实现 Task Path Planner / 任务路径规划器（legacy: Agent D）。
 - 不做用户自然语言任务入口、path retrieval / ranking、slot binding、
-  pre-execution confirmation、task result verification 或 Agent E 结果
+  pre-execution confirmation、task result verification 或 Task Result Reporter / 任务结果汇报器（legacy: Agent E） 结果
   报告；这些属于 M11.1。
 - 不做 Runtime Conversation Surface / CLI。
 - 不做 Conversation Orchestrator / Dispatcher。
-- 不实现 Agent F / G 的 recovery / abort dialogue。
-- 不实现 Agent H / teaching mode，不做 visible browser teaching overlay，
+- 不实现 Failure Recovery Agent / 失败恢复助手和 User Abort Handler / 用户中断处理器（legacy: Agent F/G） 的 recovery / abort dialogue。
+- 不实现 Teaching Guide Agent / 教学引导器（legacy: Agent H） / teaching mode，不做 visible browser teaching overlay，
   不记录用户真实操作。
 - 不做 artifact lifecycle；下载、导出、截图等 artifact 的 capture /
   storage / display / retention / cleanup 属于后续里程碑。

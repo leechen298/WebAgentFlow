@@ -13,27 +13,27 @@ task-to-path planning 找到候选路径、绑定参数、请求确认、执行 
 2. 系统生成 task intent record。
 3. LearnedPath retrieval / ranking 返回候选路径。
 4. Slot binding 将任务参数绑定到可替换 action values。
-5. Agent D 在候选、绑定、证据边界内生成 route plan。
+5. Task Path Planner / 任务路径规划器（legacy: Agent D） 在候选、绑定、证据边界内生成 route plan。
 6. Confirmation / consent gate 在执行前要求用户确认不确定或有风险的计划。
 7. Execution 通过 M10 replay / M11.0 replay hook 执行。
 8. Result verification 读取 replay result、postconditions、artifact status
    和 final-state signals。
-9. Agent E 基于证据汇报结果，不脑补成功。
+9. Task Result Reporter / 任务结果汇报器（legacy: Agent E） 基于证据汇报结果，不脑补成功。
 
 ## 执行包拆分
 
 - 11.1.1 Task planning domain contract。
 - 11.1.2 LearnedPath retrieval and ranking。
 - 11.1.3 Slot binding contract and deterministic binding MVP。
-- 11.1.4 Agent D planner MVP。
+- 11.1.4 Task Path Planner / 任务路径规划器（legacy: Agent D） planner MVP。
 - 11.1.5 Plan confirmation and consent gate。
 - 11.1.6 Execution via replay。
-- 11.1.7 Result verification and Agent E reporting。
+- 11.1.7 Result verification and Task Result Reporter / 任务结果汇报器（legacy: Agent E） reporting。
 - 11.1.8 Task-to-path tests and evidence。
 
-## Agent D 输入 / 输出边界
+## Task Path Planner / 任务路径规划器（legacy: Agent D） 输入 / 输出边界
 
-Agent D Path Planner Agent 只在规划边界工作。
+Task Path Planner / 任务路径规划器（legacy: Agent D） 只在规划边界工作。
 
 输入：
 
@@ -51,12 +51,12 @@ Agent D Path Planner Agent 只在规划边界工作。
 - RiskHint / ConsentRequirement。
 - uncertainty。
 
-Agent D 不读 raw HTML，不逐步控制浏览器，不执行 replay，不调用
+Task Path Planner / 任务路径规划器（legacy: Agent D） 不读 raw HTML，不逐步控制浏览器，不执行 replay，不调用
 autonomous run。
 
-## Agent E 输入 / 输出边界
+## Task Result Reporter / 任务结果汇报器（legacy: Agent E） 输入 / 输出边界
 
-Agent E Result Reporter Agent 只在结果汇报边界工作。
+Task Result Reporter / 任务结果汇报器（legacy: Agent E） 只在结果汇报边界工作。
 
 输入：
 
@@ -74,7 +74,7 @@ Agent E Result Reporter Agent 只在结果汇报边界工作。
 - evidence references。
 - warnings / next action suggestions。
 
-Agent E 不得脑补成功；证据不足时必须返回 `uncertain` 或 `needs_review`。
+Task Result Reporter / 任务结果汇报器（legacy: Agent E） 不得脑补成功；证据不足时必须返回 `uncertain` 或 `needs_review`。
 
 ## LearnedPath retrieval 输入 / 输出
 
@@ -92,7 +92,7 @@ Agent E 不得脑补成功；证据不足时必须返回 `uncertain` 或 `needs_
 - warnings。
 - evidence summary。
 
-Retrieval / ranking 不调用 Agent D，不执行 replay。
+Retrieval / ranking 不调用 Task Path Planner / 任务路径规划器（legacy: Agent D），不执行 replay。
 
 ## Slot binding 输入 / 输出
 
@@ -129,7 +129,7 @@ later explicit execution service 调用。
 
 ## Result verification 位置
 
-Result verification 位于 replay execution 之后、Agent E reporting 之前。
+Result verification 位于 replay execution 之后、Task Result Reporter / 任务结果汇报器（legacy: Agent E） reporting 之前。
 
 验证输入包括 replay result、postcondition signals、artifact status、final
 URL / title / DOM signals。无法验证时返回 `uncertain` / `needs_review`。

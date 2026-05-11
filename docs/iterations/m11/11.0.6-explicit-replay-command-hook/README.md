@@ -29,7 +29,7 @@
 - 不做 LearnedPath selection。
 - 不做 task-to-path planning。
 - 不做 slot binding。
-- 不做 Agent D / E / F / G / H。
+- 不做 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 不调用 autonomous run。
 - 不依赖 LLM provider。
 - 不把 replay result 包装成 `pass_gate` / Supervisor verdict。

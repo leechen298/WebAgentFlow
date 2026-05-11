@@ -24,7 +24,7 @@ planning，不触发 replay side effect。
 - 不做 orchestrator dispatcher。
 - 不调用 replay API。
 - 不实现 `/replay` command side effect。
-- 不实现 Agent D / E / F / G / H。
+- 不实现 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 不做 task-to-path planning。
 - 不做 slot binding。
 - 不做 recovery / abort dialogue。

@@ -87,7 +87,7 @@ cd apps/api && ../../.venv/bin/pytest tests/test_conversation_commands.py tests/
 - 未做 CLI command。
 - 未调用 replay API。
 - 未实现 orchestrator side effects。
-- 未实现 Agent D / E / F / G / H。
+- 未实现 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 未做 task-to-path planning。
 - 未做 slot binding。
 - 未调用 autonomous run。

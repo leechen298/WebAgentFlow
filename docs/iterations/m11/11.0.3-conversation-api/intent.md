@@ -22,7 +22,7 @@ events。
 - 后续 11.0.4 runtime CLI shell 应调用 HTTP API；否则 CLI 和 API 会形成两套
   conversation lifecycle。
 - API 必须保持 WebAgentFlow 视角：用户和 WebAgentFlow 沟通，不直接面对
-  Agent D / E / F / G / H。
+  Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 
 ## 边界（本轮不做）
 
@@ -30,7 +30,7 @@ events。
 - 不做 orchestrator dispatcher。
 - 不调用 replay API。
 - 不实现 `/replay` command side effect。
-- 不实现 Agent D / E / F / G / H。
+- 不实现 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 不做 task-to-path planning。
 - 不做 slot binding。
 - 不做 recovery / abort dialogue。

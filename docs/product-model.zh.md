@@ -84,9 +84,12 @@ runtime failure / recovery / 用户沟通流程。
 
 ### 2.1 Runtime Conversation Surface / 运行时沟通入口
 
-用户始终和 **WebAgentFlow** 这个应用沟通，而不是直接和 Agent D、
-Agent F、Agent G、Agent H 或其他内部子 Agent 沟通。内部 Agent 名称
-是实现角色；运行时产品表面以统一的 WebAgentFlow 视角说话。
+用户始终和 **WebAgentFlow** 这个应用沟通，而不是直接和 Task Path
+Planner / 任务路径规划器（legacy: Agent D）、Failure Recovery Agent /
+失败恢复助手（legacy: Agent F）、User Abort Handler / 用户中断处理器
+（legacy: Agent G）、Teaching Guide Agent / 教学引导器（legacy: Agent H）
+或其他内部子 Agent 沟通。内部 Agent 名称是实现角色；运行时产品表面
+以统一的 WebAgentFlow 视角说话。
 
 第一版有用的沟通入口可以 **CLI-first**。CLI-first 是为了先跑通完整
 产品闭环：任务输入、执行前确认、失败恢复、用户中断、教学模式对话和
@@ -105,7 +108,9 @@ Agent F、Agent G、Agent H 或其他内部子 Agent 沟通。内部 Agent 名�
 
 - 维护 session state
 - 接收用户消息和 engine events
-- 在正确边界把工作路由给 Agent D / E / F / G / H
+- 在正确边界把工作路由给 Task Path Planner / 任务路径规划器、Task
+  Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、
+  User Abort Handler / 用户中断处理器和 Teaching Guide Agent / 教学引导器
 - 管理 confirmation、pause、resume、abort、takeover 和 teaching mode
 - 强制执行 L3 不变量：大模型不进入逐步浏览器执行循环
 - 用 WebAgentFlow 视角统一输出给用户，而不是暴露各个内部 Agent 的口吻
@@ -150,7 +155,7 @@ Agent F、Agent G、Agent H 或其他内部子 Agent 沟通。内部 Agent 名�
 2. **Full AST → Simplified AST**（结构保留的投影）。
    Simplified AST 去噪但保留节点边界和兄弟顺序。它**不是**
    "页面摘要"。
-3. **Agent A · Page Intent Agent / 页面意图 Agent** 读 Simplified AST + 截图，写下
+3. **Page Understanding Agent / 页面理解器（legacy: Agent A）** 读 Simplified AST + 截图，写下
    这个页面是干什么的。
    - 输出：简短的页面用途描述，与 page signature 一起持久化。
    - 这是语义理解，不是可操作元素的抽取。
@@ -159,18 +164,20 @@ Agent F、Agent G、Agent H 或其他内部子 Agent 沟通。内部 Agent 名�
    纯结构分类。
 5. **代码**用 Playwright 尝试各种操作，并**把失败也记下来**。
    失败路径作为负面知识保留，不丢弃。
-6. **Agent B · Attempt Evaluator Agent / 尝试评估 Agent** 判定每次尝试的结果，标记异常。
-   - 输出：单次尝试的 verdict + summary。和 Agent A 独立。
-7. **Agent C · Learning Reporter Agent / 学习报告 Agent**（表现层，低优先级）把整个学习过程
+6. **Attempt Evaluation Agent / 尝试评估器（legacy: Agent B）** 判定每次尝试的结果，标记异常。
+   - 输出：单次尝试的 verdict + summary。和 Page Understanding Agent
+     / 页面理解器独立。
+7. **Learning Report Agent / 学习报告器（legacy: Agent C）**（表现层，低优先级）把整个学习过程
    整理成给用户看的报告。
    - 输出：用户可读的报告（这个页面是什么、系统能干什么、有
      什么没搞定）。
    - **不是学习闭环的前置条件**。只要步骤 1–6 + 8 跑通，闭环就
-     成立；C 是在那份数据之上加的 UX 打磨。**优先打磨 A / B /
-     第 4 / 第 5 步的准确度**，别先投资 C。
+     成立；Learning Report Agent 是在那份数据之上加的 UX 打磨。
+     **优先打磨 Page Understanding Agent / Attempt Evaluation Agent /
+     第 4 / 第 5 步的准确度**，别先投资 Learning Report Agent。
 8. **持久化**成一条学习过的页面记录：
    - page signature
-   - 页面用途（来自 Agent A）
+   - 页面用途（来自 Page Understanding Agent / 页面理解器）
    - 可操作元素（来自第 4 步）
    - 成功路径（来自第 5 步，verdict=success）
    - 失败路径（来自第 5 步，verdict≠success）—— 作为负面知识
@@ -180,8 +187,10 @@ Agent F、Agent G、Agent H 或其他内部子 Agent 沟通。内部 Agent 名�
 
 - 不是 skill 注册表。学过的记录是一条按 page signature 归档的
   数据 blob，不是具名 skill。
-- 不是一个大一统 Agent。Agent A / B / C 是**分开的**：不同 prompt、
-  不同输出、不同失效模式。**不要合并**。
+- 不是一个大一统 Agent。Page Understanding Agent / 页面理解器、
+  Attempt Evaluation Agent / 尝试评估器、Learning Report Agent /
+  学习报告器（legacy: Agents A-C）是**分开的**：不同 prompt、不同输出、
+  不同失效模式。**不要合并**。
 - 不是永久结论。支持重新学习。页面变了或用户纠正了，都可以重学。
 
 ---
@@ -214,14 +223,14 @@ L2 分成两个子模式。
 什么。
 
 1. 系统在可视化 Playwright 浏览器里打开页面。
-2. Agent H · Teaching Guide Agent / 教学引导 Agent 和用户沟通下一步建议。
+2. Teaching Guide Agent / 教学引导器（legacy: Agent H）和用户沟通下一步建议。
 3. UI 可以给目标元素加高亮、阴影、指示器、tooltip 或下一步提示。
 4. 用户点击、输入、选择或以其他方式操作页面。
 5. 系统记录真实事件 target、value 和可观测状态变化。
 6. 只有记录到的用户动作才能追加到学习记录，并标记为
    `provenance = user`。
 
-Agent H 的建议是引导，不是证据。除非用户实际执行了该动作，否则不能
+Teaching Guide Agent / 教学引导器的建议是引导，不是证据。除非用户实际执行了该动作，否则不能
 把建议写成 LearnedPath action。
 
 ### 5.3 不变量
@@ -246,12 +255,12 @@ L3 **便宜、快、可靠**。
 记录预期不符，运行会在多个分支之间切换：
 
 ```
-规划 (D) → 执行 → 观察 → 成功？ ─── 是 ──→ 报告 (E)
-                         │
-                         └── 否 ──→ 恢复对话 (F)
-                                     ├── 重新规划  ──→ 回到执行
-                                     ├── 从头重跑  ──→ 回到规划
-                                     └── 交给用户  ──→ 进入 L2
+规划（Task Path Planner）→ 执行 → 观察 → 成功？ ─── 是 ──→ 报告（Task Result Reporter）
+                                      │
+                                      └── 否 ──→ 恢复对话（Failure Recovery Agent）
+                                                  ├── 重新规划  ──→ 回到执行
+                                                  ├── 从头重跑  ──→ 回到规划
+                                                  └── 交给用户  ──→ 进入 L2
 ```
 
 会把运行切出快乐路径的触发条件：
@@ -266,14 +275,14 @@ L3 **便宜、快、可靠**。
 
 ### 6.2 快乐路径
 
-1. **Agent D · Path Planner Agent / 路径规划 Agent** 读取：
+1. **Task Path Planner / 任务路径规划器（legacy: Agent D）** 读取：
    - 用户的任务描述
    - 目标页面的学习记录
 
    然后**选一条路线**。路线是一串具体动作（selector + 动作类型 +
    值），从学过的路径里选出来。
 
-   Agent D **绝不读原始 HTML**。它只读学过的数据。它的工作是
+   Task Path Planner / 任务路径规划器 **绝不读原始 HTML**。它只读学过的数据。它的工作是
    "从已验证的路径里挑正确那条"，**不是**"从零开始想要点哪里"。
 
 2. **代码**用 Playwright 执行所选路线。
@@ -281,7 +290,7 @@ L3 **便宜、快、可靠**。
      大模型在循环里做的决定。
    - 每个动作的观测（URL 前后、DOM 信号等）记录下来给报告 Agent。
 
-3. **Agent E · Result Reporter Agent / 结果报告 Agent** 把结果总结给用户。
+3. **Task Result Reporter / 任务结果汇报器（legacy: Agent E）** 把结果总结给用户。
    输出：自然语言结果 + UI 可渲染的结构化字段。
 
 ### 6.3 任务结果验证
@@ -289,12 +298,12 @@ L3 **便宜、快、可靠**。
 L3 不只是“路径执行完了”。它还必须判断用户任务的 postconditions 是否
 成立。
 
-Agent E 不能只根据执行日志干净就脑补成功。它应基于执行结果、
+Task Result Reporter / 任务结果汇报器不能只根据执行日志干净就脑补成功。它应基于执行结果、
 postcondition check、artifact 状态、可见错误，以及可用的 rule / spec
 信号来汇报。如果 WebAgentFlow 无法验证结果，必须向用户明确报告
 `uncertain` / `needs review`，而不是宣称完成。
 
-Postconditions 可以来自选定的 LearnedPath、Agent D 的任务计划、用户
+Postconditions 可以来自选定的 LearnedPath、Task Path Planner / 任务路径规划器的任务计划、用户
 显式确认，或 rule / spec 信号。例如：
 
 - final URL 或路由
@@ -341,7 +350,7 @@ WebAgentFlow 最终需要 artifact 生命周期：
 
 ### 6.7 Multi-Page / Multi-Path Workflow
 
-终局任务可能需要跨一个或多个页面组合多个 LearnedPath。Agent D 未来
+终局任务可能需要跨一个或多个页面组合多个 LearnedPath。Task Path Planner / 任务路径规划器未来
 可以把多条已学路径组合成 workflow，但不能在运行时从 raw HTML 凭空
 发明路径。
 
@@ -353,12 +362,12 @@ Multi-page workflow composition 是后续能力。M11 MVP 不需要完整覆盖
 动作失败时（页面报错、找不到元素、可观测状态没变化、5xx 等等）：
 
 1. 执行**暂停**。**绝不**偷偷重试。
-2. **Agent F · Recovery Dialogue Agent / 恢复对话 Agent** 开一个和用户的对话：
+2. **Failure Recovery Agent / 失败恢复助手（legacy: Agent F）** 开一个和用户的对话：
    - 发生了什么
    - 哪一步失败了
    - 系统认为有哪些选项
 3. 基于用户回复，系统三选一：
-   - **重新规划继续**：Agent D 根据新上下文重新选一条路线，继续。
+   - **重新规划继续**：Task Path Planner / 任务路径规划器根据新上下文重新选一条路线，继续。
    - **从头重跑**：用于部分状态不安全时。
    - **交给用户**：进入 L2。用户手动完成任务，动作被记录、
      反哺学习记录。
@@ -368,40 +377,40 @@ Multi-page workflow composition 是后续能力。M11 MVP 不需要完整覆盖
 用户可以随时停止运行。停下时：
 
 1. 执行立刻暂停。
-2. **Agent G · Abort Dialogue Agent / 中断对话 Agent** 开对话：
+2. **User Abort Handler / 用户中断处理器（legacy: Agent G）** 开对话：
    - 目前做了什么
    - 页面处于什么状态
    - 用户想怎么办（继续 / 重跑 / 交接 / 放弃）
 3. 系统按用户回复执行。
 
 中断和错误**不是一回事**：中断是用户在一次原本正常的运行上主动
-介入。不同 Agent、不同 prompt、不同语气。
+介入。不同角色、不同 prompt、不同语气。
 
 ---
 
-## 7. Agent 总表（单一权威）
+## 7. 内部角色总表（单一权威）
 
 这些是**独立**的 Agent。不要合并。不同 prompt、不同输入、不同输出、
 未来会用不同的模型。
 
-| ID | 名称 | 生命周期阶段 | 读什么 | 产出什么 |
-|---|---|---|---|---|
-| A | Page Intent Agent / 页面意图 Agent | L1 | Simplified AST + 截图 | 页面用途描述 |
-| B | Attempt Evaluator Agent / 尝试评估 Agent | L1 | 尝试日志 + 前后状态 | 单次尝试的 verdict + 异常 |
-| C | Learning Reporter Agent / 学习报告 Agent*（低优先、表现层）* | L1 | 整个学习过程 | 给用户看的学习报告 |
-| D | Path Planner Agent / 路径规划 Agent | L3 | 用户任务 + 学习记录 | 选定的具体路线 |
-| E | Result Reporter Agent / 结果报告 Agent | L3 | 执行结果 | 给用户看的结果 |
-| F | Recovery Dialogue Agent / 恢复对话 Agent | L3（错误） | 错误上下文 + 近期步骤 | 对话记录 + 下一步动作 |
-| G | Abort Dialogue Agent / 中断对话 Agent | L3（用户中断） | 当前状态 + 中断信号 | 对话记录 + 下一步动作 |
-| H | Teaching Guide Agent / 教学引导 Agent | L2 | teaching goal + 当前页面分析 + 已知 LearnedPath + 近期用户动作日志 + 可选失败 / 恢复上下文 | 自然语言指令 + highlight target + 预期用户动作 + 澄清问题 |
+| 主名称 | 中文名 | Legacy alias | 生命周期阶段 | 读什么 | 产出什么 |
+|---|---|---|---|---|---|
+| Page Understanding Agent | 页面理解器 | Agent A | L1 | Simplified AST + 截图 | 页面用途描述 |
+| Attempt Evaluation Agent | 尝试评估器 | Agent B | L1 | 尝试日志 + 前后状态 | 单次尝试的 verdict + 异常 |
+| Learning Report Agent*（低优先、表现层）* | 学习报告器 | Agent C | L1 | 整个学习过程 | 给用户看的学习报告 |
+| Task Path Planner | 任务路径规划器 | Agent D | L3 | 用户任务 + 学习记录 | 选定的具体路线 |
+| Task Result Reporter | 任务结果汇报器 | Agent E | L3 | 执行结果 | 给用户看的结果 |
+| Failure Recovery Agent | 失败恢复助手 | Agent F | L3（错误） | 错误上下文 + 近期步骤 | 对话记录 + 下一步动作 |
+| User Abort Handler | 用户中断处理器 | Agent G | L3（用户中断） | 当前状态 + 中断信号 | 对话记录 + 下一步动作 |
+| Teaching Guide Agent | 教学引导器 | Agent H | L2 | teaching goal + 当前页面分析 + 已知 LearnedPath + 近期用户动作日志 + 可选失败 / 恢复上下文 | 自然语言指令 + highlight target + 预期用户动作 + 澄清问题 |
 
-Agent H 边界：
+Teaching Guide Agent / 教学引导器边界：
 
 - 不 click / fill / 操作浏览器。
 - 不伪造用户动作。
 - 引导内容和记录下来的 `provenance = user` 动作是两回事。
 
-加新能力时先问：**这属于哪个 Agent？** 如果答案是"新的一个"，那
+加新能力时先问：**这属于哪个内部角色？** 如果答案是"新的一个"，那
 是产品级决策，**先更新本文档**再写代码。
 
 ---
@@ -441,14 +450,14 @@ Agent H 边界：
   已交付（`html_ast_parser.py` + `ast_simplifier.py`）。自主探索
   当前用的是实时页面分析器（`page_analyzer.py`），不是离线 AST
   管线。两条路径的统一是待做项。
-- **L1 步骤 3（Page Intent Agent / 页面意图 Agent）**：**尚未**单独做成一个
+- **L1 步骤 3（Page Understanding Agent / 页面理解器，legacy: Agent A）**：**尚未**单独做成一个
   Agent。今天的 Supervisor 把"理解意图"和"评估结果"混在一起了。
 - **L1 步骤 4–5（元素抽取 + 尝试）**：已交付（在自主探索
   子系统里）。
 - **L1 步骤 6–8（评估 + 报告 + 持久化）**：部分完成。verdict +
   5 项验证评分卡 + Supervisor 总结都有了，但这些都是**探索阶段的
   产物**。**面向最终产品的用户可读学习报告仍在探索形态** —— 当前
-  的输出更像开发者调试面板，不是 Agent C 应该最终产出的东西。
+  的输出更像开发者调试面板，不是 Learning Report Agent / 学习报告器应该最终产出的东西。
   **"落成学习路径"在交付里程碑 M10.1 已交付** —— `pass_gate
   = pass` 的运行自动写入 `learned_paths`，主键为
   (page_template, query_signature, dom_fingerprint, scenario)，并
@@ -458,9 +467,9 @@ Agent H 边界：
 - **L2（用户引导学习）**：未开工。2026-04-20 清理把旧的
   Chrome 扩展移除了；L2 会从零开始基于**可视化** Playwright
   浏览器（见 §5.1）搭建，不再依赖扩展。User Demonstration、Guided
-  Teaching 和 Agent H 当前都尚未实现。
-- **L3（实际工作）**：未开工。没有 Path Planner Agent / 路径规划
-  Agent，没有 task-to-path 执行闭环，没有 runtime conversation
+  Teaching 和 Teaching Guide Agent / 教学引导器当前都尚未实现。
+- **L3（实际工作）**：未开工。没有 Task Path Planner / 任务路径规划器，
+  没有 task-to-path 执行闭环，没有 runtime conversation
   surface，没有 Conversation Orchestrator，没有结果验证闭环，也没有
   恢复对话。Replay / drift 是 M10 基础；M11 是运行时沟通基础，M11.1
   是第一版 L3 快乐路径 MVP。
@@ -474,18 +483,18 @@ Agent H 边界：
 | 里程碑 | 产品作用 | 产品内部 Agent |
 |---|---|---|
 | M10 · Path Asset Foundation / 路径资产基础 | LearnedPath persistence、catalog、replay execution 和 drift detection。 | 不新增 Agent；提供执行底座。 |
-| M11.0 · Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排 | CLI MVP、session state、Conversation Orchestrator、user message routing，以及 confirmation / pause / abort / takeover basics。 | 默认不新增 Agent；随能力落地路由到 Agent D / E / F / G / H。 |
-| M11.1 · Task-to-Path Planning & Execution MVP / 任务到路径规划与执行 MVP | Agent D / E、LearnedPath retrieval / ranking、slot binding、task result verification MVP、basic artifact capture、risk / consent gate MVP。 | Agent D · Path Planner Agent；Agent E · Result Reporter Agent。 |
-| M12 · Recovery & Abort Dialogue / 恢复与中断对话 | Failure recovery、user interrupt handling，以及 continue / replan / rerun / takeover / abandon choices。 | Agent F · Recovery Dialogue Agent；Agent G · Abort Dialogue Agent。 |
-| M13 · User-Guided Learning, Teaching & Correction / 用户引导学习、教学与纠正 | Visible browser、user demonstration recording、Agent H teaching guidance、highlight / shadow / indicator / tooltip、provenance=user write-back、correction UI。 | Agent H · Teaching Guide Agent；保留用户来源。 |
-| M14 · Learning Quality, Coverage & Negative Knowledge / 学习质量、覆盖与负面知识 | Agent A / B / C、popup controls、custom click-toggle、label extractor expansion、cross-page pattern mining、failure evidence / negative knowledge store。 | Agent A · Page Intent Agent；Agent B · Attempt Evaluator Agent；Agent C · Learning Reporter Agent。 |
-| M15 · Automated Evaluation, Audit & Hygiene / 自动评估、审计与卫生 | Replay regression、drift alerts、trust trend、result verification trend、artifact / log / screenshot retention cleanup、conversation / recovery / teaching audit。 | 复用 Agent B / Supervisor 式评估；默认不新增 Agent。 |
+| M11.0 · Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排 | CLI MVP、session state、Conversation Orchestrator、user message routing，以及 confirmation / pause / abort / takeover basics。 | 默认不新增 Agent；随能力落地路由到 Task Path Planner、Task Result Reporter、Failure Recovery Agent、User Abort Handler 和 Teaching Guide Agent。 |
+| M11.1 · Task-to-Path Planning & Execution MVP / 任务到路径规划与执行 MVP | Task Path Planner / Task Result Reporter、LearnedPath retrieval / ranking、slot binding、task result verification MVP、basic artifact capture、risk / consent gate MVP。 | Task Path Planner / 任务路径规划器（legacy: Agent D）；Task Result Reporter / 任务结果汇报器（legacy: Agent E）。 |
+| M12 · Recovery & Abort Dialogue / 恢复与中断对话 | Failure recovery、user interrupt handling，以及 continue / replan / rerun / takeover / abandon choices。 | Failure Recovery Agent / 失败恢复助手（legacy: Agent F）；User Abort Handler / 用户中断处理器（legacy: Agent G）。 |
+| M13 · User-Guided Learning, Teaching & Correction / 用户引导学习、教学与纠正 | Visible browser、user demonstration recording、Teaching Guide Agent guidance、highlight / shadow / indicator / tooltip、provenance=user write-back、correction UI。 | Teaching Guide Agent / 教学引导器（legacy: Agent H）；保留用户来源。 |
+| M14 · Learning Quality, Coverage & Negative Knowledge / 学习质量、覆盖与负面知识 | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent、popup controls、custom click-toggle、label extractor expansion、cross-page pattern mining、failure evidence / negative knowledge store。 | Page Understanding Agent / 页面理解器（legacy: Agent A）；Attempt Evaluation Agent / 尝试评估器（legacy: Agent B）；Learning Report Agent / 学习报告器（legacy: Agent C）。 |
+| M15 · Automated Evaluation, Audit & Hygiene / 自动评估、审计与卫生 | Replay regression、drift alerts、trust trend、result verification trend、artifact / log / screenshot retention cleanup、conversation / recovery / teaching audit。 | 复用 Attempt Evaluation Agent / Supervisor 式评估；默认不新增 Agent。 |
 | M16 · External Interfaces / 对外接口 | Stable API、external CLI、Skill / Tool、third-party scheduler interface，以及 user-built systems integration hooks。 | 不新增产品 Agent；暴露既有能力。 |
-| M17 · Multi-Page Workflow Composition / 多页工作流组合 | 把多个 LearnedPath 组合成更大的 workflow，但不从 raw HTML 凭空发明路径。 | 扩展 Agent D 的规划输入；默认不新增 Agent。 |
+| M17 · Multi-Page Workflow Composition / 多页工作流组合 | 把多个 LearnedPath 组合成更大的 workflow，但不从 raw HTML 凭空发明路径。 | 扩展 Task Path Planner / 任务路径规划器的规划输入；默认不新增 Agent。 |
 | M18 · CLI Distribution & Integration Readiness / CLI 分发与集成就绪 | 稳定 CLI 分发、local packaging、API / CLI examples、scripting / batch usage、integration cookbook，以及版本化 CLI / API contract。 | 默认不新增产品 Agent。 |
 
 M10.2 replay 在这次重排后仍然有价值：它是 LearnedPath 数据的第一个
-确定性消费者。它**不**实现 Agent D，也**不**实现 L3 任务规划；它给
+确定性消费者。它**不**实现 Task Path Planner / 任务路径规划器（legacy: Agent D），也**不**实现 L3 任务规划；它给
 M11.1 提供一个可安全调用的执行底座。
 
 ---
@@ -561,8 +570,10 @@ WebAgentFlow 至少支持两种使用形态：
 
 > **澄清 —— 本文周围会出现三种"Agent"，不要混在一起**：
 >
-> 1. **产品内部 A–H Agent**（§7）—— 运行时跑在 WebAgentFlow **内部**
->    的角色（页面意图、规划、恢复对话…）。由本文定义。
+> 1. **产品内部功能角色 Agent**（§7）—— 运行时跑在 WebAgentFlow
+>    **内部**的角色（Page Understanding Agent / 页面理解器、Task Path
+>    Planner / 任务路径规划器、Failure Recovery Agent / 失败恢复助手等）。
+>    A-H 标签只是 legacy alias。由本文定义。
 > 2. **第三方 Agent**（本 §10）—— 运行时的**外部调度者**，通过
 >    WebAgentFlow 的 CLI / Skill / API 来让浏览器干活。不是
 >    WebAgentFlow 的一部分。

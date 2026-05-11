@@ -28,7 +28,7 @@
 ## 已决策
 
 - `TaskIntent.normalized_goal` 在 11.1.1 中定义为 optional field。本包不实现
-  deterministic normalizer，也不实现 Agent D；后续 11.1.4 Agent D 可以填充或
+  deterministic normalizer，也不实现 Task Path Planner / 任务路径规划器（legacy: Agent D）；后续 11.1.4 Task Path Planner / 任务路径规划器（legacy: Agent D） 可以填充或
   改写 `normalized_goal`。schema 必须保留 `raw_text` 作为不可丢失的原始输入，
   并可定义 `normalization_source` optional field，取值规划为
   `none | deterministic | agent_d`。
@@ -41,14 +41,17 @@
   `succeeded | failed | uncertain | needs_review`。失败来源通过
   `failure_stage: planning | confirmation | replay | verification | artifact | unknown`
   和 `failure_reason` 表达，不把 replay failure / verification failure 拆成
-  status enum。Agent E 后续必须基于 status、failure_stage 和 evidence 汇报，
+  status enum。Task Result Reporter / 任务结果汇报器（legacy: Agent E） 后续必须基于 status、failure_stage 和 evidence 汇报，
   不得脑补成功。
-- 11.1.1 定义 Agent D / Agent E 的 input / output contract，但不定义 prompt，
+- 11.1.1 定义 Task Path Planner / 任务路径规划器和 Task Result Reporter /
+  任务结果汇报器的 input / output contract（legacy: Agent D/E），但不定义 prompt，
   不实现 LLM 调用。`AgentDPlannerInput` / `AgentDPlannerOutput` 至少承载
   `TaskIntent`、`LearnedPathCandidate`、`SlotBindingProposal`、`RoutePlan`、
   `ConfirmationRequirement`。`AgentEReporterInput` / `AgentEReporterOutput`
   至少承载 `TaskExecutionResult`、verification signals、artifact
   placeholders、warnings 和 user-facing summary。
+- 11.1.1 的 schema 类名可以保留 `AgentD` / `AgentE` 前缀以保持连续性；
+  面向用户和后续文档时优先使用 Task Path Planner / Task Result Reporter。
 - artifact fields 在 11.1.1 只定义 placeholder / reference shape，不实现
   capture、storage、retention、download、display。`TaskExecutionResult` 可以包含
   `artifacts: list[ArtifactReference]`；`ArtifactReference` 只保留 minimal fields：
@@ -57,5 +60,5 @@
 ## 待确认问题
 
 - 11.1.2 retrieval ranking 是否需要 first deterministic scoring formula。
-- 11.1.4 Agent D prompt 是否需要独立 prompt doc。
-- 11.1.7 Agent E 是否需要和 artifact lifecycle 分离。
+- 11.1.4 Task Path Planner / 任务路径规划器（legacy: Agent D） prompt 是否需要独立 prompt doc。
+- 11.1.7 Task Result Reporter / 任务结果汇报器（legacy: Agent E） 是否需要和 artifact lifecycle 分离。

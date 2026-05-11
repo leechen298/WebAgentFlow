@@ -24,7 +24,7 @@
 哪一步失败”的结构化结果。
 
 10.2 会给未来 **M11.1 Task-to-Path Planning & Execution MVP** 提供
-replay engine，但本轮不实现 Agent D、自然语言任务理解、slot binding
+replay engine，但本轮不实现 Task Path Planner / 任务路径规划器（legacy: Agent D）、自然语言任务理解、slot binding
 或 L3 task runner。
 
 ## 固定边界
@@ -38,7 +38,7 @@ replay engine，但本轮不实现 Agent D、自然语言任务理解、slot bin
 - Conversation Orchestrator / Dispatcher。
 - 根据用户自然语言任务检索、选择、组合 LearnedPath。
 - slot binding。
-- Agent D / E / F / G / H。
+- Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - recovery / abort dialogue。
 - teaching mode。
 - 执行前确认流。

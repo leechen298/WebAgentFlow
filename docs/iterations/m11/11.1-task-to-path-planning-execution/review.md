@@ -9,8 +9,8 @@
 
 ## 待确认问题
 
-- Agent D 是否在 11.1.4 才开始接 LLM，前置包是否全部保持 deterministic。
-- 11.1.1 domain contract 是否应该定义 Agent D / E schema，还是只定义
+- Task Path Planner / 任务路径规划器（legacy: Agent D） 是否在 11.1.4 才开始接 LLM，前置包是否全部保持 deterministic。
+- 11.1.1 domain contract 是否应该定义 Task Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器（legacy: Agent D/E） schema，还是只定义
   task / path / route / result schema。
 - task result verification 是否作为 11.1.7，还是拆成更细。
 - basic artifact capture 是否放入 11.1.7，还是推到 M15。

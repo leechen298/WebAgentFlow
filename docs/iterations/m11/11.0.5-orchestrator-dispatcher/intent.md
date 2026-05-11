@@ -20,14 +20,17 @@ response 生成点。
 
 11.0.5 要先把“消息进入系统后发生什么”这件事固定下来。它必须先建立无
 replay side effect、无 Agent side effect 的 dispatcher 骨架，再由 11.0.6
-接入显式 replay hook。这样可以避免一上来把 orchestrator、replay、Agent
-D / E / F / G / H、task planning 混在一起。
+接入显式 replay hook。这样可以避免一上来把 orchestrator、replay、Task
+Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、
+Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、
+Teaching Guide Agent / 教学引导器（legacy: Agents D-H）和 task planning
+混在一起。
 
 ## 边界（本轮不做）
 
 - 不调用 replay API。
 - 不实现 `/replay` command side effect。
-- 不做 Agent D / E / F / G / H。
+- 不做 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 不做 Agent routing implementation。
 - 不做 task-to-path planning。
 - 不做 slot binding。

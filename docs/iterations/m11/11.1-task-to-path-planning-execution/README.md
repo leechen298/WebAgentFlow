@@ -54,7 +54,7 @@ WebAgentFlow 基于 LearnedPath catalog 和 replay evidence 选择候选路径�
 
 - 有 M11.1 总体拆分。
 - 有 11.1.1 domain contract 执行包。
-- 明确 Agent D / E 边界。
+- 明确 Task Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器（legacy: Agent D/E） 边界。
 - 明确 path retrieval / slot binding / confirmation / execution /
   verification 拆分。
 - 明确不调用 autonomous run。

@@ -106,9 +106,11 @@ or developer tooling? Different axes, different review standards.
 ### 2.1 Runtime Conversation Surface
 
 The user always talks to **WebAgentFlow** as the application, not
-directly to Agent D, Agent F, Agent G, Agent H, or any other internal
-Agent. Internal Agent names are implementation roles; the runtime
-product surface speaks in the unified WebAgentFlow voice.
+directly to Task Path Planner (legacy: Agent D), Failure Recovery Agent
+(legacy: Agent F), User Abort Handler (legacy: Agent G), Teaching Guide
+Agent (legacy: Agent H), or any other internal Agent. Internal Agent
+names are implementation roles; the runtime product surface speaks in
+the unified WebAgentFlow voice.
 
 The first useful conversation surface can be **CLI-first**. CLI-first is
 about getting the full product loop working end to end: task input,
@@ -131,7 +133,9 @@ Responsibilities:
 
 - maintain session state
 - receive user messages and engine events
-- route work to Agent D / E / F / G / H at the correct boundary
+- route work to Task Path Planner, Task Result Reporter, Failure
+  Recovery Agent, User Abort Handler, and Teaching Guide Agent at the
+  correct boundary
 - manage confirmation, pause, resume, abort, takeover, and teaching mode
 - enforce the L3 invariant that LLMs do not enter the step-by-step
   browser execution loop
@@ -182,7 +186,7 @@ components can be replaced independently.
 2. **Full AST → Simplified AST** (structure-preserving projection).
    Simplified AST removes noise but preserves node boundaries and
    sibling order. It is NOT a "page summary".
-3. **Agent A · Page Intent Agent** reads the Simplified AST plus a
+3. **Page Understanding Agent (legacy: Agent A)** reads the Simplified AST plus a
    screenshot and writes down what the page is for.
    - Output: a short page-purpose description, persisted with the
      page signature.
@@ -193,21 +197,22 @@ components can be replaced independently.
 5. **Code** drives Playwright to try operations on those elements and
    records what happened — including the failures. Failure paths are
    kept as negative knowledge, not discarded.
-6. **Agent B · Attempt Evaluator Agent** judges each attempt's
+6. **Attempt Evaluation Agent (legacy: Agent B)** judges each attempt's
    outcome and flags anomalies.
-   - Output: per-attempt verdict + summary. Independent of Agent A.
-7. **Agent C · Learning Reporter Agent** (presentation layer, low
+   - Output: per-attempt verdict + summary. Independent of Page
+     Understanding Agent.
+7. **Learning Report Agent (legacy: Agent C)** (presentation layer, low
    priority) compiles the full learning session into a report for
    the user.
    - Output: user-facing report (what the page is, what the system
      can do on it, what it couldn't figure out).
    - **Not a prerequisite** for the learning loop to function. The
-     loop is complete once steps 1–6 + 8 run; C is UX polish on top
+     loop is complete once steps 1–6 + 8 run; this is UX polish on top
      of that data. Prioritize accuracy in A / B / 4 / 5 before
-     investing in C.
+     investing in Learning Report Agent.
 8. **Persist** as a learned page record:
    - page signature
-   - page purpose (from Agent A)
+   - page purpose (from Page Understanding Agent)
    - operable elements (from step 4)
    - successful paths (from step 5, verdict=success)
    - failed paths (from step 5, verdict≠success) — kept as negative
@@ -217,7 +222,8 @@ components can be replaced independently.
 
 - Not a skill registry. The learned record is a data blob keyed by
   page signature, not a named skill.
-- Not a single god Agent. Agents A / B / C are separate prompts with
+- Not a single god Agent. Page Understanding Agent, Attempt Evaluation
+  Agent, and Learning Report Agent (legacy: Agents A-C) are separate prompts with
   separate outputs and separate failure modes. Don't fuse them.
 - Not permanent. Re-learning is supported. A page can be re-learned
   when it changes, or when the user corrects something.
@@ -255,7 +261,7 @@ Guided Teaching is still L2: the user performs the real browser action,
 and the system records what the user actually did.
 
 1. The system opens the page in a visible Playwright browser.
-2. Agent H · Teaching Guide Agent communicates the next suggested step.
+2. Teaching Guide Agent (legacy: Agent H) communicates the next suggested step.
 3. The UI may highlight target elements, add shadows, indicators,
    tooltips, or next-step prompts.
 4. The user clicks, types, selects, or otherwise operates the page.
@@ -264,7 +270,7 @@ and the system records what the user actually did.
 6. Only the recorded user action can be appended to the learned record
    with `provenance = user`.
 
-Agent H's suggestion is guidance, not evidence. It must not be written
+Teaching Guide Agent's suggestion is guidance, not evidence. It must not be written
 as a LearnedPath action unless the user actually performs the action.
 
 ### 5.3 Invariant
@@ -290,12 +296,12 @@ It's a loop that can branch any time the page disagrees with what
 the learned record expected:
 
 ```
-plan (D) → execute → observe → ok?  ─── yes ──→ report (E)
-                                │
-                                └── no ──→ recovery dialogue (F)
-                                             ├── re-plan   ──→ back to execute
-                                             ├── re-run    ──→ back to plan
-                                             └── hand off  ──→ L2 mode
+plan (Task Path Planner) → execute → observe → ok?  ─── yes ──→ report (Task Result Reporter)
+                                                 │
+                                                 └── no ──→ recovery dialogue (Failure Recovery Agent)
+                                                              ├── re-plan   ──→ back to execute
+                                                              ├── re-run    ──→ back to plan
+                                                              └── hand off  ──→ L2 mode
 ```
 
 Triggers that flip a run off the happy path:
@@ -311,16 +317,16 @@ not exception cases.
 
 ### 6.2 Happy-path pipeline
 
-1. **Agent D · Path Planner Agent** reads:
+1. **Task Path Planner (legacy: Agent D)** reads:
    - the user's task description
    - the learned record(s) for the target page(s)
 
    and picks a route. A route is a sequence of concrete actions
    (selector + action_type + value) drawn from the learned paths.
 
-   Agent D **never reads raw HTML**. It only reads learned data. Its
-   job is "pick the right pre-verified path", not "figure out what to
-   click from scratch".
+   Task Path Planner **never reads raw HTML**. It only reads learned
+   data. Its job is "pick the right pre-verified path", not "figure out
+   what to click from scratch".
 
 2. **Code** executes the chosen route via Playwright.
    - Selectors, values, action types are fully deterministic — they
@@ -328,7 +334,7 @@ not exception cases.
    - Each action's observation (URL before/after, DOM signals, etc.)
      is recorded for the reporting Agent.
 
-3. **Agent E · Result Reporter Agent** summarizes the outcome for
+3. **Task Result Reporter (legacy: Agent E)** summarizes the outcome for
    the user. Output: natural-language result + structured fields the
    UI can render.
 
@@ -337,13 +343,13 @@ not exception cases.
 L3 does not stop at "the path executed". It must also decide whether
 the task's postconditions were satisfied.
 
-Agent E must not infer success from a clean execution log alone. It
+Task Result Reporter must not infer success from a clean execution log alone. It
 reports from execution results, postcondition checks, artifact status,
 visible errors, and any rule / spec signals available. If WebAgentFlow
 cannot verify the outcome, it must tell the user `uncertain` /
 `needs review` instead of claiming completion.
 
-Postconditions can come from the selected LearnedPath, Agent D's task
+Postconditions can come from the selected LearnedPath, Task Path Planner's task
 plan, explicit user confirmation, or rule / spec signals. Examples:
 
 - final URL or route
@@ -399,7 +405,7 @@ drift.
 ### 6.7 Multi-Page / Multi-Path Workflow
 
 End-state tasks may require multiple LearnedPaths across one or more
-pages. Agent D may eventually compose several learned paths into a
+pages. Task Path Planner may eventually compose several learned paths into a
 workflow, but it must not invent a path from raw HTML at runtime.
 
 Multi-page workflow composition is a later capability. The M11 MVP does
@@ -411,13 +417,13 @@ When an action fails (page error, element not found, observable state
 didn't change, server returned 5xx, etc.):
 
 1. Execution **pauses**. It does NOT silently retry.
-2. **Agent F · Recovery Dialogue Agent** opens a dialogue with the
+2. **Failure Recovery Agent (legacy: Agent F)** opens a dialogue with the
    user:
    - what happened
    - which step failed
    - what the system thinks the options are
 3. Based on the user's reply, the system does one of:
-   - **Re-plan and continue**: Agent D re-picks a route, taking the
+   - **Re-plan and continue**: Task Path Planner re-picks a route, taking the
      new context into account. Execution resumes.
    - **Re-execute from start**: used when partial state is unsafe.
    - **Hand off to the user**: enters L2 mode. The user finishes
@@ -429,14 +435,14 @@ didn't change, server returned 5xx, etc.):
 The user can stop the run at any time. When they do:
 
 1. Execution pauses immediately.
-2. **Agent G · Abort Dialogue Agent** opens a dialogue:
+2. **User Abort Handler (legacy: Agent G)** opens a dialogue:
    - what was done so far
    - what state the page is in
    - what the user wants next (resume / restart / hand over / drop)
 3. The system acts on the user's reply.
 
 Abort is different from error: abort is the user intervening on a
-run that was otherwise going fine. Different Agent, different prompt,
+run that was otherwise going fine. Different role, different prompt,
 different tone.
 
 ---
@@ -446,24 +452,24 @@ different tone.
 These are separate Agents. Don't merge them. Different prompts,
 different inputs, different outputs, different models over time.
 
-| ID | Name | Lifecycle stage | Reads | Produces |
+| Primary role name | Legacy alias | Lifecycle stage | Reads | Produces |
 |---|---|---|---|---|
-| A | Page Intent Agent | L1 | Simplified AST + screenshot | Page purpose description |
-| B | Attempt Evaluator Agent | L1 | Attempt log + before/after state | Per-attempt verdict + anomalies |
-| C | Learning Reporter Agent *(low priority, presentation)* | L1 | Full learning session | User-facing learning report |
-| D | Path Planner Agent | L3 | User task + learned record | Chosen concrete route |
-| E | Result Reporter Agent | L3 | Execution outcome | User-facing result |
-| F | Recovery Dialogue Agent | L3 (error) | Error context + recent steps | Dialogue transcript + next action |
-| G | Abort Dialogue Agent | L3 (user abort) | Current state + abort signal | Dialogue transcript + next action |
-| H | Teaching Guide Agent | L2 | Teaching goal + current page analysis + known LearnedPaths + recent user action log + optional failure / recovery context | Natural-language instruction + highlight targets + expected user action + clarification questions |
+| Page Understanding Agent | Agent A | L1 | Simplified AST + screenshot | Page purpose description |
+| Attempt Evaluation Agent | Agent B | L1 | Attempt log + before/after state | Per-attempt verdict + anomalies |
+| Learning Report Agent *(low priority, presentation)* | Agent C | L1 | Full learning session | User-facing learning report |
+| Task Path Planner | Agent D | L3 | User task + learned record | Chosen concrete route |
+| Task Result Reporter | Agent E | L3 | Execution outcome | User-facing result |
+| Failure Recovery Agent | Agent F | L3 (error) | Error context + recent steps | Dialogue transcript + next action |
+| User Abort Handler | Agent G | L3 (user abort) | Current state + abort signal | Dialogue transcript + next action |
+| Teaching Guide Agent | Agent H | L2 | Teaching goal + current page analysis + known LearnedPaths + recent user action log + optional failure / recovery context | Natural-language instruction + highlight targets + expected user action + clarification questions |
 
-Agent H boundaries:
+Teaching Guide Agent boundaries:
 
 - It does not click, fill, or operate the browser.
 - It does not fabricate user actions.
 - Its guidance is separate from recorded `provenance = user` actions.
 
-When adding a new capability, first ask: **which Agent does this
+When adding a new capability, first ask: **which role does this
 belong to?** If the answer is "a new one", that's a product-level
 decision — update this document before adding it.
 
@@ -512,7 +518,7 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
   Autonomous exploration currently uses a live-page analyzer
   (`page_analyzer.py`) rather than the offline AST pipeline;
   reconciling the two views is open work.
-- **L1 step 3 (Page Intent Agent)**: not yet built as a
+- **L1 step 3 (Page Understanding Agent, legacy: Agent A)**: not yet built as a
   separate Agent. Today's Supervisor mixes intent-understanding and
   evaluation concerns.
 - **L1 steps 4–5 (element extraction + trial)**: shipped in the
@@ -522,7 +528,7 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
   exist as exploration-stage artifacts. A **product-form,
   user-facing learning report is still exploratory** — current
   output is a developer-oriented debug surface, not the final shape
-  Agent C should produce. **Persist-as-learned-record shipped in
+  Learning Report Agent should produce. **Persist-as-learned-record shipped in
   delivery milestone M10.1** — `pass_gate = pass` runs
   auto-ingest as `learned_paths` rows keyed by
   (page_template, query_signature, dom_fingerprint, scenario), with
@@ -534,8 +540,8 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
   cleanup removed the old Chrome extension; L2 will be built
   from scratch on top of a **visible** Playwright browser (per §5.1),
   not on the extension. User Demonstration, Guided Teaching, and
-  Agent H are not implemented today.
-- **L3 (Actual Work)**: not started. No Path Planner Agent, no
+  Teaching Guide Agent is not implemented today.
+- **L3 (Actual Work)**: not started. No Task Path Planner, no
   task-to-path execution loop, no runtime conversation surface, no
   Conversation Orchestrator, no result verification loop, and no
   recovery dialogue. Replay / drift is the M10 foundation; M11 is the
@@ -552,19 +558,19 @@ task execution:
 | Milestone | Product role | Internal Agents |
 |---|---|---|
 | M10 · Path Asset Foundation | LearnedPath persistence, catalog, replay execution, and drift detection. | No new Agent; provides execution substrate. |
-| M11.0 · Runtime Conversation Shell & Agent Orchestration | CLI MVP, session state, Conversation Orchestrator, user message routing, and confirmation / pause / abort / takeover basics. | No new Agent by default; routes to Agent D / E / F / G / H as those capabilities land. |
-| M11.1 · Task-to-Path Planning & Execution MVP | Agent D / E, LearnedPath retrieval / ranking, slot binding, task result verification MVP, basic artifact capture, and risk / consent gate MVP. | Agent D · Path Planner Agent; Agent E · Result Reporter Agent. |
-| M12 · Recovery & Abort Dialogue | Failure recovery, user interrupt handling, and continue / replan / rerun / takeover / abandon choices. | Agent F · Recovery Dialogue Agent; Agent G · Abort Dialogue Agent. |
-| M13 · User-Guided Learning, Teaching & Correction | Visible browser, user demonstration recording, Agent H teaching guidance, highlight / shadow / indicator / tooltip, provenance=user write-back, and correction UI. | Agent H · Teaching Guide Agent; preserve user provenance. |
-| M14 · Learning Quality, Coverage & Negative Knowledge | Agent A / B / C, popup controls, custom click-toggle, label extractor expansion, cross-page pattern mining, and failure evidence / negative knowledge store. | Agent A · Page Intent Agent; Agent B · Attempt Evaluator Agent; Agent C · Learning Reporter Agent. |
-| M15 · Automated Evaluation, Audit & Hygiene | Replay regression, drift alerts, trust trend, result verification trend, artifact / log / screenshot retention cleanup, and conversation / recovery / teaching audit. | Reuses Agent B / Supervisor-style evaluation; no new Agent by default. |
+| M11.0 · Runtime Conversation Shell & Agent Orchestration | CLI MVP, session state, Conversation Orchestrator, user message routing, and confirmation / pause / abort / takeover basics. | No new Agent by default; routes to Task Path Planner, Task Result Reporter, Failure Recovery Agent, User Abort Handler, and Teaching Guide Agent as those capabilities land. |
+| M11.1 · Task-to-Path Planning & Execution MVP | Task Path Planner / Task Result Reporter, LearnedPath retrieval / ranking, slot binding, task result verification MVP, basic artifact capture, and risk / consent gate MVP. | Task Path Planner (legacy: Agent D); Task Result Reporter (legacy: Agent E). |
+| M12 · Recovery & Abort Dialogue | Failure recovery, user interrupt handling, and continue / replan / rerun / takeover / abandon choices. | Failure Recovery Agent (legacy: Agent F); User Abort Handler (legacy: Agent G). |
+| M13 · User-Guided Learning, Teaching & Correction | Visible browser, user demonstration recording, Teaching Guide Agent guidance, highlight / shadow / indicator / tooltip, provenance=user write-back, and correction UI. | Teaching Guide Agent (legacy: Agent H); preserve user provenance. |
+| M14 · Learning Quality, Coverage & Negative Knowledge | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent, popup controls, custom click-toggle, label extractor expansion, cross-page pattern mining, and failure evidence / negative knowledge store. | Page Understanding Agent (legacy: Agent A); Attempt Evaluation Agent (legacy: Agent B); Learning Report Agent (legacy: Agent C). |
+| M15 · Automated Evaluation, Audit & Hygiene | Replay regression, drift alerts, trust trend, result verification trend, artifact / log / screenshot retention cleanup, and conversation / recovery / teaching audit. | Reuses Attempt Evaluation Agent / Supervisor-style evaluation; no new Agent by default. |
 | M16 · External Interfaces | Stable API, external CLI, Skill / Tool, third-party scheduler interface, and integration hooks for user-built systems. | No new product Agent; exposes existing capabilities. |
-| M17 · Multi-Page Workflow Composition | Compose multiple LearnedPaths into larger workflows without inventing paths from raw HTML. | Extends Agent D planning inputs; no new Agent by default. |
+| M17 · Multi-Page Workflow Composition | Compose multiple LearnedPaths into larger workflows without inventing paths from raw HTML. | Extends Task Path Planner inputs; no new Agent by default. |
 | M18 · CLI Distribution & Integration Readiness | Stable CLI distribution, local packaging, API / CLI examples, scripting / batch usage, integration cookbook, and versioned CLI / API contracts. | No new product Agent by default. |
 
 M10.2 replay is still valuable after this reshuffle: it is the first
 deterministic consumer of LearnedPath data. It does **not** implement
-Agent D or L3 task planning; it gives M11.1 something safe to call.
+Task Path Planner or L3 task planning; it gives M11.1 something safe to call.
 
 ---
 
@@ -651,9 +657,10 @@ WebAgentFlow with its own per-step browser automation.
 > **Clarification — three kinds of "Agent" appear near this document,
 > don't confuse them**:
 >
-> 1. **Product-internal Agents A–H** (§7) — roles that run *inside*
->    WebAgentFlow at runtime (Page Intent, Path Planner, Recovery Dialogue,
->    …). Defined by this document.
+> 1. **Product-internal role Agents** (§7) — roles that run *inside*
+>    WebAgentFlow at runtime (Page Understanding Agent, Task Path Planner,
+>    Failure Recovery Agent, …). A-H labels are legacy aliases. Defined by
+>    this document.
 > 2. **Third-party Agent** (this §10) — an *external* runtime
 >    scheduler that calls WebAgentFlow's CLI / Skill / API to get
 >    browser work done. Not part of WebAgentFlow.

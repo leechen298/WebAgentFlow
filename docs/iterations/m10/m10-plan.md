@@ -153,7 +153,7 @@ M10 使用语义编号目录，目录名前缀与任务编号一致，例如
   等可解释状态。
 - replay 不回退到 autonomous learning，不静默重试。
 - 本包是 M11.1 Task-to-Path Planning & Execution MVP 的执行底座，但
-  **不**实现 Agent D · Path Planner Agent、task input、slot binding 或
+  **不**实现 Task Path Planner / 任务路径规划器（legacy: Agent D）、task input、slot binding 或
   L3 task runner。
 
 实际交付：
@@ -198,10 +198,10 @@ M10.2 已完成 LearnedPath 的确定性消费能力：它只消费已经存在�
 后续里程碑边界保持如下：
 
 - Runtime Conversation Shell / Conversation Orchestrator 属于 M11.0。
-- Agent D / Agent E 的 task runner、task-to-path planning、task result
+- Task Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器（legacy: Agent D/E） 的 task runner、task-to-path planning、task result
   verification 属于 M11.1。
 - Recovery / Abort 对话属于 M12。
-- Guided Teaching / Agent H Teaching Guide Agent 属于 M13。
+- Guided Teaching / Teaching Guide Agent / 教学引导器（legacy: Agent H） 属于 M13。
 - Negative knowledge / failure evidence 的正式 store 属于 M14 / M15。
 - Artifact lifecycle、action risk / consent gate、multi-page workflow
   composition 都属于后续里程碑，不进入 M10.2。

@@ -73,8 +73,9 @@ Current code status:
   conversation runtime E2E evidence (11.0.7, `10 passed` E2E).
 - `apps/worker` is still a scaffold.
 - M11.1 task-to-path schemas are planned, not implemented. L2 user-guided
-  learning, L3 task execution, Agent routing for D / E / F / G / H, and
-  Agent H Teaching Guide Agent are planned but not implemented.
+  learning, L3 task execution, and routing for Task Path Planner, Task Result
+  Reporter, Failure Recovery Agent, User Abort Handler, and Teaching Guide
+  Agent (legacy: Agents D-H) are planned but not implemented.
 
 **Completed legacy steps:**
 
@@ -378,7 +379,7 @@ foundation:
 **`services/teaching/`** — planned L2 teaching support:
 
 - highlight target generation
-- Agent H Teaching Guide integration
+- Teaching Guide Agent (legacy: Agent H) integration
 - visible-browser teaching event handling
 - user action recorder integration
 
@@ -412,11 +413,11 @@ Agents and deterministic services:
 User message
 -> Runtime Conversation Surface
 -> Conversation Orchestrator / Dispatcher
--> Agent D / F / G / H or execution service
+-> Task Path Planner / Failure Recovery Agent / User Abort Handler / Teaching Guide Agent (legacy: Agents D/F/G/H) or execution service
 -> Browser runtime / replay engine / teaching recorder
 -> result event
 -> Conversation Orchestrator / Dispatcher
--> Agent E / F / G / H response
+-> Task Result Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide Agent (legacy: Agents E/F/G/H) response
 -> user
 ```
 
@@ -439,10 +440,10 @@ Planned pieces:
 - indicator / tooltip / next-step prompt rendering in the operator UI
 - user event recorder that captures real clicks, inputs, selections,
   navigation, and observable state changes
-- Agent H Teaching Guide Agent producing natural-language guidance and
+- Teaching Guide Agent (legacy: Agent H) producing natural-language guidance and
   highlight targets
 
-Recorded LearnedPath actions must come from real user events. Agent H
+Recorded LearnedPath actions must come from real user events. Teaching Guide Agent (legacy: Agent H)
 suggestions are guidance, not provenance, and cannot be written directly
 as LearnedPath actions.
 

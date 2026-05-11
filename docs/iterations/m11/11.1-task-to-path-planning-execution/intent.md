@@ -14,7 +14,7 @@ WebAgentFlow 基于 LearnedPath catalog 和 replay evidence 选择候选路径�
 - 11.0.6 已证明 conversation flow 能显式调用 replay。
 - 但用户还不能说“帮我筛选 active 用户并导出”这类任务。
 - M11.1 把 explicit replay 推进到 task-to-path planning。
-- 必须分阶段做，不能一次性把 Agent D / E / execution / verification
+- 必须分阶段做，不能一次性把 Task Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器（legacy: Agent D/E） / execution / verification
   混在一起。
 
 ## 边界（本阶段不做）
@@ -33,7 +33,7 @@ WebAgentFlow 基于 LearnedPath catalog 和 replay evidence 选择候选路径�
 
 - 有 M11.1 总体拆分。
 - 有 11.1.1 domain contract 执行包。
-- 明确 Agent D / E 边界。
+- 明确 Task Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器（legacy: Agent D/E） 边界。
 - 明确 path retrieval / slot binding / confirmation / execution /
   verification 拆分。
 - 明确不调用 autonomous run。

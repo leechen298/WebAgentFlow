@@ -30,8 +30,8 @@
 - 全局路线改为 L1/L2/L3 生命周期阶段 + M10/M11/... 交付里程碑。
 - 10.2 归属 M10 Path Asset Foundation；目录名保留历史 `m10`。
 - 10.2 继续可执行，不因路线图重排而推翻。
-- 10.2 明确不实现 Agent D · Path Planner Agent、用户自然语言任务入口、
-  slot binding、执行前确认或 Agent E 汇报；这些属于 M11
+- 10.2 明确不实现 Task Path Planner / 任务路径规划器（legacy: Agent D）、用户自然语言任务入口、
+  slot binding、执行前确认或 Task Result Reporter / 任务结果汇报器（legacy: Agent E） 汇报；这些属于 M11
   Task-to-Path Planning MVP。
 - 10.2 的 replay engine 是 M11 后续可调用的执行底座。
 
@@ -56,7 +56,7 @@
 
 ## 2026-05-07 状态语义补丁
 
-- 将 `intent.md` 中的 Agent D 引用对齐到 M11.1。
+- 将 `intent.md` 中的 Task Path Planner / 任务路径规划器（legacy: Agent D） 引用对齐到 M11.1。
 - 明确 `ReplayStatus.failed` 表示 drift precheck 未阻断但动作执行失败。
 - 明确 `candidate_not_found` / `no_candidate` 只服务 candidate helper 或
   未来 M11.1 自动候选路径，显式 path replay 的 path 不存在仍是 HTTP 404。
@@ -130,7 +130,7 @@ git diff --check
 ### 本轮明确未做
 
 - 自动候选 replay UI / API（`candidate_not_found` / `no_candidate` 只预留枚举值）
-- Agent D · Path Planner Agent
+- Task Path Planner / 任务路径规划器（legacy: Agent D）
 - 用户自然语言任务入口、slot binding、执行前确认
 - Runtime Conversation Surface / CLI
 - teaching mode、risk gate、artifact lifecycle、multi-page workflow

@@ -127,21 +127,27 @@ AgentEReporterInput / Output
   warnings, next suggested action optional.
 ```
 
+11.1.1 的 schema 类名可以保留 `AgentD` / `AgentE` 前缀以保持连续性；
+面向用户和后续文档时优先使用 Task Path Planner / Task Result Reporter。
+
 ## Contract rules
 
 - 不加入 user / account / tenant 字段。
 - schema module 不 import replay / autonomous / LLM modules。
 - `TaskIntent.raw_text` 是不可丢失原始输入；`normalized_goal` 是 optional，
-  后续可由 deterministic normalizer 或 Agent D 填充。本包只定义
+  后续可由 deterministic normalizer 或 Task Path Planner / 任务路径规划器填充
+  （legacy: Agent D）。本包只定义
   `normalization_source` contract，不实现 normalizer。
 - `RiskHint` 和 `ConsentRequirement` 分离：前者表示风险信号，后者表示执行前
   必须获得用户确认的门槛。risk / consent policy engine 属于 11.1.5。
 - `TaskExecutionResult.status` 不拆 replay failure / verification failure；
   失败来源通过 `failure_stage` 和 `failure_reason` 表达。
-- Agent D schema 定义相对完整的 planner 输入 / 输出 contract，但不定义 prompt，
-  不实现 Agent D，不调用 LLM provider。
-- Agent E schema 定义相对完整的 reporter 输入 / 输出 contract，但不定义 prompt，
-  不实现 Agent E，不调用 LLM provider。
+- Task Path Planner / 任务路径规划器 schema 定义相对完整的 planner 输入 /
+  输出 contract（legacy: Agent D），但不定义 prompt，不实现 Task Path Planner，
+  不调用 LLM provider。
+- Task Result Reporter / 任务结果汇报器 schema 定义相对完整的 reporter 输入 /
+  输出 contract（legacy: Agent E），但不定义 prompt，不实现 Task Result Reporter，
+  不调用 LLM provider。
 - artifact fields 只保留 `ArtifactReference` 占位，不实现 artifact lifecycle。
 
 ## 测试计划

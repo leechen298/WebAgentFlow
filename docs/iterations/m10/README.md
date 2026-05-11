@@ -84,7 +84,7 @@ backlog**。
   LearnedPath，指定一条已学路径做 replay，并返回页面变化 / 目标缺失
   等可解释状态。replay API、LearnedPath catalog replay UI、
   deterministic E2E、Codex exploratory validation 首轮证据报告均已交付。
-  它不实现 Agent D，不实现 L3 task runner。
+  它不实现 Task Path Planner / 任务路径规划器（legacy: Agent D），不实现 L3 task runner。
 - **10.3 Popup-based control support** —— draft，已迁入 M14 backlog。
 - **10.4 Custom click-toggle controls** —— draft，已迁入 M14 backlog。
 - **10.5 Form-label extractor coverage expansion** —— draft，已迁入
