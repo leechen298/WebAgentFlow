@@ -347,7 +347,8 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 - [`docs/product-model.zh.md`](./docs/product-model.zh.md) —— **产品形态
   权威文档**：L1/L2/L3 生命周期阶段（自主学习 / 用户引导学习 /
-  实际工作）、Agents A-H、跨阶段不变量。**先看这份**。
+  实际工作）、产品内部功能角色（A-H 为 legacy alias）、跨阶段不变量。
+  **先看这份**。
 - [`docs/architecture.zh.md`](./docs/architecture.zh.md) —— AST 双轨、
   服务子包结构、iframe 处理。
 - [`docs/scope-boundaries.zh.md`](./docs/scope-boundaries.zh.md) —— 当前交付里程碑

@@ -5,10 +5,10 @@ current delivery milestone. When in doubt, check here before proposing or
 implementing them. Items on this list are deferred until a prerequisite
 milestone validates.
 
-For **what the product is** (the L1/L2/L3 lifecycle model and the Agents),
-see [`product-model.md`](./product-model.md). If a proposal isn't
-in that document AND isn't listed here as out-of-scope, pause and
-ask — don't invent.
+For **what the product is** (the L1/L2/L3 lifecycle model and internal role
+Agents with A-H legacy aliases), see [`product-model.md`](./product-model.md).
+If a proposal isn't in that document AND isn't listed here as out-of-scope,
+pause and ask — don't invent.
 
 ## Current Delivery Milestone
 
@@ -52,12 +52,14 @@ Last completed package: `11.1.1-task-planning-domain-contract`.
 Current planning package: `11.1.2-learned-path-retrieval-ranking`.
 
 11.1.2 does not compose multi-step routes, bind slots, execute tasks, or
-implement Task Path Planner / Task Result Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide Agent (legacy: Agents D-H) behavior. Planning language uses M<N> for delivery
-milestones and L1/L2/L3 for lifecycle stages.
+implement Task Path Planner / Task Result Reporter / Failure Recovery Agent /
+User Abort Handler / Teaching Guide Agent behavior (legacy: Agents D-H).
+Planning language uses M<N> for delivery milestones and L1/L2/L3 for
+lifecycle stages.
 
 11.0.7 established the conversation test domain: API, CLI, orchestrator, and
 necessary E2E smoke tests with auditable evidence. It does not add path
-selection, slot binding, task-to-path planning, Task Path Planner / Task Result Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide Agent (legacy: Agents D-H)
+selection, slot binding, task-to-path planning, those runtime Agent
 implementations, or autonomous learning.
 
 Last completed M10 package: `10.2-replay-execution-drift-detection`.
@@ -105,9 +107,10 @@ did not implement the complete negative-knowledge store.
 - **Teaching Guide Agent (legacy: Agent H)** — guided teaching belongs to M13, not
   M11.0.
 - **Runtime Agent implementations** — M11.0 may define routing
-  boundaries, but it does not implement Task Path Planner / Task Result Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide Agent (legacy: Agents D-H) logic,
-  L3 task running, slot binding, recovery dialogue, or teaching
-  behavior.
+  boundaries, but it does not implement Task Path Planner / Task Result
+  Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide
+  Agent logic (legacy: Agents D-H), L3 task running, slot binding, recovery
+  dialogue, or teaching behavior.
 - **Multi-page workflow composition** — composing multiple LearnedPaths
   into a cross-page workflow is M17, not M11.0.
 - **Action risk & consent gate** — risk classification, destructive

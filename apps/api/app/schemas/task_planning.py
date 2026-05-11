@@ -1,7 +1,8 @@
 """M11.1 task-to-path planning domain contract.
 
 These contracts define the data structures for retrieval, slot binding,
-Agent D planning, confirmation, execution, verification, and Agent E reporting.
+Task Path Planner planning, confirmation, execution, verification, and
+Task Result Reporter reporting.
 
 This module intentionally does NOT import or reference replay, autonomous
 exploration, or LLM provider modules. It is a pure schema layer.
@@ -54,8 +55,8 @@ class TaskIntent(BaseModel):
 
     `raw_text` is the immutable original input.
     `normalized_goal` may be populated later by a deterministic normalizer
-    or Agent D (11.1.4). `normalization_source` tracks which component
-    produced the normalized goal.
+    or Task Path Planner (legacy: Agent D, 11.1.4). `normalization_source`
+    tracks which component produced the normalized goal.
     """
 
     raw_text: str = Field(min_length=1)
@@ -236,7 +237,7 @@ class ArtifactReference(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Agent D / Agent E contracts
+# Task Path Planner / Task Result Reporter contracts (legacy: Agent D/E)
 # ---------------------------------------------------------------------------
 
 

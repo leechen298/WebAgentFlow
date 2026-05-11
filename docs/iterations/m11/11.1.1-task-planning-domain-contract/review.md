@@ -46,7 +46,8 @@
 ## 已决策
 
 - `TaskIntent.normalized_goal` 在 11.1.1 中定义为 optional field。本包不实现
-  deterministic normalizer，也不实现 Task Path Planner / 任务路径规划器（legacy: Agent D）；后续 11.1.4 Task Path Planner / 任务路径规划器（legacy: Agent D） 可以填充或
+  deterministic normalizer，也不实现 Task Path Planner / 任务路径规划器
+  （legacy: Agent D）；后续 11.1.4 Task Path Planner 可以填充或
   改写 `normalized_goal`。schema 必须保留 `raw_text` 作为不可丢失的原始输入，
   并可定义 `normalization_source` optional field，取值规划为
   `none | deterministic | agent_d`。

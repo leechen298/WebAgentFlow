@@ -364,8 +364,9 @@ M11.0 Runtime Conversation Shell & Agent Orchestration 已完成到 11.0.7。
 - explicit replay command hook
 - conversation runtime tests and evidence
 
-M11.0 建立了 runtime loop 基座，但仍未实现 task-to-path planning、Task Path Planner / 任务路径规划器（legacy: Agent D）、
-Task Result Reporter / 任务结果汇报器（legacy: Agent E）、slot binding 或 task result verification。M11.0 的最后一个功能
+M11.0 建立了 runtime loop 基座，但仍未实现 task-to-path planning、Task
+Path Planner / 任务路径规划器（legacy: Agent D）、Task Result Reporter /
+任务结果汇报器（legacy: Agent E）、slot binding 或 task result verification。M11.0 的最后一个功能
 连接点是显式 `/replay <learned_path_id> <url>`：它只使用用户给出的 path id
 和 URL，不做 path selection、不做 task planning、不做 slot binding。
 
@@ -378,10 +379,10 @@ M11.1 是第一个 L3 Actual Work MVP。用户通过 M11.0 conversation surface
 M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Agent D）
 和 Task Result Reporter / 任务结果汇报器（legacy: Agent E）。
 
-- Task Path Planner / 任务路径规划器（legacy: Agent D） 不能读 raw HTML，不能逐步控制浏览器，只能基于 user task、
+- Task Path Planner 不能读 raw HTML，不能逐步控制浏览器，只能基于 user task、
   LearnedPath catalog、negative / replay evidence、available route
   candidates 输出规划。
-- Task Result Reporter / 任务结果汇报器（legacy: Agent E） 不得脑补成功，只能基于 replay result、postcondition check、
+- Task Result Reporter 不得脑补成功，只能基于 replay result、postcondition check、
   artifact status、final-state signal、uncertainty flags 汇报。
 
 ## M11.1 拆分原则
@@ -417,8 +418,8 @@ M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Age
 边界（已遵守）：
 
 - 不做 retrieval / ranking 实现。
-- 不做 Task Path Planner / 任务路径规划器（legacy: Agent D） 实现。
-- 不做 Task Result Reporter / 任务结果汇报器（legacy: Agent E） 实现。
+- 不做 Task Path Planner 实现。
+- 不做 Task Result Reporter 实现。
 - 不做 slot binding 实现。
 - 不做 replay execution。
 - 不做 risk gate implementation。
@@ -434,7 +435,7 @@ M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Age
 - 从 LearnedPath catalog 检索与 task / page / scenario 匹配的候选路径。
 - 排序候选路径。
 - 读取 trust、hit_count、drift evidence、negative evidence。
-- 不调用 Task Path Planner / 任务路径规划器（legacy: Agent D）。
+- 不调用 Task Path Planner。
 - 不执行 replay。
 
 ### 11.1.3 · Slot binding contract and deterministic binding MVP
@@ -449,18 +450,18 @@ M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Age
 - 输出 slot binding proposal。
 - 不执行 replay。
 
-### 11.1.4 · Task Path Planner / 任务路径规划器（legacy: Agent D） planner MVP
+### 11.1.4 · Task Path Planner MVP（legacy: Agent D）
 
 状态：future。
 
 目标：
 
-- Task Path Planner / 任务路径规划器（legacy: Agent D） 读取 user task、candidate paths、slot binding proposals、
+- Task Path Planner 读取 user task、candidate paths、slot binding proposals、
   negative evidence。
 - 输出 route plan / confirmation requirements。
-- Task Path Planner / 任务路径规划器（legacy: Agent D） 不读 raw HTML。
-- Task Path Planner / 任务路径规划器（legacy: Agent D） 不逐步控制浏览器。
-- Task Path Planner / 任务路径规划器（legacy: Agent D） 不执行 replay。
+- Task Path Planner 不读 raw HTML。
+- Task Path Planner 不逐步控制浏览器。
+- Task Path Planner 不执行 replay。
 
 ### 11.1.5 · Plan confirmation and consent gate
 
@@ -485,7 +486,7 @@ M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Age
 - 不做 path selection。
 - 不调用 autonomous run。
 
-### 11.1.7 · Result verification and Task Result Reporter / 任务结果汇报器（legacy: Agent E） reporting
+### 11.1.7 · Result verification and Task Result Reporter（legacy: Agent E）
 
 状态：future。
 
@@ -493,7 +494,7 @@ M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Age
 
 - 基于 replay result、postcondition signals、artifact status、final
   URL / title / DOM signal 生成 result verification。
-- Task Result Reporter / 任务结果汇报器（legacy: Agent E） 汇报结果。
+- Task Result Reporter 汇报结果。
 - 不脑补成功。
 - 无法验证时返回 `uncertain` / `needs_review`。
 

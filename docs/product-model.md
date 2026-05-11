@@ -208,8 +208,9 @@ components can be replaced independently.
      can do on it, what it couldn't figure out).
    - **Not a prerequisite** for the learning loop to function. The
      loop is complete once steps 1–6 + 8 run; this is UX polish on top
-     of that data. Prioritize accuracy in A / B / 4 / 5 before
-     investing in Learning Report Agent.
+     of that data. Prioritize accuracy in Page Understanding Agent,
+     Attempt Evaluation Agent, and steps 4–5 before investing in
+     Learning Report Agent.
 8. **Persist** as a learned page record:
    - page signature
    - page purpose (from Page Understanding Agent)
@@ -534,19 +535,21 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
   (page_template, query_signature, dom_fingerprint, scenario), with
   a trust lifecycle (`provisional` / `confirmed` / `flaky` /
   `deprecated`) the operator drives via the run-detail page.
-  Replay / drift detection against stored paths is being planned in
-  M10.2.
+  Replay / drift detection against stored paths shipped in M10.2.
 - **L2 (User-Guided Learning)**: not started. The 2026-04-20
   cleanup removed the old Chrome extension; L2 will be built
   from scratch on top of a **visible** Playwright browser (per §5.1),
   not on the extension. User Demonstration, Guided Teaching, and
   Teaching Guide Agent is not implemented today.
-- **L3 (Actual Work)**: not started. No Task Path Planner, no
-  task-to-path execution loop, no runtime conversation surface, no
-  Conversation Orchestrator, no result verification loop, and no
-  recovery dialogue. Replay / drift is the M10 foundation; M11 is the
-  runtime-conversation foundation, and M11.1 is the first planned L3
-  happy-path MVP.
+- **M11.0 runtime conversation foundation**: shipped. `wagent conversation`,
+  Conversation API, Conversation Orchestrator / Dispatcher service skeleton,
+  public dispatch endpoint, explicit replay hook, and CLI dispatch integration
+  are implemented.
+- **L3 task execution**: not started. No Task Path Planner implementation,
+  no Task Result Reporter implementation, no task-to-path execution loop, no
+  result verification loop, no recovery dialogue, and no teaching mode.
+  Replay / drift is the M10 foundation; M11.0 is the runtime-conversation
+  foundation, and M11.1 is the first planned L3 happy-path MVP.
 
 When a lifecycle stage fully lands, update this section to reflect it.
 
@@ -694,10 +697,12 @@ Current codebase has part of the foundation:
 - Browser execution and exploration capabilities.
 - Page analysis / action planning / verification.
 - Autonomous workbench as the operator's trigger + observation surface.
+- Runtime CLI conversation foundation (`wagent conversation`), Conversation
+  API, Conversation Orchestrator / Dispatcher service skeleton, public dispatch
+  endpoint, explicit replay hook, and CLI dispatch integration.
 
 Pending:
 
-- Runtime CLI conversation entry.
 - A more stable external CLI entry.
 - A clearer Skill / Tool interface definition.
 - Calling conventions oriented at third-party Agents.

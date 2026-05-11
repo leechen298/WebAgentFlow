@@ -282,7 +282,7 @@ conversation、teaching、artifact、evidence 服务是 planned service areas，
 **`services/teaching/`** —— 规划中的 L2 teaching 支撑：
 
 - highlight target generation
-- Teaching Guide Agent / 教学引导器（legacy: Agent H） integration
+- Teaching Guide Agent / 教学引导器 integration（legacy: Agent H）
 - visible-browser teaching event handling
 - user action recorder integration
 
@@ -340,12 +340,10 @@ Teaching mode 是规划在 M13 的 L2 能力，不属于当前 M10.2 replay / dr
 - operator UI 中的 indicator / tooltip / next-step prompt rendering
 - user event recorder，记录真实 click、input、selection、navigation 和
   可观测状态变化
-- Teaching Guide Agent / 教学引导器（legacy: Agent H），产出自然语言 guidance 和 highlight
-  targets
+- Teaching Guide Agent / 教学引导器，产出自然语言 guidance 和 highlight targets
 
-写入 LearnedPath 的 recorded action 必须来自真实用户事件。Teaching Guide Agent / 教学引导器
-（legacy: Agent H）的建议
-只是 guidance，不是 provenance，不能直接写成 LearnedPath action。
+写入 LearnedPath 的 recorded action 必须来自真实用户事件。Teaching Guide Agent /
+教学引导器的建议只是 guidance，不是 provenance，不能直接写成 LearnedPath action。
 
 ---
 

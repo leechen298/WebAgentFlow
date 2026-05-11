@@ -379,7 +379,7 @@ foundation:
 **`services/teaching/`** — planned L2 teaching support:
 
 - highlight target generation
-- Teaching Guide Agent (legacy: Agent H) integration
+- Teaching Guide Agent integration (legacy: Agent H)
 - visible-browser teaching event handling
 - user action recorder integration
 
@@ -440,12 +440,11 @@ Planned pieces:
 - indicator / tooltip / next-step prompt rendering in the operator UI
 - user event recorder that captures real clicks, inputs, selections,
   navigation, and observable state changes
-- Teaching Guide Agent (legacy: Agent H) producing natural-language guidance and
-  highlight targets
+- Teaching Guide Agent producing natural-language guidance and highlight targets
 
-Recorded LearnedPath actions must come from real user events. Teaching Guide Agent (legacy: Agent H)
-suggestions are guidance, not provenance, and cannot be written directly
-as LearnedPath actions.
+Recorded LearnedPath actions must come from real user events. Teaching Guide Agent
+suggestions are guidance, not provenance, and cannot be written directly as
+LearnedPath actions.
 
 ---
 

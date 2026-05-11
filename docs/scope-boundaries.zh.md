@@ -2,9 +2,9 @@
 
 本文列出**当前交付里程碑刻意不做**的能力。提出或实现这些之前，先来这里看一眼。清单上的项目都在等某个前置里程碑完成后才会解锁。
 
-**产品"要做什么"**（L1/L2/L3 生命周期模型和各个 Agent）见
-[`product-model.zh.md`](./product-model.zh.md)。如果一个提议在那份
-文档里没位置、本清单也没列为"不做"，**停下来问**，不要擅自发明。
+**产品"要做什么"**（L1/L2/L3 生命周期模型和产品内部功能角色，A-H 为
+legacy alias）见 [`product-model.zh.md`](./product-model.zh.md)。如果一个
+提议在那份文档里没位置、本清单也没列为"不做"，**停下来问**，不要擅自发明。
 
 ## 当前交付里程碑
 
@@ -39,22 +39,25 @@ M11.0 runtime loop foundation 已完成。已完成范围是：
 - `11.0.6-explicit-replay-command-hook`
 - `11.0.7-conversation-tests-and-evidence`
 
-刚完成的执行包：`11.0.7-conversation-tests-and-evidence`。
+M11.0 最后完成包：`11.0.7-conversation-tests-and-evidence`。
 
 已完成的 M11.1 执行包：
 
 - `11.1.1-task-planning-domain-contract`
 
+最近完成包：`11.1.1-task-planning-domain-contract`。
 当前规划包：`11.1.2-learned-path-retrieval-ranking`。
 
 11.1.2 不组合多步 route、不做 slot binding、不执行任务，也不实现
-Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 行为。规划语言使用 M<N> 指交付里程碑，使用
-L1/L2/L3 指生命周期阶段。
+Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、
+Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、
+Teaching Guide Agent / 教学引导器行为（legacy: Agents D-H）。规划语言使用
+M<N> 指交付里程碑，使用 L1/L2/L3 指生命周期阶段。
 
 11.0.7 已建立 conversation 测试证据：API、CLI、orchestrator、replay hook
 baseline，以及 conversation runtime E2E。它仍不做 path selection、slot
-binding、task-to-path planning、不实现 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H），也不做
-autonomous learning。
+binding、task-to-path planning、不实现这些 runtime Agent，也不做 autonomous
+learning。
 
 刚完成的 M10 执行包：`10.2-replay-execution-drift-detection`。
 M10.2 现在作为历史参考。它实现了 LearnedPath replay 和 drift detection：
@@ -95,8 +98,10 @@ knowledge store。
 - **Teaching Guide Agent / 教学引导器（legacy: Agent H）** —— guided teaching 属于
   M13，不属于 M11.0。
 - **Runtime Agent 具体实现** —— M11.0 可以定义 routing 边界，但不实现
-  Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 逻辑，不做 L3 task runner、slot binding、
-  recovery dialogue 或 teaching behavior。
+  Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、
+  Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、
+  Teaching Guide Agent / 教学引导器逻辑（legacy: Agents D-H），不做 L3
+  task runner、slot binding、recovery dialogue 或 teaching behavior。
 - **Multi-page workflow composition / 多页面工作流编排** —— 多个 LearnedPath
   组成跨页面 workflow 属于 M17，不属于 M11.0。
 - **Action risk & consent gate / 操作风险与确认门** —— 风险分类、

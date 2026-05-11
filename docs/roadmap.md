@@ -3,7 +3,7 @@
 Operational view of what's shipped, what's current, and what's next.
 
 - For what the product **is** (L1/L2/L3 lifecycle stages, internal
-  Agents A-H, invariants),
+  role Agents with A-H as legacy aliases, invariants),
   see [`product-model.md`](./product-model.md). That's the authoritative
   product reference.
 - Iteration folders use milestone names such as `docs/iterations/m10/`.
@@ -281,7 +281,7 @@ Internal Agents introduced / made concrete:
 Expected delivery:
 
 - Pause-on-failure semantics for L3 execution.
-- Recovery dialogue that can route to Task Path Planner (legacy: Agent D) only at planning
+- Recovery dialogue that can route to Task Path Planner only at planning
   boundaries.
 - Abort dialogue for user interruption and user-requested stop.
 - Takeover handoff into M13 User Demonstration or Guided Teaching when
@@ -346,13 +346,14 @@ Coverage backlog moved here:
   Design, TDesign, Quasar, and MUI where fixture or real-page evidence
   justifies the handler.
 - Cross-page pattern mining for login / search / CRUD metadata that
-  Task Path Planner (legacy: Agent D) can consume later.
+  Task Path Planner can consume later.
 
 Negative knowledge / failure evidence becomes formal here:
 
 - Store failed attempts, replay drift, `target_missing`,
   `unsupported_action`, and user correction evidence.
-- Feed that evidence to Task Path Planner (legacy: Agent D) planning, Attempt Evaluation Agent (legacy: Agent B) evaluation, learning
+- Feed that evidence to Task Path Planner planning, Attempt Evaluation Agent
+  evaluation, learning
   quality reports, and M15 automated evaluation.
 - Add richer postcondition patterns and artifact verification patterns
   here or in M15, depending on implementation scope.
@@ -402,7 +403,7 @@ Expected delivery:
 - Carry state across pages, such as search -> detail -> export.
 - Support workflow-level recovery, takeover, and teaching mode across
   page transitions.
-- Let Task Path Planner (legacy: Agent D) compose already learned paths, while forbidding it from
+- Let Task Path Planner compose already learned paths, while forbidding it from
   inventing browser paths from raw HTML.
 
 ## M18 — CLI Distribution & Integration Readiness

@@ -173,8 +173,8 @@ Planner / 任务路径规划器（legacy: Agent D）、Failure Recovery Agent /
      什么没搞定）。
    - **不是学习闭环的前置条件**。只要步骤 1–6 + 8 跑通，闭环就
      成立；Learning Report Agent 是在那份数据之上加的 UX 打磨。
-     **优先打磨 Page Understanding Agent / Attempt Evaluation Agent /
-     第 4 / 第 5 步的准确度**，别先投资 Learning Report Agent。
+     **优先打磨 Page Understanding Agent / 页面理解器、Attempt Evaluation Agent /
+     尝试评估器和第 4–5 步的准确度**，别先投资 Learning Report Agent。
 8. **持久化**成一条学习过的页面记录：
    - page signature
    - 页面用途（来自 Page Understanding Agent / 页面理解器）
@@ -463,16 +463,20 @@ Teaching Guide Agent / 教学引导器边界：
   (page_template, query_signature, dom_fingerprint, scenario)，并
   携带 trust 生命周期（`provisional` / `confirmed` / `flaky` /
   `deprecated`），由操作者在 run 详情页推动状态变化。基于学过路径
-  的 replay / drift detection 正在 M10.2 中规划。
+  的 replay / drift detection 已在 M10.2 交付。
 - **L2（用户引导学习）**：未开工。2026-04-20 清理把旧的
   Chrome 扩展移除了；L2 会从零开始基于**可视化** Playwright
   浏览器（见 §5.1）搭建，不再依赖扩展。User Demonstration、Guided
   Teaching 和 Teaching Guide Agent / 教学引导器当前都尚未实现。
-- **L3（实际工作）**：未开工。没有 Task Path Planner / 任务路径规划器，
-  没有 task-to-path 执行闭环，没有 runtime conversation
-  surface，没有 Conversation Orchestrator，没有结果验证闭环，也没有
-  恢复对话。Replay / drift 是 M10 基础；M11 是运行时沟通基础，M11.1
-  是第一版 L3 快乐路径 MVP。
+- **M11.0 runtime conversation foundation / 运行时沟通基础**：已交付。
+  `wagent conversation`、Conversation API、Conversation Orchestrator /
+  Dispatcher service skeleton、public dispatch endpoint、explicit replay hook
+  和 CLI dispatch integration 都已实现。
+- **L3 task execution / 实际任务执行**：未开工。没有 Task Path Planner /
+  任务路径规划器实现，没有 Task Result Reporter / 任务结果汇报器实现，没有
+  task-to-path 执行闭环，没有结果验证闭环，也没有恢复对话或 teaching mode。
+  Replay / drift 是 M10 基础；M11.0 是运行时沟通基础，M11.1 是第一版
+  L3 快乐路径 MVP。
 
 某个生命周期阶段完整落地后，回来更新本段。
 
@@ -602,10 +606,12 @@ M16 则是之后对外部调度接口和更广义 tooling contract 的稳定化�
 - 浏览器执行与探索能力。
 - 页面分析 / 动作规划 / 验证能力。
 - autonomous workbench 作为人工触发与观察入口。
+- runtime CLI conversation foundation（`wagent conversation`）、Conversation
+  API、Conversation Orchestrator / Dispatcher service skeleton、public dispatch
+  endpoint、explicit replay hook 和 CLI dispatch integration。
 
 后续需要逐步补齐：
 
-- 运行时 CLI 沟通入口。
 - 更稳定的外部 CLI 入口。
 - 更清晰的 Skill / Tool 接口定义。
 - 面向第三方 Agent 的调用约定。

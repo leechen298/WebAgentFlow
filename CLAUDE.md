@@ -363,7 +363,8 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
 
 - [`docs/product-model.md`](./docs/product-model.md) — **authoritative
   product model**: L1/L2/L3 lifecycle stages (autonomous learning,
-  user-guided learning, actual work), Agents A-H, invariants. Read first.
+  user-guided learning, actual work), internal role Agents with A-H legacy
+  aliases, invariants. Read first.
 - [`docs/architecture.md`](./docs/architecture.md) — AST dual-track,
   services sub-package structure, iframe handling.
 - [`docs/scope-boundaries.md`](./docs/scope-boundaries.md) — what's

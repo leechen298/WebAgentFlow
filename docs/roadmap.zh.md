@@ -2,7 +2,8 @@
 
 运营视角下"已交付 / 正在做 / 下一步"的全景。
 
-- 产品**是什么**（L1/L2/L3 生命周期阶段、产品内部 功能角色（legacy aliases A-H）、跨阶段不变量）见
+- 产品**是什么**（L1/L2/L3 生命周期阶段、产品内部功能角色，A-H 作为
+  legacy alias、跨阶段不变量）见
   [`product-model.zh.md`](./product-model.zh.md) —— 权威产品参考。
 - 迭代目录使用 `docs/iterations/m10/` 这类里程碑路径。路线图正文使用
   **交付里程碑 M<N>**，避免和生命周期阶段 L1/L2/L3 混淆。
@@ -248,7 +249,7 @@ M12 把失败和用户中断做成一等产品流程。它依赖 M11.0 conversat
 预期交付：
 
 - L3 执行失败即暂停。
-- 恢复对话只在规划边界处调用 Task Path Planner / 任务路径规划器（legacy: Agent D）。
+- 恢复对话只在规划边界处调用 Task Path Planner / 任务路径规划器。
 - 用户主动中断和用户请求停止的 abort dialogue。
 - 自动化无法安全继续时，交给 M13 的 User Demonstration 或 Guided
   Teaching。
@@ -305,16 +306,15 @@ M10 draft backlog：更丰富控件、模式泛化和负面知识。
   checkbox / radio。
 - Form-label extractor 扩展：Element Plus、Naive UI、Arco Design、
   TDesign、Quasar、MUI，按 fixture 或真实页面证据触发。
-- Cross-page pattern mining：login / search / CRUD metadata，供 Task Path Planner / 任务路径规划器（legacy: Agent D）
+- Cross-page pattern mining：login / search / CRUD metadata，供 Task Path Planner / 任务路径规划器
   后续消费。
 
 Negative knowledge / failure evidence 在这里正式化：
 
 - 存储 failed attempts、replay drift、`target_missing`、
   `unsupported_action` 和 user correction evidence。
-- 供 Task Path Planner / 任务路径规划器 planning（legacy: Agent D）、
-  Attempt Evaluation Agent / 尝试评估器 evaluation（legacy: Agent B）、
-  learning quality report 和
+- 供 Task Path Planner / 任务路径规划器 planning、Attempt Evaluation Agent /
+  尝试评估器 evaluation、learning quality report 和
   M15 automated evaluation 消费。
 - 更丰富的 postcondition pattern 和 artifact verification pattern 可以
   放在 M14 或 M15，取决于实现范围。
@@ -360,7 +360,7 @@ M17 把 L3 从单路径执行扩展到 workflow composition。
 - 把多个 LearnedPath 编排成更大的 workflow。
 - 跨页面传递状态，例如 search -> detail -> export。
 - 支持跨页面的 workflow-level recovery、takeover 和 teaching mode。
-- Task Path Planner / 任务路径规划器（legacy: Agent D） 可以组合已经学会的路径，但不能从 raw HTML 凭空发明浏览器
+- Task Path Planner / 任务路径规划器可以组合已经学会的路径，但不能从 raw HTML 凭空发明浏览器
   路径。
 
 ## M18 —— CLI Distribution & Integration Readiness / CLI 分发与集成就绪
