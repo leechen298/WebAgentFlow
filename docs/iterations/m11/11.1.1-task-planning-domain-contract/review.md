@@ -3,8 +3,27 @@
 ## 规划初始化
 
 - 本目录用于 11.1.1 Task Planning Domain Contract。
-- 当前状态：intent / plan 初始化，尚未实现代码。
+- 当前状态：intent / plan / code / tests 已完成。
 - 本包是 M11.1 的第一个执行包，用于定义 task-to-path 领域 contract。
+
+## 实现记录
+
+- `apps/api/app/schemas/task_planning.py` — 17 个 schema / contract 定义。
+  - TaskInput, TaskIntent
+  - LearnedPathCandidate
+  - RoutePlan, RouteStep
+  - SlotBindingProposal
+  - ConfirmationRequirement, RiskHint, ConsentRequirement
+  - PostconditionSignal
+  - TaskExecutionResult
+  - ArtifactReference (placeholder)
+  - AgentDPlannerInput / Output, AgentEReporterInput / Output
+- `apps/api/tests/test_task_planning_schemas.py` — 24 tests passed。
+  - minimal valid data acceptance (16 tests)
+  - enum / literal validation (3 tests)
+  - structural assertions (2 tests)
+  - contract rules (3 tests)
+- ruff check clean。
 
 ## 已决策
 

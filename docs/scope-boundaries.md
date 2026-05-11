@@ -12,18 +12,16 @@ ask — don't invent.
 
 ## Current Delivery Milestone
 
-Current package: **11.1.1 Task Planning Domain Contract** within **M11.1
-Task-to-Path Planning & Execution MVP**. Iteration docs:
-[`docs/iterations/m11/11.1.1-task-planning-domain-contract/`](./iterations/m11/11.1.1-task-planning-domain-contract/).
+Current package: **11.1.2 LearnedPath Retrieval and Ranking** within
+**M11.1 Task-to-Path Planning & Execution MVP**. Iteration docs:
+[`docs/iterations/m11/11.1.2-learned-path-retrieval-ranking/`](./iterations/m11/11.1.2-learned-path-retrieval-ranking/).
 
-11.1.1 is a domain-contract package only. Its scope is to plan task input,
-intent, candidate path, route plan, slot binding proposal, confirmation /
-consent, postcondition, task execution result, Agent D planner input / output,
-and Agent E reporter input / output schemas.
+11.1.2 implements LearnedPath retrieval and ranking for a given task intent.
+It builds on the 11.1.1 domain contract (`TaskInput`, `TaskIntent`,
+`LearnedPathCandidate`).
 
-11.1.1 does not implement Agent D / E, retrieval, ranking, slot binding,
-execution, replay side effects, result verification, artifact lifecycle, or
-E2E.
+11.1.2 does not implement Agent D / E, slot binding, execution, replay side
+effects, result verification, artifact lifecycle, or E2E.
 
 M11.0 runtime loop foundation is complete. Its completed scope is:
 
@@ -46,10 +44,14 @@ Completed M11.0 execution packages:
 - `11.0.6-explicit-replay-command-hook`
 - `11.0.7-conversation-tests-and-evidence`
 
-Last completed package: `11.0.7-conversation-tests-and-evidence`.
-Current planning package: `11.1.1-task-planning-domain-contract`.
+Completed M11.1 execution packages:
 
-11.1.1 does not select paths, plan tasks, bind slots, execute tasks, or
+- `11.1.1-task-planning-domain-contract`
+
+Last completed package: `11.1.1-task-planning-domain-contract`.
+Current planning package: `11.1.2-learned-path-retrieval-ranking`.
+
+11.1.2 does not compose multi-step routes, bind slots, execute tasks, or
 implement Agent D / E / F / G / H behavior. Planning language uses M<N> for delivery
 milestones and L1/L2/L3 for lifecycle stages.
 

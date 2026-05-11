@@ -38,11 +38,13 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
   **10.2 replay execution + drift detection** 已交付。
 - **M11.0 Runtime Conversation Shell & Agent Orchestration / 运行时沟通与
   Agent 编排** 已完成到 11.0.7。
+- 11.1.1 Task Planning Domain Contract 已交付：17 个 schema 定义，
+  24 个测试通过（`apps/api/app/schemas/task_planning.py`）。
 - 当前交付包：**M11.1 Task-to-Path Planning & Execution MVP** 下的
-  **11.1.1 Task Planning Domain Contract**。
-- M11.1 规划已经开始。当前包只定义 task / candidate / route / binding /
-  verification contract；不实现 Agent D / E、retrieval、slot binding、
-  replay execution 或 result verification。
+  **11.1.2 LearnedPath Retrieval and Ranking**。
+- M11.1 规划继续。11.1.1 定义了 task / candidate / route / binding /
+  verification contract；11.1.2 实现 retrieval。Agent D / E、slot binding、
+  replay execution、result verification 仍属后续工作。
 - Agent routing、L3 task runner、L2 guided teaching、Agent H Teaching Guide
   Agent 都是后续规划，不是当前已实现。
 
@@ -277,15 +279,15 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   conversation CLI。
 - `apps/cli/tests/test_conversation.py` —— CLI regression tests。
 - `apps/api/app/schemas/task_planning.py` —— 计划中的 M11.1 task-to-path
-  planning domain contract（`11.1.1`，尚未实现）。
+  planning domain contract（`11.1.1`，已交付）。
 
 **规划中 / 部分已实现的服务区域：**
 
 - Conversation domain / store / API / CLI / Orchestrator service skeleton、
   explicit replay hook、public dispatch endpoint、CLI dispatch 接入和
   conversation runtime E2E 已通过 M11.0.7 实现。
-- M11.1 task planning domain schema 在 11.1.1 规划。Agent D / E、
-  retrieval、slot binding、task execution、result verification、
+- M11.1 task planning domain schema 在 11.1.1 已交付（24 个测试）。Agent D /
+  E、retrieval、slot binding、task execution、result verification、
   confirmation、recovery、teaching 仍是后续工作。
 - L2 teaching support、highlight targets 和 user action recording。
 - Artifact lifecycle handling。

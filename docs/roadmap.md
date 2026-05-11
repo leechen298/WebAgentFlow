@@ -155,8 +155,9 @@ has a first evidence report (`PASS 12 / FAIL 0 / BLOCKED 0 / NOT_RUN 4`).
 evidence and drift evidence, but 10.2 did not implement a full
 negative-knowledge store.
 
-Current: **M11.1 Task-to-Path Planning & Execution MVP** planning,
-starting with `11.1.1-task-planning-domain-contract`.
+Current: **M11.1 Task-to-Path Planning & Execution MVP**. 11.1.1 domain
+contract shipped; next execution package is
+`11.1.2-learned-path-retrieval-ranking`.
 
 ## M11.0 — Runtime Conversation Shell & Agent Orchestration
 
@@ -188,6 +189,12 @@ Progress:
   smoke plus fresh replay / conversation evidence (`10 passed` E2E).
 - M11.0 execution packages are complete. M11.1 planning starts with
   `11.1.1-task-planning-domain-contract`.
+- 11.1.1 Task Planning Domain Contract shipped: 17 schema definitions
+  (`TaskInput`, `TaskIntent`, `LearnedPathCandidate`, `RoutePlan`,
+  `RouteStep`, `SlotBindingProposal`, `ConfirmationRequirement`,
+  `RiskHint`, `ConsentRequirement`, `PostconditionSignal`,
+  `TaskExecutionResult`, `ArtifactReference`, `AgentDPlannerInput/Output`,
+  `AgentEReporterInput/Output`), 24 tests passed, ruff clean.
 
 Expected delivery:
 
@@ -215,10 +222,9 @@ parameterizes learned paths, executes them through the M10 replay
 engine, verifies the task result as far as possible, and reports the
 result.
 
-Current M11.1 package: `11.1.1-task-planning-domain-contract`. It is a
-documentation / domain-contract planning package only: no Agent D / E
-implementation, no retrieval, no slot binding, no replay execution, and no
-result verification yet.
+Current M11.1 package: `11.1.2-learned-path-retrieval-ranking`. It builds
+on the 11.1.1 domain contract to implement LearnedPath retrieval and
+ranking for a given task intent.
 
 Internal Agents introduced / made concrete:
 

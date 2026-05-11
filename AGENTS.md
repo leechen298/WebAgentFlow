@@ -39,11 +39,13 @@ Current delivery status:
   **10.2 replay execution + drift detection** have shipped.
 - **M11.0 Runtime Conversation Shell & Agent Orchestration** has completed
   through 11.0.7.
-- Current delivery package: **11.1.1 Task Planning Domain Contract** within
-  **M11.1 Task-to-Path Planning & Execution MVP**.
-- M11.1 planning has begun. The current package defines task / candidate /
-  route / binding / verification contracts only; it does not implement Agent
-  D / E, retrieval, slot binding, replay execution, or result verification.
+- 11.1.1 Task Planning Domain Contract shipped: 17 schema definitions,
+  24 tests passed (`apps/api/app/schemas/task_planning.py`).
+- Current delivery package: **11.1.2 LearnedPath Retrieval and Ranking**
+  within **M11.1 Task-to-Path Planning & Execution MVP**.
+- M11.1 planning continues. 11.1.1 defined task / candidate / route / binding /
+  verification contracts; 11.1.2 implements retrieval. Agent D / E, slot
+  binding, replay execution, and result verification remain future work.
 - Agent routing, L3 task runner, L2 guided teaching, and Agent H Teaching
   Guide Agent are planned future work, not current implementation.
 
@@ -252,7 +254,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   conversation CLI.
 - `apps/cli/tests/test_conversation.py` — CLI regression tests.
 - `apps/api/app/schemas/task_planning.py` — planned M11.1 task-to-path
-  planning domain contract (`11.1.1`; not implemented yet).
+  planning domain contract (`11.1.1`; shipped).
 
 **Autonomous exploration + M10 path assets:**
 
@@ -296,8 +298,8 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - Conversation domain / store / API / CLI / Orchestrator service skeleton,
   explicit replay hook, public dispatch endpoint, CLI dispatch integration,
   and conversation runtime E2E are implemented through M11.0.7.
-- M11.1 task planning domain schemas are planned in 11.1.1. Agent D / E,
-  retrieval, slot binding, task execution, result verification,
+- M11.1 task planning domain schemas shipped in 11.1.1 (24 tests). Agent D /
+  E, retrieval, slot binding, task execution, result verification,
   confirmation, recovery, and teaching remain future work.
 - L2 teaching support, highlight targets, and user action recording.
 - Artifact lifecycle handling.
