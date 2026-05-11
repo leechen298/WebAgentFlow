@@ -29,8 +29,8 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.0.6-explicit-replay-command-hook](./11.0.6-explicit-replay-command-hook/) —— 显式 `/replay <learned_path_id> <url>` hook。状态：完成。
 - [11.0.7-conversation-tests-and-evidence](./11.0.7-conversation-tests-and-evidence/) —— conversation 测试域与证据。状态：完成。
 - [11.1-task-to-path-planning-execution](./11.1-task-to-path-planning-execution/) —— M11.1 总纲：Task-to-Path Planning & Execution MVP。状态：总纲初始化中。
-- [11.1.1-task-planning-domain-contract](./11.1.1-task-planning-domain-contract/) —— task / candidate / route / binding / verification domain contract。状态：当前规划中。
-- 11.1.2-learned-path-retrieval-ranking —— 状态：future。
+- [11.1.1-task-planning-domain-contract](./11.1.1-task-planning-domain-contract/) —— task / candidate / route / binding / verification domain contract。状态：完成（17 schema，25 passed）。
+- 11.1.2-learned-path-retrieval-ranking —— 状态：当前规划中。
 - 11.1.3-slot-binding-contract —— 状态：future。
 - 11.1.4-agent-d-planner-mvp —— 状态：future。
 - 11.1.5-plan-confirmation-and-consent-gate —— 状态：future。

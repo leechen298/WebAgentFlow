@@ -61,7 +61,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 不做 CLI。
 - 不做 orchestrator side effects。
 - 不做 replay hook。
-- 不做 Agent D / E / F / G / H。
+- 不做 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 
 交付：
 
@@ -104,7 +104,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 不做 CLI。
 - 不做 orchestrator side effects。
 - 不调用 replay API。
-- 不做 Agent D / E / F / G / H。
+- 不做 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 不做 task-to-path planning。
 - 不加 user / account / tenant 字段。
 
@@ -145,7 +145,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 不做 natural-language planning。
 - 不做 orchestrator dispatcher。
 - 不做 replay hook 或 `/replay` side effect。
-- 不做 Agent D / E / F / G / H。
+- 不做 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 不做 task-to-path planning。
 - 不做 slot binding。
 - 不加入 user / account / tenant 字段。
@@ -185,7 +185,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 不做 orchestrator dispatcher。
 - 不调用 replay API。
 - 不实现 `/replay` command side effect。
-- 不做 Agent D / E / F / G / H。
+- 不做 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 不做 natural-language planning。
 - 不做 slot binding。
 - 不调用 autonomous run。
@@ -219,7 +219,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 为每次用户输入生成 parsed command、state transition、user-facing
   response 和 audit event。
 - 不执行 replay side effect。
-- 不实现 Agent D / E / F / G / H。
+- 不实现 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 不新增 CLI 命令。
 - 不做 task-to-path planning。
 
@@ -270,7 +270,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 
 边界：
 
-- 不做 Agent D / E / F / G / H。
+- 不做 Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - 不做 path selection。
 - 不做 natural-language task planning。
 - 不做 slot binding。
@@ -364,8 +364,8 @@ M11.0 Runtime Conversation Shell & Agent Orchestration 已完成到 11.0.7。
 - explicit replay command hook
 - conversation runtime tests and evidence
 
-M11.0 建立了 runtime loop 基座，但仍未实现 task-to-path planning、Agent D、
-Agent E、slot binding 或 task result verification。M11.0 的最后一个功能
+M11.0 建立了 runtime loop 基座，但仍未实现 task-to-path planning、Task Path Planner / 任务路径规划器（legacy: Agent D）、
+Task Result Reporter / 任务结果汇报器（legacy: Agent E）、slot binding 或 task result verification。M11.0 的最后一个功能
 连接点是显式 `/replay <learned_path_id> <url>`：它只使用用户给出的 path id
 和 URL，不做 path selection、不做 task planning、不做 slot binding。
 
@@ -375,13 +375,13 @@ M11.1 是第一个 L3 Actual Work MVP。用户通过 M11.0 conversation surface
 提交任务；WebAgentFlow 需要从 LearnedPath catalog 中检索候选路径、选择
 路径、绑定参数、请求确认、执行 replay、验证结果、汇报结果。
 
-M11.1 引入 / 具体化 Agent D Path Planner Agent 和 Agent E Result Reporter
-Agent。
+M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Agent D）
+和 Task Result Reporter / 任务结果汇报器（legacy: Agent E）。
 
-- Agent D 不能读 raw HTML，不能逐步控制浏览器，只能基于 user task、
+- Task Path Planner / 任务路径规划器（legacy: Agent D） 不能读 raw HTML，不能逐步控制浏览器，只能基于 user task、
   LearnedPath catalog、negative / replay evidence、available route
   candidates 输出规划。
-- Agent E 不得脑补成功，只能基于 replay result、postcondition check、
+- Task Result Reporter / 任务结果汇报器（legacy: Agent E） 不得脑补成功，只能基于 replay result、postcondition check、
   artifact status、final-state signal、uncertainty flags 汇报。
 
 ## M11.1 拆分原则
@@ -401,53 +401,40 @@ Agent。
 
 ### 11.1.1 · Task planning domain contract
 
-状态：当前规划 / 下一步执行包。
+状态：已完成。
 
-目标：
+交付：
 
-- 定义 Task-to-Path 的核心 domain contract：
-  - user task input
-  - task intent record
-  - LearnedPath candidate
-  - path route plan
-  - route step
-  - slot binding
-  - confirmation requirement
-  - consent / risk hint
-  - postcondition signal
-  - task execution result
-  - Agent D planner input / output shape
-  - Agent E reporter input / output shape
-- 本包只定义 schema / contract，不做 retrieval、LLM Agent、execution、
-  verification。
+- `apps/api/app/schemas/task_planning.py` — 17 个 schema 定义：
+  `TaskInput`, `TaskIntent`, `LearnedPathCandidate`, `RoutePlan`, `RouteStep`,
+  `SlotBindingProposal`, `ConfirmationRequirement`, `RiskHint`,
+  `ConsentRequirement`, `PostconditionSignal`, `TaskExecutionResult`,
+  `ArtifactReference`, `AgentDPlannerInput/Output`, `AgentEReporterInput/Output`。
+- `apps/api/tests/test_task_planning_schemas.py` — 25 tests passed，ruff clean。
+- `TrustLevel = Literal["provisional", "confirmed", "flaky", "deprecated"]`
+  校验 `LearnedPathCandidate.trust`。
 
-边界：
+边界（已遵守）：
 
 - 不做 retrieval / ranking 实现。
-- 不做 Agent D 实现。
-- 不做 Agent E 实现。
+- 不做 Task Path Planner / 任务路径规划器（legacy: Agent D） 实现。
+- 不做 Task Result Reporter / 任务结果汇报器（legacy: Agent E） 实现。
 - 不做 slot binding 实现。
 - 不做 replay execution。
 - 不做 risk gate implementation。
 - 不做 artifact lifecycle。
 - 不做 E2E。
 
-预期触及：
-
-- `apps/api/app/schemas/task_planning.py`
-- `apps/api/tests/test_task_planning_schemas.py`
-- `docs/iterations/m11/11.1.1-task-planning-domain-contract/review.md`
-
 ### 11.1.2 · LearnedPath retrieval and ranking
 
-状态：future。
+状态：当前规划 / 下一步执行包。
 
 目标：
 
 - 从 LearnedPath catalog 检索与 task / page / scenario 匹配的候选路径。
 - 排序候选路径。
 - 读取 trust、hit_count、drift evidence、negative evidence。
-- 不调用 Agent D。
+- 不调用 Task Path Planner / 任务路径规划器（legacy: Agent D）。
 - 不执行 replay。
 
 ### 11.1.3 · Slot binding contract and deterministic binding MVP
@@ -462,18 +449,18 @@ Agent。
 - 输出 slot binding proposal。
 - 不执行 replay。
 
-### 11.1.4 · Agent D planner MVP
+### 11.1.4 · Task Path Planner / 任务路径规划器（legacy: Agent D） planner MVP
 
 状态：future。
 
 目标：
 
-- Agent D 读取 user task、candidate paths、slot binding proposals、
+- Task Path Planner / 任务路径规划器（legacy: Agent D） 读取 user task、candidate paths、slot binding proposals、
   negative evidence。
 - 输出 route plan / confirmation requirements。
-- Agent D 不读 raw HTML。
-- Agent D 不逐步控制浏览器。
-- Agent D 不执行 replay。
+- Task Path Planner / 任务路径规划器（legacy: Agent D） 不读 raw HTML。
+- Task Path Planner / 任务路径规划器（legacy: Agent D） 不逐步控制浏览器。
+- Task Path Planner / 任务路径规划器（legacy: Agent D） 不执行 replay。
 
 ### 11.1.5 · Plan confirmation and consent gate
 
@@ -498,7 +485,7 @@ Agent。
 - 不做 path selection。
 - 不调用 autonomous run。
 
-### 11.1.7 · Result verification and Agent E reporting
+### 11.1.7 · Result verification and Task Result Reporter / 任务结果汇报器（legacy: Agent E） reporting
 
 状态：future。
 
@@ -506,7 +493,7 @@ Agent。
 
 - 基于 replay result、postcondition signals、artifact status、final
   URL / title / DOM signal 生成 result verification。
-- Agent E 汇报结果。
+- Task Result Reporter / 任务结果汇报器（legacy: Agent E） 汇报结果。
 - 不脑补成功。
 - 无法验证时返回 `uncertain` / `needs_review`。
 
