@@ -106,7 +106,9 @@ def test_slot_binding_proposal_accepts_minimal_data() -> None:
 
 def test_confirmation_requirement_accepts_minimal_data() -> None:
     obj = ConfirmationRequirement(
-        reason="destructive action", message="This will delete data.", severity="high"
+        reason="destructive action",
+        message="This will delete data.",
+        severity="blocking",
     )
 
     assert obj.reason == "destructive action"
@@ -115,7 +117,11 @@ def test_confirmation_requirement_accepts_minimal_data() -> None:
 
 
 def test_risk_hint_accepts_minimal_data() -> None:
-    obj = RiskHint(risk_type="data_loss", reason="delete operation", severity="high")
+    obj = RiskHint(
+        risk_type="data_loss",
+        reason="delete operation",
+        severity="blocking",
+    )
 
     assert obj.id is None
     assert obj.policy_source is None
@@ -125,7 +131,7 @@ def test_consent_requirement_accepts_minimal_data() -> None:
     obj = ConsentRequirement(
         reason="legal compliance",
         message="Confirm you have authority.",
-        severity="critical",
+        severity="blocking",
     )
 
     assert obj.fields == []
@@ -160,7 +166,7 @@ def test_artifact_reference_accepts_minimal_placeholder_data() -> None:
     obj = ArtifactReference(kind="screenshot", label="final state")
 
     assert obj.uri is None
-    assert obj.status == "pending"
+    assert obj.status == "expected"
     assert obj.metadata == {}
 
 
@@ -224,6 +230,26 @@ def test_failure_stage_rejects_invalid_value() -> None:
         TaskExecutionResult(status="failed", failure_stage="invalid")  # type: ignore[call-arg]
 
 
+def test_risk_hint_severity_rejects_invalid_value() -> None:
+    with pytest.raises(ValidationError):
+        RiskHint(risk_type="data_loss", reason="delete operation", severity="critical")  # type: ignore[call-arg]
+
+
+def test_confirmation_requirement_severity_rejects_invalid_value() -> None:
+    with pytest.raises(ValidationError):
+        ConfirmationRequirement(reason="x", message="confirm", severity="critical")  # type: ignore[call-arg]
+
+
+def test_consent_requirement_severity_rejects_invalid_value() -> None:
+    with pytest.raises(ValidationError):
+        ConsentRequirement(reason="x", message="confirm", severity="critical")  # type: ignore[call-arg]
+
+
+def test_artifact_reference_status_rejects_invalid_value() -> None:
+    with pytest.raises(ValidationError):
+        ArtifactReference(kind="screenshot", label="final state", status="ready")  # type: ignore[call-arg]
+
+
 # ---------------------------------------------------------------------------
 # Structural assertions
 # ---------------------------------------------------------------------------
@@ -253,6 +279,32 @@ def test_slot_binding_confidence_enforced_range() -> None:
 
     valid = SlotBindingProposal(slot_name="x", source_text="y", confidence=0.75)
     assert valid.confidence == 0.75
+
+
+def test_task_input_raw_text_rejects_empty_string() -> None:
+    with pytest.raises(ValidationError):
+        TaskInput(raw_text="")
+
+
+def test_task_intent_raw_text_rejects_empty_string() -> None:
+    with pytest.raises(ValidationError):
+        TaskIntent(raw_text="")
+
+
+def test_learned_path_candidate_hit_count_rejects_negative_value() -> None:
+    with pytest.raises(ValidationError):
+        LearnedPathCandidate(
+            learned_path_id="path-1",
+            scenario="x",
+            page_template="/x",
+            trust="confirmed",
+            hit_count=-1,
+        )
+
+
+def test_route_step_order_rejects_negative_value() -> None:
+    with pytest.raises(ValidationError):
+        RouteStep(order=-1, learned_path_id="path-1", purpose="navigate")
 
 
 # ---------------------------------------------------------------------------

@@ -32,6 +32,10 @@ FailureStage = Literal[
 
 TrustLevel = Literal["provisional", "confirmed", "flaky", "deprecated"]
 
+Severity = Literal["info", "warning", "blocking"]
+
+ArtifactStatus = Literal["expected", "produced", "missing", "unavailable"]
+
 # ---------------------------------------------------------------------------
 # Task intake
 # ---------------------------------------------------------------------------
@@ -40,7 +44,7 @@ TrustLevel = Literal["provisional", "confirmed", "flaky", "deprecated"]
 class TaskInput(BaseModel):
     """Raw user input that initiates a task planning flow."""
 
-    raw_text: str
+    raw_text: str = Field(min_length=1)
     locale: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -54,7 +58,7 @@ class TaskIntent(BaseModel):
     produced the normalized goal.
     """
 
-    raw_text: str
+    raw_text: str = Field(min_length=1)
     normalized_goal: str | None = None
     normalization_source: NormalizationSource = "none"
     target_page_hint: str | None = None
@@ -76,7 +80,7 @@ class LearnedPathCandidate(BaseModel):
     scenario: str
     page_template: str
     trust: TrustLevel
-    hit_count: int = 0
+    hit_count: int = Field(default=0, ge=0)
     match_reasons: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     drift_evidence_summary: str | None = None
@@ -91,7 +95,7 @@ class LearnedPathCandidate(BaseModel):
 class RouteStep(BaseModel):
     """A single step within a route plan."""
 
-    order: int
+    order: int = Field(ge=0)
     learned_path_id: str
     purpose: str
     bound_slots: dict[str, Any] = Field(default_factory=dict)
@@ -144,7 +148,7 @@ class RiskHint(BaseModel):
     id: str | None = None
     risk_type: str
     reason: str
-    severity: str
+    severity: Severity
     policy_source: str | None = None
 
 
@@ -154,7 +158,7 @@ class ConfirmationRequirement(BaseModel):
     reason: str
     message: str
     fields: list[str] = Field(default_factory=list)
-    severity: str
+    severity: Severity
     linked_risk_ids: list[str] = Field(default_factory=list)
 
 
@@ -168,7 +172,7 @@ class ConsentRequirement(BaseModel):
     reason: str
     message: str
     fields: list[str] = Field(default_factory=list)
-    severity: str
+    severity: Severity
     linked_risk_ids: list[str] = Field(default_factory=list)
     requires_user_confirmation: bool = True
     policy_source: str | None = None
@@ -227,7 +231,7 @@ class ArtifactReference(BaseModel):
     kind: str
     label: str
     uri: str | None = None
-    status: str = "pending"
+    status: ArtifactStatus = "expected"
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -237,7 +241,7 @@ class ArtifactReference(BaseModel):
 
 
 class AgentDPlannerInput(BaseModel):
-    """Input contract for Agent D (planner).
+    """Input contract for Task Path Planner (legacy: Agent D).
 
     This schema only defines the contract shape; prompt construction,
     LLM invocation, and runtime logic are out of scope for 11.1.1.
@@ -251,7 +255,7 @@ class AgentDPlannerInput(BaseModel):
 
 
 class AgentDPlannerOutput(BaseModel):
-    """Output contract for Agent D (planner)."""
+    """Output contract for Task Path Planner (legacy: Agent D)."""
 
     route_plan: RoutePlan | None = None
     confirmation_requirements: list[ConfirmationRequirement] = Field(
@@ -264,7 +268,7 @@ class AgentDPlannerOutput(BaseModel):
 
 
 class AgentEReporterInput(BaseModel):
-    """Input contract for Agent E (reporter).
+    """Input contract for Task Result Reporter (legacy: Agent E).
 
     This schema only defines the contract shape; prompt construction,
     LLM invocation, and runtime logic are out of scope for 11.1.1.
@@ -278,7 +282,7 @@ class AgentEReporterInput(BaseModel):
 
 
 class AgentEReporterOutput(BaseModel):
-    """Output contract for Agent E (reporter)."""
+    """Output contract for Task Result Reporter (legacy: Agent E)."""
 
     status: TaskExecutionStatus
     user_facing_summary: str

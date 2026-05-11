@@ -18,12 +18,30 @@
   - TaskExecutionResult
   - ArtifactReference (placeholder)
   - AgentDPlannerInput / Output, AgentEReporterInput / Output
-- `apps/api/tests/test_task_planning_schemas.py` — 24 tests passed。
+- `apps/api/tests/test_task_planning_schemas.py` — 33 tests passed。
   - minimal valid data acceptance (16 tests)
-  - enum / literal validation (3 tests)
-  - structural assertions (2 tests)
-  - contract rules (3 tests)
+  - enum / literal validation for normalization source, trust, execution status,
+    failure stage, severity, and artifact status
+  - structural assertions and numeric / string constraints for route order,
+    slot confidence, raw task text, and candidate hit count
+  - contract rules for no identity / tenant fields and no replay / autonomous /
+    LLM imports
 - ruff check clean。
+
+## Hardening 记录
+
+- 增加 `Severity = Literal["info", "warning", "blocking"]`，用于
+  `RiskHint.severity`、`ConfirmationRequirement.severity` 和
+  `ConsentRequirement.severity`。
+- 增加 `ArtifactStatus = Literal["expected", "produced", "missing", "unavailable"]`，
+  并将 `ArtifactReference.status` 默认值固定为 `expected`。
+- 为 `TaskInput.raw_text` 和 `TaskIntent.raw_text` 增加 `min_length=1`。
+- 为 `LearnedPathCandidate.hit_count` 增加 `ge=0`。
+- 为 `RouteStep.order` 增加 `ge=0`。
+- `AgentDPlannerInput` / `AgentDPlannerOutput` docstring 已同步为
+  Task Path Planner（legacy: Agent D）；`AgentEReporterInput` /
+  `AgentEReporterOutput` docstring 已同步为 Task Result Reporter
+  （legacy: Agent E）。
 
 ## 已决策
 
