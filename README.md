@@ -1,48 +1,11 @@
 # WebAgentFlow
 
-WebAgentFlow is a monorepo for an agent-driven web workflow engine. It
-learns reusable web-operation paths, stores them as LearnedPaths, replays
-them deterministically, and reports verification / drift evidence through a
-Vue console, FastAPI backend, Python CLI, worker scaffold, and Playwright
-runtime.
+WebAgentFlow is a monorepo for an agent-driven web workflow engine. It learns
+reusable web-operation paths, stores them as LearnedPaths, replays them
+deterministically, and exposes the workflow through a Vue operator console,
+FastAPI backend, Python CLI, validation fixtures, and Playwright runtime.
 
-## Current Status
-
-The product model uses three lifecycle stages:
-
-- **L1 Autonomous Learning** — learn page behavior from authored scenarios.
-- **L2 User-Guided Learning** — planned user demonstration and guided teaching.
-- **L3 Actual Work** — planned task-to-path execution from learned paths.
-
-**M10 Path Asset Foundation** has completed. **M11.0 Runtime Conversation
-Shell & Agent Orchestration** is in progress.
-
-- **10.1 LearnedPath persistence** — shipped.
-- **10.1.5 LearnedPath catalog** — shipped.
-- **10.2 Replay execution + drift detection** — shipped, with replay API,
-  catalog replay UI, deterministic E2E, and a first Codex exploratory
-  evidence report.
-- **11.0.1 Conversation Domain Contract** — shipped, with `29 passed`.
-- **11.0.2 Conversation Session Store** — shipped, with `61 passed`.
-- **11.0.3 Conversation API** — shipped, with `84 passed`.
-- **11.0.4 Runtime CLI Shell** — shipped, with non-interactive
-  `wagent conversation` commands and `67 passed`.
-
-Current next package: **11.0.5 Orchestrator Dispatcher**.
-
-Not yet implemented:
-
-- Conversation Orchestrator / Dispatcher behavior.
-- Agent routing for D / E / F / G / H.
-- L2 guided teaching and Agent H Teaching Guide Agent.
-- L3 task-to-path execution.
-- Multi-page workflow composition and full artifact lifecycle.
-
-See [product-model.md](./docs/product-model.md), [roadmap.md](./docs/roadmap.md),
-and [scope-boundaries.md](./docs/scope-boundaries.md) for the authoritative
-product shape and milestone boundaries.
-
-## Current Product Surfaces
+## Features
 
 - **Autonomous Workbench** — user-driven autonomous scenario runs with live SSE
   status, page analysis, execution timeline, Supervisor verdict, scorecard, and
@@ -58,34 +21,7 @@ product shape and milestone boundaries.
 - **`wagent conversation` runtime conversation CLI** — non-interactive CLI for
   creating conversation sessions, sending user messages, reading session
   status, and viewing transcript, messages, and events. It is backed by the
-  Conversation API and is not the M16 external CLI.
-
-## CLI-First Direction
-
-The near-term goal is to make the complete runtime loop work through CLI/API
-before polishing richer operator surfaces. Developer-capable users should be
-able to connect WebAgentFlow to their own systems or operator consoles through
-stable CLI/API contracts.
-
-The current `wagent verify` path is a development verification backend.
-`wagent conversation` has shipped as the M11.0 runtime conversation CLI
-foundation. It is not the M16 external CLI, and it does not yet implement
-Orchestrator / Dispatcher behavior, task planning, replay side effects, or
-Agent routing.
-
-## Roadmap Snapshot
-
-- **M10** — Path Asset Foundation: persistence, catalog, replay, drift detection.
-- **M11.0** — Runtime Conversation Shell & Agent Orchestration: 11.0.1–11.0.4
-  shipped; next is 11.0.5 Orchestrator Dispatcher.
-- **M11.1** — Task-to-Path Planning & Execution MVP.
-- **M12** — Recovery / Abort Dialogue.
-- **M13** — User-guided learning, guided teaching, and Agent H.
-- **M14** — Learning quality, coverage, and negative knowledge.
-- **M15** — Automated evaluation, audit, and hygiene.
-- **M16** — External interfaces.
-- **M17** — Multi-page workflow composition.
-- **M18** — CLI distribution and integration readiness.
+  Conversation API.
 
 ## Tech Stack
 
@@ -131,7 +67,7 @@ web-agent-flow/
 - Python `>=3.11`
 - Docker with Compose support
 
-## Local Setup
+## Quick Start
 
 1. Copy environment variables:
 
@@ -258,14 +194,43 @@ CORS_ALLOWED_ORIGINS=http://<your-current-lan-ip>:5174,http://localhost:5174,htt
   pnpm run dev:lan
   ```
 
-## Common Commands
+## CLI
+
+The Python CLI is installed from `apps/cli` during local setup.
+
+- Development verification:
+
+  ```bash
+  wagent verify --help
+  ```
+
+- Runtime conversation commands:
+
+  ```bash
+  wagent conversation --help
+  wagent conversation start
+  wagent conversation send <session_id> --content "Hello"
+  wagent conversation transcript <session_id>
+  ```
+
+## Testing and Quality
+
+Common project commands:
 
 - `pnpm run build`
 - `pnpm run lint`
 - `pnpm run format`
 - `pnpm run test`
+- `pnpm run test:e2e`
 - `pnpm run docker:up`
 - `pnpm run docker:down`
+
+API and CLI tests run from their app directories:
+
+```bash
+cd apps/api && ../../.venv/bin/pytest
+cd apps/cli && ../../.venv/bin/pytest
+```
 
 ## Additional Docs
 
