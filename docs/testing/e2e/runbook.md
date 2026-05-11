@@ -14,6 +14,7 @@ console、API、数据库、validation-site 和后端 Playwright replay 的产�
 
 - M10.2 LearnedPath replay API。
 - M10.2 LearnedPath catalog UI replay 区块。
+- M10.2 LearnedPath catalog list / trust filter / drawer / replay section presence。
 - M11.0 conversation runtime explicit replay smoke。
 - M11.0 `wagent conversation` CLI-driven explicit replay smoke。
 - Validation-site deterministic browser smoke for `/login` and `/users`.
@@ -62,6 +63,8 @@ Playwright config 暂时不使用 `webServer` 编排全部服务。等回归轨�
 
 查看 [`../results/2026-05-11-replay-e2e-rerun.md`](../results/2026-05-11-replay-e2e-rerun.md)
 了解最新 replay E2E fresh rerun 证据；查看
+[`../results/2026-05-11-learned-path-catalog-deterministic-e2e.md`](../results/2026-05-11-learned-path-catalog-deterministic-e2e.md)
+了解 LearnedPath catalog deterministic E2E 扩展结果；查看
 [`../results/2026-05-11-conversation-runtime-e2e.md`](../results/2026-05-11-conversation-runtime-e2e.md)
 了解 M11 conversation runtime E2E 首次 smoke 结果；查看
 [`../results/2026-05-11-conversation-cli-e2e.md`](../results/2026-05-11-conversation-cli-e2e.md)
@@ -91,7 +94,10 @@ seed 脚本通过 API 侧 page analyzer 和 execution runtime 计算当前 `/use
 | 用例 | 预期断言 |
 | --- | --- |
 | replay API 正常路径 | `status=succeeded`，`drift_status=none`，存在 step logs |
-| catalog UI 正常路径 | drawer replay 结果展示成功且无 drift |
+| catalog UI list | catalog 显示 seeded LearnedPath rows 和 trust labels |
+| catalog UI trust filter | trust=flaky 过滤后仅显示 flaky seeded row |
+| catalog UI drawer presence | actions drawer 显示 replay section、target URL input、disabled replay button、actions timeline |
+| catalog UI replay path | drawer replay 结果展示成功且无 drift |
 | `actions=[]` observational path | `status=observed`，steps 为空 |
 | `page_mismatch` | `status=drifted`，`drift_status=page_mismatch` |
 | `target_missing` | `status=drifted`，`drift_status=target_missing` |

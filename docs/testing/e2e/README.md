@@ -47,6 +47,8 @@ Deterministic E2E 的定义：
 覆盖范围：
 
 - Replay E2E 覆盖 M10.2 LearnedPath replay execution + drift detection。
+- LearnedPath catalog E2E 覆盖 catalog list、trust filter、actions drawer、
+  replay section presence，以及 seeded happy path replay。
 - Conversation runtime E2E 覆盖 API-request runtime flow：
   session -> dispatch `/replay` -> replay summary -> transcript/events。
 - Conversation CLI-driven E2E 覆盖真实 `wagent conversation` subprocess flow：
@@ -64,6 +66,7 @@ exploratory。
 
 - `../results/2026-05-08-replay-e2e-first-run.md`
 - `../results/2026-05-11-replay-e2e-rerun.md`
+- `../results/2026-05-11-learned-path-catalog-deterministic-e2e.md`
 - `../results/2026-05-11-conversation-runtime-e2e.md`
 - `../results/2026-05-11-conversation-cli-e2e.md`
 - `../results/2026-05-11-validation-site-deterministic-e2e.md`
@@ -77,6 +80,7 @@ exploratory。
 当前 E2E 线优先做 keep-running 和小范围补强：
 
 - Replay E2E keep-running。
+- LearnedPath catalog deterministic E2E keep-running。
 - Conversation API-request runtime E2E keep-running。
 - Conversation CLI-driven E2E keep-running。
 - Validation-site deterministic browser smoke keep-running。
