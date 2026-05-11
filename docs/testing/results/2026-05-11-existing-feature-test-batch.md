@@ -15,33 +15,44 @@ Q3 执行：按 `docs/testing/current-testing-backlog.md` 第一批实现测试�
 - **Action**: Removed 2 tests that referenced deleted `abortRunning` method.
 - **File modified**: `apps/console/src/__tests__/components/AutonomousUseCasesPage.test.ts`
 - **Reason**: Component changed to fire-and-forget for batch runs. `abortRunning` no longer exists.
+- **Clarification**: This is not new abort coverage. It removes stale assertions against a deleted private component instance method. The product component was not changed to satisfy old tests.
 - **Result**: **PASS** — 10/10 tests pass (was 10/12 with 2 failures)
 
 ### 2. CV-API-SMOKE: Conversation API smoke (keep-running)
 
-- **Action**: Attempted verification run.
-- **Result**: **BLOCKED** — `.venv` not available in current session (empty directory). API tests need `pip install -e './apps/api[dev]'` environment. Q1 baseline had this environment; current session does not.
-- **Previous evidence**: Q1 baseline shows `test_conversation_api.py` passing (part of 811 passed).
+- **Action**: Fresh verification run.
+- **Command**: `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_api.py tests/test_exploration_learned_paths_api.py -q`
+- **Result**: **PASS** — 62/62 tests pass.
 
 ### 3. CV-CLI-SMOKE: Conversation CLI smoke (keep-running)
 
 - **Action**: Verified baseline.
-- **Command**: `python3 -m pytest --rootdir=<path>/apps/cli <path>/apps/cli/tests/test_conversation.py -v --tb=short`
+- **Command**: `cd apps/cli && ../../.venv/bin/pytest tests/test_conversation.py -q`
 - **Result**: **PASS** — 15/15 tests pass
 
-### 4. REPLAY-E2E: Replay deterministic E2E (keep-running)
+### 4. CV-O-SMOKE: Conversation Orchestrator smoke (keep-running)
 
-- **Action**: Not re-run in this session (requires running services).
+- **Action**: Fresh verification run with API + LearnedPath review + Orchestrator baseline.
+- **Command**: `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_api.py tests/test_exploration_learned_paths_api.py tests/test_conversation_orchestrator.py -q`
+- **Result**: **PASS** — 79/79 tests pass.
+
+### 5. REPLAY-E2E: Replay deterministic E2E (keep-running)
+
+- **Action**: Fresh rerun attempted in this session.
 - **Previous evidence**: Q1 baseline shows 9/9 E2E tests pass.
-- **Result**: **PASS** (from Q1 baseline)
+- **Current rerun**: `pnpm run test:e2e`
+- **Current result**: **BLOCKED / exit 1** — API request tests failed with
+  `connect EPERM 127.0.0.1:8001`; catalog UI failed to launch Chromium with
+  `bootstrap_check_in ... Permission denied`.
+- **Result policy**: Do not count this as a fresh PASS. Q1 baseline remains the last recorded successful run.
 
-### 5. LP-TRUST-REVIEW: LearnedPath trust / run-review separation smoke
+### 6. LP-TRUST-REVIEW: LearnedPath trust / run-review separation smoke
 
 - **Action**: Gap review of existing tests.
 - **Finding**: `test_patch_run_review_does_not_modify_learned_path` (line 253 in `test_exploration_learned_paths_api.py`) already tests the separation invariant: after rejecting a run review, the learned path's trust remains "provisional".
 - **Result**: **EXISTING** — no new test needed. Invariant already covered.
 
-### 6. VS-SELECTOR: Validation-site selector stability smoke
+### 7. VS-SELECTOR: Validation-site selector stability smoke
 
 - **Action**: New test created.
 - **File created**: `apps/console/src/__tests__/validation-site/selector-stability.test.ts`
@@ -51,7 +62,7 @@ Q3 执行：按 `docs/testing/current-testing-backlog.md` 第一批实现测试�
   - DashboardPage: data-testid=dashboard-welcome
 - **Result**: **PASS** — 14/14 tests pass
 
-### 7. CONSOLE-SMOKE: AutonomousWorkbenchPage basic smoke
+### 8. CONSOLE-SMOKE: AutonomousWorkbenchPage basic smoke
 
 - **Action**: New test created.
 - **File created**: `apps/console/src/__tests__/components/AutonomousWorkbenchPage.test.ts`
@@ -71,7 +82,7 @@ After all changes, ran the complete console test suite:
 ```
 Test Files: 21 passed (21)
 Tests:      160 passed (160)
-Duration:   3.45s
+Duration:   3.35s
 ```
 
 Improvement from Q1 baseline: 140 passed + 2 failed → 160 passed + 0 failed.
@@ -89,9 +100,10 @@ Improvement from Q1 baseline: 140 passed + 2 failed → 160 passed + 0 failed.
 | Item | Status | Tests |
 |---|---|---|
 | FIX-01: Fix abort tests | DONE | 10/10 pass |
-| CV-API-SMOKE | BLOCKED (env) | 15/15 (from Q1) |
+| CV-API-SMOKE | DONE | 62/62 pass |
 | CV-CLI-SMOKE | DONE | 15/15 pass |
-| REPLAY-E2E | PASS (from Q1) | 9/9 pass |
+| CV-O-SMOKE | DONE | 79/79 targeted API/orchestrator pass |
+| REPLAY-E2E | BLOCKED on current rerun; Q1 baseline pass | Current run exit 1; Q1 baseline 9/9 pass |
 | LP-TRUST-REVIEW | EXISTING | invariant already tested |
 | VS-SELECTOR | DONE | 14/14 pass |
 | CONSOLE-SMOKE | DONE | 6/6 pass |
@@ -109,5 +121,6 @@ Improvement from Q1 baseline: 140 passed + 2 failed → 160 passed + 0 failed.
 
 ## Uncompleted Items
 
-- CV-API-SMOKE verification: blocked by missing .venv environment. Need `pip install -e './apps/api[dev]'` to run API tests.
-- REPLAY-E2E re-run: deferred (needs running services). Q1 baseline confirms 9/9 pass.
+- REPLAY-E2E current rerun: blocked by local sandbox / permission / localhost access errors
+  (`connect EPERM 127.0.0.1:8001`, Chromium `bootstrap_check_in ... Permission denied`).
+  Q1 baseline confirms a prior 9/9 pass, but this report does not claim a fresh E2E PASS.

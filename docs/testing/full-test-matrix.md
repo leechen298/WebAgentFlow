@@ -112,7 +112,7 @@ Top gaps：
 | AE pass_gate invariant audit | partial | 可后续核对是否还有缺口，但不是当前第一批 |
 | Workbench/history 基础 component smoke | partial | 适合组件测试，不需要 live run |
 | verify-scenario release smoke | proposed | 只做 manual release smoke，CI no |
-| 全量 AE 60 case 立即落地 | deferred | 范围太大，会偏离当前 M11.0.5 |
+| 全量 AE 60 case 立即落地 | deferred | 范围太大，会偏离当前 M11 runtime 测试重点 |
 
 Recommended next cases：
 
@@ -199,12 +199,13 @@ Current status：
   - 11.0.2 DB-backed session store。
   - 11.0.3 Conversation API。
   - 11.0.4 `wagent conversation` runtime CLI。
-- 当前下一步：11.0.5 Orchestrator Dispatcher。
+  - 11.0.5 service-only Orchestrator Dispatcher。
+- 下一开发包：11.0.6 Explicit Replay Command Hook。
 
 Key risks：
 
-- Orchestrator dispatcher 会把 user message、slash command、engine event 和
-  session state 接起来，是 M11 当前最高风险边界。
+- Orchestrator dispatcher 已有 service-only baseline；下一风险点是 11.0.6 explicit
+  replay command hook 如何在不改 M10 replay contract 的前提下接入。
 - CLI/API 已经成为用户入口和后续 orchestrator 的外部 contract，需要 smoke 保护。
 - 不能让 LLM 逐步控制浏览器，不能调用 autonomous run。
 
@@ -214,6 +215,7 @@ Existing coverage summary：
 - CV-R：repo/store tests 已有。
 - CV-API：Conversation API tests 已有。
 - CV-CLI：`wagent conversation` CLI tests 已有。
+- CV-O：service-only Orchestrator Dispatcher tests 已有。
 
 Recommended grouping：
 
@@ -223,21 +225,22 @@ Recommended grouping：
 | CV-R | repo / session store | existing |
 | CV-API | conversation HTTP API | existing |
 | CV-CLI | `wagent conversation` | existing |
-| CV-O | Orchestrator dispatcher | proposed |
-| CV-E2E | conversation smoke | proposed / deferred until 11.0.5+ |
+| CV-O | service-only Orchestrator Dispatcher | existing / keep-running |
+| CV-E2E | conversation smoke | proposed / deferred until CLI dispatch / public dispatch flow is stable |
 
 Top gaps：
 
 | Case | Status | 说明 |
 | --- | --- | --- |
-| CV-O dispatcher unit matrix | gap | 11.0.5 实现时第一优先级 |
-| CV-API + CV-CLI smoke | partial | 已有测试，建议形成 smoke 批次 |
-| CV-E2E conversation smoke | proposed | 等 11.0.5 后评估，不能依赖 LLM/autonomous |
+| CV-O dispatcher baseline | existing / keep-running | 11.0.5 已完成 service-only baseline，持续运行 |
+| CV-API + CV-CLI smoke | keep-running | 已有测试，除非发现缺口才新增 |
+| CV-E2E conversation smoke | deferred | 等 CLI dispatch / public dispatch endpoint / replay hook flow 稳定后再定 |
 
 Recommended next cases：
 
-- 11.0.5 实现时先补 Orchestrator Dispatcher unit matrix。
+- keep-running：Conversation API / CLI / Orchestrator baseline。
 - 保留 API + CLI smoke，保护 session create/send/status/transcript/events。
+- 11.0.6 实现后再评估 explicit replay command hook 的测试矩阵。
 
 ### 5. validation-site
 
@@ -309,7 +312,7 @@ Recommended next cases：
 | `AE-D-*` login/users live run 标为 `Det E2E / CI yes` | reclassify to Live smoke / CI no | 依赖 LLM、verify-scenario、Supervisor verdict |
 | conversation 写成 pure-function only | reject as outdated | 11.0.1-11.0.4 已完成 domain/store/API/CLI |
 | Current Coverage Snapshot | rename to Test File Inventory Snapshot | 文件数量不是覆盖率，也不代表测试通过 |
-| 原 first batch 回头补 AE/LP/CV 大量旧 case | reject as current first batch | 不贴合当前 M11.0.5 风险 |
+| 原 first batch 回头补 AE/LP/CV 大量旧 case | reject as current first batch | 不贴合当前 M11 runtime 风险 |
 | 全量 207 case 一次性落地 | deferred | 范围过大，必须按能力域逐步展开 |
 | Visual UI 用 API/headless 证据代替 | reject | 证据类型不匹配 |
 
@@ -317,7 +320,7 @@ Recommended next cases：
 
 | Case ID | Work type | Reason | Layer | Priority | CI | Milestone dependency | Evidence required |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| FIRST-P0-01 CV-O dispatcher unit matrix | new | 11.0.5 是当前下一步，必须先护住 state routing 和 response contract | Unit | P0 | yes | 11.0.5 implementation | pytest output，review.md evidence |
+| FIRST-P0-01 CV-O dispatcher baseline | existing baseline / keep-running | 11.0.5 service-only dispatcher 已完成，持续运行 baseline；除非发现缺口才新增 | Unit | P0 | yes | 11.0.5 shipped | pytest output，review.md evidence |
 | FIRST-P0-02 Conversation API smoke | existing baseline / keep-running | API 是 CLI 和 orchestrator 的前置 contract；已有 11.0.3 API tests，除非发现缺口才新增 | Repo/API integration | P0 | yes | 11.0.3 shipped | pytest output，HTTP 404/422 覆盖 |
 | FIRST-P0-03 Conversation CLI smoke | existing baseline / keep-running | 11.0.4 CLI tests 已存在；当前任务是持续运行，除非发现缺口才新增 | CLI integration | P0 | yes | 11.0.4 shipped | CLI test output，stdout/stderr / exit code evidence |
 | FIRST-P0-04 Replay deterministic E2E | existing baseline / keep-running | M10.2 replay 是当前稳定浏览器闭环回归轨道 | Deterministic E2E | P0 | yes, once services are orchestrated | M10.2 shipped | `pnpm run test:e2e` output，seed fixture evidence |
@@ -333,7 +336,7 @@ Deferred：
 - live autonomous learning -> replay smoke。
 - validation-site 全页面 E2E。
 - console 全页面 visual exploratory。
-- conversation E2E smoke，等 11.0.5 dispatcher 后再定。
+- conversation E2E smoke，等 CLI dispatch / public dispatch endpoint / replay hook flow 稳定后再定。
 - replay DOM obstruction failure，等 fixture 设计稳定后再补。
 
 Reject：

@@ -23,7 +23,8 @@ task-execution、recovery、teaching、multi-page-workflow。不是每个小功�
 - `replay`：已有 deterministic E2E、API exploratory 和 visual UI exploratory
   证据，用于保护 M10.2 LearnedPath replay execution + drift detection。
 - `conversation`：已有 domain / repo / API / CLI 覆盖，用于保护 M11 runtime
-  conversation 基础；当前下一重点是 11.0.5 Orchestrator Dispatcher。
+  conversation 基础；11.0.5 service-only Orchestrator Dispatcher 已有 baseline
+  测试，下一开发包是 11.0.6 Explicit Replay Command Hook。
 
 Codex exploratory validation 也按能力域执行，不做一次性全项目自动测试。新增探索式
 用例必须先明确所属能力域、证据类型、是否 CI-safe，以及是否依赖当前里程碑。
