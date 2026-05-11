@@ -40,13 +40,12 @@ Current delivery status:
 - Current delivery package: **M11.0 Runtime Conversation Shell & Agent
   Orchestration**.
 - M11.0 has completed its conversation domain contract, DB-backed session
-  store, conversation HTTP API, CLI-first runtime conversation shell, and
-  service-only Orchestrator Dispatcher (11.0.5, `101 passed`).
-- Next M11.0 execution package: **11.0.6 Explicit Replay Command Hook**.
-- The Orchestrator service skeleton is implemented; CLI dispatch integration
-  and public dispatch endpoint are not yet connected. Replay hook, Agent
-  routing, L3 task runner, L2 guided teaching, and Agent H Teaching Guide
-  Agent are planned future work, not current implementation.
+  store, conversation HTTP API, CLI-first runtime conversation shell,
+  service-only Orchestrator Dispatcher (11.0.5, `101 passed`), and
+  explicit replay command hook (11.0.6, `179 passed` API + `67 passed` CLI).
+- Next M11.0 execution package: **11.0.7 Conversation Tests and Evidence**.
+- Agent routing, L3 task runner, L2 guided teaching, and Agent H Teaching
+  Guide Agent are planned future work, not current implementation.
 
 CLI terminology:
 

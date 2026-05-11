@@ -39,12 +39,12 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - 当前交付包：**M11.0 Runtime Conversation Shell & Agent Orchestration /
   运行时沟通与 Agent 编排**。
 - M11.0 已完成 conversation domain contract、DB-backed session store、
-  conversation HTTP API、CLI-first runtime conversation shell 和 service-only
-  Orchestrator Dispatcher（11.0.5，`101 passed`）。
-- 下一步 M11.0 执行包：**11.0.6 Explicit Replay Command Hook**。
-- Orchestrator service skeleton 已实现；CLI dispatch 接入和 public dispatch
-  endpoint 尚未连通。Replay hook、Agent routing、L3 task runner、L2 guided
-  teaching、Agent H Teaching Guide Agent 都是后续规划，不是当前已实现。
+  conversation HTTP API、CLI-first runtime conversation shell、service-only
+  Orchestrator Dispatcher（11.0.5，`101 passed`）和 explicit replay command
+  hook（11.0.6，`179 passed` API + `67 passed` CLI）。
+- 下一步 M11.0 执行包：**11.0.7 Conversation Tests and Evidence**。
+- Agent routing、L3 task runner、L2 guided teaching、Agent H Teaching Guide
+  Agent 都是后续规划，不是当前已实现。
 
 CLI 术语：
 

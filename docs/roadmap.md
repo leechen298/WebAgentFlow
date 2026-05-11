@@ -179,7 +179,11 @@ Progress:
 - 11.0.5 Orchestrator Dispatcher shipped: service-only dispatcher skeleton
   with `dispatch_user_input` and `dispatch_engine_event` placeholder
   (`101 passed`). No replay hook, no new CLI commands, no new HTTP endpoints.
-- Next M11.0 execution package: 11.0.6 Explicit Replay Command Hook.
+- 11.0.6 Explicit Replay Command Hook shipped: Orchestrator replay handler
+  protocol, `run_explicit_replay` bridge to M10 replay engine,
+  `POST /conversation/sessions/{id}/dispatch` endpoint, CLI `send` routed
+  through dispatch (`179 passed` API + `67 passed` CLI).
+- Next M11.0 execution package: 11.0.7 Conversation Tests and Evidence.
 
 Expected delivery:
 
