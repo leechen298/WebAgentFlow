@@ -16,6 +16,7 @@ console、API、数据库、validation-site 和后端 Playwright replay 的产�
 - M10.2 LearnedPath catalog UI replay 区块。
 - M11.0 conversation runtime explicit replay smoke。
 - M11.0 `wagent conversation` CLI-driven explicit replay smoke。
+- Validation-site deterministic browser smoke for `/login` and `/users`.
 
 这不会新增产品行为，也不会扩大 M10.2 范围。
 
@@ -64,7 +65,9 @@ Playwright config 暂时不使用 `webServer` 编排全部服务。等回归轨�
 [`../results/2026-05-11-conversation-runtime-e2e.md`](../results/2026-05-11-conversation-runtime-e2e.md)
 了解 M11 conversation runtime E2E 首次 smoke 结果；查看
 [`../results/2026-05-11-conversation-cli-e2e.md`](../results/2026-05-11-conversation-cli-e2e.md)
-了解 `wagent conversation` CLI-driven E2E 结果。
+了解 `wagent conversation` CLI-driven E2E 结果；查看
+[`../results/2026-05-11-validation-site-deterministic-e2e.md`](../results/2026-05-11-validation-site-deterministic-e2e.md)
+了解 validation-site browser smoke 结果。
 
 `apps/e2e/test-results/` 和 `apps/e2e/playwright-report/` 是 Playwright
 原始输出，保持 gitignore。人类可读的测试运行摘要放在
@@ -98,6 +101,11 @@ seed 脚本通过 API 侧 page analyzer 和 execution runtime 计算当前 `/use
 | signature changed but executable | `drift_status=signature_changed`，存在 warning，且 replay 仍可执行 |
 | conversation runtime replay | session dispatch `/replay` 后完成，transcript/events 记录 replay 结果 |
 | conversation CLI runtime replay | `wagent conversation` 创建 session、发送 `/replay`、读取 transcript/events |
+| validation-site login controls | `/login` 显示 username/password/submit，默认无 visible alert |
+| validation-site invalid login | wrong/wrong 后显示可见错误提示并停留在 login |
+| validation-site users controls | `/users` 显示 search controls、result card、seeded rows |
+| validation-site users name search | name=alice 后 URL 和结果区反映筛选 |
+| validation-site users empty search | no-match 搜索显示 empty state |
 
 ## 暂缓项
 
