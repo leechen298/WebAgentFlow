@@ -18,6 +18,8 @@ deterministic ranking 能力：输入 `TaskIntent` 和可选 page / scenario hin
 - 这一层不执行 replay，不做 slot binding，不生成 route plan。
 - 这一层必须保留可解释的 `match_reasons` / `warnings`，供后续 Task Path
   Planner 和用户确认使用。
+- 第一版不修改 11.1.1 `LearnedPathCandidate` schema；ranking score 是
+  service 内部实现细节，对外解释通过 `match_reasons` / `warnings` 表达。
 
 ## 边界（本轮不做）
 
@@ -43,6 +45,8 @@ deterministic ranking 能力：输入 `TaskIntent` 和可选 page / scenario hin
 - 输出使用 11.1.1 `LearnedPathCandidate`。
 - 有 deterministic ranking score 规划。
 - 有 `match_reasons` / `warnings` 规划。
+- 第一版不修改 11.1.1 `LearnedPathCandidate` schema，不新增 public
+  `score` 字段。
 - deprecated LearnedPath 不作为正常候选，第一版默认排除。
 - confirmed path 排名优先于 provisional / flaky。
 - hit_count 可以作为正向信号，但不能压过 trust / deprecated。
