@@ -31,7 +31,8 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
 - `apps/worker` —— 异步执行骨架（当前是脚手架）。
 - `apps/validation-site` —— 自主探索的自建测试 fixture（login、users 等）。
 - `apps/cli` —— Python CLI（`wagent`）与 `verify-scenario` Claude Code
-  skill。未来可能承载 M11.0 runtime conversation CLI，但当前尚未实现。
+  skill。它也承载 M11.0 runtime conversation CLI（`wagent conversation`），
+  当前通过 Conversation API 工作，不直接访问数据库。
 
 ---
 
@@ -42,23 +43,22 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
 [`roadmap.zh.md`](./roadmap.zh.md) 为准：产品生命周期阶段是 L1 / L2 /
 L3，交付里程碑是 M10 / M11 / ...
 
-M10 Path Asset Foundation / 路径资产基础已完成。下一步计划交付包是
-**M11.0 Runtime Conversation Shell & Agent Orchestration / 运行时沟通与
-Agent 编排**。刚完成的 M10 可执行包是
-`10.2-replay-execution-drift-detection`。
+M10 Path Asset Foundation / 路径资产基础已完成。当前交付包是 **M11.0
+Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent
+编排**。最新完成的 M11.0 执行包是 `11.0.4-runtime-cli-shell`；下一步计划
+执行包是 `11.0.5-orchestrator-dispatcher`。
 
 当前代码状态：
 
 - M10 Path Asset Foundation / 路径资产基础已交付 LearnedPath persistence、
   catalog 和 replay / drift。
-- M11.0 Runtime Conversation Shell & Agent Orchestration 是下一步计划，
-  迭代文档已在
-  `docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`
-  初始化。
+- M11.0 Runtime Conversation Shell & Agent Orchestration 已交付
+  conversation domain contract、DB-backed session store、Conversation API 和
+  CLI-first runtime conversation shell。
 - `apps/worker` 仍是脚手架。
-- L2 用户引导学习、L3 task execution、runtime conversation、
-  Conversation Orchestrator、Agent D / E / F / G / H routing，以及 Agent H
-  Teaching Guide Agent 都是 planned，尚未实现。
+- L2 用户引导学习、L3 task execution、Conversation Orchestrator 行为、
+  Agent D / E / F / G / H routing，以及 Agent H Teaching Guide Agent 都是
+  planned，尚未实现。
 
 **已完成阶段：**
 

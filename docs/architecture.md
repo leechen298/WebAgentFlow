@@ -40,9 +40,9 @@ runtime.
 - `apps/validation-site` — self-hosted test fixtures (login, users, …)
   that autonomous exploration runs against.
 - `apps/cli` — Python CLI (`wagent`) plus the `verify-scenario`
-  Claude Code skill that invokes it. It may later host the M11.0
-  runtime conversation CLI, but that runtime surface is not implemented
-  today.
+  Claude Code skill that invokes it. It also hosts the M11.0 runtime
+  conversation CLI (`wagent conversation`), currently backed by the
+  Conversation API rather than direct database access.
 
 ---
 
@@ -54,22 +54,22 @@ accumulation. The current planning vocabulary lives in
 product lifecycle stages are L1 / L2 / L3, delivery milestones are M10 /
 M11 / ...
 
-M10 Path Asset Foundation has completed. The next planned delivery
-package is **M11.0 Runtime Conversation Shell & Agent Orchestration**.
-The last completed M10 executable package was
-`10.2-replay-execution-drift-detection`.
+M10 Path Asset Foundation has completed. The current delivery package is
+**M11.0 Runtime Conversation Shell & Agent Orchestration**. The latest
+completed M11.0 execution package is `11.0.4-runtime-cli-shell`; the next
+planned execution package is `11.0.5-orchestrator-dispatcher`.
 
 Current code status:
 
 - M10 Path Asset Foundation has shipped LearnedPath persistence,
   catalog, and replay / drift.
-- M11.0 Runtime Conversation Shell & Agent Orchestration is planned next;
-  its iteration docs are initialized under
-  `docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`.
+- M11.0 Runtime Conversation Shell & Agent Orchestration has shipped the
+  conversation domain contract, DB-backed session store, Conversation API,
+  and CLI-first runtime conversation shell.
 - `apps/worker` is still a scaffold.
-- L2 user-guided learning, L3 task execution, runtime conversation,
-  Conversation Orchestrator, Agent routing for D / E / F / G / H, and
-  Agent H Teaching Guide Agent are planned but not implemented.
+- L2 user-guided learning, L3 task execution, Conversation Orchestrator
+  behavior, Agent routing for D / E / F / G / H, and Agent H Teaching Guide
+  Agent are planned but not implemented.
 
 **Completed legacy steps:**
 

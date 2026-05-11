@@ -155,7 +155,7 @@ has a first evidence report (`PASS 12 / FAIL 0 / BLOCKED 0 / NOT_RUN 4`).
 evidence and drift evidence, but 10.2 did not implement a full
 negative-knowledge store.
 
-Next: **M11.0 Runtime Conversation Shell & Agent Orchestration**.
+Current: **M11.0 Runtime Conversation Shell & Agent Orchestration**.
 
 ## M11.0 — Runtime Conversation Shell & Agent Orchestration
 
@@ -165,6 +165,11 @@ the full functional loop before polishing richer operator surfaces.
 
 Iteration docs:
 [`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/).
+
+Status: 11.0.1 through 11.0.4 have shipped the conversation domain
+contract, DB-backed session store, Conversation API, and CLI-first runtime
+conversation shell (`wagent conversation`). Next M11.0 execution package:
+11.0.5 Orchestrator Dispatcher.
 
 Expected delivery:
 

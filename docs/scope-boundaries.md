@@ -26,13 +26,22 @@ M11.0 is the runtime loop foundation. Its scope is:
 - basic slash commands or equivalent structured messages
 - explicit replay hook with `learned_path_id + url`
 
+Completed M11.0 execution packages so far:
+
+- `11.0.1-conversation-domain-contract`
+- `11.0.2-conversation-session-store`
+- `11.0.3-conversation-api`
+- `11.0.4-runtime-cli-shell`
+
+Next M11.0 execution package: `11.0.5-orchestrator-dispatcher`.
+
 M11.0 does not select paths, plan tasks, bind slots, or implement Agent
 D / E / F / G / H behavior. Planning language uses M<N> for delivery
 milestones and L1/L2/L3 for lifecycle stages.
 
-Last completed package: `10.2-replay-execution-drift-detection`.
-M10.2 remains historical reference. It implemented LearnedPath replay
-plus drift detection:
+Last completed M10 package: `10.2-replay-execution-drift-detection`.
+M10.2 remains historical reference. It implemented LearnedPath replay plus
+drift detection:
 
 - consume an existing LearnedPath from the catalog
 - replay its stored actions against a provided URL
@@ -52,8 +61,9 @@ did not implement the complete negative-knowledge store.
   - current `wagent verify` / `verify-scenario`: a development
     verification skill backend that already exists for auditable
     scenario checks;
-  - M11.0 Runtime Conversation CLI: the current planned runtime product
-    entry where the user talks to WebAgentFlow;
+  - M11.0 Runtime Conversation CLI: `wagent conversation`, the runtime
+    product entry where the user talks to WebAgentFlow through the
+    Conversation API;
   - M16 External CLI: the later stable tooling surface for external
     schedulers, scripting, and integration.
 - **Skill / Tool interface for third-party Agents** — the public

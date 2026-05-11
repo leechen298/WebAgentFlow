@@ -13,9 +13,9 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - `apps/api` —— FastAPI 后端（routes / services / schemas / LLM provider）。
 - `apps/worker` —— 异步 worker（当前是骨架）。
 - `apps/validation-site` —— 自主探索的自建验证站点。
-- `apps/cli` —— Python CLI（`wagent`）。当前它是 `verify-scenario` 开发验证
-  skill 的后端；未来 M11.0 可能新增 runtime conversation CLI，M16 可能开放
-  稳定 external CLI / Skill / Tool 接口。
+- `apps/cli` —— Python CLI（`wagent`）。它是 `verify-scenario` 开发验证
+  skill 的后端，同时已经包含 M11.0 runtime conversation CLI（`wagent
+  conversation`）。M16 后续可能开放稳定 external CLI / Skill / Tool 接口。
 - `packages/` —— 共享 TypeScript 包。
 
 **产品形态**（WebAgentFlow 到底是什么）：
@@ -36,17 +36,19 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - **M10 Path Asset Foundation / 路径资产基础** 已完成。
 - **10.1 LearnedPath persistence**、**10.1.5 LearnedPath catalog** 和
   **10.2 replay execution + drift detection** 已交付。
-- 下一步计划交付包：**M11.0 Runtime Conversation Shell & Agent
-  Orchestration / 运行时沟通与 Agent 编排**。
-- Runtime Conversation Surface、Conversation Orchestrator / Dispatcher、
-  L3 task runner、L2 guided teaching、Agent H Teaching Guide Agent 都是后续
-  规划，不是当前已实现。
+- 当前交付包：**M11.0 Runtime Conversation Shell & Agent Orchestration /
+  运行时沟通与 Agent 编排**。
+- M11.0 已完成 conversation domain contract、DB-backed session store、
+  conversation HTTP API 和 CLI-first runtime conversation shell。
+- 下一步 M11.0 执行包：**11.0.5 Orchestrator Dispatcher**。
+- Conversation Orchestrator / Dispatcher 行为、L3 task runner、L2 guided
+  teaching、Agent H Teaching Guide Agent 都是后续规划，不是当前已实现。
 
 CLI 术语：
 
 - 当前 `wagent verify` / `verify-scenario` 是开发验证 skill 后端。
-- M11.0 未来可能引入 runtime conversation CLI，用户在这里和 WebAgentFlow
-  沟通。
+- M11.0 runtime conversation CLI 是 `wagent conversation`，用户通过
+  Conversation API 和 WebAgentFlow 沟通。
 - M16 未来可能开放稳定 external CLI / Skill / Tool 接口，供外部调度和集成。
 - 这三类入口必须区分清楚，不要混用。
 

@@ -21,11 +21,20 @@ M11.0 是 runtime loop foundation。本轮范围是：
 - 基础 slash commands 或等价结构化消息
 - 显式 replay hook：`learned_path_id + url`
 
+目前已完成的 M11.0 执行包：
+
+- `11.0.1-conversation-domain-contract`
+- `11.0.2-conversation-session-store`
+- `11.0.3-conversation-api`
+- `11.0.4-runtime-cli-shell`
+
+下一步 M11.0 执行包：`11.0.5-orchestrator-dispatcher`。
+
 M11.0 不做 path selection、不做 task planning、不做 slot binding，也不实现
 Agent D / E / F / G / H 行为。规划语言使用 M<N> 指交付里程碑，使用
 L1/L2/L3 指生命周期阶段。
 
-刚完成的执行包：`10.2-replay-execution-drift-detection`。
+刚完成的 M10 执行包：`10.2-replay-execution-drift-detection`。
 M10.2 现在作为历史参考。它实现了 LearnedPath replay 和 drift detection：
 
 - 从 catalog 消费一条已有 LearnedPath
@@ -44,8 +53,8 @@ knowledge store。
 - **CLI surface 混淆** —— 这里要区分三类 CLI：
   - 当前 `wagent verify` / `verify-scenario`：已经存在的开发验证 skill
     后端，用于可审计的 scenario check；
-  - M11.0 Runtime Conversation CLI：当前规划中的 WebAgentFlow 运行时产品
-    入口，用户在这里和 WebAgentFlow 沟通；
+  - M11.0 Runtime Conversation CLI：`wagent conversation`，这是运行时产品
+    入口，用户通过 Conversation API 和 WebAgentFlow 沟通；
   - M16 External CLI：后续面向外部调度、本地脚本和集成的稳定工具接口。
 - **Skill / Tool 接口（给第三方 Agent）** —— 对外接口仍然是 HTTP API。
   唯一例外是 `verify-scenario` Claude Code skill（由 `wagent` CLI 通过

@@ -13,10 +13,10 @@ WebAgentFlow — monorepo for an agent-driven web workflow engine.
 - `apps/api` — FastAPI backend (routes, services, schemas, LLM provider).
 - `apps/worker` — async worker (currently scaffold).
 - `apps/validation-site` — self-hosted page fixtures for autonomous exploration.
-- `apps/cli` — Python CLI (`wagent`). Today it backs the `verify-scenario`
-  development verification skill; future M11.0 may add a runtime
-  conversation CLI, and M16 may expose stable external CLI / Skill / Tool
-  interfaces.
+- `apps/cli` — Python CLI (`wagent`). It backs the `verify-scenario`
+  development verification skill and now includes the M11.0 runtime
+  conversation CLI (`wagent conversation`). M16 may later expose stable
+  external CLI / Skill / Tool interfaces.
 - `packages/` — shared TypeScript packages.
 
 **Product model** (what WebAgentFlow actually is):
@@ -37,18 +37,21 @@ Current delivery status:
 - **M10 Path Asset Foundation** has completed.
 - **10.1 LearnedPath persistence**, **10.1.5 LearnedPath catalog**, and
   **10.2 replay execution + drift detection** have shipped.
-- Next planned delivery package: **M11.0 Runtime Conversation Shell & Agent
+- Current delivery package: **M11.0 Runtime Conversation Shell & Agent
   Orchestration**.
-- Runtime Conversation Surface, Conversation Orchestrator / Dispatcher,
-  L3 task runner, L2 guided teaching, and Agent H Teaching Guide Agent are
-  planned future work, not current implementation.
+- M11.0 has completed its conversation domain contract, DB-backed session
+  store, conversation HTTP API, and CLI-first runtime conversation shell.
+- Next M11.0 execution package: **11.0.5 Orchestrator Dispatcher**.
+- Conversation Orchestrator / Dispatcher behavior, L3 task runner, L2 guided
+  teaching, and Agent H Teaching Guide Agent are planned future work, not
+  current implementation.
 
 CLI terminology:
 
 - Current `wagent verify` / `verify-scenario` is a development verification
   skill backend.
-- M11.0 may introduce a runtime conversation CLI where the user talks to
-  WebAgentFlow.
+- M11.0 runtime conversation CLI is `wagent conversation`, where the user
+  talks to WebAgentFlow through the Conversation API.
 - M16 may expose stable external CLI / Skill / Tool interfaces for external
   schedulers and integrations.
 - Keep those three surfaces distinct.

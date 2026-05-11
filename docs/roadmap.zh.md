@@ -139,7 +139,7 @@ M10 收口时，LearnedPath 已经可以持久化、进入 catalog、执行 trus
 drift 结果未来会成为 failure evidence 和 drift evidence 的来源，但 10.2
 本身没有实现完整 negative knowledge store。
 
-下一步：**M11.0 Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排**。
+当前：**M11.0 Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排**。
 
 ## M11.0 —— Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排
 
@@ -149,6 +149,11 @@ M11.0 建立第一版运行时产品入口，让用户可以和 WebAgentFlow 沟
 
 迭代文档：
 [`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/)。
+
+状态：11.0.1 到 11.0.4 已交付 conversation domain contract、
+DB-backed session store、Conversation API 和 CLI-first runtime conversation
+shell（`wagent conversation`）。下一步 M11.0 执行包：11.0.5 Orchestrator
+Dispatcher。
 
 预期交付：
 
