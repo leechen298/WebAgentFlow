@@ -19,8 +19,8 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 
 ## 迭代索引
 
-- [m11-plan](./m11-plan.md) —— M11 全量计划与 M11.0 执行包拆分。状态：已初始化。
-- [11.0-runtime-conversation-shell-orchestration](./11.0-runtime-conversation-shell-orchestration/) —— M11.0 总纲：Runtime Conversation Shell 与 Conversation Orchestrator 规划。状态：总纲已初始化。
+- [m11-plan](./m11-plan.md) —— M11 全量计划与 M11.0 / M11.1 执行包拆分。状态：持续更新。
+- [11.0-runtime-conversation-shell-orchestration](./11.0-runtime-conversation-shell-orchestration/) —— M11.0 总纲：Runtime Conversation Shell 与 Conversation Orchestrator 规划。状态：完成。
 - [11.0.1-conversation-domain-contract](./11.0.1-conversation-domain-contract/) —— conversation session / message / event / command / state contract。状态：完成。
 - [11.0.2-conversation-session-store](./11.0.2-conversation-session-store/) —— session / message / event persistence。状态：完成。
 - [11.0.3-conversation-api](./11.0.3-conversation-api/) —— conversation API endpoints。状态：完成。
@@ -28,7 +28,15 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.0.5-orchestrator-dispatcher](./11.0.5-orchestrator-dispatcher/) —— Orchestrator / Dispatcher state routing。状态：完成。
 - [11.0.6-explicit-replay-command-hook](./11.0.6-explicit-replay-command-hook/) —— 显式 `/replay <learned_path_id> <url>` hook。状态：完成。
 - [11.0.7-conversation-tests-and-evidence](./11.0.7-conversation-tests-and-evidence/) —— conversation 测试域与证据。状态：完成。
-- 11.1-task-to-path-planning-execution —— Task-to-Path Planning & Execution MVP。状态：future，尚未创建详情目录。
+- [11.1-task-to-path-planning-execution](./11.1-task-to-path-planning-execution/) —— M11.1 总纲：Task-to-Path Planning & Execution MVP。状态：总纲初始化中。
+- [11.1.1-task-planning-domain-contract](./11.1.1-task-planning-domain-contract/) —— task / candidate / route / binding / verification domain contract。状态：当前规划中。
+- 11.1.2-learned-path-retrieval-ranking —— 状态：future。
+- 11.1.3-slot-binding-contract —— 状态：future。
+- 11.1.4-agent-d-planner-mvp —— 状态：future。
+- 11.1.5-plan-confirmation-and-consent-gate —— 状态：future。
+- 11.1.6-execution-via-replay —— 状态：future。
+- 11.1.7-result-verification-and-agent-e-reporting —— 状态：future。
+- 11.1.8-task-to-path-tests-and-evidence —— 状态：future。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护

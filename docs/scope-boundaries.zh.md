@@ -8,11 +8,19 @@
 
 ## 当前交付里程碑
 
-当前状态是 **M11.0 在 11.0.7 · Conversation Tests and Evidence 后收口**。
-迭代文档：
-[`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/)。
+当前包是 **M11.1 Task-to-Path Planning & Execution MVP** 下的
+**11.1.1 Task Planning Domain Contract**。迭代文档：
+[`docs/iterations/m11/11.1.1-task-planning-domain-contract/`](./iterations/m11/11.1.1-task-planning-domain-contract/)。
 
-M11.0 是 runtime loop foundation。本轮范围是：
+11.1.1 只做 domain contract。本包范围是规划 task input、intent、candidate
+path、route plan、slot binding proposal、confirmation / consent、
+postcondition、task execution result、Agent D planner input / output，以及
+Agent E reporter input / output schema。
+
+11.1.1 不实现 Agent D / E，不做 retrieval、ranking、slot binding、
+execution、replay side effects、result verification、artifact lifecycle 或 E2E。
+
+M11.0 runtime loop foundation 已完成。已完成范围是：
 
 - CLI-first runtime conversation surface，让用户和 WebAgentFlow 沟通
 - Conversation Orchestrator / Dispatcher 骨架
@@ -20,6 +28,7 @@ M11.0 是 runtime loop foundation。本轮范围是：
 - 最小 message / event / audit log 结构
 - 基础 slash commands 或等价结构化消息
 - 显式 replay hook：`learned_path_id + url`
+- conversation tests and evidence
 
 目前已完成的 M11.0 执行包：
 
@@ -32,11 +41,10 @@ M11.0 是 runtime loop foundation。本轮范围是：
 - `11.0.7-conversation-tests-and-evidence`
 
 刚完成的执行包：`11.0.7-conversation-tests-and-evidence`。
-下一步规划决策：M11.1 Task-to-Path Planning & Execution MVP。M11.1
-实现开始前必须先创建 intent / plan / review 文档。
+当前规划包：`11.1.1-task-planning-domain-contract`。
 
-M11.0 不做 path selection、不做 task planning、不做 slot binding，也不实现
-Agent D / E / F / G / H 行为。规划语言使用 M<N> 指交付里程碑，使用
+11.1.1 不做 path selection、不做 task planning、不做 slot binding、不执行
+任务，也不实现 Agent D / E / F / G / H 行为。规划语言使用 M<N> 指交付里程碑，使用
 L1/L2/L3 指生命周期阶段。
 
 11.0.7 已建立 conversation 测试证据：API、CLI、orchestrator、replay hook
@@ -72,10 +80,10 @@ knowledge store。
   端点并带上可审计的汇报契约，让 AI 编码 Agent 可以跑 scenario 而不
   绕过项目内 Supervisor Agent。更广义的第三方 Agent 注册表属于后续
   里程碑。
-- **Task-to-Path Planning MVP** —— 用户任务 / chat 入口、Agent D Path
-  Planner、路径检索 / 排序、slot binding、执行前确认、task result
-  verification、Agent E 结果汇报属于 M11.1，但必须等 M11.1 迭代文档
-  初始化后才能实现。
+- **Task-to-Path 具体实现** —— schema 以外的用户任务 / chat 入口、Agent
+  D Path Planner 实现、路径检索 / 排序、slot binding、执行前确认、task
+  result verification、Agent E 结果汇报属于后续 M11.1 包。11.1.1 只定义
+  domain contract。
 - **Recovery / abort 对话** —— Agent F Recovery Dialogue 和 Agent G
   Abort Dialogue 属于 M12，不属于 M11.0。
 - **Agent H Teaching Guide Agent / 教学引导 Agent** —— guided teaching 属于

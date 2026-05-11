@@ -36,15 +36,13 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - **M10 Path Asset Foundation / 路径资产基础** 已完成。
 - **10.1 LearnedPath persistence**、**10.1.5 LearnedPath catalog** 和
   **10.2 replay execution + drift detection** 已交付。
-- 当前交付包：**M11.0 Runtime Conversation Shell & Agent Orchestration /
-  运行时沟通与 Agent 编排**。
-- M11.0 已完成 conversation domain contract、DB-backed session store、
-  conversation HTTP API、CLI-first runtime conversation shell、service-only
-  Orchestrator Dispatcher（11.0.5，`101 passed`）和 explicit replay command
-  hook（11.0.6，`179 passed` API + `67 passed` CLI），并完成 conversation
-  tests and evidence（11.0.7，`10 passed` E2E）。
-- M11.0 执行包已完成；下一步规划决策是 M11.1 Task-to-Path Planning &
-  Execution MVP。
+- **M11.0 Runtime Conversation Shell & Agent Orchestration / 运行时沟通与
+  Agent 编排** 已完成到 11.0.7。
+- 当前交付包：**M11.1 Task-to-Path Planning & Execution MVP** 下的
+  **11.1.1 Task Planning Domain Contract**。
+- M11.1 规划已经开始。当前包只定义 task / candidate / route / binding /
+  verification contract；不实现 Agent D / E、retrieval、slot binding、
+  replay execution 或 result verification。
 - Agent routing、L3 task runner、L2 guided teaching、Agent H Teaching Guide
   Agent 都是后续规划，不是当前已实现。
 
@@ -260,7 +258,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/api/app/schemas/` —— Pydantic 契约（page_analysis、
   page_verification、llm、ast、common）。
 
-**当前重点 —— M11 runtime conversation foundation：**
+**当前重点 —— M11 runtime conversation 与 task planning foundation：**
 
 - `apps/api/app/schemas/conversation.py` —— M11.0 conversation 枚举、领域
   contract 和 API request / response schema。
@@ -278,12 +276,16 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/cli/wagent/conversation.py` —— `wagent conversation` runtime
   conversation CLI。
 - `apps/cli/tests/test_conversation.py` —— CLI regression tests。
+- `apps/api/app/schemas/task_planning.py` —— 计划中的 M11.1 task-to-path
+  planning domain contract（`11.1.1`，尚未实现）。
 
 **规划中 / 部分已实现的服务区域：**
 
 - Conversation domain / store / API / CLI / Orchestrator service skeleton、
   explicit replay hook、public dispatch endpoint、CLI dispatch 接入和
-  conversation runtime E2E 已通过 M11.0.7 实现。Agent routing、
+  conversation runtime E2E 已通过 M11.0.7 实现。
+- M11.1 task planning domain schema 在 11.1.1 规划。Agent D / E、
+  retrieval、slot binding、task execution、result verification、
   confirmation、recovery、teaching 仍是后续工作。
 - L2 teaching support、highlight targets 和 user action recording。
 - Artifact lifecycle handling。

@@ -37,15 +37,13 @@ Current delivery status:
 - **M10 Path Asset Foundation** has completed.
 - **10.1 LearnedPath persistence**, **10.1.5 LearnedPath catalog**, and
   **10.2 replay execution + drift detection** have shipped.
-- Current delivery package: **M11.0 Runtime Conversation Shell & Agent
-  Orchestration**.
-- M11.0 has completed its conversation domain contract, DB-backed session
-  store, conversation HTTP API, CLI-first runtime conversation shell,
-  service-only Orchestrator Dispatcher (11.0.5, `101 passed`), and
-  explicit replay command hook (11.0.6, `179 passed` API + `67 passed` CLI),
-  plus conversation tests and evidence (11.0.7, `10 passed` E2E).
-- M11.0 execution packages are complete; next planning decision is M11.1
-  Task-to-Path Planning & Execution MVP.
+- **M11.0 Runtime Conversation Shell & Agent Orchestration** has completed
+  through 11.0.7.
+- Current delivery package: **11.1.1 Task Planning Domain Contract** within
+  **M11.1 Task-to-Path Planning & Execution MVP**.
+- M11.1 planning has begun. The current package defines task / candidate /
+  route / binding / verification contracts only; it does not implement Agent
+  D / E, retrieval, slot binding, replay execution, or result verification.
 - Agent routing, L3 task runner, L2 guided teaching, and Agent H Teaching
   Guide Agent are planned future work, not current implementation.
 
@@ -235,7 +233,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 ## Key File Locations
 
-**Current focus — M11 runtime conversation foundation:**
+**Current focus — M11 runtime conversation and task planning foundation:**
 
 - `apps/api/app/schemas/conversation.py` — M11.0 conversation enums,
   domain contracts, and API request / response schemas.
@@ -253,6 +251,8 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/cli/wagent/conversation.py` — `wagent conversation` runtime
   conversation CLI.
 - `apps/cli/tests/test_conversation.py` — CLI regression tests.
+- `apps/api/app/schemas/task_planning.py` — planned M11.1 task-to-path
+  planning domain contract (`11.1.1`; not implemented yet).
 
 **Autonomous exploration + M10 path assets:**
 
@@ -295,7 +295,9 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 - Conversation domain / store / API / CLI / Orchestrator service skeleton,
   explicit replay hook, public dispatch endpoint, CLI dispatch integration,
-  and conversation runtime E2E are implemented through M11.0.7. Agent routing,
+  and conversation runtime E2E are implemented through M11.0.7.
+- M11.1 task planning domain schemas are planned in 11.1.1. Agent D / E,
+  retrieval, slot binding, task execution, result verification,
   confirmation, recovery, and teaching remain future work.
 - L2 teaching support, highlight targets, and user action recording.
 - Artifact lifecycle handling.

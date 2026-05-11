@@ -155,7 +155,8 @@ has a first evidence report (`PASS 12 / FAIL 0 / BLOCKED 0 / NOT_RUN 4`).
 evidence and drift evidence, but 10.2 did not implement a full
 negative-knowledge store.
 
-Current: **M11.0 Runtime Conversation Shell & Agent Orchestration**.
+Current: **M11.1 Task-to-Path Planning & Execution MVP** planning,
+starting with `11.1.1-task-planning-domain-contract`.
 
 ## M11.0 — Runtime Conversation Shell & Agent Orchestration
 
@@ -185,7 +186,8 @@ Progress:
   through dispatch (`179 passed` API + `67 passed` CLI).
 - 11.0.7 Conversation Tests and Evidence shipped: conversation runtime E2E
   smoke plus fresh replay / conversation evidence (`10 passed` E2E).
-- Next planning decision: M11.1 Task-to-Path Planning & Execution MVP.
+- M11.0 execution packages are complete. M11.1 planning starts with
+  `11.1.1-task-planning-domain-contract`.
 
 Expected delivery:
 
@@ -212,6 +214,11 @@ through the M11.0 conversation surface; WebAgentFlow selects and
 parameterizes learned paths, executes them through the M10 replay
 engine, verifies the task result as far as possible, and reports the
 result.
+
+Current M11.1 package: `11.1.1-task-planning-domain-contract`. It is a
+documentation / domain-contract planning package only: no Agent D / E
+implementation, no retrieval, no slot binding, no replay execution, and no
+result verification yet.
 
 Internal Agents introduced / made concrete:
 

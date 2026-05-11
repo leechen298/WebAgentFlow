@@ -139,7 +139,8 @@ M10 收口时，LearnedPath 已经可以持久化、进入 catalog、执行 trus
 drift 结果未来会成为 failure evidence 和 drift evidence 的来源，但 10.2
 本身没有实现完整 negative knowledge store。
 
-当前：**M11.0 Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排**。
+当前：**M11.1 Task-to-Path Planning & Execution MVP / 任务到路径规划与执行
+MVP** 规划，从 `11.1.1-task-planning-domain-contract` 开始。
 
 ## M11.0 —— Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排
 
@@ -168,7 +169,8 @@ M11.0 建立第一版运行时产品入口，让用户可以和 WebAgentFlow 沟
   走 dispatch（`179 passed` API + `67 passed` CLI）。
 - 11.0.7 Conversation Tests and Evidence 已交付：conversation runtime E2E
   smoke 和 replay / conversation fresh evidence（`10 passed` E2E）。
-- 下一步规划决策：M11.1 Task-to-Path Planning & Execution MVP。
+- M11.0 执行包已完成。M11.1 规划从
+  `11.1.1-task-planning-domain-contract` 开始。
 
 预期交付：
 
@@ -190,6 +192,10 @@ M11.0 建立第一版运行时产品入口，让用户可以和 WebAgentFlow 沟
 M11.1 是第一版 L3 实际工作里程碑。用户通过 M11.0 conversation surface
 描述任务；WebAgentFlow 从已学路径中选择并绑定参数，通过 M10 replay
 engine 执行，在能力范围内验证任务结果，然后汇报结果。
+
+当前 M11.1 执行包：`11.1.1-task-planning-domain-contract`。它只做文档 /
+domain-contract 规划：不实现 Agent D / E、不做 retrieval、不做 slot
+binding、不执行 replay，也不做 result verification。
 
 纳入 / 明确的产品内部 Agent：
 

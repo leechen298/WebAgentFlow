@@ -12,11 +12,20 @@ ask — don't invent.
 
 ## Current Delivery Milestone
 
-Current package: **M11.0 closure after 11.0.7 · Conversation Tests and
-Evidence**. Iteration docs:
-[`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/).
+Current package: **11.1.1 Task Planning Domain Contract** within **M11.1
+Task-to-Path Planning & Execution MVP**. Iteration docs:
+[`docs/iterations/m11/11.1.1-task-planning-domain-contract/`](./iterations/m11/11.1.1-task-planning-domain-contract/).
 
-M11.0 is the runtime loop foundation. Its scope is:
+11.1.1 is a domain-contract package only. Its scope is to plan task input,
+intent, candidate path, route plan, slot binding proposal, confirmation /
+consent, postcondition, task execution result, Agent D planner input / output,
+and Agent E reporter input / output schemas.
+
+11.1.1 does not implement Agent D / E, retrieval, ranking, slot binding,
+execution, replay side effects, result verification, artifact lifecycle, or
+E2E.
+
+M11.0 runtime loop foundation is complete. Its completed scope is:
 
 - CLI-first runtime conversation surface where the user talks to
   WebAgentFlow
@@ -25,6 +34,7 @@ M11.0 is the runtime loop foundation. Its scope is:
 - minimal message / event / audit log structures
 - basic slash commands or equivalent structured messages
 - explicit replay hook with `learned_path_id + url`
+- conversation tests and evidence
 
 Completed M11.0 execution packages:
 
@@ -37,11 +47,10 @@ Completed M11.0 execution packages:
 - `11.0.7-conversation-tests-and-evidence`
 
 Last completed package: `11.0.7-conversation-tests-and-evidence`.
-Next planning decision: M11.1 Task-to-Path Planning & Execution MVP. No M11.1
-implementation starts until its intent / plan / review docs are created.
+Current planning package: `11.1.1-task-planning-domain-contract`.
 
-M11.0 does not select paths, plan tasks, bind slots, or implement Agent
-D / E / F / G / H behavior. Planning language uses M<N> for delivery
+11.1.1 does not select paths, plan tasks, bind slots, execute tasks, or
+implement Agent D / E / F / G / H behavior. Planning language uses M<N> for delivery
 milestones and L1/L2/L3 for lifecycle stages.
 
 11.0.7 established the conversation test domain: API, CLI, orchestrator, and
@@ -84,11 +93,11 @@ did not implement the complete negative-knowledge store.
   so an AI coding agent can run scenarios without bypassing the
   Supervisor Agent. A broader registry for third-party Agents is
   still a later milestone.
-- **Task-to-Path Planning MVP** — user task / chat input, Agent D Path
-  Planner, path retrieval / ranking, slot binding, execution
-  confirmation, task result verification, and Agent E result reporting
-  belong to M11.1, but implementation must wait until the M11.1 iteration
-  docs are initialized.
+- **Task-to-Path implementation** — user task / chat input beyond schema,
+  Agent D Path Planner implementation, path retrieval / ranking, slot
+  binding, execution confirmation, task result verification, and Agent E
+  result reporting belong to later M11.1 packages. 11.1.1 only defines the
+  domain contract.
 - **Recovery / abort dialogue** — Agent F Recovery Dialogue and Agent G
   Abort Dialogue are M12, not M11.0.
 - **Agent H Teaching Guide Agent** — guided teaching belongs to M13, not

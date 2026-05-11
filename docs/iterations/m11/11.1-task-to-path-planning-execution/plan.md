@@ -1,0 +1,151 @@
+# 实施计划
+
+## M11.1 总体设计
+
+M11.1 在 M11.0 runtime conversation loop 之上建立第一个 L3 Actual Work
+MVP。用户提交任务后，系统不再要求用户显式提供 LearnedPath id，而是通过
+task-to-path planning 找到候选路径、绑定参数、请求确认、执行 replay，并
+基于可验证信号汇报结果。
+
+核心路径：
+
+1. 用户通过 conversation surface 提交 task input。
+2. 系统生成 task intent record。
+3. LearnedPath retrieval / ranking 返回候选路径。
+4. Slot binding 将任务参数绑定到可替换 action values。
+5. Agent D 在候选、绑定、证据边界内生成 route plan。
+6. Confirmation / consent gate 在执行前要求用户确认不确定或有风险的计划。
+7. Execution 通过 M10 replay / M11.0 replay hook 执行。
+8. Result verification 读取 replay result、postconditions、artifact status
+   和 final-state signals。
+9. Agent E 基于证据汇报结果，不脑补成功。
+
+## 执行包拆分
+
+- 11.1.1 Task planning domain contract。
+- 11.1.2 LearnedPath retrieval and ranking。
+- 11.1.3 Slot binding contract and deterministic binding MVP。
+- 11.1.4 Agent D planner MVP。
+- 11.1.5 Plan confirmation and consent gate。
+- 11.1.6 Execution via replay。
+- 11.1.7 Result verification and Agent E reporting。
+- 11.1.8 Task-to-path tests and evidence。
+
+## Agent D 输入 / 输出边界
+
+Agent D Path Planner Agent 只在规划边界工作。
+
+输入：
+
+- user task / TaskIntent。
+- LearnedPathCandidate 列表。
+- SlotBindingProposal 列表。
+- negative / drift / replay evidence summary。
+- risk / confirmation policy hints。
+
+输出：
+
+- RoutePlan。
+- RouteStep 列表。
+- ConfirmationRequirement。
+- RiskHint / ConsentRequirement。
+- uncertainty。
+
+Agent D 不读 raw HTML，不逐步控制浏览器，不执行 replay，不调用
+autonomous run。
+
+## Agent E 输入 / 输出边界
+
+Agent E Result Reporter Agent 只在结果汇报边界工作。
+
+输入：
+
+- TaskExecutionResult。
+- replay result summary。
+- postcondition results。
+- artifact status。
+- final URL / title / DOM signals。
+- uncertainty flags。
+
+输出：
+
+- 用户可读结果 summary。
+- structured status：`succeeded` / `failed` / `uncertain` / `needs_review`。
+- evidence references。
+- warnings / next action suggestions。
+
+Agent E 不得脑补成功；证据不足时必须返回 `uncertain` 或 `needs_review`。
+
+## LearnedPath retrieval 输入 / 输出
+
+输入：
+
+- TaskIntent。
+- target_page_hint / scenario_hint。
+- available LearnedPath catalog metadata。
+- trust / hit_count / drift evidence / negative evidence。
+
+输出：
+
+- LearnedPathCandidate 列表。
+- match_reasons。
+- warnings。
+- evidence summary。
+
+Retrieval / ranking 不调用 Agent D，不执行 replay。
+
+## Slot binding 输入 / 输出
+
+输入：
+
+- TaskIntent。
+- LearnedPathCandidate actions / replaceable values。
+- user-provided task terms。
+
+输出：
+
+- SlotBindingProposal。
+- confidence。
+- requires_confirmation。
+- binding warnings。
+
+11.1.3 之前只规划 contract，不做 binding implementation。
+
+## Confirmation / consent gate 位置
+
+Confirmation / consent gate 位于 route plan 生成之后、execution 之前。
+
+初期使用 deterministic policy + user confirmation，不新增 Risk Agent。
+需要确认的类型包括 ambiguous、risky、destructive、external-send、
+bulk-modification、permission-modification 和用户自定义敏感操作。
+
+## Execution through replay 位置
+
+Execution 只能执行已确认的 route plan，并通过已有 deterministic replay /
+later explicit execution service 调用。
+
+不通过 autonomous exploration 执行，不做 hidden relearning，不让 LLM 逐步
+控制浏览器。
+
+## Result verification 位置
+
+Result verification 位于 replay execution 之后、Agent E reporting 之前。
+
+验证输入包括 replay result、postcondition signals、artifact status、final
+URL / title / DOM signals。无法验证时返回 `uncertain` / `needs_review`。
+
+## Testing strategy
+
+- 11.1.1 优先覆盖 schema / enum / contract。
+- 后续包优先 deterministic tests。
+- LLM provider 不作为默认测试依赖。
+- 不调用 autonomous run。
+- E2E 放到 11.1.8。
+
+## 验证
+
+当前文档阶段只运行：
+
+```bash
+git diff --check
+```

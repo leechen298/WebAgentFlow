@@ -18,10 +18,11 @@ runtime.
    event store, Conversation API, the non-interactive `wagent conversation`
    CLI, service-only Orchestrator Dispatcher, explicit replay hook, public
    dispatch endpoint, CLI dispatch integration, and conversation runtime E2E
-   evidence are implemented through M11.0.7. Agent routing, confirmation,
-   recovery, and teaching remain planned follow-up work. This layer is a
-   code-side session controller / dispatcher, not an LLM controller that
-   chooses browser actions step by step.
+   evidence are implemented through M11.0.7. M11.1 planning now begins with
+   task-to-path domain schemas; Agent routing, confirmation, recovery, and
+   teaching remain planned follow-up work. This layer is a code-side session
+   controller / dispatcher, not an LLM controller that chooses browser actions
+   step by step.
 4. **Execution** — Playwright runtime + async worker for browser automation.
 5. **Infrastructure** — PostgreSQL, Redis, MinIO for persistence, cache, object
    storage.
@@ -35,7 +36,7 @@ runtime.
 - `apps/api` — HTTP API, LLM provider layer, autonomous exploration,
   LearnedPath persistence / replay, page verification, validation-api
   mock backend, conversation domain / store / API. Planned future
-  responsibilities include orchestrator endpoints, Agent routing, artifact
+  responsibilities include task planning schemas, Agent routing, artifact
   metadata, and failure-evidence APIs.
 - `apps/worker` — async execution scaffold (currently scaffold).
 - `apps/validation-site` — self-hosted test fixtures (login, users, …)
@@ -57,7 +58,8 @@ M11 / ...
 
 M10 Path Asset Foundation has completed. **M11.0 Runtime Conversation Shell
 & Agent Orchestration** has completed through `11.0.7-conversation-tests-and-evidence`.
-The next planning decision is M11.1 Task-to-Path Planning & Execution MVP.
+M11.1 Task-to-Path Planning & Execution MVP is now in planning; the current
+package is `11.1.1-task-planning-domain-contract`.
 
 Current code status:
 
@@ -70,8 +72,9 @@ Current code status:
   replay command hook (11.0.6, `179 passed` API + `67 passed` CLI), and
   conversation runtime E2E evidence (11.0.7, `10 passed` E2E).
 - `apps/worker` is still a scaffold.
-- L2 user-guided learning, L3 task execution, Agent routing for D / E / F /
-  G / H, and Agent H Teaching Guide Agent are planned but not implemented.
+- M11.1 task-to-path schemas are planned, not implemented. L2 user-guided
+  learning, L3 task execution, Agent routing for D / E / F / G / H, and
+  Agent H Teaching Guide Agent are planned but not implemented.
 
 **Completed legacy steps:**
 

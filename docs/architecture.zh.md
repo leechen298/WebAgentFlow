@@ -14,9 +14,10 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
    运行时层。M11.0.7 已实现 domain contract、DB-backed session / message /
    event store、Conversation API、非交互式 `wagent conversation` CLI、
    service-only Orchestrator Dispatcher、explicit replay hook、public dispatch
-   endpoint、CLI dispatch 接入和 conversation runtime E2E 证据。Agent
-   routing、确认、恢复和教学仍是后续工作。它是代码侧 session controller /
-   dispatcher，不是逐步选择浏览器动作的 LLM controller。
+   endpoint、CLI dispatch 接入和 conversation runtime E2E 证据。M11.1 现在
+   从 task-to-path domain schema 规划开始；Agent routing、确认、恢复和
+   教学仍是后续工作。它是代码侧 session controller / dispatcher，不是逐步
+   选择浏览器动作的 LLM controller。
 4. **执行层** —— Playwright runtime + 异步 worker，负责浏览器自动化。
 5. **基础设施层** —— PostgreSQL、Redis、MinIO 分别提供持久化、缓存、对象存储。
 
@@ -27,8 +28,8 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
   artifact display 和更丰富的 workbench 面板。
 - `apps/api` —— HTTP API、LLM provider 层、autonomous exploration、
   LearnedPath persistence / replay、page verification、validation-api mock
-  后端、conversation domain / store / API。未来可承载 orchestrator
-  endpoints、Agent routing、artifact metadata 和 failure-evidence APIs。
+  后端、conversation domain / store / API。未来可承载 task planning schemas、
+  Agent routing、artifact metadata 和 failure-evidence APIs。
 - `apps/worker` —— 异步执行骨架（当前是脚手架）。
 - `apps/validation-site` —— 自主探索的自建测试 fixture（login、users 等）。
 - `apps/cli` —— Python CLI（`wagent`）与 `verify-scenario` Claude Code
@@ -46,8 +47,9 @@ L3，交付里程碑是 M10 / M11 / ...
 
 M10 Path Asset Foundation / 路径资产基础已完成。**M11.0 Runtime Conversation
 Shell & Agent Orchestration / 运行时沟通与 Agent 编排** 已完成到
-`11.0.7-conversation-tests-and-evidence`。下一步规划决策是 M11.1
-Task-to-Path Planning & Execution MVP。
+`11.0.7-conversation-tests-and-evidence`。M11.1 Task-to-Path Planning &
+Execution MVP 现在进入规划；当前包是
+`11.1.1-task-planning-domain-contract`。
 
 当前代码状态：
 
@@ -60,8 +62,9 @@ Task-to-Path Planning & Execution MVP。
   hook（11.0.6，`179 passed` API + `67 passed` CLI）和 conversation runtime
   E2E evidence（11.0.7，`10 passed` E2E）。
 - `apps/worker` 仍是脚手架。
-- L2 用户引导学习、L3 task execution、Agent D / E / F / G / H routing，
-  以及 Agent H Teaching Guide Agent 都是 planned，尚未实现。
+- M11.1 task-to-path schema 仍是规划中，尚未实现。L2 用户引导学习、L3
+  task execution、Agent D / E / F / G / H routing，以及 Agent H Teaching
+  Guide Agent 都是 planned，尚未实现。
 
 **已完成阶段：**
 
