@@ -51,10 +51,24 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 
 内部 Agent 命名规则：
 
-- 新文档优先使用功能性角色名。
+- 新文档和提示词优先使用主名称。
 - A-H 标签只作为 legacy alias。
+- 旧别名只在首次说明或引用旧文档时使用。
 - 首次出现示例：`Task Path Planner / 任务路径规划器（legacy: Agent D）`。
 - 后续提及时使用 `Task Path Planner / 任务路径规划器`。
+- 不要擅自新增 Agent 字母编号；如果确实需要，必须先更新
+  `docs/product-model.md`。
+
+| 主名称 | 旧别名 | 生命周期 |
+|---|---|---|
+| Page Understanding Agent / 页面理解器 | Agent A | L1 |
+| Attempt Evaluation Agent / 尝试评估器 | Agent B | L1 |
+| Learning Report Agent / 学习报告器 | Agent C | L1 |
+| Task Path Planner / 任务路径规划器 | Agent D | L3 |
+| Task Result Reporter / 任务结果汇报器 | Agent E | L3 |
+| Failure Recovery Agent / 失败恢复助手 | Agent F | L3 recovery |
+| User Abort Handler / 用户中断处理器 | Agent G | L3 abort |
+| Teaching Guide Agent / 教学引导器 | Agent H | L2 |
 
 CLI 术语：
 

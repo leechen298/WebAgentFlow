@@ -53,10 +53,24 @@ Current delivery status:
 
 Internal Agent naming:
 
-- Prefer functional role names in new docs.
+- Use the primary role name in new docs and prompts.
 - A-H labels are legacy aliases.
+- Use the legacy alias only on first mention or when referencing older docs.
 - First mention example: `Task Path Planner (legacy: Agent D)`.
 - Later mentions should use `Task Path Planner`.
+- Do not invent new Agent letters without updating `docs/product-model.md`
+  first.
+
+| Primary role name | Legacy alias | Lifecycle |
+|---|---|---|
+| Page Understanding Agent | Agent A | L1 |
+| Attempt Evaluation Agent | Agent B | L1 |
+| Learning Report Agent | Agent C | L1 |
+| Task Path Planner | Agent D | L3 |
+| Task Result Reporter | Agent E | L3 |
+| Failure Recovery Agent | Agent F | L3 recovery |
+| User Abort Handler | Agent G | L3 abort |
+| Teaching Guide Agent | Agent H | L2 |
 
 CLI terminology:
 
