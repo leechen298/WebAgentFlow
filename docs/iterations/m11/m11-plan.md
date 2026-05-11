@@ -212,15 +212,39 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 
 目标：
 
-- 实现 user message、slash command、engine event 到 state transition 的
-  dispatcher。
-- 输出 WebAgentFlow user-facing response。
-- 通过代码侧边界保证 L3 不允许 LLM 逐步控制浏览器。
+- 实现 Conversation Orchestrator / Dispatcher 的纯调度骨架。
+- 接收 user message / slash command / engine event。
+- 复用 11.0.1 的 command parser 和 state transition contract。
+- 复用 11.0.2 的 session / message / event store。
+- 为每次用户输入生成 parsed command、state transition、user-facing
+  response 和 audit event。
+- 不执行 replay side effect。
+- 不实现 Agent D / E / F / G / H。
+- 不新增 CLI 命令。
+- 不做 task-to-path planning。
 
 边界：
 
-- 不做 Agent D / E / F / G / H 逻辑。
-- 不做 autonomous run。
+- 不做 replay hook；explicit replay hook 属于 11.0.6。
+- 不调用 replay API。
+- 不调用 autonomous run。
+- 不做 natural-language planning。
+- 不做 slot binding。
+- 不做 Agent routing implementation。
+- 不做 recovery / abort dialogue。
+- 不做 teaching mode。
+- 不做 E2E。
+
+预期触及：
+
+- `apps/api/app/services/conversation/orchestrator.py` 或等价 dispatcher module。
+- `apps/api/app/services/conversation/__init__.py`。
+- `apps/api/tests/test_conversation_orchestrator.py`。
+- 可能小幅复用 `apps/api/app/services/conversation/commands.py` 和
+  `apps/api/app/services/conversation/state.py`。
+- 可能小幅使用 `apps/api/app/repos/conversation_repo.py`。
+- 不改 11.0.3 API endpoint contract，除非后续实现阶段明确需要最小 endpoint
+  hook；本轮文档不实现。
 
 ### 11.0.6 · Explicit replay command hook
 
