@@ -279,7 +279,8 @@ class ConversationOrchestrator:
 
         # Run replay
         try:
-            assert learned_path_id is not None and url is not None
+            if learned_path_id is None or url is None:
+                raise ValueError("replay command missing learned_path_id or url")
             summary: ConversationReplaySummary = self._replay_handler(
                 learned_path_id, url
             )
