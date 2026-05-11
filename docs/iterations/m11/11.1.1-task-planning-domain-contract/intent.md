@@ -36,6 +36,8 @@ binding、Agent D、confirmation、execution、verification、Agent E reporting
 - 有 TaskExecutionResult schema。
 - 有 AgentDPlannerInput / AgentDPlannerOutput schema contract。
 - 有 AgentEReporterInput / AgentEReporterOutput schema contract。
+- Agent D / Agent E 只定义 input / output contract，不实现 prompt、provider 或运行逻辑。
+- 有 ArtifactReference placeholder schema，但不实现 artifact lifecycle。
 - 有 tests plan。
 - 不加入 user / account / tenant 字段。
 - 不调用 replay / autonomous / LLM。

@@ -21,6 +21,7 @@ TaskInput
 TaskIntent
 - raw_text
 - normalized_goal optional
+- normalization_source optional: none | deterministic | agent_d
 - target_page_hint optional
 - scenario_hint optional
 - required_outputs
@@ -70,10 +71,21 @@ ConfirmationRequirement
 - message
 - fields
 - severity
+- linked_risk_ids
 
-RiskHint / ConsentRequirement
+RiskHint
+- id optional
 - risk_type
 - reason
+- severity
+- policy_source optional
+
+ConsentRequirement
+- reason
+- message
+- fields
+- severity
+- linked_risk_ids
 - requires_user_confirmation
 - policy_source
 
@@ -85,6 +97,8 @@ PostconditionSignal
 
 TaskExecutionResult
 - status: succeeded | failed | uncertain | needs_review
+- failure_stage optional: planning | confirmation | replay | verification | artifact | unknown
+- failure_reason optional
 - route_plan_id optional
 - replay_results
 - postcondition_results
@@ -93,17 +107,42 @@ TaskExecutionResult
 - errors
 - warnings
 
+ArtifactReference
+- kind
+- label
+- uri optional
+- status
+- metadata
+
 AgentDPlannerInput / Output
+- input includes TaskIntent, LearnedPathCandidate list, SlotBindingProposal list,
+  negative / replay evidence summaries.
+- output includes RoutePlan, ConfirmationRequirement list, RiskHint list,
+  uncertainty, warnings.
+
 AgentEReporterInput / Output
+- input includes TaskExecutionResult, PostconditionSignal results,
+  ArtifactReference placeholders, warnings, final state evidence.
+- output includes status, user-facing summary, evidence summary, uncertainty,
+  warnings, next suggested action optional.
 ```
 
 ## Contract rules
 
 - 不加入 user / account / tenant 字段。
 - schema module 不 import replay / autonomous / LLM modules。
-- Agent D schema 只定义 planner 输入 / 输出，不实现 Agent D。
-- Agent E schema 只定义 reporter 输入 / 输出，不实现 Agent E。
-- artifact fields 只保留必要占位，不实现 artifact lifecycle。
+- `TaskIntent.raw_text` 是不可丢失原始输入；`normalized_goal` 是 optional，
+  后续可由 deterministic normalizer 或 Agent D 填充。本包只定义
+  `normalization_source` contract，不实现 normalizer。
+- `RiskHint` 和 `ConsentRequirement` 分离：前者表示风险信号，后者表示执行前
+  必须获得用户确认的门槛。risk / consent policy engine 属于 11.1.5。
+- `TaskExecutionResult.status` 不拆 replay failure / verification failure；
+  失败来源通过 `failure_stage` 和 `failure_reason` 表达。
+- Agent D schema 定义相对完整的 planner 输入 / 输出 contract，但不定义 prompt，
+  不实现 Agent D，不调用 LLM provider。
+- Agent E schema 定义相对完整的 reporter 输入 / 输出 contract，但不定义 prompt，
+  不实现 Agent E，不调用 LLM provider。
+- artifact fields 只保留 `ArtifactReference` 占位，不实现 artifact lifecycle。
 
 ## 测试计划
 
@@ -113,6 +152,9 @@ AgentEReporterInput / Output
 - trust / status enums reject invalid values。
 - route step order preserved。
 - confirmation requirement required fields。
+- `TaskExecutionResult.failure_stage` rejects invalid values。
+- AgentD / AgentE contract accepts complete minimal input / output data。
+- `ArtifactReference` accepts minimal placeholder data without lifecycle behavior。
 - no user / account / tenant fields。
 - schema module does not import replay / autonomous / LLM modules。
 
