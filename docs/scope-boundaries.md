@@ -12,7 +12,7 @@ ask — don't invent.
 
 ## Current Delivery Milestone
 
-Current package: **11.0.5 · Orchestrator Dispatcher** within **M11.0 ·
+Current package: **11.0.6 · Explicit Replay Command Hook** within **M11.0 ·
 Runtime Conversation Shell & Agent Orchestration**. Iteration docs:
 [`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/).
 
@@ -32,17 +32,19 @@ Completed M11.0 execution packages so far:
 - `11.0.2-conversation-session-store`
 - `11.0.3-conversation-api`
 - `11.0.4-runtime-cli-shell`
+- `11.0.5-orchestrator-dispatcher`
 
-Last completed package: `11.0.4-runtime-cli-shell`.
-Next M11.0 execution package: `11.0.5-orchestrator-dispatcher`.
+Last completed package: `11.0.5-orchestrator-dispatcher`.
+Next M11.0 execution package: `11.0.6-explicit-replay-command-hook`.
 
 M11.0 does not select paths, plan tasks, bind slots, or implement Agent
 D / E / F / G / H behavior. Planning language uses M<N> for delivery
 milestones and L1/L2/L3 for lifecycle stages.
 
-11.0.5 specifically does not add a replay hook, new CLI features, E2E,
-task-to-path planning, Agent D / E / F / G / H implementations, or
-autonomous learning. The explicit replay hook belongs to 11.0.6.
+11.0.6 may wire the `/replay <learned_path_id> <url>` command through the
+Orchestrator to the M10 replay engine. It does not add path selection, slot
+binding, new CLI commands, E2E, task-to-path planning, Agent D / E / F / G / H
+implementations, or autonomous learning.
 
 Last completed M10 package: `10.2-replay-execution-drift-detection`.
 M10.2 remains historical reference. It implemented LearnedPath replay plus

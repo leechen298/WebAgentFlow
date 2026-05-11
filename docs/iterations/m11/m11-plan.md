@@ -252,7 +252,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 
 ### 11.0.6 · Explicit replay command hook
 
-状态：future。
+状态：当前规划 / 下一步执行包。
 
 目标：
 

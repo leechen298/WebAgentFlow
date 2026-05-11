@@ -15,10 +15,10 @@ runtime.
    points, integration boundaries.
 3. **Conversation / Orchestration** — runtime layer near the FastAPI
    application boundary. Domain contracts, DB-backed session / message /
-   event store, Conversation API, and the non-interactive
-   `wagent conversation` CLI are implemented through M11.0.4.
-   Conversation Orchestrator / Dispatcher behavior, Agent routing,
-   confirmation, recovery, teaching, and replay side effects remain
+   event store, Conversation API, the non-interactive `wagent conversation`
+   CLI, and the service-only Orchestrator Dispatcher are implemented through
+   M11.0.5. Public dispatch endpoint, CLI dispatch integration, replay side
+   effects, Agent routing, confirmation, recovery, and teaching remain
    planned follow-up work. This layer is a code-side session controller /
    dispatcher, not an LLM controller that chooses browser actions step by
    step.
@@ -57,8 +57,9 @@ M11 / ...
 
 M10 Path Asset Foundation has completed. The current delivery package is
 **M11.0 Runtime Conversation Shell & Agent Orchestration**. The latest
-completed M11.0 execution package is `11.0.4-runtime-cli-shell`; the next
-planned execution package is `11.0.5-orchestrator-dispatcher`.
+completed M11.0 execution package is `11.0.5-orchestrator-dispatcher`
+(`101 passed`); the next planned execution package is
+`11.0.6-explicit-replay-command-hook`.
 
 Current code status:
 
@@ -66,10 +67,12 @@ Current code status:
   catalog, and replay / drift.
 - M11.0 Runtime Conversation Shell & Agent Orchestration has shipped the
   conversation domain contract, DB-backed session store, Conversation API,
-  and CLI-first runtime conversation shell (`wagent conversation`).
-- The next M11.0 package is `11.0.5-orchestrator-dispatcher`; it should add
-  dispatcher behavior without replay hook side effects, task planning, or
-  Agent D / E / F / G / H implementations.
+  CLI-first runtime conversation shell (`wagent conversation`), and the
+  service-only Orchestrator Dispatcher (11.0.5, `101 passed`).
+- The next M11.0 package is `11.0.6-explicit-replay-command-hook`; it should
+  wire the `/replay` command through the Orchestrator to the M10 replay
+  engine without path selection, slot binding, or Agent D / E / F / G / H
+  implementations.
 - `apps/worker` is still a scaffold.
 - L2 user-guided learning, L3 task execution, Conversation Orchestrator
   behavior, Agent routing for D / E / F / G / H, and Agent H Teaching Guide
@@ -365,8 +368,11 @@ foundation:
 - implemented: DB-backed session / message / event store and Conversation API
   in models / repos / routers
 - implemented: `wagent conversation` CLI calling the Conversation API
-- planned for 11.0.5+: Conversation Orchestrator / Dispatcher, user message
-  and engine event routing, and Agent routing boundaries
+- implemented: service-only Conversation Orchestrator / Dispatcher
+  (`orchestrator.py`, `DispatchResult`, 11.0.5)
+- planned for 11.0.6+: replay hook side effect, public dispatch endpoint,
+  CLI dispatch integration, user message and engine event routing, and Agent
+  routing boundaries
 - planned later: confirmation, abort, recovery, takeover, and teaching-mode
   behavior
 

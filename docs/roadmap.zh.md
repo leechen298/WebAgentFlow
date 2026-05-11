@@ -160,7 +160,10 @@ M11.0 建立第一版运行时产品入口，让用户可以和 WebAgentFlow 沟
   （`84 passed`）。
 - 11.0.4 Runtime CLI Shell 已交付：非交互式 `wagent conversation`
   session、message、transcript、events 命令（`67 passed`）。
-- 下一步 M11.0 执行包：11.0.5 Orchestrator Dispatcher。
+- 11.0.5 Orchestrator Dispatcher 已交付：service-only dispatcher skeleton，
+  含 `dispatch_user_input` 和 `dispatch_engine_event` 占位（`101 passed`）。
+  不新增 replay hook、CLI 命令、HTTP endpoint。
+- 下一步 M11.0 执行包：11.0.6 Explicit Replay Command Hook。
 
 预期交付：
 

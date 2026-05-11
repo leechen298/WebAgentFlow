@@ -41,11 +41,13 @@ Current delivery status:
 - Current delivery package: **M11.0 Runtime Conversation Shell & Agent
   Orchestration**.
 - M11.0 has completed its conversation domain contract, DB-backed session
-  store, conversation HTTP API, and CLI-first runtime conversation shell.
-- Next M11.0 execution package: **11.0.5 Orchestrator Dispatcher**.
-- Conversation Orchestrator / Dispatcher behavior, L3 task runner, L2 guided
-  teaching, and Agent H Teaching Guide Agent are planned future work, not
-  current implementation.
+  store, conversation HTTP API, CLI-first runtime conversation shell, and
+  service-only Orchestrator Dispatcher (11.0.5, `101 passed`).
+- Next M11.0 execution package: **11.0.6 Explicit Replay Command Hook**.
+- The Orchestrator service skeleton is implemented; CLI dispatch integration
+  and public dispatch endpoint are not yet connected. Replay hook, Agent
+  routing, L3 task runner, L2 guided teaching, and Agent H Teaching Guide
+  Agent are planned future work, not current implementation.
 
 CLI terminology:
 
@@ -246,6 +248,8 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/api/app/services/conversation/state.py` — pure conversation state
   transition contract.
 - `apps/api/app/routers/conversation.py` — Conversation API endpoints.
+- `apps/api/app/services/conversation/orchestrator.py` — M11.0.5
+  Conversation Orchestrator / Dispatcher service skeleton.
 - `apps/cli/wagent/conversation.py` — `wagent conversation` runtime
   conversation CLI.
 - `apps/cli/tests/test_conversation.py` — CLI regression tests.
@@ -289,9 +293,10 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 **Planned / partially implemented service areas:**
 
-- Conversation domain / store / API / CLI are implemented through M11.0.4.
-  Conversation Orchestrator / Dispatcher behavior and Agent routing remain
-  planned for 11.0.5+.
+- Conversation domain / store / API / CLI / Orchestrator service skeleton are
+  implemented through M11.0.5. Replay hook side effects, public dispatch
+  endpoint, CLI dispatch integration, Agent routing, confirmation, recovery,
+  and teaching remain planned for 11.0.6+.
 - L2 teaching support, highlight targets, and user action recording.
 - Artifact lifecycle handling.
 - Failure evidence / negative knowledge.

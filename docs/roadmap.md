@@ -176,7 +176,10 @@ Progress:
   (`84 passed`).
 - 11.0.4 Runtime CLI Shell shipped: non-interactive `wagent conversation`
   commands for session, message, transcript, and events (`67 passed`).
-- Next M11.0 execution package: 11.0.5 Orchestrator Dispatcher.
+- 11.0.5 Orchestrator Dispatcher shipped: service-only dispatcher skeleton
+  with `dispatch_user_input` and `dispatch_engine_event` placeholder
+  (`101 passed`). No replay hook, no new CLI commands, no new HTTP endpoints.
+- Next M11.0 execution package: 11.0.6 Explicit Replay Command Hook.
 
 Expected delivery:
 
