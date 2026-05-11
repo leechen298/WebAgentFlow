@@ -365,8 +365,8 @@ M11.0 Runtime Conversation Shell & Agent Orchestration 已完成到 11.0.7。
 - conversation runtime tests and evidence
 
 M11.0 建立了 runtime loop 基座，但仍未实现 task-to-path planning、Task
-Path Planner / 任务路径规划器（legacy: Agent D）、Task Result Reporter /
-任务结果汇报器（legacy: Agent E）、slot binding 或 task result verification。M11.0 的最后一个功能
+Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、
+slot binding 或 task result verification。M11.0 的最后一个功能
 连接点是显式 `/replay <learned_path_id> <url>`：它只使用用户给出的 path id
 和 URL，不做 path selection、不做 task planning、不做 slot binding。
 
@@ -376,8 +376,8 @@ M11.1 是第一个 L3 Actual Work MVP。用户通过 M11.0 conversation surface
 提交任务；WebAgentFlow 需要从 LearnedPath catalog 中检索候选路径、选择
 路径、绑定参数、请求确认、执行 replay、验证结果、汇报结果。
 
-M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Agent D）
-和 Task Result Reporter / 任务结果汇报器（legacy: Agent E）。
+M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器和 Task Result
+Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 - Task Path Planner 不能读 raw HTML，不能逐步控制浏览器，只能基于 user task、
   LearnedPath catalog、negative / replay evidence、available route
@@ -411,9 +411,20 @@ M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Age
   `SlotBindingProposal`, `ConfirmationRequirement`, `RiskHint`,
   `ConsentRequirement`, `PostconditionSignal`, `TaskExecutionResult`,
   `ArtifactReference`, `AgentDPlannerInput/Output`, `AgentEReporterInput/Output`。
-- `apps/api/tests/test_task_planning_schemas.py` — 25 tests passed，ruff clean。
+- `apps/api/tests/test_task_planning_schemas.py` — 33 tests passed，ruff clean。
 - `TrustLevel = Literal["provisional", "confirmed", "flaky", "deprecated"]`
   校验 `LearnedPathCandidate.trust`。
+- `Severity` / `ArtifactStatus` literals、`raw_text` / `hit_count` /
+  `RouteStep.order` 基础约束。
+
+验证：
+
+- `cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_schemas.py -v`
+- 结果：`33 passed`
+- `cd apps/api && ../../.venv/bin/ruff check app/schemas/task_planning.py tests/test_task_planning_schemas.py`
+- 结果：`All checks passed!`
+- `git diff --check`
+- 结果：clean
 
 边界（已遵守）：
 
@@ -432,11 +443,46 @@ M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Age
 
 目标：
 
-- 从 LearnedPath catalog 检索与 task / page / scenario 匹配的候选路径。
-- 排序候选路径。
-- 读取 trust、hit_count、drift evidence、negative evidence。
+- 基于 `TaskIntent`、page / scenario hints、LearnedPath catalog metadata，
+  从 LearnedPath store 中检索候选路径。
+- 输出 `LearnedPathCandidate` 列表。
+- 对候选路径做第一版 deterministic ranking。
+- 评分考虑：
+  - page_template match
+  - scenario match
+  - trust status
+  - hit_count
+  - task text / scenario / page hint keyword overlap
+  - drift evidence summary
+  - negative evidence summary
+  - deprecated path exclusion or heavy penalty
 - 不调用 Task Path Planner。
+- 不调用 LLM。
 - 不执行 replay。
+- 不做 slot binding。
+
+边界：
+
+- 不做 Task Path Planner implementation。
+- 不做 Task Result Reporter implementation。
+- 不做 slot binding。
+- 不做 route plan generation。
+- 不做 confirmation gate。
+- 不执行 replay。
+- 不调用 autonomous run。
+- 不读取 raw HTML。
+- 不做 hidden relearning。
+- 不做 E2E。
+- 不加入 user / account / tenant 字段。
+
+预期触及：
+
+- `apps/api/app/services/task_planning/retrieval.py` 或等价 module。
+- `apps/api/app/services/task_planning/__init__.py`。
+- `apps/api/app/repos/learned_paths_repo.py`，如需新增 read-only query
+  method，保持最小改动。
+- `apps/api/tests/test_task_planning_retrieval.py`。
+- `docs/iterations/m11/11.1.2-learned-path-retrieval-ranking/review.md`。
 
 ### 11.1.3 · Slot binding contract and deterministic binding MVP
 
@@ -450,7 +496,7 @@ M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Age
 - 输出 slot binding proposal。
 - 不执行 replay。
 
-### 11.1.4 · Task Path Planner MVP（legacy: Agent D）
+### 11.1.4 · Task Path Planner MVP
 
 状态：future。
 
@@ -486,7 +532,7 @@ M11.1 引入 / 具体化 Task Path Planner / 任务路径规划器（legacy: Age
 - 不做 path selection。
 - 不调用 autonomous run。
 
-### 11.1.7 · Result verification and Task Result Reporter（legacy: Agent E）
+### 11.1.7 · Result verification and Task Result Reporter
 
 状态：future。
 
