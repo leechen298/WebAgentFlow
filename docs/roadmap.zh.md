@@ -150,10 +150,17 @@ M11.0 建立第一版运行时产品入口，让用户可以和 WebAgentFlow 沟
 迭代文档：
 [`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/)。
 
-状态：11.0.1 到 11.0.4 已交付 conversation domain contract、
-DB-backed session store、Conversation API 和 CLI-first runtime conversation
-shell（`wagent conversation`）。下一步 M11.0 执行包：11.0.5 Orchestrator
-Dispatcher。
+进度：
+
+- 11.0.1 Conversation Domain Contract 已交付：schemas、slash-command
+  parser 和纯 state transitions（`29 passed`）。
+- 11.0.2 Conversation Session Store 已交付并 hardening：DB-backed sessions、
+  messages、events 和 repository validation（`61 passed`）。
+- 11.0.3 Conversation API 已交付：7 个 `/conversation/...` endpoints
+  （`84 passed`）。
+- 11.0.4 Runtime CLI Shell 已交付：非交互式 `wagent conversation`
+  session、message、transcript、events 命令（`67 passed`）。
+- 下一步 M11.0 执行包：11.0.5 Orchestrator Dispatcher。
 
 预期交付：
 

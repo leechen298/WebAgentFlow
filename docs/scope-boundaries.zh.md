@@ -8,8 +8,9 @@
 
 ## 当前交付里程碑
 
-当前执行包是 **M11.0 · Runtime Conversation Shell & Agent Orchestration /
-运行时沟通与 Agent 编排**。迭代文档：
+当前执行包是 **11.0.5 · Orchestrator Dispatcher**，归属于 **M11.0 ·
+Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排**。
+迭代文档：
 [`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/)。
 
 M11.0 是 runtime loop foundation。本轮范围是：
@@ -28,11 +29,16 @@ M11.0 是 runtime loop foundation。本轮范围是：
 - `11.0.3-conversation-api`
 - `11.0.4-runtime-cli-shell`
 
+刚完成的执行包：`11.0.4-runtime-cli-shell`。
 下一步 M11.0 执行包：`11.0.5-orchestrator-dispatcher`。
 
 M11.0 不做 path selection、不做 task planning、不做 slot binding，也不实现
 Agent D / E / F / G / H 行为。规划语言使用 M<N> 指交付里程碑，使用
 L1/L2/L3 指生命周期阶段。
+
+11.0.5 本身不新增 replay hook、不新增 CLI 功能、不做 E2E、不做
+task-to-path planning、不实现 Agent D / E / F / G / H，也不做 autonomous
+learning。显式 replay hook 属于 11.0.6。
 
 刚完成的 M10 执行包：`10.2-replay-execution-drift-detection`。
 M10.2 现在作为历史参考。它实现了 LearnedPath replay 和 drift detection：

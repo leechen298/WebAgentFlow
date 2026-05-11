@@ -48,7 +48,8 @@ CLI 术语：
 
 - 当前 `wagent verify` / `verify-scenario` 是开发验证 skill 后端。
 - M11.0 runtime conversation CLI 是 `wagent conversation`，用户通过
-  Conversation API 和 WebAgentFlow 沟通。
+  Conversation API 和 WebAgentFlow 沟通。第一版是非交互式 session /
+  message / transcript / events CLI。
 - M16 未来可能开放稳定 external CLI / Skill / Tool 接口，供外部调度和集成。
 - 这三类入口必须区分清楚，不要混用。
 
@@ -255,9 +256,28 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/api/app/schemas/` —— Pydantic 契约（page_analysis、
   page_verification、llm、ast、common）。
 
-**规划中的服务区域（尚不是已实现文件路径）：**
+**当前重点 —— M11 runtime conversation foundation：**
 
-- Runtime conversation / orchestration session state 和 Agent routing。
+- `apps/api/app/schemas/conversation.py` —— M11.0 conversation 枚举、领域
+  contract 和 API request / response schema。
+- `apps/api/app/models/conversation.py` —— DB-backed conversation session /
+  message / event ORM models。
+- `apps/api/app/repos/conversation_repo.py` —— conversation session / message /
+  event repository。
+- `apps/api/app/services/conversation/commands.py` —— 纯 slash-command parser
+  contract。
+- `apps/api/app/services/conversation/state.py` —— 纯 conversation state
+  transition contract。
+- `apps/api/app/routers/conversation.py` —— Conversation API endpoints。
+- `apps/cli/wagent/conversation.py` —— `wagent conversation` runtime
+  conversation CLI。
+- `apps/cli/tests/test_conversation.py` —— CLI regression tests。
+
+**规划中 / 部分已实现的服务区域：**
+
+- Conversation domain / store / API / CLI 已通过 M11.0.4 实现。
+  Conversation Orchestrator / Dispatcher 行为和 Agent routing 仍规划在
+  11.0.5+。
 - L2 teaching support、highlight targets 和 user action recording。
 - Artifact lifecycle handling。
 - Failure evidence / negative knowledge。

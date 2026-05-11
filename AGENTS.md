@@ -51,7 +51,8 @@ CLI terminology:
 - Current `wagent verify` / `verify-scenario` is a development verification
   skill backend.
 - M11.0 runtime conversation CLI is `wagent conversation`, where the user
-  talks to WebAgentFlow through the Conversation API.
+  talks to WebAgentFlow through the Conversation API. The first version is a
+  non-interactive session / message / transcript / events CLI.
 - M16 may expose stable external CLI / Skill / Tool interfaces for external
   schedulers and integrations.
 - Keep those three surfaces distinct.
@@ -231,7 +232,24 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 ## Key File Locations
 
-**Current focus — autonomous exploration + M10 path assets:**
+**Current focus — M11 runtime conversation foundation:**
+
+- `apps/api/app/schemas/conversation.py` — M11.0 conversation enums,
+  domain contracts, and API request / response schemas.
+- `apps/api/app/models/conversation.py` — DB-backed conversation session,
+  message, and event ORM models.
+- `apps/api/app/repos/conversation_repo.py` — conversation session / message /
+  event repository.
+- `apps/api/app/services/conversation/commands.py` — pure slash-command
+  parser contract.
+- `apps/api/app/services/conversation/state.py` — pure conversation state
+  transition contract.
+- `apps/api/app/routers/conversation.py` — Conversation API endpoints.
+- `apps/cli/wagent/conversation.py` — `wagent conversation` runtime
+  conversation CLI.
+- `apps/cli/tests/test_conversation.py` — CLI regression tests.
+
+**Autonomous exploration + M10 path assets:**
 
 - `apps/api/app/services/learning/autonomous_explorer.py` — orchestrator,
   SSE event emitter, Supervisor LLM call.
@@ -268,9 +286,11 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/api/app/schemas/` — Pydantic contracts (page_analysis,
   page_verification, llm, ast, common).
 
-**Planned service areas (not implemented file paths yet):**
+**Planned / partially implemented service areas:**
 
-- Runtime conversation / orchestration session state and Agent routing.
+- Conversation domain / store / API / CLI are implemented through M11.0.4.
+  Conversation Orchestrator / Dispatcher behavior and Agent routing remain
+  planned for 11.0.5+.
 - L2 teaching support, highlight targets, and user action recording.
 - Artifact lifecycle handling.
 - Failure evidence / negative knowledge.

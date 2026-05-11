@@ -166,10 +166,17 @@ the full functional loop before polishing richer operator surfaces.
 Iteration docs:
 [`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/).
 
-Status: 11.0.1 through 11.0.4 have shipped the conversation domain
-contract, DB-backed session store, Conversation API, and CLI-first runtime
-conversation shell (`wagent conversation`). Next M11.0 execution package:
-11.0.5 Orchestrator Dispatcher.
+Progress:
+
+- 11.0.1 Conversation Domain Contract shipped: schemas, slash-command
+  parser, and pure state transitions (`29 passed`).
+- 11.0.2 Conversation Session Store shipped and hardened: DB-backed
+  sessions, messages, events, repository validation (`61 passed`).
+- 11.0.3 Conversation API shipped: seven `/conversation/...` endpoints
+  (`84 passed`).
+- 11.0.4 Runtime CLI Shell shipped: non-interactive `wagent conversation`
+  commands for session, message, transcript, and events (`67 passed`).
+- Next M11.0 execution package: 11.0.5 Orchestrator Dispatcher.
 
 Expected delivery:
 

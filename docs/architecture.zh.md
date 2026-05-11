@@ -10,12 +10,12 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
 
 1. **表示层** —— Vue 控制台提供面向操作者的界面。
 2. **应用层** —— FastAPI 服务承载 API 契约、编排入口、集成边界。
-3. **Conversation / Orchestration 层** —— 规划中的运行时层，靠近
-   FastAPI application 边界。它连接用户消息、Agent 调用、浏览器执行
-   事件、确认门、中断 / 恢复对话、接管和教学模式。它是代码侧 session
-   controller / dispatcher，不是逐步选择浏览器动作的 LLM controller。
-   Runtime Conversation Surface 初期可以是 CLI，后续也可以通过稳定
-   CLI / API contract 被用户自建系统或操作台调用。
+3. **Conversation / Orchestration 层** —— 靠近 FastAPI application 边界的
+   运行时层。M11.0.4 已实现 domain contract、DB-backed session / message /
+   event store、Conversation API 和非交互式 `wagent conversation` CLI。
+   Conversation Orchestrator / Dispatcher 行为、Agent routing、确认、恢复、
+   教学和 replay side effects 仍是后续工作。它是代码侧 session controller
+   / dispatcher，不是逐步选择浏览器动作的 LLM controller。
 4. **执行层** —— Playwright runtime + 异步 worker，负责浏览器自动化。
 5. **基础设施层** —— PostgreSQL、Redis、MinIO 分别提供持久化、缓存、对象存储。
 
@@ -26,8 +26,8 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
   artifact display 和更丰富的 workbench 面板。
 - `apps/api` —— HTTP API、LLM provider 层、autonomous exploration、
   LearnedPath persistence / replay、page verification、validation-api mock
-  后端。未来可承载 conversation sessions、orchestrator endpoints、Agent
-  routing、artifact metadata 和 failure-evidence APIs。
+  后端、conversation domain / store / API。未来可承载 orchestrator
+  endpoints、Agent routing、artifact metadata 和 failure-evidence APIs。
 - `apps/worker` —— 异步执行骨架（当前是脚手架）。
 - `apps/validation-site` —— 自主探索的自建测试 fixture（login、users 等）。
 - `apps/cli` —— Python CLI（`wagent`）与 `verify-scenario` Claude Code
@@ -54,7 +54,10 @@ Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent
   catalog 和 replay / drift。
 - M11.0 Runtime Conversation Shell & Agent Orchestration 已交付
   conversation domain contract、DB-backed session store、Conversation API 和
-  CLI-first runtime conversation shell。
+  CLI-first runtime conversation shell（`wagent conversation`）。
+- 下一步 M11.0 执行包是 `11.0.5-orchestrator-dispatcher`；它应添加
+  dispatcher 行为，但不做 replay hook side effect、task planning 或
+  Agent D / E / F / G / H 具体实现。
 - `apps/worker` 仍是脚手架。
 - L2 用户引导学习、L3 task execution、Conversation Orchestrator 行为、
   Agent D / E / F / G / H routing，以及 Agent H Teaching Guide Agent 都是
@@ -253,18 +256,20 @@ conversation、teaching、artifact、evidence 服务是 planned service areas，
 **顶层平铺 services**：`html_ast_parser.py`、`ast_simplifier.py`、
 `llm_provider.py`。
 
-### Planned Service Areas / 规划中的服务区域
+### Planned Service Areas / 规划中和部分已实现的服务区域
 
-这些服务区域是 M11+ 的架构占位，不应被理解为当前已经存在的 package：
+这些服务区域是 M11+ 的架构占位和当前实现边界说明：
 
-**`services/conversation/`** —— 规划中的 runtime conversation 和
-orchestration：
+**`services/conversation/`** —— 部分已实现的 runtime conversation foundation：
 
-- session state
-- Conversation Orchestrator / Dispatcher
-- 用户消息和 engine event routing
-- message log
-- confirmation、abort、recovery、takeover、teaching-mode state
+- 已实现：domain-level slash-command parser 和纯 state transition contract
+  （`commands.py`、`state.py`）
+- 已实现：DB-backed session / message / event store 和 Conversation API
+  （models / repos / routers）
+- 已实现：调用 Conversation API 的 `wagent conversation` CLI
+- 11.0.5+ 规划：Conversation Orchestrator / Dispatcher、用户消息和 engine
+  event routing、Agent routing 边界
+- 后续规划：confirmation、abort、recovery、takeover、teaching-mode 行为
 
 **`services/teaching/`** —— 规划中的 L2 teaching 支撑：
 

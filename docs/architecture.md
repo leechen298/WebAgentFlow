@@ -13,14 +13,15 @@ runtime.
 1. **Presentation** — Vue console provides operator-facing interfaces.
 2. **Application** — FastAPI service owns API contracts, orchestration entry
    points, integration boundaries.
-3. **Conversation / Orchestration** — planned runtime layer near the
-   FastAPI application boundary. It will connect user messages, Agent
-   calls, browser execution events, confirmation gates, abort / recovery
-   dialogue, takeover, and teaching mode. It is a code-side session
-   controller / dispatcher, not an LLM controller that chooses browser
-   actions step by step. The Runtime Conversation Surface can start as
-   a CLI and later be called by user-owned systems or operator consoles
-   through stable CLI / API contracts.
+3. **Conversation / Orchestration** — runtime layer near the FastAPI
+   application boundary. Domain contracts, DB-backed session / message /
+   event store, Conversation API, and the non-interactive
+   `wagent conversation` CLI are implemented through M11.0.4.
+   Conversation Orchestrator / Dispatcher behavior, Agent routing,
+   confirmation, recovery, teaching, and replay side effects remain
+   planned follow-up work. This layer is a code-side session controller /
+   dispatcher, not an LLM controller that chooses browser actions step by
+   step.
 4. **Execution** — Playwright runtime + async worker for browser automation.
 5. **Infrastructure** — PostgreSQL, Redis, MinIO for persistence, cache, object
    storage.
@@ -33,9 +34,9 @@ runtime.
   surfaces, artifact display, and richer workbench panels.
 - `apps/api` — HTTP API, LLM provider layer, autonomous exploration,
   LearnedPath persistence / replay, page verification, validation-api
-  mock backend. Planned future responsibilities include conversation
-  sessions, orchestrator endpoints, Agent routing, artifact metadata,
-  and failure-evidence APIs.
+  mock backend, conversation domain / store / API. Planned future
+  responsibilities include orchestrator endpoints, Agent routing, artifact
+  metadata, and failure-evidence APIs.
 - `apps/worker` — async execution scaffold (currently scaffold).
 - `apps/validation-site` — self-hosted test fixtures (login, users, …)
   that autonomous exploration runs against.
@@ -65,7 +66,10 @@ Current code status:
   catalog, and replay / drift.
 - M11.0 Runtime Conversation Shell & Agent Orchestration has shipped the
   conversation domain contract, DB-backed session store, Conversation API,
-  and CLI-first runtime conversation shell.
+  and CLI-first runtime conversation shell (`wagent conversation`).
+- The next M11.0 package is `11.0.5-orchestrator-dispatcher`; it should add
+  dispatcher behavior without replay hook side effects, task planning, or
+  Agent D / E / F / G / H implementations.
 - `apps/worker` is still a scaffold.
 - L2 user-guided learning, L3 task execution, Conversation Orchestrator
   behavior, Agent routing for D / E / F / G / H, and Agent H Teaching Guide
@@ -353,14 +357,18 @@ should use the sub-package paths.
 These service areas are architecture placeholders for M11+ work; they
 should not be read as existing packages:
 
-**`services/conversation/`** — planned runtime conversation and
-orchestration:
+**`services/conversation/`** — partially implemented runtime conversation
+foundation:
 
-- session state
-- Conversation Orchestrator / Dispatcher
-- user message and engine event routing
-- message log
-- confirmation, abort, recovery, takeover, and teaching-mode state
+- implemented: domain-level slash-command parser and pure state transition
+  contracts (`commands.py`, `state.py`)
+- implemented: DB-backed session / message / event store and Conversation API
+  in models / repos / routers
+- implemented: `wagent conversation` CLI calling the Conversation API
+- planned for 11.0.5+: Conversation Orchestrator / Dispatcher, user message
+  and engine event routing, and Agent routing boundaries
+- planned later: confirmation, abort, recovery, takeover, and teaching-mode
+  behavior
 
 **`services/teaching/`** — planned L2 teaching support:
 
