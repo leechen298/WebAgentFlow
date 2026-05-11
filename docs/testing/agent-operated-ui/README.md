@@ -114,6 +114,12 @@ docs/testing/results/YYYY-MM-DD-console-operator-visual-ui-exploratory.md
 
 ### AUI-03 · Validation-site Browser Smoke
 
+Case file:
+
+```text
+docs/testing/agent-operated-ui/cases/validation-site-browser-smoke.md
+```
+
 目标：
 
 - 打开 `/login`。
