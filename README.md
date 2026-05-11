@@ -14,20 +14,28 @@ The product model uses three lifecycle stages:
 - **L2 User-Guided Learning** — planned user demonstration and guided teaching.
 - **L3 Actual Work** — planned task-to-path execution from learned paths.
 
-**M10 Path Asset Foundation** has completed. The next planned delivery
-package is **M11.0 Runtime Conversation Shell & Agent Orchestration**.
+**M10 Path Asset Foundation** has completed. **M11.0 Runtime Conversation
+Shell & Agent Orchestration** is in progress.
 
 - **10.1 LearnedPath persistence** — shipped.
 - **10.1.5 LearnedPath catalog** — shipped.
 - **10.2 Replay execution + drift detection** — shipped, with replay API,
   catalog replay UI, deterministic E2E, and a first Codex exploratory
   evidence report.
+- **11.0.1 Conversation Domain Contract** — shipped, with `29 passed`.
+- **11.0.2 Conversation Session Store** — shipped, with `61 passed`.
+- **11.0.3 Conversation API** — shipped, with `84 passed`.
+- **11.0.4 Runtime CLI Shell** — shipped, with non-interactive
+  `wagent conversation` commands and `67 passed`.
+
+Current next package: **11.0.5 Orchestrator Dispatcher**.
 
 Not yet implemented:
 
+- Conversation Orchestrator / Dispatcher behavior.
+- Agent routing for D / E / F / G / H.
 - L2 guided teaching and Agent H Teaching Guide Agent.
 - L3 task-to-path execution.
-- Runtime conversation shell and Conversation Orchestrator.
 - Multi-page workflow composition and full artifact lifecycle.
 
 See [product-model.md](./docs/product-model.md), [roadmap.md](./docs/roadmap.md),
@@ -47,6 +55,10 @@ product shape and milestone boundaries.
   controlled learning / verification scenarios.
 - **`wagent` verify-scenario backend** — Python CLI support used by the
   `verify-scenario` skill for auditable development verification.
+- **`wagent conversation` runtime conversation CLI** — non-interactive CLI for
+  creating conversation sessions, sending user messages, reading session
+  status, and viewing transcript, messages, and events. It is backed by the
+  Conversation API and is not the M16 external CLI.
 
 ## CLI-First Direction
 
@@ -55,14 +67,17 @@ before polishing richer operator surfaces. Developer-capable users should be
 able to connect WebAgentFlow to their own systems or operator consoles through
 stable CLI/API contracts.
 
-The current `wagent verify` path is a development verification backend. The
-future runtime conversation CLI belongs to M11.0, and the stable external
-CLI/API surface belongs to M16.
+The current `wagent verify` path is a development verification backend.
+`wagent conversation` has shipped as the M11.0 runtime conversation CLI
+foundation. It is not the M16 external CLI, and it does not yet implement
+Orchestrator / Dispatcher behavior, task planning, replay side effects, or
+Agent routing.
 
 ## Roadmap Snapshot
 
 - **M10** — Path Asset Foundation: persistence, catalog, replay, drift detection.
-- **M11.0** — Runtime Conversation Shell & Agent Orchestration.
+- **M11.0** — Runtime Conversation Shell & Agent Orchestration: 11.0.1–11.0.4
+  shipped; next is 11.0.5 Orchestrator Dispatcher.
 - **M11.1** — Task-to-Path Planning & Execution MVP.
 - **M12** — Recovery / Abort Dialogue.
 - **M13** — User-guided learning, guided teaching, and Agent H.
