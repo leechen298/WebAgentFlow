@@ -1,7 +1,7 @@
 """Tests for ``wagent conversation``.
 
-The conversation subcommand is a thin HTTP client around the 11.0.3
-Conversation API. These tests pin its contract:
+The conversation subcommand is a thin HTTP client around the Conversation API
+and the 11.0.6 dispatch endpoint. These tests pin its contract:
 
     - stdout is exactly one JSON object (or array)
     - stderr carries errors

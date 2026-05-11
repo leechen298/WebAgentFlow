@@ -1,6 +1,6 @@
 """``wagent conversation`` — runtime conversation CLI.
 
-Thin client around the 11.0.3 Conversation API.
+Thin client around the Conversation API and the 11.0.6 dispatch endpoint.
 """
 
 from __future__ import annotations

@@ -4,16 +4,20 @@ from __future__ import annotations
 
 import inspect
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy.orm import Session
 
+from app.models.learned_path import TrustStatus
 from app.repos.conversation_repo import ConversationRepository
+from app.repos.learned_paths_repo import LearnedPathRepository
 from app.schemas.conversation import (
     ConversationEventType,
     ConversationReplaySummary,
 )
 from app.services.conversation.orchestrator import ConversationOrchestrator
+from app.services.conversation.replay_hook import run_explicit_replay
 
 
 @pytest.fixture
@@ -39,6 +43,24 @@ def _make_summary(
 def _create_session(repo: ConversationRepository, status: str = "idle") -> str:
     session = repo.create_session(initial_status=status)
     return session.id
+
+
+def _create_learned_path(db_session: Session, *, trust: TrustStatus) -> str:
+    row, _ = LearnedPathRepository(db_session).ingest_run(
+        page_template="/users",
+        query_signature={},
+        dom_fingerprint="a" * 64,
+        scenario="filter_by_status",
+        actions=[{"step": 1, "action_type": "fill", "target_selector": "#q"}],
+        source_run_id=None,
+    )
+    if trust != TrustStatus.PROVISIONAL:
+        row = LearnedPathRepository(db_session).set_trust(
+            row.id,
+            trust,
+            reason=f"test {trust.value}",
+        )
+    return row.id
 
 
 # ── Replay command triggers handler ────────────────────────────────────────────
@@ -149,6 +171,27 @@ def test_replay_bad_status_fails_session(
     assert session.status == "failed"
 
 
+def test_deprecated_learned_path_does_not_call_run_replay(
+    db_session: Session,
+) -> None:
+    path_id = _create_learned_path(db_session, trust=TrustStatus.DEPRECATED)
+
+    with patch(
+        "app.services.conversation.replay_hook.run_replay",
+        side_effect=AssertionError("run_replay should not be called"),
+    ):
+        result = run_explicit_replay(
+            db_session,
+            path_id,
+            "http://127.0.0.1:5175/users",
+        )
+
+    assert result.learned_path_id == path_id
+    assert result.replay_status == "deprecated"
+    assert result.drift_status == "none"
+    assert result.error == "LearnedPath is deprecated"
+
+
 def test_replay_handler_exception_maps_to_failed(repo: ConversationRepository) -> None:
     def handler(_lid: str, _url: str) -> ConversationReplaySummary:
         raise RuntimeError("browser exploded")
@@ -215,6 +258,32 @@ def test_malformed_replay_does_not_call_handler(repo: ConversationRepository) ->
     assert result.next_status == "idle"
 
 
+def test_dispatch_metadata_is_persisted_on_message_and_command_event(
+    repo: ConversationRepository,
+) -> None:
+    orch = ConversationOrchestrator(repo)
+    session_id = _create_session(repo, status="idle")
+
+    orch.dispatch_user_input(
+        session_id,
+        "do some work",
+        metadata={"source": "api", "request_id": "req-1"},
+    )
+
+    messages = repo.list_messages(session_id)
+    assert messages[0].metadata_json == {"source": "api", "request_id": "req-1"}
+
+    events = repo.list_events(session_id)
+    command_parsed = [
+        event for event in events
+        if event.type == ConversationEventType.COMMAND_PARSED.value
+    ][0]
+    assert command_parsed.payload_json["dispatch_metadata"] == {
+        "source": "api",
+        "request_id": "req-1",
+    }
+
+
 # ── No handler configured ──────────────────────────────────────────────────────
 
 
@@ -247,20 +316,22 @@ def test_replay_lifecycle_events_in_correct_order(repo: ConversationRepository) 
     orch = ConversationOrchestrator(repo, replay_handler=handler)
     session_id = _create_session(repo, status="idle")
 
-    orch.dispatch_user_input(
+    result = orch.dispatch_user_input(
         session_id, "/replay path-1 http://127.0.0.1:5175/users"
     )
 
     events = repo.list_events(session_id)
     event_types = [e.type for e in events]
 
-    # Expected: command_parsed, replay_requested, state_changed,
-    #           state_changed (to replay_running), replay_completed,
-    #           state_changed (to completed)
-    assert event_types[0] == ConversationEventType.COMMAND_PARSED.value
-    assert ConversationEventType.REPLAY_REQUESTED.value in event_types
-    assert ConversationEventType.REPLAY_COMPLETED.value in event_types
-    assert event_types.count(ConversationEventType.STATE_CHANGED.value) >= 2
+    assert event_types == [
+        ConversationEventType.COMMAND_PARSED.value,
+        ConversationEventType.REPLAY_REQUESTED.value,
+        ConversationEventType.STATE_CHANGED.value,
+        ConversationEventType.STATE_CHANGED.value,
+        ConversationEventType.REPLAY_COMPLETED.value,
+        ConversationEventType.STATE_CHANGED.value,
+    ]
+    assert result.events_appended == event_types
 
 
 def test_replay_event_payload_contains_summary(repo: ConversationRepository) -> None:

@@ -30,6 +30,11 @@
 - malformed `/replay` 返回 HTTP 200 + `allowed=false` + error，不调用 replay。
 - missing session 返回 HTTP 404。
 - replay resource / runtime failures 返回 HTTP 200 + `replay_failed` event + replay result / error summary。
+- Deprecated LearnedPath 不能通过 conversation replay hook 执行；必须返回
+  `replay_status=deprecated` 的失败 summary，并记录为 replay failure。
+- Dispatch request metadata 必须写入 user message metadata，并进入
+  `command_parsed` audit payload，不允许静默丢弃。
+- `DispatchResult.events_appended` 顺序必须和实际持久化 event 顺序一致。
 
 ## 实现证据
 
@@ -47,30 +52,58 @@
 - `apps/cli/tests/test_conversation.py` — 更新 `send` 测试为 dispatch endpoint。
 - `apps/api/tests/test_conversation_api.py` — 新增 6 个 dispatch endpoint 测试。
 
+### Hardening 补丁（2026-05-11）
+
+- `apps/api/app/services/conversation/replay_hook.py`：
+  - deprecated LearnedPath 直接返回 `ConversationReplaySummary(replay_status="deprecated")`。
+  - 不调用 M10 `run_replay()`，避免绕过 M10 trust gate。
+- `apps/api/app/services/conversation/orchestrator.py`：
+  - `dispatch_user_input(..., metadata=None)` 接收 dispatch metadata。
+  - user message metadata 持久化。
+  - `command_parsed` payload 记录 `dispatch_metadata`。
+  - replay lifecycle event 顺序调整为 running -> replay_completed / replay_failed -> final state_changed。
+  - `events_appended` 与实际持久化 event 顺序保持一致。
+- `apps/api/app/routers/conversation.py`：
+  - dispatch endpoint 将 `ConversationDispatchRequest.metadata` 传入 orchestrator。
+- `apps/api/tests/test_conversation_replay_hook.py`：
+  - 覆盖 deprecated path 不调用 `run_replay()`。
+  - 覆盖 dispatch metadata 持久化。
+  - 覆盖 `events_appended` 顺序等于 persisted event type 顺序。
+- `apps/api/tests/test_conversation_api.py`：
+  - 覆盖 dispatch metadata 通过 API 写入 message / event。
+  - 覆盖 mocked replay success 和 drifted dispatch response。
+- `apps/cli/wagent/conversation.py` / `apps/cli/tests/test_conversation.py`：
+  - 更新文件头注释，不再只描述为 11.0.3 store-level API client。
+
 ### 测试覆盖
 
-API 共 179 passed：
+API 共 184 passed：
 
-- `test_conversation_replay_hook.py` — 16 passed：
+- `test_conversation_replay_hook.py` — 18 passed：
   - replay command calls handler and completes (succeeded)
   - replay observed also completes
   - replay drifted fails session
   - replay unsupported / failed / runtime_error / candidate_not_found fail session
+  - deprecated LearnedPath does not call M10 `run_replay`
   - replay handler exception maps to failed
   - free text does not call handler
   - malformed replay does not call handler
   - replay without handler stops at replay_requested
-  - replay lifecycle events in correct order
+  - replay lifecycle events and returned `events_appended` stay in the same order
   - replay event payload contains summary
   - replay status goes idle -> replay_running -> completed
   - replay uses exact path id (no selection)
   - orchestrator does not import autonomous / LLM / CLI
+  - dispatch metadata persists on user message and `command_parsed` event
 
-- `test_conversation_api.py` — 29 passed：
+- `test_conversation_api.py` — 32 passed：
   - dispatch free text
+  - dispatch metadata persists on user message and audit event
   - dispatch missing session -> 404
   - dispatch malformed replay -> allowed=false, no replay
   - dispatch replay with missing path -> candidate_not_found, failed
+  - dispatch replay success returns replay summary
+  - dispatch replay drift returns failed summary
   - dispatch response does not expose engine_command
   - dispatch does not expose identity/tenant fields
 
@@ -89,7 +122,7 @@ cd apps/api && ../../.venv/bin/pytest \
   tests/test_conversation_state.py \
   tests/test_learned_path_replay.py \
   tests/test_exploration_learned_paths_api.py -v
-# 179 passed
+# 184 passed
 
 cd apps/cli && ../../.venv/bin/pytest tests/test_conversation.py tests/test_verify.py tests/test_skill.py -v
 # 67 passed

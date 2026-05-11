@@ -6,6 +6,8 @@ import inspect
 
 from fastapi.testclient import TestClient
 
+from app.schemas.conversation import ConversationReplaySummary
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
@@ -319,6 +321,33 @@ def test_dispatch_free_text(client: TestClient) -> None:
     assert data["replay_result"] is None
 
 
+def test_dispatch_metadata_is_persisted(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={
+            "input": "hello world",
+            "metadata": {"source": "api-test", "request_id": "req-1"},
+        },
+    )
+
+    assert resp.status_code == 200
+
+    messages_resp = client.get(f"/conversation/sessions/{session_id}/messages")
+    messages = messages_resp.json()["data"]
+    assert messages[0]["metadata"] == {"source": "api-test", "request_id": "req-1"}
+
+    events_resp = client.get(f"/conversation/sessions/{session_id}/events")
+    command_parsed = [
+        event for event in events_resp.json()["data"]
+        if event["type"] == "command_parsed"
+    ][0]
+    assert command_parsed["payload"]["dispatch_metadata"] == {
+        "source": "api-test",
+        "request_id": "req-1",
+    }
+
+
 def test_dispatch_missing_session_returns_404(client: TestClient) -> None:
     resp = client.post(
         "/conversation/sessions/not-a-real-id/dispatch",
@@ -360,6 +389,72 @@ def test_dispatch_replay_with_missing_path_returns_candidate_not_found(
     assert data["next_status"] == "failed"
     assert data["replay_result"] is not None
     assert data["replay_result"]["replay_status"] == "candidate_not_found"
+
+
+def test_dispatch_replay_success_returns_replay_summary(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    session_id = _create_session(client)
+
+    def fake_replay(_db, learned_path_id: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=learned_path_id,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            final_url=url,
+            final_title="Users",
+            step_count=2,
+        )
+
+    monkeypatch.setattr(
+        "app.services.conversation.replay_hook.run_explicit_replay",
+        fake_replay,
+    )
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "/replay path-1 http://127.0.0.1:5175/users"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["next_status"] == "completed"
+    assert data["replay_result"]["replay_status"] == "succeeded"
+    assert data["replay_result"]["step_count"] == 2
+
+
+def test_dispatch_replay_drift_returns_failed_summary(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    session_id = _create_session(client)
+
+    def fake_replay(_db, learned_path_id: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=learned_path_id,
+            url=url,
+            replay_status="drifted",
+            drift_status="target_missing",
+            drift_reasons=["Target missing for step 1"],
+        )
+
+    monkeypatch.setattr(
+        "app.services.conversation.replay_hook.run_explicit_replay",
+        fake_replay,
+    )
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "/replay path-1 http://127.0.0.1:5175/users"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["next_status"] == "failed"
+    assert data["replay_result"]["replay_status"] == "drifted"
+    assert data["replay_result"]["drift_status"] == "target_missing"
 
 
 def test_dispatch_response_does_not_expose_engine_command(

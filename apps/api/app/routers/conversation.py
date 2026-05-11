@@ -1,6 +1,6 @@
 """M11.0 runtime conversation API endpoints.
 
-Minimal HTTP facade over the 11.0.2 conversation store.
+Store-level conversation facade plus the 11.0.6 dispatch endpoint.
 """
 
 from __future__ import annotations
@@ -203,5 +203,9 @@ def dispatch_input(
         return run_explicit_replay(db, learned_path_id, url)
 
     orchestrator = ConversationOrchestrator(repo, replay_handler=replay_handler)
-    result = orchestrator.dispatch_user_input(session_id, body.input)
+    result = orchestrator.dispatch_user_input(
+        session_id,
+        body.input,
+        metadata=body.metadata,
+    )
     return ApiResponse(data=_dispatch_response(result))

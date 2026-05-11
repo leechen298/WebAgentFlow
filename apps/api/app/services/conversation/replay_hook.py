@@ -10,6 +10,7 @@ from typing import Protocol
 
 from sqlalchemy.orm import Session
 
+from app.models.learned_path import TrustStatus
 from app.repos.learned_paths_repo import LearnedPathRepository
 from app.schemas.conversation import ConversationReplaySummary
 from app.services.learning.learned_path_replay import run_replay
@@ -41,6 +42,15 @@ def run_explicit_replay(
             replay_status="candidate_not_found",
             drift_status="no_candidate",
             error="LearnedPath not found",
+        )
+
+    if learned_path.trust == TrustStatus.DEPRECATED:
+        return ConversationReplaySummary(
+            learned_path_id=learned_path_id,
+            url=url,
+            replay_status="deprecated",
+            drift_status="none",
+            error="LearnedPath is deprecated",
         )
 
     result = run_replay(learned_path, url)

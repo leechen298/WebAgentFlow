@@ -45,7 +45,12 @@ class ConversationOrchestrator:
         self._repo = repo
         self._replay_handler = replay_handler
 
-    def dispatch_user_input(self, session_id: str, raw_input: str) -> DispatchResult:
+    def dispatch_user_input(
+        self,
+        session_id: str,
+        raw_input: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> DispatchResult:
         """Dispatch a raw user input through the orchestrator.
 
         Flow:
@@ -71,6 +76,7 @@ class ConversationOrchestrator:
             session_id=session_id,
             role="user",
             content=raw_input,
+            metadata=metadata,
         )
 
         # 2. Parse command
@@ -90,6 +96,7 @@ class ConversationOrchestrator:
             "parse_error": command.error,
             "allowed": transition.allowed,
             "transition_error": transition.error,
+            "dispatch_metadata": metadata or {},
         }
         self._repo.append_event(
             session_id=session_id,
@@ -301,6 +308,14 @@ class ConversationOrchestrator:
             final_status = "failed"
             lifecycle_event = ConversationEventType.REPLAY_FAILED
 
+        # Append replay lifecycle event before the final state change so audit
+        # order mirrors the execution flow: running -> result -> final status.
+        self._repo.append_event(
+            session_id=session_id,
+            type=lifecycle_event,
+            payload=summary.model_dump(mode="json"),
+        )
+
         # Move to final status
         self._repo.update_session_status(
             session_id=session_id,
@@ -314,13 +329,6 @@ class ConversationOrchestrator:
                 "to": final_status,
                 "command_kind": "replay",
             },
-        )
-
-        # Append replay lifecycle event
-        self._repo.append_event(
-            session_id=session_id,
-            type=lifecycle_event,
-            payload=summary.model_dump(mode="json"),
         )
 
         return summary, final_status
