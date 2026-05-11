@@ -111,16 +111,16 @@
 
 ## D. Catalog UI exploratory / UI 探索
 
-本组 case 的 PASS 必须来自 visual UI exploratory 证据：Codex Browser panel /
-in-app browser 或 headed Playwright 打开真实页面，执行可见 UI 操作，并记录页面观察、
-截图、trace、video 或明确 browser observation。Headless E2E 只能作为
+本组 case 的 PASS 必须来自 Agent-operated UI exploratory 证据：Codex、Claude Code
+或其他具备浏览器能力的 Agent，或 headed Playwright，打开真实页面，执行可见 UI 操作，
+并记录页面观察、截图、trace、video 或明确 browser observation。Headless E2E 只能作为
 deterministic E2E 证据；API-only 调用不能作为本组 PASS 证据。
 
 ### CASE UI-001: replay button disabled on empty URL
 
 - 目标：确认空 URL 时不能触发 replay。
 - 执行方法：打开 LearnedPath catalog，打开 happy path drawer，不输入 URL。
-- 预期证据：Codex Browser panel / in-app browser 或 headed Playwright 的可见页面
+- 预期证据：Agent-operated browser / headed Playwright 的可见页面
   操作记录、截图/trace/video 或 browser observation 摘录。
 - PASS 条件：Replay 按钮 disabled。
 - 禁止捷径：不得只读代码推断。
@@ -129,18 +129,18 @@ deterministic E2E 证据；API-only 调用不能作为本组 PASS 证据。
 
 - 目标：确认 catalog UI 展示 happy replay 结果。
 - 执行方法：打开 happy path drawer，输入 `<validation>/users`，点击 Replay。
-- 预期证据：Codex Browser panel / in-app browser 或 headed Playwright 的可见页面
+- 预期证据：Agent-operated browser / headed Playwright 的可见页面
   操作记录、截图/trace/video 或 browser observation 摘录。
 - PASS 条件：UI 展示 `Succeeded`、`No drift`、final URL 或 step log；
   同时没有请求 `/exploration/autonomous-runs` 或 stream。
 - 禁止捷径：不得只调用 API 代替 UI 操作；不得把 headless E2E 的 PASS 直接写成
-  visual UI PASS。
+  Agent-operated UI PASS。
 
 ### CASE UI-003: flaky replay warning renders
 
 - 目标：确认 flaky/trust warning 在 UI 中可见。
 - 执行方法：打开 flaky path drawer，输入 `<validation>/users`，点击 Replay。
-- 预期证据：Codex Browser panel / in-app browser 或 headed Playwright 的可见页面
+- 预期证据：Agent-operated browser / headed Playwright 的可见页面
   操作记录、截图/trace/video 或 browser observation 摘录。
 - PASS 条件：UI 展示 replay 结果，并展示 flaky/trust warning。
 - 禁止捷径：如果文案定位失败但 API 有 warning，不得写 PASS；应写 FAIL 或
@@ -150,7 +150,7 @@ deterministic E2E 证据；API-only 调用不能作为本组 PASS 证据。
 
 - 目标：确认 target missing drift 在 UI 中可见。
 - 执行方法：打开 targetMissing path drawer，输入 `<validation>/users`，点击 Replay。
-- 预期证据：Codex Browser panel / in-app browser 或 headed Playwright 的可见页面
+- 预期证据：Agent-operated browser / headed Playwright 的可见页面
   操作记录、截图/trace/video 或 browser observation 摘录。
 - PASS 条件：UI 展示 `drifted` / `target_missing` 或 drift reason。
 - 禁止捷径：必须实际操作 UI，不得只调用 API。
@@ -159,7 +159,7 @@ deterministic E2E 证据；API-only 调用不能作为本组 PASS 证据。
 
 - 目标：确认 deprecated replay 的 422 错误能在 UI 中展示。
 - 执行方法：打开 deprecated path drawer，输入 `<validation>/users`，点击 Replay。
-- 预期证据：Codex Browser panel / in-app browser 或 headed Playwright 的可见页面
+- 预期证据：Agent-operated browser / headed Playwright 的可见页面
   操作记录、截图/trace/video 或 browser observation 摘录。
 - PASS 条件：UI 展示 error alert，错误来自 HTTP 422。
 - 禁止捷径：必须实际操作 UI，不得只调用 API。

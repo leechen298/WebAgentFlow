@@ -8,9 +8,10 @@
 - 不覆盖未来 M11.1 Task-to-Path、M12、M13。
 - 不执行测试，只整理 backlog。
 - 不改产品代码，不改测试代码，不改 package scripts。
-- 本文件会混合 unit / API / CLI / component / E2E；如果任务目标专指
-  E2E、Codex exploratory、Browser Use / Computer Use 自主网页测试，请使用
-  `e2e-codex-testing-track.md` 和 `codex-browser-computer-use.md`。
+- 本文件会混合 unit / API / CLI / component / E2E。
+- 如果任务目标专指 deterministic E2E，请使用 `e2e/README.md`。
+- 如果任务目标专指 Agent-operated UI exploratory，请使用
+  `agent-operated-ui/README.md`。
 
 ## Existing Baselines
 
@@ -93,7 +94,7 @@ Q1 关键发现：
 |---|---|
 | 把 LLM / verify-scenario / live autonomous run 标成 deterministic E2E | 依赖 LLM，不是 deterministic |
 | 把 LLM-dependent case 标成常规 CI yes | 不符合 evidence type 规则 |
-| 把 headless E2E 当成 visual UI exploratory | 证据类型不匹配 |
+| 把 headless E2E 当成 Agent-operated UI exploratory | 证据类型不匹配 |
 | conversation 写成 pure-function only | 11.0.1–11.0.4 已完成 |
 
 ---
@@ -225,7 +226,7 @@ Q1 关键发现：
 - **Evidence required**: test output confirming selectors exist in fixture HTML
 - **Implementation target**: new file `apps/api/tests/test_validation_site_selectors.py` or `apps/e2e/tests/validation-site/selectors.spec.ts`
 - **Why now**: Protects replay E2E from fixture drift. Low cost, high signal.
-- **What not to do**: Don't build full validation-site E2E. Don't test login/sessionStorage behavior. Don't add visual UI exploratory here.
+- **What not to do**: Don't build full validation-site E2E. Don't test login/sessionStorage behavior. Don't add Agent-operated UI exploratory here.
 - **Status**: **DONE** (2026-05-11) — new test at `apps/console/src/__tests__/validation-site/selector-stability.test.ts`. 14 tests covering LoginPage, UserDirectoryPage, DashboardPage selectors. Reads Vue source files directly, no running server needed. 14/14 pass.
 
 ### 10. CONSOLE-SMOKE: Console operator UI basic smoke
@@ -238,7 +239,7 @@ Q1 关键发现：
 - **Evidence required**: Vitest output
 - **Implementation target**: `apps/console/src/__tests__/components/` (new tests for uncovered pages)
 - **Why now**: 1001-line untested component is the largest coverage gap in the console suite.
-- **What not to do**: Don't add visual UI exploratory (needs headed browser). Don't add E2E for console pages. Don't test pages that don't exist yet.
+- **What not to do**: Don't add Agent-operated UI exploratory (needs headed browser). Don't add E2E for console pages. Don't test pages that don't exist yet.
 - **Status**: **DONE** (2026-05-11) — new test at `apps/console/src/__tests__/components/AutonomousWorkbenchPage.test.ts`. 6 tests: renders config card, loads specs, renders form, spec matched alert, no-match warning, error handling. 6/6 pass.
 
 ---
@@ -250,11 +251,11 @@ Q1 关键发现：
 | ID | Item | Trigger |
 |---|---|---|
 | W-01 | Additional conversation E2E variants | M11.1 或更多 runtime behavior 进入施工 |
-| W-02 | Conversation visual exploratory | 需要观察 console 呈现时 |
+| W-02 | Conversation Agent-operated UI exploratory | 需要观察 console 呈现时 |
 | W-03 | verify-scenario manual live smoke | release smoke only |
 | W-04 | Guided teaching tests | L2 teaching enters implementation |
 | W-05 | Task-to-path planning tests | M11.1 enters implementation |
-| W-06 | AutonomousWorkbenchPage visual UI exploratory | headed browser evidence available |
+| W-06 | AutonomousWorkbenchPage Agent-operated UI exploratory | headed browser evidence available |
 | W-07 | Replay DOM obstruction failure E2E | fixture design stable |
 | W-08 | Replay audit persistence | replay audit feature implemented |
 

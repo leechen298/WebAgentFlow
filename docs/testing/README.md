@@ -8,11 +8,13 @@ intent、plan、step 文档和 review。长期测试体系文档不放在
 
 ## 当前测试线与测试域
 
-WebAgentFlow 规划两条验证线：
+WebAgentFlow 当前把测试专项拆成两条主线：
 
-- 确定性 E2E 回归：稳定的 Playwright Test 套件，用来覆盖已经交付的行为。
-- Codex 探索式验证：按产品能力域执行，由 Codex 基于产品/API contract 提出边界用例，
-  并把稳定发现沉淀为长期测试用例。
+- Deterministic E2E：稳定的 Playwright Test 套件，用来覆盖已经交付的行为。
+  测试代码放在 `apps/e2e/tests/`，目标是可重复、可进入 CI。
+- Agent-operated UI Exploratory：由 Codex、Claude Code 或其他具备浏览器 /
+  Computer Use 能力的 Agent 打开真实页面操作，产出浏览器观察、截图、trace、
+  video 或 equivalent visual evidence report。它不进常规 CI，也不替代 E2E。
 
 当前已建立的测试域包括 M10.2 replay 和 M11 conversation。后续核心产品能力域可以继续在
 `docs/testing/features/` 下建立自己的测试矩阵，例如
@@ -20,27 +22,30 @@ task-execution、recovery、teaching、multi-page-workflow。不是每个小功�
 完整 E2E；小功能应归入所属能力域，只有跨模块、用户可见、真实浏览器链路等核心
 行为才需要 E2E 或探索式验证。
 
-- `replay`：已有 deterministic E2E、API exploratory 和 visual UI exploratory
+- `replay`：已有 deterministic E2E、API exploratory 和 Agent-operated UI exploratory
   证据，用于保护 M10.2 LearnedPath replay execution + drift detection。
 - `conversation`：已有 domain / repo / API / CLI 覆盖，用于保护 M11 runtime
   conversation 基础；11.0.5 Orchestrator Dispatcher、11.0.6 Explicit Replay
   Command Hook 和 11.0.7 conversation runtime E2E 已有证据。
 
-Codex exploratory validation 也按能力域执行，不做一次性全项目自动测试。新增探索式
-用例必须先明确所属能力域、证据类型、是否 CI-safe，以及是否依赖当前里程碑。
+Agent-operated UI exploratory 也按能力域执行，不做一次性全项目自动测试。新增探索式
+用例必须先明确所属能力域、证据类型、执行工具、是否 CI-safe，以及是否依赖当前里程碑。
 
-测试规划文档分三层：
+测试规划文档分层：
 
 - [full-test-matrix.md](./full-test-matrix.md)：全测试地图，覆盖 unit /
   repo / API / component / E2E / exploratory / live smoke 等所有层级，不是一次性
   施工清单。
 - [current-testing-backlog.md](./current-testing-backlog.md)：已完成功能的测试
   补全 backlog，可包含普通 API、CLI、component baseline。
-- [e2e-codex-testing-track.md](./e2e-codex-testing-track.md)：只管理
-  deterministic E2E、API exploratory、visual UI exploratory、Codex evidence
-  report 和 release-only manual live smoke。
-- [codex-browser-computer-use.md](./codex-browser-computer-use.md)：定义 Codex
-  使用 Browser Use / Computer Use 自己操作网页并产出 visual UI evidence 的测试规程。
+- [e2e/README.md](./e2e/README.md)：只管理 deterministic E2E。E2E 产物是
+  Playwright Test 代码、可重复命令输出和 result report。
+- [agent-operated-ui/README.md](./agent-operated-ui/README.md)：只管理
+  Agent-operated UI Exploratory。产物是用例、浏览器操作证据和人工可读报告。
+- [e2e-codex-testing-track.md](./e2e-codex-testing-track.md)：历史 / 过渡索引，
+  指向拆分后的 E2E 和 Agent-operated UI 文档。
+- [codex-browser-computer-use.md](./codex-browser-computer-use.md)：历史兼容入口，
+  指向工具无关的 Agent-operated UI 文档。
 
 E2E 套件不依赖 LLM 服务，不调用 `/exploration/autonomous-runs`，
 不调用 `/exploration/autonomous-runs/stream`，也不创建 live autonomous run。
@@ -51,12 +56,12 @@ E2E 套件不依赖 LLM 服务，不调用 `/exploration/autonomous-runs`，
   和稳定回归的证据。
 - API exploratory：使用 curl、Python、Node 等直接调用 API，并保留命令、退出码
   和原始响应摘录。
-- Visual UI exploratory：使用 Codex Browser panel / in-app browser，或 headed
-  Playwright 打开真实页面，执行可见 UI 操作，并记录页面观察、截图、trace、video
-  或明确的 browser observation 证据。
+- Agent-operated UI exploratory：使用 Codex、Claude Code 或其他具备浏览器 /
+  Computer Use 能力的 Agent，或 headed Playwright，打开真实页面执行可见 UI 操作，
+  并记录页面观察、截图、trace、video 或明确的 browser observation 证据。
 
-Headless E2E 不能算 visual UI exploratory。API-only 调用也不能算 visual UI
-exploratory。报告必须清楚写明采用的是哪一种证据类型。
+Headless E2E 不能算 Agent-operated UI exploratory。API-only 调用也不能算
+Agent-operated UI exploratory。报告必须清楚写明采用的是哪一种证据类型。
 
 ## 常用命令
 
@@ -73,11 +78,12 @@ pnpm run test:e2e:install
 ```
 
 查看 [full-test-matrix.md](./full-test-matrix.md) 了解全量测试地图；
-查看 [e2e-codex-testing-track.md](./e2e-codex-testing-track.md) 了解 E2E /
-Codex 专项路线图；
-查看 [codex-browser-computer-use.md](./codex-browser-computer-use.md) 了解 Codex
-自主网页操作测试规程；
-查看 [e2e.md](./e2e.md) 了解确定性 E2E 设计；
+查看 [e2e/README.md](./e2e/README.md) 了解 deterministic E2E 轨道；
+查看 [agent-operated-ui/README.md](./agent-operated-ui/README.md) 了解
+Agent-operated UI Exploratory 规程；
+查看 [e2e-codex-testing-track.md](./e2e-codex-testing-track.md) 和
+[codex-browser-computer-use.md](./codex-browser-computer-use.md) 了解历史兼容入口；
+查看 [e2e/runbook.md](./e2e/runbook.md) 了解确定性 E2E 运行说明；
 查看 [features/replay.md](./features/replay.md) 了解 M10.2 replay 测试域；
 查看 [features/conversation.md](./features/conversation.md) 了解 M11 conversation 测试域；
 查看 [exploratory/README.md](./exploratory/README.md) 了解 replay 探索式验证提示词和用例矩阵；

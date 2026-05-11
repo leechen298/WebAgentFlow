@@ -1,6 +1,6 @@
-# Codex 探索式验证提示词
+# Exploratory Testing 提示词
 
-本目录存放 Codex exploratory validation 的项目内置提示词和用例矩阵。
+本目录存放 exploratory validation 的项目内置提示词和用例矩阵。
 
 当前已建立的探索式验证只针对 M10.2 Replay 测试域。它是第二阶段测试工作流，
 不能替代 deterministic E2E，也不是 WebAgentFlow 全项目自动测试。
@@ -20,7 +20,7 @@
 - 写清哪些阻塞。
 
 PASS 必须有命令或浏览器操作证据。没有证据只能写 `NOT_RUN` 或 `BLOCKED`。
-禁止 Codex 仅凭主观判断写“测试完成”。
+禁止任何执行 Agent 仅凭主观判断写“测试完成”。
 
 ## 证据类型
 
@@ -28,12 +28,12 @@ PASS 必须有命令或浏览器操作证据。没有证据只能写 `NOT_RUN` �
 
 - deterministic E2E：Playwright Test 自动化回归，通常 headless。
 - API exploratory：直接 API 调用，并保留命令、退出码和响应摘录。
-- visual UI exploratory：Codex Browser panel / in-app browser 或 headed
-  Playwright 打开真实页面，执行可见 UI 操作。
+- Agent-operated UI exploratory：Codex、Claude Code 或其他具备浏览器能力的
+  Agent，或 headed Playwright，打开真实页面，执行可见 UI 操作。
 
-Headless E2E 不能算 visual UI exploratory。API-only 调用不能算 visual UI
-exploratory。visual UI PASS 必须包含页面观察、截图、trace、video 或明确的
-browser observation 证据。
+Headless E2E 不能算 Agent-operated UI exploratory。API-only 调用不能算
+Agent-operated UI exploratory。UI PASS 必须包含页面观察、截图、trace、video 或
+明确的 browser observation 证据。
 
 ## 当前矩阵
 
@@ -43,7 +43,7 @@ browser observation 证据。
 
 ## 硬边界
 
-Codex 探索式验证不能：
+探索式验证不能：
 
 - 调用 `/exploration/autonomous-runs`。
 - 调用 `/exploration/autonomous-runs/stream`。

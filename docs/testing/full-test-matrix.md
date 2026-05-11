@@ -28,8 +28,11 @@ trace 或报告证据时，不能把 case 写成已通过。
 - Live smoke 只手动触发，不进常规 CI。
 - Deterministic E2E 不依赖 LLM，不调用 autonomous run。
 - 详细 case 表只在对应能力域进入施工时展开，不把 MiMo draft 全量复制为永久计划。
-- 如果任务目标专指 E2E / Codex exploratory / visual UI / live smoke，请使用
-  `e2e-codex-testing-track.md`，不要从本矩阵直接推导一次性施工清单。
+- 如果任务目标专指 deterministic E2E，请使用 `e2e/README.md`。
+- 如果任务目标专指 Agent-operated UI exploratory，请使用
+  `agent-operated-ui/README.md`。
+- `e2e-codex-testing-track.md` 只保留为历史 / 过渡索引，不要从本矩阵或旧索引
+  直接推导一次性施工清单。
 
 ## Evidence Types
 
@@ -39,8 +42,8 @@ trace 或报告证据时，不能把 case 写成已通过。
 | Repo/API integration | DB repo 或 HTTP API contract 测试 | yes | 需要测试 DB 或 API test client，但不触发 autonomous run |
 | Component | Vue component / frontend utility tests | yes | 使用 mock/stub，不等同真实浏览器 E2E |
 | Deterministic E2E | Playwright Test 对稳定 seed 数据和固定 app stack 的回归 | yes | 不依赖 LLM，不调用 autonomous run，可重复、可 seed |
-| API exploratory | curl / Python / Node 直接调用 API 并保留命令证据 | no | 不能冒充 visual UI exploratory |
-| Visual UI exploratory | Browser panel、headed Playwright、截图、trace 或可见页面观察 | no | 必须实际观察 UI，不能只读代码或只调 API |
+| API exploratory | curl / Python / Node 直接调用 API 并保留命令证据 | no | 不能冒充 Agent-operated UI exploratory |
+| Agent-operated UI exploratory | Codex / Claude Code / other browser-capable agents、headed Playwright、截图、trace 或可见页面观察 | no | 必须实际观察 UI，不能只读代码或只调 API |
 | Live smoke | `verify-scenario` skill 触发的 live autonomous run | no | 需要 LLM / Supervisor verdict / run_id，只能人工或 release smoke |
 
 归类规则：
@@ -50,9 +53,11 @@ trace 或报告证据时，不能把 case 写成已通过。
   deterministic E2E，也不能写 CI yes。
 - Deterministic E2E 必须不依赖 LLM、不调用
   `/exploration/autonomous-runs` 或 `/exploration/autonomous-runs/stream`。
-- API exploratory 和 visual UI exploratory 不能互相替代。
-- Visual UI exploratory 必须保留 Browser panel / headed browser / screenshot /
-  trace / video / visible observation 证据。
+- API exploratory 和 Agent-operated UI exploratory 不能互相替代。
+- Agent-operated UI exploratory 必须保留 browser panel / headed browser /
+  screenshot / trace / video / visible observation 证据。
+- Full matrix 不管理具体浏览器操作工具细节；具体规则见
+  `agent-operated-ui/README.md`。
 
 ## Case Status Legend
 
@@ -90,7 +95,7 @@ find apps/e2e/tests -name '*.spec.ts' | wc -l
 Current status：
 
 - L1 autonomous exploration 是已有核心能力，但当前 M11 下一步不是扩展 live run。
-- `verify-scenario` 是唯一允许 Codex 触发 live autonomous run 的路径。
+- `verify-scenario` 是唯一允许 AI coding agent 触发 live autonomous run 的路径。
 - MiMo draft 中把 `AE-D-*` live run 标成 `Det E2E / CI yes` 是错误分类。
 
 Key risks：
@@ -160,8 +165,8 @@ Current status：
 
 - 当前已建立的确定性 E2E 域。
 - `apps/e2e/tests/replay/` 已覆盖 9 个 M10.2 replay case。
-- 结果证据见 `docs/testing/results/2026-05-08-replay-e2e-first-run.md` 和
-  replay Codex exploratory 报告。
+- 结果证据见 `docs/testing/results/2026-05-08-replay-e2e-first-run.md`、
+  replay API exploratory 报告和 replay Agent-operated UI exploratory 报告。
 
 Key risks：
 
@@ -175,7 +180,7 @@ Existing coverage summary：
 - deterministic E2E：happy path、observational、catalog UI happy path、
   page_mismatch、target_missing、unsupported_action、flaky warning、
   deprecated 422、signature_changed。
-- Codex exploratory：已有证据型报告。
+- API exploratory：已有证据型报告。
 
 Top gaps：
 
@@ -273,7 +278,7 @@ Top gaps：
 | --- | --- | --- |
 | selector stability smoke | proposed | 可做轻量 unit/API/DOM smoke |
 | validation API seed data smoke | proposed | 适合 API integration，不需要浏览器 |
-| fixture visual layout checks | deferred | 只做 visual exploratory，不进常规 CI |
+| fixture visual layout checks | deferred | 只做 Agent-operated UI exploratory，不进常规 CI |
 
 Recommended next cases：
 
@@ -311,7 +316,7 @@ Top gaps：
 Recommended next cases：
 
 - 先补 history/catalog/workbench 基础 smoke。
-- visual UI exploratory 只做重点页面和重点状态，不进常规 CI。
+- Agent-operated UI exploratory 只做重点页面和重点状态，不进常规 CI。
 
 ## Misclassification Fixes
 
@@ -322,7 +327,7 @@ Recommended next cases：
 | Current Coverage Snapshot | rename to Test File Inventory Snapshot | 文件数量不是覆盖率，也不代表测试通过 |
 | 原 first batch 回头补 AE/LP/CV 大量旧 case | reject as current first batch | 不贴合当前 M11 runtime 风险 |
 | 全量 207 case 一次性落地 | deferred | 范围过大，必须按能力域逐步展开 |
-| Visual UI 用 API/headless 证据代替 | reject | 证据类型不匹配 |
+| Agent-operated UI 用 API/headless 证据代替 | reject | 证据类型不匹配 |
 
 ## Recommended First Implementation Batch
 
@@ -336,7 +341,7 @@ Recommended next cases：
 | FIRST-P0-03 Conversation CLI smoke | existing baseline / keep-running | 11.0.4 CLI tests 已存在；当前任务是持续运行，除非发现缺口才新增 | CLI integration | P0 | yes | 11.0.4 shipped | CLI test output，stdout/stderr / exit code evidence |
 | FIRST-P0-04 Replay deterministic E2E | existing baseline / keep-running | M10.2 replay 是当前稳定浏览器闭环回归轨道 | Deterministic E2E | P0 | yes, once services are orchestrated | M10.2 shipped | `pnpm run test:e2e` output，seed fixture evidence |
 | FIRST-P1-01 LearnedPath trust / run-review separation smoke | evaluate gap before adding | 保护 path trust 与 run review 独立这一设计不变量；先查现有 API/component coverage | API / Component | P1 | yes | M10.1.3 shipped | gap review + API/component test output |
-| FIRST-P1-02 Console operator UI basic smoke | proposed, scope before implementation | 保护 history/catalog/workbench 主入口不破；先定具体页面和证据类型 | Component / Visual UI exploratory | P1 | partial: component yes, visual no | M10/M11 current console | component test output；visual 需 screenshot/trace |
+| FIRST-P1-02 Console operator UI basic smoke | proposed, scope before implementation | 保护 history/catalog/workbench 主入口不破；先定具体页面和证据类型 | Component / Agent-operated UI exploratory | P1 | partial: component yes, visual no | M10/M11 current console | component test output；visual 需 screenshot/trace |
 | FIRST-MAN-01 verify-scenario live smoke | manual only | release 前人工验证 L1 live loop，不进入常规 CI | Live smoke | Manual | no | release smoke only | `verify-scenario` pass_gate、Supervisor verdict、scorecard、run_id |
 
 ## Deferred / Reject Summary
@@ -354,7 +359,7 @@ Reject：
 
 - 把 LLM / verify-scenario / live autonomous run 标成 deterministic E2E。
 - 把 LLM-dependent case 标成常规 CI yes。
-- 把 headless E2E 当成 visual UI exploratory。
+- 把 headless E2E 当成 Agent-operated UI exploratory。
 - 把 MiMo 207 case 原样提交为永久测试计划。
 - 把当前 conversation 域描述成 pure-function only。
 

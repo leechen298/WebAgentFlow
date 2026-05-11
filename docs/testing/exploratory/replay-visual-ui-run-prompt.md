@@ -1,6 +1,7 @@
-# Replay Visual UI Exploratory Run Prompt
+# Replay Agent-operated UI Exploratory Run Prompt
 
-你正在为 WebAgentFlow M10.2 replay UI 运行 visual UI exploratory validation。
+你正在为 WebAgentFlow M10.2 replay UI 运行 Agent-operated UI exploratory
+validation。
 
 本提示词只针对 replay 测试域，不是 WebAgentFlow 全项目测试。
 
@@ -15,15 +16,17 @@
 - 不修改 package scripts。
 - 不新增 `data-testid`。
 - 不新增 Skill / Superpowers / MCP 配置。
-- 不把 headless E2E 当成 visual UI exploratory PASS。
-- 不把 API-only response 当成 visual UI exploratory PASS。
+- 不把 headless E2E 当成 Agent-operated UI exploratory PASS。
+- 不把 API-only response 当成 Agent-operated UI exploratory PASS。
 - 没有页面观察证据的 UI case 不能写 PASS。
 
 ## 证据要求
 
-Visual UI exploratory 必须使用以下任一方式：
+Agent-operated UI exploratory 必须使用以下任一方式：
 
 - Codex Browser panel / in-app browser。
+- Claude Code Browser Use / Computer Use。
+- 其他具备浏览器操作能力的 Agent。
 - Headed Playwright。
 
 每个 PASS case 必须包含至少一种可追溯证据：
@@ -35,7 +38,7 @@ Visual UI exploratory 必须使用以下任一方式：
 - 明确的 browser observation 摘录。
 
 Headless Playwright E2E 属于 deterministic E2E。curl / Python / Node API 调用
-属于 API exploratory。它们都不能替代 visual UI exploratory。
+属于 API exploratory。它们都不能替代 Agent-operated UI exploratory。
 
 ## 前置检查
 
@@ -86,4 +89,4 @@ docs/testing/results/YYYY-MM-DD-replay-visual-ui-exploratory.md
 - `git diff --check` 结果。
 
 如果某个 case 没跑，写 `NOT_RUN`。如果环境阻塞，写 `BLOCKED`。不得用
-headless E2E 或 API-only 结果补写 visual UI PASS。
+headless E2E 或 API-only 结果补写 Agent-operated UI PASS。

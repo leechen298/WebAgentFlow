@@ -17,7 +17,7 @@ Replay 测试域覆盖：
 Replay 测试域不覆盖：
 
 - autonomous learning 全流程。
-- Agent D/E/F/G/H。
+- Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H）。
 - Runtime Conversation Surface。
 - teaching mode。
 - risk gate。
@@ -43,7 +43,7 @@ Replay 测试域不覆盖：
 | deprecated 422 | deprecated path replay 返回 HTTP 422 |
 | signature changed but executable | `drift_status=signature_changed`，有 warning，但仍可执行 |
 
-## Codex 探索式补充
+## 探索式补充
 
 Replay 的探索式验证只补充 M10.2 replay E2E 的边界观察。它不能替代确定性
 E2E，也不能扩大 replay 的产品范围。
@@ -63,20 +63,21 @@ E2E，也不能扩大 replay 的产品范围。
 没有命令证据的 case 不能写 PASS；未执行的 case 写 `NOT_RUN`，环境阻塞写
 `BLOCKED`。
 
-### Visual UI exploratory
+### Agent-operated UI exploratory
 
-Replay 域的 visual UI exploratory 是独立证据类型。它要求 Codex Browser panel /
-in-app browser 或 headed Playwright 打开真实 console 页面，逐个操作 LearnedPath
-catalog drawer、输入 URL、点击 replay，并观察页面可见结果。
+Replay 域的 Agent-operated UI exploratory 是独立证据类型。它要求 Codex、Claude
+Code 或其他具备浏览器操作能力的 Agent，或 headed Playwright，打开真实 console
+页面，逐个操作 LearnedPath catalog drawer、输入 URL、点击 replay，并观察页面
+可见结果。
 
-Headless E2E 不能算 visual UI exploratory。API-only 调用也不能算 visual UI
-exploratory。
+Headless E2E 不能算 Agent-operated UI exploratory。API-only 调用也不能算
+Agent-operated UI exploratory。
 
 Replay visual UI prompt 见：
 
 - `docs/testing/exploratory/replay-visual-ui-run-prompt.md`
 
-已记录的 visual UI exploratory 结果：
+已记录的 Agent-operated UI exploratory 结果：
 
 - `docs/testing/results/2026-05-09-replay-visual-ui-exploratory.md`
 
