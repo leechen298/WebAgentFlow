@@ -308,7 +308,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 
 ### 11.0.7 · Conversation tests and evidence
 
-状态：future。
+状态：完成。
 
 目标：
 
@@ -321,15 +321,44 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 不依赖 LLM provider。
 - 不调用 autonomous run。
 
+交付：
+
+- `apps/e2e/tests/conversation/runtime.spec.ts`
+- `docs/testing/results/2026-05-11-replay-e2e-rerun.md`
+- `docs/testing/results/2026-05-11-conversation-baseline.md`
+- `docs/testing/results/2026-05-11-conversation-runtime-e2e.md`
+- `docs/testing/live-smoke.md`
+- `docs/testing/README.md`
+- `docs/testing/e2e.md`
+- `docs/testing/features/conversation.md`
+- `docs/testing/current-testing-backlog.md`
+- `docs/testing/full-test-matrix.md`
+- `apps/e2e/README.md`
+
+验证：
+
+- `curl -sS -i http://127.0.0.1:8001/health`
+- 结果：HTTP 200，database ok
+- `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_replay_hook.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py tests/test_conversation_repo.py tests/test_conversation_commands.py tests/test_conversation_state.py tests/test_learned_path_replay.py tests/test_exploration_learned_paths_api.py -v`
+- 结果：`179 passed`
+- `cd apps/cli && ../../.venv/bin/pytest tests/test_conversation.py -v`
+- 结果：`15 passed`
+- `pnpm --filter @web-agent-flow/e2e exec playwright test tests/conversation/runtime.spec.ts`
+- 结果：`1 passed`
+- `pnpm run test:e2e`
+- 结果：`10 passed`
+- `git diff --check`
+- 结果：clean
+
 ## M11.1 placeholder
 
-M11.1 Task-to-Path Planning & Execution MVP 是 future。它会在 M11.0 runtime
-loop 基础上接入 Agent D / E、LearnedPath retrieval / ranking、slot binding、
-pre-execution confirmation、task result verification MVP 和 basic artifact
-capture。
+M11.1 Task-to-Path Planning & Execution MVP 是下一步 future planning package。
+它会在 M11.0 runtime loop 基础上接入 Agent D / E、LearnedPath retrieval /
+ranking、slot binding、pre-execution confirmation、task result verification
+MVP 和 basic artifact capture。
 
-本轮不展开 M11.1 详情目录。等 M11.0 完成后，再创建
-`11.1-task-to-path-planning-execution/` 的 intent / plan / review。
+M11.0 执行包已完成。下一步如进入 M11.1，先创建
+`11.1-task-to-path-planning-execution/` 的 intent / plan / review；不要直接实现。
 
 ## 执行规则
 

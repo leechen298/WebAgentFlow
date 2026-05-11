@@ -11,12 +11,12 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
 1. **表示层** —— Vue 控制台提供面向操作者的界面。
 2. **应用层** —— FastAPI 服务承载 API 契约、编排入口、集成边界。
 3. **Conversation / Orchestration 层** —— 靠近 FastAPI application 边界的
-   运行时层。M11.0.5 已实现 domain contract、DB-backed session / message /
-   event store、Conversation API、非交互式 `wagent conversation` CLI 和
-   service-only Orchestrator Dispatcher。Public dispatch endpoint、CLI dispatch
-   接入、replay side effects、Agent routing、确认、恢复和教学仍是后续工作。
-   它是代码侧 session controller / dispatcher，不是逐步选择浏览器动作的
-   LLM controller。
+   运行时层。M11.0.7 已实现 domain contract、DB-backed session / message /
+   event store、Conversation API、非交互式 `wagent conversation` CLI、
+   service-only Orchestrator Dispatcher、explicit replay hook、public dispatch
+   endpoint、CLI dispatch 接入和 conversation runtime E2E 证据。Agent
+   routing、确认、恢复和教学仍是后续工作。它是代码侧 session controller /
+   dispatcher，不是逐步选择浏览器动作的 LLM controller。
 4. **执行层** —— Playwright runtime + 异步 worker，负责浏览器自动化。
 5. **基础设施层** —— PostgreSQL、Redis、MinIO 分别提供持久化、缓存、对象存储。
 
@@ -44,11 +44,10 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
 [`roadmap.zh.md`](./roadmap.zh.md) 为准：产品生命周期阶段是 L1 / L2 /
 L3，交付里程碑是 M10 / M11 / ...
 
-M10 Path Asset Foundation / 路径资产基础已完成。当前交付包是 **M11.0
-Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent
-编排**。最新完成的 M11.0 执行包是 `11.0.5-orchestrator-dispatcher`
-（`101 passed`）；下一步计划执行包是
-`11.0.6-explicit-replay-command-hook`。
+M10 Path Asset Foundation / 路径资产基础已完成。**M11.0 Runtime Conversation
+Shell & Agent Orchestration / 运行时沟通与 Agent 编排** 已完成到
+`11.0.7-conversation-tests-and-evidence`。下一步规划决策是 M11.1
+Task-to-Path Planning & Execution MVP。
 
 当前代码状态：
 
@@ -56,15 +55,13 @@ Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent
   catalog 和 replay / drift。
 - M11.0 Runtime Conversation Shell & Agent Orchestration 已交付
   conversation domain contract、DB-backed session store、Conversation API、
-  CLI-first runtime conversation shell（`wagent conversation`）和 service-only
-  Orchestrator Dispatcher（11.0.5，`101 passed`）。
-- 下一步 M11.0 执行包是 `11.0.6-explicit-replay-command-hook`；它应把
-  `/replay` 命令通过 Orchestrator 接入 M10 replay 引擎，但不做 path
-  selection、slot binding 或 Agent D / E / F / G / H 具体实现。
+  CLI-first runtime conversation shell（`wagent conversation`）、service-only
+  Orchestrator Dispatcher（11.0.5，`101 passed`）、explicit replay command
+  hook（11.0.6，`179 passed` API + `67 passed` CLI）和 conversation runtime
+  E2E evidence（11.0.7，`10 passed` E2E）。
 - `apps/worker` 仍是脚手架。
-- L2 用户引导学习、L3 task execution、Conversation Orchestrator 行为、
-  Agent D / E / F / G / H routing，以及 Agent H Teaching Guide Agent 都是
-  planned，尚未实现。
+- L2 用户引导学习、L3 task execution、Agent D / E / F / G / H routing，
+  以及 Agent H Teaching Guide Agent 都是 planned，尚未实现。
 
 **已完成阶段：**
 
@@ -272,9 +269,10 @@ conversation、teaching、artifact、evidence 服务是 planned service areas，
 - 已实现：调用 Conversation API 的 `wagent conversation` CLI
 - 已实现：service-only Conversation Orchestrator / Dispatcher
   （`orchestrator.py`、`DispatchResult`、11.0.5）
-- 11.0.6+ 规划：replay hook side effect、public dispatch endpoint、CLI
-  dispatch 接入、用户消息和 engine event routing、Agent routing 边界
-- 后续规划：confirmation、abort、recovery、takeover、teaching-mode 行为
+- 已实现：replay hook side effect、public dispatch endpoint、CLI dispatch
+  接入和 conversation runtime E2E（11.0.6–11.0.7）
+- 后续规划：更丰富的用户消息 / engine event routing、Agent routing 边界、
+  confirmation、abort、recovery、takeover、teaching-mode 行为
 
 **`services/teaching/`** —— 规划中的 L2 teaching 支撑：
 

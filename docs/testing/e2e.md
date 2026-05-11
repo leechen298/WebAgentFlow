@@ -4,20 +4,22 @@ WebAgentFlow 使用 Playwright Test 做浏览器 E2E 和 API request 验证。
 E2E workspace 位于 `apps/e2e/`。
 
 E2E 用例按产品能力域组织在 `apps/e2e/tests/` 下，例如
-`apps/e2e/tests/replay/`。这些用例是跨 console、API、数据库、
-validation-site 和后端 Playwright replay 的产品闭环测试。
+`apps/e2e/tests/replay/` 和 `apps/e2e/tests/conversation/`。这些用例是跨
+console、API、数据库、validation-site 和后端 Playwright replay 的产品闭环测试。
 它们不是 console 前端单元测试，不应放到 `apps/console/src/__tests__/`。
 
-## 第一阶段目标
+## 当前覆盖
 
-第一阶段 E2E 覆盖已经完成的 M10.2 replay 能力：
+当前 E2E 覆盖已经完成的能力：
 
-- LearnedPath replay API。
-- LearnedPath catalog UI replay 区块。
+- M10.2 LearnedPath replay API。
+- M10.2 LearnedPath catalog UI replay 区块。
+- M11.0 conversation runtime explicit replay smoke。
 
 这不会新增产品行为，也不会扩大 M10.2 范围。
 
 Replay 测试域的长期矩阵见 [features/replay.md](./features/replay.md)。
+Conversation 测试域的长期矩阵见 [features/conversation.md](./features/conversation.md)。
 Codex 探索式补充用例见
 [exploratory/replay-e2e-cases.md](./exploratory/replay-e2e-cases.md)。
 
@@ -54,8 +56,10 @@ Playwright config 暂时不使用 `webServer` 编排全部服务。等回归轨�
 浏览器。如果该命令卡在 `playwright install chromium`，通常是浏览器下载或网络
 环境问题。可以稍后重试；如果本机已经有 Chromium 缓存，确定性 E2E 仍可能正常运行。
 
-查看 [results/2026-05-08-replay-e2e-first-run.md](./results/2026-05-08-replay-e2e-first-run.md)
-了解 M10.2 replay E2E 首次实跑结果，以及当次观察到的浏览器安装注意事项。
+查看 [results/2026-05-11-replay-e2e-rerun.md](./results/2026-05-11-replay-e2e-rerun.md)
+了解最新 replay E2E fresh rerun 证据；查看
+[results/2026-05-11-conversation-runtime-e2e.md](./results/2026-05-11-conversation-runtime-e2e.md)
+了解 M11 conversation runtime E2E 首次 smoke 结果。
 
 `apps/e2e/test-results/` 和 `apps/e2e/playwright-report/` 是 Playwright
 原始输出，保持 gitignore。人类可读的测试运行摘要放在
@@ -74,7 +78,7 @@ E2E 固定数据直接写入 `learned_paths`。
 seed 脚本通过 API 侧 page analyzer 和 execution runtime 计算当前 `/users`
 页面签名。这是确定性页面分析，不是 autonomous run。
 
-## 第一批用例矩阵
+## 当前用例矩阵
 
 | 用例                             | 预期断言                                                               |
 | -------------------------------- | ---------------------------------------------------------------------- |
@@ -87,6 +91,7 @@ seed 脚本通过 API 侧 page analyzer 和 execution runtime 计算当前 `/use
 | flaky warning                    | replay 请求成功，warnings 包含 flaky trust warning                     |
 | deprecated 422                   | replay 请求返回 HTTP 422                                               |
 | signature changed but executable | `drift_status=signature_changed`，存在 warning，且 replay 仍可执行     |
+| conversation runtime replay      | session dispatch `/replay` 后完成，transcript/events 记录 replay 结果 |
 
 ## 暂缓项
 

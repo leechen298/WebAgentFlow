@@ -42,8 +42,10 @@ Current delivery status:
 - M11.0 has completed its conversation domain contract, DB-backed session
   store, conversation HTTP API, CLI-first runtime conversation shell,
   service-only Orchestrator Dispatcher (11.0.5, `101 passed`), and
-  explicit replay command hook (11.0.6, `179 passed` API + `67 passed` CLI).
-- Next M11.0 execution package: **11.0.7 Conversation Tests and Evidence**.
+  explicit replay command hook (11.0.6, `179 passed` API + `67 passed` CLI),
+  plus conversation tests and evidence (11.0.7, `10 passed` E2E).
+- M11.0 execution packages are complete; next planning decision is M11.1
+  Task-to-Path Planning & Execution MVP.
 - Agent routing, L3 task runner, L2 guided teaching, and Agent H Teaching
   Guide Agent are planned future work, not current implementation.
 
@@ -291,10 +293,10 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 **Planned / partially implemented service areas:**
 
-- Conversation domain / store / API / CLI / Orchestrator service skeleton are
-  implemented through M11.0.5. Replay hook side effects, public dispatch
-  endpoint, CLI dispatch integration, Agent routing, confirmation, recovery,
-  and teaching remain planned for 11.0.6+.
+- Conversation domain / store / API / CLI / Orchestrator service skeleton,
+  explicit replay hook, public dispatch endpoint, CLI dispatch integration,
+  and conversation runtime E2E are implemented through M11.0.7. Agent routing,
+  confirmation, recovery, and teaching remain future work.
 - L2 teaching support, highlight targets, and user action recording.
 - Artifact lifecycle handling.
 - Failure evidence / negative knowledge.

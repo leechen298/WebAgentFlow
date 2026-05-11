@@ -183,7 +183,9 @@ Progress:
   protocol, `run_explicit_replay` bridge to M10 replay engine,
   `POST /conversation/sessions/{id}/dispatch` endpoint, CLI `send` routed
   through dispatch (`179 passed` API + `67 passed` CLI).
-- Next M11.0 execution package: 11.0.7 Conversation Tests and Evidence.
+- 11.0.7 Conversation Tests and Evidence shipped: conversation runtime E2E
+  smoke plus fresh replay / conversation evidence (`10 passed` E2E).
+- Next planning decision: M11.1 Task-to-Path Planning & Execution MVP.
 
 Expected delivery:
 

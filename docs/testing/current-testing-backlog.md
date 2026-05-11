@@ -4,8 +4,8 @@
 
 本文件整理当前已完成功能的测试缺口和第一批补全计划。
 
-- 只覆盖当前已完成功能（M10 + M11.0.1–11.0.5）。
-- 不覆盖未来 M11.0.6 Explicit Replay Command Hook、M11.1 Task-to-Path、M12、M13。
+- 只覆盖当前已完成功能（M10 + M11.0.1–11.0.7）。
+- 不覆盖未来 M11.1 Task-to-Path、M12、M13。
 - 不执行测试，只整理 backlog。
 - 不改产品代码，不改测试代码，不改 package scripts。
 
@@ -28,7 +28,7 @@ Q1 关键发现：
 - F-02: 65 API tests skipped（HTML fixtures 不在 checkout 中）
 - F-03: E2E 全部通过（9/9 replay）
 - F-04: AutonomousWorkbenchPage.vue 无组件测试（1001 行）
-- F-05: Conversation 无 E2E smoke
+- F-05: Conversation 无 E2E smoke（已在 11.0.7 补齐）
 
 ## Backlog Categories
 
@@ -53,6 +53,8 @@ Q1 关键发现：
 | KR-09 | Page verification tests | `test_page_verification.py`, `test_pass_gate.py` | scorecard, gate logic |
 | KR-10 | Supervisor observation tests | `test_supervisor_observations.py`, `test_supervisor_prompt.py` | observation atoms, verdict derivation |
 | KR-11 | Conversation orchestrator tests | `test_conversation_orchestrator.py` | service-only orchestrator / dispatcher baseline |
+| KR-12 | Conversation replay hook tests | `test_conversation_replay_hook.py` | explicit replay hook |
+| KR-13 | Conversation runtime E2E | `apps/e2e/tests/conversation/runtime.spec.ts` | session dispatch `/replay` -> transcript/events |
 
 ### gap — 确认缺口，需补
 
@@ -66,7 +68,7 @@ Q1 关键发现：
 
 | ID | Item | Dependency |
 |---|---|---|
-| PROP-01 | Conversation E2E smoke | CLI dispatch / public dispatch endpoint / replay hook flow 稳定后 |
+| PROP-01 | Additional conversation E2E variants | M11.1 或更多 runtime behavior 进入施工后 |
 | PROP-02 | Console history/detail page component smoke | 需先定具体页面范围 |
 | PROP-03 | LearnedPath catalog trust tag visual exploratory | 需 headed browser 证据 |
 
@@ -94,7 +96,7 @@ Q1 关键发现：
 
 ## First Existing-Feature Batch
 
-只列当前可做的测试补全。不推进 M11.0.6，不实现 replay hook 测试。
+只列当前可做的测试补全。不推进 M11.1，不实现 task-to-path 测试。
 
 ### 1. FIX-01: Fix broken AutonomousUseCasesPage abort tests
 
@@ -112,7 +114,7 @@ Q1 关键发现：
 ### 2. CV-API-SMOKE: Conversation API smoke (keep-running)
 
 - **Case ID**: FIRST-P0-02 (from full-test-matrix.md)
-- **Reason**: API is the contract for CLI, orchestrator baseline, and future replay hook. Existing `test_conversation_api.py` covers session create/read, messages, events, transcript. Current task: verify baseline, keep running, only add cases if gap found.
+- **Reason**: API is the contract for CLI, orchestrator baseline, and explicit replay hook. Existing `test_conversation_api.py` covers session create/read, messages, events, transcript, and dispatch. Current task: verify baseline, keep running, only add cases if gap found.
 - **Layer**: Repo/API integration
 - **Priority**: P0
 - **CI**: yes
@@ -143,9 +145,35 @@ Q1 关键发现：
 - **Evidence required**: pytest output from `apps/api/tests/test_conversation_orchestrator.py`
 - **Implementation target**: `apps/api/tests/test_conversation_orchestrator.py` (existing)
 - **Why now**: Orchestrator 是 conversation 后续 replay hook / dispatch integration 的前置边界。
-- **What not to do**: Don't add 11.0.6 replay hook tests. Don't add public dispatch endpoint tests before that endpoint exists.
+- **What not to do**: Don't add path selection or task-to-path tests.
 
-### 5. REPLAY-E2E: Replay deterministic E2E (keep-running)
+### 5. CV-RH-SMOKE: Conversation replay hook smoke (keep-running)
+
+- **Case ID**: CV-RH-SMOKE
+- **Reason**: 11.0.6 Explicit Replay Command Hook 已完成，`test_conversation_replay_hook.py` 是当前 baseline。当前任务是持续运行。
+- **Layer**: API / integration
+- **Priority**: P0
+- **CI**: yes
+- **Evidence required**: pytest output from `apps/api/tests/test_conversation_replay_hook.py`
+- **Implementation target**: `apps/api/tests/test_conversation_replay_hook.py` (existing)
+- **Why now**: replay hook 是 M10 replay 和 M11 runtime loop 的第一条确定性桥。
+- **What not to do**: Don't add path selection or task-to-path tests.
+- **Status**: **DONE** (2026-05-11) — included in conversation baseline report, 179 passed targeted API baseline.
+
+### 6. CV-E2E: Conversation runtime E2E (keep-running)
+
+- **Case ID**: CV-E2E
+- **Reason**: 11.0.6 已提供 dispatch + replay hook；11.0.7 已新增 deterministic E2E，验证 session -> `/replay` -> replay summary -> transcript/events。
+- **Layer**: Deterministic E2E
+- **Priority**: P0
+- **CI**: yes, once local services are orchestrated
+- **Evidence required**: Playwright output from `apps/e2e/tests/conversation/runtime.spec.ts`
+- **Implementation target**: `apps/e2e/tests/conversation/runtime.spec.ts` (existing)
+- **Why now**: 这是 M10 replay 和 M11 runtime loop 的第一个端到端闭环。
+- **What not to do**: Don't call autonomous run. Don't depend on LLM. Don't add M11.1 task-to-path expectations.
+- **Status**: **DONE** (2026-05-11) — scoped conversation E2E 1/1 passed；full `pnpm run test:e2e` 10/10 passed.
+
+### 7. REPLAY-E2E: Replay deterministic E2E (keep-running)
 
 - **Case ID**: FIRST-P0-04 (from full-test-matrix.md)
 - **Reason**: M10.2 replay is the established deterministic E2E regression track. 9 tests all passing. Current task: keep running as regression gate.
@@ -157,7 +185,7 @@ Q1 关键发现：
 - **Why now**: Baseline already passing. Core regression track.
 - **What not to do**: Don't add conversation E2E here. Don't add live autonomous run cases.
 
-### 6. LP-TRUST-REVIEW: LearnedPath trust / run-review separation smoke
+### 8. LP-TRUST-REVIEW: LearnedPath trust / run-review separation smoke
 
 - **Case ID**: FIRST-P1-01 (from full-test-matrix.md)
 - **Reason**: Run review (accept/reject on exploration_run) and path trust (trust state machine on learned_path) are independent design invariants from M10.1.3. Tests already exist in `test_exploration_learned_paths_api.py` (run review) and `test_learned_paths_repo.py` (trust transitions). Current task: evaluate whether the separation invariant is explicitly tested.
@@ -170,7 +198,7 @@ Q1 关键发现：
 - **What not to do**: Don't add live autonomous run tests. Don't test orchestrator integration.
 - **Status**: **DONE** (2026-05-11) — gap review complete. `test_patch_run_review_does_not_modify_learned_path` (line 253 in test_exploration_learned_paths_api.py) already tests the separation invariant: rejecting a run review does NOT change path trust. No new test needed.
 
-### 7. VS-SELECTOR: Validation-site selector stability smoke
+### 9. VS-SELECTOR: Validation-site selector stability smoke
 
 - **Case ID**: NEW (from full-test-matrix.md domain 5 gap)
 - **Reason**: Replay E2E depends on stable CSS selectors in validation-site pages (`#username`, `#password`, `#search-name`, `#btn-search`, etc.). If selectors drift, replay E2E will fail silently or with confusing errors. A lightweight smoke can catch drift early.
@@ -183,7 +211,7 @@ Q1 关键发现：
 - **What not to do**: Don't build full validation-site E2E. Don't test login/sessionStorage behavior. Don't add visual UI exploratory here.
 - **Status**: **DONE** (2026-05-11) — new test at `apps/console/src/__tests__/validation-site/selector-stability.test.ts`. 14 tests covering LoginPage, UserDirectoryPage, DashboardPage selectors. Reads Vue source files directly, no running server needed. 14/14 pass.
 
-### 8. CONSOLE-SMOKE: Console operator UI basic smoke
+### 10. CONSOLE-SMOKE: Console operator UI basic smoke
 
 - **Case ID**: FIRST-P1-02 (from full-test-matrix.md)
 - **Reason**: Console has 19 test files covering APIs, stores, utils, and some components. But main operator pages (history, catalog, workbench) have limited component test coverage. AutonomousWorkbenchPage (1001 lines) has zero tests.
@@ -204,8 +232,8 @@ Q1 关键发现：
 
 | ID | Item | Trigger |
 |---|---|---|
-| W-01 | M11.0.6 Explicit Replay Command Hook tests | 11.0.6 implementation starts |
-| W-02 | Conversation E2E smoke | CLI dispatch / public dispatch endpoint / replay hook flow stable |
+| W-01 | Additional conversation E2E variants | M11.1 或更多 runtime behavior 进入施工 |
+| W-02 | Conversation visual exploratory | 需要观察 console 呈现时 |
 | W-03 | verify-scenario manual live smoke | release smoke only |
 | W-04 | Guided teaching tests | L2 teaching enters implementation |
 | W-05 | Task-to-path planning tests | M11.1 enters implementation |
@@ -223,12 +251,14 @@ Q1 关键发现：
 | CV-API-SMOKE | keep-running | P0 | API integration | yes |
 | CV-CLI-SMOKE | keep-running | P0 | CLI integration | yes |
 | CV-O-SMOKE | keep-running | P0 | Unit/integration | yes |
+| CV-RH-SMOKE | keep-running | P0 | API/integration | yes |
+| CV-E2E | keep-running | P0 | Det E2E | yes |
 | REPLAY-E2E | keep-running | P0 | Det E2E | yes |
 | LP-TRUST-REVIEW | evaluate gap | P1 | API/Repo | yes |
 | VS-SELECTOR | new | P1 | Unit/API | yes |
 | CONSOLE-SMOKE | new | P1 | Component | yes |
 
-Total: 8 items (1 fix, 4 keep-running, 1 evaluate, 2 new)
+Total: 10 items (1 fix, 6 keep-running, 1 evaluate, 2 new)
 
 ## Deferred Count
 

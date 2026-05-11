@@ -8,8 +8,7 @@
 
 ## 当前交付里程碑
 
-当前执行包是 **11.0.6 · Explicit Replay Command Hook**，归属于 **M11.0 ·
-Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排**。
+当前状态是 **M11.0 在 11.0.7 · Conversation Tests and Evidence 后收口**。
 迭代文档：
 [`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/)。
 
@@ -29,18 +28,21 @@ M11.0 是 runtime loop foundation。本轮范围是：
 - `11.0.3-conversation-api`
 - `11.0.4-runtime-cli-shell`
 - `11.0.5-orchestrator-dispatcher`
+- `11.0.6-explicit-replay-command-hook`
+- `11.0.7-conversation-tests-and-evidence`
 
-刚完成的执行包：`11.0.5-orchestrator-dispatcher`。
-下一步 M11.0 执行包：`11.0.6-explicit-replay-command-hook`。
+刚完成的执行包：`11.0.7-conversation-tests-and-evidence`。
+下一步规划决策：M11.1 Task-to-Path Planning & Execution MVP。M11.1
+实现开始前必须先创建 intent / plan / review 文档。
 
 M11.0 不做 path selection、不做 task planning、不做 slot binding，也不实现
 Agent D / E / F / G / H 行为。规划语言使用 M<N> 指交付里程碑，使用
 L1/L2/L3 指生命周期阶段。
 
-11.0.6 可以把 `/replay <learned_path_id> <url>` 命令通过 Orchestrator
-接入 M10 replay 引擎。它仍不做 path selection、slot binding、不新增 CLI
-命令、不做 E2E、不做 task-to-path planning、不实现 Agent D / E / F / G / H、
-也不做 autonomous learning。
+11.0.7 已建立 conversation 测试证据：API、CLI、orchestrator、replay hook
+baseline，以及 conversation runtime E2E。它仍不做 path selection、slot
+binding、task-to-path planning、不实现 Agent D / E / F / G / H，也不做
+autonomous learning。
 
 刚完成的 M10 执行包：`10.2-replay-execution-drift-detection`。
 M10.2 现在作为历史参考。它实现了 LearnedPath replay 和 drift detection：
@@ -72,7 +74,8 @@ knowledge store。
   里程碑。
 - **Task-to-Path Planning MVP** —— 用户任务 / chat 入口、Agent D Path
   Planner、路径检索 / 排序、slot binding、执行前确认、task result
-  verification、Agent E 结果汇报属于 M11.1，不属于 M11.0。
+  verification、Agent E 结果汇报属于 M11.1，但必须等 M11.1 迭代文档
+  初始化后才能实现。
 - **Recovery / abort 对话** —— Agent F Recovery Dialogue 和 Agent G
   Abort Dialogue 属于 M12，不属于 M11.0。
 - **Agent H Teaching Guide Agent / 教学引导 Agent** —— guided teaching 属于

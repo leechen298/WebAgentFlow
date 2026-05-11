@@ -41,8 +41,10 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - M11.0 已完成 conversation domain contract、DB-backed session store、
   conversation HTTP API、CLI-first runtime conversation shell、service-only
   Orchestrator Dispatcher（11.0.5，`101 passed`）和 explicit replay command
-  hook（11.0.6，`179 passed` API + `67 passed` CLI）。
-- 下一步 M11.0 执行包：**11.0.7 Conversation Tests and Evidence**。
+  hook（11.0.6，`179 passed` API + `67 passed` CLI），并完成 conversation
+  tests and evidence（11.0.7，`10 passed` E2E）。
+- M11.0 执行包已完成；下一步规划决策是 M11.1 Task-to-Path Planning &
+  Execution MVP。
 - Agent routing、L3 task runner、L2 guided teaching、Agent H Teaching Guide
   Agent 都是后续规划，不是当前已实现。
 
@@ -279,10 +281,10 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 **规划中 / 部分已实现的服务区域：**
 
-- Conversation domain / store / API / CLI / Orchestrator service skeleton
-  已通过 M11.0.5 实现。Replay hook side effect、public dispatch endpoint、
-  CLI dispatch 接入、Agent routing、confirmation、recovery、teaching 仍规划
-  在 11.0.6+。
+- Conversation domain / store / API / CLI / Orchestrator service skeleton、
+  explicit replay hook、public dispatch endpoint、CLI dispatch 接入和
+  conversation runtime E2E 已通过 M11.0.7 实现。Agent routing、
+  confirmation、recovery、teaching 仍是后续工作。
 - L2 teaching support、highlight targets 和 user action recording。
 - Artifact lifecycle handling。
 - Failure evidence / negative knowledge。

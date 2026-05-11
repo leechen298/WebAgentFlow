@@ -1,13 +1,15 @@
 # WebAgentFlow E2E
 
 本 workspace 存放 WebAgentFlow 的确定性 Playwright Test E2E 覆盖。
-第一批套件面向 M10.2 LearnedPath replay API 和 catalog UI 行为。
+当前套件覆盖 M10.2 LearnedPath replay API / catalog UI，以及 M11.0
+conversation runtime replay smoke。
 
 它不依赖 LLM 服务，不调用 autonomous-run 接口，也不创建 live autonomous run。
 
 `apps/e2e/tests/` 下的测试按产品能力域组织。Replay 覆盖放在
-`apps/e2e/tests/replay/`。这些是跨 console、API、数据库、validation-site
-和后端 Playwright replay 的 E2E 测试，不是
+`apps/e2e/tests/replay/`，conversation 覆盖放在
+`apps/e2e/tests/conversation/`。这些是跨 console、API、数据库、
+validation-site 和后端 Playwright replay 的 E2E 测试，不是
 `apps/console/src/__tests__/` 下的 console 单元测试。
 
 ## 一次性设置

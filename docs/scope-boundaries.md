@@ -12,8 +12,8 @@ ask — don't invent.
 
 ## Current Delivery Milestone
 
-Current package: **11.0.7 · Conversation Tests and Evidence** within **M11.0 ·
-Runtime Conversation Shell & Agent Orchestration**. Iteration docs:
+Current package: **M11.0 closure after 11.0.7 · Conversation Tests and
+Evidence**. Iteration docs:
 [`docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/`](./iterations/m11/11.0-runtime-conversation-shell-orchestration/).
 
 M11.0 is the runtime loop foundation. Its scope is:
@@ -26,7 +26,7 @@ M11.0 is the runtime loop foundation. Its scope is:
 - basic slash commands or equivalent structured messages
 - explicit replay hook with `learned_path_id + url`
 
-Completed M11.0 execution packages so far:
+Completed M11.0 execution packages:
 
 - `11.0.1-conversation-domain-contract`
 - `11.0.2-conversation-session-store`
@@ -34,15 +34,17 @@ Completed M11.0 execution packages so far:
 - `11.0.4-runtime-cli-shell`
 - `11.0.5-orchestrator-dispatcher`
 - `11.0.6-explicit-replay-command-hook`
+- `11.0.7-conversation-tests-and-evidence`
 
-Last completed package: `11.0.6-explicit-replay-command-hook`.
-Next M11.0 execution package: `11.0.7-conversation-tests-and-evidence`.
+Last completed package: `11.0.7-conversation-tests-and-evidence`.
+Next planning decision: M11.1 Task-to-Path Planning & Execution MVP. No M11.1
+implementation starts until its intent / plan / review docs are created.
 
 M11.0 does not select paths, plan tasks, bind slots, or implement Agent
 D / E / F / G / H behavior. Planning language uses M<N> for delivery
 milestones and L1/L2/L3 for lifecycle stages.
 
-11.0.7 establishes the conversation test domain: API, CLI, orchestrator, and
+11.0.7 established the conversation test domain: API, CLI, orchestrator, and
 necessary E2E smoke tests with auditable evidence. It does not add path
 selection, slot binding, task-to-path planning, Agent D / E / F / G / H
 implementations, or autonomous learning.
@@ -85,7 +87,8 @@ did not implement the complete negative-knowledge store.
 - **Task-to-Path Planning MVP** — user task / chat input, Agent D Path
   Planner, path retrieval / ranking, slot binding, execution
   confirmation, task result verification, and Agent E result reporting
-  are M11.1, not M11.0.
+  belong to M11.1, but implementation must wait until the M11.1 iteration
+  docs are initialized.
 - **Recovery / abort dialogue** — Agent F Recovery Dialogue and Agent G
   Abort Dialogue are M12, not M11.0.
 - **Agent H Teaching Guide Agent** — guided teaching belongs to M13, not

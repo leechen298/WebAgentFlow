@@ -162,8 +162,13 @@ M11.0 建立第一版运行时产品入口，让用户可以和 WebAgentFlow 沟
   session、message、transcript、events 命令（`67 passed`）。
 - 11.0.5 Orchestrator Dispatcher 已交付：service-only dispatcher skeleton，
   含 `dispatch_user_input` 和 `dispatch_engine_event` 占位（`101 passed`）。
-  不新增 replay hook、CLI 命令、HTTP endpoint。
-- 下一步 M11.0 执行包：11.0.6 Explicit Replay Command Hook。
+- 11.0.6 Explicit Replay Command Hook 已交付：replay handler protocol、
+  `run_explicit_replay` 到 M10 replay engine 的桥接、
+  `POST /conversation/sessions/{id}/dispatch` endpoint，以及 CLI `send`
+  走 dispatch（`179 passed` API + `67 passed` CLI）。
+- 11.0.7 Conversation Tests and Evidence 已交付：conversation runtime E2E
+  smoke 和 replay / conversation fresh evidence（`10 passed` E2E）。
+- 下一步规划决策：M11.1 Task-to-Path Planning & Execution MVP。
 
 预期交付：
 

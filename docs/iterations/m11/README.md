@@ -27,7 +27,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.0.4-runtime-cli-shell](./11.0.4-runtime-cli-shell/) —— CLI-first runtime conversation shell。状态：完成。
 - [11.0.5-orchestrator-dispatcher](./11.0.5-orchestrator-dispatcher/) —— Orchestrator / Dispatcher state routing。状态：完成。
 - [11.0.6-explicit-replay-command-hook](./11.0.6-explicit-replay-command-hook/) —— 显式 `/replay <learned_path_id> <url>` hook。状态：完成。
-- 11.0.7-conversation-tests-and-evidence —— conversation 测试域与证据。状态：future。
+- [11.0.7-conversation-tests-and-evidence](./11.0.7-conversation-tests-and-evidence/) —— conversation 测试域与证据。状态：完成。
 - 11.1-task-to-path-planning-execution —— Task-to-Path Planning & Execution MVP。状态：future，尚未创建详情目录。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是

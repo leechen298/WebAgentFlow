@@ -23,8 +23,8 @@ task-execution、recovery、teaching、multi-page-workflow。不是每个小功�
 - `replay`：已有 deterministic E2E、API exploratory 和 visual UI exploratory
   证据，用于保护 M10.2 LearnedPath replay execution + drift detection。
 - `conversation`：已有 domain / repo / API / CLI 覆盖，用于保护 M11 runtime
-  conversation 基础；11.0.5 service-only Orchestrator Dispatcher 已有 baseline
-  测试，下一开发包是 11.0.6 Explicit Replay Command Hook。
+  conversation 基础；11.0.5 Orchestrator Dispatcher、11.0.6 Explicit Replay
+  Command Hook 和 11.0.7 conversation runtime E2E 已有证据。
 
 Codex exploratory validation 也按能力域执行，不做一次性全项目自动测试。新增探索式
 用例必须先明确所属能力域、证据类型、是否 CI-safe，以及是否依赖当前里程碑。
@@ -68,6 +68,10 @@ pnpm run test:e2e:install
 了解 M10.2 replay E2E 首次实跑结果；
 查看 [results/2026-05-09-replay-visual-ui-exploratory.md](./results/2026-05-09-replay-visual-ui-exploratory.md)
 了解 M10.2 replay 右侧浏览器可视化点击验证结果；
+查看 [results/2026-05-11-conversation-baseline.md](./results/2026-05-11-conversation-baseline.md)
+和 [results/2026-05-11-conversation-runtime-e2e.md](./results/2026-05-11-conversation-runtime-e2e.md)
+了解 M11 conversation baseline 与 runtime E2E 证据；
+查看 [live-smoke.md](./live-smoke.md) 了解 release-only manual live smoke 规则；
 查看 [codex-exploratory.md](./codex-exploratory.md) 了解后续探索式验证方案。
 查看 [current-testing-backlog.md](./current-testing-backlog.md) 了解当前测试补全计划和状态。
 
