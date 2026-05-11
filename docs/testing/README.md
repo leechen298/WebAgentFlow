@@ -6,22 +6,27 @@
 intent、plan、step 文档和 review。长期测试体系文档不放在
 `docs/iterations/` 下。
 
-## 当前测试线
+## 当前测试线与测试域
 
 WebAgentFlow 规划两条验证线：
 
 - 确定性 E2E 回归：稳定的 Playwright Test 套件，用来覆盖已经交付的行为。
-- Codex 探索式验证：后续阶段的工作流，由 Codex 基于产品/API contract 提出边界用例，
-  并把稳定发现沉淀为长期 E2E 用例。
+- Codex 探索式验证：按产品能力域执行，由 Codex 基于产品/API contract 提出边界用例，
+  并把稳定发现沉淀为长期测试用例。
 
-当前已建立的测试域是 M10.2 replay。后续核心产品能力域可以继续在
-`docs/testing/features/` 下建立自己的测试矩阵，例如 conversation、
+当前已建立的测试域包括 M10.2 replay 和 M11 conversation。后续核心产品能力域可以继续在
+`docs/testing/features/` 下建立自己的测试矩阵，例如
 task-execution、recovery、teaching、multi-page-workflow。不是每个小功能都需要
 完整 E2E；小功能应归入所属能力域，只有跨模块、用户可见、真实浏览器链路等核心
 行为才需要 E2E 或探索式验证。
 
-当前先实现 replay 的确定性 E2E。Codex 探索式验证的第一批目标也只针对
-M10.2 replay，不是 WebAgentFlow 全项目自动测试。
+- `replay`：已有 deterministic E2E、API exploratory 和 visual UI exploratory
+  证据，用于保护 M10.2 LearnedPath replay execution + drift detection。
+- `conversation`：已有 domain / repo / API / CLI 覆盖，用于保护 M11 runtime
+  conversation 基础；当前下一重点是 11.0.5 Orchestrator Dispatcher。
+
+Codex exploratory validation 也按能力域执行，不做一次性全项目自动测试。新增探索式
+用例必须先明确所属能力域、证据类型、是否 CI-safe，以及是否依赖当前里程碑。
 
 E2E 套件不依赖 LLM 服务，不调用 `/exploration/autonomous-runs`，
 不调用 `/exploration/autonomous-runs/stream`，也不创建 live autonomous run。
@@ -53,14 +58,17 @@ pnpm run test:e2e:ui
 pnpm run test:e2e:install
 ```
 
+查看 [full-test-matrix.md](./full-test-matrix.md) 了解经 MiMo draft 收敛后的全量测试地图；
 查看 [e2e.md](./e2e.md) 了解确定性 E2E 设计；
 查看 [features/replay.md](./features/replay.md) 了解 M10.2 replay 测试域；
+查看 [features/conversation.md](./features/conversation.md) 了解 M11 conversation 测试域；
 查看 [exploratory/README.md](./exploratory/README.md) 了解 replay 探索式验证提示词和用例矩阵；
 查看 [results/2026-05-08-replay-e2e-first-run.md](./results/2026-05-08-replay-e2e-first-run.md)
 了解 M10.2 replay E2E 首次实跑结果；
 查看 [results/2026-05-09-replay-visual-ui-exploratory.md](./results/2026-05-09-replay-visual-ui-exploratory.md)
 了解 M10.2 replay 右侧浏览器可视化点击验证结果；
 查看 [codex-exploratory.md](./codex-exploratory.md) 了解后续探索式验证方案。
+查看 [current-testing-backlog.md](./current-testing-backlog.md) 了解当前测试补全计划和状态。
 
 人类可读的测试运行摘要放在 `docs/testing/results/`。
 Playwright 原始输出保留在 `apps/e2e/test-results/` 和
