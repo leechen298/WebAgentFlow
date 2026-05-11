@@ -208,7 +208,7 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 
 ### 11.0.5 · Orchestrator dispatcher
 
-状态：当前规划 / 下一步执行包。
+状态：完成。
 
 目标：
 
@@ -235,16 +235,20 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - 不做 teaching mode。
 - 不做 E2E。
 
-预期触及：
+交付：
 
-- `apps/api/app/services/conversation/orchestrator.py` 或等价 dispatcher module。
-- `apps/api/app/services/conversation/__init__.py`。
-- `apps/api/tests/test_conversation_orchestrator.py`。
-- 可能小幅复用 `apps/api/app/services/conversation/commands.py` 和
-  `apps/api/app/services/conversation/state.py`。
-- 可能小幅使用 `apps/api/app/repos/conversation_repo.py`。
-- 不改 11.0.3 API endpoint contract，除非后续实现阶段明确需要最小 endpoint
-  hook；本轮文档不实现。
+- `apps/api/app/services/conversation/orchestrator.py`
+- `apps/api/app/services/conversation/__init__.py`
+- `apps/api/tests/test_conversation_orchestrator.py`
+
+验证：
+
+- `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_orchestrator.py tests/test_conversation_repo.py tests/test_conversation_commands.py tests/test_conversation_state.py tests/test_conversation_api.py -v`
+- 结果：`101 passed`
+- `cd apps/api && ../../.venv/bin/ruff check app/services/conversation/orchestrator.py app/services/conversation/__init__.py tests/test_conversation_orchestrator.py`
+- 结果：`All checks passed!`
+- `git diff --check`
+- 结果：clean
 
 ### 11.0.6 · Explicit replay command hook
 
