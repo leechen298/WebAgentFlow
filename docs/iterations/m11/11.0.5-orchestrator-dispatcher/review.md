@@ -3,7 +3,7 @@
 ## 规划初始化
 
 - 本目录用于 11.0.5 Orchestrator Dispatcher。
-- 当前状态：intent / plan 初始化，尚未实现代码。
+- 当前状态：已实现并通过验证。
 - 前置 11.0.1 Conversation Domain Contract 已完成并通过测试。
 - 前置 11.0.2 Conversation Session Store 已完成并通过 hardening。
 - 前置 11.0.3 Conversation API 已完成并通过测试。

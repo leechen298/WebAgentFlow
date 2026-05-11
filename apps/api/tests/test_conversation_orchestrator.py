@@ -414,7 +414,9 @@ def test_state_changed_event_contains_from_to_and_command_kind(
 
 
 def test_orchestrator_does_not_import_replay_autonomous_llm_agent_or_cli() -> None:
-    source = inspect.getsource(ConversationOrchestrator)
+    from app.services.conversation import orchestrator as orchestrator_module
+
+    source = inspect.getsource(orchestrator_module)
     forbidden_tokens = [
         "learned_path_replay",
         "run_replay",
