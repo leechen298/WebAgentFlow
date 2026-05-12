@@ -583,6 +583,19 @@ def test_chinese_query_substring_matches_shorter_scenario(
     assert any("CJK text overlap" in r for r in candidates[0].match_reasons)
 
 
+def test_exact_cjk_overlap_is_not_double_counted_as_keyword_overlap(
+    repo: LearnedPathRepository,
+    service: LearnedPathRetrievalService,
+) -> None:
+    _make_path(repo, scenario="登录", page_template="/login", trust=TrustStatus.PROVISIONAL)
+
+    intent = TaskIntent(raw_text="登录")
+    candidates = service.retrieve_candidates(intent)
+
+    assert any("CJK text overlap" in r for r in candidates[0].match_reasons)
+    assert not any("Keyword overlap" in r for r in candidates[0].match_reasons)
+
+
 # ---------------------------------------------------------------------------
 # Stable tie-breaker sorting
 # ---------------------------------------------------------------------------

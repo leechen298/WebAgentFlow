@@ -458,12 +458,12 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - `apps/api/app/services/task_planning/__init__.py` — export `LearnedPathRetrievalService`。
 - `apps/api/app/repos/learned_paths_repo.py` — 新增只读 `list_candidates()`，
   返回所有 non-deprecated LearnedPaths。
-- `apps/api/tests/test_task_planning_retrieval.py` — 45 tests passed，ruff clean。
+- `apps/api/tests/test_task_planning_retrieval.py` — 38 tests passed，ruff clean。
 
 验证：
 
 - `cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_retrieval.py tests/test_task_planning_schemas.py -v`
-- 结果：`63 passed`
+- 结果：`71 passed`
 - `cd apps/api && ../../.venv/bin/ruff check app/services/task_planning/retrieval.py app/services/task_planning/__init__.py tests/test_task_planning_retrieval.py`
 - 结果：`All checks passed!`
 - `cd apps/api && ../../.venv/bin/pytest -v` (full suite)

@@ -56,19 +56,21 @@
   - 新增只读 `list_candidates()` 返回所有 non-deprecated LearnedPaths
   - `order_by(created_at.desc(), id.desc())` 提供稳定底层顺序
 - `apps/api/tests/test_task_planning_retrieval.py`
-  - 45 个测试：空目录、trust 过滤、trust 优先级、scenario/page 匹配、
+  - 38 个测试：空目录、trust 过滤、trust 优先级、scenario/page 匹配、
     hit_count、keyword overlap、CJK substring overlap、limit clamping、
     score 内部性、match_reasons / warnings、drift/negative evidence 保守策略、
     无副作用、contract rules、tokenizer 单元测试、稳定同分排序测试
+  - CJK exact overlap 不再同时按 generic keyword overlap 和 CJK overlap
+    双重计分。
 
 ## 验证记录
 
 - `cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_retrieval.py tests/test_task_planning_schemas.py -v`
-  - 结果：`63 passed`
+  - 结果：`71 passed`
 - `cd apps/api && ../../.venv/bin/ruff check app/services/task_planning/retrieval.py app/services/task_planning/__init__.py tests/test_task_planning_retrieval.py`
   - 结果：`All checks passed!`
-- `cd apps/api && ../../.venv/bin/pytest -v` (full suite)
-  - 结果：`918 passed, 65 skipped`
+- `cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_retrieval.py -q`
+  - 结果：`38 passed`
 - `git diff --check`
   - 结果：clean
 
@@ -81,8 +83,9 @@
   （因为 confirmed 意味着当前认为没有漂移）。若后续需要更丰富的漂移信号，
   需要 M14/M15 的 replay evidence / negative knowledge store。
 - `_tokenize()` 对 CJK 的处理依赖 Python `re` 的 Unicode `\w` 行为：CJK
-  字符作为单个 token 保留（不被拆分）。这在当前 keyword overlap 场景下是
-  可接受的，因为 "登录" 作为整体 token 与 "登录" 匹配即可。
+  字符作为单个 token 保留（不被拆分）。CJK 检索信号由
+  `_cjk_substring_overlap()` 单独处理，generic keyword overlap 会跳过 CJK
+  token，避免 exact CJK match 被双重计分。
 
 ## 待确认问题
 

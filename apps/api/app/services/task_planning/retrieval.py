@@ -98,6 +98,10 @@ def _cjk_substring_overlap(query_text: str, path_text: str) -> set[str]:
     return matches
 
 
+def _contains_cjk(text: str) -> bool:
+    return bool(_CJK_RE.search(text))
+
+
 # ---------------------------------------------------------------------------
 # Service
 # ---------------------------------------------------------------------------
@@ -222,7 +226,11 @@ class LearnedPathRetrievalService:
         path_tokens |= _tokenize(path.scenario)
         path_tokens |= _tokenize(path.page_template)
 
-        overlap = query_tokens & path_tokens
+        overlap = {
+            token
+            for token in query_tokens & path_tokens
+            if not _contains_cjk(token)
+        }
         if overlap:
             overlap_score = len(overlap) * _KEYWORD_OVERLAP_PER_TOKEN
             score += overlap_score
