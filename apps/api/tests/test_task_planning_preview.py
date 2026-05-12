@@ -200,6 +200,7 @@ def test_preview_payload_contains_candidate_count_and_raw_text() -> None:
     assert payload["task_intent_raw_text"] == "log in"
     assert payload["candidate_count"] == 2
     assert payload["planning_status"] == "proposed"
+    assert payload["confirmation_required"] is True
 
 
 def test_preview_payload_contains_selected_path_when_proposed() -> None:

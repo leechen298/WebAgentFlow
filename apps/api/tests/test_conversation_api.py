@@ -551,10 +551,12 @@ def test_dispatch_free_text_with_learned_path_proposes_plan_and_awaits_confirmat
     messages = messages_resp.json()["data"]
     assert any(m["role"] == "agent" and "Plan:" in m["content"] for m in messages)
 
-    # Preview event recorded
+    # Preview event recorded with confirmation_required consistent with state
     events_resp = client.get(f"/conversation/sessions/{session_id}/events")
     events = events_resp.json()["data"]
-    assert any(e["type"] == "plan_preview_proposed" for e in events)
+    preview_events = [e for e in events if e["type"] == "plan_preview_proposed"]
+    assert len(preview_events) == 1
+    assert preview_events[0]["payload"]["confirmation_required"] is True
 
     # State changed to awaiting_confirmation
     assert any(

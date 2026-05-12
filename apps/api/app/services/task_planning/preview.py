@@ -121,9 +121,7 @@ class PlanningPreviewService:
             "candidate_count": len(candidates),
             "planning_status": "proposed" if output.route_plan else "unable",
             "confirmation_required": (
-                output.route_plan.confirmation_required
-                if output.route_plan
-                else False
+                True if output.route_plan else False
             ),
             "warnings": output.warnings,
         }
