@@ -642,6 +642,48 @@ def test_dispatch_cancel_from_awaiting_confirmation(client: TestClient, db_sessi
     assert any(e["type"] == "plan_cancelled" for e in events)
 
 
+def test_dispatch_slash_cancel_from_awaiting_confirmation_uses_confirmation_gate(
+    client: TestClient, db_session
+) -> None:
+    repo = LearnedPathRepository(db_session)
+    lp, _ = repo.ingest_run(
+        page_template="/login",
+        query_signature={},
+        dom_fingerprint="a" * 64,
+        scenario="log in",
+        actions=[{"action_type": "fill", "target_selector": "#user"}],
+        source_run_id=None,
+    )
+    lp = repo.set_trust(lp.id, TrustStatus.CONFIRMED, reason="test confirmed")
+    lp.hit_count = 5
+    db_session.commit()
+
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "log in"},
+    )
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "/cancel"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["next_status"] == "task_intake"
+    assert data["allowed"] is True
+    assert "cancelled" in data["user_response"]
+
+    events_resp = client.get(f"/conversation/sessions/{session_id}/events")
+    events = events_resp.json()["data"]
+    assert any(e["type"] == "plan_cancelled" for e in events)
+    assert not any(
+        e["type"] == "state_changed" and e["payload"].get("to") == "idle"
+        for e in events
+    )
+
+
 def test_dispatch_replay_blocked_while_awaiting_confirmation(
     client: TestClient, db_session
 ) -> None:

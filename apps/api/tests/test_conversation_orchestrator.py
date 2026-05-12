@@ -652,6 +652,55 @@ def test_cancel_from_awaiting_confirmation_returns_to_task_intake(
     assert ConversationEventType.STATE_CHANGED.value in event_types
 
 
+@pytest.mark.parametrize(
+    (
+        "input_text",
+        "expected_status",
+        "expected_event",
+        "expected_decision",
+        "expected_command_kind",
+    ),
+    [
+        ("/confirm", "plan_confirmed", "plan_confirmed", "confirm", "free_text"),
+        ("/cancel", "task_intake", "plan_cancelled", "cancel", "cancel"),
+        ("/abort", "task_intake", "plan_cancelled", "cancel", "abort"),
+        ("/stop", "task_intake", "plan_cancelled", "cancel", "free_text"),
+        ("/reject", "task_intake", "plan_rejected", "reject", "free_text"),
+    ],
+)
+def test_slash_confirmation_commands_use_confirmation_gate(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+    input_text: str,
+    expected_status: str,
+    expected_event: str,
+    expected_decision: str,
+    expected_command_kind: str,
+) -> None:
+    session_id = _create_awaiting_confirmation_session(repo)
+
+    result = orchestrator.dispatch_user_input(session_id, input_text)
+
+    assert result.allowed is True
+    assert result.next_status == expected_status
+    assert result.command_kind == expected_command_kind
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.status == expected_status
+
+    events = repo.list_events(session_id)
+    assert expected_event in [e.type for e in events]
+    decision_event = [e for e in events if e.type == expected_event][0]
+    assert decision_event.payload_json["decision"] == expected_decision
+    assert decision_event.payload_json["replay_executed"] is False
+    assert not any(
+        e.type == ConversationEventType.STATE_CHANGED.value
+        and e.payload_json.get("to") == "idle"
+        for e in events
+    )
+
+
 def test_reject_from_awaiting_confirmation_returns_to_task_intake(
     orchestrator: ConversationOrchestrator,
     repo: ConversationRepository,

@@ -602,22 +602,65 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 ### 11.1.5 · Plan Confirmation and Consent Gate
 
-状态：documentation initialized。
+状态：已完成。
 
 目标：
 
-- 设计 `awaiting_confirmation` 下用户输入如何转成 explicit decision。
+- 实现 `awaiting_confirmation` 下用户输入如何转成 explicit decision。
 - 处理 confirm / cancel / reject / clarification / new task intent。
-- 只记录 consent / cancellation / rejection / revision intent。
+- 支持 slash decision commands：`/confirm`、`/cancel`、`/abort`、`/stop`、
+  `/reject`。
+- 只记录 consent / cancellation / rejection / clarification intent。
 - 不执行 replay，不调用 autonomous run，不做 result verification。
 - 确保 ambiguous input 不会被当成 consent。
 - 明确 high-risk / flaky / provisional plan 即使被确认，也只是记录 consent
   或 ready-for-execution 语义。
 
-边界：
+交付：
 
-- 不写实现代码。
-- 不修改 11.1.1 schema。
+- `apps/api/app/schemas/conversation.py`
+  - 新增 `ConversationStatus.PLAN_CONFIRMED`。
+  - 新增 `PLAN_CONFIRMED`、`PLAN_CANCELLED`、`PLAN_REJECTED`、
+    `CONFIRMATION_CLARIFICATION_REQUESTED`、
+    `EXPLICIT_REPLAY_BLOCKED_BY_PENDING_CONFIRMATION` event types。
+- `apps/api/app/services/conversation/confirmation.py`
+  - 新增 `PlanConfirmationService` deterministic keyword classifier。
+  - 支持 confirm / cancel / reject / ambiguous，以及 slash decision commands。
+- `apps/api/app/services/conversation/orchestrator.py`
+  - 在 `awaiting_confirmation` 下优先进入 confirmation gate。
+  - FREE_TEXT 和 slash decision commands 由 gate 处理。
+  - `/replay` 在 pending preview 时被阻断，不调用 replay handler。
+  - 其他 slash commands 继续走现有状态机。
+- `apps/api/app/services/conversation/__init__.py`
+  - 导出 confirmation 类型。
+- `apps/api/app/models/conversation.py`
+  - `conversation_events.type` ORM 宽度从 `String(32)` 扩到 `String(64)`。
+- `apps/api/alembic/versions/df9ed1494afd_widen_conversation_events_type_to_64_.py`
+  - DB migration：`conversation_events.type` 32 -> 64，保证 PostgreSQL 能保存
+    新事件名。
+- `apps/api/tests/test_conversation_confirmation.py`
+- `apps/api/tests/test_conversation_orchestrator.py`
+- `apps/api/tests/test_conversation_api.py`
+- `docs/iterations/m11/11.1.5-plan-confirmation-consent-gate/review.md`
+
+行为：
+
+- `confirm` / `yes` / `proceed` / `continue` / `确认` / `继续` /
+  `/confirm` -> `plan_confirmed` + `plan_confirmed` event。
+- `cancel` / `abort` / `stop` / `取消` / `停止` / `/cancel` / `/abort` /
+  `/stop` -> `task_intake` + `plan_cancelled` event。
+- `reject` / `no` / `不要` / `/reject` -> `task_intake` +
+  `plan_rejected` event。
+- 其他 free text -> stays `awaiting_confirmation` +
+  `confirmation_clarification_requested` event。
+- `/replay <learned_path_id> <url>` while awaiting confirmation -> stays
+  `awaiting_confirmation` +
+  `explicit_replay_blocked_by_pending_confirmation` event。
+- 所有 confirmation gate event payload 明确包含 `replay_executed: false`。
+
+边界（已遵守）：
+
+- 不修改 11.1.1 task planning schemas。
 - 不修改 11.1.2 retrieval implementation。
 - 不修改 11.1.3 planner implementation。
 - 不修改 11.1.4 preview implementation。
@@ -634,25 +677,20 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 不实现 teaching mode。
 - 不创建 11.1.6 详情目录。
 
-文档交付：
-
-- `docs/iterations/m11/11.1.5-plan-confirmation-consent-gate/README.md`
-- `docs/iterations/m11/11.1.5-plan-confirmation-consent-gate/intent.md`
-- `docs/iterations/m11/11.1.5-plan-confirmation-consent-gate/plan.md`
-- `docs/iterations/m11/11.1.5-plan-confirmation-consent-gate/review.md`
-
-待实现前决策：
-
-- confirmed-but-not-executed 使用新状态、现有状态，还是 event-only 语义。
-- 是否新增 `ConversationEventType` values。
-- new task while awaiting confirmation 是要求先 cancel，还是用 revision event
-  supersede pending preview。
-- `/replay <learned_path_id> <url>` 在 `awaiting_confirmation` 下是先要求取消
-  pending preview，还是作为 separate explicit command 并审计 replacement。
-
 验证：
 
+- `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_confirmation.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py -q`
+- 结果：`113 passed`
+- `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_orchestrator.py tests/test_conversation_api.py tests/test_conversation_confirmation.py tests/test_conversation_repo.py -q`
+- 结果：`145 passed`
+- `cd apps/api && ../../.venv/bin/alembic heads`
+- 结果：`df9ed1494afd (head)`
+- `cd apps/api && ../../.venv/bin/pytest -q`
+- 记录结果：`1021 passed, 65 skipped`
+- `cd apps/api && ../../.venv/bin/ruff check ...`
+- 记录结果：`All checks passed!`
 - `git diff --check`
+- 结果：clean
 
 ### Future · Slot binding contract and deterministic binding MVP
 

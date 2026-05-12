@@ -37,13 +37,18 @@ These decisions close the initial 11.1.5 open questions before implementation.
 | `yes` | confirm | `plan_confirmed` | `plan_confirmed` |
 | `proceed` | confirm | `plan_confirmed` | `plan_confirmed` |
 | `继续` | confirm | `plan_confirmed` | `plan_confirmed` |
+| `/confirm` | confirm | `plan_confirmed` | `plan_confirmed` |
 | `cancel` | cancel | `task_intake` | `plan_cancelled` |
 | `abort` | cancel | `task_intake` | `plan_cancelled` |
 | `stop` | cancel | `task_intake` | `plan_cancelled` |
 | `取消` | cancel | `task_intake` | `plan_cancelled` |
+| `/cancel` | cancel | `task_intake` | `plan_cancelled` |
+| `/abort` | cancel | `task_intake` | `plan_cancelled` |
+| `/stop` | cancel | `task_intake` | `plan_cancelled` |
 | `reject` | reject | `task_intake` | `plan_rejected` |
 | `no` | reject | `task_intake` | `plan_rejected` |
 | `不要` | reject | `task_intake` | `plan_rejected` |
+| `/reject` | reject | `task_intake` | `plan_rejected` |
 | `maybe` | ambiguous | `awaiting_confirmation` | `confirmation_clarification_requested` |
 | `looks ok?` | ambiguous | `awaiting_confirmation` | `confirmation_clarification_requested` |
 | `run export` | ambiguous | `awaiting_confirmation` | `confirmation_clarification_requested` |
@@ -53,6 +58,10 @@ These decisions close the initial 11.1.5 open questions before implementation.
 - `awaiting_confirmation + confirm -> plan_confirmed` (STATE_CHANGED recorded)
 - `awaiting_confirmation + cancel -> task_intake` (STATE_CHANGED recorded)
 - `awaiting_confirmation + reject -> task_intake` (STATE_CHANGED recorded)
+- `awaiting_confirmation + /confirm -> plan_confirmed` (STATE_CHANGED recorded)
+- `awaiting_confirmation + /cancel -> task_intake` (plan cancel, not legacy cancel-to-idle)
+- `awaiting_confirmation + /abort -> task_intake` (plan cancel, not global abort)
+- `awaiting_confirmation + /reject -> task_intake` (plan reject)
 - `awaiting_confirmation + ambiguous -> awaiting_confirmation` (no STATE_CHANGED)
 - `awaiting_confirmation + /replay -> awaiting_confirmation` (blocked, no STATE_CHANGED)
 - `awaiting_confirmation + /status -> awaiting_confirmation` (normal command, falls through)
@@ -197,20 +206,38 @@ SQLite tests passed because SQLite does not enforce `varchar` length, but Postgr
 - Added Alembic migration `df9ed1494afd` to `ALTER COLUMN conversation_events.type` from 32 to 64
 - Added regression test `test_all_event_type_values_fit_in_database_column` that persists every `ConversationEventType` through the repository to verify database compatibility
 
+## Post-Review Fix: Slash Confirmation Commands (P1)
+
+**Issue:** slash decision commands in `awaiting_confirmation` did not all enter the 11.1.5 confirmation gate:
+- `/cancel` parsed as `ConversationCommandKind.CANCEL` and fell through to the legacy state machine, resulting in `idle` instead of `task_intake + plan_cancelled`
+- `/abort` parsed as `ConversationCommandKind.ABORT` and fell through to global abort behavior
+- `/confirm` and `/reject` parsed as free text but were classified as ambiguous because the classifier did not normalize a leading slash
+
+**Fix:**
+- `PlanConfirmationService.classify()` now normalizes a single leading slash before exact keyword matching
+- `ConversationOrchestrator._handle_awaiting_confirmation_gate()` now routes `FREE_TEXT`, `CANCEL`, and `ABORT` through the confirmation gate while still blocking `REPLAY`
+- `/cancel`, `/abort`, and `/stop` now produce `plan_cancelled` and return to `task_intake`
+- `/confirm` now produces `plan_confirmed`
+- `/reject` now produces `plan_rejected`
+- Added service, orchestrator, and API regression tests so slash decision commands cannot fall back to the legacy state machine
+
 ## Verification Commands
 
 ```bash
 cd apps/api && ../../.venv/bin/pytest tests/test_conversation_confirmation.py -v
-# 27 passed
+# 41 passed
 
 cd apps/api && ../../.venv/bin/pytest tests/test_conversation_orchestrator.py -v
-# 30 passed
+# 35 passed
 
 cd apps/api && ../../.venv/bin/pytest tests/test_conversation_api.py -v
-# 36 passed
+# 37 passed
+
+cd apps/api && ../../.venv/bin/pytest tests/test_conversation_confirmation.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py -q
+# 113 passed
 
 cd apps/api && ../../.venv/bin/pytest -q
-# 1001 passed, 65 skipped
+# 1021 passed, 65 skipped
 
 cd apps/api && ../../.venv/bin/ruff check app/services/conversation/confirmation.py \
   app/services/conversation/orchestrator.py app/schemas/conversation.py \

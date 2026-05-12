@@ -42,6 +42,8 @@ class PlanConfirmationService:
 
     def classify(self, raw_input: str) -> PlanConfirmationDecision:
         normalized = raw_input.strip().lower()
+        if normalized.startswith("/"):
+            normalized = normalized[1:]
         if normalized in self._CONFIRM_KEYWORDS:
             return PlanConfirmationDecision("confirm", raw_input)
         if normalized in self._CANCEL_KEYWORDS:

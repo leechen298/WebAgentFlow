@@ -416,8 +416,9 @@ class ConversationOrchestrator:
         """Route input while session is in ``awaiting_confirmation``.
 
         Returns a ``DispatchResult`` when the gate handles the input
-        (``FREE_TEXT`` or ``REPLAY``). Returns ``None`` for other commands so
-        the normal state machine can process them.
+        (confirmation text / slash confirmation commands / ``REPLAY``).
+        Returns ``None`` for other commands so the normal state machine can
+        process them.
         """
         if command.kind == ConversationCommandKind.REPLAY:
             return self._block_replay_awaiting_confirmation(
@@ -429,10 +430,15 @@ class ConversationOrchestrator:
                 metadata=metadata,
             )
 
-        if command.kind == ConversationCommandKind.FREE_TEXT:
+        if command.kind in {
+            ConversationCommandKind.FREE_TEXT,
+            ConversationCommandKind.CANCEL,
+            ConversationCommandKind.ABORT,
+        }:
             return self._process_confirmation_input(
                 session_id=session_id,
                 raw_input=raw_input,
+                command=command,
                 previous_status=previous_status,
                 message_id=message_id,
                 metadata=metadata,
@@ -515,6 +521,7 @@ class ConversationOrchestrator:
         self,
         session_id: str,
         raw_input: str,
+        command: Any,
         previous_status: str,
         message_id: str | None,
         metadata: dict[str, Any] | None,
@@ -529,12 +536,12 @@ class ConversationOrchestrator:
             type=ConversationEventType.COMMAND_PARSED,
             payload={
                 "raw": raw_input,
-                "command_kind": "free_text",
-                "args": [],
-                "learned_path_id": None,
-                "url": None,
-                "text": raw_input,
-                "parse_error": None,
+                "command_kind": command.kind.value,
+                "args": command.args,
+                "learned_path_id": command.learned_path_id,
+                "url": command.url,
+                "text": command.text,
+                "parse_error": command.error,
                 "allowed": True,
                 "transition_error": None,
                 "dispatch_metadata": metadata or {},
@@ -585,7 +592,7 @@ class ConversationOrchestrator:
                 payload={
                     "from": previous_status,
                     "to": next_status,
-                    "command_kind": "free_text",
+                    "command_kind": command.kind.value,
                     "reason": f"confirmation_{result.decision}",
                 },
             )
@@ -595,7 +602,7 @@ class ConversationOrchestrator:
             session_id=session_id,
             previous_status=previous_status,
             next_status=next_status,
-            command_kind="free_text",
+            command_kind=command.kind.value,
             user_response=result.user_response,
             events_appended=events_appended,
             message_id=message_id,

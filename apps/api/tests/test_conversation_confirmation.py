@@ -19,7 +19,20 @@ def service() -> PlanConfirmationService:
 
 @pytest.mark.parametrize(
     "input_text",
-    ["confirm", "yes", "proceed", "continue", "确认", "继续"],
+    [
+        "confirm",
+        "yes",
+        "proceed",
+        "continue",
+        "确认",
+        "继续",
+        "/confirm",
+        "/yes",
+        "/proceed",
+        "/continue",
+        "/确认",
+        "/继续",
+    ],
 )
 def test_classify_confirm_keywords(service: PlanConfirmationService, input_text: str) -> None:
     decision = service.classify(input_text)
@@ -29,7 +42,18 @@ def test_classify_confirm_keywords(service: PlanConfirmationService, input_text:
 
 @pytest.mark.parametrize(
     "input_text",
-    ["cancel", "abort", "stop", "取消", "停止"],
+    [
+        "cancel",
+        "abort",
+        "stop",
+        "取消",
+        "停止",
+        "/cancel",
+        "/abort",
+        "/stop",
+        "/取消",
+        "/停止",
+    ],
 )
 def test_classify_cancel_keywords(service: PlanConfirmationService, input_text: str) -> None:
     decision = service.classify(input_text)
@@ -39,7 +63,7 @@ def test_classify_cancel_keywords(service: PlanConfirmationService, input_text: 
 
 @pytest.mark.parametrize(
     "input_text",
-    ["reject", "no", "不要"],
+    ["reject", "no", "不要", "/reject", "/no", "/不要"],
 )
 def test_classify_reject_keywords(service: PlanConfirmationService, input_text: str) -> None:
     decision = service.classify(input_text)
