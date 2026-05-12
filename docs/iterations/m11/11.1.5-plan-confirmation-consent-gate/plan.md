@@ -29,6 +29,29 @@ from free text alone.
 The pending preview should be auditable through existing conversation messages
 and preview events before any user decision is accepted.
 
+## Implementation Decision Closure
+
+11.1.5 implementation should use the following decisions unless a later review
+explicitly updates this document before code changes start:
+
+- explicit confirm moves the session from `awaiting_confirmation` to
+  `plan_confirmed`;
+- `plan_confirmed` means the user consented and the plan is ready for a future
+  execution package, but replay has not run;
+- cancel / abort / stop returns the session to `task_intake` after recording a
+  cancellation decision;
+- reject / no returns the session to `task_intake` after recording a rejection
+  decision;
+- ambiguous input keeps the session in `awaiting_confirmation` and asks for an
+  explicit decision;
+- new task text while awaiting confirmation does not silently replace the
+  pending preview; it records clarification / revision intent and asks the user
+  to cancel or reject the current preview first;
+- `/replay <learned_path_id> <url>` while awaiting confirmation is blocked until
+  the pending preview is resolved;
+- 11.1.5 records consent / cancellation / rejection / clarification evidence
+  only and never executes replay.
+
 ## Confirmation Input Classification
 
 MVP classification should be deterministic:
@@ -43,18 +66,23 @@ consent.
 
 ## Consent Gate State Transitions
 
-Future implementation may need new statuses or may reuse existing status with
-events. The implementation must inspect current `ConversationStatus` and
-`next_state()` before changing schema.
+Future implementation should add or use an explicit `plan_confirmed` status
+for confirmed-but-not-executed semantics. The implementation must inspect
+current `ConversationStatus` and `next_state()` before changing schema, but the
+intended first implementation behavior is:
 
-Candidate semantics:
+- `awaiting_confirmation -> plan_confirmed` when the user explicitly confirms;
+- `awaiting_confirmation -> task_intake` when the user cancels or rejects;
+- `awaiting_confirmation -> awaiting_confirmation` for ambiguous input or
+  revision intent that still needs an explicit cancel / reject / confirm
+  decision.
 
-- `awaiting_confirmation -> plan_confirmed` or equivalent ready-for-execution
-  semantics when the user explicitly confirms;
-- `awaiting_confirmation -> task_intake` when the user cancels, rejects, or
-  requests revision;
-- `awaiting_confirmation -> clarification_needed` or equivalent event-only
-  semantics for ambiguous input.
+`plan_confirmed` means:
+
+- user consent has been recorded;
+- the pending plan is ready for a future execution package;
+- replay has not executed;
+- no browser operation has occurred.
 
 No transition in 11.1.5 executes replay.
 
@@ -81,14 +109,14 @@ Examples of ambiguous input:
 ## New Task While Awaiting Confirmation
 
 New free-text task input while a preview is pending must be explicit and
-auditable. Future implementation should choose one policy:
+auditable. The first implementation should use the conservative policy:
 
-- require the user to cancel the existing preview before submitting a new task;
-- or record a plan revision request, cancel / supersede the pending preview, and
-  return to task intake.
-
-The first implementation should not silently replace a pending preview without
-an event.
+- do not silently replace the pending preview;
+- do not re-run retrieval or planning;
+- record clarification / revision intent;
+- ask the user to cancel or reject the current pending plan before submitting a
+  new task;
+- keep the session in `awaiting_confirmation`.
 
 ## Event Recording Design
 
@@ -98,7 +126,11 @@ Event semantics to plan for:
 - `plan_cancelled`
 - `plan_rejected`
 - `confirmation_clarification_requested`
-- `plan_revision_requested`
+- `explicit_replay_blocked_by_pending_confirmation`
+
+`plan_revision_requested` remains optional future scope for a later package or a
+follow-up 11.1.5 hardening pass. The first 11.1.5 implementation can record
+revision-like input through `confirmation_clarification_requested`.
 
 Payload should preserve:
 
@@ -146,14 +178,50 @@ Revision intent:
 `/replay <learned_path_id> <url>` remains an explicit replay command. 11.1.5
 does not change the replay hook and does not execute replay.
 
-Open implementation decision: if `/replay <learned_path_id> <url>` is entered
-while a plan preview is awaiting confirmation, choose one policy before coding:
+If `/replay <learned_path_id> <url>` is entered while a plan preview is awaiting
+confirmation, the first implementation must block it until the pending preview
+is resolved. It should:
 
-- reject it until the pending preview is cancelled;
-- or treat it as a separate explicit command with auditable cancellation /
-  replacement of the pending preview.
+- not call the replay handler;
+- append an assistant message that asks the user to confirm, cancel, or reject
+  the current pending plan first;
+- record `explicit_replay_blocked_by_pending_confirmation` or equivalent event
+  semantics;
+- keep the session in `awaiting_confirmation`.
 
 Confirmation input must never bypass this decision and execute replay.
+
+## Implementation Boundary
+
+Future implementation may add:
+
+```text
+apps/api/app/services/conversation/confirmation.py
+```
+
+Potential contracts:
+
+```text
+PlanConfirmationDecision
+PlanConfirmationResult
+PlanConfirmationService
+```
+
+The confirmation service is responsible only for classifying and representing
+user input while a session is in `awaiting_confirmation`. It must not call
+replay, retrieval, the Task Path Planner, autonomous run, raw HTML readers, or
+an LLM provider.
+
+The orchestrator should:
+
+- check `session.status == awaiting_confirmation` before normal command
+  handling branches that could trigger planning preview;
+- route awaiting-confirmation input through the confirmation service first;
+- block `/replay` from bypassing the pending preview;
+- record messages, events, and status updates.
+
+The router should continue using the existing dispatch endpoint. 11.1.5 does
+not add an API endpoint or CLI command.
 
 ## Test Plan
 
@@ -161,11 +229,15 @@ Future implementation tests should cover:
 
 - explicit confirm records consent / ready-for-execution and does not call
   replay;
+- explicit confirm transitions to `plan_confirmed` or the chosen exact schema
+  spelling;
 - cancel / abort / stop cancels pending preview and records event;
 - reject / no rejects pending preview and records event;
 - ambiguous input asks for clarification and does not confirm;
-- new task while awaiting confirmation follows the chosen revision policy;
-- `/replay` while awaiting confirmation follows the explicitly chosen policy;
+- new task while awaiting confirmation records clarification / revision intent,
+  keeps the session awaiting confirmation, and does not re-run planning;
+- `/replay` while awaiting confirmation is blocked, records an event, and does
+  not call the replay handler;
 - assistant messages say no execution occurred;
 - event payload preserves selected path, route summary, warnings, risk hints,
   confirmation requirements, and user decision input;
@@ -219,12 +291,10 @@ git diff --check
 
 ## Open Questions
 
-- Which status represents confirmed-but-not-executed: a new status, existing
-  `task_intake`, or event-only semantics?
-- Which event types should be added to `ConversationEventType`, if any?
-- Should a new task while awaiting confirmation require explicit cancellation,
-  or can it create a revision event and supersede the pending preview?
-- How should `/replay <learned_path_id> <url>` behave while a preview is
-  awaiting confirmation?
-- Should the assistant response include a compact route summary on every
-  confirmation-related message?
+- Exact schema spelling for `plan_confirmed` must be confirmed during
+  implementation when updating `ConversationStatus`.
+- Exact `ConversationEventType` enum additions should be verified against
+  existing naming conventions before code changes.
+- Whether route summary is included in every assistant response after a
+  confirmation-related decision can remain an implementation detail as long as
+  the event payload remains auditable.

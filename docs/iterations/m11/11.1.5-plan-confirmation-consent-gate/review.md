@@ -3,6 +3,49 @@
 This review document is initialized for the future 11.1.5 implementation
 review.
 
+## Implementation Decision Closure
+
+These decisions close the initial 11.1.5 open questions before implementation.
+They are still documentation-stage decisions; this package remains
+`documentation initialized` until code and tests are implemented.
+
+- Confirmed-but-not-executed status: future implementation should use
+  `plan_confirmed`. It means user consent is recorded and the plan is ready for
+  a future execution package, but replay has not run.
+- Confirm transition: `awaiting_confirmation -> plan_confirmed`.
+- Cancel transition: `awaiting_confirmation -> task_intake`, with a
+  `plan_cancelled` event and an assistant message that no execution occurred.
+- Reject transition: `awaiting_confirmation -> task_intake`, with a
+  `plan_rejected` event and an assistant message that the plan was not accepted
+  or executed.
+- Ambiguous input: keep `awaiting_confirmation`, record
+  `confirmation_clarification_requested`, and ask the user for explicit confirm
+  / cancel / reject. Ambiguous input is never consent.
+- New task while awaiting confirmation: do not silently replace the pending
+  preview and do not re-run planning. Record clarification / revision intent,
+  ask the user to cancel or reject the current plan first, and keep
+  `awaiting_confirmation`.
+- `/replay` while awaiting confirmation: block it until the pending preview is
+  resolved. Do not call the replay handler. Record
+  `explicit_replay_blocked_by_pending_confirmation` or equivalent event
+  semantics and keep `awaiting_confirmation`.
+- Event semantics: first implementation should plan for `plan_confirmed`,
+  `plan_cancelled`, `plan_rejected`,
+  `confirmation_clarification_requested`, and
+  `explicit_replay_blocked_by_pending_confirmation`.
+  `plan_revision_requested` remains optional future scope.
+- Implementation boundary: future code may add
+  `apps/api/app/services/conversation/confirmation.py` with
+  `PlanConfirmationDecision`, `PlanConfirmationResult`, and
+  `PlanConfirmationService` contracts. That service only classifies
+  awaiting-confirmation input and must not call replay, retrieval, the Task Path
+  Planner, autonomous run, raw HTML readers, or an LLM provider.
+- Orchestrator boundary: the confirmation branch should run before planning
+  preview for sessions already in `awaiting_confirmation`, and it should block
+  `/replay` from bypassing the pending preview.
+- Router boundary: continue using the existing dispatch endpoint. Do not add an
+  API endpoint or CLI command in 11.1.5.
+
 ## Scope Review Checklist
 
 - [ ] Implementation only handles confirmation / consent decisions.
@@ -97,12 +140,9 @@ review.
 
 ## Decisions to Confirm Before Implementation
 
-- Which status represents confirmed-but-not-executed.
-- Which new `ConversationEventType` values are needed, if any.
-- Whether new task input while awaiting confirmation requires explicit
-  cancellation or can supersede the pending preview with a revision event.
-- Whether `/replay <learned_path_id> <url>` while awaiting confirmation is
-  rejected until cancellation or treated as a separate explicit command with
-  auditable cancellation / replacement of the pending preview.
-- Whether route summary is included in every assistant response after a
-  confirmation-related decision.
+- Confirm the exact schema spelling for `plan_confirmed` when updating
+  `ConversationStatus`.
+- Confirm exact `ConversationEventType` enum names against existing naming
+  conventions before code changes.
+- Confirm whether route summary appears in every assistant response or only in
+  event payloads; either way, the event payload must remain auditable.
