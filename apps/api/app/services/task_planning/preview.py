@@ -67,10 +67,8 @@ class PlanningPreviewService:
                 confirmation_required=False,
             )
 
-        confirmation_required = (
-            output.route_plan.confirmation_required
-            or len(output.confirmation_requirements) > 0
-        )
+        # 11.1.4 boundary: all proposed previews stop and wait for confirmation.
+        confirmation_required = True
         return PlanningPreviewResult(
             user_response=self._format_proposed(output),
             event_type=ConversationEventType.PLAN_PREVIEW_PROPOSED.value,

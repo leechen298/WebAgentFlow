@@ -98,7 +98,7 @@ def test_preview_returns_proposed_for_successful_plan() -> None:
 
     assert isinstance(result, PlanningPreviewResult)
     assert result.event_type == ConversationEventType.PLAN_PREVIEW_PROPOSED.value
-    assert result.confirmation_required is False
+    assert result.confirmation_required is True
     assert result.selected_path_id == "lp-001"
     assert "Plan:" in result.user_response
     assert "Selected path: lp-001" in result.user_response

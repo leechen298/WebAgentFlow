@@ -193,8 +193,14 @@ def dispatch_input(
     session_id: str,
     body: ConversationDispatchRequest,
 ) -> ApiResponse[ConversationDispatchResponse]:
+    from app.repos.learned_paths_repo import LearnedPathRepository
     from app.services.conversation.orchestrator import ConversationOrchestrator
     from app.services.conversation.replay_hook import run_explicit_replay
+    from app.services.task_planning import (
+        LearnedPathRetrievalService,
+        PlanningPreviewService,
+        TaskPathPlanner,
+    )
 
     repo = ConversationRepository(db)
     _require_session(repo, session_id)
@@ -202,7 +208,16 @@ def dispatch_input(
     def replay_handler(learned_path_id: str, url: str):
         return run_explicit_replay(db, learned_path_id, url)
 
-    orchestrator = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    learned_path_repo = LearnedPathRepository(db)
+    retrieval = LearnedPathRetrievalService(learned_path_repo)
+    planner = TaskPathPlanner()
+    preview_service = PlanningPreviewService(retrieval, planner)
+
+    orchestrator = ConversationOrchestrator(
+        repo,
+        replay_handler=replay_handler,
+        planning_handler=preview_service.preview,
+    )
     result = orchestrator.dispatch_user_input(
         session_id,
         body.input,

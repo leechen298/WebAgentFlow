@@ -6,6 +6,8 @@ import inspect
 
 from fastapi.testclient import TestClient
 
+from app.models.learned_path import TrustStatus
+from app.repos.learned_paths_repo import LearnedPathRepository
 from app.schemas.conversation import ConversationReplaySummary
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -305,7 +307,9 @@ def test_response_does_not_expose_identity_or_tenant_fields(
 # ── POST /conversation/sessions/{session_id}/dispatch ─────────────────────────
 
 
-def test_dispatch_free_text(client: TestClient) -> None:
+def test_dispatch_free_text_empty_catalog_returns_unable_to_plan(
+    client: TestClient,
+) -> None:
     session_id = _create_session(client)
     resp = client.post(
         f"/conversation/sessions/{session_id}/dispatch",
@@ -319,9 +323,13 @@ def test_dispatch_free_text(client: TestClient) -> None:
     assert data["allowed"] is True
     assert data["next_status"] == "task_intake"
     assert data["replay_result"] is None
+    # 11.1.4 — planning preview: unable-to-plan when catalog is empty
+    assert "Unable to plan" in data["user_response"]
 
 
-def test_dispatch_metadata_is_persisted(client: TestClient) -> None:
+def test_dispatch_metadata_is_persisted_and_preview_event_recorded(
+    client: TestClient,
+) -> None:
     session_id = _create_session(client)
     resp = client.post(
         f"/conversation/sessions/{session_id}/dispatch",
@@ -338,14 +346,16 @@ def test_dispatch_metadata_is_persisted(client: TestClient) -> None:
     assert messages[0]["metadata"] == {"source": "api-test", "request_id": "req-1"}
 
     events_resp = client.get(f"/conversation/sessions/{session_id}/events")
+    events = events_resp.json()["data"]
     command_parsed = [
-        event for event in events_resp.json()["data"]
-        if event["type"] == "command_parsed"
+        event for event in events if event["type"] == "command_parsed"
     ][0]
     assert command_parsed["payload"]["dispatch_metadata"] == {
         "source": "api-test",
         "request_id": "req-1",
     }
+    # 11.1.4 — planning preview event is recorded
+    assert any(e["type"] == "plan_preview_unable" for e in events)
 
 
 def test_dispatch_missing_session_returns_404(client: TestClient) -> None:
@@ -499,3 +509,55 @@ def test_router_does_not_import_replay_autonomous_or_llm() -> None:
     ]
     for token in forbidden_tokens:
         assert token not in source
+
+
+# ── 11.1.4 Planning preview through dispatch endpoint ──────────────────────────
+
+
+def test_dispatch_free_text_with_learned_path_proposes_plan_and_awaits_confirmation(
+    client: TestClient,
+    db_session,
+) -> None:
+    # Seed a confirmed learned path
+    repo = LearnedPathRepository(db_session)
+    lp, _ = repo.ingest_run(
+        page_template="/login",
+        query_signature={},
+        dom_fingerprint="a" * 64,
+        scenario="log in",
+        actions=[{"action_type": "fill", "target_selector": "#user"}],
+        source_run_id=None,
+    )
+    lp = repo.set_trust(lp.id, TrustStatus.CONFIRMED, reason="test confirmed")
+    lp.hit_count = 5
+    db_session.commit()
+
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "log in"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["command_kind"] == "free_text"
+    assert data["allowed"] is True
+    assert data["next_status"] == "awaiting_confirmation"
+    assert "Plan:" in data["user_response"]
+    assert "Selected path:" in data["user_response"]
+
+    # Assistant message recorded
+    messages_resp = client.get(f"/conversation/sessions/{session_id}/messages")
+    messages = messages_resp.json()["data"]
+    assert any(m["role"] == "agent" and "Plan:" in m["content"] for m in messages)
+
+    # Preview event recorded
+    events_resp = client.get(f"/conversation/sessions/{session_id}/events")
+    events = events_resp.json()["data"]
+    assert any(e["type"] == "plan_preview_proposed" for e in events)
+
+    # State changed to awaiting_confirmation
+    assert any(
+        e["type"] == "state_changed" and e["payload"].get("to") == "awaiting_confirmation"
+        for e in events
+    )

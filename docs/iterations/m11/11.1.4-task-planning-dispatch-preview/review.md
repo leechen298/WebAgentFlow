@@ -75,7 +75,7 @@
 
 - [x] No replay / autonomous / LLM / raw HTML imports in preview service.
 - [x] No new API endpoint is added in 11.1.4.
-- [x] Existing conversation dispatch endpoint behavior extended for planning preview.
+- [x] Existing conversation dispatch endpoint wired with PlanningPreviewService.
 - [x] Dedicated planning preview API remains future scope.
 - [x] No CLI command is added.
 - [x] No 11.1.5 detail directory is created.
@@ -113,6 +113,9 @@
 - **Planning handler injection**: `ConversationOrchestrator` accepts an optional
   `planning_handler` callable, keeping the orchestrator decoupled from
   task-planning module internals.
+- **All proposed previews require confirmation**: 11.1.4 boundary is
+  "preview then stop and wait for confirmation". Any proposed plan enters
+  `awaiting_confirmation`; unable-to-plan remains in `task_intake`.
 - **Backward compatibility**: When `planning_handler` is `None`, FREE_TEXT
   behavior is unchanged ("Task input recorded.", `task_intake`).
 
@@ -120,6 +123,8 @@
 
 - `apps/api/app/schemas/conversation.py` — add `PLAN_PREVIEW_PROPOSED`,
   `PLAN_PREVIEW_UNABLE` event types.
+- `apps/api/app/routers/conversation.py` — wire `PlanningPreviewService` into
+  `/conversation/sessions/{id}/dispatch` endpoint.
 - `apps/api/app/services/task_planning/preview.py` — new
   `PlanningPreviewResult` + `PlanningPreviewService`.
 - `apps/api/app/services/task_planning/__init__.py` — export preview types.
@@ -129,18 +134,20 @@
 - `apps/api/tests/test_task_planning_preview.py` — new (9 tests).
 - `apps/api/tests/test_conversation_orchestrator.py` — add 5 planning preview
   integration tests.
+- `apps/api/tests/test_conversation_api.py` — update dispatch tests for
+  planning preview runtime behavior; add API-level proposed-preview test.
 
 ## Verification Commands
 
 ```bash
-cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py -v
-# 31 passed
+cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py -v
+# 34 passed
 
-cd apps/api && ../../.venv/bin/ruff check app/services/task_planning/preview.py app/services/task_planning/__init__.py app/services/conversation/orchestrator.py app/schemas/conversation.py tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py
+cd apps/api && ../../.venv/bin/ruff check app/services/task_planning/preview.py app/services/task_planning/__init__.py app/services/conversation/orchestrator.py app/schemas/conversation.py app/routers/conversation.py tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py
 # All checks passed!
 
 cd apps/api && ../../.venv/bin/pytest -q
-# 961 passed, 65 skipped
+# 962 passed, 65 skipped
 
 git diff --check
 # clean
