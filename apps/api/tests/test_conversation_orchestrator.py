@@ -428,3 +428,145 @@ def test_orchestrator_does_not_import_replay_autonomous_llm_agent_or_cli() -> No
     ]
     for token in forbidden_tokens:
         assert token not in source
+
+
+# ── 11.1.4 Planning Preview Integration ───────────────────────────────────────
+
+
+@pytest.fixture
+def mock_planning_handler():
+    def _handler(raw_input: str):
+        from app.services.task_planning.preview import PlanningPreviewResult
+        return PlanningPreviewResult(
+            user_response=f"Preview for: {raw_input}",
+            event_type="plan_preview_proposed",
+            event_payload={"task_intent_raw_text": raw_input, "candidate_count": 1},
+            confirmation_required=True,
+            selected_path_id="lp-001",
+        )
+    return _handler
+
+
+def test_free_text_without_planning_handler_keeps_original_behavior(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_session(repo, status="idle")
+    result = orchestrator.dispatch_user_input(session_id, "run export")
+
+    assert result.allowed is True
+    assert result.next_status == "task_intake"
+    assert result.user_response == "Task input recorded."
+    assert result.planning_result is None
+
+
+def test_free_text_with_planning_handler_triggers_preview(
+    repo: ConversationRepository,
+    mock_planning_handler,
+) -> None:
+    session_id = _create_session(repo, status="idle")
+    orch = ConversationOrchestrator(repo, planning_handler=mock_planning_handler)
+
+    result = orch.dispatch_user_input(session_id, "run export")
+
+    assert result.allowed is True
+    assert result.next_status == "awaiting_confirmation"
+    assert result.user_response == "Preview for: run export"
+    assert result.planning_result is not None
+    assert result.planning_result.selected_path_id == "lp-001"
+
+    # Assistant message recorded
+    messages = repo.list_messages(session_id)
+    assert any(m.role == "agent" and "Preview for:" in m.content for m in messages)
+
+    # Preview event recorded
+    events = repo.list_events(session_id)
+    assert any(e.type == "plan_preview_proposed" for e in events)
+
+    # State changed to awaiting_confirmation
+    assert any(
+        e.type == ConversationEventType.STATE_CHANGED.value
+        and e.payload_json.get("to") == "awaiting_confirmation"
+        for e in events
+    )
+
+    # Session status updated
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.status == "awaiting_confirmation"
+
+
+def test_free_text_preview_unable_keeps_task_intake(
+    repo: ConversationRepository,
+) -> None:
+    from app.services.task_planning.preview import PlanningPreviewResult
+
+    def unable_handler(raw_input: str):
+        return PlanningPreviewResult(
+            user_response="Unable to plan: no paths found",
+            event_type="plan_preview_unable",
+            event_payload={"task_intent_raw_text": raw_input, "candidate_count": 0},
+            confirmation_required=False,
+        )
+
+    session_id = _create_session(repo, status="idle")
+    orch = ConversationOrchestrator(repo, planning_handler=unable_handler)
+
+    result = orch.dispatch_user_input(session_id, "do the impossible")
+
+    assert result.allowed is True
+    assert result.next_status == "task_intake"
+    assert result.user_response == "Unable to plan: no paths found"
+
+    # Preview event recorded
+    events = repo.list_events(session_id)
+    assert any(e.type == "plan_preview_unable" for e in events)
+
+    # No state change to awaiting_confirmation
+    assert not any(
+        e.type == ConversationEventType.STATE_CHANGED.value
+        and e.payload_json.get("to") == "awaiting_confirmation"
+        for e in events
+    )
+
+
+def test_explicit_replay_ignores_planning_handler(
+    repo: ConversationRepository,
+    mock_planning_handler,
+) -> None:
+    session_id = _create_session(repo, status="idle")
+    orch = ConversationOrchestrator(
+        repo, planning_handler=mock_planning_handler
+    )
+
+    result = orch.dispatch_user_input(
+        session_id, "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users"
+    )
+
+    assert result.allowed is True
+    assert result.next_status == "replay_requested"
+    assert result.command_kind == "replay"
+    assert result.planning_result is None
+
+    # No planning preview events
+    events = repo.list_events(session_id)
+    assert not any("plan_preview" in e.type for e in events)
+
+
+def test_malformed_slash_command_does_not_trigger_planning_preview(
+    repo: ConversationRepository,
+    mock_planning_handler,
+) -> None:
+    session_id = _create_session(repo, status="idle")
+    orch = ConversationOrchestrator(
+        repo, planning_handler=mock_planning_handler
+    )
+
+    result = orch.dispatch_user_input(session_id, "/replay")
+
+    assert result.allowed is False
+    assert result.planning_result is None
+
+    # No planning preview events
+    events = repo.list_events(session_id)
+    assert not any("plan_preview" in e.type for e in events)

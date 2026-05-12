@@ -34,6 +34,7 @@ class DispatchResult:
     error: str | None = None
     engine_command: dict[str, Any] | None = None
     replay_result: ConversationReplaySummary | None = None
+    planning_result: Any | None = None
 
 
 class ConversationOrchestrator:
@@ -41,9 +42,11 @@ class ConversationOrchestrator:
         self,
         repo: ConversationRepository,
         replay_handler: Any | None = None,
+        planning_handler: Any | None = None,
     ) -> None:
         self._repo = repo
         self._replay_handler = replay_handler
+        self._planning_handler = planning_handler
 
     def dispatch_user_input(
         self,
@@ -182,6 +185,58 @@ class ConversationOrchestrator:
                     else f"Replay failed ({replay_result.replay_status})."
                 )
 
+        # 11.1.4 — Planning preview integration for ordinary free-text tasks.
+        planning_result: Any | None = None
+        if (
+            command.kind == ConversationCommandKind.FREE_TEXT
+            and self._planning_handler is not None
+            and transition.allowed
+        ):
+            preview = self._planning_handler(raw_input)
+            planning_result = preview
+
+            # Append assistant message with preview.
+            self._repo.append_message(
+                session_id=session_id,
+                role="agent",
+                content=preview.user_response,
+                metadata={"source": "planning_preview"},
+            )
+
+            # Append planning preview event.
+            self._repo.append_event(
+                session_id=session_id,
+                type=ConversationEventType(preview.event_type),
+                payload=preview.event_payload,
+            )
+            events_appended.append(preview.event_type)
+
+            # Transition to awaiting_confirmation when confirmation is required.
+            if (
+                preview.confirmation_required
+                and next_status_value != ConversationStatus.AWAITING_CONFIRMATION.value
+            ):
+                self._repo.update_session_status(
+                    session_id=session_id,
+                    status=ConversationStatus.AWAITING_CONFIRMATION.value,
+                )
+                self._repo.append_event(
+                    session_id=session_id,
+                    type=ConversationEventType.STATE_CHANGED,
+                    payload={
+                        "from": next_status_value,
+                        "to": ConversationStatus.AWAITING_CONFIRMATION.value,
+                        "command_kind": "free_text",
+                        "reason": "plan_preview_requires_confirmation",
+                    },
+                )
+                events_appended.append(
+                    ConversationEventType.STATE_CHANGED.value
+                )
+                next_status_value = ConversationStatus.AWAITING_CONFIRMATION.value
+
+            user_response = preview.user_response
+
         return DispatchResult(
             session_id=session_id,
             previous_status=previous_status,
@@ -193,6 +248,7 @@ class ConversationOrchestrator:
             allowed=transition.allowed,
             error=transition.error,
             replay_result=replay_result,
+            planning_result=planning_result,
         )
 
     def dispatch_engine_event(

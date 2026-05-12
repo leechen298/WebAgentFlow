@@ -545,46 +545,60 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 ### 11.1.4 · Task Planning Dispatch Preview
 
-状态：documentation initialized。
+状态：已完成。
 
 目标：
 
-- 设计 ordinary task request 进入 conversation runtime 后的 planning preview
-  路径。
+- 将 ordinary task request 接入 conversation runtime planning preview 路径。
 - 区分普通用户任务和显式 `/replay <learned_path_id> <url>` command。
-- 用 deterministic / minimal 方式构造 `TaskIntent`，保留原始用户输入。
-- 串联 11.1.2 retrieval / ranking 和 11.1.3 Task Path Planner，但保持职责分层。
-- 将 Task Path Planner output（`AgentDPlannerOutput` schema）/ RoutePlan
-  proposal 作为 conversation assistant message / event 预览输出。
+- 用 deterministic / minimal 方式构造 `TaskIntent`（仅 `raw_text`）。
+- 串联 11.1.2 retrieval / ranking 和 11.1.3 Task Path Planner，保持职责分层。
+- 将 planner output 作为 conversation assistant message / event 预览输出。
 - 保留 warnings / risk_hints / match_reasons / confirmation requirements。
 - no candidates 时返回 unable-to-plan，不自动学习、不 hidden relearning。
 
-边界：
+交付：
 
-- 不写实现代码。
-- 不新增 API endpoint。
+- `apps/api/app/schemas/conversation.py` — 新增 `PLAN_PREVIEW_PROPOSED`、
+  `PLAN_PREVIEW_UNABLE` event types。
+- `apps/api/app/services/task_planning/preview.py` — `PlanningPreviewResult` +
+  `PlanningPreviewService`。封装 `TaskIntent` 构造、retrieval、planner 调用、
+  用户消息格式化、event payload 构建。
+- `apps/api/app/services/conversation/orchestrator.py` — 新增可选
+  `planning_handler` 参数。FREE_TEXT dispatch 时若 handler 存在：
+  - 调用 handler 生成 preview
+  - 追加 agent assistant message
+  - 追加 preview event
+  - confirmation_required 时状态过渡到 `awaiting_confirmation`
+  - 覆盖 `user_response`
+  - backward compatible（handler=None 时行为不变）
+- `apps/api/app/services/task_planning/__init__.py` — 导出 preview 类型。
+- `apps/api/tests/test_task_planning_preview.py` — 9 tests。
+- `apps/api/tests/test_conversation_orchestrator.py` — 新增 5 个 planning preview
+  集成测试。
+
+验证：
+
+- `cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py -v`
+- 结果：`31 passed`
+- `cd apps/api && ../../.venv/bin/ruff check app/services/task_planning/preview.py app/services/task_planning/__init__.py app/services/conversation/orchestrator.py app/schemas/conversation.py tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py`
+- 结果：`All checks passed!`
+- `cd apps/api && ../../.venv/bin/pytest -q`
+- 结果：`961 passed, 65 skipped`
+- `git diff --check`
+- 结果：clean
+
+边界（已遵守）：
+
+- 不新增 API endpoint（复用现有 `/conversation/sessions/{id}/dispatch`）。
 - 不新增 CLI command。
 - 不执行 replay。
 - 不调用 autonomous run。
 - 不读取 raw HTML。
 - 不接入 LLM provider。
-- 不做真实 slot binding / form filling。
-- 不做 result verification。
-- 不实现 Task Result Reporter。
-- 不实现 recovery dialogue。
-- 不实现 teaching mode。
+- 不做 slot binding / form filling。
+- 不做 result verification / recovery / teaching。
 - 不创建 11.1.5 详情目录。
-
-文档交付：
-
-- `docs/iterations/m11/11.1.4-task-planning-dispatch-preview/README.md`
-- `docs/iterations/m11/11.1.4-task-planning-dispatch-preview/intent.md`
-- `docs/iterations/m11/11.1.4-task-planning-dispatch-preview/plan.md`
-- `docs/iterations/m11/11.1.4-task-planning-dispatch-preview/review.md`
-
-验证：
-
-- `git diff --check`
 
 ### Future · Slot binding contract and deterministic binding MVP
 

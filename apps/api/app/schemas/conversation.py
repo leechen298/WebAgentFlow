@@ -49,6 +49,8 @@ class ConversationEventType(StrEnum):
     RESUME_REQUESTED = "resume_requested"
     ABORT_REQUESTED = "abort_requested"
     TAKEOVER_REQUESTED = "takeover_requested"
+    PLAN_PREVIEW_PROPOSED = "plan_preview_proposed"
+    PLAN_PREVIEW_UNABLE = "plan_preview_unable"
     SESSION_COMPLETED = "session_completed"
     SESSION_FAILED = "session_failed"
 

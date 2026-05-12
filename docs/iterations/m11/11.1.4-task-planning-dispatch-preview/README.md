@@ -1,6 +1,6 @@
 # 11.1.4 · Task Planning Dispatch Preview
 
-Status: **documentation initialized**.
+Status: **已完成**。实现包含在 `apps/api/app/services/task_planning/preview.py`、`apps/api/app/services/conversation/orchestrator.py` 和相关测试中。
 
 ## Execution Prerequisites
 
