@@ -485,45 +485,63 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 不做 E2E。
 - 不加入 user / account / tenant 字段。
 
-### 11.1.3 · Task Path Planner MVP Design
+### 11.1.3 · Task Path Planner MVP
 
-状态：documentation initialized。
+状态：已完成。
 
 目标：
 
-- 设计 Task Path Planner MVP 的服务边界。
-- 明确未来 planner implementation 如何消费 `TaskInput` / `TaskIntent` 和
-  ranked `LearnedPathCandidate` 列表。
-- 明确 future planner implementation will map selected LearnedPath candidates
-  into a minimal explainable `RoutePlan`。
+- 设计并实现 Task Path Planner MVP 的服务边界。
+- 消费 `TaskInput` / `TaskIntent` 和 ranked `LearnedPathCandidate` 列表，
+  输出 `AgentDPlannerOutput`。
+- 将选中的 LearnedPath candidate 映射为最小可解释 `RoutePlan`。
 - 定义 no candidate / ambiguous candidate / risky candidate / flaky candidate
   的 planning semantics。
 - 保留 retrieval `match_reasons` / `warnings` / confirmation requirements，
   供后续 confirmation、execution、reporting 和 recovery 使用。
 
-边界：
+交付：
 
-- 本包只初始化文档，不写实现代码。
-- 不修改 11.1.1 schema。
-- 不补 11.1.2 retrieval / ranking 实现。
-- 不新增 retrieval preview API。
-- 不新增 CLI command。
+- `apps/api/app/services/task_planning/planner.py` — `TaskPathPlanner` 服务。
+  - 输入：`TaskIntent` + `list[LearnedPathCandidate]`（已排序）。
+  - 输出：`AgentDPlannerOutput`。
+  - 防御性过滤 `deprecated` 候选。
+  - 无候选时返回 unable-to-plan（`route_plan=None` + `blocking` confirmation requirement）。
+  - `confirmed` 候选直接生成最小 RoutePlan。
+  - `provisional` 候选生成 RoutePlan 并附加 `warning` 级别 confirmation requirement。
+  - `flaky` 候选生成 RoutePlan，附加 `flaky_path` risk hint 和 confirmation requirement。
+  - 模糊检测：top 2 候选均为 `confirmed` 且 second 有 strong match signal 时，
+    标记 ambiguous 并附加 confirmation requirement。
+  - Drift evidence 和 negative evidence 传播到 warnings / risk hints。
+  - RoutePlan 包含单个 `RouteStep`，引用 `learned_path_id`，purpose 从 task + candidate 派生。
+  - `bound_slots={}`（Slot Binding 为 future scope）。
+- `apps/api/app/services/task_planning/__init__.py` — 导出 `TaskPathPlanner`。
+- `apps/api/tests/test_task_path_planner.py` — 21 tests passed，ruff clean。
+
+验证：
+
+- `cd apps/api && ../../.venv/bin/pytest tests/test_task_path_planner.py tests/test_task_planning_retrieval.py tests/test_task_planning_schemas.py -v`
+- 结果：`92 passed`
+- `cd apps/api && ../../.venv/bin/ruff check app/services/task_planning/planner.py app/services/task_planning/__init__.py tests/test_task_path_planner.py`
+- 结果：`All checks passed!`
+- `cd apps/api && ../../.venv/bin/pytest -v` (full suite)
+- 结果：`947 passed, 65 skipped`
+- `git diff --check`
+- 结果：clean
+
+边界（已遵守）：
+
 - 不执行 replay。
 - 不调用 autonomous run。
 - 不读取 raw HTML。
 - 不做 hidden relearning。
 - 不接入 LLM provider。
+- 不调用 retrieval service（核心方法直接接收候选列表）。
+- 不引入 replay / autonomous / LLM / raw HTML / CLI imports。
+- 不新增 CLI command 或 API endpoint。
 - 不做真实 slot binding / form filling / result verification / recovery
   dialogue / teaching mode。
 - 不创建 11.1.4 详情目录。
-
-预期后续实现方向：
-
-- Potential implementation location:
-  `apps/api/app/services/task_planning/planner.py`。
-- Potential tests:
-  `apps/api/tests/test_task_path_planner.py`。
-- RoutePlan 是 future implementation 的设计目标，不是本轮文档初始化的交付物。
 
 ### Future · Slot binding contract and deterministic binding MVP
 

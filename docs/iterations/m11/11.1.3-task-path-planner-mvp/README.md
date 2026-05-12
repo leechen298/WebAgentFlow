@@ -17,7 +17,7 @@ Before working from this package, read these documents in order:
 11. This directory's `intent.md`
 12. This directory's `plan.md`
 
-Status: **documentation initialized**.
+Status: **已完成**。实现包含在 `apps/api/app/services/task_planning/planner.py` 和 `apps/api/tests/test_task_path_planner.py`。
 
 ## Background
 
