@@ -81,6 +81,12 @@ Report path:
 
 ### AUI-01 · LearnedPath Catalog Visual UI
 
+Case file:
+
+```text
+docs/testing/agent-operated-ui/cases/learned-path-catalog-visual-ui.md
+```
+
 目标：
 
 - 打开 `/exploration/learned-paths`。
@@ -97,6 +103,12 @@ docs/testing/results/YYYY-MM-DD-catalog-visual-ui-exploratory.md
 ```
 
 ### AUI-02 · Console Operator Visual UI
+
+Case file:
+
+```text
+docs/testing/agent-operated-ui/cases/console-operator-visual-ui.md
+```
 
 目标：
 
