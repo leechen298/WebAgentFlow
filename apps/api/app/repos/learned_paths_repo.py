@@ -296,7 +296,7 @@ class LearnedPathRepository:
         stmt = (
             select(LearnedPath)
             .where(LearnedPath.trust != TrustStatus.DEPRECATED)
-            .order_by(LearnedPath.created_at.desc())
+            .order_by(LearnedPath.created_at.desc(), LearnedPath.id.desc())
         )
         return list(self.session.scalars(stmt).all())
 

@@ -54,6 +54,9 @@ _LIMIT_DEFAULT = 10
 _LIMIT_MIN = 1
 _LIMIT_MAX = 50
 
+# Regex for CJK unified ideographs (common Chinese characters).
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]+")
+
 
 # ---------------------------------------------------------------------------
 # Tokenizer
@@ -63,8 +66,9 @@ _LIMIT_MAX = 50
 def _tokenize(text: str | None) -> set[str]:
     """Deterministic lowercase token extraction.
 
-    Splits on non-alphanumeric boundaries.  CJK characters are treated as
-    individual tokens so that ``登录`` becomes ``{"登", "录"}``.
+    Splits on non-alphanumeric boundaries.  CJK sequences are kept intact
+    as single tokens because CJK matching is handled separately by
+    ``_cjk_substring_overlap`` (substring / simple contains).
     """
     if not text:
         return set()
@@ -72,6 +76,26 @@ def _tokenize(text: str | None) -> set[str]:
     # Split on sequences that are *not* word characters.
     tokens = re.split(r"[^\w]", lowered)
     return {t for t in tokens if t}
+
+
+def _cjk_substring_overlap(query_text: str, path_text: str) -> set[str]:
+    """Return CJK substrings from *query_text* contained in *path_text* (or vice versa).
+
+    This implements the 11.1.2 "中文第一版采用 substring / simple contains"
+    policy without introducing an external tokenizer dependency.
+    """
+    if not query_text or not path_text:
+        return set()
+    q = query_text.lower()
+    p = path_text.lower()
+    q_runs = _CJK_RE.findall(q)
+    p_runs = _CJK_RE.findall(p)
+    matches: set[str] = set()
+    for qr in q_runs:
+        for pr in p_runs:
+            if qr in pr or pr in qr:
+                matches.add(qr)
+    return matches
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +131,9 @@ class LearnedPathRetrievalService:
             return []
 
         ranked = [self._score_path(task_intent, path) for path in paths]
-        ranked.sort(key=lambda rc: rc.score, reverse=True)
+        # Stable sort: higher score first; tie-breaker by learned_path_id
+        # so the ordering is deterministic across runs.
+        ranked.sort(key=lambda rc: (-rc.score, rc.candidate.learned_path_id))
 
         return [rc.candidate for rc in ranked[:limit]]
 
@@ -203,6 +229,30 @@ class LearnedPathRetrievalService:
             reasons.append(f"Keyword overlap: {', '.join(sorted(overlap))}")
             score_reasons.append(
                 f"keyword overlap {len(overlap)} tokens (+{overlap_score})"
+            )
+
+        # --- CJK substring overlap -------------------------------------------
+        query_str = " ".join(
+            filter(
+                None,
+                [
+                    task_intent.raw_text,
+                    task_intent.normalized_goal,
+                    task_intent.scenario_hint,
+                    task_intent.target_page_hint,
+                ],
+            )
+        )
+        path_str = " ".join(
+            filter(None, [path.scenario, path.page_template])
+        )
+        cjk_matches = _cjk_substring_overlap(query_str, path_str)
+        if cjk_matches:
+            cjk_score = len(cjk_matches) * _KEYWORD_OVERLAP_PER_TOKEN
+            score += cjk_score
+            reasons.append(f"CJK text overlap: {', '.join(sorted(cjk_matches))}")
+            score_reasons.append(
+                f"CJK overlap {len(cjk_matches)} matches (+{cjk_score})"
             )
 
         # --- drift / negative evidence (conservative) ------------------------

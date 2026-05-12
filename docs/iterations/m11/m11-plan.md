@@ -458,7 +458,7 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - `apps/api/app/services/task_planning/__init__.py` — export `LearnedPathRetrievalService`。
 - `apps/api/app/repos/learned_paths_repo.py` — 新增只读 `list_candidates()`，
   返回所有 non-deprecated LearnedPaths。
-- `apps/api/tests/test_task_planning_retrieval.py` — 38 tests passed，ruff clean。
+- `apps/api/tests/test_task_planning_retrieval.py` — 45 tests passed，ruff clean。
 
 验证：
 

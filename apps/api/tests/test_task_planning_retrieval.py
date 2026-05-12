@@ -14,6 +14,7 @@ from app.repos.learned_paths_repo import LearnedPathRepository
 from app.schemas.task_planning import TaskIntent
 from app.services.task_planning.retrieval import (
     LearnedPathRetrievalService,
+    _cjk_substring_overlap,
     _tokenize,
 )
 
@@ -518,3 +519,94 @@ def test_tokenize_handles_cjk_characters() -> None:
     # intact as a single token rather than being split character-by-character.
     tokens = _tokenize("登录")
     assert "登录" in tokens
+
+
+# ---------------------------------------------------------------------------
+# CJK substring overlap unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_cjk_substring_overlap_matches_contained_text() -> None:
+    assert _cjk_substring_overlap("用户登录", "用户登录流程") == {"用户登录"}
+
+
+def test_cjk_substring_overlap_matches_when_query_shorter() -> None:
+    assert _cjk_substring_overlap("登录", "登录用户") == {"登录"}
+
+
+def test_cjk_substring_overlap_empty_when_no_common_cjk() -> None:
+    assert _cjk_substring_overlap("export users", "登录") == set()
+
+
+def test_cjk_substring_overlap_skips_latin_tokens() -> None:
+    assert _cjk_substring_overlap("login 用户", "用户 user") == {"用户"}
+
+
+# ---------------------------------------------------------------------------
+# CJK retrieval integration tests
+# ---------------------------------------------------------------------------
+
+
+def test_chinese_task_text_matches_candidate_scenario(
+    repo: LearnedPathRepository,
+    service: LearnedPathRetrievalService,
+) -> None:
+    matching = _make_path(
+        repo, scenario="用户登录流程", page_template="/login", trust=TrustStatus.PROVISIONAL
+    )
+    non_matching = _make_path(
+        repo, scenario="订单导出", page_template="/orders", trust=TrustStatus.PROVISIONAL
+    )
+
+    intent = TaskIntent(raw_text="用户登录")
+    candidates = service.retrieve_candidates(intent)
+    assert candidates[0].learned_path_id == str(matching.id)
+    assert candidates[1].learned_path_id == str(non_matching.id)
+    assert any("CJK text overlap" in r for r in candidates[0].match_reasons)
+
+
+def test_chinese_query_substring_matches_shorter_scenario(
+    repo: LearnedPathRepository,
+    service: LearnedPathRetrievalService,
+) -> None:
+    """A shorter CJK query (e.g. '登录') should match a longer scenario ('登录用户')."""
+    matching = _make_path(
+        repo, scenario="登录用户流程", page_template="/login", trust=TrustStatus.PROVISIONAL
+    )
+    _make_path(
+        repo, scenario="注册账号", page_template="/register", trust=TrustStatus.PROVISIONAL
+    )
+
+    intent = TaskIntent(raw_text="登录")
+    candidates = service.retrieve_candidates(intent)
+    assert candidates[0].learned_path_id == str(matching.id)
+    assert any("CJK text overlap" in r for r in candidates[0].match_reasons)
+
+
+# ---------------------------------------------------------------------------
+# Stable tie-breaker sorting
+# ---------------------------------------------------------------------------
+
+
+def test_same_score_sorting_is_stable_by_id(
+    repo: LearnedPathRepository,
+    service: LearnedPathRetrievalService,
+) -> None:
+    """When scores are identical, ordering must be deterministic (by id)."""
+    # Two paths with identical trust, no scenario/page hints, no keyword overlap.
+    _make_path(
+        repo, scenario="alpha", page_template="/a", trust=TrustStatus.PROVISIONAL, hit_count=1
+    )
+    _make_path(
+        repo, scenario="beta", page_template="/b", trust=TrustStatus.PROVISIONAL, hit_count=1
+    )
+
+    intent = TaskIntent(raw_text="unrelated text with no overlap")
+    candidates = service.retrieve_candidates(intent)
+
+    # Both should be present with identical base scores (trust=provisional +10,
+    # hit_count=1 → +1).  No scenario/page/keyword overlap.  Same score.
+    assert len(candidates) == 2
+    ids = [c.learned_path_id for c in candidates]
+    # Deterministic order: lower id comes first because tie-breaker is id asc.
+    assert ids == sorted(ids)

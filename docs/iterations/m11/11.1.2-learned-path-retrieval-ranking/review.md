@@ -49,14 +49,17 @@
   - `LearnedPathRetrievalService(repo).retrieve_candidates(task_intent, limit=10)`
   - 内部 `_RankedCandidate` 类型（不暴露 public score 字段）
   - `_tokenize()` 确定性 lowercase token 提取
+  - `_cjk_substring_overlap()` CJK substring / simple contains 匹配
+  - 排序 tie-breaker：`(-score, learned_path_id)` 保证 deterministic order
 - `apps/api/app/services/task_planning/__init__.py`
 - `apps/api/app/repos/learned_paths_repo.py`
   - 新增只读 `list_candidates()` 返回所有 non-deprecated LearnedPaths
+  - `order_by(created_at.desc(), id.desc())` 提供稳定底层顺序
 - `apps/api/tests/test_task_planning_retrieval.py`
-  - 38 个测试：空目录、trust 过滤、trust 优先级、scenario/page 匹配、
-    hit_count、keyword overlap、limit clamping、score 内部性、match_reasons /
-    warnings、drift/negative evidence 保守策略、无副作用、contract rules、
-    tokenizer 单元测试
+  - 45 个测试：空目录、trust 过滤、trust 优先级、scenario/page 匹配、
+    hit_count、keyword overlap、CJK substring overlap、limit clamping、
+    score 内部性、match_reasons / warnings、drift/negative evidence 保守策略、
+    无副作用、contract rules、tokenizer 单元测试、稳定同分排序测试
 
 ## 验证记录
 
