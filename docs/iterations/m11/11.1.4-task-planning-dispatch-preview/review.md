@@ -84,7 +84,8 @@
 
 ## Regression Checklist
 
-- [x] Conversation dispatcher / orchestrator tests pass (31 passed).
+- [x] Planning preview, conversation dispatcher, and API tests pass
+  (64 targeted tests passed).
 - [x] Explicit replay hook tests pass.
 - [x] Task planning schema tests pass.
 - [x] LearnedPath retrieval tests pass.
@@ -141,7 +142,7 @@
 
 ```bash
 cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py -v
-# 34 passed
+# 64 passed
 
 cd apps/api && ../../.venv/bin/ruff check app/services/task_planning/preview.py app/services/task_planning/__init__.py app/services/conversation/orchestrator.py app/schemas/conversation.py app/routers/conversation.py tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py
 # All checks passed!

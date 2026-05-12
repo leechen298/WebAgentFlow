@@ -579,12 +579,12 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 验证：
 
-- `cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py -v`
-- 结果：`31 passed`
-- `cd apps/api && ../../.venv/bin/ruff check app/services/task_planning/preview.py app/services/task_planning/__init__.py app/services/conversation/orchestrator.py app/schemas/conversation.py tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py`
+- `cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py -v`
+- 结果：`64 passed`
+- `cd apps/api && ../../.venv/bin/ruff check app/services/task_planning/preview.py app/services/task_planning/__init__.py app/services/conversation/orchestrator.py app/schemas/conversation.py app/routers/conversation.py tests/test_task_planning_preview.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py`
 - 结果：`All checks passed!`
 - `cd apps/api && ../../.venv/bin/pytest -q`
-- 结果：`961 passed, 65 skipped`
+- 结果：`962 passed, 65 skipped`
 - `git diff --check`
 - 结果：clean
 
