@@ -80,8 +80,10 @@ review.
 ## Boundary Checklist
 
 - [ ] No replay / autonomous / LLM / raw HTML imports.
-- [ ] No API endpoint is added unless the implementation review explicitly
-  justifies it.
+- [ ] No new API endpoint is added in 11.1.4.
+- [ ] Existing conversation dispatch endpoint behavior may be extended only for
+  planning preview.
+- [ ] Dedicated planning preview API remains future scope.
 - [ ] No CLI command is added.
 - [ ] No 11.1.5 detail directory is created.
 - [ ] Existing M11.0 conversation behavior remains compatible.

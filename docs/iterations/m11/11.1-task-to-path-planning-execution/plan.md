@@ -24,7 +24,7 @@ task-to-path planning 找到候选路径、绑定参数、请求确认、执行 
 
 - 11.1.1 Task planning domain contract。
 - 11.1.2 LearnedPath retrieval and ranking。
-- 11.1.3 Task Path Planner MVP Design。
+- 11.1.3 Task Path Planner MVP。
 - 11.1.4 Task Planning Dispatch Preview。
 - Future Slot binding contract and deterministic binding MVP。
 - Future Plan confirmation and consent gate。
