@@ -184,6 +184,19 @@ These decisions close the initial 11.1.5 open questions before implementation.
 - [x] Replay non-execution evidence is recorded.
 - [x] Verification commands and results are recorded.
 
+## Post-Review Fix: Event Type Column Width (P1)
+
+**Issue:** `conversation_events.type` was `String(32)`, but two new event types exceeded this:
+- `confirmation_clarification_requested` = 36 chars
+- `explicit_replay_blocked_by_pending_confirmation` = 47 chars
+
+SQLite tests passed because SQLite does not enforce `varchar` length, but PostgreSQL would reject these inserts at runtime.
+
+**Fix:**
+- Widened `ConversationEvent.type` in ORM from `String(32)` to `String(64)` (`app/models/conversation.py`)
+- Added Alembic migration `df9ed1494afd` to `ALTER COLUMN conversation_events.type` from 32 to 64
+- Added regression test `test_all_event_type_values_fit_in_database_column` that persists every `ConversationEventType` through the repository to verify database compatibility
+
 ## Verification Commands
 
 ```bash
@@ -191,16 +204,17 @@ cd apps/api && ../../.venv/bin/pytest tests/test_conversation_confirmation.py -v
 # 27 passed
 
 cd apps/api && ../../.venv/bin/pytest tests/test_conversation_orchestrator.py -v
-# 29 passed
+# 30 passed
 
 cd apps/api && ../../.venv/bin/pytest tests/test_conversation_api.py -v
 # 36 passed
 
 cd apps/api && ../../.venv/bin/pytest -q
-# 1000 passed, 65 skipped
+# 1001 passed, 65 skipped
 
 cd apps/api && ../../.venv/bin/ruff check app/services/conversation/confirmation.py \
   app/services/conversation/orchestrator.py app/schemas/conversation.py \
+  app/models/conversation.py alembic/versions/df9ed1494afd_widen_conversation_events_type_to_64_.py \
   tests/test_conversation_confirmation.py tests/test_conversation_orchestrator.py \
   tests/test_conversation_api.py
 # All checks passed!

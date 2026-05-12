@@ -98,7 +98,7 @@ class ConversationEvent(UUIDPrimaryKeyMixin, Base):
         nullable=False,
     )
     type: Mapped[str] = mapped_column(
-        String(32),
+        String(64),
         nullable=False,
     )
     payload_json: Mapped[dict[str, Any]] = mapped_column(

@@ -753,3 +753,22 @@ def test_confirmation_gate_records_no_replay_executed(
     events = repo.list_events(session_id)
     confirmed = [e for e in events if e.type == "plan_confirmed"][0]
     assert confirmed.payload_json["replay_executed"] is False
+
+
+def test_all_event_type_values_fit_in_database_column(
+    repo: ConversationRepository,
+) -> None:
+    """Verify every ConversationEventType value can be persisted.
+
+    The ORM column is String(64); this test guards against enum values
+    that exceed the width on PostgreSQL.
+    """
+    from app.schemas.conversation import ConversationEventType
+
+    session_id = _create_session(repo, status="idle")
+    for evt in ConversationEventType:
+        repo.append_event(session_id=session_id, type=evt, payload={"test": True})
+
+    events = repo.list_events(session_id)
+    persisted_types = {e.type for e in events}
+    assert persisted_types == {e.value for e in ConversationEventType}
