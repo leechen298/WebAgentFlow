@@ -93,15 +93,22 @@ WebAgentFlow **本身就是**一个自主 web 操作引擎，内置有项目自�
 `apps/api/app/services/learning/supervisor_observations.py`。
 
 **应用**才是执行者。**用户**是操作者。**AI 编码 Agent**（Claude Code、
-Codex 等）主要负责写代码。AI 也可以通过项目提供的
-**`verify-scenario` skill** 触发一次运行 —— 但必须遵守下面的契约。
-通过 skill 调用是可审计的（走 HTTP API、持久化进 `exploration_runs`、
-输出原始 Supervisor 裁决 + scorecard），所以验证逻辑依然成立：裁决由项
-目内 Supervisor Agent 产出，AI 只是中转原样呈现。
+Codex 等）主要负责写代码，但当用户明确要求 UI smoke / 浏览器验证时，也
+可以作为**外部测试操作员**操作产品自己的 Console UI，并如实汇报产品返回
+的结果。AI 不得伪装成 WebAgentFlow 内部角色 Agent，不得编造 Agent 裁决，
+也不得绕过产品运行路径直接调用内部服务。
 
-**不得**通过其他任何方式驱动引擎 —— 直接 `curl`
-`/exploration/autonomous-runs`、内联 Playwright 脚本、直接导入
-`run_autonomous_exploration` 都在禁止范围内。
+AI 可以通过项目提供的 **`verify-scenario` skill** 触发一次运行。通过
+skill 调用是可审计的（走 HTTP API、持久化进 `exploration_runs`、输出原
+始 Supervisor 裁决 + scorecard），所以验证逻辑依然成立：裁决由项目内
+Supervisor Agent 产出，AI 负责中转原样呈现。
+
+当用户明确要求 live UI smoke 时，AI 也可以点击一方 Console 控件，例如
+Workbench 的 `Run` 或 Use Cases 的 `Run selected`。这种情况下，
+`/exploration/autonomous-runs[/stream]` 调用只允许作为这些 UI 控件触发的
+产品侧浏览器流量出现，报告里必须清楚写明。直接 `curl`、fetch、httpx、
+内联 service import，或用脚本绕开产品 UI 调 autonomous-run endpoint，
+仍然禁止。
 
 文档更新或普通代码修改如果没有明确要求 live run，不要触发
 `verify-scenario`。本仓库把每一次 live autonomous run 都当作可审计的产品
@@ -109,9 +116,13 @@ Codex 等）主要负责写代码。AI 也可以通过项目提供的
 
 ### 禁止做
 
-- 用 curl、fetch、httpx 或除 `verify-scenario` skill 的 CLI 以外的任何
-  HTTP 客户端调用 `POST /exploration/autonomous-runs` 或 `.../stream`。
+- 用 curl、fetch、httpx 或任何非产品 UI 的 HTTP 客户端调用
+  `POST /exploration/autonomous-runs` 或 `.../stream`。请通过产品 UI 或
+  `verify-scenario` skill 触发。
 - 导入 `run_autonomous_exploration` 并在进程内直接驱动 Playwright。
+- 伪装成 Task Path Planner（legacy: Agent D）、Task Result Reporter
+  （legacy: Agent E）、Supervisor Agent 等 WebAgentFlow 内部 Agent，或在
+  产品没有实际产出结果时编造内部 Agent 结果。
 - 用"通过了"/"跑过了"/"works"之类的总结概括结果，**而不引用**这次运行
   的 `supervisor.verdict` 原值和 5 项 scorecard 得分原值。
 - 汇报时省略 `run_id` —— 用户靠 `run_id` 在 WebAgentFlow 控制台里查这次
@@ -132,8 +143,12 @@ Codex 等）主要负责写代码。AI 也可以通过项目提供的
   （"verify X"、"跑一下 spec Y"、"check workflow Z"）。如实转发 Supervisor
   的裁决 + scorecard + `run_id` 给用户；如果裁决不是 `success`，再给出
   具体的分析 / 下一步建议。
-- 当 skill 无法使用时（API 没起、或需要手动检查），请用户去 workbench
-  亲自跑。
+- 当用户明确要求 Agent-operated UI / live UI smoke 时，作为外部测试操作
+  员操作一方 Console UI。如果因此触发 `/exploration/autonomous-runs[/stream]`，
+  报告时要说明这是产品 UI 触发的流量；能看到 `run_id` / run status 时要
+  记录；不得重写或美化产品返回的结果。
+- 当 skill 和外部 UI 操作都不适合时（服务未启动、缺少凭据、需要人工判断
+  等），请用户去 workbench 亲自跑。
 
 ### 验证权威顺序
 
@@ -142,8 +157,9 @@ Codex 等）主要负责写代码。AI 也可以通过项目提供的
 2. **项目内 Supervisor Agent** —— `_run_supervisor` 的 LLM 调用 + 基于规则
    的 `page_verification` 评分卡。
 
-AI 编码 Agent 是**中转**，不是验证者。它不在这个链上。使用 skill 时的
-职责是把 (1) + (2) 原样转给用户。
+AI 编码 Agent 是**外部测试操作员 / 中转**，不是产品内部验证者。它不在
+这个链上。它的职责是在用户要求时操作被允许的产品表面，并把 (1) + (2)
+原样转给用户。
 
 ### 汇报方式
 

@@ -40,16 +40,20 @@ Agent 也可以按同一份用例和报告模板执行。
 - Headless E2E 不能算 Agent-operated UI exploratory。
 - Component test 不能算 Agent-operated UI exploratory。
 - Static selector smoke 不能算 Agent-operated UI exploratory。
-- 不点击会触发 live autonomous run 的按钮。
-- 不调用 `/exploration/autonomous-runs`。
-- 不调用 `/exploration/autonomous-runs/stream`。
+- 默认 exploratory 用例不点击会触发 live autonomous run 的按钮。
+- 如果用例明确标为 Live UI Smoke，则允许通过产品自己的 Console UI 点击
+  `Run` / `Run selected` 等控件；报告必须把
+  `/exploration/autonomous-runs[/stream]` 记录为 product-initiated UI traffic。
+- 不用 curl、fetch、httpx 或自写脚本直接调用 `/exploration/autonomous-runs`。
+- 不用 curl、fetch、httpx 或自写脚本直接调用 `/exploration/autonomous-runs/stream`。
 - 不 import / run autonomous explorer。
 - 如果工具无法打开页面，写 `BLOCKED`。
 - 报告必须写明 tool：Codex、Claude Code、headed Playwright 或其他具体工具。
 - 报告必须写明是否调用 autonomous endpoint，默认应为 `no`。
 - 报告必须写明是否触发 WebAgentFlow 产品侧 LLM provider，默认应为 `no`。
 - Codex、Claude Code 或其他 browser-capable Agent 可以作为外部测试操作员；
-  禁止的是产品侧 LLM / autonomous run 被触发。
+  禁止的是伪装成 WebAgentFlow 内部 Agent、绕过产品 UI 直接调内部服务、
+  或编造产品没有实际返回的结果。
 
 ## 用例模板
 
@@ -118,12 +122,15 @@ docs/testing/agent-operated-ui/cases/console-operator-visual-ui.md
 - 打开 detail。
 - 打开 workbench。
 - 打开 use cases。
-- 不点击 run / batch run / run selected 等 live run 按钮。
+- 默认 non-live exploratory 模式只观察，不点击 run / batch run / run selected。
+- Live UI Smoke 模式可以点击 `Run` / `Run selected`，但必须如实记录
+  autonomous endpoint、产品侧 LLM / Supervisor、run status 和 run id。
 
 推荐报告路径：
 
 ```text
 docs/testing/results/YYYY-MM-DD-console-operator-visual-ui-exploratory.md
+docs/testing/results/YYYY-MM-DD-console-operator-live-ui-smoke.md
 ```
 
 ### AUI-03 · Validation-site 浏览器冒烟
@@ -186,10 +193,12 @@ Commit:
 
 范围：
 - 只操作已完成页面。
-- 不调用 `/exploration/autonomous-runs`。
-- 不调用 `/exploration/autonomous-runs/stream`。
-- 不触发 live autonomous run。
-- 不触发 WebAgentFlow 产品侧 LLM provider。
+- 默认不调用 `/exploration/autonomous-runs`。
+- 默认不调用 `/exploration/autonomous-runs/stream`。
+- 默认不触发 live autonomous run。
+- 默认不触发 WebAgentFlow 产品侧 LLM provider。
+- 如果任务明确要求 Live UI Smoke，可以通过产品 Console UI 触发 live run，
+  但不得直接 curl/fetch/httpx 调 endpoint，也不得伪装成内部 Agent。
 - Codex / Claude Code / 其他 browser-capable Agent 可作为外部测试操作员。
 
 目标页面：
@@ -206,6 +215,6 @@ Commit:
 - PASS / FAIL / BLOCKED summary。
 - 每一步操作和可见观察。
 - 使用的工具。
-- 是否调用 autonomous endpoint：no。
-- 是否触发产品侧 LLM provider：no。
+- 是否调用 autonomous endpoint。
+- 是否触发产品侧 LLM provider。
 ```

@@ -19,10 +19,10 @@ Target URL: `http://127.0.0.1:5174/exploration/learned-paths`
 
 | Case | Status | Evidence |
 |---|---|---|
-| LPC-001 catalog page renders list or empty state | PASS | Headed Playwright snapshot `.playwright-cli/page-2026-05-12T07-23-20-675Z.yml` showed `LearnedPath` heading, trust filter, refresh button, and visible seeded rows including `e2e:replay:deprecated`, `valid_credentials`, `invalid_credentials`. |
-| LPC-002 trust filter changes visible state or query/filter state | PASS | Snapshot `.playwright-cli/page-2026-05-12T07-25-25-390Z.yml` showed filter switched to `暂存` and empty state `还没有沉淀出 LearnedPath`; snapshot `.playwright-cli/page-2026-05-12T07-26-28-585Z.yml` showed filter switched back to `全部` and list rows reappeared. |
-| LPC-003 learned path drawer opens from a row/card | PASS | Clicking the first row's `查看动作` button opened the drawer; snapshot `.playwright-cli/page-2026-05-12T07-29-48-173Z.yml` showed drawer title `动作序列` and detail rows for ID, 场景, 页面模板, 信任度, 命中次数, 来源运行. |
-| LPC-004 drawer replay section is visible but does not trigger live autonomous run | PASS | The same drawer snapshot showed `重跑这条路径`, `目标 URL` textbox, and a disabled `重 跑` button. Screenshot: `output/playwright/aui01/drawer-open.png`. Browser request log contained only `GET /api/exploration/learned-paths...`, `GET /api/health`, and `GET /api/exploration/learned-paths/{id}`. No autonomous-run endpoints were called. |
+| LPC-001 catalog page renders list or empty state | PASS | The page showed `LearnedPath` heading, trust filter, refresh button, and a populated table. Visible seeded rows included `e2e:replay:deprecated`, `valid_credentials`, and `invalid_credentials`. Supporting local snapshot: `.playwright-cli/page-2026-05-12T07-23-20-675Z.yml`. |
+| LPC-002 trust filter changes visible state or query/filter state | PASS | The trust filter was visible and operable. Switching to `暂存` changed the table to the empty-state row `还没有沉淀出 LearnedPath`; switching back to `全部` restored the list. Supporting local snapshots: `.playwright-cli/page-2026-05-12T07-25-25-390Z.yml`, `.playwright-cli/page-2026-05-12T07-26-28-585Z.yml`. |
+| LPC-003 learned path drawer opens from a row/card | PASS | Clicking the first row's `查看动作` button opened a right-side drawer titled `动作序列`, with detail rows for ID, 场景, 页面模板, 信任度, 命中次数, 来源运行. Supporting local snapshot: `.playwright-cli/page-2026-05-12T07-29-48-173Z.yml`. |
+| LPC-004 drawer replay section is visible but does not trigger live autonomous run | PASS | The drawer showed `重跑这条路径`, a `目标 URL` textbox, and a disabled `重 跑` button. The action sequence was visible with Step 1 `fill #search-name -> alice` and Step 2 `click #btn-search`. Committed screenshot: `output/playwright/aui01/drawer-open.png`. Browser request log contained only `GET /api/exploration/learned-paths...`, `GET /api/health`, and `GET /api/exploration/learned-paths/{id}`. No autonomous-run endpoints were called. |
 
 ## Steps And Observations
 
@@ -59,8 +59,13 @@ Target URL: `http://127.0.0.1:5174/exploration/learned-paths`
 - E2E spec modified: no
 - Package scripts modified: no
 
+## Verification
+
+- `git diff --check`: clean
+- Local `.playwright-cli/*.yml` snapshots were supporting transient evidence during the run. The key UI observations they captured are summarized directly in this report, and the committed durable artifact is `output/playwright/aui01/drawer-open.png`.
+
 ## Follow-ups
 
 - AUI-01 is complete for the current seeded dataset.
 - This report used headed Playwright because the in-app browser / Browser Use backend was not available in this session.
-- The next Agent-operated UI run should be AUI-02 Console Operator Visual UI, still avoiding any live-run buttons.
+- The next Agent-operated UI run can be AUI-02 Console Operator UI. If it is scoped as Live UI Smoke, `Run` / `Run selected` may be clicked through the product UI and the report must record the resulting autonomous-run endpoints, product-side LLM / Supervisor behavior, run status, and run id.

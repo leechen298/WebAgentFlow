@@ -97,16 +97,26 @@ emitting observation atoms defined in
 `apps/api/app/services/learning/supervisor_observations.py`.
 
 The app operates. The user is the operator. The AI coding agent (Claude Code,
-Codex, Cursor, …) primarily writes code. The AI MAY also trigger a run via the
-project-provided **`verify-scenario` skill** — but only under the contract
-below. The skill invocation is auditable (it goes through the HTTP API,
-persists to `exploration_runs`, emits the raw Supervisor verdict +
-scorecard), so the verification story stays intact: the app's internal
-Supervisor Agent produces the verdict, and the AI merely relays it.
+Codex, Cursor, …) primarily writes code, but may also act as an **external
+test operator** when the user explicitly asks for UI smoke / browser
+validation. In that role, the AI may operate the product's own Console UI and
+report what the product returned. The AI must not pretend to be an internal
+WebAgentFlow role Agent, fabricate an Agent verdict, or bypass the product's
+runtime path by directly calling internal services.
 
-Running the engine via any other means — direct `curl` to
-`/exploration/autonomous-runs`, an inline Playwright script, importing
-`run_autonomous_exploration` directly — is NOT permitted.
+The AI MAY trigger a run via the project-provided **`verify-scenario` skill**.
+The skill invocation is auditable (it goes through the HTTP API, persists to
+`exploration_runs`, emits the raw Supervisor verdict + scorecard), so the
+verification story stays intact: the app's internal Supervisor Agent produces
+the verdict, and the AI relays it.
+
+When the user explicitly asks for live UI smoke, the AI MAY also click
+first-party Console controls such as Workbench `Run` or Use Cases `Run
+selected`. In that case, calls to `/exploration/autonomous-runs[/stream]` are
+allowed only as product-initiated browser traffic caused by those UI controls,
+and the report must say so clearly. Direct `curl`, fetch, httpx, inline service
+imports, or scripts that call the autonomous-run endpoints outside the product
+UI remain prohibited.
 
 For documentation-only work or ordinary code edits that do not explicitly
 request a live run, do not trigger `verify-scenario`. This repository treats
@@ -115,9 +125,14 @@ each live autonomous run as auditable product evidence, not as a casual test.
 ### MUST NOT
 
 - Call `POST /exploration/autonomous-runs` or `.../stream` via curl, fetch,
-  httpx, or any HTTP client other than the `verify-scenario` skill's CLI.
+  httpx, or any non-product UI HTTP client. Use the product UI or the
+  `verify-scenario` skill instead.
 - Import `run_autonomous_exploration` and drive Playwright in-process on
   the user's behalf.
+- Pretend to be an internal WebAgentFlow Agent such as Task Path Planner
+  (legacy: Agent D), Task Result Reporter (legacy: Agent E), or Supervisor
+  Agent, or return an invented internal-agent result without the product
+  actually producing it.
 - Summarise the result as "passed" / "failed" / "works" without citing the
   run's `supervisor.verdict` and the five scorecard scores verbatim.
 - Omit the `run_id` when reporting back — the user needs it to look the
@@ -140,8 +155,14 @@ each live autonomous run as auditable product evidence, not as a casual test.
   live run (e.g. "verify X", "run spec Y", "check workflow Z"). Forward the
   Supervisor verdict + scorecard + `run_id` to the user verbatim, plus a
   concrete analysis / next step if the verdict is not `success`.
-- Ask the user to run a flow in the workbench when the skill can't help
-  (e.g. the API isn't up, or manual inspection matters).
+- Operate the first-party Console UI as an external test operator when the
+  user explicitly asks for Agent-operated UI / live UI smoke. If this triggers
+  `/exploration/autonomous-runs[/stream]`, report it as product-initiated UI
+  traffic, include the run status / `run_id` when visible, and do not reshape
+  the product's outcome.
+- Ask the user to run a flow in the workbench when neither the skill nor
+  external UI operation is appropriate (e.g. missing services, credentials, or
+  manual judgment).
 
 ### Authoritative verification order
 
@@ -150,8 +171,9 @@ each live autonomous run as auditable product evidence, not as a casual test.
 2. **Project-internal Supervisor Agent** — `_run_supervisor` LLM call +
    `page_verification` rule-based scorecard.
 
-The AI coding agent is a **relay**, not a verifier. It does not sit on this
-list. Its job when using the skill is to faithfully surface (1) + (2).
+The AI coding agent is an **external test operator / relay**, not a
+product-internal verifier. It does not sit on this list. Its job is to operate
+approved surfaces when asked and faithfully surface (1) + (2).
 
 ### Reporting style
 

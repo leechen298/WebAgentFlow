@@ -1,13 +1,23 @@
-# AUI-02 · Console Operator 可视化页面探索
+# AUI-02 · Console Operator 可视化页面探索 / Live UI Smoke
 
 ## 目标
 
-使用 Agent 操作真实浏览器，验证 console operator 核心页面在不启动 live autonomous
-run 的前提下仍然可导航、可观察。覆盖 history、detail、workbench、use cases 四类
-operator surface。
+使用 Agent 操作真实浏览器，验证 console operator 核心页面可导航、可观察，并在
+任务明确要求时真实触发一轮 live UI smoke。覆盖 history、detail、workbench、
+use cases 四类 operator surface。
 
 这是 **Agent-operated UI exploratory** 证据，不是 deterministic E2E、
-API-only exploratory、component test，也不是 live autonomous run。
+API-only exploratory 或 component test。
+
+本用例文件支持两种执行模式：
+
+- **Non-live exploratory**：只观察 Console 页面，不点击 `Run` / `Run selected`。
+- **Live UI Smoke**：当任务明确要求时，允许通过产品 Console UI 点击
+  `Run` / `Run selected`，真实触发 live autonomous run，并如实记录 UI、
+  endpoint、Supervisor / LLM、run status、run id 和失败信息。
+
+两种模式都禁止绕过产品 UI 直接调 internal endpoint，也禁止把执行 Agent 伪装成
+WebAgentFlow 内部 Agent。
 
 ## 范围
 
@@ -21,8 +31,13 @@ API-only exploratory、component test，也不是 live autonomous run。
 主要证据报告路径：
 
 - `docs/testing/results/YYYY-MM-DD-console-operator-visual-ui-exploratory.md`
+- `docs/testing/results/YYYY-MM-DD-console-operator-live-ui-smoke.md`
 
-如果没有 persisted run，detail 页面用例可以写 `BLOCKED`。不要为了制造 detail 数据而触发 live run。
+Non-live exploratory 模式下，如果没有 persisted run，detail 页面用例可以写
+`BLOCKED`，不要为了制造 detail 数据而触发 live run。
+
+Live UI Smoke 模式下，可以通过 Workbench `Run` 或 Use Cases `Run selected`
+创建新的 run，再验证 history / detail。
 
 ## 目标页面
 
@@ -63,17 +78,19 @@ detail 页面数据前置：
 
 ## 禁止动作
 
-- 不调用 `/exploration/autonomous-runs`。
-- 不调用 `/exploration/autonomous-runs/stream`。
+- 不用 curl、fetch、httpx 或自写脚本直接调用 `/exploration/autonomous-runs`。
+- 不用 curl、fetch、httpx 或自写脚本直接调用 `/exploration/autonomous-runs/stream`。
 - 不 import 或直接运行 autonomous explorer。
-- 不使用 `verify-scenario`。
-- 不触发 WebAgentFlow 产品侧 LLM provider。
+- 不伪装成 WebAgentFlow 内部 Agent，也不编造产品没有实际返回的 Agent 结果。
 - Codex / Claude Code / 其他 browser-capable Agent 可作为外部测试操作员。
-- 不点击 workbench `Run`。
-- 不点击 workbench `Abort`，除非测试前已经有 run 处于运行中且 operator 明确要求介入。
-- 不点击 use-cases `Run selected`。
+- Non-live exploratory 模式不点击 workbench `Run`。
+- Non-live exploratory 模式不点击 workbench `Abort`，除非测试前已经有 run 处于运行中且 operator 明确要求介入。
+- Non-live exploratory 模式不点击 use-cases `Run selected`。
+- Live UI Smoke 模式可以点击 workbench `Run` 和 use-cases `Run selected`；此时
+  `/exploration/autonomous-runs[/stream]` 与产品侧 LLM / Supervisor 触发属于预期，
+  但报告必须写清楚。
 - `Run in Workbench` 当前只是带 query params 跳转到 workbench，不会直接启动 run；
-  但本轮仍将它视为 out of scope，不点击。后续可单独补 deep-link visual case。
+  Non-live exploratory 模式可继续只观察，Live UI Smoke 模式可以点击它进入 Workbench。
 - 不点击 history/detail 上的删除、accept review、reject review 等破坏性或状态变更操作。
 - 不改产品代码、E2E spec、package scripts 或 `docs/iterations/`。
 - 没有真实浏览器可见证据时，不得写 PASS。
@@ -282,6 +299,8 @@ Commit:
 
 ## 边界清单
 
+Non-live exploratory 模式：
+
 - Product code modified: no。
 - E2E spec modified: no。
 - Package scripts modified: no。
@@ -291,3 +310,111 @@ Commit:
 - `/exploration/autonomous-runs/stream` called: no。
 - 产品侧 LLM provider used: no。
 - Deterministic E2E claimed: no。
+
+Live UI Smoke 模式：
+
+- Product code modified: no。
+- E2E spec modified: no。
+- Package scripts modified: no。
+- `docs/iterations/` modified: no。
+- Autonomous endpoint called: yes, expected only through product Console UI。
+- `/exploration/autonomous-runs` called: yes if the UI uses the non-stream endpoint。
+- `/exploration/autonomous-runs/stream` called: yes if the UI uses the stream endpoint。
+- 产品侧 LLM provider used: yes/no, record actual observed behavior。
+- Deterministic E2E claimed: no。
+
+## Live UI Smoke 用例
+
+下面用例只在任务明确要求 **Console Operator Live UI Smoke** 时执行。
+
+### LIVE-001 · Use Cases 页面可 deep-link 到 Workbench
+
+目标 URL：
+
+```text
+http://127.0.0.1:5174/exploration/autonomous/cases
+```
+
+操作：
+
+1. 打开 use-cases 页面。
+2. 确认 scenario list 或 empty state 可见。
+3. 如果存在 validation-site scenario，选择一个。
+4. 点击该 scenario 的 `Run in Workbench`。
+5. 确认跳转到 workbench，URL query 带有 url / scenario / goal 等参数。
+
+预期可见结果：
+
+- 页面进入 workbench。
+- URL / scenario / input 预填信息可见或可从当前 URL 观察到。
+- 这一步本身不应启动 live run。
+
+### LIVE-002 · Workbench 单次 run 可从 UI 触发并产生状态
+
+目标 URL：
+
+```text
+http://127.0.0.1:5174/exploration/autonomous
+```
+
+操作：
+
+1. 确认 URL input、goal input、scenario、fill values、toggle values 可见。
+2. 点击 `Run`。
+3. 等待 live status、timeline、verification 或 raw event 区域更新。
+4. 最多等待 120 秒；未完成则标记 `TIMEOUT`。
+
+预期可见结果：
+
+- run 能启动，或 UI 显示明确错误。
+- 最终状态可以是 `PASS`、`FAIL`、`PARTIAL`、`UNVERIFIED`、`TIMEOUT` 或 `BLOCKED`。
+- 不得把失败或超时写成 PASS。
+
+### LIVE-003 · History 页面显示新 run
+
+目标 URL：
+
+```text
+http://127.0.0.1:5174/exploration/autonomous/history
+```
+
+操作：
+
+1. 打开 history 页面。
+2. 刷新列表。
+3. 查找刚才 live run 对应的记录。
+4. 记录 status、review status、scenario、created time 和 run id（如可见）。
+
+预期可见结果：
+
+- 新 run 出现在 history；若未出现，记录 `FAIL` 或 `OBSERVED GAP`。
+
+### LIVE-004 · Detail 页面可打开新 run
+
+操作：
+
+1. 从 history 点击刚才 run 的 detail navigation。
+2. 观察 run config、page analysis、step timeline、verification、learned path、raw JSON。
+3. 不删除 run。
+4. 不修改旧 run 的 review 状态。
+
+预期可见结果：
+
+- detail 页面可打开。
+- 关键区块可见；缺失区块如实记录为 gap。
+
+### LIVE-005 · 可选 batch run
+
+仅在前四个 live case 完成后执行。
+
+操作：
+
+1. 回到 use-cases 页面。
+2. 只选择 1 个 scenario。
+3. 点击 `Run selected`。
+4. 观察 batch status 从 queued / running 到 completed / failed / timeout。
+
+预期可见结果：
+
+- batch UI 有明确状态变化。
+- 不扩大到全量 scenario。
