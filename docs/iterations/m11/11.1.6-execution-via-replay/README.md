@@ -1,10 +1,10 @@
-# 11.1.6 · Execution via Replay
+# 11.1.6 · 通过 Replay 执行已确认计划
 
-Status: **documentation initialized**.
+状态：**documentation initialized**。
 
-## Execution Prerequisites
+## 执行前必读
 
-Before working from this package, read these documents in order:
+开发本包前，请按顺序阅读：
 
 1. `AGENTS.md`
 2. `docs/product-model.md`
@@ -16,83 +16,81 @@ Before working from this package, read these documents in order:
 8. `docs/iterations/m11/11.1-task-to-path-planning-execution/plan.md`
 9. `docs/iterations/m11/11.1.4-task-planning-dispatch-preview/review.md`
 10. `docs/iterations/m11/11.1.5-plan-confirmation-consent-gate/review.md`
-11. This directory's `intent.md`
-12. This directory's `plan.md`
+11. 本目录的 `intent.md`
+12. 本目录的 `plan.md`
 
-## Background
+## 背景
 
-11.1.4 exposes planning preview through the conversation runtime. 11.1.5 turns
-the pending preview into an auditable user decision and introduces
-`plan_confirmed` as confirmed-but-not-executed semantics.
+11.1.4 已经把普通用户任务通过 conversation runtime 暴露为 planning
+preview。11.1.5 将 pending preview 转成可审计的用户决策，并引入
+`plan_confirmed` 这种“已确认但尚未执行”的语义。
 
-11.1.6 is the next design package: execute an already confirmed plan through
-existing deterministic replay capability. It does not re-plan, learn a new
-path, verify the business result, report final task success, or recover from
-failure.
+11.1.6 是下一步设计包：通过已有 deterministic replay 能力执行一个已经确认
+的 plan。它不重新规划、不学习新路径、不验证业务结果、不汇报最终任务成功，也不
+做 failure recovery。
 
-## Current Relationship
+## 当前关系
 
-- Prerequisites: M11.0 conversation runtime foundation, 11.1.4 Task Planning
-  Dispatch Preview, 11.1.5 Plan Confirmation and Consent Gate, and the existing
-  M10 replay foundation / 11.0.6 explicit replay hook.
-- This package: design confirmed-plan execution through deterministic replay.
-- Future scope: result verification, Task Result Reporter, recovery dialogue,
-  teaching mode, and broader task-to-path evidence.
+- 前置：M11.0 conversation runtime foundation、11.1.4 Task Planning
+  Dispatch Preview、11.1.5 Plan Confirmation and Consent Gate，以及现有
+  M10 replay foundation / 11.0.6 explicit replay hook。
+- 本包：设计 confirmed plan 如何通过 deterministic replay 执行。
+- 后续：result verification、Task Result Reporter、recovery dialogue、
+  teaching mode，以及更完整的 task-to-path evidence。
 
-## Goals
+## 目标
 
-- Define preconditions for executing a confirmed plan.
-- Define how execution locates the confirmed plan / selected LearnedPath.
-- Define the replay invocation boundary for first implementation.
-- Define conversation event and assistant-message semantics for execution
-  started / completed / failed / blocked.
-- Preserve explicit replay compatibility.
-- Keep result verification and Task Result Reporter outside 11.1.6.
+- 定义执行 confirmed plan 的前置条件。
+- 定义 execution 如何找到 confirmed plan / selected LearnedPath。
+- 定义第一版 replay invocation boundary。
+- 定义 execution started / completed / failed / blocked 的 conversation
+  event 和 assistant message 语义。
+- 保持 explicit `/replay <learned_path_id> <url>` 兼容。
+- 将 result verification 和 Task Result Reporter 留在 11.1.6 之外。
 
-## Non-Goals
+## 非目标
 
-- Do not write implementation code in this documentation pass.
-- Do not modify 11.1.1 schemas.
-- Do not modify 11.1.2 retrieval implementation.
-- Do not modify 11.1.3 planner implementation.
-- Do not modify 11.1.4 preview implementation.
-- Do not modify 11.1.5 confirmation implementation.
-- Do not add API endpoints or CLI commands.
-- Do not call autonomous run.
-- Do not perform hidden relearning.
-- Do not read raw HTML.
-- Do not connect an LLM provider.
-- Do not implement real slot binding or form filling.
-- Do not implement result verification.
-- Do not implement Task Result Reporter.
-- Do not implement recovery dialogue or teaching mode.
-- Do not perform browser exploration.
-- Do not create a 11.1.7 detail directory.
+- 本轮文档阶段不写实现代码。
+- 不修改 11.1.1 schemas。
+- 不修改 11.1.2 retrieval implementation。
+- 不修改 11.1.3 planner implementation。
+- 不修改 11.1.4 preview implementation。
+- 不修改 11.1.5 confirmation implementation。
+- 不新增 API endpoint 或 CLI command。
+- 不调用 autonomous run。
+- 不做 hidden relearning。
+- 不读取 raw HTML。
+- 不接入 LLM provider。
+- 不实现真实 slot binding 或 form filling。
+- 不实现 result verification。
+- 不实现 Task Result Reporter。
+- 不实现 recovery dialogue 或 teaching mode。
+- 不做 browser exploration。
+- 不创建 11.1.7 详情目录。
 
-## Document Index
+## 文档索引
 
-- `intent.md` - why confirmed plans execute through deterministic replay and
-  why replay completion is not business success.
-- `plan.md` - future implementation plan for execution via replay.
-- `review.md` - checklist for the future implementation review.
+- `intent.md` —— 为什么 confirmed plan 只能通过 deterministic replay 执行，
+  以及为什么 replay completion 不等于业务成功。
+- `plan.md` —— 11.1.6 后续实现计划与实现前决策收口。
+- `review.md` —— 后续实现 review checklist。
 
-## Development Preconditions
+## 后续开发前置条件
 
-A future implementation should start only after:
+未来实现 11.1.6 前，必须确认：
 
-- 11.1.5 `plan_confirmed` behavior is available in the working branch;
-- the current replay service / explicit replay hook has been inspected;
-- the implementation can locate a confirmed plan and selected LearnedPath from
-  auditable conversation events;
-- required replay context is explicitly available, including `learned_path_id`
-  and target URL / entry context;
-- missing context behavior is decided before code changes.
+- 工作分支已经具备 11.1.5 `plan_confirmed` 行为。
+- 已 inspect 当前 replay service / explicit replay hook。
+- 实现可以从可审计 conversation events 中找到 confirmed plan 和 selected
+  LearnedPath。
+- replay 所需上下文已经显式存在，包括 `learned_path_id` 和 target URL /
+  entry context。
+- missing context 的 blocked 行为已经在代码前确定。
 
-## Acceptance Summary
+## 验收摘要
 
-- The core path is `confirmed plan -> deterministic replay execution`.
-- 11.1.6 is not `ordinary task -> autonomous execution`.
-- `replay completed` does not mean `task verified` or `business success`.
-- Execution is blocked when selected path or target URL / entry context is
-  missing.
-- Explicit `/replay <learned_path_id> <url>` remains a separate entry path.
+- 核心路径是 `confirmed plan -> deterministic replay execution`。
+- 11.1.6 不是 `ordinary task -> autonomous execution`。
+- `replay completed` 不等于 `task verified` 或 `business success`。
+- 缺 selected path、target URL 或 entry context 时必须 blocked。
+- explicit `/replay <learned_path_id> <url>` 仍然是独立入口。
