@@ -598,7 +598,61 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 不接入 LLM provider。
 - 不做 slot binding / form filling。
 - 不做 result verification / recovery / teaching。
-- 不创建 11.1.5 详情目录。
+- 11.1.4 实现阶段未创建 11.1.5 详情目录。
+
+### 11.1.5 · Plan Confirmation and Consent Gate
+
+状态：documentation initialized。
+
+目标：
+
+- 设计 `awaiting_confirmation` 下用户输入如何转成 explicit decision。
+- 处理 confirm / cancel / reject / clarification / new task intent。
+- 只记录 consent / cancellation / rejection / revision intent。
+- 不执行 replay，不调用 autonomous run，不做 result verification。
+- 确保 ambiguous input 不会被当成 consent。
+- 明确 high-risk / flaky / provisional plan 即使被确认，也只是记录 consent
+  或 ready-for-execution 语义。
+
+边界：
+
+- 不写实现代码。
+- 不修改 11.1.1 schema。
+- 不修改 11.1.2 retrieval implementation。
+- 不修改 11.1.3 planner implementation。
+- 不修改 11.1.4 preview implementation。
+- 不新增 API endpoint。
+- 不新增 CLI command。
+- 不执行 replay。
+- 不调用 autonomous run。
+- 不读取 raw HTML。
+- 不接入 LLM provider。
+- 不做 slot binding / form filling。
+- 不做 result verification。
+- 不实现 Task Result Reporter。
+- 不实现 recovery dialogue。
+- 不实现 teaching mode。
+- 不创建 11.1.6 详情目录。
+
+文档交付：
+
+- `docs/iterations/m11/11.1.5-plan-confirmation-consent-gate/README.md`
+- `docs/iterations/m11/11.1.5-plan-confirmation-consent-gate/intent.md`
+- `docs/iterations/m11/11.1.5-plan-confirmation-consent-gate/plan.md`
+- `docs/iterations/m11/11.1.5-plan-confirmation-consent-gate/review.md`
+
+待实现前决策：
+
+- confirmed-but-not-executed 使用新状态、现有状态，还是 event-only 语义。
+- 是否新增 `ConversationEventType` values。
+- new task while awaiting confirmation 是要求先 cancel，还是用 revision event
+  supersede pending preview。
+- `/replay <learned_path_id> <url>` 在 `awaiting_confirmation` 下是先要求取消
+  pending preview，还是作为 separate explicit command 并审计 replacement。
+
+验证：
+
+- `git diff --check`
 
 ### Future · Slot binding contract and deterministic binding MVP
 
@@ -611,17 +665,6 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 区分 replaceable action value 和 fixed learned action。
 - 输出 slot binding proposal。
 - 不执行 replay。
-
-### Future · Plan confirmation and consent gate
-
-状态：future，尚未分配执行包编号。
-
-目标：
-
-- 在执行前向用户展示 route plan、bound slots、risk hints。
-- 要求用户确认 ambiguous / risky / destructive / external-send /
-  bulk-modification 操作。
-- 初期使用 deterministic policy + user confirmation，不新增 Risk Agent。
 
 ### Future · Execution via replay
 

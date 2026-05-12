@@ -26,8 +26,8 @@ task-to-path planning 找到候选路径、绑定参数、请求确认、执行 
 - 11.1.2 LearnedPath retrieval and ranking。
 - 11.1.3 Task Path Planner MVP。
 - 11.1.4 Task Planning Dispatch Preview。
+- 11.1.5 Plan Confirmation and Consent Gate。
 - Future Slot binding contract and deterministic binding MVP。
-- Future Plan confirmation and consent gate。
 - Future Execution via replay。
 - Future Result verification and Task Result Reporter / 任务结果汇报器 reporting。
 - Future Task-to-path tests and evidence。
@@ -129,11 +129,21 @@ current M11.1 plan.
 
 ## Confirmation / consent gate 位置
 
-Confirmation / consent gate 位于 route plan 生成之后、execution 之前。
+Confirmation / consent gate 位于 11.1.4 planning preview 之后、execution 之前。
+它把 `awaiting_confirmation` 下的用户输入转成 explicit decision：
 
-初期使用 deterministic policy + user confirmation，不新增 Risk Agent。
-需要确认的类型包括 ambiguous、risky、destructive、external-send、
-bulk-modification、permission-modification 和用户自定义敏感操作。
+- confirm / yes / proceed / continue / 确认 / 继续 记录 consent 或
+  ready-for-execution 语义。
+- cancel / abort / stop / 取消 / 停止 停止 pending preview。
+- reject / no / 不要 拒绝 pending preview。
+- 其他 free text 进入 clarification 或 revision intent。
+
+11.1.5 不执行 replay，不调用 autonomous run，不做 result verification。它只把用户
+对 plan preview 的点头、摇头、犹豫和改口变成可审计状态。
+
+`/replay <learned_path_id> <url>` 在 `awaiting_confirmation` 下的语义必须在
+实现前明确：要么要求先取消 pending preview，要么作为 separate explicit command
+并审计 pending preview 的 cancellation / replacement。
 
 ## Execution through replay 位置
 
