@@ -103,7 +103,7 @@ skill 调用是可审计的（走 HTTP API、持久化进 `exploration_runs`、�
 始 Supervisor 裁决 + scorecard），所以验证逻辑依然成立：裁决由项目内
 Supervisor Agent 产出，AI 负责中转原样呈现。
 
-当用户明确要求 live UI smoke 时，AI 也可以点击一方 Console 控件，例如
+当用户明确要求 live UI smoke 时，AI 也可以点击产品 Console 控件，例如
 Workbench 的 `Run` 或 Use Cases 的 `Run selected`。这种情况下，
 `/exploration/autonomous-runs[/stream]` 调用只允许作为这些 UI 控件触发的
 产品侧浏览器流量出现，报告里必须清楚写明。直接 `curl`、fetch、httpx、
@@ -144,7 +144,7 @@ Workbench 的 `Run` 或 Use Cases 的 `Run selected`。这种情况下，
   的裁决 + scorecard + `run_id` 给用户；如果裁决不是 `success`，再给出
   具体的分析 / 下一步建议。
 - 当用户明确要求 Agent-operated UI / live UI smoke 时，作为外部测试操作
-  员操作一方 Console UI。如果因此触发 `/exploration/autonomous-runs[/stream]`，
+  员操作产品 Console UI。如果因此触发 `/exploration/autonomous-runs[/stream]`，
   报告时要说明这是产品 UI 触发的流量；能看到 `run_id` / run status 时要
   记录；不得重写或美化产品返回的结果。
 - 当 skill 和外部 UI 操作都不适合时（服务未启动、缺少凭据、需要人工判断
