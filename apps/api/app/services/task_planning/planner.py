@@ -146,8 +146,10 @@ class TaskPathPlanner:
         uncertainty: list[str] = []
         warnings: list[str] = []
 
-        # Preserve candidate-level warnings.
+        # Preserve candidate-level warnings and retrieval match reasons.
         warnings.extend(candidate.warnings)
+        for reason in candidate.match_reasons:
+            warnings.append(f"Retrieval match: {reason}")
 
         # Trust-level handling.
         if candidate.trust == "provisional":

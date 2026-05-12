@@ -383,20 +383,20 @@ def test_all_deprecated_returns_unable_to_plan() -> None:
     assert result.route_plan is None
 
 
-def test_provisional_and_confirmed_prefers_confirmed() -> None:
+def test_planner_trusts_ranked_order_over_trust_level() -> None:
+    """Planner does NOT re-rank by trust; it trusts the pre-sorted candidate order."""
     planner = TaskPathPlanner()
     intent = TaskIntent(raw_text="log in")
     provisional = _candidate(learned_path_id="lp-prov", trust="provisional")
     confirmed = _candidate(learned_path_id="lp-conf", trust="confirmed")
     result = planner.plan(intent, [provisional, confirmed])
 
-    # Ranking order is preserved; if provisional is first in input, it's selected.
-    # This test documents the contract: planner trusts ranking order.
+    # If provisional is ranked first by retrieval, planner selects it.
     assert result.route_plan.steps[0].learned_path_id == "lp-prov"
 
 
-def test_match_reasons_not_exposed_in_route_step_but_preserved_in_candidate() -> None:
-    """match_reasons stay on the candidate; route step carries warnings and purpose."""
+def test_match_reasons_propagated_to_output_warnings() -> None:
+    """Retrieval match_reasons are copied into output warnings for auditability."""
     planner = TaskPathPlanner()
     intent = TaskIntent(raw_text="log in")
     candidate = _candidate(
@@ -405,6 +405,7 @@ def test_match_reasons_not_exposed_in_route_step_but_preserved_in_candidate() ->
     )
     result = planner.plan(intent, [candidate])
 
-    step = result.route_plan.steps[0]
-    # RouteStep schema has no match_reasons field.
-    assert not hasattr(step, "match_reasons") or step.model_dump().get("match_reasons") is None
+    # Match reasons appear as structured warnings in AgentDPlannerOutput.
+    assert any("exact scenario match: login" in w for w in result.warnings)
+    assert any("page contains: auth" in w for w in result.warnings)
+    assert any(w.startswith("Retrieval match:") for w in result.warnings)
