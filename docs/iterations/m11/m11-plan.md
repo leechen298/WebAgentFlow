@@ -675,7 +675,7 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 不实现 Task Result Reporter。
 - 不实现 recovery dialogue。
 - 不实现 teaching mode。
-- 不创建 11.1.6 详情目录。
+- 11.1.5 实现阶段未创建 11.1.6 详情目录。
 
 验证：
 
@@ -704,17 +704,45 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 输出 slot binding proposal。
 - 不执行 replay。
 
-### Future · Execution via replay
+### 11.1.6 · Execution via Replay
 
-状态：future，尚未分配执行包编号。
+状态：documentation initialized。
 
 目标：
 
-- 执行确认后的 route plan。
-- 调用 M10 replay / M11.0 replay hook。
-- 记录 task execution events。
+- 设计 confirmed-but-not-executed plan 的 replay execution 入口。
+- 只执行已经通过 11.1.5 明确确认的 route plan。
+- 复用现有 deterministic replay 能力 / explicit replay hook 底层能力。
+- 记录 replay execution evidence 和 conversation execution events。
+- 缺少 selected LearnedPath、target URL 或 replay entry context 时返回
+  unable-to-execute / needs-more-context 语义，不脑补、不执行。
+- 明确 `replay completed` 只表示 replay 调用完成，不等于 business result
+  verified 或 task succeeded。
+
+交付：
+
+- `docs/iterations/m11/11.1.6-execution-via-replay/README.md`
+- `docs/iterations/m11/11.1.6-execution-via-replay/intent.md`
+- `docs/iterations/m11/11.1.6-execution-via-replay/plan.md`
+- `docs/iterations/m11/11.1.6-execution-via-replay/review.md`
+
+边界：
+
+- 不重新规划，不调用 Task Path Planner。
 - 不做 path selection。
+- 不做 slot binding / form filling。
 - 不调用 autonomous run。
+- 不读取 raw HTML。
+- 不接入 LLM provider。
+- 不做 hidden relearning。
+- 不做 result verification。
+- 不实现 Task Result Reporter。
+- 不实现 recovery dialogue / teaching mode。
+- 不创建 11.1.7 详情目录。
+
+验证：
+
+- 当前文档阶段只运行 `git diff --check`。
 
 ### Future · Result verification and Task Result Reporter
 

@@ -28,7 +28,7 @@ task-to-path planning 找到候选路径、绑定参数、请求确认、执行 
 - 11.1.4 Task Planning Dispatch Preview。
 - 11.1.5 Plan Confirmation and Consent Gate。
 - Future Slot binding contract and deterministic binding MVP。
-- Future Execution via replay。
+- 11.1.6 Execution via Replay。
 - Future Result verification and Task Result Reporter / 任务结果汇报器 reporting。
 - Future Task-to-path tests and evidence。
 
@@ -147,11 +147,18 @@ Confirmation / consent gate 位于 11.1.4 planning preview 之后、execution �
 
 ## Execution through replay 位置
 
-Execution 只能执行已确认的 route plan，并通过已有 deterministic replay /
-later explicit execution service 调用。
+Execution via Replay 位于 11.1.5 confirmation / consent gate 之后、result
+verification 之前。11.1.6 只执行已经确认且尚未执行的 route plan，并通过已有
+deterministic replay / later explicit execution service 调用。
 
-不通过 autonomous exploration 执行，不做 hidden relearning，不让 LLM 逐步
-控制浏览器。
+第一版必须具备明确的 selected LearnedPath、target URL 或 replay entry context。
+缺少这些执行上下文时返回 unable-to-execute / needs-more-context 语义，不脑补、
+不重新规划、不执行。
+
+不通过 autonomous exploration 执行，不做 hidden relearning，不读取 raw HTML，
+不让 LLM 逐步控制浏览器，不做 Slot Binding，不做 result verification。
+`replay completed` 只表示 replay 调用完成，不等于 task succeeded 或 business
+result verified。
 
 ## Result verification 位置
 
