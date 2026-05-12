@@ -20,7 +20,7 @@
 
 - 前置：11.1.1 Task Planning Domain Contract。
 - 本包：从 LearnedPath catalog 中检索和排序候选路径。
-- 后续：11.1.3 Slot Binding。
+- 后续：11.1.3 Task Path Planner MVP Design。Slot Binding remains future scope.
 - 本包只输出候选路径，不生成 route plan。
 
 ## 硬边界
@@ -33,15 +33,15 @@
 - 不调用 autonomous run。
 - 不读取 raw HTML。
 - 不做 hidden relearning。
-- 不创建 11.1.3 详情目录。
+- 本包不创建后续详情目录。
 
 ## 目标
 
 为 M11.1 task-to-path planning 建立第一版 LearnedPath retrieval and
 deterministic ranking 能力：输入 `TaskIntent` 和可选 page / scenario hints，
 从 LearnedPath catalog 中返回可解释、可排序、可审计的
-`LearnedPathCandidate` 列表，为后续 slot binding 和 Task Path Planner
-提供候选集合。
+`LearnedPathCandidate` 列表，为后续 Task Path Planner 提供候选集合。
+Slot Binding remains future scope.
 
 ## 非目标
 

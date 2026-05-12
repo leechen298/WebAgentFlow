@@ -5,8 +5,8 @@
 为 M11.1 task-to-path planning 建立第一版 LearnedPath retrieval and
 deterministic ranking 能力：输入 `TaskIntent` 和可选 page / scenario hints，
 从 LearnedPath catalog 中返回可解释、可排序、可审计的
-`LearnedPathCandidate` 列表，为后续 slot binding 和 Task Path Planner
-提供候选集合。
+`LearnedPathCandidate` 列表，为后续 Task Path Planner 提供候选集合。
+Slot Binding remains future scope.
 
 ## 动机
 

@@ -4,8 +4,9 @@
 
 - 本目录用于 11.1.2 LearnedPath Retrieval and Ranking。
 - 前置 11.1.1 Task Planning Domain Contract 已完成。
-- 本包建立了 deterministic retrieval / ranking 层，为后续 slot binding 和
-  Task Path Planner 提供候选路径。
+- 本包建立了 deterministic retrieval / ranking 层，为后续 Task Path Planner
+  提供候选路径。The next M11.1 package is 11.1.3 Task Path Planner MVP
+  Design. Slot Binding remains future scope.
 
 ## 已决策（保持不变）
 

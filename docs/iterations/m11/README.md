@@ -31,12 +31,12 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.1-task-to-path-planning-execution](./11.1-task-to-path-planning-execution/) —— M11.1 总纲：Task-to-Path Planning & Execution MVP。状态：总纲初始化中。
 - [11.1.1-task-planning-domain-contract](./11.1.1-task-planning-domain-contract/) —— task / candidate / route / binding / verification domain contract。状态：完成（17 schema，33 passed）。
 - [11.1.2-learned-path-retrieval-ranking](./11.1.2-learned-path-retrieval-ranking/) —— LearnedPath retrieval and deterministic ranking。状态：完成（38 retrieval tests，71 combined passed）。
-- 11.1.3-slot-binding-contract —— 状态：future。
-- 11.1.4-task-path-planner-mvp —— 状态：future。
-- 11.1.5-plan-confirmation-and-consent-gate —— 状态：future。
-- 11.1.6-execution-via-replay —— 状态：future。
-- 11.1.7-result-verification-and-task-result-reporter —— 状态：future。
-- 11.1.8-task-to-path-tests-and-evidence —— 状态：future。
+- [11.1.3-task-path-planner-mvp](./11.1.3-task-path-planner-mvp/) —— Task Path Planner MVP Design。状态：documentation initialized。
+- Slot Binding contract and deterministic binding MVP —— 状态：future，尚未分配执行包编号。
+- Plan confirmation and consent gate —— 状态：future，尚未分配执行包编号。
+- Execution via replay —— 状态：future，尚未分配执行包编号。
+- Result verification and Task Result Reporter —— 状态：future，尚未分配执行包编号。
+- Task-to-path tests and evidence —— 状态：future，尚未分配执行包编号。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护

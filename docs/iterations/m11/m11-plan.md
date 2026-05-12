@@ -485,9 +485,49 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 不做 E2E。
 - 不加入 user / account / tenant 字段。
 
-### 11.1.3 · Slot binding contract and deterministic binding MVP
+### 11.1.3 · Task Path Planner MVP Design
 
-状态：future。
+状态：documentation initialized。
+
+目标：
+
+- 设计 Task Path Planner MVP 的服务边界。
+- 明确未来 planner implementation 如何消费 `TaskInput` / `TaskIntent` 和
+  ranked `LearnedPathCandidate` 列表。
+- 明确 future planner implementation will map selected LearnedPath candidates
+  into a minimal explainable `RoutePlan`。
+- 定义 no candidate / ambiguous candidate / risky candidate / flaky candidate
+  的 planning semantics。
+- 保留 retrieval `match_reasons` / `warnings` / confirmation requirements，
+  供后续 confirmation、execution、reporting 和 recovery 使用。
+
+边界：
+
+- 本包只初始化文档，不写实现代码。
+- 不修改 11.1.1 schema。
+- 不补 11.1.2 retrieval / ranking 实现。
+- 不新增 retrieval preview API。
+- 不新增 CLI command。
+- 不执行 replay。
+- 不调用 autonomous run。
+- 不读取 raw HTML。
+- 不做 hidden relearning。
+- 不接入 LLM provider。
+- 不做真实 slot binding / form filling / result verification / recovery
+  dialogue / teaching mode。
+- 不创建 11.1.4 详情目录。
+
+预期后续实现方向：
+
+- Potential implementation location:
+  `apps/api/app/services/task_planning/planner.py`。
+- Potential tests:
+  `apps/api/tests/test_task_path_planner.py`。
+- RoutePlan 是 future implementation 的设计目标，不是本轮文档初始化的交付物。
+
+### Future · Slot binding contract and deterministic binding MVP
+
+状态：future，尚未分配执行包编号。
 
 目标：
 
@@ -497,22 +537,9 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 输出 slot binding proposal。
 - 不执行 replay。
 
-### 11.1.4 · Task Path Planner MVP
+### Future · Plan confirmation and consent gate
 
-状态：future。
-
-目标：
-
-- Task Path Planner 读取 user task、candidate paths、slot binding proposals、
-  negative evidence。
-- 输出 route plan / confirmation requirements。
-- Task Path Planner 不读 raw HTML。
-- Task Path Planner 不逐步控制浏览器。
-- Task Path Planner 不执行 replay。
-
-### 11.1.5 · Plan confirmation and consent gate
-
-状态：future。
+状态：future，尚未分配执行包编号。
 
 目标：
 
@@ -521,9 +548,9 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
   bulk-modification 操作。
 - 初期使用 deterministic policy + user confirmation，不新增 Risk Agent。
 
-### 11.1.6 · Execution via replay
+### Future · Execution via replay
 
-状态：future。
+状态：future，尚未分配执行包编号。
 
 目标：
 
@@ -533,9 +560,9 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 不做 path selection。
 - 不调用 autonomous run。
 
-### 11.1.7 · Result verification and Task Result Reporter
+### Future · Result verification and Task Result Reporter
 
-状态：future。
+状态：future，尚未分配执行包编号。
 
 目标：
 
@@ -545,9 +572,9 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 不脑补成功。
 - 无法验证时返回 `uncertain` / `needs_review`。
 
-### 11.1.8 · Task-to-path tests and evidence
+### Future · Task-to-path tests and evidence
 
-状态：future。
+状态：future，尚未分配执行包编号。
 
 目标：
 

@@ -24,12 +24,12 @@ task-to-path planning 找到候选路径、绑定参数、请求确认、执行 
 
 - 11.1.1 Task planning domain contract。
 - 11.1.2 LearnedPath retrieval and ranking。
-- 11.1.3 Slot binding contract and deterministic binding MVP。
-- 11.1.4 Task Path Planner / 任务路径规划器（legacy: Agent D） planner MVP。
-- 11.1.5 Plan confirmation and consent gate。
-- 11.1.6 Execution via replay。
-- 11.1.7 Result verification and Task Result Reporter / 任务结果汇报器（legacy: Agent E） reporting。
-- 11.1.8 Task-to-path tests and evidence。
+- 11.1.3 Task Path Planner MVP Design。
+- Future Slot binding contract and deterministic binding MVP。
+- Future Plan confirmation and consent gate。
+- Future Execution via replay。
+- Future Result verification and Task Result Reporter / 任务结果汇报器 reporting。
+- Future Task-to-path tests and evidence。
 
 ## Task Path Planner / 任务路径规划器（legacy: Agent D） 输入 / 输出边界
 
@@ -109,7 +109,8 @@ Retrieval / ranking 不调用 Task Path Planner / 任务路径规划器（legacy
 - requires_confirmation。
 - binding warnings。
 
-11.1.3 之前只规划 contract，不做 binding implementation。
+Slot Binding remains future scope and is not assigned a new package number in
+the 11.1.3 documentation initialization pass.
 
 ## Confirmation / consent gate 位置
 
