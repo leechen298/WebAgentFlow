@@ -3,7 +3,7 @@
 Date: 2026-05-12
 Commit at capture start: `fe5cf58e1a2fb9a200c87b03e7b6f9b4bf52e945`
 Current HEAD while writing report: `ea26d951ffc13681f012dff6401b71fcbfc6e5cb`
-Evidence commit: `74d34d2980d4d8a2a91050418476ca5a9caf9fed`
+Evidence commit: `8fea028c4cdbbaaf0efb0f09c2cbe2d240b39911`
 Working tree at capture start: dirty. Relevant testing/doc changes were present under `AGENTS.md`, `CLAUDE.md`, `CLAUDE.zh.md`, `docs/testing/agent-operated-ui/`, and `docs/testing/results/`. Separate staged M11 iteration documentation changes were also present and were not touched by this live UI smoke.
 Tool: headed Playwright fallback. The in-app browser / Browser Use backend was attempted first, but no Codex in-app browser backend was available in this session.
 Target URLs:
