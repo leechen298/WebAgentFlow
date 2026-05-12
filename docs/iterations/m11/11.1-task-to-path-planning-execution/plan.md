@@ -25,6 +25,7 @@ task-to-path planning 找到候选路径、绑定参数、请求确认、执行 
 - 11.1.1 Task planning domain contract。
 - 11.1.2 LearnedPath retrieval and ranking。
 - 11.1.3 Task Path Planner MVP Design。
+- 11.1.4 Task Planning Dispatch Preview。
 - Future Slot binding contract and deterministic binding MVP。
 - Future Plan confirmation and consent gate。
 - Future Execution via replay。
@@ -94,6 +95,20 @@ Task Result Reporter / 任务结果汇报器（legacy: Agent E） 不得脑补�
 
 Retrieval / ranking 不调用 Task Path Planner / 任务路径规划器（legacy: Agent D），不执行 replay。
 
+## Task Planning Dispatch Preview 位置
+
+Task Planning Dispatch Preview 位于 conversation runtime 和 task planning
+services 之间。它把 ordinary user task 转成 preview：
+
+- 构造最小 `TaskIntent`。
+- 调用 LearnedPath retrieval / ranking。
+- 调用 Task Path Planner。
+- 将 planning preview 写回 conversation message / event。
+- 停在 confirmation-pending / unable-to-plan 语义，不执行 replay。
+
+该阶段不做 Slot Binding、不做 confirmation gate、不做 execution，也不改变显式
+`/replay <learned_path_id> <url>` command 的行为。
+
 ## Slot binding 输入 / 输出
 
 输入：
@@ -109,8 +124,8 @@ Retrieval / ranking 不调用 Task Path Planner / 任务路径规划器（legacy
 - requires_confirmation。
 - binding warnings。
 
-Slot Binding remains future scope and is not assigned a new package number in
-the 11.1.3 documentation initialization pass.
+Slot Binding remains future scope and is not assigned a package number in the
+current M11.1 plan.
 
 ## Confirmation / consent gate 位置
 

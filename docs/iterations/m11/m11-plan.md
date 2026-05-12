@@ -543,6 +543,49 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
   dialogue / teaching mode。
 - 不创建 11.1.4 详情目录。
 
+### 11.1.4 · Task Planning Dispatch Preview
+
+状态：documentation initialized。
+
+目标：
+
+- 设计 ordinary task request 进入 conversation runtime 后的 planning preview
+  路径。
+- 区分普通用户任务和显式 `/replay <learned_path_id> <url>` command。
+- 用 deterministic / minimal 方式构造 `TaskIntent`，保留原始用户输入。
+- 串联 11.1.2 retrieval / ranking 和 11.1.3 Task Path Planner，但保持职责分层。
+- 将 Task Path Planner output（`AgentDPlannerOutput` schema）/ RoutePlan
+  proposal 作为 conversation assistant message / event 预览输出。
+- 保留 warnings / risk_hints / match_reasons / confirmation requirements。
+- no candidates 时返回 unable-to-plan，不自动学习、不 hidden relearning。
+
+边界：
+
+- 不写实现代码。
+- 不新增 API endpoint。
+- 不新增 CLI command。
+- 不执行 replay。
+- 不调用 autonomous run。
+- 不读取 raw HTML。
+- 不接入 LLM provider。
+- 不做真实 slot binding / form filling。
+- 不做 result verification。
+- 不实现 Task Result Reporter。
+- 不实现 recovery dialogue。
+- 不实现 teaching mode。
+- 不创建 11.1.5 详情目录。
+
+文档交付：
+
+- `docs/iterations/m11/11.1.4-task-planning-dispatch-preview/README.md`
+- `docs/iterations/m11/11.1.4-task-planning-dispatch-preview/intent.md`
+- `docs/iterations/m11/11.1.4-task-planning-dispatch-preview/plan.md`
+- `docs/iterations/m11/11.1.4-task-planning-dispatch-preview/review.md`
+
+验证：
+
+- `git diff --check`
+
 ### Future · Slot binding contract and deterministic binding MVP
 
 状态：future，尚未分配执行包编号。
