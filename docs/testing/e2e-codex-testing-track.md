@@ -1,4 +1,4 @@
-# E2E / Agent-operated UI Testing Transitional Index
+# E2E / Agent 可视化测试过渡索引
 
 本文件保留为历史链接兼容入口。
 
@@ -14,9 +14,9 @@ Codex evidence report、Browser Use / Computer Use report 和 manual live smoke�
 
 后续新内容不要继续添加到本文件。
 
-## Current Split
+## 当前拆分
 
-### Deterministic E2E
+### Deterministic E2E / 确定性 E2E
 
 由 `e2e/README.md` 管理。
 
@@ -28,7 +28,7 @@ Codex evidence report、Browser Use / Computer Use report 和 manual live smoke�
 - Headless E2E 可以作为 deterministic evidence，但不能冒充 visual UI
   exploratory。
 
-### Agent-operated UI Exploratory
+### Agent-operated UI Exploratory / Agent 可视化页面探索
 
 由 `agent-operated-ui/README.md` 管理。
 
@@ -40,12 +40,12 @@ Codex evidence report、Browser Use / Computer Use report 和 manual live smoke�
 - API-only、component test、static selector smoke、headless E2E 都不能冒充这类
   可视化证据。
 
-### API Exploratory
+### API Exploratory / API 探索式验证
 
 API exploratory 仍可在能力域文档或结果报告中记录，但它不是 E2E，也不是
 Agent-operated UI exploratory。
 
-### Manual Live Smoke
+### Manual Live Smoke / 手动 live smoke
 
 `verify-scenario` live smoke 由 `docs/testing/live-smoke.md` 管理。
 
@@ -54,7 +54,7 @@ Agent-operated UI exploratory。
 - 需要 LLM provider 和 Supervisor verdict。
 - 只能通过 `verify-scenario` skill 触发，不能直接 curl autonomous endpoints。
 
-## Existing Evidence Pointers
+## 现有证据入口
 
 E2E 报告：
 

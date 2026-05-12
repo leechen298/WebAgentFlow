@@ -1,4 +1,4 @@
-# Manual Live Smoke
+# 手动 Live Smoke
 
 本文件定义 release-only manual live smoke 流程。它不是 deterministic E2E，
 不进入常规 CI。

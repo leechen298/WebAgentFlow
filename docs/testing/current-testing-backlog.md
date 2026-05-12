@@ -1,6 +1,6 @@
-# Current Testing Backlog
+# 当前测试 Backlog
 
-## Scope
+## 范围
 
 本文件整理当前已完成功能的测试缺口和第一批补全计划。
 
@@ -13,7 +13,7 @@
 - 如果任务目标专指 Agent-operated UI exploratory，请使用
   `agent-operated-ui/README.md`。
 
-## Existing Baselines
+## 现有基线
 
 基于 Q1 baseline audit（`docs/testing/results/2026-05-11-existing-test-baseline.md`）：
 
@@ -34,17 +34,17 @@ Q1 关键发现：
 - F-04: AutonomousWorkbenchPage.vue 无组件测试（1001 行）
 - F-05: Conversation 无 E2E smoke（已在 11.0.7 补齐）
 
-## Backlog Categories
+## Backlog 分类
 
-### existing — 当前已有测试，需修
+### existing — 当前已有测试，需处理
 
-| ID | Item | Files | Issue |
+| ID | 项目 | 文件 | 问题 |
 |---|---|---|---|
 | FIX-01 | AutonomousUseCasesPage abort tests | `apps/console/src/__tests__/components/AutonomousUseCasesPage.test.ts` | 2 tests reference `vm.abortRunning` which no longer exists on component. Test/component sync gap. |
 
 ### keep-running — 已有基线，持续运行
 
-| ID | Item | Files | Coverage |
+| ID | 项目 | 文件 | 覆盖 |
 |---|---|---|---|
 | KR-01 | Conversation domain tests | `test_conversation_commands.py`, `test_conversation_state.py` | parser + state machine |
 | KR-02 | Conversation repo tests | `test_conversation_repo.py` | session/message/event store |
@@ -63,7 +63,7 @@ Q1 关键发现：
 
 ### gap — 确认缺口，需补
 
-| ID | Item | Why gap |
+| ID | 项目 | 缺口原因 |
 |---|---|---|
 | GAP-01 | AutonomousWorkbenchPage component test | 1001-line component, zero tests |
 | GAP-02 | 2 broken AutonomousUseCasesPage tests | FIX-01 的根因：组件重构后测试未同步 |
@@ -71,7 +71,7 @@ Q1 关键发现：
 
 ### proposed — 合理建议，等对应能力进入施工
 
-| ID | Item | Dependency |
+| ID | 项目 | 依赖 |
 |---|---|---|
 | PROP-01 | Additional conversation E2E variants | M11.1 或更多 runtime behavior 进入施工后 |
 | PROP-02 | Console history/detail page component smoke | 需先定具体页面范围 |
@@ -79,7 +79,7 @@ Q1 关键发现：
 
 ### deferred — 有价值但不是当前批次
 
-| ID | Item | Reason |
+| ID | 项目 | 原因 |
 |---|---|---|
 | DEF-01 | AE 全量 60 case 展开 | 范围过大，偏离当前测试专项 |
 | DEF-02 | live autonomous learning → replay smoke | live smoke，不进常规 CI |
@@ -90,7 +90,7 @@ Q1 关键发现：
 
 ### reject — 不应落地
 
-| Item | Reason |
+| 项目 | 原因 |
 |---|---|
 | 把 LLM / verify-scenario / live autonomous run 标成 deterministic E2E | 依赖 LLM，不是 deterministic |
 | 把 LLM-dependent case 标成常规 CI yes | 不符合 evidence type 规则 |
@@ -99,11 +99,11 @@ Q1 关键发现：
 
 ---
 
-## First Existing-Feature Batch
+## 第一批已完成功能测试补全
 
 只列当前可做的测试补全。不推进 M11.1，不实现 task-to-path 测试。
 
-### 1. FIX-01: Fix broken AutonomousUseCasesPage abort tests
+### 1. FIX-01: 修复 AutonomousUseCasesPage 过期 abort 测试
 
 - **Case ID**: FIX-01
 - **Reason**: 2 tests failing — `vm.abortRunning is not a function`. Tests reference method that no longer exists on component. Must fix before other console work.
@@ -116,7 +116,7 @@ Q1 关键发现：
 - **What not to do**: Don't change the component to re-expose `abortRunning` unless product intent requires it. Update tests to match current component API.
 - **Status**: **DONE** (2026-05-11) — removed 2 abort tests that referenced deleted `abortRunning` method. Component is fire-and-forget for batch runs. 10/10 tests pass.
 
-### 2. CV-API-SMOKE: Conversation API smoke (keep-running)
+### 2. CV-API-SMOKE: Conversation API smoke（keep-running）
 
 - **Case ID**: FIRST-P0-02 (from full-test-matrix.md)
 - **Reason**: API is the contract for CLI, orchestrator baseline, and explicit replay hook. Existing `test_conversation_api.py` covers session create/read, messages, events, transcript, and dispatch. Current task: verify baseline, keep running, only add cases if gap found.
@@ -128,7 +128,7 @@ Q1 关键发现：
 - **Why now**: Baseline already passing. Confirm no regression.
 - **What not to do**: Don't add orchestrator/dispatcher test cases. Don't test endpoints that don't exist yet.
 
-### 3. CV-CLI-SMOKE: Conversation CLI smoke (keep-running)
+### 3. CV-CLI-SMOKE: Conversation CLI smoke（keep-running）
 
 - **Case ID**: FIRST-P0-03 (from full-test-matrix.md)
 - **Reason**: CLI tests for `wagent conversation` (start, status, send, messages, transcript, events). 15 tests all passing. Current task: keep running.
@@ -140,7 +140,7 @@ Q1 关键发现：
 - **Why now**: Baseline already passing. Confirm no regression.
 - **What not to do**: Don't add interactive REPL tests. Don't add `/replay` command tests.
 
-### 4. CV-O-SMOKE: Conversation Orchestrator smoke (keep-running)
+### 4. CV-O-SMOKE: Conversation Orchestrator smoke（keep-running）
 
 - **Case ID**: CV-O-SMOKE
 - **Reason**: 11.0.5 service-only Orchestrator Dispatcher 已完成，`test_conversation_orchestrator.py` 是当前 baseline。当前任务是持续运行，只有发现 contract 缺口时才新增。
@@ -152,7 +152,7 @@ Q1 关键发现：
 - **Why now**: Orchestrator 是 conversation 后续 replay hook / dispatch integration 的前置边界。
 - **What not to do**: Don't add path selection or task-to-path tests.
 
-### 5. CV-RH-SMOKE: Conversation replay hook smoke (keep-running)
+### 5. CV-RH-SMOKE: Conversation replay hook smoke（keep-running）
 
 - **Case ID**: CV-RH-SMOKE
 - **Reason**: 11.0.6 Explicit Replay Command Hook 已完成，`test_conversation_replay_hook.py` 是当前 baseline。当前任务是持续运行。
@@ -165,7 +165,7 @@ Q1 关键发现：
 - **What not to do**: Don't add path selection or task-to-path tests.
 - **Status**: **DONE** (2026-05-11) — included in conversation baseline report, 179 passed targeted API baseline.
 
-### 6. CV-E2E: Conversation runtime E2E (keep-running)
+### 6. CV-E2E: Conversation runtime E2E（keep-running）
 
 - **Case ID**: CV-E2E
 - **Reason**: 11.0.6 已提供 dispatch + replay hook；11.0.7 已新增 deterministic E2E，验证 session -> `/replay` -> replay summary -> transcript/events。
@@ -178,7 +178,7 @@ Q1 关键发现：
 - **What not to do**: Don't call autonomous run. Don't depend on LLM. Don't add M11.1 task-to-path expectations.
 - **Status**: **DONE** (2026-05-11) — scoped conversation E2E 1/1 passed；full `pnpm run test:e2e` 10/10 passed.
 
-### 7. REPLAY-E2E: Replay deterministic E2E (keep-running)
+### 7. REPLAY-E2E: Replay deterministic E2E（keep-running）
 
 - **Case ID**: FIRST-P0-04 (from full-test-matrix.md)
 - **Reason**: M10.2 replay is the established deterministic E2E regression track. 9 tests all passing. Current task: keep running as regression gate.
@@ -190,7 +190,7 @@ Q1 关键发现：
 - **Why now**: Baseline already passing. Core regression track.
 - **What not to do**: Don't add conversation E2E here. Don't add live autonomous run cases.
 
-### 7B. CV-CLI-E2E: Conversation CLI-driven E2E (keep-running)
+### 7B. CV-CLI-E2E: Conversation CLI-driven E2E（keep-running）
 
 - **Case ID**: CV-CLI-E2E
 - **Reason**: `wagent conversation` 是 M11 runtime conversation CLI 入口。现在已有真实 CLI subprocess E2E，验证 start / send `/replay` / status / transcript / events 打真实 API。
@@ -237,18 +237,18 @@ Q1 关键发现：
 - **Priority**: P1
 - **CI**: yes (component), no (visual)
 - **Evidence required**: Vitest output
-- **Implementation target**: `apps/console/src/__tests__/components/` (new tests for uncovered pages)
-- **Why now**: 1001-line untested component is the largest coverage gap in the console suite.
-- **What not to do**: Don't add Agent-operated UI exploratory (needs headed browser). Don't add E2E for console pages. Don't test pages that don't exist yet.
-- **Status**: **DONE** (2026-05-11) — new test at `apps/console/src/__tests__/components/AutonomousWorkbenchPage.test.ts`. 6 tests: renders config card, loads specs, renders form, spec matched alert, no-match warning, error handling. 6/6 pass.
+- **实施目标**：`apps/console/src/__tests__/components/`（为未覆盖页面新增测试）
+- **为什么现在做**：1001 行未测试组件是 console 套件里最大的覆盖缺口。
+- **不做什么**：不新增 Agent-operated UI exploratory（需要 headed browser）；不为 console 页面新增 E2E；不测试尚不存在的页面。
+- **状态**：**DONE** (2026-05-11) — 新增 `apps/console/src/__tests__/components/AutonomousWorkbenchPage.test.ts`。6 个测试：renders config card, loads specs, renders form, spec matched alert, no-match warning, error handling。6/6 pass。
 
 ---
 
-## Watchlist
+## 观察列表
 
 暂不做但未来需要关注的测试方向：
 
-| ID | Item | Trigger |
+| ID | 项目 | 触发条件 |
 |---|---|---|
 | W-01 | Additional conversation E2E variants | M11.1 或更多 runtime behavior 进入施工 |
 | W-02 | Conversation Agent-operated UI exploratory | 需要观察 console 呈现时 |
@@ -261,9 +261,9 @@ Q1 关键发现：
 
 ---
 
-## Batch Summary
+## 批次摘要
 
-| Item | Work type | Priority | Layer | CI |
+| 项目 | 工作类型 | 优先级 | 层级 | CI |
 |---|---|---|---|---|
 | FIX-01: Fix abort tests | fix existing | P0 | Component | yes |
 | CV-API-SMOKE | keep-running | P0 | API integration | yes |
@@ -277,9 +277,9 @@ Q1 关键发现：
 | VS-SELECTOR | new | P1 | Unit/API | yes |
 | CONSOLE-SMOKE | new | P1 | Component | yes |
 
-Total: 10 items (1 fix, 6 keep-running, 1 evaluate, 2 new)
+总计：10 项（1 个 fix，6 个 keep-running，1 个 evaluate，2 个 new）
 
-## Deferred Count
+## Deferred / Watchlist 计数
 
 - 6 deferred items (DEF-01 through DEF-06)
 - 8 watchlist items (W-01 through W-08)

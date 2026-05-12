@@ -1,42 +1,41 @@
-# AUI-02 · Console Operator Visual UI
+# AUI-02 · Console Operator 可视化页面探索
 
-## Purpose
+## 目标
 
-Use an Agent-operated browser to verify that the core console operator pages
-remain visually navigable without starting a live autonomous run. This covers
-history, detail, workbench, and use-cases pages as visible operator surfaces.
+使用 Agent 操作真实浏览器，验证 console operator 核心页面在不启动 live autonomous
+run 的前提下仍然可导航、可观察。覆盖 history、detail、workbench、use cases 四类
+operator surface。
 
-This is Agent-operated UI exploratory evidence. It is not deterministic E2E,
-API-only exploratory, component testing, or a live autonomous run.
+这是 **Agent-operated UI exploratory** 证据，不是 deterministic E2E、
+API-only exploratory、component test，也不是 live autonomous run。
 
-## Scope
+## 范围
 
-Target pages are based on the current console router:
+目标页面来自当前 console router：
 
 - `http://127.0.0.1:5174/exploration/autonomous/history`
 - `http://127.0.0.1:5174/exploration/autonomous/history/<run_id>`
 - `http://127.0.0.1:5174/exploration/autonomous`
 - `http://127.0.0.1:5174/exploration/autonomous/cases`
 
-Primary evidence report:
+主要证据报告路径：
 
 - `docs/testing/results/YYYY-MM-DD-console-operator-visual-ui-exploratory.md`
 
-The detail-page case may be `BLOCKED` when no persisted run exists. Do not
-create a live run to manufacture detail data.
+如果没有 persisted run，detail 页面用例可以写 `BLOCKED`。不要为了制造 detail 数据而触发 live run。
 
-## Target Pages
+## 目标页面
 
-| Area | URL |
+| 区域 | URL |
 | --- | --- |
 | Run history | `http://127.0.0.1:5174/exploration/autonomous/history` |
 | Run detail | `http://127.0.0.1:5174/exploration/autonomous/history/<run_id>` |
 | Workbench | `http://127.0.0.1:5174/exploration/autonomous` |
 | Use cases | `http://127.0.0.1:5174/exploration/autonomous/cases` |
 
-## Preconditions
+## 前置条件
 
-Before browser operation, record:
+执行浏览器操作前，记录：
 
 ```bash
 git rev-parse HEAD
@@ -47,211 +46,201 @@ curl -sS -I http://127.0.0.1:5174/exploration/autonomous
 curl -sS -I http://127.0.0.1:5174/exploration/autonomous/cases
 ```
 
-Detail-page data precondition:
+detail 页面数据前置：
 
-- Prefer opening a detail page by clicking `View` from a visible history row.
-- If the history page has no rows, mark `COV-002` as `BLOCKED` with visible
-  empty-state evidence.
-- Do not trigger a new run to create data.
+- 优先从 history 页面点击可见 row 的 `View` 进入 detail。
+- 如果 history 没有任何 row，`COV-002` 写 `BLOCKED`，并记录 history empty state。
+- 不触发新 run 来创建数据。
 
-If the console or API is unreachable, mark affected cases `BLOCKED`. Do not
-replace browser evidence with curl, source inspection, component tests, or
-headless E2E output.
+如果 console 或 API 不可访问，相关用例写 `BLOCKED`。不能用 curl、源码阅读、component test 或 headless E2E 输出替代浏览器可视化证据。
 
-## Allowed Tools
+## 允许工具
 
-- Codex Browser panel / in-app browser.
-- Claude Code Browser Use / Computer Use.
-- Other browser-capable agents.
-- Headed Playwright only when used as a visible browser observation tool.
+- Codex Browser panel / in-app browser。
+- Claude Code Browser Use / Computer Use。
+- 其他具备浏览器操作能力的 Agent。
+- Headed Playwright，仅当它作为可视化观察工具使用时。
 
-## Forbidden Actions
+## 禁止动作
 
-- Do not call `/exploration/autonomous-runs`.
-- Do not call `/exploration/autonomous-runs/stream`.
-- Do not import or run the autonomous explorer directly.
-- Do not use `verify-scenario`.
-- Do not use an LLM provider.
-- Do not click workbench `Run`.
-- Do not click workbench `Abort` unless a run was already active before the
-  test and the operator explicitly asks for intervention.
-- Do not click use-cases `Run selected`.
-- Do not click per-scenario `Run in Workbench` if it would prepare or trigger a
-  live run outside the case objective.
-- Do not click history/detail destructive or mutating actions such as delete,
-  accept review, or reject review.
-- Do not edit product code, E2E specs, package scripts, or iteration docs.
-- Do not claim PASS without actual browser-visible evidence.
+- 不调用 `/exploration/autonomous-runs`。
+- 不调用 `/exploration/autonomous-runs/stream`。
+- 不 import 或直接运行 autonomous explorer。
+- 不使用 `verify-scenario`。
+- 不触发 WebAgentFlow 产品侧 LLM provider。
+- Codex / Claude Code / 其他 browser-capable Agent 可作为外部测试操作员。
+- 不点击 workbench `Run`。
+- 不点击 workbench `Abort`，除非测试前已经有 run 处于运行中且 operator 明确要求介入。
+- 不点击 use-cases `Run selected`。
+- `Run in Workbench` 当前只是带 query params 跳转到 workbench，不会直接启动 run；
+  但本轮仍将它视为 out of scope，不点击。后续可单独补 deep-link visual case。
+- 不点击 history/detail 上的删除、accept review、reject review 等破坏性或状态变更操作。
+- 不改产品代码、E2E spec、package scripts 或 `docs/iterations/`。
+- 没有真实浏览器可见证据时，不得写 PASS。
 
-## Cases
+## 用例
 
-### COV-001 · History page renders key controls or empty state
+### COV-001 · History 页面渲染关键控件或 empty state
 
-Target URL:
+目标 URL：
 
 ```text
 http://127.0.0.1:5174/exploration/autonomous/history
 ```
 
-Actions:
+操作：
 
-1. Open the history page.
-2. Record the current URL and page title or main visible title.
-3. Confirm the history page shell is visible.
-4. Confirm refresh and workbench navigation controls are visible if present.
-5. Observe whether a run table is visible or an empty state is visible.
+1. 打开 history 页面。
+2. 记录当前 URL、页面标题或主要可见标题。
+3. 确认 history page shell 可见。
+4. 如果存在 refresh 和 workbench navigation 控件，确认它们可见。
+5. 观察 run table/list 是否可见，或 empty state 是否可见。
 
-Expected visible result:
+预期可见结果：
 
-- History page renders normally.
-- A run table/list or clear empty state is visible.
-- No live autonomous run is triggered.
+- history 页面正常渲染。
+- run table/list 可见，或明确 empty state 可见。
+- 没有触发 live autonomous run。
 
-Evidence requirement:
+证据要求：
 
-- Browser method.
-- Page URL.
-- Visible title or card title.
-- Table/list or empty-state observation.
-- Screenshot, trace, video, or browser observation excerpt.
+- browser method。
+- page URL。
+- visible title 或 card title。
+- table/list 或 empty-state 可见观察。
+- screenshot、trace、video 或 browser observation excerpt 之一。
 
-### COV-002 · Detail page renders selected item details or is blocked due to missing seed data
+### COV-002 · Detail 页面渲染选中项详情，或因缺少 seed data 标记 blocked
 
-Target URL:
+目标 URL：
 
 ```text
 http://127.0.0.1:5174/exploration/autonomous/history/<run_id>
 ```
 
-Actions:
+操作：
 
-1. Open the history page.
-2. If at least one row is visible, click only the safe detail navigation action,
-   such as `View`.
-3. Record the resulting detail URL.
-4. Observe the detail page sections.
-5. If no row is visible, mark this case `BLOCKED` and record the history empty
-   state.
+1. 打开 history 页面。
+2. 如果存在可见 row，只点击安全的 detail navigation 操作，例如 `View`。
+3. 记录进入后的 detail URL。
+4. 观察 detail 页面区块。
+5. 如果没有 row，本用例写 `BLOCKED` 并记录 history empty state。
 
-Expected visible result:
+预期可见结果：
 
-- When a run exists, the detail page shows run configuration, status/verdict,
-  result or raw JSON sections, and any LearnedPath relation block if present.
-- When no run exists, the case is `BLOCKED`, not failed.
-- No new run is created.
+- 有 run 数据时，detail 页面显示 run configuration、status/verdict、result 或 raw JSON 区块，以及可能存在的 LearnedPath relation block。
+- 没有 run 数据时，case 是 `BLOCKED`，不是 fail。
+- 不创建新 run。
 
-Evidence requirement:
+证据要求：
 
-- Browser observation of the source history row or empty state.
-- Browser observation of the detail URL and visible detail sections when run
-  data exists.
-- Screenshot, trace, video, or browser observation excerpt.
+- history row 或 empty state 的浏览器观察。
+- 有数据时，detail URL 和 detail sections 的浏览器观察。
+- screenshot、trace、video 或 browser observation excerpt 之一。
 
-### COV-003 · Workbench page renders form and config areas
+### COV-003 · Workbench 页面渲染表单和配置区域
 
-Target URL:
+目标 URL：
 
 ```text
 http://127.0.0.1:5174/exploration/autonomous
 ```
 
-Actions:
+操作：
 
-1. Open the workbench page.
-2. Observe the run configuration card.
-3. Confirm URL and goal inputs are visible.
-4. Confirm fill-values and toggle-values sections are visible.
-5. Confirm live status / analysis / plan / result areas are present if visible
-   in the initial shell.
-6. Do not click `Run`.
+1. 打开 workbench 页面。
+2. 观察 run configuration card。
+3. 确认 URL input 和 goal input 可见。
+4. 确认 fill-values 和 toggle-values 区域可见。
+5. 如果初始 shell 中存在 live status / analysis / plan / result 区域，记录它们是否可见。
+6. 不点击 `Run`。
 
-Expected visible result:
+预期可见结果：
 
-- Workbench shell renders normally.
-- Configuration controls are visible.
-- The run button may be visible, but it is not clicked.
-- No autonomous run is triggered.
+- workbench shell 正常渲染。
+- config controls 可见。
+- run button 可以可见，但不能被点击。
+- 没有触发 autonomous run。
 
-Evidence requirement:
+证据要求：
 
-- Browser method.
-- Page URL.
-- Visible observations for form/config areas.
-- Explicit note that `Run` was not clicked.
-- Screenshot, trace, video, or browser observation excerpt.
+- browser method。
+- page URL。
+- form/config 区域的可见观察。
+- 明确记录 `Run` 未被点击。
+- screenshot、trace、video 或 browser observation excerpt 之一。
 
-### COV-004 · Use cases page renders list or empty state
+### COV-004 · Use cases 页面渲染列表或 empty state
 
-Target URL:
+目标 URL：
 
 ```text
 http://127.0.0.1:5174/exploration/autonomous/cases
 ```
 
-Actions:
+操作：
 
-1. Open the use-cases page.
-2. Observe the page title or card title.
-3. Confirm refresh and workbench navigation controls are visible if present.
-4. Observe whether spec cards/tables are visible or an empty state is visible.
-5. Do not select runnable scenarios for execution.
+1. 打开 use-cases 页面。
+2. 观察页面标题或 card title。
+3. 如果存在 refresh 和 workbench navigation 控件，确认它们可见。
+4. 观察 spec cards/tables 是否可见，或 empty state 是否可见。
+5. 不选择 runnable scenarios 执行。
 
-Expected visible result:
+预期可见结果：
 
-- Use-cases page renders normally.
-- Spec list/table or clear empty state is visible.
-- No batch run starts.
+- use-cases 页面正常渲染。
+- spec list/table 可见，或明确 empty state 可见。
+- 没有启动 batch run。
 
-Evidence requirement:
+证据要求：
 
-- Browser method.
-- Page URL.
-- Visible list/table or empty-state observation.
-- Screenshot, trace, video, or browser observation excerpt.
+- browser method。
+- page URL。
+- list/table 或 empty-state 可见观察。
+- screenshot、trace、video 或 browser observation excerpt 之一。
 
-### COV-005 · Live-run buttons are observed but not clicked
+### COV-005 · 只观察 live-run 按钮，不点击
 
-Target URLs:
+目标 URL：
 
 ```text
 http://127.0.0.1:5174/exploration/autonomous
 http://127.0.0.1:5174/exploration/autonomous/cases
 ```
 
-Actions:
+操作：
 
-1. On the workbench page, observe the `Run` button or equivalent live-run
-   control.
-2. On the use-cases page, observe `Run selected` and per-scenario run affordances
-   if visible.
-3. Record whether these controls are enabled, disabled, or absent.
-4. Do not click any live-run control.
+1. 在 workbench 页面观察 `Run` button 或等价 live-run control。
+2. 在 use-cases 页面观察 `Run selected` 和 per-scenario run affordances（如果可见）。
+3. 记录这些控件是 enabled、disabled 还是 absent。
+4. 不点击任何 live-run control。
+5. 如果看到 `Run in Workbench`，只记录可见状态；它当前是 workbench deep-link，
+   不是直接启动 run，但本用例不进入该分支。
 
-Expected visible result:
+预期可见结果：
 
-- Live-run controls are visible, disabled, or absent according to current page
-  state.
-- The report explicitly records that none were clicked.
-- No `/exploration/autonomous-runs` or stream request is made.
+- live-run controls 根据当前页面状态可见、禁用或不存在。
+- 报告明确记录没有点击任何 live-run control。
+- 没有请求 `/exploration/autonomous-runs` 或 stream endpoint。
 
-Evidence requirement:
+证据要求：
 
-- Browser observation of the live-run controls.
-- Explicit no-click note.
-- Screenshot, trace, video, or browser observation excerpt.
+- live-run controls 的浏览器观察。
+- 明确 no-click 记录。
+- screenshot、trace、video 或 browser observation excerpt 之一。
 
-## Report Template
+## 报告模板
 
 ```md
-# Console Operator Visual UI Exploratory
+# Console Operator 可视化页面探索报告
 
-Date:
+日期：
 Commit:
-Working tree:
-Tool:
-Target URLs:
+工作区：
+工具：
+目标 URL：
 
-## Preconditions
+## 前置条件
 
 - API health:
 - console history:
@@ -259,46 +248,46 @@ Target URLs:
 - console use cases:
 - persisted run availability:
 
-## Summary
+## 摘要
 
-| Case | Status | Evidence |
+| 用例 | 状态 | 证据 |
 | --- | --- | --- |
 
-## Case Results
+## 用例结果
 
-### COV-001 · History page renders key controls or empty state
+### COV-001 · History 页面渲染关键控件或 empty state
 
-- Status:
-- Method:
-- Page URL:
-- Visible actions:
-- Visible observations:
-- Evidence:
-- Notes:
-- Follow-up:
+- 状态：
+- 方法：
+- 页面 URL：
+- 可见操作：
+- 可见观察：
+- 证据：
+- 备注：
+- 后续：
 
-## Boundaries
+## 边界
 
 - Autonomous endpoints called:
 - `/exploration/autonomous-runs` called:
 - `/exploration/autonomous-runs/stream` called:
 - Autonomous explorer imported or run directly:
 - verify-scenario used:
-- LLM provider used:
+- 产品侧 LLM provider used:
 - Product code modified:
 - E2E spec modified:
 - Package scripts modified:
 - Live-run buttons clicked:
 ```
 
-## Boundaries Checklist
+## 边界清单
 
-- Product code modified: no.
-- E2E spec modified: no.
-- Package scripts modified: no.
-- `docs/iterations/` modified: no.
-- Autonomous endpoint called: no.
-- `/exploration/autonomous-runs` called: no.
-- `/exploration/autonomous-runs/stream` called: no.
-- LLM provider used: no.
-- Deterministic E2E claimed: no.
+- Product code modified: no。
+- E2E spec modified: no。
+- Package scripts modified: no。
+- `docs/iterations/` modified: no。
+- Autonomous endpoint called: no。
+- `/exploration/autonomous-runs` called: no。
+- `/exploration/autonomous-runs/stream` called: no。
+- 产品侧 LLM provider used: no。
+- Deterministic E2E claimed: no。

@@ -1,13 +1,13 @@
-# Existing Test Baseline Audit
+# 现有测试基线审计
 
-## Metadata
+## 元数据
 
-- **Date**: 2026-05-11
+- **日期**: 2026-05-11
 - **Commit**: `0b621724d926c842353aa61d5f3f2735ab9310de`
-- **Working tree**: modified (see below)
-- **Branch**: v0.1-local
+- **工作区**: modified（见下方）
+- **分支**: v0.1-local
 
-### Working tree status
+### 工作区状态
 
 ```
  M docs/iterations/m11/README.md
@@ -19,11 +19,10 @@
 ?? docs/testing/results/2026-05-11-q1-baseline-audit.md
 ```
 
-## Test File Inventory
+## 测试文件盘点
 
-**Disclaimer**: This is a Test File Inventory Snapshot. It does NOT represent
-coverage percentage. It does NOT mean all tests passed. File count is not
-test count and is not coverage.
+**说明**：这是 Test File Inventory Snapshot，只是测试文件盘点；它不代表覆盖率，
+也不代表所有测试都通过。文件数量不是测试数量，也不是 coverage。
 
 ```bash
 find apps/api/tests -name 'test_*.py' | wc -l       # 30
@@ -33,7 +32,7 @@ find apps/e2e/tests -name '*.spec.ts' | wc -l       # 2
 find apps/worker/tests -name 'test_*.py' | wc -l    # 4
 ```
 
-| Suite | Test files |
+| 套件 | 测试文件数 |
 |---|---|
 | API (apps/api/tests/) | 30 |
 | CLI (apps/cli/tests/) | 3 |
@@ -42,7 +41,7 @@ find apps/worker/tests -name 'test_*.py' | wc -l    # 4
 | Worker (apps/worker/tests/) | 4 |
 | **Total** | **58** |
 
-## Commands Run
+## 执行命令
 
 ### API tests
 
@@ -50,7 +49,7 @@ find apps/worker/tests -name 'test_*.py' | wc -l    # 4
 cd apps/api && ../../.venv/bin/pytest -v --tb=short
 ```
 
-Result: **876 collected, 811 passed, 65 skipped, 0 failed** (24.43s)
+结果：**876 collected, 811 passed, 65 skipped, 0 failed** (24.43s)
 
 65 skipped tests are HTML fixture-dependent tests in `test_ast_simplifier.py`
 and `test_html_ast_parser.py`. Skipped because fixture HTML files are not
@@ -62,7 +61,7 @@ present in the current checkout. This is expected behavior.
 cd apps/cli && ../../.venv/bin/pytest -v --tb=short
 ```
 
-Result: **67 collected, 67 passed, 0 skipped, 0 failed** (0.11s)
+结果：**67 collected, 67 passed, 0 skipped, 0 failed** (0.11s)
 
 ### Console tests
 
@@ -70,9 +69,9 @@ Result: **67 collected, 67 passed, 0 skipped, 0 failed** (0.11s)
 cd apps/console && npx vitest run
 ```
 
-Result: **19 test files, 142 tests, 140 passed, 2 failed** (2.70s)
+结果：**19 test files, 142 tests, 140 passed, 2 failed** (2.70s)
 
-#### Failed tests
+#### 失败测试
 
 Both failures are in `AutonomousUseCasesPage.test.ts`:
 
@@ -81,8 +80,8 @@ Both failures are in `AutonomousUseCasesPage.test.ts`:
 2. `queued tasks are set to aborted on abort without calling abort function`
    - `TypeError: vm.abortRunning is not a function` (line 371)
 
-Root cause: `AutonomousUseCasesPage.vue` no longer exposes `abortRunning` as a
-public method. Tests were written for an earlier version of the component.
+根因：`AutonomousUseCasesPage.vue` 不再暴露 `abortRunning` public method；
+这些测试针对的是旧版组件。
 
 ### Worker tests
 
@@ -90,7 +89,7 @@ public method. Tests were written for an earlier version of the component.
 cd apps/worker && ../../.venv/bin/pytest -v --tb=short
 ```
 
-Result: **5 collected, 5 passed, 0 skipped, 0 failed** (0.06s)
+结果：**5 collected, 5 passed, 0 skipped, 0 failed** (0.06s)
 
 ### E2E tests
 
@@ -98,9 +97,9 @@ Result: **5 collected, 5 passed, 0 skipped, 0 failed** (0.06s)
 pnpm run test:e2e
 ```
 
-Result: **9 passed** (13.8s)
+结果：**9 passed** (13.8s)
 
-| Test | Status |
+| 测试 | 状态 |
 |---|---|
 | replay happy path | PASS |
 | replay observational path | PASS |
@@ -118,11 +117,11 @@ Result: **9 passed** (13.8s)
 git diff --check
 ```
 
-Result: **exit code 0** (clean — no whitespace errors in tracked files)
+结果：**exit code 0**（clean，tracked files 无 whitespace errors）
 
-## Summary by Test Area
+## 按测试区域汇总
 
-| Area | Status | Details |
+| 区域 | 状态 | 详情 |
 |---|---|---|
 | API unit / integration | PASS | 811 passed, 65 skipped (fixtures absent) |
 | CLI tests | PASS | 67 passed |
@@ -134,11 +133,11 @@ Result: **exit code 0** (clean — no whitespace errors in tracked files)
 | Visual UI exploratory | NOT_RUN | not in scope for this audit |
 | Live autonomous smoke | NOT_RUN | not in scope for this audit |
 
-## Per-Suite Detail
+## 各套件明细
 
 ### apps/api/tests/ (30 files)
 
-| File | Domain |
+| 文件 | 域 |
 |---|---|
 | test_action_executor.py | autonomous action execution |
 | test_action_planner.py | rule-based multi-field planner |
@@ -219,7 +218,7 @@ Result: **exit code 0** (clean — no whitespace errors in tracked files)
 | test_main.py | 1 | main entry point |
 | test_runner.py | 2 | job runner lifecycle |
 
-## Aggregate
+## 总计
 
 | Metric | Count |
 |---|---|
@@ -230,7 +229,7 @@ Result: **exit code 0** (clean — no whitespace errors in tracked files)
 | Skipped | 65 |
 | NOT_RUN | 0 |
 
-## Autonomy Boundary
+## Autonomous 边界
 
 | Check | Result |
 |---|---|
@@ -241,7 +240,7 @@ Result: **exit code 0** (clean — no whitespace errors in tracked files)
 | Modified product code? | **NO** |
 | git diff --check | **exit 0** (clean) |
 
-## Notes
+## 备注
 
 1. **2 console test failures**: `AutonomousUseCasesPage.test.ts` references
    `vm.abortRunning` which no longer exists on the component. This is a
@@ -263,7 +262,7 @@ Result: **exit code 0** (clean — no whitespace errors in tracked files)
 5. **No visual UI exploratory**: This audit only runs automated tests. Visual
    UI exploratory requires headed browser observation with screenshots/traces.
 
-## Follow-up Candidates
+## 后续候选项
 
 | # | Candidate | Priority | Dependency |
 |---|---|---|---|

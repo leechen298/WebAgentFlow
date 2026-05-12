@@ -1,24 +1,24 @@
-# Validation-site Browser Smoke
+# Validation-site 浏览器冒烟
 
-Date: 2026-05-11
+日期：2026-05-11
 Commit: `818c30a564e2c2d61039f5ceb13f780c8a18e3dc`
-Working tree: clean before this report was added (`git status --short` had no output)
-Tool: Browser Use / in-app browser
-Scope: validation-site `/login` and `/users` visual browser smoke
+工作区：本报告添加前为 clean（`git status --short` 无输出）
+工具：Browser Use / in-app browser
+范围：validation-site `/login` 和 `/users` 可视化浏览器冒烟
 
-## Preconditions
+## 前置条件
 
 - API health: PASS
-  - Command: `curl -sS -i http://127.0.0.1:8001/health`
-  - Result: HTTP 200, `{"code":0,"data":{"status":"ok","database":"ok"},"msg":"ok"}`
+  - 命令：`curl -sS -i http://127.0.0.1:8001/health`
+  - 结果：HTTP 200, `{"code":0,"data":{"status":"ok","database":"ok"},"msg":"ok"}`
 - validation-site `/login`: PASS
-  - Command: `curl -sS -I http://127.0.0.1:5175/login`
-  - Result: HTTP 200, `Content-Type: text/html`
+  - 命令：`curl -sS -I http://127.0.0.1:5175/login`
+  - 结果：HTTP 200, `Content-Type: text/html`
 - validation-site `/users`: PASS
-  - Command: `curl -sS -I http://127.0.0.1:5175/users`
-  - Result: HTTP 200, `Content-Type: text/html`
+  - 命令：`curl -sS -I http://127.0.0.1:5175/users`
+  - 结果：HTTP 200, `Content-Type: text/html`
 
-Notes:
+备注：
 
 - Initial default-sandbox localhost checks could not reach the services, and
   sandboxed dev-server startup failed with local bind permission errors.
@@ -26,27 +26,27 @@ Notes:
   already reachable on `127.0.0.1:8001` and `127.0.0.1:5175`.
 - No product code, E2E spec, package script, or iteration document was changed.
 
-## Summary
+## 摘要
 
-| Case | Status | Evidence |
+| 用例 | 状态 | 证据 |
 | --- | --- | --- |
-| VSB-001 · Login page renders key controls | PASS | Browser Use DOM observation plus visible screenshot displayed in the in-app browser output |
-| VSB-002 · Login invalid credentials shows error | PASS | Browser Use fill/click observation; visible `role=alert` text `用户名或密码错误` |
-| VSB-003 · Users page renders search controls | PASS | Browser Use DOM observation plus visible screenshot displayed in the in-app browser output |
-| VSB-004 · Users search by name changes result area | PASS | Browser Use fill/click observation; URL changed to `?name=alice`, result count became `1 位用户` |
-| VSB-005 · Users no-match search shows empty state | PASS | Browser Use fill/click observation plus visible no-match screenshot displayed in the in-app browser output |
+| VSB-001 · Login 页面渲染关键控件 | PASS | Browser Use DOM observation plus visible screenshot displayed in the in-app browser output |
+| VSB-002 · Login 错误账号密码显示错误提示 | PASS | Browser Use fill/click observation; visible `role=alert` text `用户名或密码错误` |
+| VSB-003 · Users 页面渲染搜索控件 | PASS | Browser Use DOM observation plus visible screenshot displayed in the in-app browser output |
+| VSB-004 · Users 按 name 搜索会更新结果区域 | PASS | Browser Use fill/click observation; URL changed to `?name=alice`, result count became `1 位用户` |
+| VSB-005 · Users 无匹配搜索显示 empty state | PASS | Browser Use fill/click observation plus visible no-match screenshot displayed in the in-app browser output |
 
-## Case Results
+## 用例结果
 
-### VSB-001 · Login page renders key controls
+### VSB-001 · Login 页面渲染关键控件
 
-- Status: PASS
-- Method: Browser Use / in-app browser
-- Page URL: `http://127.0.0.1:5175/login`
-- Visible actions:
+- 状态：PASS
+- 方法：Browser Use / in-app browser
+- 页面 URL：`http://127.0.0.1:5175/login`
+- 可见操作：
   - Opened `/login`.
   - Observed the login page in the in-app browser.
-- Visible observations:
+- 可见观察：
   - Page title: `Sign in — Validation Site`.
   - Visible heading: `登录`.
   - Username textbox was visible.
@@ -55,7 +55,7 @@ Notes:
   - The error region is not rendered before an error because the Vue template
     uses `v-if="errorMessage"`; VSB-002 confirms the same `role=alert` region
     becomes visible after invalid credentials.
-- Evidence:
+- 证据：
   - Browser observation excerpt:
 
     ```json
@@ -74,23 +74,23 @@ Notes:
 
   - A login-page screenshot with the error state was displayed in the Browser
     Use output; no screenshot file was committed.
-- Notes: The default-hidden alert behavior is expected for this fixture.
-- Follow-up: none.
+- 备注：默认隐藏 alert 是该 fixture 的预期行为。
+- 后续：无。
 
-### VSB-002 · Login invalid credentials shows error
+### VSB-002 · Login 错误账号密码显示错误提示
 
-- Status: PASS
-- Method: Browser Use / in-app browser
-- Page URL: `http://127.0.0.1:5175/login`
-- Visible actions:
+- 状态：PASS
+- 方法：Browser Use / in-app browser
+- 页面 URL：`http://127.0.0.1:5175/login`
+- 可见操作：
   - Filled username `wrong`.
   - Filled password `wrong`.
   - Clicked the login submit button.
-- Visible observations:
+- 可见观察：
   - Page stayed on `/login`.
   - A user-visible red alert appeared above the form.
   - Alert text: `用户名或密码错误`.
-- Evidence:
+- 证据：
 
   ```json
   {
@@ -101,18 +101,18 @@ Notes:
   }
   ```
 
-- Notes: This did not require verify-scenario or autonomous exploration.
-- Follow-up: none.
+- 备注：不需要 verify-scenario 或 autonomous exploration。
+- 后续：无。
 
-### VSB-003 · Users page renders search controls
+### VSB-003 · Users 页面渲染搜索控件
 
-- Status: PASS
-- Method: Browser Use / in-app browser
-- Page URL: `http://127.0.0.1:5175/users`
-- Visible actions:
+- 状态：PASS
+- 方法：Browser Use / in-app browser
+- 页面 URL：`http://127.0.0.1:5175/users`
+- 可见操作：
   - Opened `/users`.
   - Waited for seeded users to render.
-- Visible observations:
+- 可见观察：
   - Page title: `User Directory — Validation Site`.
   - Visible heading: `用户目录`.
   - Search card `筛选条件` was visible.
@@ -122,7 +122,7 @@ Notes:
   - Result table was visible.
   - Initial result count was `15 位用户`.
   - Seeded row `alice@example.com` was visible.
-- Evidence:
+- 证据：
 
   ```json
   {
@@ -143,23 +143,23 @@ Notes:
 
   - A `/users` screenshot was displayed in the Browser Use output; no
     screenshot file was committed.
-- Notes: The page loaded through the validation-site Vite server and proxied
+- 备注：页面通过 validation-site Vite server 加载，并代理
   `/validation-api/*` calls to the local API.
-- Follow-up: none.
+- 后续：无。
 
-### VSB-004 · Users search by name changes result area
+### VSB-004 · Users 按 name 搜索会更新结果区域
 
-- Status: PASS
-- Method: Browser Use / in-app browser
-- Page URL: `http://127.0.0.1:5175/users`
-- Visible actions:
+- 状态：PASS
+- 方法：Browser Use / in-app browser
+- 页面 URL：`http://127.0.0.1:5175/users`
+- 可见操作：
   - Filled the name input with `alice`.
   - Clicked `搜索`.
-- Visible observations:
+- 可见观察：
   - URL changed to `http://127.0.0.1:5175/users?name=alice`.
   - Result count changed to `1 位用户`.
   - Result row showed `alice`, `alice@example.com`, role `admin`, status `启用`.
-- Evidence:
+- 证据：
 
   ```json
   {
@@ -170,23 +170,23 @@ Notes:
   }
   ```
 
-- Notes: This confirmed the visible result area changed after the search.
-- Follow-up: none.
+- 备注：确认搜索后可见结果区域发生变化。
+- 后续：无。
 
-### VSB-005 · Users no-match search shows empty state
+### VSB-005 · Users 无匹配搜索显示 empty state
 
-- Status: PASS
-- Method: Browser Use / in-app browser
-- Page URL: `http://127.0.0.1:5175/users`
-- Visible actions:
+- 状态：PASS
+- 方法：Browser Use / in-app browser
+- 页面 URL：`http://127.0.0.1:5175/users`
+- 可见操作：
   - Filled the name input with `zzzz-no-match-9999`.
   - Clicked `搜索`.
-- Visible observations:
+- 可见观察：
   - URL changed to
     `http://127.0.0.1:5175/users?name=zzzz-no-match-9999`.
   - Result count changed to `0 位用户`.
   - Empty state text `未找到匹配的用户` was visible in the result table.
-- Evidence:
+- 证据：
 
   ```json
   {
@@ -199,28 +199,28 @@ Notes:
 
   - A no-match screenshot was displayed in the Browser Use output; no
     screenshot file was committed.
-- Notes: The first attempted wait used the old English source expectation
+- 备注：第一次等待使用了旧英文源码预期，
   translated as `未找到用户`; a fresh browser snapshot showed the actual visible
   localized text is `未找到匹配的用户`, and the case was rerun with that visible
   UI text.
-- Follow-up: none.
+- 后续：无。
 
-## Boundaries
+## 边界
 
 - Autonomous endpoints called: no.
 - `/exploration/autonomous-runs` called: no.
 - `/exploration/autonomous-runs/stream` called: no.
 - Autonomous explorer imported or run directly: no.
 - verify-scenario used: no.
-- LLM provider used: no.
+- 产品侧 LLM provider used: no.
 - Product code modified: no.
 - E2E spec modified: no.
 - Package scripts modified: no.
 - `docs/iterations/` modified: no.
 
-## Raw Evidence Appendix
+## 原始证据附录
 
-### Repository state
+### 仓库状态
 
 ```text
 $ git rev-parse HEAD
@@ -230,7 +230,7 @@ $ git status --short
 <no output>
 ```
 
-### Service checks
+### 服务检查
 
 ```text
 $ curl -sS -i http://127.0.0.1:8001/health
@@ -248,7 +248,7 @@ HTTP/1.1 200 OK
 Content-Type: text/html
 ```
 
-### Browser observation excerpts
+### Browser observation 摘录
 
 Login page initial snapshot excerpt:
 

@@ -1,12 +1,12 @@
-# Validation-site Deterministic E2E
+# Validation-site 确定性 E2E
 
-Date: 2026-05-11
+日期：2026-05-11
 
-Commit: `8ec105cc58e7800597d7ee3db5c17e5167c7fc6e`
+Commit：`8ec105cc58e7800597d7ee3db5c17e5167c7fc6e`
 
-Working tree: uncommitted changes for this task only while running verification.
+工作区：运行验证时仅包含本任务的未提交改动。
 
-## Scope
+## 范围
 
 This report covers deterministic Playwright E2E for the validation-site fixture pages:
 
@@ -16,7 +16,7 @@ This report covers deterministic Playwright E2E for the validation-site fixture 
 This is not Agent-operated UI exploratory evidence. It is headless Playwright Test
 coverage under `apps/e2e/tests/validation-site/browser-smoke.spec.ts`.
 
-## Preconditions
+## 前置条件
 
 The first sandboxed curl checks could not connect to localhost. The checks below
 were re-run outside the sandbox because the local services were already listening
@@ -34,7 +34,7 @@ curl -sS -I http://127.0.0.1:5175/users
 # HTTP/1.1 200 OK
 ```
 
-## Commands
+## 命令
 
 ```bash
 pnpm --filter @web-agent-flow/e2e exec playwright test tests/validation-site/browser-smoke.spec.ts
@@ -48,15 +48,15 @@ pnpm run test:e2e
 # 16 passed (14.3s)
 ```
 
-## Results
+## 结果
 
 | Case | Status | Evidence |
 | --- | --- | --- |
-| VS-E2E-001 · Login page renders key controls | PASS | Scoped E2E test 1 passed; username, password, submit visible, no default alert. |
-| VS-E2E-002 · Login invalid credentials shows error | PASS | Scoped E2E test 2 passed; wrong/wrong shows `role=alert` and remains on `/login`. |
-| VS-E2E-003 · Users page renders search controls and seeded results | PASS | Scoped E2E test 3 passed; `#search-name`, `#search-status`, `#btn-search`, result card/table, and `alice@example.com` visible. |
-| VS-E2E-004 · Users search by name filters results | PASS | Scoped E2E test 4 passed; `name=alice` updates URL and shows one-result metadata plus `alice@example.com`. |
-| VS-E2E-005 · Users no-match search shows empty state | PASS | Scoped E2E test 5 passed; `name=zzzz-no-match-9999` updates URL and shows empty-state copy. |
+| VS-E2E-001 · Login 页面渲染关键控件 | PASS | Scoped E2E test 1 passed; username, password, submit visible, no default alert. |
+| VS-E2E-002 · Login 错误账号密码显示错误提示 | PASS | Scoped E2E test 2 passed; wrong/wrong shows `role=alert` and remains on `/login`. |
+| VS-E2E-003 · Users 页面渲染搜索控件和 seeded results | PASS | Scoped E2E test 3 passed; `#search-name`, `#search-status`, `#btn-search`, result card/table, and `alice@example.com` visible. |
+| VS-E2E-004 · Users 按 name 搜索会过滤结果 | PASS | Scoped E2E test 4 passed; `name=alice` updates URL and shows one-result metadata plus `alice@example.com`. |
+| VS-E2E-005 · Users 无匹配搜索显示 empty state | PASS | Scoped E2E test 5 passed; `name=zzzz-no-match-9999` updates URL and shows empty-state copy. |
 
 Full deterministic E2E also passed with the new validation-site suite included:
 
@@ -65,7 +65,7 @@ Running 16 tests using 5 workers
 16 passed (14.3s)
 ```
 
-## Boundaries
+## 边界
 
 - Autonomous endpoints called: no
 - `/exploration/autonomous-runs` called: no
@@ -76,7 +76,7 @@ Running 16 tests using 5 workers
 - Package scripts modified: no
 - Agent-operated UI exploratory performed: no
 
-## Notes
+## 备注
 
 - API service is a prerequisite for `/login` invalid-credential behavior and `/users` seed data.
 - Validation-site service is a prerequisite for browser navigation to `/login` and `/users`.

@@ -1,4 +1,4 @@
-# Exploratory Testing 提示词
+# 探索式测试提示词
 
 本目录存放 exploratory validation 的项目内置提示词和用例矩阵。
 

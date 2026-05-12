@@ -1,6 +1,6 @@
-# Agent-operated UI Exploratory Testing
+# Agent 可视化页面探索测试
 
-## Scope
+## 范围
 
 本文件管理由 Agent 实际打开页面、点击、输入、观察的可视化 UI 探索测试。
 
@@ -21,7 +21,7 @@
 
 这不是 deterministic E2E，不进常规 CI，也不替代 Playwright Test。
 
-## Naming
+## 命名
 
 这类测试不再称为 “Codex 自主操作页面测试”。
 
@@ -33,7 +33,7 @@
 Codex 只是可选执行工具之一。Claude Code 或其他带 Browser Use / Computer Use 能力的
 Agent 也可以按同一份用例和报告模板执行。
 
-## Rules
+## 规则
 
 - 没有实际浏览器观察，不得写 PASS。
 - API-only 结果不能算 Agent-operated UI exploratory。
@@ -47,9 +47,11 @@ Agent 也可以按同一份用例和报告模板执行。
 - 如果工具无法打开页面，写 `BLOCKED`。
 - 报告必须写明 tool：Codex、Claude Code、headed Playwright 或其他具体工具。
 - 报告必须写明是否调用 autonomous endpoint，默认应为 `no`。
-- 报告必须写明是否依赖 LLM provider，默认应为 `no`。
+- 报告必须写明是否触发 WebAgentFlow 产品侧 LLM provider，默认应为 `no`。
+- Codex、Claude Code 或其他 browser-capable Agent 可以作为外部测试操作员；
+  禁止的是产品侧 LLM / autonomous run 被触发。
 
-## Case Template
+## 用例模板
 
 每个用例必须包含：
 
@@ -69,7 +71,7 @@ Agent 也可以按同一份用例和报告模板执行。
 Case ID:
 Target URL:
 Goal:
-Preconditions:
+前置条件：
 Actions:
 Expected visible result:
 Forbidden actions:
@@ -77,11 +79,11 @@ Evidence requirement:
 Report path:
 ```
 
-## Current Case Groups
+## 当前用例组
 
-### AUI-01 · LearnedPath Catalog Visual UI
+### AUI-01 · LearnedPath Catalog 可视化页面探索
 
-Case file:
+用例文件：
 
 ```text
 docs/testing/agent-operated-ui/cases/learned-path-catalog-visual-ui.md
@@ -102,9 +104,9 @@ docs/testing/agent-operated-ui/cases/learned-path-catalog-visual-ui.md
 docs/testing/results/YYYY-MM-DD-catalog-visual-ui-exploratory.md
 ```
 
-### AUI-02 · Console Operator Visual UI
+### AUI-02 · Console Operator 可视化页面探索
 
-Case file:
+用例文件：
 
 ```text
 docs/testing/agent-operated-ui/cases/console-operator-visual-ui.md
@@ -124,9 +126,9 @@ docs/testing/agent-operated-ui/cases/console-operator-visual-ui.md
 docs/testing/results/YYYY-MM-DD-console-operator-visual-ui-exploratory.md
 ```
 
-### AUI-03 · Validation-site Browser Smoke
+### AUI-03 · Validation-site 浏览器冒烟
 
-Case file:
+用例文件：
 
 ```text
 docs/testing/agent-operated-ui/cases/validation-site-browser-smoke.md
@@ -145,39 +147,39 @@ docs/testing/agent-operated-ui/cases/validation-site-browser-smoke.md
 docs/testing/results/2026-05-11-validation-site-browser-smoke.md
 ```
 
-## Report Template
+## 报告模板
 
 ```md
-# <Feature> Agent-operated UI Exploratory Report
+# <Feature> Agent 可视化页面探索报告
 
-Date:
+日期：
 Commit:
-Working tree:
-Tool:
-Target URLs:
+工作区：
+工具：
+目标 URL：
 
-## Preconditions
+## 前置条件
 
-## Case Results
+## 用例结果
 
-| Case | Status | Evidence |
+| 用例 | 状态 | 证据 |
 | --- | --- | --- |
 
-## Steps And Observations
+## 操作步骤与观察
 
-## Boundaries
+## 边界
 
 - Autonomous endpoints called:
 - `/exploration/autonomous-runs` called:
 - `/exploration/autonomous-runs/stream` called:
-- LLM provider used:
+- 产品侧 LLM provider used:
 - Product code modified:
 - E2E spec modified:
 
-## Follow-ups
+## 后续
 ```
 
-## Execution Prompt Template
+## 执行提示词模板
 
 ```text
 请执行 Agent-operated UI Exploratory。
@@ -187,7 +189,8 @@ Target URLs:
 - 不调用 `/exploration/autonomous-runs`。
 - 不调用 `/exploration/autonomous-runs/stream`。
 - 不触发 live autonomous run。
-- 不依赖 LLM provider。
+- 不触发 WebAgentFlow 产品侧 LLM provider。
+- Codex / Claude Code / 其他 browser-capable Agent 可作为外部测试操作员。
 
 目标页面：
 - <target urls>
@@ -204,5 +207,5 @@ Target URLs:
 - 每一步操作和可见观察。
 - 使用的工具。
 - 是否调用 autonomous endpoint：no。
-- 是否依赖 LLM provider：no。
+- 是否触发产品侧 LLM provider：no。
 ```

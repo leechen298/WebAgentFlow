@@ -1,11 +1,11 @@
-# Conversation Baseline — Keep-running Evidence
+# Conversation Baseline — Keep-running 证据
 
-Date: 2026-05-11
-Base commit at run time: `0c009f0774ef042265e378841851b1ff9d814c80`
-Branch: `v0.1-local`
-Working tree: included uncommitted 11.0.7 test / evidence changes.
+日期：2026-05-11
+运行时 base commit：`0c009f0774ef042265e378841851b1ff9d814c80`
+分支：`v0.1-local`
+工作区：包含未提交的 11.0.7 测试 / 证据改动。
 
-## Scope
+## 范围
 
 复跑 M11.0.1–11.0.6 conversation baseline：
 
@@ -19,7 +19,7 @@ Working tree: included uncommitted 11.0.7 test / evidence changes.
 
 本报告不调用 autonomous run，不依赖 LLM provider。
 
-## Commands
+## 命令
 
 ### API / Orchestrator / Replay Hook baseline
 
@@ -27,9 +27,9 @@ Working tree: included uncommitted 11.0.7 test / evidence changes.
 cd apps/api && ../../.venv/bin/pytest tests/test_conversation_replay_hook.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py tests/test_conversation_repo.py tests/test_conversation_commands.py tests/test_conversation_state.py tests/test_learned_path_replay.py tests/test_exploration_learned_paths_api.py -v
 ```
 
-Result: **PASS / exit 0**
+结果：**PASS / exit 0**
 
-Excerpt:
+摘录：
 
 ```text
 collected 179 items
@@ -42,18 +42,18 @@ collected 179 items
 cd apps/cli && ../../.venv/bin/pytest tests/test_conversation.py -v
 ```
 
-Result: **PASS / exit 0**
+结果：**PASS / exit 0**
 
-Excerpt:
+摘录：
 
 ```text
 collected 15 items
 15 passed in 0.07s
 ```
 
-## Summary
+## 摘要
 
-| Area | Status | Evidence |
+| 区域 | 状态 | 证据 |
 | --- | --- | --- |
 | CV-U domain parser/state | PASS | included in API pytest command |
 | CV-R repo/store | PASS | included in API pytest command |
@@ -64,7 +64,7 @@ collected 15 items
 | Autonomous endpoints called | NO | static tests and API/CLI tests do not call live autonomous run |
 | LLM provider used | NO | deterministic tests |
 
-## Notes
+## 备注
 
 - This is keep-running evidence, not a new product feature.
 - It confirms 11.0.6 remains covered before adding conversation runtime E2E.

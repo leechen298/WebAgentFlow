@@ -1,4 +1,4 @@
-# Agent-operated UI Exploratory 兼容入口
+# Agent 可视化页面探索测试兼容入口
 
 本文件保留为历史链接兼容入口。
 

@@ -17,7 +17,7 @@ console、API、数据库、validation-site 和后端 Playwright replay 的产�
 - M10.2 LearnedPath catalog list / trust filter / drawer / replay section presence。
 - M11.0 conversation runtime explicit replay smoke。
 - M11.0 `wagent conversation` CLI-driven explicit replay smoke。
-- Validation-site deterministic browser smoke for `/login` and `/users`.
+- Validation-site deterministic browser smoke：覆盖 `/login` 和 `/users`。
 
 这不会新增产品行为，也不会扩大 M10.2 范围。
 

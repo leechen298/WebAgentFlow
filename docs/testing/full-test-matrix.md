@@ -1,6 +1,6 @@
-# WebAgentFlow Full Test Matrix
+# WebAgentFlow 全量测试地图
 
-## Status
+## 状态
 
 本文件是测试规划文档，不是执行报告。
 
@@ -17,7 +17,7 @@
 详细 case 只有在对应能力域进入实施时再展开。没有命令、测试输出、浏览器截图、
 trace 或报告证据时，不能把 case 写成已通过。
 
-## Implementation Policy
+## 实施策略
 
 本矩阵是测试地图，不是立即开工清单。
 
@@ -34,7 +34,7 @@ trace 或报告证据时，不能把 case 写成已通过。
 - `e2e-codex-testing-track.md` 只保留为历史 / 过渡索引，不要从本矩阵或旧索引
   直接推导一次性施工清单。
 
-## Evidence Types
+## 证据类型
 
 | Evidence type | 说明 | CI | 边界 |
 | --- | --- | --- | --- |
@@ -59,7 +59,7 @@ trace 或报告证据时，不能把 case 写成已通过。
 - Full matrix 不管理具体浏览器操作工具细节；具体规则见
   `agent-operated-ui/README.md`。
 
-## Case Status Legend
+## 用例状态说明
 
 | Status | 含义 |
 | --- | --- |
@@ -71,7 +71,7 @@ trace 或报告证据时，不能把 case 写成已通过。
 | deferred | 有价值但不是当前批次，先放后续 backlog |
 | reject | 分类错误、范围越界、重复或不应落地 |
 
-## Test File Inventory Snapshot
+## 测试文件盘点快照
 
 MiMo draft 中的 “Current Coverage Snapshot” 不能作为 coverage。它只能叫
 Test File Inventory Snapshot。
@@ -88,7 +88,7 @@ find apps/e2e/tests -name '*.spec.ts' | wc -l
 在没有命令、commit 和退出码证据前，这类数字只能标为 `unverified snapshot`。
 它不能代表覆盖率百分比，不能代表测试已通过，也不能替代测试结果文档。
 
-## Domain Summary
+## 能力域摘要
 
 ### 1. autonomous-exploration
 
@@ -318,7 +318,7 @@ Recommended next cases：
 - 先补 history/catalog/workbench 基础 smoke。
 - Agent-operated UI exploratory 只做重点页面和重点状态，不进常规 CI。
 
-## Misclassification Fixes
+## 分类修正
 
 | MiMo draft 内容 | 处理 | 理由 |
 | --- | --- | --- |
@@ -329,7 +329,7 @@ Recommended next cases：
 | 全量 207 case 一次性落地 | deferred | 范围过大，必须按能力域逐步展开 |
 | Agent-operated UI 用 API/headless 证据代替 | reject | 证据类型不匹配 |
 
-## Recommended First Implementation Batch
+## 推荐第一批落地任务
 
 | Case ID | Work type | Reason | Layer | Priority | CI | Milestone dependency | Evidence required |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -344,7 +344,7 @@ Recommended next cases：
 | FIRST-P1-02 Console operator UI basic smoke | proposed, scope before implementation | 保护 history/catalog/workbench 主入口不破；先定具体页面和证据类型 | Component / Agent-operated UI exploratory | P1 | partial: component yes, visual no | M10/M11 current console | component test output；visual 需 screenshot/trace |
 | FIRST-MAN-01 verify-scenario live smoke | manual only | release 前人工验证 L1 live loop，不进入常规 CI | Live smoke | Manual | no | release smoke only | `verify-scenario` pass_gate、Supervisor verdict、scorecard、run_id |
 
-## Deferred / Reject Summary
+## Deferred / Reject 摘要
 
 Deferred：
 
@@ -363,7 +363,7 @@ Reject：
 - 把 MiMo 207 case 原样提交为永久测试计划。
 - 把当前 conversation 域描述成 pure-function only。
 
-## Implementation Rules
+## 实施规则
 
 - 每个能力域的详细 case 只在对应能力进入实施时展开。
 - 每个新增 case 必须带 status、evidence type、CI yes/no、依赖里程碑。

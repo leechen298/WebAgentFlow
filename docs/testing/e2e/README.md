@@ -1,6 +1,6 @@
-# Deterministic E2E Track
+# 确定性 E2E 轨道
 
-## Scope
+## 范围
 
 本文件只管理 WebAgentFlow 的 deterministic E2E。
 
@@ -23,7 +23,7 @@ Deterministic E2E 的定义：
 这些内容分别由 `../agent-operated-ui/README.md`、`../full-test-matrix.md`、
 `../current-testing-backlog.md` 或 `../live-smoke.md` 管理。
 
-## Rules
+## 规则
 
 - 不依赖 LLM provider。
 - 不调用 `/exploration/autonomous-runs`。
@@ -35,7 +35,7 @@ Deterministic E2E 的定义：
 - Headless E2E 不等于 Agent-operated UI exploratory。
 - 如果服务或浏览器权限导致无法运行，结果写 `BLOCKED`，不能写 PASS。
 
-## Current E2E Suites
+## 当前 E2E 套件
 
 当前 E2E 测试代码位于：
 
@@ -60,7 +60,7 @@ Deterministic E2E 的定义：
 Validation-site browser smoke 是 deterministic E2E，不是 Agent-operated UI
 exploratory。
 
-## Reports
+## 报告
 
 已有 E2E 报告：
 
@@ -75,7 +75,7 @@ exploratory。
 
 - `../results/2026-05-08-replay-e2e-codex-exploratory.md`
 
-## Next E2E Candidates
+## 下一批 E2E 候选项
 
 当前 E2E 线优先做 keep-running 和小范围补强：
 
@@ -92,7 +92,7 @@ exploratory。
 - verify-scenario live smoke。
 - M11.1 task-to-path E2E。
 
-## Verification Commands
+## 验证命令
 
 常用命令：
 

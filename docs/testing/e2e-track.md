@@ -1,4 +1,4 @@
-# Deterministic E2E Track 兼容入口
+# 确定性 E2E 轨道兼容入口
 
 本文件保留为历史链接兼容入口。
 

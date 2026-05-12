@@ -1,28 +1,27 @@
-# AUI-03 · Validation-site Browser Smoke
+# AUI-03 · Validation-site 浏览器冒烟
 
-## Purpose
+## 目标
 
-Use an Agent-operated browser to verify that the validation-site fixtures still
-render the core controls needed by deterministic E2E, replay, and authored
-scenario checks.
+使用 Agent 操作真实浏览器，验证 validation-site fixtures 仍然能渲染 deterministic
+E2E、replay 和 authored scenario 依赖的核心控件。
 
-This is visual exploratory evidence. It is not deterministic E2E, API-only
-exploratory, static selector smoke, or a live autonomous run.
+这是 **Agent-operated UI exploratory** 证据，不是 deterministic E2E、
+API-only exploratory、static selector smoke，也不是 live autonomous run。
 
-## Scope
+## 范围
 
-Target pages:
+目标页面：
 
 - `http://127.0.0.1:5175/login`
 - `http://127.0.0.1:5175/users`
 
-Primary evidence report:
+主要证据报告：
 
 - `docs/testing/results/2026-05-11-validation-site-browser-smoke.md`
 
-## Preconditions
+## 前置条件
 
-Before browser operation, record:
+执行浏览器操作前，记录：
 
 ```bash
 git rev-parse HEAD
@@ -32,226 +31,224 @@ curl -sS -I http://127.0.0.1:5175/login
 curl -sS -I http://127.0.0.1:5175/users
 ```
 
-If API or validation-site is unreachable, mark the affected cases `BLOCKED`.
-Do not replace browser evidence with curl, source inspection, component tests,
-or headless E2E output.
+如果 API 或 validation-site 不可访问，相关用例写 `BLOCKED`。不能用 curl、源码阅读、
+component test 或 headless E2E 输出替代浏览器可视化证据。
 
-## Allowed Tools
+## 允许工具
 
-- Codex Browser panel / in-app browser.
-- Claude Code Browser Use / Computer Use.
-- Other browser-capable agents.
-- Headed Playwright only when used as a visible browser observation tool.
+- Codex Browser panel / in-app browser。
+- Claude Code Browser Use / Computer Use。
+- 其他具备浏览器操作能力的 Agent。
+- Headed Playwright，仅当它作为可视化观察工具使用时。
 
-## Forbidden Actions
+## 禁止动作
 
-- Do not call `/exploration/autonomous-runs`.
-- Do not call `/exploration/autonomous-runs/stream`.
-- Do not import or run the autonomous explorer directly.
-- Do not use `verify-scenario`.
-- Do not use an LLM provider.
-- Do not edit product code, E2E specs, package scripts, or iteration docs.
-- Do not claim PASS without actual browser-visible evidence.
+- 不调用 `/exploration/autonomous-runs`。
+- 不调用 `/exploration/autonomous-runs/stream`。
+- 不 import 或直接运行 autonomous explorer。
+- 不使用 `verify-scenario`。
+- 不触发 WebAgentFlow 产品侧 LLM provider。
+- Codex / Claude Code / 其他 browser-capable Agent 可作为外部测试操作员。
+- 不改产品代码、E2E spec、package scripts 或 iteration docs。
+- 没有真实浏览器可见证据时，不得写 PASS。
 
-## Cases
+## 用例
 
-### VSB-001 · Login page renders key controls
+### VSB-001 · Login 页面渲染关键控件
 
-Target URL:
-
-```text
-http://127.0.0.1:5175/login
-```
-
-Actions:
-
-1. Open `/login`.
-2. Confirm the page renders normally.
-3. Confirm the username input is visible.
-4. Confirm the password input is visible.
-5. Confirm the submit/login button is visible.
-6. Confirm the error region behavior. If hidden by default, record that and
-   verify it through VSB-002.
-
-Expected visible result:
-
-- Login page is visible.
-- Username input, password input, and login button are visible.
-- Hidden-by-default error region behavior is explained, not assumed.
-
-Evidence requirement:
-
-- Browser method.
-- Page URL.
-- Visible UI observation.
-- Screenshot, trace, video, or browser observation excerpt.
-
-### VSB-002 · Login invalid credentials shows error
-
-Target URL:
+目标 URL：
 
 ```text
 http://127.0.0.1:5175/login
 ```
 
-Actions:
+操作：
 
-1. Open `/login`.
-2. Enter username `wrong`.
-3. Enter password `wrong`.
-4. Click the login submit button.
-5. Observe the visible error state.
+1. 打开 `/login`。
+2. 确认页面正常渲染。
+3. 确认 username input 可见。
+4. 确认 password input 可见。
+5. 确认 submit/login button 可见。
+6. 确认 error region 行为；如果默认隐藏，需要记录并通过 `VSB-002` 验证。
 
-Expected visible result:
+预期可见结果：
 
-- The page remains in a failed-login state.
-- A user-visible error message appears.
-- No autonomous run is triggered.
+- login 页面可见。
+- username input、password input 和 login button 可见。
+- 默认隐藏的 error region 行为被说明，而不是假设。
 
-Evidence requirement:
+证据要求：
 
-- Browser observation for the typed values and click.
-- Visible error text.
-- Current URL after submission.
+- browser method。
+- page URL。
+- visible UI observation。
+- screenshot、trace、video 或 browser observation excerpt 之一。
 
-### VSB-003 · Users page renders search controls
+### VSB-002 · Login 错误账号密码显示错误提示
 
-Target URL:
+目标 URL：
+
+```text
+http://127.0.0.1:5175/login
+```
+
+操作：
+
+1. 打开 `/login`。
+2. 输入 username `wrong`。
+3. 输入 password `wrong`。
+4. 点击 login submit button。
+5. 观察 visible error state。
+
+预期可见结果：
+
+- 页面停留在 failed-login 状态。
+- 出现用户可见错误提示。
+- 没有触发 autonomous run。
+
+证据要求：
+
+- 输入和点击的浏览器观察。
+- 可见 error text。
+- 提交后的 current URL。
+
+### VSB-003 · Users 页面渲染搜索控件
+
+目标 URL：
 
 ```text
 http://127.0.0.1:5175/users
 ```
 
-Actions:
+操作：
 
-1. Open `/users`.
-2. Confirm the search area is visible.
-3. Confirm the name search input is visible.
-4. Confirm the status control is visible.
-5. Confirm the search button is visible.
-6. Confirm a result table or empty state is visible.
+1. 打开 `/users`。
+2. 确认 search area 可见。
+3. 确认 name search input 可见。
+4. 确认 status control 可见。
+5. 确认 search button 可见。
+6. 确认 result table 或 empty state 可见。
 
-Expected visible result:
+预期可见结果：
 
-- Users page renders normally.
-- Name, status, and search controls are visible.
-- Result table or empty state is visible.
+- users 页面正常渲染。
+- name、status、search controls 可见。
+- result table 或 empty state 可见。
 
-Evidence requirement:
+证据要求：
 
-- Browser method.
-- Page URL.
-- Visible observations for controls and result area.
-- Screenshot, trace, video, or browser observation excerpt.
+- browser method。
+- page URL。
+- controls 和 result area 的可见观察。
+- screenshot、trace、video 或 browser observation excerpt 之一。
 
-### VSB-004 · Users search by name changes result area
+### VSB-004 · Users 按 name 搜索会更新结果区域
 
-Target URL:
-
-```text
-http://127.0.0.1:5175/users
-```
-
-Actions:
-
-1. Open `/users`.
-2. Enter `alice` in the name search input.
-3. Click search.
-4. Observe the result area.
-
-Expected visible result:
-
-- The page does not crash.
-- The URL or visible result area reflects the search.
-- If a matching seeded user is visible, record the row text.
-- If no matching seeded user is visible, record the empty state.
-
-Evidence requirement:
-
-- Browser observation for input and click.
-- Current URL after search.
-- Visible result count, row text, or empty-state text.
-
-### VSB-005 · Users no-match search shows empty state
-
-Target URL:
+目标 URL：
 
 ```text
 http://127.0.0.1:5175/users
 ```
 
-Actions:
+操作：
 
-1. Open `/users`.
-2. Enter `zzzz-no-match-9999` in the name search input.
-3. Click search.
-4. Observe the result area.
+1. 打开 `/users`。
+2. 在 name search input 输入 `alice`。
+3. 点击 search。
+4. 观察 result area。
 
-Expected visible result:
+预期可见结果：
 
-- The page does not crash.
-- The result area gives clear no-match feedback, such as an empty state or
-  no-results message.
+- 页面没有崩溃。
+- URL 或 visible result area 反映搜索。
+- 如果匹配 seeded user 可见，记录 row text。
+- 如果没有匹配 seeded user，记录 empty state。
 
-Evidence requirement:
+证据要求：
 
-- Browser observation for input and click.
-- Current URL after search.
-- Visible no-match result count or empty-state text.
+- 输入和点击的浏览器观察。
+- 搜索后的 current URL。
+- 可见 result count、row text 或 empty-state text。
 
-## Report Template
+### VSB-005 · Users 无匹配搜索显示 empty state
+
+目标 URL：
+
+```text
+http://127.0.0.1:5175/users
+```
+
+操作：
+
+1. 打开 `/users`。
+2. 在 name search input 输入 `zzzz-no-match-9999`。
+3. 点击 search。
+4. 观察 result area。
+
+预期可见结果：
+
+- 页面没有崩溃。
+- result area 给出明确 no-match feedback，例如 empty state 或 no-results message。
+
+证据要求：
+
+- 输入和点击的浏览器观察。
+- 搜索后的 current URL。
+- 可见 no-match result count 或 empty-state text。
+
+## 报告模板
 
 ```md
-# Validation-site Browser Smoke
+# Validation-site 浏览器冒烟报告
 
-Date:
+日期：
 Commit:
-Working tree:
-Tool:
-Scope:
+工作区：
+工具：
+范围：
 
-## Preconditions
+## 前置条件
 
 - API health:
 - validation-site /login:
 - validation-site /users:
 
-## Summary
+## 摘要
 
-| Case | Status | Evidence |
+| 用例 | 状态 | 证据 |
 | --- | --- | --- |
 
-## Case Results
+## 用例结果
 
-### VSB-001 · Login page renders key controls
+### VSB-001 · Login 页面渲染关键控件
 
-- Status:
-- Method:
-- Page URL:
-- Visible actions:
-- Visible observations:
-- Evidence:
-- Notes:
-- Follow-up:
+- 状态：
+- 方法：
+- 页面 URL：
+- 可见操作：
+- 可见观察：
+- 证据：
+- 备注：
+- 后续：
 
-## Boundaries
+## 边界
 
 - Autonomous endpoints called:
 - `/exploration/autonomous-runs` called:
 - `/exploration/autonomous-runs/stream` called:
 - Autonomous explorer imported or run directly:
 - verify-scenario used:
-- LLM provider used:
+- 产品侧 LLM provider used:
 - Product code modified:
 - E2E spec modified:
 - Package scripts modified:
 ```
 
-## Current Evidence
+## 当前证据
 
-The latest recorded run is:
+最新记录：
 
 - `docs/testing/results/2026-05-11-validation-site-browser-smoke.md`
 
-That report records Browser Use / in-app browser PASS evidence for VSB-001
-through VSB-005, with no autonomous endpoint calls and no LLM provider use.
+该报告记录了 Browser Use / in-app browser 对 `VSB-001` 到 `VSB-005` 的 PASS
+证据，且未调用 autonomous endpoint，未触发产品侧 LLM provider。

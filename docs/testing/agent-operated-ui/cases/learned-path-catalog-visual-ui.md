@@ -1,39 +1,36 @@
-# AUI-01 · LearnedPath Catalog Visual UI
+# AUI-01 · LearnedPath Catalog 可视化页面探索
 
-## Purpose
+## 目标
 
-Use an Agent-operated browser to verify that the LearnedPath catalog remains
-usable as an operator surface: the page opens, the catalog list or empty state is
-visible, the trust filter can be operated, a LearnedPath detail drawer can be
-opened when seeded data exists, and the drawer exposes the replay section
-without triggering a live autonomous run.
+使用 Agent 操作真实浏览器，验证 LearnedPath catalog 作为 operator surface
+仍然可用：页面能打开，catalog list 或 empty state 可见，trust filter 可操作，
+有数据时可以打开 LearnedPath drawer，并且 drawer 中可以看到 replay section。
 
-This is Agent-operated UI exploratory evidence. It is not deterministic E2E,
-API-only exploratory, component testing, or a live autonomous run.
+这是 **Agent-operated UI exploratory** 证据，不是 deterministic E2E、
+API-only exploratory、component test，也不是 live autonomous run。
 
-## Scope
+## 范围
 
-Target page:
+目标页面：
 
 - `http://127.0.0.1:5174/exploration/learned-paths`
 
-Primary evidence report:
+主要证据报告路径：
 
 - `docs/testing/results/YYYY-MM-DD-learned-path-catalog-visual-ui-exploratory.md`
 
-The report may record `BLOCKED` for drawer-specific cases when there are no
-LearnedPath rows available. Do not replace browser evidence with API output or
-headless Playwright output.
+如果当前 catalog 没有 LearnedPath row，drawer 相关用例可以记录为 `BLOCKED`。
+不能用 API 输出或 headless Playwright 输出冒充浏览器可视化证据。
 
-## Target Pages
+## 目标页面
 
-| Area | URL |
+| 区域 | URL |
 | --- | --- |
 | LearnedPath catalog | `http://127.0.0.1:5174/exploration/learned-paths` |
 
-## Preconditions
+## 前置条件
 
-Before browser operation, record:
+执行浏览器操作前，记录：
 
 ```bash
 git rev-parse HEAD
@@ -42,216 +39,212 @@ curl -sS -i http://127.0.0.1:8001/health
 curl -sS -I http://127.0.0.1:5174/exploration/learned-paths
 ```
 
-Recommended data precondition for drawer cases:
+drawer 用例的数据前置：
 
-- At least one LearnedPath row exists in the catalog.
-- Deterministic E2E seed data is acceptable if already present.
-- If no row exists, mark `LPC-003` and `LPC-004` as `BLOCKED` with the visible
-  empty state as evidence.
+- catalog 中至少有一条 LearnedPath row。
+- 如果当前已有 deterministic E2E seed 数据，可以直接复用。
+- 如果没有任何 row，`LPC-003` 和 `LPC-004` 记录为 `BLOCKED`，并把可见 empty
+  state 作为证据。
 
-If the console or API is unreachable, mark affected cases `BLOCKED`. Do not
-modify product code, seed data, package scripts, or iteration docs to make the
-visual run pass.
+如果 console 或 API 不可访问，相关用例写 `BLOCKED`。不要为了让本次可视化验证通过而修改产品代码、seed 数据、package scripts 或 iteration 文档。
 
-## Allowed Tools
+## 允许工具
 
-- Codex Browser panel / in-app browser.
-- Claude Code Browser Use / Computer Use.
-- Other browser-capable agents.
-- Headed Playwright only when used as a visible browser observation tool.
+- Codex Browser panel / in-app browser。
+- Claude Code Browser Use / Computer Use。
+- 其他具备浏览器操作能力的 Agent。
+- Headed Playwright，仅当它作为可视化观察工具使用时。
 
-## Forbidden Actions
+## 禁止动作
 
-- Do not call `/exploration/autonomous-runs`.
-- Do not call `/exploration/autonomous-runs/stream`.
-- Do not import or run the autonomous explorer directly.
-- Do not use `verify-scenario`.
-- Do not use an LLM provider.
-- Do not click replay if the goal is only replay section presence.
-- Do not click trust mutation actions such as confirm, mark flaky, or deprecate.
-- Do not edit product code, E2E specs, package scripts, or iteration docs.
-- Do not claim PASS without actual browser-visible evidence.
+- 不调用 `/exploration/autonomous-runs`。
+- 不调用 `/exploration/autonomous-runs/stream`。
+- 不 import 或直接运行 autonomous explorer。
+- 不使用 `verify-scenario`。
+- 不触发 WebAgentFlow 产品侧 LLM provider。
+- Codex / Claude Code / 其他 browser-capable Agent 可作为外部测试操作员。
+- 只验证 replay section presence 时，不点击 replay。
+- 不点击 trust mutation 操作，例如 confirm、mark flaky、deprecate。
+- 不改产品代码、E2E spec、package scripts 或 `docs/iterations/`。
+- 没有真实浏览器可见证据时，不得写 PASS。
 
-## Cases
+## 用例
 
-### LPC-001 · Catalog page renders list or empty state
+### LPC-001 · Catalog 页面渲染列表或 empty state
 
-Target URL:
-
-```text
-http://127.0.0.1:5174/exploration/learned-paths
-```
-
-Actions:
-
-1. Open the catalog page.
-2. Record the current URL and page title or main visible title.
-3. Observe whether a LearnedPath table/list is visible.
-4. If no rows are present, observe the empty state.
-5. Record whether the refresh action is visible.
-
-Expected visible result:
-
-- The catalog page renders normally.
-- Either the LearnedPath table/list is visible, or a clear empty state is
-  visible.
-- The page does not attempt to start an autonomous run.
-
-Evidence requirement:
-
-- Browser method.
-- Page URL.
-- Visible title.
-- Visible list/table or empty-state observation.
-- Screenshot, trace, video, or browser observation excerpt.
-
-### LPC-002 · Trust filter changes visible state or filter state
-
-Target URL:
+目标 URL：
 
 ```text
 http://127.0.0.1:5174/exploration/learned-paths
 ```
 
-Actions:
+操作：
 
-1. Open the catalog page.
-2. Locate the trust filter control.
-3. Open the filter dropdown.
-4. Select one trust value, for example `Flaky`, `Confirmed`, or the visible
-   localized equivalent.
-5. Observe the table/list, empty state, or selected filter label.
+1. 打开 catalog 页面。
+2. 记录当前 URL、页面标题或主要可见标题。
+3. 观察 LearnedPath table/list 是否可见。
+4. 如果没有 row，观察 empty state。
+5. 记录 refresh 操作是否可见。
 
-Expected visible result:
+预期可见结果：
 
-- The trust filter is visible and operable.
-- The selected filter state changes visibly, or the list/empty-state updates.
-- If no matching rows exist, the empty state is visible and recorded.
+- catalog 页面正常渲染。
+- LearnedPath table/list 可见，或明确 empty state 可见。
+- 页面没有尝试启动 autonomous run。
 
-Evidence requirement:
+证据要求：
 
-- Browser observation before and after filter selection.
-- Selected filter label or visible list/empty-state change.
-- Screenshot, trace, video, or browser observation excerpt.
+- browser method。
+- page URL。
+- visible title。
+- list/table 或 empty-state 可见观察。
+- screenshot、trace、video 或 browser observation excerpt 之一。
 
-### LPC-003 · LearnedPath drawer opens from a row/card
+### LPC-002 · Trust filter 会改变可见状态或 filter 状态
 
-Target URL:
-
-```text
-http://127.0.0.1:5174/exploration/learned-paths
-```
-
-Actions:
-
-1. Open the catalog page.
-2. Find a visible LearnedPath row or card.
-3. Click only the row/card action that opens details, such as `View actions`.
-4. Observe the drawer.
-
-Expected visible result:
-
-- A detail drawer opens.
-- The drawer shows path identity or scenario information.
-- The drawer shows path trust and action details when available.
-- If no row/card exists, mark `BLOCKED` and record the visible empty state.
-
-Evidence requirement:
-
-- Browser observation showing the chosen row/card.
-- Browser observation showing the opened drawer.
-- Visible drawer title or scenario/path identity.
-- Screenshot, trace, video, or browser observation excerpt.
-
-### LPC-004 · Drawer replay section is visible but does not trigger live autonomous run
-
-Target URL:
+目标 URL：
 
 ```text
 http://127.0.0.1:5174/exploration/learned-paths
 ```
 
-Actions:
+操作：
 
-1. Open the catalog page.
-2. Open a LearnedPath drawer from a visible row/card.
-3. Observe the replay section.
-4. Confirm the target URL input is visible if present.
-5. Confirm the replay button is visible if present.
-6. Do not click replay.
+1. 打开 catalog 页面。
+2. 找到 trust filter。
+3. 打开 filter dropdown。
+4. 选择一个 trust value，例如 `Flaky`、`Confirmed`，或当前页面可见的本地化等价文案。
+5. 观察 table/list、empty state 或已选 filter label 的变化。
 
-Expected visible result:
+预期可见结果：
 
-- The drawer contains a replay section or equivalent replay affordance.
-- The replay target input and replay button are visible when the selected path
-  supports replay.
-- No autonomous run is triggered.
-- No `/exploration/autonomous-runs` or stream request is made.
+- trust filter 可见且可操作。
+- selected filter state 有可见变化，或 list / empty state 更新。
+- 如果没有匹配 row，empty state 可见并被记录。
 
-Evidence requirement:
+证据要求：
 
-- Browser observation of the opened drawer.
-- Browser observation of the replay section.
-- Explicit note that replay was not clicked.
-- Screenshot, trace, video, or browser observation excerpt.
+- filter 操作前后的浏览器观察。
+- selected filter label，或 list / empty-state 的可见变化。
+- screenshot、trace、video 或 browser observation excerpt 之一。
 
-## Report Template
+### LPC-003 · LearnedPath drawer 可从 row/card 打开
+
+目标 URL：
+
+```text
+http://127.0.0.1:5174/exploration/learned-paths
+```
+
+操作：
+
+1. 打开 catalog 页面。
+2. 找到一个可见 LearnedPath row 或 card。
+3. 只点击用于打开详情的安全操作，例如 `View actions`。
+4. 观察 drawer。
+
+预期可见结果：
+
+- detail drawer 打开。
+- drawer 中显示 path identity 或 scenario 信息。
+- drawer 中显示 path trust 和 actions detail（如果当前 path 有这些数据）。
+- 如果没有 row/card，本用例写 `BLOCKED` 并记录 empty state。
+
+证据要求：
+
+- 选中的 row/card 可见观察。
+- drawer 打开后的可见观察。
+- drawer title 或 scenario/path identity 可见。
+- screenshot、trace、video 或 browser observation excerpt 之一。
+
+### LPC-004 · Drawer replay section 可见但不触发 live autonomous run
+
+目标 URL：
+
+```text
+http://127.0.0.1:5174/exploration/learned-paths
+```
+
+操作：
+
+1. 打开 catalog 页面。
+2. 从可见 row/card 打开 LearnedPath drawer。
+3. 观察 replay section。
+4. 如果存在 target URL input，确认它可见。
+5. 如果存在 replay button，确认它可见。
+6. 不点击 replay。
+
+预期可见结果：
+
+- drawer 中存在 replay section 或等价 replay affordance。
+- 选中 path 支持 replay 时，target input 和 replay button 可见。
+- 没有启动 autonomous run。
+- 没有请求 `/exploration/autonomous-runs` 或 stream endpoint。
+
+证据要求：
+
+- drawer 打开后的浏览器观察。
+- replay section 可见观察。
+- 明确记录 replay 没有被点击。
+- screenshot、trace、video 或 browser observation excerpt 之一。
+
+## 报告模板
 
 ```md
-# LearnedPath Catalog Visual UI Exploratory
+# LearnedPath Catalog 可视化页面探索报告
 
-Date:
+日期：
 Commit:
-Working tree:
-Tool:
-Target URLs:
+工作区：
+工具：
+目标 URL：
 
-## Preconditions
+## 前置条件
 
 - API health:
 - console learned-path catalog:
 - LearnedPath row availability:
 
-## Summary
+## 摘要
 
-| Case | Status | Evidence |
+| 用例 | 状态 | 证据 |
 | --- | --- | --- |
 
-## Case Results
+## 用例结果
 
-### LPC-001 · Catalog page renders list or empty state
+### LPC-001 · Catalog 页面渲染列表或 empty state
 
-- Status:
-- Method:
-- Page URL:
-- Visible actions:
-- Visible observations:
-- Evidence:
-- Notes:
-- Follow-up:
+- 状态：
+- 方法：
+- 页面 URL：
+- 可见操作：
+- 可见观察：
+- 证据：
+- 备注：
+- 后续：
 
-## Boundaries
+## 边界
 
 - Autonomous endpoints called:
 - `/exploration/autonomous-runs` called:
 - `/exploration/autonomous-runs/stream` called:
 - Autonomous explorer imported or run directly:
 - verify-scenario used:
-- LLM provider used:
+- 产品侧 LLM provider used:
 - Product code modified:
 - E2E spec modified:
 - Package scripts modified:
 - Replay clicked:
 ```
 
-## Boundaries Checklist
+## 边界清单
 
-- Product code modified: no.
-- E2E spec modified: no.
-- Package scripts modified: no.
-- `docs/iterations/` modified: no.
-- Autonomous endpoint called: no.
-- `/exploration/autonomous-runs` called: no.
-- `/exploration/autonomous-runs/stream` called: no.
-- LLM provider used: no.
-- Deterministic E2E claimed: no.
+- Product code modified: no。
+- E2E spec modified: no。
+- Package scripts modified: no。
+- `docs/iterations/` modified: no。
+- Autonomous endpoint called: no。
+- `/exploration/autonomous-runs` called: no。
+- `/exploration/autonomous-runs/stream` called: no。
+- 产品侧 LLM provider used: no。
+- Deterministic E2E claimed: no。
