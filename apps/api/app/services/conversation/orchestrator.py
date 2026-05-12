@@ -85,6 +85,19 @@ class ConversationOrchestrator:
         # 2. Parse command
         command = parse_command(raw_input)
 
+        # 11.1.5 — Confirmation gate for awaiting_confirmation
+        if previous_status == ConversationStatus.AWAITING_CONFIRMATION.value:
+            gate_result = self._handle_awaiting_confirmation_gate(
+                session_id=session_id,
+                raw_input=raw_input,
+                command=command,
+                previous_status=previous_status,
+                message_id=message.id,
+                metadata=metadata,
+            )
+            if gate_result is not None:
+                return gate_result
+
         # 3. Compute next state
         transition = next_state(current_status, command)
 
@@ -388,3 +401,212 @@ class ConversationOrchestrator:
         )
 
         return summary, final_status
+
+    # ── 11.1.5 Confirmation gate helpers ───────────────────────────────────────
+
+    def _handle_awaiting_confirmation_gate(
+        self,
+        session_id: str,
+        raw_input: str,
+        command: Any,
+        previous_status: str,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+    ) -> DispatchResult | None:
+        """Route input while session is in ``awaiting_confirmation``.
+
+        Returns a ``DispatchResult`` when the gate handles the input
+        (``FREE_TEXT`` or ``REPLAY``). Returns ``None`` for other commands so
+        the normal state machine can process them.
+        """
+        if command.kind == ConversationCommandKind.REPLAY:
+            return self._block_replay_awaiting_confirmation(
+                session_id=session_id,
+                raw_input=raw_input,
+                command=command,
+                previous_status=previous_status,
+                message_id=message_id,
+                metadata=metadata,
+            )
+
+        if command.kind == ConversationCommandKind.FREE_TEXT:
+            return self._process_confirmation_input(
+                session_id=session_id,
+                raw_input=raw_input,
+                previous_status=previous_status,
+                message_id=message_id,
+                metadata=metadata,
+            )
+
+        return None
+
+    def _block_replay_awaiting_confirmation(
+        self,
+        session_id: str,
+        raw_input: str,
+        command: Any,
+        previous_status: str,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+    ) -> DispatchResult:
+        """Block explicit replay while a plan preview is pending."""
+        events_appended: list[str] = []
+
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.COMMAND_PARSED,
+            payload={
+                "raw": raw_input,
+                "command_kind": command.kind.value,
+                "args": command.args,
+                "learned_path_id": command.learned_path_id,
+                "url": command.url,
+                "text": command.text,
+                "parse_error": command.error,
+                "allowed": False,
+                "transition_error": None,
+                "dispatch_metadata": metadata or {},
+                "gate": "awaiting_confirmation",
+            },
+        )
+        events_appended.append(ConversationEventType.COMMAND_PARSED.value)
+
+        user_response = (
+            "A plan is awaiting confirmation. Please confirm, cancel, or reject "
+            "the current plan before starting a replay."
+        )
+
+        self._repo.append_message(
+            session_id=session_id,
+            role="agent",
+            content=user_response,
+            metadata={"source": "confirmation_gate", "decision": "replay_blocked"},
+        )
+
+        pending_plan = self._get_pending_plan(session_id)
+        payload: dict[str, Any] = {
+            "user_input": raw_input,
+            "reason": "replay_blocked_by_pending_confirmation",
+            "selected_path_id": pending_plan.get("selected_path_id") if pending_plan else None,
+            "replay_executed": False,
+        }
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.EXPLICIT_REPLAY_BLOCKED_BY_PENDING_CONFIRMATION,
+            payload=payload,
+        )
+        events_appended.append(
+            ConversationEventType.EXPLICIT_REPLAY_BLOCKED_BY_PENDING_CONFIRMATION.value
+        )
+
+        return DispatchResult(
+            session_id=session_id,
+            previous_status=previous_status,
+            next_status=previous_status,
+            command_kind=command.kind.value,
+            user_response=user_response,
+            events_appended=events_appended,
+            message_id=message_id,
+            allowed=False,
+            error="Replay is blocked while a plan is awaiting confirmation.",
+        )
+
+    def _process_confirmation_input(
+        self,
+        session_id: str,
+        raw_input: str,
+        previous_status: str,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+    ) -> DispatchResult:
+        """Classify free-text confirmation input and record decision."""
+        from app.services.conversation.confirmation import PlanConfirmationService
+
+        events_appended: list[str] = []
+
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.COMMAND_PARSED,
+            payload={
+                "raw": raw_input,
+                "command_kind": "free_text",
+                "args": [],
+                "learned_path_id": None,
+                "url": None,
+                "text": raw_input,
+                "parse_error": None,
+                "allowed": True,
+                "transition_error": None,
+                "dispatch_metadata": metadata or {},
+                "gate": "awaiting_confirmation",
+            },
+        )
+        events_appended.append(ConversationEventType.COMMAND_PARSED.value)
+
+        service = PlanConfirmationService()
+        result = service.process(raw_input)
+
+        self._repo.append_message(
+            session_id=session_id,
+            role="agent",
+            content=result.user_response,
+            metadata={"source": "confirmation_gate", "decision": result.decision},
+        )
+
+        pending_plan = self._get_pending_plan(session_id)
+        payload: dict[str, Any] = {
+            "user_decision_input": raw_input,
+            "decision": result.decision,
+            "selected_path_id": pending_plan.get("selected_path_id") if pending_plan else None,
+            "selected_purpose": pending_plan.get("selected_purpose") if pending_plan else None,
+            "warnings": pending_plan.get("warnings", []) if pending_plan else [],
+            "risk_hints": pending_plan.get("risk_hints", []) if pending_plan else [],
+            "confirmation_requirements": pending_plan.get("confirmation_requirements", [])
+            if pending_plan
+            else [],
+            "replay_executed": False,
+        }
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType(result.event_type),
+            payload=payload,
+        )
+        events_appended.append(result.event_type)
+
+        next_status = result.next_status
+        if next_status != previous_status:
+            self._repo.update_session_status(
+                session_id=session_id,
+                status=next_status,
+            )
+            self._repo.append_event(
+                session_id=session_id,
+                type=ConversationEventType.STATE_CHANGED,
+                payload={
+                    "from": previous_status,
+                    "to": next_status,
+                    "command_kind": "free_text",
+                    "reason": f"confirmation_{result.decision}",
+                },
+            )
+            events_appended.append(ConversationEventType.STATE_CHANGED.value)
+
+        return DispatchResult(
+            session_id=session_id,
+            previous_status=previous_status,
+            next_status=next_status,
+            command_kind="free_text",
+            user_response=result.user_response,
+            events_appended=events_appended,
+            message_id=message_id,
+            allowed=True,
+            error=None,
+        )
+
+    def _get_pending_plan(self, session_id: str) -> dict[str, Any] | None:
+        """Return the most recent ``plan_preview_proposed`` event payload."""
+        events = self._repo.list_events(session_id, limit=100)
+        for event in reversed(events):
+            if event.type == ConversationEventType.PLAN_PREVIEW_PROPOSED.value:
+                return event.payload_json
+        return None

@@ -21,6 +21,7 @@ class ConversationStatus(StrEnum):
     IDLE = "idle"
     TASK_INTAKE = "task_intake"
     AWAITING_CONFIRMATION = "awaiting_confirmation"
+    PLAN_CONFIRMED = "plan_confirmed"
     REPLAY_REQUESTED = "replay_requested"
     REPLAY_RUNNING = "replay_running"
     PAUSED = "paused"
@@ -51,6 +52,15 @@ class ConversationEventType(StrEnum):
     TAKEOVER_REQUESTED = "takeover_requested"
     PLAN_PREVIEW_PROPOSED = "plan_preview_proposed"
     PLAN_PREVIEW_UNABLE = "plan_preview_unable"
+    PLAN_CONFIRMED = "plan_confirmed"
+    PLAN_CANCELLED = "plan_cancelled"
+    PLAN_REJECTED = "plan_rejected"
+    CONFIRMATION_CLARIFICATION_REQUESTED = (
+        "confirmation_clarification_requested"
+    )
+    EXPLICIT_REPLAY_BLOCKED_BY_PENDING_CONFIRMATION = (
+        "explicit_replay_blocked_by_pending_confirmation"
+    )
     SESSION_COMPLETED = "session_completed"
     SESSION_FAILED = "session_failed"
 

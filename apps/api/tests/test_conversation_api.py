@@ -563,3 +563,120 @@ def test_dispatch_free_text_with_learned_path_proposes_plan_and_awaits_confirmat
         e["type"] == "state_changed" and e["payload"].get("to") == "awaiting_confirmation"
         for e in events
     )
+
+
+# ── 11.1.5 Confirmation gate through dispatch endpoint ─────────────────────────
+
+
+def test_dispatch_confirm_from_awaiting_confirmation(client: TestClient, db_session) -> None:
+    repo = LearnedPathRepository(db_session)
+    lp, _ = repo.ingest_run(
+        page_template="/login",
+        query_signature={},
+        dom_fingerprint="a" * 64,
+        scenario="log in",
+        actions=[{"action_type": "fill", "target_selector": "#user"}],
+        source_run_id=None,
+    )
+    lp = repo.set_trust(lp.id, TrustStatus.CONFIRMED, reason="test confirmed")
+    lp.hit_count = 5
+    db_session.commit()
+
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "log in"},
+    )
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "confirm"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["next_status"] == "plan_confirmed"
+    assert data["allowed"] is True
+    assert "ready for future execution" in data["user_response"]
+
+    events_resp = client.get(f"/conversation/sessions/{session_id}/events")
+    events = events_resp.json()["data"]
+    assert any(e["type"] == "plan_confirmed" for e in events)
+    confirmed = [e for e in events if e["type"] == "plan_confirmed"][0]
+    assert confirmed["payload"]["replay_executed"] is False
+
+
+def test_dispatch_cancel_from_awaiting_confirmation(client: TestClient, db_session) -> None:
+    repo = LearnedPathRepository(db_session)
+    lp, _ = repo.ingest_run(
+        page_template="/login",
+        query_signature={},
+        dom_fingerprint="a" * 64,
+        scenario="log in",
+        actions=[{"action_type": "fill", "target_selector": "#user"}],
+        source_run_id=None,
+    )
+    lp = repo.set_trust(lp.id, TrustStatus.CONFIRMED, reason="test confirmed")
+    lp.hit_count = 5
+    db_session.commit()
+
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "log in"},
+    )
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "cancel"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["next_status"] == "task_intake"
+    assert data["allowed"] is True
+    assert "cancelled" in data["user_response"]
+
+    events_resp = client.get(f"/conversation/sessions/{session_id}/events")
+    events = events_resp.json()["data"]
+    assert any(e["type"] == "plan_cancelled" for e in events)
+
+
+def test_dispatch_replay_blocked_while_awaiting_confirmation(
+    client: TestClient, db_session
+) -> None:
+    repo = LearnedPathRepository(db_session)
+    lp, _ = repo.ingest_run(
+        page_template="/login",
+        query_signature={},
+        dom_fingerprint="a" * 64,
+        scenario="log in",
+        actions=[{"action_type": "fill", "target_selector": "#user"}],
+        source_run_id=None,
+    )
+    lp = repo.set_trust(lp.id, TrustStatus.CONFIRMED, reason="test confirmed")
+    lp.hit_count = 5
+    db_session.commit()
+
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "log in"},
+    )
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["next_status"] == "awaiting_confirmation"
+    assert data["allowed"] is False
+    assert "confirm, cancel, or reject" in data["user_response"]
+
+    events_resp = client.get(f"/conversation/sessions/{session_id}/events")
+    events = events_resp.json()["data"]
+    assert any(
+        e["type"] == "explicit_replay_blocked_by_pending_confirmation" for e in events
+    )

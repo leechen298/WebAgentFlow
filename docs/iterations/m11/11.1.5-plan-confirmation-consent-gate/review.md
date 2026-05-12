@@ -1,148 +1,210 @@
 # Review and Reflection
 
-This review document is initialized for the future 11.1.5 implementation
-review.
-
 ## Implementation Decision Closure
 
 These decisions close the initial 11.1.5 open questions before implementation.
-They are still documentation-stage decisions; this package remains
-`documentation initialized` until code and tests are implemented.
 
-- Confirmed-but-not-executed status: future implementation should use
-  `plan_confirmed`. It means user consent is recorded and the plan is ready for
-  a future execution package, but replay has not run.
+- Confirmed-but-not-executed status: `plan_confirmed`. It means user consent is recorded and the plan is ready for a future execution package, but replay has not run.
 - Confirm transition: `awaiting_confirmation -> plan_confirmed`.
-- Cancel transition: `awaiting_confirmation -> task_intake`, with a
-  `plan_cancelled` event and an assistant message that no execution occurred.
-- Reject transition: `awaiting_confirmation -> task_intake`, with a
-  `plan_rejected` event and an assistant message that the plan was not accepted
-  or executed.
-- Ambiguous input: keep `awaiting_confirmation`, record
-  `confirmation_clarification_requested`, and ask the user for explicit confirm
-  / cancel / reject. Ambiguous input is never consent.
-- New task while awaiting confirmation: do not silently replace the pending
-  preview and do not re-run planning. Record clarification / revision intent,
-  ask the user to cancel or reject the current plan first, and keep
-  `awaiting_confirmation`.
-- `/replay` while awaiting confirmation: block it until the pending preview is
-  resolved. Do not call the replay handler. Record
-  `explicit_replay_blocked_by_pending_confirmation` or equivalent event
-  semantics and keep `awaiting_confirmation`.
-- Event semantics: first implementation should plan for `plan_confirmed`,
-  `plan_cancelled`, `plan_rejected`,
-  `confirmation_clarification_requested`, and
-  `explicit_replay_blocked_by_pending_confirmation`.
+- Cancel transition: `awaiting_confirmation -> task_intake`, with a `plan_cancelled` event and an assistant message that no execution occurred.
+- Reject transition: `awaiting_confirmation -> task_intake`, with a `plan_rejected` event and an assistant message that the plan was not accepted or executed.
+- Ambiguous input: keep `awaiting_confirmation`, record `confirmation_clarification_requested`, and ask the user for explicit confirm / cancel / reject. Ambiguous input is never consent.
+- New task while awaiting confirmation: do not silently replace the pending preview and do not re-run planning. Record clarification / revision intent, ask the user to cancel or reject the current plan first, and keep `awaiting_confirmation`.
+- `/replay` while awaiting confirmation: block it until the pending preview is resolved. Do not call the replay handler. Record `explicit_replay_blocked_by_pending_confirmation` or equivalent event semantics and keep `awaiting_confirmation`.
+- Event semantics: `plan_confirmed`, `plan_cancelled`, `plan_rejected`, `confirmation_clarification_requested`, and `explicit_replay_blocked_by_pending_confirmation`.
   `plan_revision_requested` remains optional future scope.
-- Implementation boundary: future code may add
-  `apps/api/app/services/conversation/confirmation.py` with
-  `PlanConfirmationDecision`, `PlanConfirmationResult`, and
-  `PlanConfirmationService` contracts. That service only classifies
-  awaiting-confirmation input and must not call replay, retrieval, the Task Path
-  Planner, autonomous run, raw HTML readers, or an LLM provider.
-- Orchestrator boundary: the confirmation branch should run before planning
-  preview for sessions already in `awaiting_confirmation`, and it should block
-  `/replay` from bypassing the pending preview.
-- Router boundary: continue using the existing dispatch endpoint. Do not add an
-  API endpoint or CLI command in 11.1.5.
+- Implementation boundary: `apps/api/app/services/conversation/confirmation.py` with `PlanConfirmationDecision`, `PlanConfirmationResult`, and `PlanConfirmationService` contracts. That service only classifies awaiting-confirmation input and must not call replay, retrieval, the Task Path Planner, autonomous run, raw HTML readers, or an LLM provider.
+- Orchestrator boundary: the confirmation branch runs before planning preview for sessions already in `awaiting_confirmation`, and it blocks `/replay` from bypassing the pending preview.
+- Router boundary: continue using the existing dispatch endpoint. Do not add an API endpoint or CLI command in 11.1.5.
+
+## Changed Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/schemas/conversation.py` | Add `PLAN_CONFIRMED` to `ConversationStatus`; add `PLAN_CONFIRMED`, `PLAN_CANCELLED`, `PLAN_REJECTED`, `CONFIRMATION_CLARIFICATION_REQUESTED`, `EXPLICIT_REPLAY_BLOCKED_BY_PENDING_CONFIRMATION` to `ConversationEventType` |
+| `apps/api/app/services/conversation/confirmation.py` | **New.** `PlanConfirmationService` with deterministic keyword classification |
+| `apps/api/app/services/conversation/orchestrator.py` | Add confirmation gate: `_handle_awaiting_confirmation_gate`, `_process_confirmation_input`, `_block_replay_awaiting_confirmation`, `_get_pending_plan` |
+| `apps/api/app/services/conversation/__init__.py` | Export `PlanConfirmationDecision`, `PlanConfirmationResult`, `PlanConfirmationService` |
+| `apps/api/tests/test_conversation_confirmation.py` | **New.** 9 tests for classification, process results, and boundary checks |
+| `tests/test_conversation_orchestrator.py` | Add 7 integration tests for confirm, cancel, reject, ambiguous, replay blocked, normal commands, and no-replay marker |
+| `tests/test_conversation_api.py` | Add 3 API-level tests for confirm, cancel, and replay blocked through the dispatch endpoint |
+
+## Input Classification Examples
+
+| Input | Decision | Next Status | Event |
+|---|---|---|---|
+| `confirm` | confirm | `plan_confirmed` | `plan_confirmed` |
+| `yes` | confirm | `plan_confirmed` | `plan_confirmed` |
+| `proceed` | confirm | `plan_confirmed` | `plan_confirmed` |
+| `继续` | confirm | `plan_confirmed` | `plan_confirmed` |
+| `cancel` | cancel | `task_intake` | `plan_cancelled` |
+| `abort` | cancel | `task_intake` | `plan_cancelled` |
+| `stop` | cancel | `task_intake` | `plan_cancelled` |
+| `取消` | cancel | `task_intake` | `plan_cancelled` |
+| `reject` | reject | `task_intake` | `plan_rejected` |
+| `no` | reject | `task_intake` | `plan_rejected` |
+| `不要` | reject | `task_intake` | `plan_rejected` |
+| `maybe` | ambiguous | `awaiting_confirmation` | `confirmation_clarification_requested` |
+| `looks ok?` | ambiguous | `awaiting_confirmation` | `confirmation_clarification_requested` |
+| `run export` | ambiguous | `awaiting_confirmation` | `confirmation_clarification_requested` |
+
+## State Transition Behavior
+
+- `awaiting_confirmation + confirm -> plan_confirmed` (STATE_CHANGED recorded)
+- `awaiting_confirmation + cancel -> task_intake` (STATE_CHANGED recorded)
+- `awaiting_confirmation + reject -> task_intake` (STATE_CHANGED recorded)
+- `awaiting_confirmation + ambiguous -> awaiting_confirmation` (no STATE_CHANGED)
+- `awaiting_confirmation + /replay -> awaiting_confirmation` (blocked, no STATE_CHANGED)
+- `awaiting_confirmation + /status -> awaiting_confirmation` (normal command, falls through)
+
+## Event Payload Examples
+
+**plan_confirmed:**
+```json
+{
+  "user_decision_input": "confirm",
+  "decision": "confirm",
+  "selected_path_id": "lp-001",
+  "selected_purpose": "Export users",
+  "warnings": [],
+  "risk_hints": [],
+  "confirmation_requirements": [],
+  "replay_executed": false
+}
+```
+
+**explicit_replay_blocked_by_pending_confirmation:**
+```json
+{
+  "user_input": "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users",
+  "reason": "replay_blocked_by_pending_confirmation",
+  "selected_path_id": "lp-001",
+  "replay_executed": false
+}
+```
+
+## Assistant Message Examples
+
+- Confirm: "Plan confirmed. The task is ready for future execution. Replay has not run yet."
+- Cancel: "The pending plan has been cancelled. No execution occurred."
+- Reject: "The plan was not accepted and was not executed. Please describe a revised task."
+- Ambiguous: "Please confirm, cancel, reject, or describe a revised task explicitly."
+- Replay blocked: "A plan is awaiting confirmation. Please confirm, cancel, or reject the current plan before starting a replay."
+
+## Replay Non-Execution Evidence
+
+- All confirmation gate event payloads set `replay_executed: false`.
+- The replay handler is never called while a session is in `awaiting_confirmation`.
+- `/replay` while awaiting confirmation returns `allowed: false` with a specific error message.
 
 ## Scope Review Checklist
 
-- [ ] Implementation only handles confirmation / consent decisions.
-- [ ] Implementation does not execute replay.
-- [ ] Implementation does not call autonomous run.
-- [ ] Implementation does not read raw HTML.
-- [ ] Implementation does not perform hidden relearning.
-- [ ] Implementation does not connect an LLM provider.
-- [ ] Implementation does not implement real slot binding.
-- [ ] Implementation does not implement result verification, Task Result
-  Reporter, recovery dialogue, or teaching mode.
-- [ ] Implementation does not add user / account / tenant fields.
+- [x] Implementation only handles confirmation / consent decisions.
+- [x] Implementation does not execute replay.
+- [x] Implementation does not call autonomous run.
+- [x] Implementation does not read raw HTML.
+- [x] Implementation does not perform hidden relearning.
+- [x] Implementation does not connect an LLM provider.
+- [x] Implementation does not implement real slot binding.
+- [x] Implementation does not implement result verification, Task Result Reporter, recovery dialogue, or teaching mode.
+- [x] Implementation does not add user / account / tenant fields.
 
 ## Confirmation Input Checklist
 
-- [ ] Confirm inputs are deterministic and explicit.
-- [ ] Cancel / abort / stop inputs are deterministic and explicit.
-- [ ] Reject inputs are deterministic and explicit.
-- [ ] Ambiguous input is not treated as consent.
-- [ ] Free text while awaiting confirmation follows the chosen revision policy.
-- [ ] No LLM classifier is required.
+- [x] Confirm inputs are deterministic and explicit.
+- [x] Cancel / abort / stop inputs are deterministic and explicit.
+- [x] Reject inputs are deterministic and explicit.
+- [x] Ambiguous input is not treated as consent.
+- [x] Free text while awaiting confirmation follows the chosen revision policy.
+- [x] No LLM classifier is required.
 
 ## Consent Semantics Checklist
 
-- [ ] Confirm records consent or ready-for-execution semantics.
-- [ ] Confirm does not execute replay.
-- [ ] Cancel stops the pending preview.
-- [ ] Reject declines the pending preview.
-- [ ] High-risk / flaky / provisional plans still require explicit confirmation.
-- [ ] User decision is auditable.
+- [x] Confirm records consent or ready-for-execution semantics.
+- [x] Confirm does not execute replay.
+- [x] Cancel stops the pending preview.
+- [x] Reject declines the pending preview.
+- [x] High-risk / flaky / provisional plans still require explicit confirmation.
+- [x] User decision is auditable.
 
 ## State Transition Checklist
 
-- [ ] `awaiting_confirmation` is the only entry point for the gate.
-- [ ] Confirmed-but-not-executed state semantics are explicit.
-- [ ] Cancel / reject / revision state semantics are explicit.
-- [ ] Clarification-needed behavior is explicit.
-- [ ] State changes are recorded consistently if implementation extends the
-  conversation state machine.
+- [x] `awaiting_confirmation` is the only entry point for the gate.
+- [x] Confirmed-but-not-executed state semantics are explicit (`plan_confirmed`).
+- [x] Cancel / reject / revision state semantics are explicit.
+- [x] Clarification-needed behavior is explicit.
+- [x] State changes are recorded consistently.
 
 ## Event Recording Checklist
 
-- [ ] Plan confirmation event is recorded.
-- [ ] Plan cancellation event is recorded.
-- [ ] Plan rejection event is recorded.
-- [ ] Clarification-requested event is recorded.
-- [ ] Revision-requested event is recorded if new task input is supported.
-- [ ] Event payloads preserve selected path, route summary, warnings, risk
-  hints, confirmation requirements, and user decision input.
-- [ ] Event payloads explicitly indicate that replay was not executed.
+- [x] Plan confirmation event is recorded.
+- [x] Plan cancellation event is recorded.
+- [x] Plan rejection event is recorded.
+- [x] Clarification-requested event is recorded.
+- [x] Event payloads preserve selected path, route summary, warnings, risk hints, confirmation requirements, and user decision input.
+- [x] Event payloads explicitly indicate that replay was not executed.
 
 ## Assistant Message Checklist
 
-- [ ] Confirm response says the plan is confirmed for future execution, not
-  executed.
-- [ ] Cancel response says the pending plan is cancelled.
-- [ ] Reject response says the plan was not accepted and was not executed.
-- [ ] Ambiguous response asks for explicit confirm / cancel / reject / revision.
-- [ ] Revision response follows the chosen pending-preview policy.
+- [x] Confirm response says the plan is confirmed for future execution, not executed.
+- [x] Cancel response says the pending plan is cancelled.
+- [x] Reject response says the plan was not accepted and was not executed.
+- [x] Ambiguous response asks for explicit confirm / cancel / reject / revision.
+- [x] Revision response follows the chosen pending-preview policy.
 
 ## Explicit Replay Compatibility Checklist
 
-- [ ] Existing explicit replay command behavior remains compatible.
-- [ ] `/replay` while awaiting confirmation follows the documented policy.
-- [ ] Confirmation input cannot bypass consent and execute replay.
-- [ ] Existing explicit replay tests still pass.
+- [x] Existing explicit replay command behavior remains compatible.
+- [x] `/replay` while awaiting confirmation follows the documented policy.
+- [x] Confirmation input cannot bypass consent and execute replay.
+- [x] Existing explicit replay tests still pass.
 
 ## Boundary Checklist
 
-- [ ] No replay / autonomous / LLM / raw HTML imports are introduced.
-- [ ] No new API endpoint is added in 11.1.5.
-- [ ] No CLI command is added.
-- [ ] No 11.1.6 detail directory is created.
-- [ ] Existing 11.1.4 planning preview behavior remains compatible.
+- [x] No replay / autonomous / LLM / raw HTML imports are introduced.
+- [x] No new API endpoint is added in 11.1.5.
+- [x] No CLI command is added.
+- [x] No 11.1.6 detail directory is created.
+- [x] Existing 11.1.4 planning preview behavior remains compatible.
 
 ## Regression Checklist
 
-- [ ] Conversation dispatcher / orchestrator tests pass.
-- [ ] Explicit replay hook tests pass.
-- [ ] Task planning preview tests pass.
-- [ ] Conversation API / CLI tests pass if touched.
-- [ ] `git diff --check` is clean.
+- [x] Conversation dispatcher / orchestrator tests pass.
+- [x] Explicit replay hook tests pass.
+- [x] Task planning preview tests pass.
+- [x] Conversation API / CLI tests pass if touched.
+- [x] `git diff --check` is clean.
 
 ## Evidence Checklist
 
-- [ ] Changed files are listed.
-- [ ] Input classification examples are recorded.
-- [ ] State transition examples are recorded.
-- [ ] Event payload examples are recorded.
-- [ ] Replay non-execution evidence is recorded.
-- [ ] Verification commands and results are recorded.
+- [x] Changed files are listed.
+- [x] Input classification examples are recorded.
+- [x] State transition examples are recorded.
+- [x] Event payload examples are recorded.
+- [x] Replay non-execution evidence is recorded.
+- [x] Verification commands and results are recorded.
 
-## Decisions to Confirm Before Implementation
+## Verification Commands
 
-- Confirm the exact schema spelling for `plan_confirmed` when updating
-  `ConversationStatus`.
-- Confirm exact `ConversationEventType` enum names against existing naming
-  conventions before code changes.
-- Confirm whether route summary appears in every assistant response or only in
-  event payloads; either way, the event payload must remain auditable.
+```bash
+cd apps/api && ../../.venv/bin/pytest tests/test_conversation_confirmation.py -v
+# 27 passed
+
+cd apps/api && ../../.venv/bin/pytest tests/test_conversation_orchestrator.py -v
+# 29 passed
+
+cd apps/api && ../../.venv/bin/pytest tests/test_conversation_api.py -v
+# 36 passed
+
+cd apps/api && ../../.venv/bin/pytest -q
+# 1000 passed, 65 skipped
+
+cd apps/api && ../../.venv/bin/ruff check app/services/conversation/confirmation.py \
+  app/services/conversation/orchestrator.py app/schemas/conversation.py \
+  tests/test_conversation_confirmation.py tests/test_conversation_orchestrator.py \
+  tests/test_conversation_api.py
+# All checks passed!
+
+git diff --check
+# clean
+```

@@ -570,3 +570,186 @@ def test_malformed_slash_command_does_not_trigger_planning_preview(
     # No planning preview events
     events = repo.list_events(session_id)
     assert not any("plan_preview" in e.type for e in events)
+
+
+# ── 11.1.5 Confirmation Gate ──────────────────────────────────────────────────
+
+
+def _create_awaiting_confirmation_session(
+    repo: ConversationRepository,
+) -> str:
+    """Create a session and seed a plan_preview_proposed event."""
+    session = repo.create_session(initial_status="awaiting_confirmation")
+    session_id = session.id
+    # Seed the pending preview event so _get_pending_plan can find it
+    repo.append_event(
+        session_id=session_id,
+        type=ConversationEventType.PLAN_PREVIEW_PROPOSED,
+        payload={
+            "task_intent_raw_text": "run export",
+            "candidate_count": 1,
+            "selected_path_id": "lp-001",
+            "selected_purpose": "Export users",
+            "warnings": [],
+            "risk_hints": [],
+            "confirmation_requirements": [],
+            "confirmation_required": True,
+        },
+    )
+    return session_id
+
+
+def test_confirm_from_awaiting_confirmation_moves_to_plan_confirmed(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_awaiting_confirmation_session(repo)
+
+    result = orchestrator.dispatch_user_input(session_id, "confirm")
+
+    assert result.allowed is True
+    assert result.previous_status == "awaiting_confirmation"
+    assert result.next_status == "plan_confirmed"
+    assert result.command_kind == "free_text"
+    assert "ready for future execution" in result.user_response
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.status == "plan_confirmed"
+
+    events = repo.list_events(session_id)
+    event_types = [e.type for e in events]
+    assert "plan_confirmed" in event_types
+    assert ConversationEventType.STATE_CHANGED.value in event_types
+
+    # Verify event payload
+    confirmed_event = [e for e in events if e.type == "plan_confirmed"][0]
+    assert confirmed_event.payload_json["decision"] == "confirm"
+    assert confirmed_event.payload_json["selected_path_id"] == "lp-001"
+    assert confirmed_event.payload_json["replay_executed"] is False
+
+
+def test_cancel_from_awaiting_confirmation_returns_to_task_intake(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_awaiting_confirmation_session(repo)
+
+    result = orchestrator.dispatch_user_input(session_id, "cancel")
+
+    assert result.allowed is True
+    assert result.next_status == "task_intake"
+    assert "cancelled" in result.user_response
+    assert "No execution occurred" in result.user_response
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.status == "task_intake"
+
+    events = repo.list_events(session_id)
+    event_types = [e.type for e in events]
+    assert "plan_cancelled" in event_types
+    assert ConversationEventType.STATE_CHANGED.value in event_types
+
+
+def test_reject_from_awaiting_confirmation_returns_to_task_intake(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_awaiting_confirmation_session(repo)
+
+    result = orchestrator.dispatch_user_input(session_id, "reject")
+
+    assert result.allowed is True
+    assert result.next_status == "task_intake"
+    assert "not accepted" in result.user_response
+    assert "not executed" in result.user_response
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.status == "task_intake"
+
+    events = repo.list_events(session_id)
+    event_types = [e.type for e in events]
+    assert "plan_rejected" in event_types
+    assert ConversationEventType.STATE_CHANGED.value in event_types
+
+
+def test_ambiguous_from_awaiting_confirmation_stays_awaiting_confirmation(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_awaiting_confirmation_session(repo)
+
+    result = orchestrator.dispatch_user_input(session_id, "maybe")
+
+    assert result.allowed is True
+    assert result.next_status == "awaiting_confirmation"
+    assert "confirm, cancel, reject" in result.user_response
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.status == "awaiting_confirmation"
+
+    events = repo.list_events(session_id)
+    event_types = [e.type for e in events]
+    assert "confirmation_clarification_requested" in event_types
+    # No state change because status stays the same
+    state_changes = [e for e in events if e.type == ConversationEventType.STATE_CHANGED.value]
+    assert len(state_changes) == 0
+
+
+def test_replay_blocked_while_awaiting_confirmation(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_awaiting_confirmation_session(repo)
+
+    result = orchestrator.dispatch_user_input(
+        session_id, "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users"
+    )
+
+    assert result.allowed is False
+    assert result.next_status == "awaiting_confirmation"
+    assert result.command_kind == "replay"
+    assert "confirm, cancel, or reject" in result.user_response
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.status == "awaiting_confirmation"
+
+    events = repo.list_events(session_id)
+    event_types = [e.type for e in events]
+    assert "explicit_replay_blocked_by_pending_confirmation" in event_types
+    blocked_event = [
+        e for e in events
+        if e.type == "explicit_replay_blocked_by_pending_confirmation"
+    ][0]
+    assert blocked_event.payload_json["reason"] == "replay_blocked_by_pending_confirmation"
+
+
+def test_confirmation_gate_does_not_affect_normal_commands(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """Non-FREE_TEXT / non-REPLAY commands while awaiting_confirmation fall through."""
+    session_id = _create_awaiting_confirmation_session(repo)
+
+    result = orchestrator.dispatch_user_input(session_id, "/status")
+
+    assert result.allowed is True
+    assert result.next_status == "awaiting_confirmation"
+    assert result.command_kind == "status"
+
+
+def test_confirmation_gate_records_no_replay_executed(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_awaiting_confirmation_session(repo)
+
+    orchestrator.dispatch_user_input(session_id, "confirm")
+
+    events = repo.list_events(session_id)
+    confirmed = [e for e in events if e.type == "plan_confirmed"][0]
+    assert confirmed.payload_json["replay_executed"] is False
