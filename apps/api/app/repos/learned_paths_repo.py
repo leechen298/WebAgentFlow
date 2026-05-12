@@ -284,6 +284,23 @@ class LearnedPathRepository:
         return int(self.session.scalar(select(func.count(LearnedPath.id))) or 0)
 
     # ------------------------------------------------------------------
+    # Retrieval helpers (read-only)
+    # ------------------------------------------------------------------
+
+    def list_candidates(self) -> list[LearnedPath]:
+        """Return all non-deprecated LearnedPaths ordered newest-first.
+
+        Used by the task-planning retrieval layer.  Does not mutate
+        ``trust`` or ``hit_count``.
+        """
+        stmt = (
+            select(LearnedPath)
+            .where(LearnedPath.trust != TrustStatus.DEPRECATED)
+            .order_by(LearnedPath.created_at.desc())
+        )
+        return list(self.session.scalars(stmt).all())
+
+    # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
 

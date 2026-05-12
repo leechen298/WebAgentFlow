@@ -439,50 +439,51 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 ### 11.1.2 · LearnedPath retrieval and ranking
 
-状态：当前规划 / 下一步执行包。
+状态：已完成。
 
-目标：
+交付：
 
-- 基于 `TaskIntent`、page / scenario hints、LearnedPath catalog metadata，
-  从 LearnedPath store 中检索候选路径。
-- 输出 `LearnedPathCandidate` 列表。
-- 对候选路径做第一版 deterministic ranking。
-- 评分考虑：
-  - page_template match
-  - scenario match
-  - trust status
-  - hit_count
-  - task text / scenario / page hint keyword overlap
-  - drift evidence summary
-  - negative evidence summary
-  - deprecated path exclusion or heavy penalty
+- `apps/api/app/services/task_planning/retrieval.py` — deterministic retrieval /
+  ranking service (`LearnedPathRetrievalService`)。
+  - 输入：`TaskIntent`；输出：`list[LearnedPathCandidate]`。
+  - 默认排除 `trust=deprecated`；包含 confirmed / provisional / flaky。
+  - 评分维度：exact scenario match (+50)、page_template exact/contains match
+    (+30/+15)、trust base (confirmed +20 / provisional +10 / flaky 0)、
+    hit_count capped at +10、keyword token overlap (+2 per token)。
+  - `match_reasons` / `warnings` 可解释；score 为内部实现细节，不暴露为 public
+    `LearnedPathCandidate` 字段。
+  - `limit` 默认 10，clamp 至 `[1, 50]`。
+  - `drift_evidence_summary` 保守地从 `trust_reason` 填充；
+    `negative_evidence_summary` 11.1.2 留空。
+- `apps/api/app/services/task_planning/__init__.py` — export `LearnedPathRetrievalService`。
+- `apps/api/app/repos/learned_paths_repo.py` — 新增只读 `list_candidates()`，
+  返回所有 non-deprecated LearnedPaths。
+- `apps/api/tests/test_task_planning_retrieval.py` — 38 tests passed，ruff clean。
+
+验证：
+
+- `cd apps/api && ../../.venv/bin/pytest tests/test_task_planning_retrieval.py tests/test_task_planning_schemas.py -v`
+- 结果：`63 passed`
+- `cd apps/api && ../../.venv/bin/ruff check app/services/task_planning/retrieval.py app/services/task_planning/__init__.py tests/test_task_planning_retrieval.py`
+- 结果：`All checks passed!`
+- `cd apps/api && ../../.venv/bin/pytest -v` (full suite)
+- 结果：`918 passed, 65 skipped`
+- `git diff --check`
+- 结果：clean
+
+边界（已遵守）：
+
 - 不调用 Task Path Planner。
 - 不调用 LLM。
 - 不执行 replay。
-- 不做 slot binding。
-
-边界：
-
-- 不做 Task Path Planner implementation。
-- 不做 Task Result Reporter implementation。
-- 不做 slot binding。
-- 不做 route plan generation。
-- 不做 confirmation gate。
-- 不执行 replay。
 - 不调用 autonomous run。
+- 不做 slot binding。
+- 不生成 route plan。
+- 不做 confirmation gate。
 - 不读取 raw HTML。
 - 不做 hidden relearning。
 - 不做 E2E。
 - 不加入 user / account / tenant 字段。
-
-预期触及：
-
-- `apps/api/app/services/task_planning/retrieval.py` 或等价 module。
-- `apps/api/app/services/task_planning/__init__.py`。
-- `apps/api/app/repos/learned_paths_repo.py`，如需新增 read-only query
-  method，保持最小改动。
-- `apps/api/tests/test_task_planning_retrieval.py`。
-- `docs/iterations/m11/11.1.2-learned-path-retrieval-ranking/review.md`。
 
 ### 11.1.3 · Slot binding contract and deterministic binding MVP
 
