@@ -54,9 +54,10 @@ Deterministic E2E 的定义：
   session -> dispatch `/replay` -> replay summary -> transcript/events。
 - Conversation CLI-driven E2E 覆盖真实 `wagent conversation` subprocess flow：
   start -> send `/replay <learned_path_id> <url>` -> status / transcript / events。
-- Conversation task execution E2E 覆盖 11.1.6 scoped runtime execution flow：
-  seeded confirmed execution context -> `execute` -> replay handler evidence，以及自然
-  preview 缺少 `target_url` 时的 blocked 边界。
+- Conversation task execution E2E 覆盖 11.1.6 scoped runtime execution flow
+  和 11.1.7 Task Result Reporter output：seeded confirmed execution context
+  -> `execute` -> replay handler evidence -> `task_result_reported`，以及自然
+  preview 缺少 `target_url` 时的 blocked reporting 边界。
 - Validation-site browser smoke 覆盖 `/login` 和 `/users` fixture 页面：
   登录控件、错误提示、用户目录筛选和 empty state。
 

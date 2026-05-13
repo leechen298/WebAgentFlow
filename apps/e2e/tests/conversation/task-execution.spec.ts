@@ -211,7 +211,7 @@ test.describe('Conversation 11.1.6 task execution E2E', () => {
       allowed: true,
       error: null,
     });
-    expect(execute.user_response).toContain('Result verification is not implemented');
+    expect(execute.user_response.toLowerCase()).toContain('could not verify');
     expect(execute.replay_result).toMatchObject({
       learned_path_id: fixture.id,
       url: targetUrl,
@@ -247,9 +247,10 @@ test.describe('Conversation 11.1.6 task execution E2E', () => {
     );
     const startedIndex = indexOfEventAfter(events, executingIndex, 'plan_execution_started');
     const completedIndex = indexOfEventAfter(events, startedIndex, 'plan_execution_completed');
+    const reportedIndex = indexOfEventAfter(events, completedIndex, 'task_result_reported');
     const finishedIndex = indexOfEventAfter(
       events,
-      completedIndex,
+      reportedIndex,
       'state_changed',
       (event) => event.payload.from === 'executing' && event.payload.to === 'execution_finished',
     );
@@ -260,7 +261,8 @@ test.describe('Conversation 11.1.6 task execution E2E', () => {
     expect(executingIndex).toBeGreaterThan(commandIndex);
     expect(startedIndex).toBeGreaterThan(executingIndex);
     expect(completedIndex).toBeGreaterThan(startedIndex);
-    expect(finishedIndex).toBeGreaterThan(completedIndex);
+    expect(reportedIndex).toBeGreaterThan(completedIndex);
+    expect(finishedIndex).toBeGreaterThan(reportedIndex);
 
     const completed = events[completedIndex];
     expect(completed.payload).toMatchObject({
@@ -272,15 +274,31 @@ test.describe('Conversation 11.1.6 task execution E2E', () => {
       no_autonomous: true,
     });
 
+    const reported = events[reportedIndex];
+    expect(reported.payload).toMatchObject({
+      learned_path_id: fixture.id,
+      verification_outcome: 'uncertain',
+      task_verified: false,
+      needs_review: true,
+      no_recovery: true,
+      no_autonomous: true,
+      no_llm: true,
+    });
+    expect(String(reported.payload.evidence_summary ?? '')).toContain('Replay status: succeeded');
+    expect(String(reported.payload.missing_evidence_summary ?? '')).toContain(
+      'no explicit postcondition evidence',
+    );
+
     const transcript = await listTranscript(request, session.id);
     const finalAgentMessage = [...transcript]
       .reverse()
       .find((message) => message.role === 'agent');
-    expect(finalAgentMessage?.content).toContain('Replay execution completed');
-    expect(finalAgentMessage?.content).toContain('Result verification is not implemented');
+    expect(finalAgentMessage?.content.toLowerCase()).toContain('could not verify');
     expect(finalAgentMessage?.metadata).toMatchObject({
       source: 'execution_gate',
       status: 'completed',
+      verification_outcome: 'uncertain',
+      needs_review: true,
     });
   });
 
@@ -293,11 +311,14 @@ test.describe('Conversation 11.1.6 task execution E2E', () => {
     expect(execute.next_status).toBe('plan_confirmed');
     expect(execute.allowed).toBe(false);
     expect(execute.replay_result).toBeNull();
-    expect(execute.user_response.toLowerCase()).toContain('not executable');
+    expect(execute.user_response.toLowerCase()).toMatch(
+      /blocked|could not run|required evidence/,
+    );
 
     const events = await listEvents(request, session.id);
     const eventTypes = events.map((event) => event.type);
     expect(eventTypes).toContain('plan_execution_blocked');
+    expect(eventTypes).toContain('task_result_reported');
     expect(eventTypes).not.toContain('plan_execution_started');
     expect(eventTypes).not.toContain('plan_execution_completed');
     expect(eventTypes).not.toContain('replay_completed');
@@ -310,14 +331,28 @@ test.describe('Conversation 11.1.6 task execution E2E', () => {
     });
     expect(blocked?.payload.missing_fields).toContain('target_url');
 
+    const reported = events.find((event) => event.type === 'task_result_reported');
+    expect(reported?.payload).toMatchObject({
+      verification_outcome: 'blocked',
+      task_verified: false,
+      needs_review: false,
+      no_recovery: true,
+      no_autonomous: true,
+      no_llm: true,
+    });
+
     const transcript = await listTranscript(request, session.id);
     const finalAgentMessage = [...transcript]
       .reverse()
       .find((message) => message.role === 'agent');
-    expect(finalAgentMessage?.content.toLowerCase()).toContain('not executable');
+    expect(finalAgentMessage?.content.toLowerCase()).toMatch(
+      /blocked|could not run|required evidence/,
+    );
     expect(finalAgentMessage?.metadata).toMatchObject({
       source: 'execution_gate',
       status: 'blocked',
+      verification_outcome: 'blocked',
+      needs_review: false,
     });
   });
 
