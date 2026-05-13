@@ -1,181 +1,149 @@
-# 审核与反思
+# Review and Reflection
 
-本 review 文档用于后续 11.1.6 implementation review。当前仍是文档阶段，不写
-PASS，不写测试数量。
+## 11.1.6 Execution via Replay Implementation Report
 
-## Scope Review Checklist
+### Changed files
 
-- [ ] 实现只执行 already confirmed plans。
-- [ ] 实现不从 raw user text 重建 plan。
-- [ ] 实现不调用 Task Path Planner 做 re-planning。
-- [ ] 实现不调用 autonomous run。
-- [ ] 实现不读取 raw HTML。
-- [ ] 实现不做 hidden relearning。
-- [ ] 实现不接入 LLM provider。
-- [ ] 实现不做 slot binding、result verification、Task Result Reporter、
-  recovery dialogue 或 teaching mode。
-- [ ] 实现不新增 user / account / tenant fields。
+| File | Change |
+|---|---|
+| `apps/api/app/schemas/conversation.py` | Add `EXECUTING`, `EXECUTION_FINISHED`, `EXECUTION_FAILED` to `ConversationStatus`; add `PLAN_EXECUTION_STARTED`, `PLAN_EXECUTION_COMPLETED`, `PLAN_EXECUTION_FAILED`, `PLAN_EXECUTION_BLOCKED` to `ConversationEventType` |
+| `apps/api/app/services/conversation/execution.py` | **New.** `PlanExecutionService` deterministic classifier + context extractor + result builders; replay invocation is caller-side (orchestrator) so `executing` / `started` are recorded before replay runs |
+| `apps/api/app/services/conversation/orchestrator.py` | Add execution gate: `_handle_plan_confirmed_gate`, inject `execution_handler`, state transitions through `executing` -> `execution_finished` / `execution_failed` |
+| `apps/api/app/services/conversation/__init__.py` | Export `PlanExecutionDecision`, `PlanExecutionResult`, `PlanExecutionService` |
+| `apps/api/app/routers/conversation.py` | Wire `execution_handler=replay_handler` into `ConversationOrchestrator` |
+| `apps/api/tests/test_conversation_execution.py` | **New.** 26 service-level tests for classification, context extraction, blocked cases, replay result builders, payload boundaries, forbidden imports |
+| `apps/api/tests/test_conversation_orchestrator.py` | Add 9 integration tests for execution gate (success, blocked, failure, non-execution text, explicit replay compatibility, handler-after-executing audit order, missing-confirmed-event blocked) |
+| `apps/api/tests/test_conversation_api.py` | Add 3 API-level tests for blocked execution, successful execution, explicit replay compatibility |
 
-## Execution Precondition Checklist
+### Implemented behavior
 
-- [ ] Conversation 处于 confirmed-but-not-executed 语义。
-- [ ] User consent 已通过 11.1.5 记录。
-- [ ] Plan 尚未执行。
-- [ ] Plan 未被 cancelled、rejected 或 superseded。
-- [ ] Selected LearnedPath id 可用。
-- [ ] Target URL 或 replay entry context 可用。
-- [ ] Missing context 会 blocked，而不是 guessing。
+- `plan_confirmed` + execution intent (`execute`, `run`, `start`, `执行`, `开始`) → deterministic replay execution.
+- Execution context recovered from audited conversation events; **both** `plan_preview_proposed` and `plan_confirmed` events are required (P2).
+- Missing context → `plan_execution_blocked` event, session stays `plan_confirmed`.
+- Successful replay → `plan_execution_started` recorded **before** replay runs (P1), then `plan_execution_completed`, session becomes `execution_finished`.
+- Failed replay → `plan_execution_started` recorded **before** replay runs (P1), then `plan_execution_failed`, session becomes `execution_failed`.
+- Multi-step routes → blocked.
+- Non-execution free text in `plan_confirmed` → not intercepted by execution gate, falls through to state machine (blocked).
 
-## Confirmed Plan Lookup Checklist
+### Execution trigger
 
-- [ ] Confirmed plan 从可审计 conversation events 恢复。
-- [ ] `plan_preview_proposed` evidence 用于 selected path / route summary。
-- [ ] `plan_confirmed` evidence 用于 consent。
-- [ ] 不使用 raw user text 重建 plan。
-- [ ] 不再次调用 Task Path Planner。
+Exact-match tokens only (strip, lowercase for ASCII; strip for CJK):
+- `execute`
+- `run`
+- `start`
+- `执行`
+- `开始`
 
-## Replay Invocation Checklist
+No LLM classifier, no fuzzy inference, no new API endpoint or CLI command.
 
-- [ ] 复用 existing deterministic replay service / explicit replay hook。
-- [ ] 如果已有 service-level replay function，不引入 HTTP self-call。
-- [ ] 只有显式 `learned_path_id + url` 或等价 confirmed entry context 存在时
-  才调用 replay。
-- [ ] 不引入 autonomous execution、hidden relearning、raw HTML planning、
-  LLM、slot binding 或 invented actions。
+### Missing context behavior
 
-## Missing Context Checklist
+When `learned_path_id` or `target_url` is missing from the confirmed plan context:
+- No replay invocation.
+- `plan_execution_blocked` event recorded.
+- Assistant message: "The confirmed plan is not executable because required replay context is missing."
+- Session stays `plan_confirmed`.
 
-- [ ] Missing LearnedPath id 记录 execution-blocked 语义。
-- [ ] Missing target URL / entry context 记录 execution-blocked 语义。
-- [ ] Assistant message 说明 execution context 缺失。
-- [ ] Context 不完整时不调用 replay handler。
+### Replay invocation boundary
 
-## Conversation Event Checklist
+- Reuses existing `run_explicit_replay` / `replay_handler` deterministic capability.
+- `learned_path_id` and `target_url` must come from confirmed plan event context.
+- No autonomous run, no raw HTML, no LLM, no slot binding, no invented actions.
 
-- [ ] 记录 execution started event。
-- [ ] replay invocation 完成时记录 execution completed event。
-- [ ] replay invocation 失败时记录 execution failed event。
-- [ ] preconditions 缺失时记录 execution blocked event。
-- [ ] Payload 在可用时包含 learned_path_id 和 target URL / entry context。
-- [ ] Payload 包含 no-autonomous marker。
-- [ ] Payload 包含 no result verification marker。
-- [ ] Payload 不包含 raw HTML、screenshots 或 user/account/tenant fields。
+### Events / states
 
-## State Transition Checklist
+New statuses:
+- `executing`
+- `execution_finished` (does NOT mean task succeeded)
+- `execution_failed`
 
-- [ ] Confirmed plan 只有在 preconditions 通过后才进入 executing 语义。
-- [ ] Completion state 不暗示 result verification。
-- [ ] Failure state 不尝试 recovery。
-- [ ] 如果实现扩展 conversation state machine，state changes 记录一致。
+New event types (all ≤ 24 chars, fit in `String(64)`):
+- `plan_execution_started`
+- `plan_execution_completed`
+- `plan_execution_failed`
+- `plan_execution_blocked`
 
-## Assistant Message Checklist
+Event payloads consistently include:
+- `no_result_verification: true`
+- `no_autonomous: true`
+- `task_verified: false` (completed / failed events)
 
-- [ ] Execution-started response 表达 replay execution started。
-- [ ] Execution-completed response 表达 result verification 尚未实现。
-- [ ] Execution-failed response 表达未尝试 recovery。
-- [ ] Execution-blocked response 表达 required context missing。
-- [ ] 没有 response 声明 task success 或 business-result verification。
+### Explicit replay compatibility
 
-## Explicit Replay Compatibility Checklist
+- `/replay <learned_path_id> <url>` from non-`awaiting_confirmation` states continues to use the explicit replay path.
+- `/replay` while `awaiting_confirmation` continues to be blocked by 11.1.5.
+- Confirmed-plan execution and explicit replay are separate entry paths sharing the same underlying deterministic replay handler.
 
-- [ ] 现有 `/replay <learned_path_id> <url>` command 仍可工作。
-- [ ] `/replay` while `awaiting_confirmation` 仍由 11.1.5 blocked。
-- [ ] Confirmed-plan execution 和 explicit replay 保持 separate entry paths。
+### Result verification boundary
 
-## Result Verification Boundary Checklist
+- `plan_execution_completed` means replay invocation completed, NOT task succeeded.
+- No business result verified, no artifact produced, no form submission confirmed.
+- No Task Result Reporter, no recovery, no teaching mode.
 
-- [ ] Replay completed 不被报告为 task succeeded。
-- [ ] 11.1.6 不发出 business result verified。
-- [ ] 11.1.6 不发出 artifact produced。
-- [ ] 不调用 Task Result Reporter。
+### Tests
 
-## Regression Checklist
+```bash
+cd apps/api && ../../.venv/bin/pytest \
+  tests/test_conversation_execution.py \
+  tests/test_conversation_orchestrator.py \
+  tests/test_conversation_api.py \
+  tests/test_conversation_replay_hook.py \
+  tests/test_conversation_confirmation.py -q
+```
+Result: `173 passed`
 
-- [ ] Conversation orchestrator tests pass。
-- [ ] 如触及 Conversation API，则 Conversation API tests pass。
-- [ ] Explicit replay hook tests pass。
-- [ ] 11.1.5 confirmation gate tests pass。
-- [ ] 如触及 replay integration，则 replay service tests pass。
-- [ ] `git diff --check` clean。
+```bash
+cd apps/api && ../../.venv/bin/pytest -q
+```
+Result: `1063 passed, 65 skipped`
 
-## Evidence Checklist
+```bash
+cd apps/api && ../../.venv/bin/ruff check \
+  app/schemas/conversation.py \
+  app/services/conversation/orchestrator.py \
+  app/services/conversation/execution.py \
+  app/routers/conversation.py \
+  tests/test_conversation_execution.py \
+  tests/test_conversation_orchestrator.py \
+  tests/test_conversation_api.py
+```
+Result: `All checks passed!`
 
-- [ ] Changed files 已列出。
-- [ ] Execution precondition examples 已记录。
-- [ ] Confirmed plan lookup evidence 已记录。
-- [ ] Replay invocation evidence 已记录。
-- [ ] Missing-context behavior 已记录。
-- [ ] Event payload examples 已记录。
-- [ ] Result verification non-goal evidence 已记录。
-- [ ] Verification commands and results 已记录。
+```bash
+cd apps/api && ../../.venv/bin/alembic heads
+```
+Result: `df9ed1494afd (head)` — no new migration needed, all event types fit in `String(64)`.
 
-## Implementation Decision Closure
+```bash
+git diff --check
+```
+Result: clean
 
-以下决策已为 11.1.6 第一版 future implementation 收口。它们仍是文档阶段决策，
-直到代码和测试实现完成。
+### Verification
 
-- [ ] Execution trigger decision：
-  - 11.1.6 不得在 11.1.5 confirmation 后自动执行 replay。
-  - Confirmation 只记录 consent / ready-for-execution 语义。
-  - 第一版 execution trigger 是 `conversation status == plan_confirmed` 加
-    用户通过现有 dispatch surface 输入明确 execution intent。
-  - 允许的 execution tokens 仅限 exact match：
-    `execute`、`run`、`start`、`执行`、`开始`。
-  - 此 trigger 不引入 LLM classifier、fuzzy matching、新 API endpoint 或新
-    CLI command。
-- [ ] Target URL / replay context decision：
-  - Replay context 必须来自可审计 confirmed plan / preview evidence。
-  - 允许来源是 latest `plan_preview_proposed` event payload、`plan_confirmed`
-    event payload，或已经存在的 future persisted execution context。
-  - 必需 context 是 selected `learned_path_id` 加 `target_url` 或 replay entry
-    context。
-  - 实现不得从 raw user text 推断 target URL，不得 re-run retrieval，不得
-    re-run Task Path Planner，不得从 raw HTML / browser page 猜 entry point。
-- [ ] Missing context decision：
-  - 缺 confirmed plan、selected LearnedPath 或 target URL / replay entry context
-    时，execution blocked。
-  - Blocked execution 记录 `execution_blocked` 或等价语义。
-  - 不调用 replay，不调用 autonomous run，不尝试 re-planning。
-- [ ] Execution state decision：
-  - 第一版可以新增 `executing`、`execution_finished`、`execution_failed`
-    statuses。
-  - `execution_finished` 不表示 task succeeded 或 business result verified。
-  - Blocked execution 可以只记录 event，并让 session 保持 `plan_confirmed`。
-- [ ] Event semantics decision：
-  - 第一版应使用或新增 `plan_execution_started`、
-    `plan_execution_completed`、`plan_execution_failed`、
-    `plan_execution_blocked`。
-  - `plan_execution_completed` 只表示 replay invocation completed。
-  - Event payload 包含 learned_path_id、target URL / replay context（如可用）、
-    route summary（如可用）、replay run id / execution id（如可用）、failed 时的
-    error summary、`no_result_verification: true`、`no_autonomous: true`。
-  - Event payload 不包含 raw HTML、screenshot payload、identity / tenant
-    fields 或 business success assertions。
-- [ ] Replay result boundary decision：
-  - 11.1.6 只记录 replay-level results：started、completed、failed、blocked。
-  - 11.1.6 不得记录 task succeeded、business result verified、form submission
-    confirmed 或 artifact produced。
-- [ ] Single selected LearnedPath decision：
-  - 第一版只支持 single selected LearnedPath。
-  - Multi-step 或 multi-selected-path RoutePlans 返回 `execution_blocked` /
-    `unsupported_multi_step_route`。
-  - 不允许 partial multi-step execution。
-- [ ] Explicit replay compatibility decision：
-  - Confirmed-plan execution 和 explicit `/replay <learned_path_id> <url>` 是
-    separate entry paths。
-  - explicit `/replay` outside `awaiting_confirmation` 继续走 explicit replay
-    path。
-  - `/replay` while `awaiting_confirmation` 继续由 11.1.5 blocked。
-  - `plan_confirmed` execution intent 不得通过伪装成 slash `/replay` command
-    实现。
-- [ ] Result verification boundary decision：
-  - 11.1.6 不实现 result verification、Task Result Reporter、failure recovery、
-    teaching mode、slot binding、form filling、autonomous run、hidden
-    relearning、raw HTML planning、LLM planning、browser exploration 或
-    multi-step route execution。
+- [x] Implementation only executes already confirmed plans.
+- [x] Implementation does not execute from raw user text.
+- [x] Implementation does not call Task Path Planner for re-planning.
+- [x] Implementation does not call autonomous run.
+- [x] Implementation does not read raw HTML.
+- [x] Implementation does not perform hidden relearning.
+- [x] Implementation does not connect an LLM provider.
+- [x] Implementation does not implement slot binding, result verification, Task Result Reporter, recovery dialogue, or teaching mode.
+- [x] Missing LearnedPath id records execution-blocked semantics.
+- [x] Missing target URL records execution-blocked semantics.
+- [x] Missing `plan_confirmed` event records execution-blocked semantics (P2).
+- [x] Replay completed is not reported as task succeeded.
+- [x] `plan_execution_started` and `executing` state are recorded **before** replay handler runs (P1).
+- [x] Explicit `/replay` compatibility preserved.
+- [x] `/replay` while `awaiting_confirmation` still blocked by 11.1.5.
+- [x] No new API endpoint or CLI command added.
 
-## Decisions to Confirm Before Implementation
+### Non-goals preserved
 
-- 最终 status enum 名称可以在实现时按现有 conversation schema 风格微调。
-- 精确 replay service integration point 必须在 inspect 现有 replay code 后决定。
-- 精确 replay run id / execution id 字段取决于现有 replay return shape。
+- Result verification: future scope.
+- Task Result Reporter: future scope.
+- Recovery dialogue: future scope.
+- Teaching mode: future scope.
+- Slot binding / form filling: future scope.
+- Multi-step route execution: future scope.
+- 11.1.7 directory: not created.

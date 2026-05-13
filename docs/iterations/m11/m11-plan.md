@@ -706,27 +706,37 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 ### 11.1.6 · Execution via Replay
 
-状态：documentation initialized。
+状态：已完成。
 
 目标：
 
-- 设计 confirmed-but-not-executed plan 的 replay execution 入口。
+- 让 `plan_confirmed` 状态下的 confirmed plan 可以通过现有 deterministic replay 执行。
 - 只执行已经通过 11.1.5 明确确认的 route plan。
 - 复用现有 deterministic replay 能力 / explicit replay hook 底层能力。
 - 记录 replay execution evidence 和 conversation execution events。
-- 缺少 selected LearnedPath、target URL 或 replay entry context 时返回
-  unable-to-execute / needs-more-context 语义，不脑补、不执行。
-- 明确 `replay completed` 只表示 replay 调用完成，不等于 business result
-  verified 或 task succeeded。
+- 缺少 selected LearnedPath、target URL 或 replay entry context 时返回 blocked 语义，不脑补、不执行。
+- 明确 `replay completed` 只表示 replay 调用完成，不等于 business result verified 或 task succeeded。
 
 交付：
 
-- `docs/iterations/m11/11.1.6-execution-via-replay/README.md`
-- `docs/iterations/m11/11.1.6-execution-via-replay/intent.md`
-- `docs/iterations/m11/11.1.6-execution-via-replay/plan.md`
+- `apps/api/app/services/conversation/execution.py` — `PlanExecutionService` deterministic classifier + context extractor + replay invoker。
+- `apps/api/app/schemas/conversation.py` — 新增 `executing`、`execution_finished`、`execution_failed` statuses；新增 4 个 execution event types。
+- `apps/api/app/services/conversation/orchestrator.py` — `plan_confirmed` execution gate，状态流转 `plan_confirmed -> executing -> execution_finished/execution_failed`。
+- `apps/api/app/routers/conversation.py` — 注入 `execution_handler`。
+- `apps/api/tests/test_conversation_execution.py` — 29 tests。
+- `apps/api/tests/test_conversation_orchestrator.py` — 7 个 execution gate 集成测试。
+- `apps/api/tests/test_conversation_api.py` — 3 个 API-level execution 测试。
 - `docs/iterations/m11/11.1.6-execution-via-replay/review.md`
 
-边界：
+行为：
+
+- `plan_confirmed` + `execute`/`run`/`start`/`执行`/`开始` → `executing` → `execution_finished` (replay succeeded/observed) 或 `execution_failed` (replay drifted/failed)。
+- 缺少 `learned_path_id` 或 `target_url` → `plan_execution_blocked`，session 保持 `plan_confirmed`。
+- Multi-step route → `plan_execution_blocked`。
+- 非 execution intent free text → falls through to state machine (blocked)。
+- Explicit `/replay` 保持独立入口。
+
+边界（已遵守）：
 
 - 不重新规划，不调用 Task Path Planner。
 - 不做 path selection。
@@ -742,7 +752,16 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 验证：
 
-- 当前文档阶段只运行 `git diff --check`。
+- `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_execution.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py tests/test_conversation_replay_hook.py tests/test_conversation_confirmation.py -q`
+- 结果：`173 passed`
+- `cd apps/api && ../../.venv/bin/pytest -q`
+- 结果：`1066 passed, 65 skipped`
+- `cd apps/api && ../../.venv/bin/ruff check ...`
+- 结果：`All checks passed!`
+- `cd apps/api && ../../.venv/bin/alembic heads`
+- 结果：`df9ed1494afd (head)`
+- `git diff --check`
+- 结果：clean
 
 ### Future · Result verification and Task Result Reporter
 

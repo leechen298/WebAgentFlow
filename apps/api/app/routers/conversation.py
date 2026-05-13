@@ -217,6 +217,7 @@ def dispatch_input(
         repo,
         replay_handler=replay_handler,
         planning_handler=preview_service.preview,
+        execution_handler=replay_handler,
     )
     result = orchestrator.dispatch_user_input(
         session_id,

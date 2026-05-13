@@ -35,7 +35,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.1.4-task-planning-dispatch-preview](./11.1.4-task-planning-dispatch-preview/) —— Task Planning Dispatch Preview。状态：完成（64 targeted tests passed，962 full API tests passed）。
 - [11.1.5-plan-confirmation-consent-gate](./11.1.5-plan-confirmation-consent-gate/) —— Plan Confirmation and Consent Gate。状态：完成（confirmation gate + slash decision commands，review passed）。
 - Slot Binding contract and deterministic binding MVP —— 状态：future，尚未分配执行包编号。
-- [11.1.6-execution-via-replay](./11.1.6-execution-via-replay/) —— Execution via Replay。状态：documentation initialized。
+- [11.1.6-execution-via-replay](./11.1.6-execution-via-replay/) —— Execution via Replay。状态：完成（29 service tests + 7 orchestrator tests + 3 API tests，ruff clean，全量 1063 passed）。
 - Result verification and Task Result Reporter —— 状态：future，尚未分配执行包编号。
 - Task-to-path tests and evidence —— 状态：future，尚未分配执行包编号。
 

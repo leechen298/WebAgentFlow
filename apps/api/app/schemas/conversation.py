@@ -22,6 +22,9 @@ class ConversationStatus(StrEnum):
     TASK_INTAKE = "task_intake"
     AWAITING_CONFIRMATION = "awaiting_confirmation"
     PLAN_CONFIRMED = "plan_confirmed"
+    EXECUTING = "executing"
+    EXECUTION_FINISHED = "execution_finished"
+    EXECUTION_FAILED = "execution_failed"
     REPLAY_REQUESTED = "replay_requested"
     REPLAY_RUNNING = "replay_running"
     PAUSED = "paused"
@@ -61,6 +64,10 @@ class ConversationEventType(StrEnum):
     EXPLICIT_REPLAY_BLOCKED_BY_PENDING_CONFIRMATION = (
         "explicit_replay_blocked_by_pending_confirmation"
     )
+    PLAN_EXECUTION_STARTED = "plan_execution_started"
+    PLAN_EXECUTION_COMPLETED = "plan_execution_completed"
+    PLAN_EXECUTION_FAILED = "plan_execution_failed"
+    PLAN_EXECUTION_BLOCKED = "plan_execution_blocked"
     SESSION_COMPLETED = "session_completed"
     SESSION_FAILED = "session_failed"
 

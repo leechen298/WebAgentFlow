@@ -1,6 +1,6 @@
 # 11.1.6 · 通过 Replay 执行已确认计划
 
-状态：**documentation initialized**。
+状态：**implementation complete, review passed**。
 
 ## 执行前必读
 

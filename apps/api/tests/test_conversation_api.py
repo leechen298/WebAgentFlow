@@ -722,3 +722,172 @@ def test_dispatch_replay_blocked_while_awaiting_confirmation(
     assert any(
         e["type"] == "explicit_replay_blocked_by_pending_confirmation" for e in events
     )
+
+
+# ── 11.1.6 Execution gate through dispatch endpoint ───────────────────────────
+
+
+def test_dispatch_execute_after_confirmed_plan_blocked_no_target_url(
+    client: TestClient, db_session
+) -> None:
+    """Execution is blocked when confirmed plan lacks target_url."""
+    repo = LearnedPathRepository(db_session)
+    lp, _ = repo.ingest_run(
+        page_template="/login",
+        query_signature={},
+        dom_fingerprint="a" * 64,
+        scenario="log in",
+        actions=[{"action_type": "fill", "target_selector": "#user"}],
+        source_run_id=None,
+    )
+    lp = repo.set_trust(lp.id, TrustStatus.CONFIRMED, reason="test confirmed")
+    lp.hit_count = 5
+    db_session.commit()
+
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "log in"},
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "confirm"},
+    )
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "execute"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["next_status"] == "plan_confirmed"
+    assert data["allowed"] is False
+    assert "not executable" in data["user_response"].lower()
+
+    events_resp = client.get(f"/conversation/sessions/{session_id}/events")
+    events = events_resp.json()["data"]
+    assert any(e["type"] == "plan_execution_blocked" for e in events)
+    blocked = [e for e in events if e["type"] == "plan_execution_blocked"][0]
+    assert blocked["payload"]["no_result_verification"] is True
+    assert blocked["payload"]["no_autonomous"] is True
+
+
+def test_dispatch_execute_after_confirmed_plan_with_target_url(
+    client: TestClient, db_session, monkeypatch
+) -> None:
+    """Execution completes when confirmed plan has full replay context."""
+    from app.schemas.conversation import ConversationEventType
+    from app.services.task_planning.preview import PlanningPreviewResult
+
+    def mock_preview(_self, raw_input: str) -> PlanningPreviewResult:
+        return PlanningPreviewResult(
+            user_response="Plan: test",
+            event_type=ConversationEventType.PLAN_PREVIEW_PROPOSED.value,
+            event_payload={
+                "task_intent_raw_text": raw_input,
+                "candidate_count": 1,
+                "selected_path_id": "lp-001",
+                "selected_purpose": "Test",
+                "target_url": "http://127.0.0.1:5175/users",
+                "route_steps": [{"order": 1, "learned_path_id": "lp-001"}],
+                "confirmation_required": True,
+            },
+            confirmation_required=True,
+            selected_path_id="lp-001",
+        )
+
+    monkeypatch.setattr(
+        "app.services.task_planning.preview.PlanningPreviewService.preview",
+        mock_preview,
+    )
+
+    def fake_replay(_db, learned_path_id: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=learned_path_id,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            step_count=2,
+        )
+
+    monkeypatch.setattr(
+        "app.services.conversation.replay_hook.run_explicit_replay",
+        fake_replay,
+    )
+
+    repo = LearnedPathRepository(db_session)
+    lp, _ = repo.ingest_run(
+        page_template="/login",
+        query_signature={},
+        dom_fingerprint="a" * 64,
+        scenario="log in",
+        actions=[{"action_type": "fill", "target_selector": "#user"}],
+        source_run_id=None,
+    )
+    lp = repo.set_trust(lp.id, TrustStatus.CONFIRMED, reason="test confirmed")
+    lp.hit_count = 5
+    db_session.commit()
+
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "log in"},
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "confirm"},
+    )
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "run"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["next_status"] == "execution_finished"
+    assert data["allowed"] is True
+    assert data["replay_result"] is not None
+    assert data["replay_result"]["replay_status"] == "succeeded"
+    assert data["replay_result"]["step_count"] == 2
+    assert "not implemented" in data["user_response"].lower()
+
+    events_resp = client.get(f"/conversation/sessions/{session_id}/events")
+    events = events_resp.json()["data"]
+    assert any(e["type"] == "plan_execution_started" for e in events)
+    assert any(e["type"] == "plan_execution_completed" for e in events)
+    completed = [e for e in events if e["type"] == "plan_execution_completed"][0]
+    assert completed["payload"]["task_verified"] is False
+    assert completed["payload"]["no_result_verification"] is True
+    assert completed["payload"]["no_autonomous"] is True
+
+
+def test_dispatch_explicit_replay_compatible_outside_awaiting_confirmation(
+    client: TestClient, monkeypatch
+) -> None:
+    """Explicit /replay still works independently of confirmed-plan execution."""
+    def fake_replay(_db, learned_path_id: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=learned_path_id,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    monkeypatch.setattr(
+        "app.services.conversation.replay_hook.run_explicit_replay",
+        fake_replay,
+    )
+
+    session_id = _create_session(client)
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "/replay lp-001 http://127.0.0.1:5175/users"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["next_status"] == "completed"
+    assert data["replay_result"] is not None
+    assert data["replay_result"]["replay_status"] == "succeeded"

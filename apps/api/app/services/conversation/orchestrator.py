@@ -43,10 +43,12 @@ class ConversationOrchestrator:
         repo: ConversationRepository,
         replay_handler: Any | None = None,
         planning_handler: Any | None = None,
+        execution_handler: Any | None = None,
     ) -> None:
         self._repo = repo
         self._replay_handler = replay_handler
         self._planning_handler = planning_handler
+        self._execution_handler = execution_handler
 
     def dispatch_user_input(
         self,
@@ -88,6 +90,19 @@ class ConversationOrchestrator:
         # 11.1.5 — Confirmation gate for awaiting_confirmation
         if previous_status == ConversationStatus.AWAITING_CONFIRMATION.value:
             gate_result = self._handle_awaiting_confirmation_gate(
+                session_id=session_id,
+                raw_input=raw_input,
+                command=command,
+                previous_status=previous_status,
+                message_id=message.id,
+                metadata=metadata,
+            )
+            if gate_result is not None:
+                return gate_result
+
+        # 11.1.6 — Execution gate for plan_confirmed
+        if previous_status == ConversationStatus.PLAN_CONFIRMED.value:
+            gate_result = self._handle_plan_confirmed_gate(
                 session_id=session_id,
                 raw_input=raw_input,
                 command=command,
@@ -617,3 +632,185 @@ class ConversationOrchestrator:
             if event.type == ConversationEventType.PLAN_PREVIEW_PROPOSED.value:
                 return event.payload_json
         return None
+
+    # ── 11.1.6 Execution gate helpers ──────────────────────────────────────────
+
+    def _handle_plan_confirmed_gate(
+        self,
+        session_id: str,
+        raw_input: str,
+        command: Any,
+        previous_status: str,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+    ) -> DispatchResult | None:
+        """Route input while session is in ``plan_confirmed``.
+
+        Returns a ``DispatchResult`` when the gate handles the input
+        (execution intent). Returns ``None`` for non-execution intent so the
+        normal state machine can process it (which will block free text).
+
+        Audit order:
+        1. command_parsed
+        2. state_changed (plan_confirmed -> executing)
+        3. plan_execution_started
+        4. replay handler invoked
+        5. plan_execution_completed / plan_execution_failed
+        6. state_changed (executing -> execution_finished / execution_failed)
+        """
+        if command.kind != ConversationCommandKind.FREE_TEXT:
+            return None
+        if self._execution_handler is None:
+            return None
+
+        from app.services.conversation.execution import PlanExecutionService
+
+        service = PlanExecutionService()
+        decision = service.classify(raw_input)
+        if not decision.is_execution_intent:
+            return None
+
+        events_appended: list[str] = []
+
+        # Append command_parsed event
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.COMMAND_PARSED,
+            payload={
+                "raw": raw_input,
+                "command_kind": command.kind.value,
+                "args": command.args,
+                "learned_path_id": command.learned_path_id,
+                "url": command.url,
+                "text": command.text,
+                "parse_error": command.error,
+                "allowed": True,
+                "transition_error": None,
+                "dispatch_metadata": metadata or {},
+                "gate": "plan_confirmed",
+            },
+        )
+        events_appended.append(ConversationEventType.COMMAND_PARSED.value)
+
+        # Extract confirmed plan context from events
+        all_events = self._repo.list_events(session_id, limit=100)
+        confirmed_plan_context = service.extract_confirmed_plan_context(
+            all_events
+        )
+
+        # Validate preconditions (does NOT call replay)
+        validation = service.validate(raw_input, confirmed_plan_context)
+
+        # Append assistant message (blocked response if applicable)
+        user_response = validation.user_response
+        self._repo.append_message(
+            session_id=session_id,
+            role="agent",
+            content=user_response,
+            metadata={
+                "source": "execution_gate",
+                "status": validation.status,
+            },
+        )
+
+        # For blocked executions, just record the blocked event
+        if validation.status == "blocked":
+            self._repo.append_event(
+                session_id=session_id,
+                type=ConversationEventType(validation.event_type),
+                payload=validation.payload,
+            )
+            events_appended.append(validation.event_type)
+            return DispatchResult(
+                session_id=session_id,
+                previous_status=previous_status,
+                next_status=previous_status,
+                command_kind=command.kind.value,
+                user_response=user_response,
+                events_appended=events_appended,
+                message_id=message_id,
+                allowed=False,
+                error="Execution blocked: required replay context is missing.",
+            )
+
+        # Transition to executing BEFORE replay runs (11.1.6 P1)
+        self._repo.update_session_status(
+            session_id=session_id,
+            status="executing",
+        )
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.STATE_CHANGED,
+            payload={
+                "from": previous_status,
+                "to": "executing",
+                "command_kind": command.kind.value,
+                "reason": "plan_execution_started",
+            },
+        )
+        events_appended.append(ConversationEventType.STATE_CHANGED.value)
+
+        # Record execution started event
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.PLAN_EXECUTION_STARTED,
+            payload=validation.payload,
+        )
+        events_appended.append(
+            ConversationEventType.PLAN_EXECUTION_STARTED.value
+        )
+
+        # Invoke replay handler
+        learned_path_id = validation.payload["learned_path_id"]
+        target_url = validation.payload["target_url"]
+        try:
+            replay_summary: ConversationReplaySummary = (
+                self._execution_handler(learned_path_id, target_url)
+            )
+            result = service.build_result_from_replay(
+                raw_input, confirmed_plan_context, replay_summary
+            )
+        except Exception as exc:
+            result = service.build_result_from_error(
+                raw_input, confirmed_plan_context, exc
+            )
+            replay_summary = None  # type: ignore[assignment]
+
+        # Record execution result event
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType(result.event_type),
+            payload=result.payload,
+        )
+        events_appended.append(result.event_type)
+
+        # Transition to final status
+        next_status = result.next_status
+        self._repo.update_session_status(
+            session_id=session_id,
+            status=next_status,
+        )
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.STATE_CHANGED,
+            payload={
+                "from": "executing",
+                "to": next_status,
+                "command_kind": command.kind.value,
+                "reason": result.event_type,
+            },
+        )
+        events_appended.append(ConversationEventType.STATE_CHANGED.value)
+
+        return DispatchResult(
+            session_id=session_id,
+            previous_status=previous_status,
+            next_status=next_status,
+            command_kind=command.kind.value,
+            user_response=result.user_response,
+            events_appended=events_appended,
+            message_id=message_id,
+            allowed=True,
+            error=None,
+            replay_result=replay_summary,
+        )

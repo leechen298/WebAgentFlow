@@ -5,6 +5,11 @@ from app.services.conversation.confirmation import (
     PlanConfirmationResult,
     PlanConfirmationService,
 )
+from app.services.conversation.execution import (
+    PlanExecutionDecision,
+    PlanExecutionResult,
+    PlanExecutionService,
+)
 from app.services.conversation.orchestrator import ConversationOrchestrator, DispatchResult
 
 __all__ = [
@@ -13,4 +18,7 @@ __all__ = [
     "PlanConfirmationDecision",
     "PlanConfirmationResult",
     "PlanConfirmationService",
+    "PlanExecutionDecision",
+    "PlanExecutionResult",
+    "PlanExecutionService",
 ]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+from typing import Any
 
 import pytest
 from sqlalchemy.orm import Session
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.repos.conversation_repo import ConversationRepository
 from app.schemas.conversation import (
     ConversationEventType,
+    ConversationReplaySummary,
 )
 from app.services.conversation.orchestrator import ConversationOrchestrator
 
@@ -802,6 +804,341 @@ def test_confirmation_gate_records_no_replay_executed(
     events = repo.list_events(session_id)
     confirmed = [e for e in events if e.type == "plan_confirmed"][0]
     assert confirmed.payload_json["replay_executed"] is False
+
+
+# ── 11.1.6 Execution Gate ─────────────────────────────────────────────────────
+
+
+def _create_plan_confirmed_session(
+    repo: ConversationRepository,
+    *,
+    with_target_url: bool = True,
+) -> str:
+    """Create a session in plan_confirmed with seeded plan events."""
+    session = repo.create_session(initial_status="plan_confirmed")
+    session_id = session.id
+    payload: dict[str, Any] = {
+        "task_intent_raw_text": "run export",
+        "candidate_count": 1,
+        "selected_path_id": "lp-001",
+        "selected_purpose": "Export users",
+        "warnings": [],
+        "risk_hints": [],
+        "confirmation_requirements": [],
+        "confirmation_required": True,
+        "route_steps": [{"order": 1, "learned_path_id": "lp-001"}],
+    }
+    if with_target_url:
+        payload["target_url"] = "http://127.0.0.1:5175/users"
+    repo.append_event(
+        session_id=session_id,
+        type=ConversationEventType.PLAN_PREVIEW_PROPOSED,
+        payload=payload,
+    )
+    repo.append_event(
+        session_id=session_id,
+        type=ConversationEventType.PLAN_CONFIRMED,
+        payload={
+            "user_decision_input": "confirm",
+            "decision": "confirm",
+            "selected_path_id": "lp-001",
+            "replay_executed": False,
+        },
+    )
+    return session_id
+
+
+def test_execute_from_plan_confirmed_with_context_moves_to_execution_finished(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_plan_confirmed_session(repo)
+
+    def handler(lid: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(
+        repo, execution_handler=handler
+    )
+
+    result = orch.dispatch_user_input(session_id, "execute")
+
+    assert result.allowed is True
+    assert result.previous_status == "plan_confirmed"
+    assert result.next_status == "execution_finished"
+    assert result.command_kind == "free_text"
+    assert "completed" in result.user_response.lower()
+    assert "not implemented" in result.user_response.lower()
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.status == "execution_finished"
+
+    events = repo.list_events(session_id)
+    event_types = [e.type for e in events]
+    assert "plan_execution_started" in event_types
+    assert "plan_execution_completed" in event_types
+    assert ConversationEventType.STATE_CHANGED.value in event_types
+
+    started = [e for e in events if e.type == "plan_execution_started"][0]
+    assert started.payload_json["learned_path_id"] == "lp-001"
+    assert started.payload_json["no_result_verification"] is True
+    assert started.payload_json["no_autonomous"] is True
+
+    completed = [e for e in events if e.type == "plan_execution_completed"][0]
+    assert completed.payload_json["task_verified"] is False
+    assert completed.payload_json["no_result_verification"] is True
+
+
+def test_execute_from_plan_confirmed_missing_context_blocked(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_plan_confirmed_session(repo, with_target_url=False)
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        raise AssertionError("handler should not be called")
+
+    orch = ConversationOrchestrator(
+        repo, execution_handler=handler
+    )
+
+    result = orch.dispatch_user_input(session_id, "execute")
+
+    assert result.allowed is False
+    assert result.previous_status == "plan_confirmed"
+    assert result.next_status == "plan_confirmed"
+    assert "not executable" in result.user_response.lower()
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.status == "plan_confirmed"
+
+    events = repo.list_events(session_id)
+    event_types = [e.type for e in events]
+    assert "plan_execution_blocked" in event_types
+    blocked = [e for e in events if e.type == "plan_execution_blocked"][0]
+    assert blocked.payload_json["reason"] == "missing_execution_context"
+    assert (
+        "learned_path_id" in blocked.payload_json["missing_fields"]
+        or "target_url" in blocked.payload_json["missing_fields"]
+    )
+
+
+def test_execute_replay_failure_moves_to_execution_failed(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_plan_confirmed_session(repo)
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id="lp-001",
+            url="http://127.0.0.1:5175/users",
+            replay_status="drifted",
+            drift_status="target_missing",
+            error="Target missing",
+        )
+
+    orch = ConversationOrchestrator(
+        repo, execution_handler=handler
+    )
+
+    result = orch.dispatch_user_input(session_id, "run")
+
+    assert result.allowed is True
+    assert result.next_status == "execution_failed"
+    assert "failed" in result.user_response.lower()
+
+    session = repo.get_session(session_id)
+    assert session.status == "execution_failed"
+
+    events = repo.list_events(session_id)
+    assert "plan_execution_failed" in [e.type for e in events]
+
+
+def test_non_execution_free_text_in_plan_confirmed_does_not_trigger_replay(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_plan_confirmed_session(repo)
+
+    calls: list[Any] = []
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        calls.append(True)
+        return ConversationReplaySummary(
+            learned_path_id="lp-001",
+            url="http://127.0.0.1:5175/users",
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(
+        repo, execution_handler=handler
+    )
+
+    result = orch.dispatch_user_input(session_id, "hello")
+
+    assert len(calls) == 0
+    assert result.allowed is False
+    assert result.next_status == "plan_confirmed"
+
+
+def test_replay_outside_awaiting_confirmation_still_uses_explicit_path(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_plan_confirmed_session(repo)
+
+    def handler(lid: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(
+        repo, replay_handler=handler
+    )
+
+    # explicit /replay from plan_confirmed goes through normal state machine
+    # (state machine blocks replay from plan_confirmed, but let's verify)
+    result = orch.dispatch_user_input(
+        session_id, "/replay lp-002 http://other.com"
+    )
+
+    # State machine blocks replay from plan_confirmed
+    assert result.allowed is False
+    assert result.next_status == "plan_confirmed"
+
+
+def test_replay_while_awaiting_confirmation_still_blocked(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_awaiting_confirmation_session(repo)
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id="lp-001",
+            url="http://127.0.0.1:5175/users",
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(
+        repo, replay_handler=handler, execution_handler=handler
+    )
+
+    result = orch.dispatch_user_input(
+        session_id, "/replay lp-001 http://127.0.0.1:5175/users"
+    )
+
+    assert result.allowed is False
+    assert result.next_status == "awaiting_confirmation"
+    assert "confirm, cancel, or reject" in result.user_response
+
+
+def test_execution_gate_records_replay_result_in_dispatch_result(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_plan_confirmed_session(repo)
+
+    def handler(lid: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            step_count=3,
+        )
+
+    orch = ConversationOrchestrator(
+        repo, execution_handler=handler
+    )
+
+    result = orch.dispatch_user_input(session_id, "start")
+
+    assert result.replay_result is not None
+    assert result.replay_result.replay_status == "succeeded"
+    assert result.replay_result.step_count == 3
+
+
+def test_replay_handler_called_after_executing_state_and_started_event(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """P1 fix: replay handler must run only after executing + started event."""
+    session_id = _create_plan_confirmed_session(repo)
+
+    call_log: list[str] = []
+
+    def handler(lid: str, url: str) -> ConversationReplaySummary:
+        # Verify session is already executing when handler runs
+        session = repo.get_session(session_id)
+        assert session is not None
+        assert session.status == "executing"
+        # Verify started event already exists
+        events = repo.list_events(session_id)
+        assert any(e.type == "plan_execution_started" for e in events)
+        call_log.append("handler_called")
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    orch.dispatch_user_input(session_id, "execute")
+
+    assert call_log == ["handler_called"]
+
+
+def test_execute_blocked_when_plan_confirmed_event_is_missing(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """P2 fix: no plan_confirmed event means no auditable consent -> blocked."""
+    session = repo.create_session(initial_status="plan_confirmed")
+    session_id = session.id
+    # Only seed preview — no confirmed event
+    repo.append_event(
+        session_id=session_id,
+        type=ConversationEventType.PLAN_PREVIEW_PROPOSED,
+        payload={
+            "selected_path_id": "lp-001",
+            "target_url": "http://127.0.0.1:5175/users",
+            "route_steps": [{"order": 1}],
+        },
+    )
+
+    calls: list[Any] = []
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        calls.append(True)
+        raise AssertionError("handler should not be called")
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    result = orch.dispatch_user_input(session_id, "execute")
+
+    assert len(calls) == 0
+    assert result.allowed is False
+    assert result.next_status == "plan_confirmed"
+    assert "not executable" in result.user_response.lower()
+
+    events = repo.list_events(session_id)
+    assert any(e.type == "plan_execution_blocked" for e in events)
+    blocked = [e for e in events if e.type == "plan_execution_blocked"][0]
+    assert blocked.payload_json["reason"] == "missing_confirmed_plan"
 
 
 def test_all_event_type_values_fit_in_database_column(
