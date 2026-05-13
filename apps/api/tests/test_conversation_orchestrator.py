@@ -1141,6 +1141,80 @@ def test_execute_blocked_when_plan_confirmed_event_is_missing(
     assert blocked.payload_json["reason"] == "missing_confirmed_plan"
 
 
+def test_execution_success_records_final_agent_message_not_empty(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """Execution success must append the final response, not an empty message."""
+    session_id = _create_plan_confirmed_session(repo)
+
+    def handler(lid: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    orch.dispatch_user_input(session_id, "execute")
+
+    messages = repo.list_messages(session_id)
+    agent_messages = [m for m in messages if m.role == "agent"]
+    # Should have exactly one agent message: the final execution response
+    assert len(agent_messages) == 1
+    assert "completed" in agent_messages[0].content.lower()
+    assert "not implemented" in agent_messages[0].content.lower()
+    assert agent_messages[0].metadata_json.get("source") == "execution_gate"
+    assert agent_messages[0].metadata_json.get("status") == "completed"
+
+
+def test_execution_failure_records_final_agent_message_not_empty(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """Execution failure must append the final response, not an empty message."""
+    session_id = _create_plan_confirmed_session(repo)
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id="lp-001",
+            url="http://127.0.0.1:5175/users",
+            replay_status="drifted",
+            drift_status="target_missing",
+            error="Target missing",
+        )
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    orch.dispatch_user_input(session_id, "run")
+
+    messages = repo.list_messages(session_id)
+    agent_messages = [m for m in messages if m.role == "agent"]
+    assert len(agent_messages) == 1
+    assert "failed" in agent_messages[0].content.lower()
+    assert agent_messages[0].metadata_json.get("status") == "failed"
+
+
+def test_execution_blocked_records_agent_message_not_empty(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """Blocked execution must append the blocked response message."""
+    session_id = _create_plan_confirmed_session(repo, with_target_url=False)
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        raise AssertionError("handler should not be called")
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    orch.dispatch_user_input(session_id, "execute")
+
+    messages = repo.list_messages(session_id)
+    agent_messages = [m for m in messages if m.role == "agent"]
+    assert len(agent_messages) == 1
+    assert "not executable" in agent_messages[0].content.lower()
+    assert agent_messages[0].metadata_json.get("status") == "blocked"
+
+
 def test_all_event_type_values_fit_in_database_column(
     repo: ConversationRepository,
 ) -> None:

@@ -701,20 +701,17 @@ class ConversationOrchestrator:
         # Validate preconditions (does NOT call replay)
         validation = service.validate(raw_input, confirmed_plan_context)
 
-        # Append assistant message (blocked response if applicable)
-        user_response = validation.user_response
-        self._repo.append_message(
-            session_id=session_id,
-            role="agent",
-            content=user_response,
-            metadata={
-                "source": "execution_gate",
-                "status": validation.status,
-            },
-        )
-
-        # For blocked executions, just record the blocked event
+        # For blocked executions, record blocked message + event and return
         if validation.status == "blocked":
+            self._repo.append_message(
+                session_id=session_id,
+                role="agent",
+                content=validation.user_response,
+                metadata={
+                    "source": "execution_gate",
+                    "status": validation.status,
+                },
+            )
             self._repo.append_event(
                 session_id=session_id,
                 type=ConversationEventType(validation.event_type),
@@ -726,7 +723,7 @@ class ConversationOrchestrator:
                 previous_status=previous_status,
                 next_status=previous_status,
                 command_kind=command.kind.value,
-                user_response=user_response,
+                user_response=validation.user_response,
                 events_appended=events_appended,
                 message_id=message_id,
                 allowed=False,
@@ -783,6 +780,17 @@ class ConversationOrchestrator:
             payload=result.payload,
         )
         events_appended.append(result.event_type)
+
+        # Append assistant message with execution outcome
+        self._repo.append_message(
+            session_id=session_id,
+            role="agent",
+            content=result.user_response,
+            metadata={
+                "source": "execution_gate",
+                "status": result.status,
+            },
+        )
 
         # Transition to final status
         next_status = result.next_status
