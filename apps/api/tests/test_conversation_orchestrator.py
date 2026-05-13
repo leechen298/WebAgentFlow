@@ -1141,6 +1141,101 @@ def test_execute_blocked_when_plan_confirmed_event_is_missing(
     assert blocked.payload_json["reason"] == "missing_confirmed_plan"
 
 
+def test_execute_blocked_when_confirmed_path_id_mismatches_preview(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """P2: confirmed selected_path_id must match preview selected_path_id."""
+    session = repo.create_session(initial_status="plan_confirmed")
+    session_id = session.id
+    repo.append_event(
+        session_id=session_id,
+        type=ConversationEventType.PLAN_PREVIEW_PROPOSED,
+        payload={
+            "selected_path_id": "lp-001",
+            "target_url": "http://127.0.0.1:5175/users",
+            "route_steps": [{"order": 1}],
+        },
+    )
+    repo.append_event(
+        session_id=session_id,
+        type=ConversationEventType.PLAN_CONFIRMED,
+        payload={
+            "decision": "confirm",
+            "selected_path_id": "lp-999",  # mismatch
+        },
+    )
+
+    calls: list[Any] = []
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        calls.append(True)
+        raise AssertionError("handler should not be called")
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    result = orch.dispatch_user_input(session_id, "execute")
+
+    assert len(calls) == 0
+    assert result.allowed is False
+    assert result.next_status == "plan_confirmed"
+
+    events = repo.list_events(session_id)
+    assert any(e.type == "plan_execution_blocked" for e in events)
+
+
+def test_execute_binds_to_confirmed_preview_not_newer_unconfirmed_preview(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """P2: execution must bind to the preview confirmed by plan_confirmed,
+    ignoring newer unconfirmed previews."""
+    session = repo.create_session(initial_status="plan_confirmed")
+    session_id = session.id
+    repo.append_event(
+        session_id=session_id,
+        type=ConversationEventType.PLAN_PREVIEW_PROPOSED,
+        payload={
+            "selected_path_id": "lp-001",
+            "target_url": "http://old.com",
+            "route_steps": [{"order": 1}],
+        },
+    )
+    repo.append_event(
+        session_id=session_id,
+        type=ConversationEventType.PLAN_CONFIRMED,
+        payload={"decision": "confirm", "selected_path_id": "lp-001"},
+    )
+    # Newer preview but no confirm for it — must be ignored
+    repo.append_event(
+        session_id=session_id,
+        type=ConversationEventType.PLAN_PREVIEW_PROPOSED,
+        payload={
+            "selected_path_id": "lp-999",
+            "target_url": "http://new.com",
+            "route_steps": [{"order": 1}],
+        },
+    )
+
+    calls: list[str] = []
+
+    def handler(lid: str, _url: str) -> ConversationReplaySummary:
+        calls.append(lid)
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url="http://old.com",
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    result = orch.dispatch_user_input(session_id, "execute")
+
+    # Must execute the confirmed path (lp-001), not the newer unconfirmed one
+    assert calls == ["lp-001"]
+    assert result.allowed is True
+    assert result.next_status == "execution_finished"
+
+
 def test_execution_success_records_final_agent_message_not_empty(
     orchestrator: ConversationOrchestrator,
     repo: ConversationRepository,

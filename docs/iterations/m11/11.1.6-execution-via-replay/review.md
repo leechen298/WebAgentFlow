@@ -11,14 +11,14 @@
 | `apps/api/app/services/conversation/orchestrator.py` | Add execution gate: `_handle_plan_confirmed_gate`, inject `execution_handler`, state transitions through `executing` -> `execution_finished` / `execution_failed` |
 | `apps/api/app/services/conversation/__init__.py` | Export `PlanExecutionDecision`, `PlanExecutionResult`, `PlanExecutionService` |
 | `apps/api/app/routers/conversation.py` | Wire `execution_handler=replay_handler` into `ConversationOrchestrator` |
-| `apps/api/tests/test_conversation_execution.py` | **New.** 26 service-level tests for classification, context extraction, blocked cases, replay result builders, payload boundaries, forbidden imports |
-| `apps/api/tests/test_conversation_orchestrator.py` | Add 9 integration tests for execution gate (success, blocked, failure, non-execution text, explicit replay compatibility, handler-after-executing audit order, missing-confirmed-event blocked) |
-| `apps/api/tests/test_conversation_api.py` | Add 3 API-level tests for blocked execution, successful execution, explicit replay compatibility |
+| `apps/api/tests/test_conversation_execution.py` | **New.** Service-level tests for classification, context extraction, confirmed-preview binding, blocked cases, replay result builders, payload boundaries, forbidden imports |
+| `apps/api/tests/test_conversation_orchestrator.py` | Integration tests for execution gate covering success, blocked, failure, non-execution text, explicit replay compatibility, handler-after-executing audit order, missing-confirmed-event blocked, mismatch-path-id blocked, unconfirmed-preview ignored |
+| `apps/api/tests/test_conversation_api.py` | API-level tests for blocked execution, successful execution, explicit replay compatibility |
 
 ### Implemented behavior
 
 - `plan_confirmed` + execution intent (`execute`, `run`, `start`, `执行`, `开始`) → deterministic replay execution.
-- Execution context recovered from audited conversation events; **both** `plan_preview_proposed` and `plan_confirmed` events are required (P2).
+- Execution context recovered from audited conversation events; **both** `plan_preview_proposed` and `plan_confirmed` events are required, bound by matching `selected_path_id`, with preview chronologically preceding confirm (P2).
 - Missing context → `plan_execution_blocked` event, session stays `plan_confirmed`.
 - Successful replay → `plan_execution_started` recorded **before** replay runs (P1), then `plan_execution_completed`, session becomes `execution_finished`.
 - Failed replay → `plan_execution_started` recorded **before** replay runs (P1), then `plan_execution_failed`, session becomes `execution_failed`.
@@ -70,8 +70,8 @@ Event payloads consistently include:
 
 ### Explicit replay compatibility
 
-- `/replay <learned_path_id> <url>` from non-`awaiting_confirmation` states continues to use the explicit replay path.
-- `/replay` while `awaiting_confirmation` continues to be blocked by 11.1.5.
+- Explicit `/replay` remains compatible in states where the existing state machine already allows explicit replay (e.g. `idle`, `task_intake`).
+- `/replay` while `awaiting_confirmation` or `plan_confirmed` is not allowed to bypass the pending / confirmed plan flow.
 - Confirmed-plan execution and explicit replay are separate entry paths sharing the same underlying deterministic replay handler.
 
 ### Result verification boundary
@@ -90,12 +90,12 @@ cd apps/api && ../../.venv/bin/pytest \
   tests/test_conversation_replay_hook.py \
   tests/test_conversation_confirmation.py -q
 ```
-Result: `173 passed`
+Result: `175 passed`
 
 ```bash
 cd apps/api && ../../.venv/bin/pytest -q
 ```
-Result: `1063 passed, 65 skipped`
+Result: `1074 passed, 65 skipped`
 
 ```bash
 cd apps/api && ../../.venv/bin/ruff check \
@@ -132,9 +132,11 @@ Result: clean
 - [x] Missing LearnedPath id records execution-blocked semantics.
 - [x] Missing target URL records execution-blocked semantics.
 - [x] Missing `plan_confirmed` event records execution-blocked semantics (P2).
+- [x] Confirmed and preview `selected_path_id` mismatch records execution-blocked semantics (P2).
+- [x] Newer unconfirmed preview is ignored; execution binds to the confirmed preview (P2).
 - [x] Replay completed is not reported as task succeeded.
 - [x] `plan_execution_started` and `executing` state are recorded **before** replay handler runs (P1).
-- [x] Explicit `/replay` compatibility preserved.
+- [x] Explicit `/replay` compatibility preserved in allowed states.
 - [x] `/replay` while `awaiting_confirmation` still blocked by 11.1.5.
 - [x] No new API endpoint or CLI command added.
 

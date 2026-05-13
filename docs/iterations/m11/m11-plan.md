@@ -723,9 +723,9 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - `apps/api/app/schemas/conversation.py` — 新增 `executing`、`execution_finished`、`execution_failed` statuses；新增 4 个 execution event types。
 - `apps/api/app/services/conversation/orchestrator.py` — `plan_confirmed` execution gate，状态流转 `plan_confirmed -> executing -> execution_finished/execution_failed`。
 - `apps/api/app/routers/conversation.py` — 注入 `execution_handler`。
-- `apps/api/tests/test_conversation_execution.py` — 29 tests。
-- `apps/api/tests/test_conversation_orchestrator.py` — 7 个 execution gate 集成测试。
-- `apps/api/tests/test_conversation_api.py` — 3 个 API-level execution 测试。
+- `apps/api/tests/test_conversation_execution.py` — service-level tests。
+- `apps/api/tests/test_conversation_orchestrator.py` — execution gate 集成测试。
+- `apps/api/tests/test_conversation_api.py` — API-level execution 测试。
 - `docs/iterations/m11/11.1.6-execution-via-replay/review.md`
 
 行为：
@@ -734,7 +734,7 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 缺少 `learned_path_id` 或 `target_url` → `plan_execution_blocked`，session 保持 `plan_confirmed`。
 - Multi-step route → `plan_execution_blocked`。
 - 非 execution intent free text → falls through to state machine (blocked)。
-- Explicit `/replay` 保持独立入口。
+- Explicit `/replay` 保持独立入口（在 `idle`/`task_intake` 等现有 state machine 允许 replay 的 state 下可用；`awaiting_confirmation` 和 `plan_confirmed` 下不允许绕过 pending / confirmed plan flow）。
 
 边界（已遵守）：
 
@@ -753,9 +753,9 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 验证：
 
 - `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_execution.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py tests/test_conversation_replay_hook.py tests/test_conversation_confirmation.py -q`
-- 结果：`173 passed`
+- 结果：`175 passed`
 - `cd apps/api && ../../.venv/bin/pytest -q`
-- 结果：`1066 passed, 65 skipped`
+- 结果：`1074 passed, 65 skipped`
 - `cd apps/api && ../../.venv/bin/ruff check ...`
 - 结果：`All checks passed!`
 - `cd apps/api && ../../.venv/bin/alembic heads`

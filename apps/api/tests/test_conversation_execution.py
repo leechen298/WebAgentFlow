@@ -79,7 +79,9 @@ def test_extract_confirmed_plan_context_requires_both_events(
                 "target_url": "http://example.com/users",
             },
         ),
-        _make_event("plan_confirmed", {"decision": "confirm"}),
+        _make_event(
+            "plan_confirmed", {"decision": "confirm", "selected_path_id": "lp-001"}
+        ),
     ]
     ctx = service.extract_confirmed_plan_context(events)
     assert ctx is not None
@@ -117,12 +119,18 @@ def test_extract_confirmed_plan_context_reads_most_recent(
             "plan_preview_proposed",
             {"selected_path_id": "lp-old", "target_url": "http://old.com"},
         ),
-        _make_event("plan_confirmed", {"decision": "confirm"}),
+        _make_event(
+            "plan_confirmed",
+            {"decision": "confirm", "selected_path_id": "lp-old"},
+        ),
         _make_event(
             "plan_preview_proposed",
             {"selected_path_id": "lp-new", "target_url": "http://new.com"},
         ),
-        _make_event("plan_confirmed", {"decision": "confirm"}),
+        _make_event(
+            "plan_confirmed",
+            {"decision": "confirm", "selected_path_id": "lp-new"},
+        ),
     ]
     ctx = service.extract_confirmed_plan_context(events)
     assert ctx is not None
@@ -332,7 +340,7 @@ def test_extract_context_from_real_repo_events(repo: ConversationRepository) -> 
     repo.append_event(
         session_id=session.id,
         type=ConversationEventType.PLAN_CONFIRMED,
-        payload={"decision": "confirm"},
+        payload={"decision": "confirm", "selected_path_id": "lp-001"},
     )
 
     service = PlanExecutionService()
@@ -357,5 +365,64 @@ def test_extract_context_missing_confirmed_from_repo_returns_none(
 
     service = PlanExecutionService()
     events = repo.list_events(session.id)
+    ctx = service.extract_confirmed_plan_context(events)
+    assert ctx is None
+
+
+def test_extract_confirmed_plan_context_mismatch_path_id_returns_none(
+    service: PlanExecutionService,
+) -> None:
+    """P2: confirmed selected_path_id must match preview selected_path_id."""
+    events = [
+        _make_event(
+            "plan_preview_proposed",
+            {"selected_path_id": "lp-001", "target_url": "http://a.com"},
+        ),
+        _make_event(
+            "plan_confirmed",
+            {"decision": "confirm", "selected_path_id": "lp-002"},
+        ),
+    ]
+    ctx = service.extract_confirmed_plan_context(events)
+    assert ctx is None
+
+
+def test_extract_confirmed_plan_context_preview_after_confirm_ignored(
+    service: PlanExecutionService,
+) -> None:
+    """P2: preview after confirm must not be used as execution context."""
+    events = [
+        _make_event(
+            "plan_preview_proposed",
+            {"selected_path_id": "lp-001", "target_url": "http://old.com"},
+        ),
+        _make_event(
+            "plan_confirmed",
+            {"decision": "confirm", "selected_path_id": "lp-001"},
+        ),
+        # Newer preview without corresponding confirm
+        _make_event(
+            "plan_preview_proposed",
+            {"selected_path_id": "lp-999", "target_url": "http://new.com"},
+        ),
+    ]
+    ctx = service.extract_confirmed_plan_context(events)
+    assert ctx is not None
+    # Must bind to the preview that precedes the confirmed event
+    assert ctx["learned_path_id"] == "lp-001"
+    assert ctx["target_url"] == "http://old.com"
+
+
+def test_extract_confirmed_plan_context_confirmed_missing_path_id_returns_none(
+    service: PlanExecutionService,
+) -> None:
+    """P2: plan_confirmed must carry selected_path_id to be auditable."""
+    events = [
+        _make_event(
+            "plan_preview_proposed",
+            {"selected_path_id": "lp-001", "target_url": "http://a.com"},
+        ),
+        _make_event("plan_confirmed", {"decision": "confirm"}),
+    ]
     ctx = service.extract_confirmed_plan_context(events)
     assert ctx is None

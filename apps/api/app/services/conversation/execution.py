@@ -62,31 +62,60 @@ class PlanExecutionService:
     ) -> dict[str, Any] | None:
         """Recover confirmed plan context from conversation events.
 
-        Requires **both** a ``plan_preview_proposed`` event and a
-        ``plan_confirmed`` event. The ``plan_confirmed`` event is the
-        auditable 11.1.5 consent record; without it execution is blocked.
-        """
-        preview_payload: dict[str, Any] | None = None
-        confirmed_payload: dict[str, Any] | None = None
+        Binds the latest ``plan_confirmed`` to the **specific**
+        ``plan_preview_proposed`` it confirmed by requiring:
 
-        for event in reversed(events):
+        1. A ``plan_confirmed`` event exists and carries ``selected_path_id``.
+        2. A ``plan_preview_proposed`` event exists **at or before** the
+           confirmed event (chronologically).
+        3. Both events reference the same ``selected_path_id``.
+
+        This prevents execution when preview / confirmed evidence is stale,
+        reordered, or mismatched.
+        """
+        # 1. Find the latest plan_confirmed (newest first)
+        confirmed_payload: dict[str, Any] | None = None
+        confirmed_index: int | None = None
+        for idx in range(len(events) - 1, -1, -1):
+            event = events[idx]
             if not hasattr(event, "type") or not hasattr(
                 event, "payload_json"
             ):
                 continue
-            if (
-                event.type == ConversationEventType.PLAN_PREVIEW_PROPOSED.value
-                and preview_payload is None
-            ):
-                preview_payload = event.payload_json
-            if (
-                event.type == ConversationEventType.PLAN_CONFIRMED.value
-                and confirmed_payload is None
-            ):
+            if event.type == ConversationEventType.PLAN_CONFIRMED.value:
                 confirmed_payload = event.payload_json
+                confirmed_index = idx
+                break
 
-        # 11.1.6 P2: both preview and confirmed evidence are required
-        if preview_payload is None or confirmed_payload is None:
+        if confirmed_payload is None:
+            return None
+
+        confirmed_path_id = confirmed_payload.get("selected_path_id")
+        if not confirmed_path_id:
+            return None
+
+        # 2. Find the most recent plan_preview_proposed at or before confirm
+        preview_payload: dict[str, Any] | None = None
+        if confirmed_index is not None:
+            for idx in range(confirmed_index, -1, -1):
+                event = events[idx]
+                if not hasattr(event, "type") or not hasattr(
+                    event, "payload_json"
+                ):
+                    continue
+                if (
+                    event.type
+                    == ConversationEventType.PLAN_PREVIEW_PROPOSED.value
+                ):
+                    preview_payload = event.payload_json
+                    break
+
+        if preview_payload is None:
+            return None
+
+        # 3. Bind: selected_path_id must match
+        preview_path_id = preview_payload.get("selected_path_id")
+        if preview_path_id != confirmed_path_id:
             return None
 
         context: dict[str, Any] = {
