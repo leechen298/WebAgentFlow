@@ -29,7 +29,7 @@ task-to-path planning 找到候选路径、绑定参数、请求确认、执行 
 - 11.1.5 Plan Confirmation and Consent Gate。
 - Future Slot binding contract and deterministic binding MVP。
 - 11.1.6 Execution via Replay。
-- Future Result verification and Task Result Reporter / 任务结果汇报器 reporting。
+- 11.1.7 Result Verification and Task Result Reporter。
 - Future Task-to-path tests and evidence。
 
 ## Task Path Planner / 任务路径规划器（legacy: Agent D） 输入 / 输出边界
@@ -160,12 +160,18 @@ deterministic replay / later explicit execution service 调用。
 `replay completed` 只表示 replay 调用完成，不等于 task succeeded 或 business
 result verified。
 
-## Result verification 位置
+## Result verification / Task Result Reporter 位置
 
-Result verification 位于 replay execution 之后、Task Result Reporter / 任务结果汇报器（legacy: Agent E） reporting 之前。
+11.1.7 Result Verification and Task Result Reporter 位于 replay execution 之后。
+它消费 11.1.6 的 execution evidence，生成 `verified` / `failed` /
+`uncertain` / `needs_review` / `blocked` 等结果语义，并由 Task Result
+Reporter / 任务结果汇报器（legacy: Agent E） 基于证据汇报结果。
 
 验证输入包括 replay result、postcondition signals、artifact status、final
 URL / title / DOM signals。无法验证时返回 `uncertain` / `needs_review`。
+
+`replay completed` 不等于 `task succeeded`。没有 postcondition evidence 时，
+11.1.7 不得脑补成功，也不得自动 recovery。
 
 ## Testing strategy
 

@@ -36,7 +36,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.1.5-plan-confirmation-consent-gate](./11.1.5-plan-confirmation-consent-gate/) —— Plan Confirmation and Consent Gate。状态：完成（confirmation gate + slash decision commands，review passed）。
 - Slot Binding contract and deterministic binding MVP —— 状态：future，尚未分配执行包编号。
 - [11.1.6-execution-via-replay](./11.1.6-execution-via-replay/) —— Execution via Replay。状态：完成（execution service + orchestrator/API coverage，full API tests passed，ruff clean）。
-- Result verification and Task Result Reporter —— 状态：future，尚未分配执行包编号。
+- [11.1.7-result-verification-task-result-reporter](./11.1.7-result-verification-task-result-reporter/) —— Result Verification and Task Result Reporter。状态：documentation initialized。
 - Task-to-path tests and evidence —— 状态：future，尚未分配执行包编号。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是

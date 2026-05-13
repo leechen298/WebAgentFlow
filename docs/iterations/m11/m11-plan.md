@@ -748,7 +748,7 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 不做 result verification。
 - 不实现 Task Result Reporter。
 - 不实现 recovery dialogue / teaching mode。
-- 不创建 11.1.7 详情目录。
+- 不实现 11.1.7 result verification / Task Result Reporter。
 
 验证：
 
@@ -763,17 +763,37 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - `git diff --check`
 - 结果：clean
 
-### Future · Result verification and Task Result Reporter
+### 11.1.7 · Result Verification and Task Result Reporter
 
-状态：future，尚未分配执行包编号。
+状态：documentation initialized。
 
 目标：
 
-- 基于 replay result、postcondition signals、artifact status、final
-  URL / title / DOM signal 生成 result verification。
-- Task Result Reporter 汇报结果。
-- 不脑补成功。
-- 无法验证时返回 `uncertain` / `needs_review`。
+- 消费 11.1.6 的 replay execution evidence。
+- 生成 conservative verification outcome：`verified` / `failed` / `uncertain` / `needs_review` / `blocked`。
+- Task Result Reporter 基于证据汇报结果，不脑补成功。
+- 明确 `plan_execution_completed` / replay completed 不等于 task succeeded。
+- 无 postcondition evidence 时默认返回 `uncertain` / `needs_review`。
+- failed / uncertain 不自动 recovery。
+
+边界：
+
+- 不执行 replay。
+- 不重新执行 replay。
+- 不调用 autonomous run。
+- 不读取 raw HTML。
+- 不接入 LLM provider。
+- 不调用 Page Understanding Agent。
+- 不做 Slot Binding / form filling。
+- 不实现 recovery dialogue / teaching mode。
+- 不创建 11.1.8 详情目录。
+
+文档：
+
+- `docs/iterations/m11/11.1.7-result-verification-task-result-reporter/README.md`
+- `docs/iterations/m11/11.1.7-result-verification-task-result-reporter/intent.md`
+- `docs/iterations/m11/11.1.7-result-verification-task-result-reporter/plan.md`
+- `docs/iterations/m11/11.1.7-result-verification-task-result-reporter/review.md`
 
 ### Future · Task-to-path tests and evidence
 
