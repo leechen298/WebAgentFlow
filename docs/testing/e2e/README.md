@@ -43,6 +43,7 @@ Deterministic E2E 的定义：
 - `apps/e2e/tests/conversation/runtime.spec.ts`
 - `apps/e2e/tests/conversation/cli-runtime.spec.ts`
 - `apps/e2e/tests/conversation/task-execution.spec.ts`
+- `apps/e2e/tests/conversation/task-result-reporter.spec.ts`
 - `apps/e2e/tests/validation-site/browser-smoke.spec.ts`
 
 覆盖范围：
@@ -58,6 +59,10 @@ Deterministic E2E 的定义：
   和 11.1.7 Task Result Reporter output：seeded confirmed execution context
   -> `execute` -> replay handler evidence -> `task_result_reported`，以及自然
   preview 缺少 `target_url` 时的 blocked reporting 边界。
+- Conversation task result reporter E2E 覆盖 11.1.7 scoped reporter output：
+  successful replay -> `uncertain`，failed replay -> `failed`，blocked
+  execution -> `blocked`，以及 `task_result_reported` event order 和 payload
+  boundary。
 - Validation-site browser smoke 覆盖 `/login` 和 `/users` fixture 页面：
   登录控件、错误提示、用户目录筛选和 empty state。
 
@@ -76,6 +81,7 @@ exploratory。
 - `../results/2026-05-11-conversation-cli-e2e.md`
 - `../results/2026-05-11-validation-site-deterministic-e2e.md`
 - `../results/2026-05-13-11-1-6-scoped-e2e.md`
+- `../results/2026-05-13-11-1-7-scoped-e2e.md`
 
 历史 API exploratory 报告仍可作为调试证据，但不等同 deterministic E2E：
 
@@ -90,6 +96,7 @@ exploratory。
 - Conversation API-request runtime E2E keep-running。
 - Conversation CLI-driven E2E keep-running。
 - Conversation 11.1.6 scoped task execution E2E keep-running。
+- Conversation 11.1.7 scoped task result reporter E2E keep-running。
 - Validation-site deterministic browser smoke keep-running。
 
 当前不纳入本 track：
