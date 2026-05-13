@@ -42,6 +42,7 @@ Deterministic E2E 的定义：
 - `apps/e2e/tests/replay/`
 - `apps/e2e/tests/conversation/runtime.spec.ts`
 - `apps/e2e/tests/conversation/cli-runtime.spec.ts`
+- `apps/e2e/tests/conversation/task-execution.spec.ts`
 - `apps/e2e/tests/validation-site/browser-smoke.spec.ts`
 
 覆盖范围：
@@ -53,6 +54,9 @@ Deterministic E2E 的定义：
   session -> dispatch `/replay` -> replay summary -> transcript/events。
 - Conversation CLI-driven E2E 覆盖真实 `wagent conversation` subprocess flow：
   start -> send `/replay <learned_path_id> <url>` -> status / transcript / events。
+- Conversation task execution E2E 覆盖 11.1.6 scoped runtime execution flow：
+  seeded confirmed execution context -> `execute` -> replay handler evidence，以及自然
+  preview 缺少 `target_url` 时的 blocked 边界。
 - Validation-site browser smoke 覆盖 `/login` 和 `/users` fixture 页面：
   登录控件、错误提示、用户目录筛选和 empty state。
 
@@ -70,6 +74,7 @@ exploratory。
 - `../results/2026-05-11-conversation-runtime-e2e.md`
 - `../results/2026-05-11-conversation-cli-e2e.md`
 - `../results/2026-05-11-validation-site-deterministic-e2e.md`
+- `../results/2026-05-13-11-1-6-scoped-e2e.md`
 
 历史 API exploratory 报告仍可作为调试证据，但不等同 deterministic E2E：
 
@@ -83,6 +88,7 @@ exploratory。
 - LearnedPath catalog deterministic E2E keep-running。
 - Conversation API-request runtime E2E keep-running。
 - Conversation CLI-driven E2E keep-running。
+- Conversation 11.1.6 scoped task execution E2E keep-running。
 - Validation-site deterministic browser smoke keep-running。
 
 当前不纳入本 track：
