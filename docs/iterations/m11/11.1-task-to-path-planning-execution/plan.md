@@ -30,7 +30,7 @@ task-to-path planning 找到候选路径、绑定参数、请求确认、执行 
 - Future Slot binding contract and deterministic binding MVP。
 - 11.1.6 Execution via Replay。
 - 11.1.7 Result Verification and Task Result Reporter。
-- Future Task-to-path tests and evidence。
+- 11.1.8 Task-to-path Tests and Evidence。
 
 ## Task Path Planner / 任务路径规划器（legacy: Agent D） 输入 / 输出边界
 
@@ -174,13 +174,37 @@ final URL / title，以及已捕获的 structured page / result signals。无法
 `replay completed` 不等于 `task succeeded`。没有 postcondition evidence 时，
 11.1.7 不得脑补成功，也不得自动 recovery。
 
+## Task-to-path tests and evidence 位置
+
+11.1.8 Task-to-path Tests and Evidence 位于 11.1.1 到 11.1.7 功能链路之后。
+它不是新功能包，而是 M11.1 task-to-path MVP 的测试与证据收口包。
+
+11.1.8 覆盖：
+
+- domain schema tests。
+- retrieval / ranking tests。
+- Task Path Planner tests。
+- planning preview tests。
+- confirmation gate tests。
+- execution via replay tests。
+- Task Result Reporter tests。
+- conversation API runtime tests。
+- scoped E2E tests。
+- explicit `/replay` regression tests。
+- negative / blocked / uncertain paths。
+
+11.1.8 必须区分 deterministic tests、exploratory tests、Codex autonomous
+review、manual UI smoke 和 visual UI exploratory。它不新增 runtime feature，
+不改 11.1.1 到 11.1.7 业务逻辑，不执行 autonomous run，不把 exploratory
+结果伪装成 deterministic pass。
+
 ## Testing strategy
 
 - 11.1.1 优先覆盖 schema / enum / contract。
 - 后续包优先 deterministic tests。
 - LLM provider 不作为默认测试依赖。
 - 不调用 autonomous run。
-- E2E 放到 11.1.8。
+- M11.1 task-to-path scoped E2E 和证据收口放到 11.1.8。
 
 ## 验证
 

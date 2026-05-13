@@ -795,17 +795,32 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - `docs/iterations/m11/11.1.7-result-verification-task-result-reporter/plan.md`
 - `docs/iterations/m11/11.1.7-result-verification-task-result-reporter/review.md`
 
-### Future · Task-to-path tests and evidence
+### 11.1.8 · Task-to-path Tests and Evidence
 
-状态：future，尚未分配执行包编号。
+状态：documentation initialized。
 
 目标：
 
-- 建立 task-execution 测试域。
-- 覆盖 retrieval、binding、planner output、confirmation、execution、
-  reporting。
-- 包含 deterministic E2E / API / CLI / evidence report。
-- 不依赖 LLM provider 的测试优先。
+- 对 M11.1 task-to-path MVP 做测试与证据收口。
+- 覆盖 domain schema、retrieval / ranking、Task Path Planner、planning
+  preview、confirmation gate、execution via replay、Task Result Reporter、
+  conversation API runtime、scoped E2E、explicit `/replay` 回归，以及
+  negative / blocked / uncertain paths。
+- 区分 deterministic tests、exploratory tests、Codex autonomous review、
+  manual UI smoke 和 visual UI exploratory。
+- 记录 test command、结果、事件序列、代表性 API response、assistant message
+  summary、环境 caveats 和 follow-up issues。
+- 明确 `replay completed` 仍不等于 task succeeded；`uncertain` /
+  `needs_review` 是合法结果；failed / blocked 不触发 recovery 或 hidden
+  learning。
+- 不做新 runtime feature，不改 11.1.1 到 11.1.7 业务逻辑，不创建 11.1.9。
+
+文档：
+
+- `docs/iterations/m11/11.1.8-task-to-path-tests-and-evidence/README.md`
+- `docs/iterations/m11/11.1.8-task-to-path-tests-and-evidence/intent.md`
+- `docs/iterations/m11/11.1.8-task-to-path-tests-and-evidence/plan.md`
+- `docs/iterations/m11/11.1.8-task-to-path-tests-and-evidence/review.md`
 
 ## 执行规则
 
