@@ -701,29 +701,49 @@ class ConversationOrchestrator:
         # Validate preconditions (does NOT call replay)
         validation = service.validate(raw_input, confirmed_plan_context)
 
-        # For blocked executions, record blocked message + event and return
+        # For blocked executions, record blocked message + event, then report
         if validation.status == "blocked":
-            self._repo.append_message(
-                session_id=session_id,
-                role="agent",
-                content=validation.user_response,
-                metadata={
-                    "source": "execution_gate",
-                    "status": validation.status,
-                },
-            )
             self._repo.append_event(
                 session_id=session_id,
                 type=ConversationEventType(validation.event_type),
                 payload=validation.payload,
             )
             events_appended.append(validation.event_type)
+
+            # 11.1.7 — Result verification and reporting for blocked executions
+            from app.services.task_planning.result_reporter import TaskResultReporter
+
+            reporter = TaskResultReporter()
+            report = reporter.build_report(
+                execution_status=validation.status,
+                execution_payload=validation.payload,
+                replay_summary=None,
+                confirmed_plan_context=confirmed_plan_context,
+            )
+            self._repo.append_event(
+                session_id=session_id,
+                type=ConversationEventType.TASK_RESULT_REPORTED,
+                payload=report.event_payload,
+            )
+            events_appended.append(ConversationEventType.TASK_RESULT_REPORTED.value)
+
+            self._repo.append_message(
+                session_id=session_id,
+                role="agent",
+                content=report.user_response,
+                metadata={
+                    "source": "execution_gate",
+                    "status": validation.status,
+                    "verification_outcome": report.outcome,
+                    "needs_review": report.needs_review,
+                },
+            )
             return DispatchResult(
                 session_id=session_id,
                 previous_status=previous_status,
                 next_status=previous_status,
                 command_kind=command.kind.value,
-                user_response=validation.user_response,
+                user_response=report.user_response,
                 events_appended=events_appended,
                 message_id=message_id,
                 allowed=False,
@@ -781,14 +801,35 @@ class ConversationOrchestrator:
         )
         events_appended.append(result.event_type)
 
-        # Append assistant message with execution outcome
+        # 11.1.7 — Result verification and reporting
+        from app.services.task_planning.result_reporter import TaskResultReporter
+
+        reporter = TaskResultReporter()
+        report = reporter.build_report(
+            execution_status=result.status,
+            execution_payload=result.payload,
+            replay_summary=replay_summary,
+            confirmed_plan_context=confirmed_plan_context,
+        )
+
+        # Append result verification event
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.TASK_RESULT_REPORTED,
+            payload=report.event_payload,
+        )
+        events_appended.append(ConversationEventType.TASK_RESULT_REPORTED.value)
+
+        # Append assistant message with verification report
         self._repo.append_message(
             session_id=session_id,
             role="agent",
-            content=result.user_response,
+            content=report.user_response,
             metadata={
                 "source": "execution_gate",
                 "status": result.status,
+                "verification_outcome": report.outcome,
+                "needs_review": report.needs_review,
             },
         )
 
@@ -815,7 +856,7 @@ class ConversationOrchestrator:
             previous_status=previous_status,
             next_status=next_status,
             command_kind=command.kind.value,
-            user_response=result.user_response,
+            user_response=report.user_response,
             events_appended=events_appended,
             message_id=message_id,
             allowed=True,

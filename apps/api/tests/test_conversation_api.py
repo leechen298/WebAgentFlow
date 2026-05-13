@@ -763,11 +763,16 @@ def test_dispatch_execute_after_confirmed_plan_blocked_no_target_url(
     data = resp.json()["data"]
     assert data["next_status"] == "plan_confirmed"
     assert data["allowed"] is False
-    assert "not executable" in data["user_response"].lower()
+    # 11.1.7: blocked user_response now comes from Task Result Reporter
+    response = data["user_response"].lower()
+    assert "blocked" in response or "could not run" in response
 
     events_resp = client.get(f"/conversation/sessions/{session_id}/events")
     events = events_resp.json()["data"]
     assert any(e["type"] == "plan_execution_blocked" for e in events)
+    assert any(e["type"] == "task_result_reported" for e in events)
+    reported = [e for e in events if e["type"] == "task_result_reported"][0]
+    assert reported["payload"]["verification_outcome"] == "blocked"
     blocked = [e for e in events if e["type"] == "plan_execution_blocked"][0]
     assert blocked["payload"]["no_result_verification"] is True
     assert blocked["payload"]["no_autonomous"] is True
@@ -851,16 +856,23 @@ def test_dispatch_execute_after_confirmed_plan_with_target_url(
     assert data["replay_result"] is not None
     assert data["replay_result"]["replay_status"] == "succeeded"
     assert data["replay_result"]["step_count"] == 2
-    assert "not implemented" in data["user_response"].lower()
+    # 11.1.7: user_response now comes from Task Result Reporter
+    assert "could not verify" in data["user_response"].lower()
 
     events_resp = client.get(f"/conversation/sessions/{session_id}/events")
     events = events_resp.json()["data"]
     assert any(e["type"] == "plan_execution_started" for e in events)
     assert any(e["type"] == "plan_execution_completed" for e in events)
+    assert any(e["type"] == "task_result_reported" for e in events)
     completed = [e for e in events if e["type"] == "plan_execution_completed"][0]
     assert completed["payload"]["task_verified"] is False
     assert completed["payload"]["no_result_verification"] is True
     assert completed["payload"]["no_autonomous"] is True
+    reported = [e for e in events if e["type"] == "task_result_reported"][0]
+    assert reported["payload"]["verification_outcome"] == "uncertain"
+    assert reported["payload"]["needs_review"] is True
+    assert reported["payload"]["no_recovery"] is True
+    assert reported["payload"]["no_llm"] is True
 
 
 def test_dispatch_explicit_replay_compatible_outside_awaiting_confirmation(
@@ -891,3 +903,91 @@ def test_dispatch_explicit_replay_compatible_outside_awaiting_confirmation(
     assert data["next_status"] == "completed"
     assert data["replay_result"] is not None
     assert data["replay_result"]["replay_status"] == "succeeded"
+
+
+def test_dispatch_execute_failed_replay_includes_task_result_reported(
+    client: TestClient, db_session, monkeypatch
+) -> None:
+    """Failed execution via dispatch must include task_result_reported with failed outcome."""
+    from app.schemas.conversation import ConversationEventType
+    from app.services.task_planning.preview import PlanningPreviewResult
+
+    def mock_preview(_self, raw_input: str) -> PlanningPreviewResult:
+        return PlanningPreviewResult(
+            user_response="Plan: test",
+            event_type=ConversationEventType.PLAN_PREVIEW_PROPOSED.value,
+            event_payload={
+                "task_intent_raw_text": raw_input,
+                "candidate_count": 1,
+                "selected_path_id": "lp-001",
+                "selected_purpose": "Test",
+                "target_url": "http://127.0.0.1:5175/users",
+                "route_steps": [{"order": 1, "learned_path_id": "lp-001"}],
+                "confirmation_required": True,
+            },
+            confirmation_required=True,
+            selected_path_id="lp-001",
+        )
+
+    monkeypatch.setattr(
+        "app.services.task_planning.preview.PlanningPreviewService.preview",
+        mock_preview,
+    )
+
+    def fake_replay(_db, learned_path_id: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=learned_path_id,
+            url=url,
+            replay_status="drifted",
+            drift_status="target_missing",
+            error="Target missing",
+        )
+
+    monkeypatch.setattr(
+        "app.services.conversation.replay_hook.run_explicit_replay",
+        fake_replay,
+    )
+
+    repo = LearnedPathRepository(db_session)
+    lp, _ = repo.ingest_run(
+        page_template="/login",
+        query_signature={},
+        dom_fingerprint="a" * 64,
+        scenario="log in",
+        actions=[{"action_type": "fill", "target_selector": "#user"}],
+        source_run_id=None,
+    )
+    lp = repo.set_trust(lp.id, TrustStatus.CONFIRMED, reason="test confirmed")
+    lp.hit_count = 5
+    db_session.commit()
+
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "log in"},
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "confirm"},
+    )
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "run"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["next_status"] == "execution_failed"
+    assert data["allowed"] is True
+    assert "failed" in data["user_response"].lower()
+    assert "no recovery" in data["user_response"].lower()
+
+    events_resp = client.get(f"/conversation/sessions/{session_id}/events")
+    events = events_resp.json()["data"]
+    assert any(e["type"] == "plan_execution_failed" for e in events)
+    assert any(e["type"] == "task_result_reported" for e in events)
+    reported = [e for e in events if e["type"] == "task_result_reported"][0]
+    assert reported["payload"]["verification_outcome"] == "failed"
+    assert reported["payload"]["needs_review"] is False
+    assert reported["payload"]["no_recovery"] is True

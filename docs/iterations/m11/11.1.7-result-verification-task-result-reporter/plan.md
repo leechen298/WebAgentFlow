@@ -285,15 +285,236 @@ Future implementation review should record:
 - evidence report aggregation;
 - 11.1.8 detail directory creation.
 
+## Implementation Decision Closure
+
+以下决策收口 11.1.7 第一版实现中会影响代码结构的 open questions。它们是 future implementation decisions；本文档不修改代码、schema、API endpoint 或 CLI command。
+
+### 1. First-version verification evidence source
+
+第一版只消费已有结构化 evidence。允许来源：
+
+```text
+plan_execution_started / plan_execution_completed / plan_execution_failed / plan_execution_blocked events
+ConversationReplaySummary (replay_status, drift_status, drift_reasons, final_url, final_title, step_count, error)
+learned_path_id from execution event payload
+target_url / replay entry context from execution event payload
+route_summary from execution event payload if available
+error_summary from failed/blocked execution events
+no_result_verification marker from 11.1.6
+no_autonomous marker from 11.1.6
+task_verified=false marker from 11.1.6
+```
+
+禁止来源：
+
+```text
+raw HTML parsing
+DOM scraping
+screenshot interpretation
+Page Understanding Agent invocation
+LLM judgment
+browser second pass / re-open
+autonomous run
+```
+
+如果没有 postcondition evidence，默认 outcome 必须是：
+
+```text
+uncertain / needs_review
+```
+
+不得默认 verified。
+
+### 2. Postcondition evidence first-version strategy
+
+11.1.7 第一版不新增复杂 postcondition source。可以接受的 evidence：
+
+```text
+explicit structured postcondition signal if already present in execution payload or task planning schema
+artifact reference if already present
+replay summary terminal status (succeeded/observed vs drifted/failed)
+drift_status and drift_reasons
+error_summary from replay or exception
+manual verification signal if a future code path already provides it
+```
+
+不允许：
+
+```text
+raw HTML parsing
+DOM scraping
+screenshot interpretation
+Page Understanding Agent
+LLM judgment
+browser second pass
+autonomous run
+```
+
+### 3. Outcome semantics
+
+第一版 outcome 语义：
+
+```text
+verified   — 明确 postcondition evidence 支持成功
+failed     — replay failed / drifted / error_summary 明确失败
+uncertain  — replay completed，但没有足够 evidence 证明业务成功
+needs_review — evidence 不足，需要用户或后续系统检查
+blocked    — execution 没发生，或缺少 verification input
+```
+
+默认规则（写死）：
+
+```text
+plan_execution_completed + no postcondition evidence -> uncertain
+```
+
+如果需要更保守，也可以是：
+
+```text
+uncertain + needs_review flag
+```
+
+`verified` 不是默认。`verified` 需要明确 evidence 支持。
+
+注意：现有 `TaskExecutionStatus` Literal 定义在 11.1.1 schema 中为 `["succeeded", "failed", "uncertain", "needs_review"]`，不含 `"verified"` 或 `"blocked"`。实现时若复用该 schema，需明确映射关系（如 `verified` -> `"succeeded"` 并附加 `verification_source` 字段，或 `blocked` -> `"failed"` 并附加 `failure_stage="verification"`）。如果实现发现必须扩展 schema，应列为独立 implementation task 并补 schema tests。本轮文档阶段不修改 schema。
+
+### 4. Uncertain and needs_review persistence
+
+第一版 service output 保留两者语义，但 conversation persisted status 先不拆太细。
+
+推荐：
+
+```text
+verification outcome: uncertain
+needs_review: true
+```
+
+如果未来新增 `ConversationStatus`，再单独评估：
+
+```text
+result_verified / result_failed / result_uncertain / result_blocked
+```
+
+本轮不修改 `ConversationStatus` enum。
+
+### 5. Event semantics
+
+未来实现可以新增最小事件语义：
+
+```text
+result_verification_completed
+task_result_reported
+```
+
+如果需要区分失败 / uncertain，用 payload `outcome` 表达，而不是第一版就膨胀 event enum。
+
+Event payload 建议：
+
+```text
+execution_event_id / replay_run_id if available
+learned_path_id
+verification_outcome
+evidence_summary
+missing_evidence_summary
+report_summary
+task_verified
+needs_review
+no_recovery: true
+no_autonomous: true
+no_llm: true
+```
+
+禁止 payload 包含：
+
+```text
+raw HTML
+screenshot payload
+user/account/tenant fields
+unsupported success assertion
+```
+
+### 6. Task Result Reporter service boundary
+
+未来实现可以新增：
+
+```text
+apps/api/app/services/task_planning/result_reporter.py
+```
+
+或等价路径。实现前必须 inspect 当前 code structure。
+
+职责：
+
+```text
+consume execution evidence
+derive verification outcome
+build user-facing report
+build event payload
+```
+
+不得：
+
+```text
+execute replay
+re-run replay
+call recovery
+call autonomous
+call LLM
+read raw HTML
+call Page Understanding Agent
+```
+
+### 7. AgentEReporter schema relationship
+
+- 文档主名称使用 **Task Result Reporter**。
+- `AgentEReporterInput` / `AgentEReporterOutput` 作为 11.1.1 legacy schema 名称保留，不删除、不重命名。
+- 第一版尽量复用现有 schema。如果需要新字段，优先在 service result type 中表达，再映射到 schema。
+- 不为了方便随意改 11.1.1 schema。
+- 如果实现发现必须 schema hardening，单独列为 implementation task，并补 schema tests。
+
+### 8. Conversation integration strategy
+
+第一版可以在 `execution_finished` / `execution_failed` 后，通过现有 conversation dispatch 或 orchestrator branch 触发 reporting。
+
+但必须明确：
+
+```text
+11.1.7 不执行 replay。
+11.1.7 只消费已经存在的 execution events。
+```
+
+触发方式待实现前进一步确认（推荐方案）：
+
+```text
+automatic after execution_finished / execution_failed: orchestrator immediately appends report after execution result event
+or explicit user asks for result/report
+```
+
+推荐：**automatic after execution**，因为 replay 完成后用户通常期望立即看到结果汇报，而不是再次输入指令。如果 automatic 实现有副作用风险，可以退回到 explicit。
+
+### 9. Recovery boundary
+
+明确：
+
+```text
+failed / uncertain / needs_review 不触发 recovery。
+```
+
+不会：
+
+```text
+replay again
+autonomous run
+Failure Recovery Agent
+hidden relearning
+teaching mode
+```
+
 ## Open Questions
 
-- Which postcondition evidence source is stable enough for the first
-  implementation?
-- Should `uncertain` and `needs_review` be separate persisted statuses or only
-  reporter outcomes?
-- Should Task Result Reporter output reuse `AgentEReporterOutput` directly, or
-  should a narrower service result type map into that schema?
-- Which event enum names should be added if conversation event recording is
-  implemented in 11.1.7?
-- How should manually provided verification signals be represented without
-  adding user/account/tenant ownership concepts?
+以下问题仍然 open，待实现前或实现中确认：
+
+- Exact service file path after inspecting current code structure（`services/task_planning/result_reporter.py` 或 `services/conversation/result_reporter.py`？）
+- Exact `ConversationEventType` names if new events are added（`result_verification_completed` vs `task_result_reported` 的命名风格需与现有 event type 保持一致）
+- Whether reporting is automatic after execution or requires explicit user input（推荐 automatic，但需实现时验证无副作用）
+- Whether `ConversationStatus` needs `result_verified` / `result_failed` / `result_uncertain` states in first implementation，或继续复用 `execution_finished` / `execution_failed` 并附加 verification metadata

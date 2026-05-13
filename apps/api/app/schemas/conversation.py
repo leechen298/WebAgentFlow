@@ -68,6 +68,7 @@ class ConversationEventType(StrEnum):
     PLAN_EXECUTION_COMPLETED = "plan_execution_completed"
     PLAN_EXECUTION_FAILED = "plan_execution_failed"
     PLAN_EXECUTION_BLOCKED = "plan_execution_blocked"
+    TASK_RESULT_REPORTED = "task_result_reported"
     SESSION_COMPLETED = "session_completed"
     SESSION_FAILED = "session_failed"
 

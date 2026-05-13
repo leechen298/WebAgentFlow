@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.services.task_planning.planner import TaskPathPlanner
 from app.services.task_planning.preview import PlanningPreviewResult, PlanningPreviewService
+from app.services.task_planning.result_reporter import TaskResultReport, TaskResultReporter
 from app.services.task_planning.retrieval import LearnedPathRetrievalService
 
 __all__ = [
@@ -11,4 +12,6 @@ __all__ = [
     "TaskPathPlanner",
     "PlanningPreviewService",
     "PlanningPreviewResult",
+    "TaskResultReporter",
+    "TaskResultReport",
 ]

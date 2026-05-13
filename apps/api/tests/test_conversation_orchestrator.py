@@ -872,8 +872,8 @@ def test_execute_from_plan_confirmed_with_context_moves_to_execution_finished(
     assert result.previous_status == "plan_confirmed"
     assert result.next_status == "execution_finished"
     assert result.command_kind == "free_text"
-    assert "completed" in result.user_response.lower()
-    assert "not implemented" in result.user_response.lower()
+    # 11.1.7: user_response now comes from Task Result Reporter, not raw execution result
+    assert "could not verify" in result.user_response.lower()
 
     session = repo.get_session(session_id)
     assert session is not None
@@ -883,6 +883,7 @@ def test_execute_from_plan_confirmed_with_context_moves_to_execution_finished(
     event_types = [e.type for e in events]
     assert "plan_execution_started" in event_types
     assert "plan_execution_completed" in event_types
+    assert "task_result_reported" in event_types
     assert ConversationEventType.STATE_CHANGED.value in event_types
 
     started = [e for e in events if e.type == "plan_execution_started"][0]
@@ -893,6 +894,13 @@ def test_execute_from_plan_confirmed_with_context_moves_to_execution_finished(
     completed = [e for e in events if e.type == "plan_execution_completed"][0]
     assert completed.payload_json["task_verified"] is False
     assert completed.payload_json["no_result_verification"] is True
+
+    reported = [e for e in events if e.type == "task_result_reported"][0]
+    assert reported.payload_json["verification_outcome"] == "uncertain"
+    assert reported.payload_json["needs_review"] is True
+    assert reported.payload_json["no_recovery"] is True
+    assert reported.payload_json["no_autonomous"] is True
+    assert reported.payload_json["no_llm"] is True
 
 
 def test_execute_from_plan_confirmed_missing_context_blocked(
@@ -913,7 +921,9 @@ def test_execute_from_plan_confirmed_missing_context_blocked(
     assert result.allowed is False
     assert result.previous_status == "plan_confirmed"
     assert result.next_status == "plan_confirmed"
-    assert "not executable" in result.user_response.lower()
+    # 11.1.7: blocked user_response now comes from Task Result Reporter
+    response = result.user_response.lower()
+    assert "blocked" in response or "could not run" in response
 
     session = repo.get_session(session_id)
     assert session is not None
@@ -922,12 +932,15 @@ def test_execute_from_plan_confirmed_missing_context_blocked(
     events = repo.list_events(session_id)
     event_types = [e.type for e in events]
     assert "plan_execution_blocked" in event_types
+    assert "task_result_reported" in event_types
     blocked = [e for e in events if e.type == "plan_execution_blocked"][0]
     assert blocked.payload_json["reason"] == "missing_execution_context"
     assert (
         "learned_path_id" in blocked.payload_json["missing_fields"]
         or "target_url" in blocked.payload_json["missing_fields"]
     )
+    reported = [e for e in events if e.type == "task_result_reported"][0]
+    assert reported.payload_json["verification_outcome"] == "blocked"
 
 
 def test_execute_replay_failure_moves_to_execution_failed(
@@ -1133,12 +1146,17 @@ def test_execute_blocked_when_plan_confirmed_event_is_missing(
     assert len(calls) == 0
     assert result.allowed is False
     assert result.next_status == "plan_confirmed"
-    assert "not executable" in result.user_response.lower()
+    # 11.1.7: blocked user_response now comes from Task Result Reporter
+    response = result.user_response.lower()
+    assert "blocked" in response or "could not run" in response
 
     events = repo.list_events(session_id)
     assert any(e.type == "plan_execution_blocked" for e in events)
+    assert any(e.type == "task_result_reported" for e in events)
     blocked = [e for e in events if e.type == "plan_execution_blocked"][0]
     assert blocked.payload_json["reason"] == "missing_confirmed_plan"
+    reported = [e for e in events if e.type == "task_result_reported"][0]
+    assert reported.payload_json["verification_outcome"] == "blocked"
 
 
 def test_execute_blocked_when_confirmed_path_id_mismatches_preview(
@@ -1256,12 +1274,13 @@ def test_execution_success_records_final_agent_message_not_empty(
 
     messages = repo.list_messages(session_id)
     agent_messages = [m for m in messages if m.role == "agent"]
-    # Should have exactly one agent message: the final execution response
+    # Should have exactly one agent message: the final verification report
     assert len(agent_messages) == 1
-    assert "completed" in agent_messages[0].content.lower()
-    assert "not implemented" in agent_messages[0].content.lower()
+    assert "could not verify" in agent_messages[0].content.lower()
     assert agent_messages[0].metadata_json.get("source") == "execution_gate"
     assert agent_messages[0].metadata_json.get("status") == "completed"
+    assert agent_messages[0].metadata_json.get("verification_outcome") == "uncertain"
+    assert agent_messages[0].metadata_json.get("needs_review") is True
 
 
 def test_execution_failure_records_final_agent_message_not_empty(
@@ -1294,7 +1313,7 @@ def test_execution_blocked_records_agent_message_not_empty(
     orchestrator: ConversationOrchestrator,
     repo: ConversationRepository,
 ) -> None:
-    """Blocked execution must append the blocked response message."""
+    """Blocked execution must append the blocked response message from reporter."""
     session_id = _create_plan_confirmed_session(repo, with_target_url=False)
 
     def handler(_lid: str, _url: str) -> ConversationReplaySummary:
@@ -1306,8 +1325,10 @@ def test_execution_blocked_records_agent_message_not_empty(
     messages = repo.list_messages(session_id)
     agent_messages = [m for m in messages if m.role == "agent"]
     assert len(agent_messages) == 1
-    assert "not executable" in agent_messages[0].content.lower()
+    content = agent_messages[0].content.lower()
+    assert "could not run" in content or "blocked" in content
     assert agent_messages[0].metadata_json.get("status") == "blocked"
+    assert agent_messages[0].metadata_json.get("verification_outcome") == "blocked"
 
 
 def test_all_event_type_values_fit_in_database_column(
@@ -1327,3 +1348,144 @@ def test_all_event_type_values_fit_in_database_column(
     events = repo.list_events(session_id)
     persisted_types = {e.type for e in events}
     assert persisted_types == {e.value for e in ConversationEventType}
+
+
+# ── 11.1.7 Result Verification and Task Result Reporter ───────────────────────
+
+
+def test_execute_success_includes_task_result_reported_event(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """Successful replay must append task_result_reported event after execution."""
+    session_id = _create_plan_confirmed_session(repo)
+
+    def handler(lid: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    orch.dispatch_user_input(session_id, "execute")
+
+    events = repo.list_events(session_id)
+    event_types = [e.type for e in events]
+    assert "task_result_reported" in event_types
+
+    reported = [e for e in events if e.type == "task_result_reported"][0]
+    assert reported.payload_json["verification_outcome"] == "uncertain"
+    assert reported.payload_json["task_verified"] is False
+    assert reported.payload_json["needs_review"] is True
+    assert reported.payload_json["no_recovery"] is True
+    assert reported.payload_json["no_autonomous"] is True
+    assert reported.payload_json["no_llm"] is True
+    assert "evidence_summary" in reported.payload_json
+    assert "missing_evidence_summary" in reported.payload_json
+
+
+def test_execute_failure_includes_task_result_reported_event(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """Failed replay must append task_result_reported event with failed outcome."""
+    session_id = _create_plan_confirmed_session(repo)
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id="lp-001",
+            url="http://127.0.0.1:5175/users",
+            replay_status="drifted",
+            drift_status="target_missing",
+            error="Target missing",
+        )
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    result = orch.dispatch_user_input(session_id, "run")
+
+    assert result.next_status == "execution_failed"
+    assert "failed" in result.user_response.lower()
+
+    events = repo.list_events(session_id)
+    event_types = [e.type for e in events]
+    assert "task_result_reported" in event_types
+
+    reported = [e for e in events if e.type == "task_result_reported"][0]
+    assert reported.payload_json["verification_outcome"] == "failed"
+    assert reported.payload_json["task_verified"] is False
+    assert reported.payload_json["needs_review"] is False
+
+
+def test_execute_blocked_includes_task_result_reported(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """Blocked execution must append task_result_reported with blocked outcome."""
+    session_id = _create_plan_confirmed_session(repo, with_target_url=False)
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        raise AssertionError("handler should not be called")
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    result = orch.dispatch_user_input(session_id, "execute")
+
+    assert result.allowed is False
+    events = repo.list_events(session_id)
+    event_types = [e.type for e in events]
+    assert "plan_execution_blocked" in event_types
+    assert "task_result_reported" in event_types
+
+    reported = [e for e in events if e.type == "task_result_reported"][0]
+    assert reported.payload_json["verification_outcome"] == "blocked"
+    assert reported.payload_json["needs_review"] is False
+    assert reported.payload_json["no_recovery"] is True
+
+
+def test_execute_success_report_user_response_is_evidence_bound(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """Reporter user response must not claim success when outcome is uncertain."""
+    session_id = _create_plan_confirmed_session(repo)
+
+    def handler(lid: str, url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    result = orch.dispatch_user_input(session_id, "execute")
+
+    response = result.user_response.lower()
+    assert "could not verify" in response
+    assert "success" not in response
+    assert "succeeded" not in response
+
+
+def test_execute_failure_report_user_response_does_not_claim_recovery(
+    orchestrator: ConversationOrchestrator,
+    repo: ConversationRepository,
+) -> None:
+    """Reporter user response for failed execution must state no recovery."""
+    session_id = _create_plan_confirmed_session(repo)
+
+    def handler(_lid: str, _url: str) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id="lp-001",
+            url="http://127.0.0.1:5175/users",
+            replay_status="failed",
+            drift_status="none",
+            error="element not found",
+        )
+
+    orch = ConversationOrchestrator(repo, execution_handler=handler)
+    result = orch.dispatch_user_input(session_id, "run")
+
+    response = result.user_response.lower()
+    assert "failed" in response
+    assert "no recovery was attempted" in response
