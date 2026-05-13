@@ -69,6 +69,22 @@ class TaskResultReporter:
         if not learned_path_id and execution_payload is not None:
             learned_path_id = execution_payload.get("learned_path_id")
 
+        # Structured replay / execution evidence for UI / downstream parsing.
+        # These fields are *not* used to change verification_outcome rules.
+        replay_status: str | None = None
+        drift_status: str | None = None
+        final_url: str | None = None
+        final_title: str | None = None
+        error_summary: str | None = None
+        if replay_summary is not None:
+            replay_status = replay_summary.replay_status
+            drift_status = replay_summary.drift_status
+            final_url = replay_summary.final_url
+            final_title = replay_summary.final_title
+            error_summary = replay_summary.error or None
+        if error_summary is None and execution_payload is not None:
+            error_summary = execution_payload.get("error_summary") or None
+
         event_payload: dict[str, Any] = {
             "learned_path_id": learned_path_id,
             "verification_outcome": outcome,
@@ -79,6 +95,13 @@ class TaskResultReporter:
             "no_recovery": True,
             "no_autonomous": True,
             "no_llm": True,
+            # Structured evidence fields (added in follow-up fix)
+            "execution_status": execution_status,
+            "replay_status": replay_status,
+            "drift_status": drift_status,
+            "error_summary": error_summary,
+            "final_url": final_url,
+            "final_title": final_title,
         }
 
         return TaskResultReport(

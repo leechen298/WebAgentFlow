@@ -341,6 +341,105 @@ def test_missing_evidence_summary_for_drift(reporter: TaskResultReporter) -> Non
     assert "Page drift detected" in report.missing_evidence_summary
 
 
+# ── Structured payload fields (follow-up fix) ─────────────────────────────────
+
+
+def test_completed_replay_with_final_url_but_missing_title_remains_uncertain(
+    reporter: TaskResultReporter,
+) -> None:
+    """Final URL alone must not shift outcome from uncertain to verified."""
+    summary = ConversationReplaySummary(
+        learned_path_id="lp-001",
+        url="http://example.com",
+        replay_status="succeeded",
+        drift_status="none",
+        final_url="http://example.com/done",
+        final_title=None,
+    )
+    report = reporter.build_report(
+        execution_status="completed",
+        execution_payload={},
+        replay_summary=summary,
+        confirmed_plan_context=None,
+    )
+    assert report.outcome == "uncertain"
+    assert report.needs_review is True
+    assert report.event_payload["task_verified"] is False
+
+    # Structured fields preserved
+    assert report.event_payload["execution_status"] == "completed"
+    assert report.event_payload["replay_status"] == "succeeded"
+    assert report.event_payload["drift_status"] == "none"
+    assert report.event_payload["final_url"] == "http://example.com/done"
+    assert report.event_payload["final_title"] is None
+    assert report.event_payload["error_summary"] is None
+
+    # Evidence summary must not say replay was unavailable
+    assert "Replay summary was not available" not in report.evidence_summary
+    assert "Final URL: http://example.com/done" in report.evidence_summary
+
+    # Missing evidence must point to postcondition gap, not replay gap
+    assert "no explicit postcondition evidence" in report.missing_evidence_summary
+
+
+def test_structured_payload_fields_populated_from_replay_summary(
+    reporter: TaskResultReporter,
+) -> None:
+    summary = ConversationReplaySummary(
+        learned_path_id="lp-001",
+        url="http://example.com",
+        replay_status="failed",
+        drift_status="target_missing",
+        error="element not found",
+        final_url="http://example.com/error",
+        final_title="Error",
+    )
+    report = reporter.build_report(
+        execution_status="completed",
+        execution_payload={},
+        replay_summary=summary,
+        confirmed_plan_context=None,
+    )
+    payload = report.event_payload
+    assert payload["execution_status"] == "completed"
+    assert payload["replay_status"] == "failed"
+    assert payload["drift_status"] == "target_missing"
+    assert payload["error_summary"] == "element not found"
+    assert payload["final_url"] == "http://example.com/error"
+    assert payload["final_title"] == "Error"
+
+
+def test_structured_payload_fields_null_when_no_replay_summary(
+    reporter: TaskResultReporter,
+) -> None:
+    report = reporter.build_report(
+        execution_status="blocked",
+        execution_payload={"reason": "missing_context"},
+        replay_summary=None,
+        confirmed_plan_context=None,
+    )
+    payload = report.event_payload
+    assert payload["execution_status"] == "blocked"
+    assert payload["replay_status"] is None
+    assert payload["drift_status"] is None
+    assert payload["final_url"] is None
+    assert payload["final_title"] is None
+    assert payload["error_summary"] is None
+
+
+def test_error_summary_falls_back_to_execution_payload(
+    reporter: TaskResultReporter,
+) -> None:
+    report = reporter.build_report(
+        execution_status="failed",
+        execution_payload={"error_summary": "browser crashed"},
+        replay_summary=None,
+        confirmed_plan_context=None,
+    )
+    assert report.event_payload["error_summary"] == "browser crashed"
+    assert report.event_payload["execution_status"] == "failed"
+
+
 # ── Forbidden imports ─────────────────────────────────────────────────────────
 
 

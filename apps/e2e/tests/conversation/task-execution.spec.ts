@@ -288,6 +288,10 @@ test.describe('Conversation 11.1.6 task execution E2E', () => {
     expect(String(reported.payload.missing_evidence_summary ?? '')).toContain(
       'no explicit postcondition evidence',
     );
+    // Structured payload fields (follow-up fix)
+    expect(reported.payload.execution_status).toBe('completed');
+    expect(reported.payload.replay_status).toBe('succeeded');
+    expect(reported.payload.drift_status).toBe('none');
 
     const transcript = await listTranscript(request, session.id);
     const finalAgentMessage = [...transcript]
@@ -340,6 +344,10 @@ test.describe('Conversation 11.1.6 task execution E2E', () => {
       no_autonomous: true,
       no_llm: true,
     });
+    // Structured payload fields (follow-up fix)
+    expect(reported?.payload.execution_status).toBe('blocked');
+    expect(reported?.payload.replay_status).toBeNull();
+    expect(reported?.payload.drift_status).toBeNull();
 
     const transcript = await listTranscript(request, session.id);
     const finalAgentMessage = [...transcript]
