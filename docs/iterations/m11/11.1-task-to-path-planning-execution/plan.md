@@ -65,7 +65,7 @@ Task Result Reporter / 任务结果汇报器（legacy: Agent E） 只在结果�
 - replay result summary。
 - postcondition results。
 - artifact status。
-- final URL / title / DOM signals。
+- final URL / title，以及已捕获的 structured page / result signals。
 - uncertainty flags。
 
 输出：
@@ -167,8 +167,9 @@ result verified。
 `uncertain` / `needs_review` / `blocked` 等结果语义，并由 Task Result
 Reporter / 任务结果汇报器（legacy: Agent E） 基于证据汇报结果。
 
-验证输入包括 replay result、postcondition signals、artifact status、final
-URL / title / DOM signals。无法验证时返回 `uncertain` / `needs_review`。
+验证输入包括 replay result、structured postcondition signals、artifact status、
+final URL / title，以及已捕获的 structured page / result signals。无法验证时
+返回 `uncertain` / `needs_review`。
 
 `replay completed` 不等于 `task succeeded`。没有 postcondition evidence 时，
 11.1.7 不得脑补成功，也不得自动 recovery。
