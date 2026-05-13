@@ -797,7 +797,7 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 ### 11.1.8 · Task-to-path Tests and Evidence
 
-状态：documentation initialized。
+状态：完成（1104 API tests passed, 25 E2E passed, ruff clean, no P1/P2）。
 
 目标：
 
@@ -821,6 +821,24 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - `docs/iterations/m11/11.1.8-task-to-path-tests-and-evidence/intent.md`
 - `docs/iterations/m11/11.1.8-task-to-path-tests-and-evidence/plan.md`
 - `docs/iterations/m11/11.1.8-task-to-path-tests-and-evidence/review.md`
+- `docs/testing/results/2026-05-13-11-1-8-task-to-path-tests-and-evidence.md`
+
+验证：
+
+- `cd apps/api && ../../.venv/bin/pytest tests/test_task_path_planner.py tests/test_task_planning_preview.py tests/test_conversation_confirmation.py tests/test_conversation_execution.py tests/test_task_planning_result_reporter.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py tests/test_task_planning_schemas.py tests/test_task_planning_retrieval.py -q`
+- 结果：`294 passed`
+- `cd apps/api && ../../.venv/bin/pytest -q`
+- 结果：`1104 passed, 65 skipped`
+- `cd apps/api && ../../.venv/bin/ruff check app/schemas/conversation.py app/services/conversation app/services/task_planning tests/test_task_path_planner.py tests/test_task_planning_preview.py tests/test_conversation_confirmation.py tests/test_conversation_execution.py tests/test_task_planning_result_reporter.py tests/test_conversation_orchestrator.py tests/test_conversation_api.py tests/test_task_planning_schemas.py tests/test_task_planning_retrieval.py`
+- 结果：`All checks passed!`
+- `pnpm --filter @web-agent-flow/e2e exec playwright test tests/conversation/task-execution.spec.ts`
+- 结果：`3 passed (4.0s)`
+- `pnpm run test:e2e`
+- 结果：`25 passed (13.4s)`
+- `git diff --check`
+- 结果：clean
+- `find docs/iterations/m11 -maxdepth 1 -type d -name '11.1.9*' -print`
+- 结果：无 11.1.9 目录
 
 ## 执行规则
 

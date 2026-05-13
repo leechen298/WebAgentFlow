@@ -1,131 +1,136 @@
 # Review and Reflection
 
-This review document is initialized for the future 11.1.8 tests and evidence
-review.
+## 11.1.8 Task-to-path Tests and Evidence Execution Report
 
-## Scope Review Checklist
+### Changed files
 
-- [ ] 11.1.8 remains a tests and evidence package.
-- [ ] No runtime feature implementation is added by this package.
-- [ ] No API endpoint or CLI command is added.
-- [ ] No 11.1.9 detail directory is created.
-- [ ] M12 / recovery / teaching scope remains future.
+| File | Change |
+|---|---|
+| `docs/testing/results/2026-05-13-11-1-8-task-to-path-tests-and-evidence.md` | **New.** M11.1 task-to-path MVP 测试与证据收口报告。 |
+| `docs/iterations/m11/11.1.8-task-to-path-tests-and-evidence/review.md` | Updated. Execution review with test results, E2E evidence, static review findings. |
+| `docs/iterations/m11/README.md` | Status sync: 11.1.8 标记为完成。 |
+| `docs/iterations/m11/m11-plan.md` | Status sync: 11.1.8 标记为完成。 |
 
-## Test Matrix Checklist
+### Commands run
 
-- [ ] Domain schema tests are included.
-- [ ] Retrieval / ranking tests are included.
-- [ ] Task Path Planner tests are included.
-- [ ] Planning preview tests are included.
-- [ ] Confirmation gate tests are included.
-- [ ] Execution via replay tests are included.
-- [ ] Task Result Reporter tests are included.
-- [ ] Conversation API runtime tests are included.
-- [ ] Scoped E2E tests are included.
-- [ ] Explicit `/replay` regression tests are included.
-- [ ] Negative / blocked / uncertain paths are included.
+```bash
+cd apps/api
+../../.venv/bin/pytest \
+  tests/test_task_path_planner.py \
+  tests/test_task_planning_preview.py \
+  tests/test_conversation_confirmation.py \
+  tests/test_conversation_execution.py \
+  tests/test_task_planning_result_reporter.py \
+  tests/test_conversation_orchestrator.py \
+  tests/test_conversation_api.py \
+  tests/test_task_planning_schemas.py \
+  tests/test_task_planning_retrieval.py \
+  -q
+```
+结果：`294 passed`
 
-## API / Unit Regression Checklist
+```bash
+cd apps/api && ../../.venv/bin/pytest -q
+```
+结果：`1104 passed, 65 skipped`
 
-- [ ] Focused API tests pass.
-- [ ] Full API pytest result is recorded.
-- [ ] Result reporter tests preserve `replay completed != task succeeded`.
-- [ ] Confirmation tests preserve explicit consent.
-- [ ] Execution tests preserve missing-context blocked behavior.
-- [ ] No test depends on LLM provider, autonomous run, or raw HTML planning.
+```bash
+cd apps/api && ../../.venv/bin/ruff check \
+  app/schemas/conversation.py \
+  app/services/conversation \
+  app/services/task_planning \
+  tests/test_task_path_planner.py \
+  tests/test_task_planning_preview.py \
+  tests/test_conversation_confirmation.py \
+  tests/test_conversation_execution.py \
+  tests/test_task_planning_result_reporter.py \
+  tests/test_conversation_orchestrator.py \
+  tests/test_conversation_api.py \
+  tests/test_task_planning_schemas.py \
+  tests/test_task_planning_retrieval.py
+```
+结果：`All checks passed!`
 
-## Scoped E2E Checklist
+```bash
+pnpm --filter @web-agent-flow/e2e exec playwright test tests/conversation/task-execution.spec.ts
+```
+结果：`3 passed (4.0s)`
 
-- [ ] Ordinary task -> planning preview is covered.
-- [ ] Planning preview -> awaiting confirmation is covered.
-- [ ] Confirm -> plan confirmed is covered.
-- [ ] Execute -> replay started / completed is covered.
-- [ ] `task_result_reported` event is covered.
-- [ ] Final report is uncertain / needs_review when no postcondition evidence
-  exists.
-- [ ] Event order is recorded and consistent with state transitions.
-- [ ] E2E environment caveats are recorded.
+```bash
+pnpm run test:e2e
+```
+结果：`25 passed (13.4s)`
 
-## Negative Path Checklist
+```bash
+git diff --check
+```
+结果：`clean`
 
-- [ ] No candidates returns unable-to-plan.
-- [ ] Ambiguous confirmation remains awaiting confirmation.
-- [ ] `/cancel` returns to task intake.
-- [ ] `/replay` while awaiting confirmation is blocked.
-- [ ] `/replay` while plan confirmed does not bypass confirmed-plan execution.
-- [ ] Execute without target URL is blocked.
-- [ ] Replay failed reports failed and no recovery.
-- [ ] Replay completed without postcondition evidence reports uncertain /
-  needs_review.
+```bash
+find docs/iterations/m11 -maxdepth 1 -type d -name '11.1.9*' -print
+```
+结果：无 11.1.9 目录。
 
-## Result Reporter Checklist
+### Test results
 
-- [ ] Reporter does not infer verified success from replay completion.
-- [ ] Reporter records evidence used.
-- [ ] Reporter records evidence missing.
-- [ ] Reporter includes `no_recovery`, `no_autonomous`, and `no_llm` markers.
-- [ ] Reporter user-facing message matches event payload outcome.
-- [ ] Reporter does not claim artifact production without artifact evidence.
+- **Focused API / service tests**: 294 passed (schema + retrieval + planner + preview + confirmation + execution + reporter + orchestrator + API).
+- **Full API regression**: 1104 passed, 65 skipped.
+- **Ruff**: clean for all touched Python files.
+- **Scoped E2E**: 3 passed (task-execution spec: happy path execution + blocked without target_url + replay bypass).
+- **Full E2E**: 25 passed (replay API, catalog UI, conversation runtime, CLI runtime, task execution, task result reporter, validation-site smoke).
 
-## Explicit Replay Compatibility Checklist
+### E2E result
 
-- [ ] Explicit `/replay <learned_path_id> <url>` still works where the existing
-  state machine allows it.
-- [ ] Explicit `/replay` remains separate from confirmed-plan execution.
-- [ ] `/replay` does not bypass `awaiting_confirmation`.
-- [ ] `/replay` does not bypass `plan_confirmed` execution intent handling.
+All E2E deterministic. No environment-blocked failures.
 
-## Codex Autonomous Review Checklist
+Key E2E evidence:
 
-- [ ] Review checks for replay completion treated as task success.
-- [ ] Review checks for confirmation bypass.
-- [ ] Review checks for `/replay` bypass.
-- [ ] Review checks for target URL guessing.
-- [ ] Review checks for result reporter success invention.
-- [ ] Review checks for failed / uncertain triggering recovery.
-- [ ] Review checks for event order mismatch.
-- [ ] Review checks for final assistant message contradictions.
-- [ ] Review checks for docs status drift.
-- [ ] Findings include severity, file / line, reasoning, coverage, and
-  recommended fix.
+- **task-execution.spec.ts** (11.1.6): event order verified (started → completed → reported → state_changed); blocked path has no replay events.
+- **task-result-reporter.spec.ts** (11.1.7): successful replay → `uncertain`; failed replay → `failed`; blocked execution → `blocked`. Payload forbidden keys verified.
 
-## Evidence Quality Checklist
+### Static review findings
 
-- [ ] Each evidence record includes command, result, and environment.
-- [ ] Evidence distinguishes deterministic, exploratory, manual, and
-  review-only results.
-- [ ] Evidence records representative API response and event sequence where
-  useful.
-- [ ] Evidence records assistant message summary where useful.
-- [ ] Evidence does not collapse skipped, flaky, blocked, and passed results.
-- [ ] Evidence does not use `PASS` without supporting details.
+- **P1**: None.
+- **P2**: None.
+- **P3**: None required.
 
-## Environment Caveat Checklist
+Static review confirmed:
 
-- [ ] Sandbox restrictions are recorded.
-- [ ] Browser permission issues are recorded.
-- [ ] Missing local service issues are recorded.
-- [ ] DB migration state is recorded.
-- [ ] External rerun evidence is recorded when needed.
-- [ ] Environment-blocked runs are not counted as product failures.
+| 检查项 | 结果 | 证据 |
+|---|---|---|
+| replay completed != task succeeded | ✓ | reporter `_derive_outcome` + E2E `verification_outcome=uncertain` |
+| confirmation 不可绕过 | ✓ | `confirmation.py` 精确匹配 + orchestrator gate + E2E |
+| `/replay` 不绕过 awaiting_confirmation / plan_confirmed | ✓ | orchestrator gate + state machine + E2E |
+| missing target_url 不脑补 | ✓ | `execution.py` validate + E2E blocked |
+| Reporter 不脑补成功 | ✓ | `_check_postconditions` 恒 `False` + E2E |
+| failed/uncertain 不触发 recovery | ✓ | `no_recovery: true` + user response + E2E |
+| event order 与 state transition 一致 | ✓ | orchestrator + E2E index 验证 |
+| final assistant message 与 event payload 一致 | ✓ | orchestrator metadata + E2E transcript |
+| docs 状态正确 | ✓ | 11.1.1–11.1.7 完成；11.1.8 完成；slot binding future |
 
-## Exit Criteria Checklist
+### Environment caveats
 
-- [ ] Focused API tests pass.
-- [ ] Full API pytest passes or unresolved failures are documented.
-- [ ] Scoped E2E passes or environment-blocked status has rerun evidence.
-- [ ] `ruff` is clean for any touched Python files during execution.
-- [ ] `git diff --check` is clean.
-- [ ] Codex autonomous review has no unresolved P1 / P2.
-- [ ] M11.1 docs reflect final statuses.
-- [ ] Future scopes remain future.
-- [ ] No 11.1.9 detail directory exists.
+- 本地开发环境（macOS, Docker PostgreSQL 16, Redis, MinIO）。
+- 65 skipped tests: 外部依赖（LLM provider, browser sandbox, autonomous run），非产品缺陷。
+- E2E 使用 Playwright Chromium headless + seeded fixtures + validation-site。
 
-## Decisions to Confirm Before Execution
+### Unresolved P1/P2/P3
 
-- [ ] Final canonical focused API command list.
-- [ ] Final scoped E2E command list.
-- [ ] Final evidence report filename and location.
-- [ ] Whether manual UI smoke is required or supplementary.
-- [ ] Whether Codex autonomous review is run once after deterministic tests or
-  iterated after fixes.
+**No unresolved P1/P2 findings.**
+
+已知边界（非缺陷）：
+
+- `_check_postconditions` 恒返回 `False`；`verified` outcome 需要未来 postcondition 集成。
+- `ConversationStatus` 没有 verification 子状态；outcome 通过 event payload 承载。
+- Slot Binding 为 future scope。
+
+### Final assessment
+
+M11.1 task-to-path MVP tests and evidence closure complete.
+
+- Deterministic tests pass.
+- E2E passes.
+- Ruff clean.
+- `git diff --check` clean.
+- No 11.1.9 directory.
+- Core safety boundaries verified: replay completed != task succeeded, no recovery, blocked reporting, event order consistency.
