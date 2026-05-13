@@ -196,6 +196,8 @@ function latestAgentMessage(messages: ConversationMessage[]): ConversationMessag
 function expectNoForbiddenReporterPayload(payload: Record<string, unknown>): void {
   const forbiddenKeys = [
     'raw_html',
+    // Exact raw-HTML field names are forbidden. This does not block future
+    // structured summary fields such as `html_safe_summary`.
     'html',
     'dom_html',
     'screenshot',
@@ -245,7 +247,9 @@ test.describe('Conversation 11.1.7 task result reporter E2E', () => {
     });
     expect(execute.user_response.toLowerCase()).toContain('could not verify');
     expect(execute.user_response.toLowerCase()).not.toContain('task succeeded');
-    expect(execute.user_response.toLowerCase()).not.toContain('verified');
+    expect(execute.user_response.toLowerCase()).not.toContain('verified successfully');
+    expect(execute.user_response.toLowerCase()).not.toContain('successfully verified');
+    expect(execute.user_response.toLowerCase()).not.toContain('successfully completed the task');
     expect(execute.replay_result).toMatchObject({
       learned_path_id: fixture.id,
       url: targetUrl,
