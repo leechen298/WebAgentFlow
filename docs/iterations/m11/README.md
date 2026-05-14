@@ -11,7 +11,10 @@ Conversation Orchestrator / Dispatcher 管理。
 
 M11.0 先做 Runtime Conversation Shell & Agent Orchestration。它建立
 CLI-first 的最小运行时沟通入口、session state、消息 / 事件边界和
-orchestrator 骨架。M11.1 才进入 Task-to-Path Planning & Execution MVP。
+orchestrator 骨架。M11.1 进入 Task-to-Path Planning & Execution MVP。
+M11.2 在 v0.1 后续优化中补运行时观察与真实网页稳健性增强
+（Runtime Observation & Realistic Web Hardening），
+只定义页面变化观察和 evidence 边界，不进入 M12 recovery / retry / abort。
 
 M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 的共同入口层。当前最小可行 runtime surface 是 CLI-first：先跑通完整功能
@@ -28,7 +31,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.0.5-orchestrator-dispatcher](./11.0.5-orchestrator-dispatcher/) —— Orchestrator / Dispatcher state routing。状态：完成。
 - [11.0.6-explicit-replay-command-hook](./11.0.6-explicit-replay-command-hook/) —— 显式 `/replay <learned_path_id> <url>` hook。状态：完成。
 - [11.0.7-conversation-tests-and-evidence](./11.0.7-conversation-tests-and-evidence/) —— conversation 测试域与证据。状态：完成。
-- [11.1-task-to-path-planning-execution](./11.1-task-to-path-planning-execution/) —— M11.1 总纲：Task-to-Path Planning & Execution MVP。状态：总纲初始化中。
+- [11.1-task-to-path-planning-execution](./11.1-task-to-path-planning-execution/) —— M11.1 总纲：Task-to-Path Planning & Execution MVP。状态：完成。
 - [11.1.1-task-planning-domain-contract](./11.1.1-task-planning-domain-contract/) —— task / candidate / route / binding / verification domain contract。状态：完成（17 schema，33 passed）。
 - [11.1.2-learned-path-retrieval-ranking](./11.1.2-learned-path-retrieval-ranking/) —— LearnedPath retrieval and deterministic ranking。状态：完成（38 retrieval tests，71 combined passed）。
 - [11.1.3-task-path-planner-mvp](./11.1.3-task-path-planner-mvp/) —— Task Path Planner MVP。状态：完成（21 planner tests passed）。
@@ -38,7 +41,10 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.1.6-execution-via-replay](./11.1.6-execution-via-replay/) —— Execution via Replay。状态：完成（execution service + orchestrator/API coverage，full API tests passed，ruff clean）。
 - [11.1.7-result-verification-task-result-reporter](./11.1.7-result-verification-task-result-reporter/) —— Result Verification and Task Result Reporter。状态：完成（result reporter service + orchestrator/API 集成，1100 full tests passed，ruff clean）。
 - [11.1.8-task-to-path-tests-and-evidence](./11.1.8-task-to-path-tests-and-evidence/) —— Task-to-path Tests and Evidence。状态：完成（1104 API tests passed, 25 E2E passed, ruff clean, no P1/P2）。
+- [11.2-runtime-observation-realistic-hardening](./11.2-runtime-observation-realistic-hardening/) —— M11.2 总纲：运行时观察与真实网页稳健性增强。状态：11.2.0 文档初始化完成。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
 `intent.md`、`plan.md`、`review.md`，并且每次只施工当前包。
+`11.2-runtime-observation-realistic-hardening/` 是 M11.2 总纲和 11.2.0
+文档初始化目录，不代表 runtime observation 功能已经实现。

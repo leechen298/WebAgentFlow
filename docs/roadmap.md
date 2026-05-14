@@ -269,6 +269,27 @@ per-step LLM browser control, no full recovery dialogue beyond
 returning a clear failure state and handing the session to M12-capable
 flows.
 
+## M11.2 — 运行时观察与真实网页稳健性增强
+
+M11.2 是 v0.1 后续稳健性增强轨道。它不重新展开 task-to-path planning，
+也不启动 v0.2 / M12。它的目标是在 replay 周围定义并后续实现 observation
+layer：动作之后页面发生了什么、预期变化是否被观察到、哪些结构化信号可以作为
+result evidence。
+
+11.2.0 是文档初始化包：只初始化 runtime observation scope 和
+realistic web runtime case catalog。它记录 Post-action Observation、Passive
+Runtime Observation，以及 modal、toast、delayed button、loading state、
+partial refresh、SPA content change、server push、passive DOM mutation 等真实
+网页场景。
+
+详细 11.2.x 拆包计划放在
+[`docs/iterations/m11/m11-plan.md`](./iterations/m11/m11-plan.md) 和
+[`docs/iterations/m11/11.2-runtime-observation-realistic-hardening/`](./iterations/m11/11.2-runtime-observation-realistic-hardening/)。
+本路线图只保留 M11.2 的高层定位。
+
+M11.2 不定义 recovery、retry、abort、user interruption、takeover 或 teaching
+behavior。这些仍属于 v0.2 / M12 或更后续阶段。
+
 ## M12 — Recovery & Abort Dialogue
 
 M12 turns failures and user aborts into first-class product flows. It

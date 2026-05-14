@@ -7,7 +7,9 @@ catalog、显式 replay 和 drift detection 出发，建立用户与 WebAgentFlo
 沟通的运行时闭环。
 
 M11.0 建立 Runtime Conversation Shell 和 Conversation Orchestrator /
-Dispatcher 骨架。M11.1 才进入 Task-to-Path Planning & Execution MVP。
+Dispatcher 骨架。M11.1 进入 Task-to-Path Planning & Execution MVP。
+M11.2 作为 v0.1 后续优化，补运行时观察与真实网页稳健性增强
+（Runtime Observation & Realistic Web Hardening）的 scope 和后续执行包边界。
 
 M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用户始终
 和 WebAgentFlow 沟通；内部 Agent、engine event 和 replay execution 都由
@@ -22,6 +24,8 @@ M11 不是 L1 autonomous learning，也不允许 LLM 逐步控制浏览器。用
 - `docs/iterations/m11/README.md`
 - `docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/intent.md`
 - `docs/iterations/m11/11.0-runtime-conversation-shell-orchestration/plan.md`
+- `docs/iterations/m11/11.2-runtime-observation-realistic-hardening/README.md`
+- `docs/testing/scenarios/realistic-web-runtime-cases.md`
 
 ## M11.0 拆分原则
 
@@ -839,6 +843,164 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 - 结果：clean
 - `find docs/iterations/m11 -maxdepth 1 -type d -name '11.1.9*' -print`
 - 结果：无 11.1.9 目录
+
+## M11.2 · 运行时观察与真实网页稳健性增强
+
+状态：11.2.0 文档初始化完成。
+
+M11.2 是 v0.1 后续优化。它不继续扩展 task-to-path 规划逻辑，而是在
+M11.1 已完成的 replay execution / result reporting 后补运行时观察边界。
+
+M11.2 只回答：
+
+- 页面发生了什么？
+- 变化是不是等到了？
+- 观察到了哪些结构化信号？
+- 这些信号能不能作为 result evidence？
+
+M11.2 不回答：
+
+- 失败后怎么办？
+- 要不要 retry？
+- 要不要 ask user / takeover？
+- 要不要 abort / interrupt？
+- 要不要提出 recovery proposal？
+
+这些属于 v0.2 / M12。
+
+### Post-action Observation
+
+Post-action Observation 是用户或 replay 主动操作之后，页面在短时间内产生的
+可观察变化。
+
+示例：
+
+- 点击提交后 loading 消失。
+- 点击提交后 toast 出现。
+- 点击操作后 modal 出现。
+- 搜索后结果列表刷新。
+- 填完字段后按钮从 disabled 变 enabled。
+- 提交后 URL / title / text / element 变化。
+
+它解决的问题是：系统不能点完按钮就立刻判断成功失败，而是要知道点完之后
+应该等什么变化。
+
+### Passive Runtime Observation
+
+Passive Runtime Observation 是非用户主动操作触发的页面变化。
+
+示例：
+
+- WebSocket 推送新消息。
+- SSE 推送状态更新。
+- 后台任务完成后页面自动刷新。
+- polling 导致列表更新。
+- 客服消息自动出现。
+- 订单状态被服务端主动更新。
+
+它解决的问题是：页面自己变了，系统要能记录这个变化，并判断它是否影响
+当前 replay / result report。
+
+## M11.2 拆分原则
+
+- 每个 `11.2.x` 都必须有清楚的 scope。
+- 11.2.0 只做文档范围和 scenario catalog。
+- 不在 11.2.0 写代码、测试代码或 fixture。
+- 不把运行时观察写成 recovery。
+- 不实现 retry policy。
+- 不实现 user abort / stop handling。
+- 不做 hidden relearning。
+- 不调用 autonomous run。
+- 不接入 LLM provider。
+- 不读 raw HTML。
+- 不创建 M12 / 12.x 目录。
+- 不创建 v0.2 分支。
+
+## M11.2 执行包拆分
+
+### 11.2.0 · 运行时观察范围与真实场景目录
+
+状态：文档初始化完成。
+
+目标：
+
+- 初始化 M11.2 文档包。
+- 明确 M11.2 与 M11.1、M12 的边界。
+- 定义 Post-action Observation 和 Passive Runtime Observation。
+- 建立 realistic web runtime case catalog。
+- 明确后续 11.2.x 包如何展开。
+
+交付：
+
+- `docs/iterations/m11/11.2-runtime-observation-realistic-hardening/README.md`
+- `docs/iterations/m11/11.2-runtime-observation-realistic-hardening/intent.md`
+- `docs/iterations/m11/11.2-runtime-observation-realistic-hardening/plan.md`
+- `docs/iterations/m11/11.2-runtime-observation-realistic-hardening/review.md`
+- `docs/testing/scenarios/realistic-web-runtime-cases.md`
+
+边界：
+
+- 不写代码。
+- 不新增测试代码。
+- 不运行 E2E。
+- 不修改 replay execution。
+- 不修改 Task Result Reporter。
+- 不做 recovery / retry / abort / user interruption。
+- 不做 teaching mode。
+- 不做 autonomous run。
+- 不接 LLM。
+- 不读 raw HTML。
+
+### 11.2.1 · 观察信号契约
+
+状态：计划中。
+
+目标方向：定义 observation signal 的结构化 contract，包括 source、timing、
+trigger relation、observed change、confidence、evidence reference 和 relevance
+边界。不得实现 recovery policy。
+
+### 11.2.2 · 等待变化 MVP
+
+状态：计划中。
+
+目标方向：定义 replay 动作后等待页面变化的最小能力，覆盖 loading 消失、
+toast / modal 出现、按钮 enabled、文本 / URL / title / element 变化。不得
+实现 retry 或自动 recovery。
+
+### 11.2.3 · replay 与观察集成
+
+状态：计划中。
+
+目标方向：把 observation collection 接到 replay execution 边界，让 replay
+result 可以携带 observation evidence。不得改变 Task Path Planner 规划逻辑。
+
+### 11.2.4 · 真实场景 fixture 页面
+
+状态：计划中。
+
+目标方向：为 realistic web runtime cases 建立受控 fixture 页面。fixture
+证明观察能力，不证明任意真实网页已经被覆盖。
+
+### 11.2.5 · 观察证据接入 Task Result Reporter
+
+状态：计划中。
+
+目标方向：让 Task Result Reporter 可以消费 observation evidence。无明确
+postcondition evidence 时仍必须保守返回 `uncertain` / `needs_review`。
+
+### 11.2.6 · Codex 真实网页 QA
+
+状态：计划中。
+
+目标方向：组织 Codex / browser QA 对 realistic cases 做人工可读验证记录。
+不得把 exploratory 结果伪装成 deterministic pass。
+
+### 11.2.7 · 运行时观察测试与证据
+
+状态：计划中。
+
+目标方向：对 M11.2 observation 能力做测试和证据收口。它是 evidence closure，
+不是新 runtime feature 包。
 
 ## 执行规则
 
