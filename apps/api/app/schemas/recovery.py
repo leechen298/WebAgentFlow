@@ -86,3 +86,72 @@ class RecoveryBoundary(BaseModel):
     reason: ClassificationReason
     evidence: list[EvidenceReference] = Field(default_factory=list)
     message: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# M12.2 user abort / stop handling schema contracts
+# ---------------------------------------------------------------------------
+
+AbortSource = Literal[
+    "slash_abort",
+    "slash_stop",
+    "user_message",
+    "ui_stop_button",
+    "external_scheduler",
+]
+
+StopHandlingDecision = Literal[
+    "accepted_stop",
+    "already_finished",
+    "already_failed",
+    "not_running",
+    "cannot_interrupt_inflight_action",
+    "needs_manual_review",
+]
+
+
+class UserAbortSignal(BaseModel):
+    """User control intent to stop current automation."""
+
+    model_config = ConfigDict(extra="allow")
+
+    source: AbortSource
+    raw_text: str | None = None
+    timestamp: str | None = None
+
+
+class UserAbortState(BaseModel):
+    """Runtime state snapshot at the moment the abort signal is received."""
+
+    model_config = ConfigDict(extra="allow")
+
+    session_status: str | None = None
+    active_command: str | None = None
+    active_plan_id: str | None = None
+    active_step_index: int | None = None
+    last_execution_event: str | None = None
+    replay_status: str | None = None
+    reporter_outcome: str | None = None
+    task_verified: bool = False
+    has_inflight_action: bool = False
+    user_message: str | None = None
+
+
+class AbortEvidence(BaseModel):
+    """Evidence captured at interruption time."""
+
+    model_config = ConfigDict(extra="allow")
+
+    signal: UserAbortSignal
+    state: UserAbortState
+    captured_at: str | None = None
+
+
+class AbortAcknowledgement(BaseModel):
+    """Pure acknowledgement of a user abort — no proposal, no retry, no browser action."""
+
+    decision: StopHandlingDecision
+    message: str
+    evidence: AbortEvidence
+    no_new_actions_after: bool = True
+    inflight_caveat: bool = False

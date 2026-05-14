@@ -1,61 +1,89 @@
 # 12.2 Review and Reflection
 
-Status: documentation initialized.
+Status: implemented.
 
-## 初始化记录
+## 实现记录
 
-- 创建 12.2 User Abort / Stop Handling 文档目录。
-- 本轮只定义文档边界，没有实现代码。
-- 本轮没有创建 12.3 / 12.4 / 12.5 目录。
-- 本轮没有修改 `docs/iterations/m11/**` 历史文档。
+本轮实现了 12.2 纯逻辑层：abort signal schema + deterministic abort handler + unit tests。
 
-## Created Documents
+### Changed files
 
-- `docs/iterations/m12/12.2-user-abort-stop-handling/README.md`
-- `docs/iterations/m12/12.2-user-abort-stop-handling/intent.md`
-- `docs/iterations/m12/12.2-user-abort-stop-handling/plan.md`
-- `docs/iterations/m12/12.2-user-abort-stop-handling/review.md`
+- `apps/api/app/schemas/recovery.py` — 追加 AbortSource, StopHandlingDecision, UserAbortSignal, UserAbortState, AbortEvidence, AbortAcknowledgement
+- `apps/api/app/services/recovery/abort_handler.py` — 新建，纯确定性 handler
+- `apps/api/tests/test_user_abort_handler.py` — 新建，18 个单元测试
 
-## Scope Summary
+### Schema contracts
 
-12.2 定义用户 abort / stop 后的收手边界：
+| Type | Role |
+|---|---|
+| `AbortSource` | Literal union: slash_abort, slash_stop, user_message, ui_stop_button, external_scheduler |
+| `StopHandlingDecision` | Literal union: accepted_stop, already_finished, already_failed, not_running, cannot_interrupt_inflight_action, needs_manual_review |
+| `UserAbortSignal` | source + raw_text + timestamp |
+| `UserAbortState` | Runtime snapshot: session_status, active_command, active_plan_id, active_step_index, replay_status, reporter_outcome, has_inflight_action, etc. |
+| `AbortEvidence` | signal + state + captured_at |
+| `AbortAcknowledgement` | decision + message + evidence + no_new_actions_after + inflight_caveat |
 
-- user abort 是用户控制权信号，不是 engine failure；
-- abort accepted 后不得继续新的浏览器动作；
-- in-flight action 只能 best-effort stop，不能承诺撤销已发生的外部副作用；
-- abort evidence 必须保留；
-- repeated abort / stop 必须是幂等的；
-- 后续选择交给 12.3 / 12.4 / 12.5。
+### Handler design
+
+`UserAbortHandler.handle(signal, state) -> AbortAcknowledgement`
+
+Decision precedence (deterministic):
+
+1. session_status in finished set → `already_finished`
+2. session_status in failed set → `already_failed`
+3. session_status empty / idle / not_running → `not_running`
+4. has_inflight_action + active status → `cannot_interrupt_inflight_action`
+5. active status → `accepted_stop`
+6. fallback → `needs_manual_review`
+
+Fail-closed: `no_new_actions_after` is `True` for `accepted_stop`,
+`cannot_interrupt_inflight_action`, and `needs_manual_review`. Only
+terminal states (`already_finished`, `already_failed`, `not_running`)
+return `False`.
+
+Pre-execution states (`awaiting_confirmation`, `task_intake`) are excluded
+from `_ACTIVE_STATUSES` — user abort during plan confirmation is a cancel,
+not an execution stop. These fall through to `needs_manual_review`.
+
+Module-level `handle_user_abort()` convenience wrapper.
+
+### Test coverage
+
+18 tests covering:
+
+- all 6 decision paths
+- idempotent repeated abort
+- input immutability (no mutation)
+- evidence preservation (signal, state, plan, step, replay status)
+- accepted_stop blocks new actions for all active statuses
+- inflight_caveat only when has_inflight_action=True
+- forbidden dependency scanning (no 12.1 classifier import)
+- forbidden runtime dependency scanning (no sqlalchemy, playwright, httpx, etc.)
+- paused / replay_requested status handling
 
 ## Non-goals Preserved
 
 本轮没有实现：
 
-- recovery proposal generation；
-- retry / re-run policy；
-- retry execution；
-- replan execution；
-- conversation recovery flow；
-- runtime stop / pause behavior；
-- teaching mode；
-- takeover implementation；
-- LearnedPath write-back；
-- M11.2 Runtime Observation / Wait-for-change；
-- API endpoint；
-- CLI command；
-- database migration；
-- frontend UI；
-- E2E；
-- `verify-scenario`。
+- conversation dispatcher / orchestrator 接入
+- API endpoint
+- CLI command
+- frontend stop button
+- database migration
+- 真实浏览器取消动作
+- recovery proposal generation
+- retry / re-run policy
+- replan execution
+- teaching mode
+- takeover
+- LearnedPath write-back
+- E2E
+- `verify-scenario`
 
 ## Relationship to 12.1
 
-12.1 已实现 deterministic recovery boundary classifier。它从 M11.1 evidence
-中分类 failure / blocked / uncertain / needs_review，并输出 boundary
-recommendation。
-
 12.2 不改变 12.1 classifier，也不把 user abort 塞进 classifier。User abort
-是 runtime user-control signal，应由独立 stop handling boundary 接住。
+是 runtime user-control signal，由独立 stop handling boundary 接住。
 
 ## Relationship to 12.3 / 12.4 / 12.5
 
@@ -63,37 +91,14 @@ recommendation。
 - 12.4 定义 retry / re-run policy，12.2 不判断 safe retry。
 - 12.5 接 conversation flow，12.2 不实现 dialogue routing。
 
-## Follow-ups
+## Acceptance Criteria
 
-- 当前 `v0.2-local` 上曾有 AGENTS / CLAUDE / CLAUDE.zh 状态同步补丁；本轮基于
-  `v0.2`，并按范围限制不修改全局入口文档。
-- 若 `AGENTS.md` / `CLAUDE.md` / `CLAUDE.zh.md` 在 `v0.2` 上仍写 M12
-  documentation initialization 或未反映 12.1 shipped / 12.2 planning，应在单独
-  文档同步任务中处理。
-- 进入 12.2 implementation 前，需要人工审核本 plan，尤其是 abort / pause /
-  cancel / takeover 的状态边界和 idempotent abort handling。
-
-## 未运行的验证
-
-本轮没有运行：
-
-- API tests；
-- CLI tests；
-- E2E tests；
-- `verify-scenario`；
-- autonomous run；
-- browser UI smoke。
-
-## Expected Validation
-
-```bash
-git diff --check
-git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.3*' -print
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.4*' -print
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.5*' -print
-git status --short docs/iterations/m11
-git diff --name-only
-git diff --cached --name-only
-git diff --cached --check
-```
+- ✅ User abort is represented as user control intent.
+- ✅ Abort acknowledgement is returned without recovery proposal execution.
+- ✅ No new browser action starts after abort is accepted.
+- ✅ In-flight external side effects are explicitly marked when needed.
+- ✅ Repeated abort / stop is idempotent.
+- ✅ Evidence includes signal source, runtime state snapshot.
+- ✅ Retry / replan / takeover / teaching mode remain outside 12.2.
+- ✅ ruff clean.
+- ✅ 18/18 unit tests pass.

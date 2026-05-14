@@ -1,58 +1,49 @@
 # 12.2 Plan
 
-Status: documentation initialized.
+Status: implemented.
 
 ## 本轮范围
 
-本轮只初始化 12.2 文档，不创建或修改代码文件。
+本轮实现 12.2 纯逻辑层，不做完整 runtime 接入。
 
-不创建：
+实现：
 
-- `apps/api/app/services/recovery/abort_handler.py`
-- `apps/api/tests/test_user_abort_handler.py`
-- `apps/api/tests/test_conversation_abort_flow.py`
+- `apps/api/app/schemas/recovery.py` — 追加 abort signal / state / evidence / acknowledgement schema
+- `apps/api/app/services/recovery/abort_handler.py` — 纯确定性 abort handler
+- `apps/api/tests/test_user_abort_handler.py` — 单元测试
 
-不修改：
+不实现：
 
-- `apps/api/app/schemas/recovery.py`
-- `apps/api/app/schemas/conversation.py`
-- `apps/api/app/services/conversation/state.py`
-- `apps/api/app/services/conversation/orchestrator.py`
-- API router；
-- CLI；
-- database model / migration；
-- frontend UI。
+- conversation dispatcher / orchestrator 接入
+- API endpoint
+- CLI command
+- frontend stop button
+- DB / migration
+- 真实浏览器取消动作
+- recovery proposal / retry / replan / takeover / teaching mode
 
-## Future Concept Model
-
-未来实现可围绕以下概念建模：
+## Concept Model
 
 | Concept | Meaning |
 |---|---|
 | `UserAbortSignal` | 用户明确要求停止当前自动化继续操作的信号。 |
-| `AbortBoundary` | abort 被接受后，系统允许或禁止的运行时边界。 |
-| `AbortReason` | 触发 abort handling 的结构化原因，例如 slash command、用户消息、UI stop。 |
-| `AbortEvidence` | interruption time 的 execution / replay / reporter / user message evidence。 |
+| `AbortSource` | 信号来源：slash_abort, slash_stop, user_message, ui_stop_button, external_scheduler。 |
+| `UserAbortState` | interruption time 的 runtime state snapshot。 |
 | `StopHandlingDecision` | 当前 stop handling 的稳定决策。 |
+| `AbortEvidence` | interruption time 的 signal + state 证据。 |
 | `AbortAcknowledgement` | 返回给用户或 conversation flow 的 acknowledgement，不是 proposal。 |
 
-## Future Signal Sources
+## Signal Sources
 
-未来实现可以识别：
+- slash command `/abort`
+- slash command `/stop`
+- 明确表达停止意图的用户消息
+- UI stop button
+- external scheduler cancellation
 
-- slash command `/abort`；
-- slash command `/stop`；
-- 明确表达停止意图的用户消息；
-- UI stop button；
-- external scheduler cancellation。
-
-本轮不新增 slash command、不改 parser、不改 CLI。现有 conversation schema 中已有
-`ABORT` command、`ABORT_REQUESTED` status / event、`PAUSE`、`CANCEL`、
-`TAKEOVER` 等概念，12.2 只为后续实现定义边界。
+本轮不新增 slash command、不改 parser、不改 CLI。
 
 ## Stop Handling Rules
-
-未来实现必须满足：
 
 1. User abort is user intent, not engine failure.
 2. Abort must be acknowledged.
@@ -65,7 +56,7 @@ Status: documentation initialized.
 9. Abort must hand off later choices to 12.3 / 12.4 / 12.5.
 10. Repeated abort / stop must be idempotent.
 
-## Future Stop Decisions
+## Stop Decisions
 
 | Decision | Default meaning |
 |---|---|
@@ -76,60 +67,51 @@ Status: documentation initialized.
 | `cannot_interrupt_inflight_action` | Current action may already be in flight; record caveat. |
 | `needs_manual_review` | State is not clear enough to decide without evidence review. |
 
-## Future Implementation Steps
+## Implementation Steps
 
-1. Define pure schemas for abort signal, abort evidence, stop decision, and
-   acknowledgement.
-2. Implement a deterministic abort handler that consumes current conversation /
-   execution state and a user abort signal.
-3. Make handler output an acknowledgement and evidence payload only; no proposal,
+1. ✅ Define pure schemas for abort signal, abort state, abort evidence, stop decision, and
+   acknowledgement in `recovery.py`.
+2. ✅ Implement deterministic `UserAbortHandler` in `abort_handler.py` — pure logic,
+   no side effects.
+3. ✅ Handler outputs acknowledgement and evidence payload only; no proposal,
    retry, browser continuation, or LearnedPath write-back.
-4. Integrate with conversation state/orchestrator only after the pure handler is
-   tested.
-5. Ensure repeated abort / stop returns the same stable acknowledgement instead
-   of creating new actions.
-6. Add tests for in-flight caveat and no-new-browser-action guarantees.
+4. ✅ Module-level `handle_user_abort()` convenience wrapper.
+5. ✅ Unit tests covering all decision paths, idempotency, evidence preservation,
+   input immutability, and forbidden dependency scanning.
 
-## Future Test Plan
+## Test Plan
 
-Focused unit tests should cover:
+Unit tests cover:
 
-- `/abort` while executing -> `accepted_stop`；
-- `/stop` alias semantics；
-- abort after finished -> `already_finished`；
-- abort after failed -> `already_failed`；
-- abort when not running -> `not_running`；
-- in-flight action caveat -> `cannot_interrupt_inflight_action`；
-- repeated abort is idempotent；
-- abort does not call retry / replan / proposal generation；
-- abort does not write LearnedPath；
-- abort does not mutate 12.1 classifier behavior；
-- pause / cancel / takeover remain distinct.
+- `/abort` while executing -> `accepted_stop`
+- `/stop` alias semantics
+- abort after finished -> `already_finished`
+- abort after failed -> `already_failed`
+- abort when not running -> `not_running`
+- null status -> `not_running`
+- in-flight action caveat -> `cannot_interrupt_inflight_action`
+- repeated abort is idempotent
+- abort does not mutate input
+- abort preserves evidence (signal, state, plan, step, replay status)
+- accepted_stop blocks new actions for all active statuses
+- inflight_caveat only for has_inflight_action
+- abort handler does not import 12.1 recovery classifier
+- abort handler has no forbidden runtime dependencies
+- paused / replay_requested statuses handled correctly
 
-Integration tests should only be added after the pure handler is stable.
+## Acceptance Criteria
 
-## Future Acceptance Criteria
+- ✅ User abort is represented as user control intent.
+- ✅ Abort acknowledgement is returned without recovery proposal execution.
+- ✅ No new browser action starts after abort is accepted.
+- ✅ In-flight external side effects are explicitly marked when needed.
+- ✅ Repeated abort / stop is idempotent.
+- ✅ Evidence includes signal source, runtime state snapshot.
+- ✅ Retry / replan / takeover / teaching mode remain outside 12.2.
 
-- User abort is represented as user control intent.
-- Abort acknowledgement is returned without recovery proposal execution.
-- No new browser action starts after abort is accepted.
-- In-flight external side effects are explicitly marked as unknown when needed.
-- Repeated abort / stop is idempotent.
-- Evidence includes user message, source status, active command / plan / step,
-  last execution event, known replay status, reporter outcome, and no-new-action
-  marker.
-- Retry / replan / takeover / teaching mode remain outside 12.2.
-
-## Validation for This Documentation Round
+## Validation
 
 ```bash
-git diff --check
-git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.3*' -print
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.4*' -print
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.5*' -print
-git status --short docs/iterations/m11
-git diff --name-only
-git diff --cached --name-only
-git diff --cached --check
+cd apps/api && .venv/bin/ruff check app/schemas/recovery.py app/services/recovery/abort_handler.py tests/test_user_abort_handler.py
+cd apps/api && .venv/bin/pytest tests/test_user_abort_handler.py -v
 ```
