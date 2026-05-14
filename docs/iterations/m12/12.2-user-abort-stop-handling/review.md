@@ -10,7 +10,7 @@ Status: implemented.
 
 - `apps/api/app/schemas/recovery.py` — 追加 AbortSource, StopHandlingDecision, UserAbortSignal, UserAbortState, AbortEvidence, AbortAcknowledgement
 - `apps/api/app/services/recovery/abort_handler.py` — 新建，纯确定性 handler
-- `apps/api/tests/test_user_abort_handler.py` — 新建，18 个单元测试
+- `apps/api/tests/test_user_abort_handler.py` — 新建，19 个单元测试
 
 ### Schema contracts
 
@@ -49,12 +49,13 @@ Module-level `handle_user_abort()` convenience wrapper.
 
 ### Test coverage
 
-18 tests covering:
+19 tests covering:
 
 - all 6 decision paths
 - idempotent repeated abort
 - input immutability (no mutation)
 - evidence preservation (signal, state, plan, step, replay status)
+- captured_at propagates from signal.timestamp when present
 - accepted_stop blocks new actions for all active statuses
 - inflight_caveat only when has_inflight_action=True
 - forbidden dependency scanning (no 12.1 classifier import)
@@ -101,4 +102,4 @@ Module-level `handle_user_abort()` convenience wrapper.
 - ✅ Evidence includes signal source, runtime state snapshot.
 - ✅ Retry / replan / takeover / teaching mode remain outside 12.2.
 - ✅ ruff clean.
-- ✅ 18/18 unit tests pass.
+- ✅ 19/19 unit tests pass.

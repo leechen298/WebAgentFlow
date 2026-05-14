@@ -153,5 +153,19 @@ class AbortAcknowledgement(BaseModel):
     decision: StopHandlingDecision
     message: str
     evidence: AbortEvidence
-    no_new_actions_after: bool = True
-    inflight_caveat: bool = False
+    no_new_actions_after: bool = Field(
+        default=True,
+        description=(
+            "Stop boundary flag: True means the caller must not start new browser "
+            "actions. False means no active automation was running to stop. "
+            "This is NOT an invitation to start new actions — it only describes "
+            "whether the stop boundary applies."
+        ),
+    )
+    inflight_caveat: bool = Field(
+        default=False,
+        description=(
+            "True when a browser action may already be in flight at abort time. "
+            "The caller must not assume external side effects are reversible."
+        ),
+    )

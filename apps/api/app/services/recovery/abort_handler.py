@@ -121,7 +121,7 @@ class UserAbortHandler:
         return AbortEvidence(
             signal=signal,
             state=state,
-            captured_at=None,
+            captured_at=signal.timestamp,
         )
 
     # ------------------------------------------------------------------

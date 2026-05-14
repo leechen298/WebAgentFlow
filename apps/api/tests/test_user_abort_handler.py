@@ -155,6 +155,18 @@ def test_abort_preserves_evidence() -> None:
     assert result.evidence.state.replay_status == "in_progress"
 
 
+def test_captured_at_propagates_from_signal_timestamp() -> None:
+    result = handle(
+        _make_signal("slash_abort"),
+        _make_state(session_status="executing"),
+    )
+    assert result.evidence.captured_at is None
+
+    signal_with_ts = {"source": "slash_abort", "timestamp": "2026-05-14T10:00:00Z"}
+    result_ts = handle(signal_with_ts, _make_state(session_status="executing"))
+    assert result_ts.evidence.captured_at == "2026-05-14T10:00:00Z"
+
+
 def test_accepted_stop_blocks_new_actions() -> None:
     for status in ("executing", "replay_running", "plan_confirmed", "paused"):
         result = handle(
