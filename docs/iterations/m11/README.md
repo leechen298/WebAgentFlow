@@ -43,6 +43,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.1.8-task-to-path-tests-and-evidence](./11.1.8-task-to-path-tests-and-evidence/) —— Task-to-path Tests and Evidence。状态：完成（1104 API tests passed, 25 E2E passed, ruff clean, no P1/P2）。
 - [11.2-runtime-observation-realistic-hardening](./11.2-runtime-observation-realistic-hardening/) —— M11.2 总纲：运行时观察与真实网页稳健性增强。状态：11.2.0 文档初始化完成。
 - [11.2.1-observation-signal-contract](./11.2.1-observation-signal-contract/) —— Observation Signal Contract。状态：文档生成完成。
+- [11.2.2-wait-for-change-mvp](./11.2.2-wait-for-change-mvp/) —— Wait-for-change MVP。状态：文档生成完成，能力未实现。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -51,3 +52,42 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 文档初始化目录，不代表 runtime observation 功能已经实现。
 `11.2.1-observation-signal-contract/` 只定义文档级 Observation Signal Contract，
 不代表 wait-for-change、page-load waiting 或 reporter integration 已实现。
+`11.2.2-wait-for-change-mvp/` 只定义文档级 Wait Result 和 Wait Strategy，
+不代表 wait-for-change、page-load waiting、Agent 判断或 reporter integration
+已实现。
+
+## Possible M11.3 · Page Context Bridge Decision Point
+
+M11.2 完成后，可以根据实际验证结果决定是否插入一个小型 M11.3。这个条目是
+候选决策点，不是已确定执行包；本轮不创建 11.3 目录。
+
+M11.3 的候选方向是 Page Context Bridge / 页面语义上下文桥接。它不是完整 M14，
+也不是完整 Page Understanding Agent 提前实现。
+
+如果 M11.2 收口后发现主要瓶颈不是“执行和观察”，而是 learned path 的业务语义
+太弱、Task Path Planner 缺少页面上下文、Task Result Reporter 汇报像执行日志、
+或 execution evidence 有了但缺少页面级语义解释，可以考虑该候选点。
+
+候选目标：
+
+- 定义轻量 Page Context Contract。
+- 从已有 LearnedPath metadata、page_template、scenario、route plan、observation
+  evidence 中整理页面上下文。
+- 为 Task Path Planner 和 Task Result Reporter 提供轻量语义上下文。
+- 不要求 L3 实时读取 raw HTML。
+- 不让 LLM 进入 per-step execution loop。
+
+M11.3 不做：
+
+- 不实现完整 Page Understanding Agent。
+- 不实现 Attempt Evaluation Agent。
+- 不实现 Learning Report Agent。
+- 不重构 L1 autonomous learning。
+- 不读取 raw HTML 做 runtime planner。
+- 不让 LLM 在 L3 每一步看网页决定怎么点。
+- 不替代 Task Path Planner。
+- 不替代 Task Result Reporter。
+- 不做 recovery / retry / abort / user takeover。
+- 不创建 M14 范围内的 learning quality / coverage / negative knowledge 系统。
+
+完整 Page Understanding Agent 仍然属于后续 M14 范围。

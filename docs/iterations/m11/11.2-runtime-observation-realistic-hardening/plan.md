@@ -72,6 +72,22 @@ cases，但不实现观察、wait-for-change、replay integration 或 reporter i
 - `loading_started` / `loading_finished` 是页面内 visible loading UI signal。
 - timeout / not-observed 不属于 11.2.1 signal kind。
 
+## 与 11.2.2 的关系
+
+11.2.2 在 11.2.1 的 Observation Signal Contract 基础上定义 Wait-for-change MVP。
+它应明确 Wait Result 描述“等待过程如何结束”，Observation Signal 描述“观察到了
+什么”。
+
+11.2.2 必须明确：
+
+- Wait-for-change MVP 优先覆盖 `post_action` wait。
+- `timeout` / `skipped` / `not_required` 是 wait outcome，不是 signal kind。
+- Wait Strategy 只是后续实现方向，不代表能力已实现。
+- wait 层不使用 Agent 判断业务成功。
+- Agent 式解释留给 11.2.5 evidence-aware Task Result Reporter。
+- Page Understanding Agent 不参与 11.2.2。
+- M11.3 只作为 M11.2 后的候选决策点，不创建 11.3 目录。
+
 ## 验证
 
 只运行：

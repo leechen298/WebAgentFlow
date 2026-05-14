@@ -846,7 +846,7 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 ## M11.2 · 运行时观察与真实网页稳健性增强
 
-状态：11.2.0 文档初始化完成。
+状态：11.2.2 文档生成完成，能力未实现。
 
 M11.2 是 v0.1 后续优化。它不继续扩展 task-to-path 规划逻辑，而是在
 M11.1 已完成的 replay execution / result reporting 后补运行时观察边界。
@@ -986,11 +986,63 @@ Passive Runtime Observation 是非用户主动操作触发的页面变化。
 
 ### 11.2.2 · 等待变化 MVP
 
-状态：计划中。
+状态：文档生成完成，能力未实现。
 
-目标方向：定义 replay 动作后等待页面变化的最小能力，覆盖 loading 消失、
-toast / modal 出现、按钮 enabled、文本 / URL / title / element 变化。不得
-实现 retry 或自动 recovery。
+目标：
+
+- 定义 Wait-for-change MVP 的文档级设计。
+- 定义 replay action 后短窗口等待页面变化的最小语义。
+- 定义 Wait Result 字段 proposal 和 status。
+- 定义 Wait Strategy 方向。
+- 明确 Wait Result 和 Observation Signal 的关系。
+- 明确 wait 层不使用 Agent 判断业务成功。
+- 明确 Agent 式解释留给 11.2.5 evidence-aware Task Result Reporter。
+
+交付：
+
+- `docs/iterations/m11/11.2.2-wait-for-change-mvp/README.md`
+- `docs/iterations/m11/11.2.2-wait-for-change-mvp/intent.md`
+- `docs/iterations/m11/11.2.2-wait-for-change-mvp/design.md`
+- `docs/iterations/m11/11.2.2-wait-for-change-mvp/plan.md`
+- `docs/iterations/m11/11.2.2-wait-for-change-mvp/review.md`
+
+设计边界：
+
+- Wait-for-change MVP 优先覆盖 `post_action` wait。
+- `passive_runtime` 不作为 11.2.2 MVP 的连续后台观察目标。
+- Wait Result status 收敛为 `observed`、`timeout`、`skipped`、`not_required`。
+- `timeout` / `skipped` / `not_required` 是 wait outcome，不是 Observation Signal kind。
+- Wait Strategy 只是后续实现方向，不代表能力已实现。
+- `network_idle_observed` 只能作为辅助信号，不能单独代表业务成功。
+
+Agent / Reporter 边界：
+
+- Wait-for-change MVP 不使用 Agent 判断业务是否成功。
+- wait 层只负责等待、观察、记录，产出结构化 wait results 和 observation signals。
+- 不引入每一步 wait 后的 Agent 业务判断。
+- 不引入 Agent 驱动的 retry、recovery、abort、user takeover 或 next-step decision。
+- 11.2.5 才考虑 evidence-aware Task Result Reporter 如何消费 wait results 和
+  observation signals。
+
+Page Understanding Agent 边界：
+
+- 11.2.2 不调用 Page Understanding Agent。
+- Page Understanding Agent 属于 L1 / M14 的页面学习语义理解角色。
+- 如果后续需要基于完整 replay evidence 做解释，应由 11.2.5 的 evidence-aware
+  Task Result Reporter 承接，而不是把 Page Understanding Agent 放进 wait loop。
+
+边界：
+
+- 不写代码。
+- 不新增测试代码。
+- 不运行 E2E。
+- 不修改 public API / database schema / TypeScript schema / Python schema。
+- 不实现 runtime observation / wait-for-change / page-load waiting。
+- 不修改 replay execution。
+- 不修改 Task Result Reporter。
+- 不做 recovery / retry / abort / interruption / user takeover。
+- 不读取或保存 raw HTML。
+- 不创建 M12 / M14 / 11.3 目录。
 
 ### 11.2.3 · replay 与观察集成
 
@@ -1026,6 +1078,84 @@ postcondition evidence 时仍必须保守返回 `uncertain` / `needs_review`。
 
 目标方向：对 M11.2 observation 能力做测试和证据收口。它是 evidence closure，
 不是新 runtime feature 包。
+
+## Possible M11.3 · Page Context Bridge Decision Point
+
+状态：候选决策点，不是已确定执行包。
+
+M11.2 完成后，可以根据实际验证结果决定是否插入一个小型 M11.3。M11.3 的候选
+方向是 Page Context Bridge / 页面语义上下文桥接。
+
+它不是完整 M14，也不是完整 Page Understanding Agent 提前实现。
+
+### Why this may be needed
+
+M11.1 / M11.2 可以在没有 Page Understanding Agent 的情况下跑通：
+
+```text
+用户任务
+-> LearnedPath retrieval / ranking
+-> Task Path Planner
+-> 用户确认
+-> replay execution
+-> observation / wait evidence
+-> Task Result Reporter
+```
+
+但 M11.2 收口后，如果发现主要瓶颈不是“执行和观察”，而是：
+
+- learned path 的业务语义太弱。
+- Task Path Planner 缺少页面上下文。
+- Task Result Reporter 汇报像执行日志，不像任务结果。
+- execution evidence 有了，但缺少页面级语义解释。
+
+则可以考虑插入 M11.3 Page Context Bridge。
+
+### M11.3 candidate scope
+
+M11.3 只作为候选后续包记录，不在 11.2.2 实现，也不在本轮创建目录。
+
+候选目标：
+
+- 定义轻量 Page Context Contract。
+- 从已有 LearnedPath metadata、page_template、scenario、route plan、observation
+  evidence 中整理页面上下文。
+- 为 Task Path Planner 和 Task Result Reporter 提供轻量语义上下文。
+- 不要求 L3 实时读取 raw HTML。
+- 不让 LLM 进入 per-step execution loop。
+
+示例 Page Context：
+
+```json
+{
+  "page_context_summary": "这是一个订单查询页面",
+  "known_task_domain": "search_and_filter",
+  "expected_result_shape": "列表刷新 / 出现目标文本 / 导出文件",
+  "source": "learned_path_metadata"
+}
+```
+
+### Explicit non-goals
+
+M11.3 不等于 M14 提前。
+
+M11.3 不做：
+
+- 不实现完整 Page Understanding Agent。
+- 不实现 Attempt Evaluation Agent。
+- 不实现 Learning Report Agent。
+- 不重构 L1 autonomous learning。
+- 不读取 raw HTML 做 runtime planner。
+- 不让 LLM 在 L3 每一步看网页决定怎么点。
+- 不替代 Task Path Planner。
+- 不替代 Task Result Reporter。
+- 不做 recovery / retry / abort / user takeover。
+- 不创建 M14 范围内的 learning quality / coverage / negative knowledge 系统。
+
+完整 Page Understanding Agent 仍然属于后续 M14 范围。
+
+M11.3 只是一个 M11.2 之后的可选决策点：如果语义上下文成为瓶颈，再考虑插入；
+否则继续进入 M12 Recovery & Abort Dialogue。
 
 ## 执行规则
 

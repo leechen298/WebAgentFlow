@@ -67,6 +67,7 @@ Observation Signal 是 replay/runtime 观察层产生的结构化记录，用于
 - 不修改 replay execution。
 - 不修改 Task Result Reporter。
 - 不实现 wait-for-change。
+- 不实现 page-load waiting。
 - 不实现 mutation observer。
 - 不实现 network observer。
 - 不实现 WebSocket / SSE 观察。
