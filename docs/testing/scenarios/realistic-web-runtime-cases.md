@@ -99,6 +99,23 @@ Runtime Observation 覆盖不是由当前动作直接触发的页面变化。
 - 后续执行包（future package）：11.2.2 wait-for-change MVP / 11.2.3 replay
   integration with observation。
 
+### 动作后延迟完整页面刷新（Delayed Full Page Reload After Action）
+
+- 场景名称（case name）：delayed full page reload after action。
+- 场景（scenario）：用户点击提交、保存、跳转或确认按钮后，页面触发完整
+  document reload。URL 可能变化，也可能保持不变。刷新完成前，新内容不会立即出现。
+- 价值（why it matters）：replay 不能在点击后立即判断结果，否则会误判页面尚未
+  稳定。same-url reload 也不能只靠 URL 变化判断。
+- M11.2 预期观察（expected observation）：记录 `page_load_started` 和
+  `page_load_finished`；可选记录 `url_changed`、`title_changed`、
+  `text_appeared`、`network_idle_observed`。
+- 不在范围（not in scope）：不判断刷新失败后是否 retry，不处理 timeout
+  recovery，不自动 abort。
+- 后续 M12 含义（future M12 implication）：如果 page load 长时间未完成，M12
+  可基于 observation evidence 决定是否提出 retry / recovery / user takeover。
+- 后续执行包（future package）：11.2.1 observation signal contract / 11.2.2
+  wait-for-change MVP / 11.2.3 replay integration。
+
 ### 校验错误信息（Validation Error Message）
 
 - 场景名称（case name）：validation error message。

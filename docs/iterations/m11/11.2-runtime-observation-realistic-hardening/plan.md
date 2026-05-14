@@ -58,6 +58,20 @@
 
 catalog 不得声称这些 case 已经自动化、人工验证或被 E2E 覆盖。
 
+## 与 11.2.1 的关系
+
+11.2.1 在 11.2.0 的 scope 和 case catalog 基础上定义 Observation Signal
+Contract。它应覆盖本目录和
+`docs/testing/scenarios/realistic-web-runtime-cases.md` 中列出的核心 runtime
+cases，但不实现观察、wait-for-change、replay integration 或 reporter integration。
+
+11.2.1 必须明确：
+
+- `page_load_started` / `page_load_finished` 是浏览器级 page load /
+  document reload signal。
+- `loading_started` / `loading_finished` 是页面内 visible loading UI signal。
+- timeout / not-observed 不属于 11.2.1 signal kind。
+
 ## 验证
 
 只运行：

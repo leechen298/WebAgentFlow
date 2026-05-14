@@ -953,11 +953,36 @@ Passive Runtime Observation 是非用户主动操作触发的页面变化。
 
 ### 11.2.1 · 观察信号契约
 
-状态：计划中。
+状态：文档生成完成。
 
-目标方向：定义 observation signal 的结构化 contract，包括 source、timing、
-trigger relation、observed change、confidence、evidence reference 和 relevance
-边界。不得实现 recovery policy。
+目标：
+
+- 定义 Observation Signal 的文档级 contract。
+- 定义 signal kind、scope、推荐字段和 conservative reporting 边界。
+- 明确 `page_load_started` / `page_load_finished` 描述浏览器级页面加载、
+  导航、完整刷新或 document reload。
+- 明确 `loading_started` / `loading_finished` 描述页面内可见 loading UI。
+- 明确 timeout / not-observed outcome 属于后续 wait-for-change result 设计，
+  不作为 11.2.1 signal kind。
+
+交付：
+
+- `docs/iterations/m11/11.2.1-observation-signal-contract/README.md`
+- `docs/iterations/m11/11.2.1-observation-signal-contract/intent.md`
+- `docs/iterations/m11/11.2.1-observation-signal-contract/contract.md`
+- `docs/iterations/m11/11.2.1-observation-signal-contract/plan.md`
+- `docs/iterations/m11/11.2.1-observation-signal-contract/review.md`
+
+边界：
+
+- 不写代码。
+- 不新增测试代码。
+- 不修改 public API / database schema / TypeScript schema / Python schema。
+- 不实现 wait-for-change / page-load waiting。
+- 不修改 replay execution。
+- 不修改 Task Result Reporter。
+- 不做 recovery / retry / abort / interruption / user takeover。
+- 不读取或保存 raw HTML。
 
 ### 11.2.2 · 等待变化 MVP
 

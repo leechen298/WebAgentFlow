@@ -103,13 +103,18 @@ reporter integration。
 ## 后续 11.2.x 拆包
 
 - 11.2.0 · 运行时观察范围与真实场景目录（Runtime Observation Scope & Realistic Case Catalog）。
-- 11.2.1 · 观察信号契约（Observation Signal Contract）。
+- 11.2.1 · [观察信号契约（Observation Signal Contract）](../11.2.1-observation-signal-contract/)。
 - 11.2.2 · 等待变化 MVP（Wait-for-change MVP）。
 - 11.2.3 · replay 与观察集成（Replay Integration with Observation）。
 - 11.2.4 · 真实场景 fixture 页面（Realistic Fixture Pages）。
 - 11.2.5 · 观察证据接入 Task Result Reporter（Observation Evidence into Task Result Reporter）。
 - 11.2.6 · Codex 真实网页 QA（Codex Realistic Web QA）。
 - 11.2.7 · 运行时观察测试与证据（Runtime Observation Tests and Evidence）。
+
+11.2.1 的核心 contract 文档是
+[`contract.md`](../11.2.1-observation-signal-contract/contract.md)。它只定义
+文档级 signal contract，不代表 runtime observation、wait-for-change 或 reporter
+integration 已实现。
 
 ## 硬边界
 
