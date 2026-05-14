@@ -1,15 +1,23 @@
 # Review and Reflection
 
-Status: documentation initialized.
+Status: implementation completed.
 
 ## 初始化记录
 
 - 创建 12.1 Failure Classification and Recovery Boundary 文档目录。
-- 本轮只做文档初始化。
-- 本轮只修改 `docs/iterations/m12/**`。
-- 本轮没有实现 schema、service、test 或 runtime behavior。
+- 实现 deterministic recovery boundary classifier。
+- 新增 schema、service、focused unit tests。
 - 本轮没有创建 12.2 / 12.3 / 12.4 目录。
 - 本轮没有修改 `docs/iterations/m11/**` 历史文档。
+
+## Created / Modified Files
+
+- `apps/api/app/schemas/recovery.py`
+- `apps/api/app/services/recovery/__init__.py`
+- `apps/api/app/services/recovery/classifier.py`
+- `apps/api/tests/test_recovery_classifier.py`
+- `docs/iterations/m12/12.1-failure-classification-recovery-boundary/plan.md`
+- `docs/iterations/m12/12.1-failure-classification-recovery-boundary/review.md`
 
 ## Scope Summary
 
@@ -34,16 +42,79 @@ recommender。它从 M11.1 structured execution / result reporting evidence 出�
 - LearnedPath write-back；
 - user abort handling。
 
+## Classification Precedence
+
+实现固化的 precedence：
+
+```text
+blocked > failure > uncertain > needs_review marker > success_no_recovery_needed
+```
+
+含义：
+
+- blocked 是最强边界，不能被 retry candidate 覆盖。
+- failure 表示明确负面 evidence。
+- uncertain 表示 replay 可能完成但缺 postcondition evidence。
+- needs_review marker 保留在 evidence references 中，但不覆盖 blocked /
+  failure / uncertain。
+- success 只能来自 `task_verified=True` 加 explicit postcondition evidence。
+
+## Retry Guard
+
+`retry_candidate=True` 只可能把安全边界标记为
+`retry_possible_requires_confirmation`，并且只作为 later 12.3 / 12.4 /
+user-confirmation consideration。
+
+它不能覆盖：
+
+- blocked；
+- unsupported action；
+- unsafe / unknown state；
+- permission / auth blocked；
+- missing required context；
+- unknown side effects。
+
+这些场景必须保持 `ask_user` 或 `stop`。
+
 ## Follow-up References
 
 本轮未发现必须立即修改的 `docs/iterations/m12/**` 外部 stale reference。若后续
 全局状态文档需要同步，应在单独文档同步任务中处理，不混入 12.1 初始化提交。
 
+## Test Evidence
+
+```bash
+cd apps/api && .venv/bin/python -m pytest tests/test_recovery_classifier.py -q
+```
+
+Result: `16 passed`
+
+```bash
+cd apps/api && .venv/bin/ruff check app/schemas/recovery.py app/services/recovery tests/test_recovery_classifier.py
+```
+
+Result: `All checks passed!`
+
+Covered:
+
+- success -> `success_no_recovery_needed`；
+- replay failed -> `failure`；
+- drift / target missing -> `suggest_reteach`；
+- missing context -> `ask_user`；
+- unsupported action -> `stop`；
+- insufficient postcondition evidence -> `uncertain`；
+- explicit needs_review marker；
+- blocked / failure / uncertain precedence；
+- retry candidate boundary marker；
+- retry guard for permission / auth blocked；
+- input immutability；
+- evidence references；
+- forbidden dependency imports。
+
 ## 未运行的验证
 
 本轮没有运行：
 
-- API tests；
 - CLI tests；
 - E2E tests；
 - `verify-scenario`；

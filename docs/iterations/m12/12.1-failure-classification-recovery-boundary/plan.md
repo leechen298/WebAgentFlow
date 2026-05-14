@@ -1,50 +1,42 @@
 # 12.1 Implementation Plan
 
-Status: documentation initialized.
+Status: implementation completed.
 
-## 本轮文件
+## 实现文件
 
-本轮只创建和更新 M12 文档：
-
-- `docs/iterations/m12/12.1-failure-classification-recovery-boundary/README.md`
-- `docs/iterations/m12/12.1-failure-classification-recovery-boundary/intent.md`
-- `docs/iterations/m12/12.1-failure-classification-recovery-boundary/plan.md`
-- `docs/iterations/m12/12.1-failure-classification-recovery-boundary/review.md`
-- `docs/iterations/m12/README.md`
-- `docs/iterations/m12/m12-plan.md`
-
-本轮不创建任何代码文件。
-
-## 未来可能触及的模块
-
-进入 12.1 implementation 前，可以考虑新增：
+本轮实现 12.1 deterministic recovery classifier，并更新本 12.1 文档：
 
 - `apps/api/app/schemas/recovery.py`：定义 `FailureClassification`、
-  `RecoveryBoundary`、`ClassificationReason`、`EvidenceReference`、
-  `BoundaryRecommendation` 等 schema。
-- `apps/api/app/services/recovery/classifier.py`：从 M11.1 execution / reporter
-  evidence 中派生 classification 和 boundary recommendation。
-- `apps/api/tests/test_recovery_classifier.py`：覆盖 classification matrix、
-  evidence references、non-execution contract 和 forbidden dependency checks。
+  `BoundaryRecommendation`、`ClassificationReason`、`EvidenceReference`、
+  `RecoveryEvidence`、`RecoveryBoundary`。
+- `apps/api/app/services/recovery/classifier.py`：确定性 classifier。入口为
+  `classify_recovery_boundary(...)`，内部由 `RecoveryBoundaryClassifier`
+  实现。
+- `apps/api/app/services/recovery/__init__.py`：导出 recovery classifier。
+- `apps/api/tests/test_recovery_classifier.py`：覆盖分类矩阵、precedence、
+  retry guard、evidence references、input immutability 和 forbidden imports。
+- `docs/iterations/m12/12.1-failure-classification-recovery-boundary/plan.md`
+- `docs/iterations/m12/12.1-failure-classification-recovery-boundary/review.md`
 
-这些文件只是未来候选路径。本轮不创建这些代码文件，不创建测试文件。
+没有修改 API router、CLI、conversation dispatcher、database model、Alembic
+migration、frontend console、E2E tests、Playwright tests、M11 history docs、
+12.2 / 12.3 / 12.4 docs。
 
-## 未来实现步骤
+## 实现边界
 
-1. 定义 recovery schema，保持结构化、可序列化、可审计。
-2. 建立 classifier 输入边界，只接受 M11.1 execution / result reporter evidence。
-3. 实现确定性分类规则，先覆盖 `failed`、`blocked`、`uncertain`、
-   `needs_review` 和 `success_no_recovery_needed`。
-4. 为每个 classification 生成 `ClassificationReason` 和 `EvidenceReference`。
-5. 为每个 classification 派生 `BoundaryRecommendation`。
-6. 加入 forbidden dependency checks，确保 classifier 不调用 replay、
-   autonomous run、LLM provider、raw HTML parser、LearnedPath write-back 或
-   browser continuation。
-7. 只在未来人工审核 plan 后进入实现，不在本轮执行。
+classifier 输入是 M11.1-compatible `RecoveryEvidence`，也接受
+`Mapping[str, Any]`。输出是 `RecoveryBoundary`：
 
-## 未来分类优先级草案
+- classification；
+- recommendation；
+- reason；
+- evidence references；
+- message。
 
-进入 implementation 前必须人工审核最终 precedence。初始建议：
+schema 是纯数据结构，不包含执行逻辑。classifier 是纯服务逻辑，不访问 DB、
+浏览器、网络、LLM、conversation dispatcher，也不写 LearnedPath。
+
+## 分类优先级
 
 ```text
 blocked > failure > uncertain > needs_review marker > success_no_recovery_needed
@@ -64,7 +56,7 @@ blocked > failure > uncertain > needs_review marker > success_no_recovery_needed
 如果多个信号同时出现，primary classification 按 precedence 选择；reason 必须
 说明被保留的次级信号，不能丢失 evidence。
 
-## 未来分类规则草案
+## 分类规则
 
 | Input evidence | Classification | Boundary recommendation |
 |---|---|---|
@@ -80,44 +72,39 @@ that later 12.3 / 12.4 / user-confirmation flow may consider retry. 12.1
 must not make the complete retry allowed / denied decision; that belongs to
 12.4.
 
-## 未来测试计划
+`retry_candidate=True` 不能覆盖 stronger safety boundaries。blocked、
+unsupported action、unsafe / unknown state、permission / auth block、missing
+context、unknown side effects 等情况必须保留 `ask_user` 或 `stop`。
 
-未来 implementation 应覆盖：
+## 测试覆盖
 
-- successful replay without postcondition evidence -> `uncertain` +
-  `needs_review` recommendation；
-- failed replay -> `failure` + `stop` 或 future retry consideration boundary；
-- drifted replay -> `failure` + evidence reference；
-- missing `target_url` / `learned_path_id` -> `blocked` + `ask_user`；
-- `needs_review=true` reporter payload -> `needs_review`；
-- conflicting signals follow the documented classification precedence while
-  preserving secondary evidence in reason / evidence references；
-- explicit postcondition evidence + `task_verified=true` ->
-  `success_no_recovery_needed`；
-- repeated drift / stale path evidence -> `suggest_reteach` recommendation，
-  但无 LearnedPath write-back；
-- no raw HTML, no LLM provider, no autonomous run, no replay execution；
-- user abort signal 不进入 12.1 classifier，交给 12.2。
+- success -> `success_no_recovery_needed` + `no_recovery_needed`；
+- replay failed -> `failure` + `stop`；
+- drift / target missing -> `failure` + `suggest_reteach`；
+- missing context -> `blocked` + `ask_user`；
+- unsupported action -> `blocked` + `stop`；
+- insufficient postcondition evidence -> `uncertain` + `needs_review`；
+- explicit needs_review marker -> `needs_review`；
+- precedence: blocked beats failure；
+- precedence: failure beats uncertain；
+- precedence: uncertain beats needs_review marker；
+- retry candidate returns only `retry_possible_requires_confirmation` and never
+  executes retry；
+- retry candidate does not override permission/auth blocked；
+- classifier does not mutate input evidence；
+- evidence references preserve structured inputs；
+- forbidden dependency imports are absent.
 
-## 验收标准
+## 验证
 
-未来 12.1 implementation 才能声称完成的条件：
-
-- classifier 输出包含 classification、reason、evidence references 和 boundary
-  recommendation。
-- classifier 不执行 retry、replan、browser continuation、recovery proposal、
-  hidden relearning 或 LearnedPath write-back。
-- classifier 不读取 raw HTML 做自由规划，不依赖默认 LLM provider。
-- 所有 classification 和 boundary recommendation 都有 deterministic tests。
-- 文档和 review 记录清楚说明 12.1 与 12.2 / 12.3 / 12.4 的边界。
-
-## 本轮验证
-
-本轮只运行文档级静态检查：
+本轮只运行 focused unit / static checks，不运行 API full regression、CLI、E2E、
+`verify-scenario` 或 browser UI smoke。
 
 ```bash
 git diff --check
-git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'
+cd apps/api && .venv/bin/python -m pytest tests/test_recovery_classifier.py -q
+cd apps/api && .venv/bin/ruff check app/schemas/recovery.py app/services/recovery tests/test_recovery_classifier.py
+git status --short -- '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'
 find docs/iterations/m12 -maxdepth 1 -type d -name '12.2*' -print
 find docs/iterations/m12 -maxdepth 1 -type d -name '12.3*' -print
 find docs/iterations/m12 -maxdepth 1 -type d -name '12.4*' -print
@@ -126,5 +113,3 @@ git diff --name-only
 git diff --cached --name-only
 git diff --cached --check
 ```
-
-不运行 API / CLI / E2E / `verify-scenario`。
