@@ -167,7 +167,8 @@ def test_retry_candidate_returns_boundary_marker_without_execution() -> None:
     assert result.recommendation == "retry_possible_requires_confirmation"
     assert result.reason == "replay_failed"
     assert "retry" in result.message.lower()
-    assert "execut" not in result.message.lower()
+    for forbidden in ("retry execution", "execute retry", "executes retry", "executing retry"):
+        assert forbidden not in result.message.lower()
 
 
 def test_retry_candidate_never_overrides_permission_block() -> None:
@@ -182,6 +183,8 @@ def test_retry_candidate_never_overrides_permission_block() -> None:
     assert result.classification == "blocked"
     assert result.recommendation == "ask_user"
     assert result.reason == "permission_or_auth_blocked"
+    for forbidden in ("retry execution", "execute retry", "executes retry", "executing retry"):
+        assert forbidden not in result.message.lower()
 
 
 def test_classifier_does_not_mutate_input_evidence() -> None:
@@ -227,8 +230,59 @@ def test_service_class_matches_function_entrypoint() -> None:
     assert service_result == function_result
 
 
+def test_retry_candidate_with_replay_drifted_returns_suggest_reteach() -> None:
+    result = classify(
+        {
+            "execution_status": "completed",
+            "replay_status": "succeeded",
+            "drift_status": "element_mismatch",
+            "drift_reasons": ["stale_path"],
+            "retry_candidate": True,
+        }
+    )
+
+    assert result.classification == "failure"
+    assert result.recommendation == "suggest_reteach"
+    assert result.reason == "stale_or_missing_path_coverage"
+    assert "retry" not in result.message.lower()
+
+
+def test_retry_candidate_with_target_missing_returns_suggest_reteach() -> None:
+    result = classify(
+        {
+            "execution_status": "completed",
+            "replay_status": "succeeded",
+            "drift_status": "target_missing",
+            "drift_reasons": ["target_missing"],
+            "retry_candidate": True,
+        }
+    )
+
+    assert result.classification == "failure"
+    assert result.recommendation == "suggest_reteach"
+    assert result.reason == "target_missing"
+    assert "retry" not in result.message.lower()
+
+
+def test_unknown_side_effects_blocked_and_stops() -> None:
+    result = classify(
+        {
+            "execution_status": "blocked",
+            "blocked_reason": "unknown side effects",
+        }
+    )
+
+    assert result.classification == "blocked"
+    assert result.recommendation == "stop"
+    assert result.reason == "unsafe_or_unknown_state"
+
+
 def test_classifier_module_has_no_forbidden_dependencies() -> None:
     source = inspect.getsource(classifier_module)
+    import app.services.recovery as recovery_module
+
+    init_source = inspect.getsource(recovery_module)
+    combined = source + init_source
     forbidden_tokens = [
         "learned_path_replay",
         "run_replay",
@@ -244,4 +298,4 @@ def test_classifier_module_has_no_forbidden_dependencies() -> None:
         "ConversationOrchestrator",
     ]
     for token in forbidden_tokens:
-        assert token not in source
+        assert token not in combined

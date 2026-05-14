@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from app.schemas.recovery import (
+    BoundaryRecommendation,
     ClassificationReason,
     EvidenceReference,
     RecoveryBoundary,
@@ -111,7 +112,12 @@ class RecoveryBoundaryClassifier:
             return "unsupported_action"
         if "permission" in combined or "auth" in combined or "login" in combined:
             return "permission_or_auth_blocked"
-        if "unsafe" in combined or "unknown_state" in combined or "side_effect" in combined:
+        if (
+            "unsafe" in combined
+            or "unknown_state" in combined
+            or "side_effect" in combined
+            or "side effect" in combined
+        ):
             return "unsafe_or_unknown_state"
         if "target_missing" in combined or "target missing" in combined:
             return "target_missing"
@@ -157,7 +163,7 @@ class RecoveryBoundaryClassifier:
         self,
         data: RecoveryEvidence,
         reason: ClassificationReason,
-    ) -> str:
+    ) -> BoundaryRecommendation:
         if reason in ("target_missing", "stale_or_missing_path_coverage", "replay_drifted"):
             return "suggest_reteach"
         if reason == "replay_failed" and data.retry_candidate:
@@ -215,13 +221,16 @@ class RecoveryBoundaryClassifier:
                 "Future retry consideration requires confirmation through later "
                 "recovery policy; this classifier only marks the boundary."
             )
+        if recommendation == "suggest_reteach":
+            return (
+                f"Failure classified as {reason}; consider re-teaching or updating "
+                "the learned path before any later recovery decision."
+            )
         if classification == "success_no_recovery_needed":
             return "Structured postcondition evidence indicates no recovery is needed."
         if classification == "blocked":
             return f"Boundary is blocked by {reason}; no recovery action is started."
         if classification == "failure":
-            if data.retry_candidate:
-                return f"Failure classified as {reason}; stronger safety policy still applies."
             return f"Failure classified as {reason}; stop or route to later recovery planning."
         if classification == "uncertain":
             return "Result is uncertain because postcondition evidence is insufficient."
