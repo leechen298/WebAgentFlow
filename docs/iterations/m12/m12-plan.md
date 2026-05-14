@@ -80,7 +80,7 @@ later detail directories in this round.
 
 | Situation | Default M12 action |
 |---|---|
-| Replay failed, drifted, or returned an error | Stop execution, explain the failure evidence, and propose next choices. |
+| Replay failed, drifted, or returned an error | Stop execution, explain the failure evidence, and hand off to a later recovery-proposal flow. |
 | Required context is missing | Stay blocked, ask for the missing context, and do not execute. |
 | Result cannot be verified | Report `uncertain` / `needs_review`, preserve evidence, and ask for review or clarification. |
 | User aborts | Pause or stop immediately, record current state, acknowledge that no new browser action may start, and hand later choices to future recovery flow. |
