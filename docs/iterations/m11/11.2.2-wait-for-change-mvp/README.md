@@ -63,6 +63,10 @@ Wait-for-change MVP 是 replay action 执行后的短窗口观察机制，用于
 - conservative reporting 边界。
 - 与 realistic runtime case catalog 的对齐关系。
 
+## 后续实现计划
+
+- [Implementation Plan](./implementation-plan.md)：后续代码实现计划，当前能力尚未实现。
+
 ## Page Understanding Agent 边界
 
 11.2.2 不调用 Page Understanding Agent。
