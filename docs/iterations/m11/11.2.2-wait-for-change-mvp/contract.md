@@ -35,9 +35,9 @@ Wait-for-change MVP 是 replay action 执行后的短窗口观察机制，用于
 `passive_runtime` 变化先保留在 11.2.1 contract 和后续设计中，不在 11.2.2 MVP 中
 实现连续后台观察。
 
-### MVP 优先覆盖的 Signal
+### MVP Signal 覆盖
 
-MVP 最小实现优先覆盖这些 11.2.1 signal kind：
+MVP schema 保留这些 11.2.1 signal kind：
 
 ```text
 url_changed
@@ -46,8 +46,19 @@ page_load_finished
 network_idle_observed
 ```
 
-`page_load_finished` 必须保守生成；`network_idle_observed` 只能作为 supporting
-signal，不能单独代表业务成功或 wait 命中。
+11.2.2 MVP 当前实际生成的 primary / target signals 只包括：
+
+```text
+url_changed
+title_changed
+```
+
+`network_idle_observed` 可以作为 supporting signal 记录，但不能单独代表业务成功或
+wait 命中，也不能成为 `primary_signal`。
+
+`page_load_finished` 只在 schema 中保留给后续 page-load evidence 增强；当前 11.2.2
+MVP 不实际生成该 signal，因为 URL/title 变化本身不能证明浏览器级 document load /
+reload completion。
 
 ### 可观察但非 MVP 主目标的 Signal
 
@@ -73,8 +84,9 @@ passive_dom_mutation
 server_push_update
 ```
 
-`page_load_started` 和 `loading_started` 对诊断有价值，但 MVP 的等待终止通常依赖
-`page_load_finished`、`loading_finished` 或其他可见完成信号。
+`page_load_started` 和 `loading_started` 对诊断有价值。后续 page-load waiting 或
+loading UI waiting 可以依赖 `page_load_finished`、`loading_finished` 或其他可见完成
+信号，但当前 11.2.2 MVP 不实现这些等待终止能力。
 
 `passive_dom_mutation` 和 `server_push_update` 偏 `passive_runtime`，不作为 11.2.2
 MVP 的主要实现目标。
@@ -138,8 +150,8 @@ skipped
 not_required
 ```
 
-- `observed`：等待窗口内观察到至少一个符合条件的 signal。
-- `timeout`：等待窗口结束时没有观察到符合条件的 signal。
+- `observed`：等待窗口内观察到至少一个符合条件的 primary / target signal。
+- `timeout`：等待窗口结束时没有观察到符合条件的 primary / target signal。
 - `skipped`：当前 action 不适合等待，例如纯键盘输入、无页面变化预期的 action。
 - `not_required`：调用方明确声明本 step 不需要等待变化。
 

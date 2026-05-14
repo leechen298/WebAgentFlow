@@ -327,6 +327,25 @@ def test_network_idle_budget_sums_to_total() -> None:
     assert stability_ms + idle_ms == 1000
 
 
+def test_non_string_page_state_does_not_create_false_change_signal() -> None:
+    """Mock or corrupted page state must not be treated as URL/title changes."""
+    action = _make_action("click")
+    step_log = _make_step_log(
+        ok=True,
+        url_before="http://example.com/before",
+        title_before="Before",
+    )
+    page = MagicMock()
+    page.wait_for_load_state.side_effect = TimeoutError("not idle")
+
+    result = wait_for_change_after_action(page=page, action=action, step_log=step_log)
+
+    assert result.status == "timeout"
+    assert result.primary_signal is None
+    assert not any(s.kind in ("url_changed", "title_changed") for s in result.observed_signals)
+    assert "wait failed" not in result.notes.lower()
+
+
 # ── Exception policy ─────────────────────────────────────────────────────────
 
 
@@ -334,10 +353,13 @@ def test_wait_service_exception_returns_conservative_result() -> None:
     """Internal wait failure must not propagate to replay."""
     action = _make_action("click")
     step_log = _make_step_log(ok=True)
-    page = MagicMock()
-    page.wait_for_timeout = MagicMock(side_effect=RuntimeError("mock crash"))
+    page = _make_page()
 
-    result = wait_for_change_after_action(page=page, action=action, step_log=step_log)
+    with patch(
+        "app.services.learning.wait_for_change._read_page_state",
+        side_effect=RuntimeError("mock crash"),
+    ):
+        result = wait_for_change_after_action(page=page, action=action, step_log=step_log)
 
     assert result.status in ("skipped", "timeout")
     assert "wait failed" in result.notes.lower()

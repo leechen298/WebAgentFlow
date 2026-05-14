@@ -43,7 +43,7 @@ Updated `apps/api/app/services/learning/learned_path_replay.py`:
 
 ### Tests
 
-- `apps/api/tests/test_wait_for_change.py` — 24 tests covering schema validation, action policy, signal detection, primary vs supporting signals, budget splitting (stability fraction, network idle remaining budget, budget sums to total), exception policy, no-raw-HTML invariant.
+- `apps/api/tests/test_wait_for_change.py` — 25 tests covering schema validation, action policy, signal detection, primary vs supporting signals, budget splitting (stability fraction, network idle remaining budget, budget sums to total), non-string page state hardening, exception policy, no-raw-HTML invariant.
 - `apps/api/tests/test_learned_path_replay.py` — 5 new tests for wait integration (fill carries skipped result, click triggers wait, observe returns not_required, failed action doesn't misreport, wait exception produces conservative result without changing replay status). All 22 existing tests continue passing.
 
 ### Supported signals (MVP)
@@ -55,6 +55,15 @@ Updated `apps/api/app/services/learning/learned_path_replay.py`:
 Not emitted in MVP (schema kinds retained for future use):
 
 - `page_load_finished` — requires action-related load evidence that the current wait service cannot reliably detect.
+
+### Follow-up hardening
+
+After implementation review, the wait service was hardened so mock or corrupted
+page state cannot create false `url_changed` / `title_changed` signals:
+
+- `_read_page_state` accepts only string URL / title values; non-string values are treated as unknown.
+- The exception-policy test now simulates an explicit state-read failure instead of relying on `MagicMock` URL / title behavior.
+- 11.2.2 contract / plan docs now state that `page_load_finished` is retained in schema but not emitted by the current MVP.
 
 ### What is NOT implemented
 
@@ -69,7 +78,7 @@ Not emitted in MVP (schema kinds retained for future use):
 ### Validation
 
 - `git diff --check`: PASS
-- Scoped wait/replay tests: 46/46 PASS
+- Scoped wait/replay tests: 47/47 PASS
 - `ruff`: PASS
-- Full API suite: 1133 passed, 65 skipped
+- Full API suite in Codex sandbox: 1105 passed, 65 skipped, 29 failed due Playwright Chromium launch permission (`MachPortRendezvousServer` permission denied). Rerun outside the sandbox before final release evidence.
 - M12/M14/11.3 directory check: PASS (none found)

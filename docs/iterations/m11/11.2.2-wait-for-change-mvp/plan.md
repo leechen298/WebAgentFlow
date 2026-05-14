@@ -69,7 +69,7 @@ ReplayStepLog.wait_result: WaitResult | None = None
 计划在 `apps/api/app/schemas/learned_path_replay.py` 中新增最小
 `ObservationSignal` schema。
 
-MVP 计划支持的 signal kind：
+MVP schema 计划保留的 signal kind：
 
 ```text
 url_changed
@@ -77,6 +77,16 @@ title_changed
 page_load_finished
 network_idle_observed
 ```
+
+11.2.2 当前最小实现实际生成：
+
+- `url_changed`：primary signal。
+- `title_changed`：primary signal。
+- `network_idle_observed`：supporting signal only。
+
+`page_load_finished` 保留在 schema 中，但当前 MVP 不实际生成。它需要后续
+page-load evidence 增强证明 load / navigation completion 与当前 action 相关，不能仅凭
+URL/title 变化生成。
 
 11.2.2 当前最小实现不做完整组件库 runtime behavior detection，不识别任意
 component-generated runtime surface，也不根据组件库 class 判定 popup / panel 归属。
@@ -215,9 +225,8 @@ notes = "wait failed: <short error>"
 1. 从 step log 读取 action 前后的 URL / title。
 2. 在短窗口内尝试读取当前 page URL / title。
 3. 检测 `url_changed` / `title_changed`。
-4. 在有 action-related evidence 时，保守记录 `page_load_finished`。
-5. 尝试记录 `network_idle_observed` 作为 supporting signal。
-6. 根据 primary / target signal 决定 `status`。
+4. 尝试记录 `network_idle_observed` 作为 supporting signal。
+5. 根据 primary / target signal 决定 `status`。
 
 ### Primary vs supporting signals
 
@@ -230,7 +239,6 @@ notes = "wait failed: <short error>"
 
 - `url_changed`
 - `title_changed`
-- `page_load_finished`
 
 如果只观察到 `network_idle_observed`，wait result 必须保持保守，例如：
 
@@ -248,14 +256,18 @@ notes = "network idle observed without primary page-change signal"
 调用 `page.wait_for_load_state("load")` 后立即成功，只能说明当前页面已经处于 loaded
 状态，不自动证明当前 action 触发了页面加载。
 
-11.2.2 MVP 计划只在有 action-related evidence 时记录 `page_load_finished`：
+11.2.2 MVP schema 保留 `page_load_finished`，但当前最小实现不实际生成它。
+
+后续增强只有在能证明 load / navigation completion 与当前 action 相关时，才可以记录
+`page_load_finished`，例如：
 
 - URL 变化后观察到页面稳定。
 - title 变化后观察到页面稳定。
 - 后续实现能够证明 load / navigation completion 与当前 action 相关。
 
 如果没有 URL/title 变化，也没有明确 action-related load evidence，不应单独生成
-`page_load_finished`。
+`page_load_finished`。在当前 MVP 中，URL/title 变化只生成 `url_changed` /
+`title_changed`，不额外生成 `page_load_finished`。
 
 ## 后续增强：Common Component Runtime Semantics
 
@@ -335,7 +347,8 @@ Playwright。
 
 - URL 变化时返回 `status=observed`，`primary_signal=url_changed`。
 - title 变化时返回 `status=observed`，`primary_signal=title_changed`。
-- URL/title 变化后可保守记录 `page_load_finished`。
+- URL/title 变化后不生成 `page_load_finished`；该 signal 留给后续 page-load evidence
+  增强。
 - 仅观察到 `network_idle_observed` 时不能返回 `status=observed`。
 - `primary_signal` 不能是 `network_idle_observed`。
 - 无 primary / target signal 时返回 `timeout` 或其他保守 outcome。

@@ -40,12 +40,16 @@ def _read_page_state(page) -> tuple[str | None, str | None]:
         url = page.url if hasattr(page, "url") else None
         if callable(url):
             url = url()
+        if not isinstance(url, str):
+            url = None
     except Exception:
         url = None
     try:
         title = page.title if hasattr(page, "title") else None
         if callable(title):
             title = title()
+        if not isinstance(title, str):
+            title = None
     except Exception:
         title = None
     return url, title
