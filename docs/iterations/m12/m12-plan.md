@@ -36,7 +36,7 @@ abort handling, and runtime robustness.
 
 ### 12.1 · Failure classification and recovery boundary
 
-Status: documentation initialized / current planning package.
+Status: implemented / shipped.
 
 Classify `failure`, `blocked`, `uncertain`, and `needs_review` from M11.1
 structured execution and reporting evidence. The classifier returns evidence
@@ -45,8 +45,11 @@ recovery.
 
 ### 12.2 · User abort / stop handling
 
+Status: documentation initialized / current planning package.
+
 Handle explicit user interruption. Abort should pause or stop immediately,
-record what was known, and ask what the user wants next.
+record what was known, acknowledge the stop boundary, avoid new browser
+actions, and hand later choices to 12.3 / 12.4 / 12.5.
 
 ### 12.3 · Recovery proposal MVP
 
@@ -70,8 +73,8 @@ Close M12 with deterministic tests, conversation/event evidence, and static
 review that prove no hidden recovery, no hidden relearning, and no browser
 continuation without user consent.
 
-12.1 creates only `12.1-failure-classification-recovery-boundary`. Do not
-create `12.2-*` or later detail directories in this round.
+12.2 creates only `12.2-user-abort-stop-handling`. Do not create `12.3-*` or
+later detail directories in this round.
 
 ## Decision Rules
 
@@ -80,7 +83,7 @@ create `12.2-*` or later detail directories in this round.
 | Replay failed, drifted, or returned an error | Stop execution, explain the failure evidence, and propose next choices. |
 | Required context is missing | Stay blocked, ask for the missing context, and do not execute. |
 | Result cannot be verified | Report `uncertain` / `needs_review`, preserve evidence, and ask for review or clarification. |
-| User aborts | Pause or stop immediately, record current state, and ask whether to abandon, retry, replan, or hand off. |
+| User aborts | Pause or stop immediately, record current state, acknowledge that no new browser action may start, and hand later choices to future recovery flow. |
 | Partial state may be unsafe | Must stop; retry or re-run requires explicit user confirmation. |
 | Missing path coverage or repeated drift | Suggest re-teach / update LearnedPath, but do not write a new path automatically. |
 
@@ -129,6 +132,6 @@ M12 decisions must preserve:
 
 - `git diff --check`
 - `git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'`
-- `find docs/iterations/m12 -maxdepth 1 -type d -name '12.2*' -print`
 - `find docs/iterations/m12 -maxdepth 1 -type d -name '12.3*' -print`
 - `find docs/iterations/m12 -maxdepth 1 -type d -name '12.4*' -print`
+- `find docs/iterations/m12 -maxdepth 1 -type d -name '12.5*' -print`
