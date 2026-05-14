@@ -545,11 +545,14 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
   Conversation API, Conversation Orchestrator / Dispatcher service skeleton,
   public dispatch endpoint, explicit replay hook, and CLI dispatch integration
   are implemented.
-- **L3 task execution**: not started. No Task Path Planner implementation,
-  no Task Result Reporter implementation, no task-to-path execution loop, no
-  result verification loop, no recovery dialogue, and no teaching mode.
-  Replay / drift is the M10 foundation; M11.0 is the runtime-conversation
-  foundation, and M11.1 is the first planned L3 happy-path MVP.
+- **L3 task execution**: first task-to-path MVP shipped in M11.1. Task Path
+  Planner and Task Result Reporter now cover the conservative happy-path loop:
+  retrieval / ranking, planning preview, confirmation, replay execution, and
+  evidence-bound reporting with `failed`, `blocked`, `uncertain`, and
+  `needs_review` outcomes. Recovery dialogue, abort handling, teaching mode,
+  full slot binding, multi-page workflow composition, and full artifact
+  lifecycle remain future work. M12 is now initializing the recovery / abort
+  boundary after M11.1 outcomes.
 
 When a lifecycle stage fully lands, update this section to reflect it.
 

@@ -161,9 +161,10 @@ has a first evidence report (`PASS 12 / FAIL 0 / BLOCKED 0 / NOT_RUN 4`).
 evidence and drift evidence, but 10.2 did not implement a full
 negative-knowledge store.
 
-As of the v0.1 closeout, M11.0 and M11.1 have completed through
-`11.1.8-task-to-path-tests-and-evidence`. The branch is being prepared as the
-first working task-to-path MVP, not as a released/tagged artifact yet.
+M11.1 Task-to-Path Planning & Execution MVP is now closed through
+`11.1.8-task-to-path-tests-and-evidence`. Current work has moved to
+M12 documentation initialization:
+[`docs/iterations/m12/`](./iterations/m12/).
 
 ## M11.0 — Runtime Conversation Shell & Agent Orchestration
 
@@ -193,7 +194,8 @@ Progress:
   through dispatch (`179 passed` API + `67 passed` CLI).
 - 11.0.7 Conversation Tests and Evidence shipped: conversation runtime E2E
   smoke plus fresh replay / conversation evidence (`10 passed` E2E).
-- M11.0 execution packages are complete.
+- M11.0 execution packages are complete. M11.1 has also closed through
+  `11.1.8-task-to-path-tests-and-evidence`.
 
 Expected delivery:
 
@@ -216,79 +218,47 @@ verification tool.
 
 ## M11.1 — Task-to-Path Planning & Execution MVP
 
-M11.1 is the first L3 Actual Work milestone. The user describes a task
+M11.1 was the first L3 Actual Work milestone. The user describes a task
 through the M11.0 conversation surface; WebAgentFlow selects and
 parameterizes learned paths, executes them through the M10 replay
 engine, verifies the task result as far as possible, and reports the
 result.
 
-M11.1 is complete for the v0.1 release closeout through
-`11.1.8-task-to-path-tests-and-evidence`. It connects natural-language task
-input to LearnedPath retrieval / ranking, Task Path Planner preview,
-confirmation, deterministic replay execution, and Task Result Reporter output.
+Closure package: `11.1.8-task-to-path-tests-and-evidence`. It records the
+M11.1 task-to-path MVP evidence closure across domain schema, retrieval /
+ranking, Task Path Planner, planning preview, confirmation gate, execution
+via replay, Task Result Reporter, API runtime, and E2E coverage.
 
 Internal Agents introduced / made concrete:
 
 - **Task Path Planner (legacy: Agent D)** — reads the user task plus learned
-  data, selects / composes a route, binds task parameters into
-  replaceable action values, and never reads raw HTML.
+  data, selects a route from learned candidates, and never reads raw HTML.
 - **Task Result Reporter (legacy: Agent E)** — reads the execution outcome,
   postcondition checks, artifact status, and final-state signals, then
   returns a user-facing result with structured fields the UI can render.
 
-Delivered for v0.1 closeout:
+Closed MVP scope:
 
-- 11.1.1 Task Planning Domain Contract.
-- 11.1.2 LearnedPath Retrieval and Ranking.
-- 11.1.3 Task Path Planner MVP.
-- 11.1.4 Task Planning Dispatch Preview.
-- 11.1.5 Plan Confirmation and Consent Gate.
-- 11.1.6 Execution via Replay.
-- 11.1.7 Result Verification and Task Result Reporter.
-- 11.1.8 Task-to-path Tests and Evidence (`1104` API tests passed,
-  `25` E2E passed, ruff clean, no unresolved P1/P2).
+- LearnedPath retrieval and ranking for the task.
+- Task Path Planner MVP.
+- Planning preview through the runtime conversation surface.
+- Pre-execution confirmation / consent gate.
+- Execution through the M10 replay engine, not through autonomous
+  exploration.
+- Task Result Reporter with evidence-bound `failed`, `blocked`,
+  `uncertain`, and `needs_review` outcomes.
+- Task-to-path tests and evidence closure.
 
-The v0.1 shipped chain is:
-
-```text
-TaskInput -> LearnedPath retrieval / ranking -> Task Path Planner
--> planning preview -> confirmation -> replay execution
--> Task Result Reporter
-```
-
-Current boundaries:
-
-- Slot Binding remains future scope.
-- `replay completed` does not mean `task succeeded`.
-- Missing postcondition evidence returns `uncertain` / `needs review`.
-- Failed / blocked execution does not trigger automatic recovery or hidden
-  relearning.
+Slot binding, richer artifact lifecycle, multi-page workflows, and recovery /
+abort dialogue remain future work.
 
 Explicit non-goals for M11.1: no hidden autonomous relearning, no
 per-step LLM browser control, no full recovery dialogue beyond
 returning a clear failure state and handing the session to M12-capable
 flows.
 
-## M11.2 — 运行时观察与真实网页稳健性增强
-
-M11.2 是 v0.1 后续稳健性增强轨道。它不重新展开 task-to-path planning，
-也不启动 v0.2 / M12。它的目标是在 replay 周围定义并后续实现 observation
-layer：动作之后页面发生了什么、预期变化是否被观察到、哪些结构化信号可以作为
-result evidence。
-
-11.2.0 是文档初始化包：只初始化 runtime observation scope 和
-realistic web runtime case catalog。它记录 Post-action Observation、Passive
-Runtime Observation，以及 modal、toast、delayed button、loading state、
-partial refresh、SPA content change、server push、passive DOM mutation 等真实
-网页场景。
-
-详细 11.2.x 拆包计划放在
-[`docs/iterations/m11/m11-plan.md`](./iterations/m11/m11-plan.md) 和
-[`docs/iterations/m11/11.2-runtime-observation-realistic-hardening/`](./iterations/m11/11.2-runtime-observation-realistic-hardening/)。
-本路线图只保留 M11.2 的高层定位。
-
-M11.2 不定义 recovery、retry、abort、user interruption、takeover 或 teaching
-behavior。这些仍属于 v0.2 / M12 或更后续阶段。
+Current: **M12 Failure Recovery / Abort / Runtime Robustness** documentation
+initialization. See [`docs/iterations/m12/`](./iterations/m12/).
 
 ## M12 — Recovery & Abort Dialogue
 

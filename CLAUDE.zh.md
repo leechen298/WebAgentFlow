@@ -38,19 +38,18 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
   **10.2 replay execution + drift detection** 已交付。
 - **M11.0 Runtime Conversation Shell & Agent Orchestration / 运行时沟通与
   Agent 编排** 已完成到 11.0.7。
-- 11.1.1 Task Planning Domain Contract 已交付：17 个 schema 定义，
-  24 个测试通过（`apps/api/app/schemas/task_planning.py`）。
-- **M11.1 Task-to-Path Planning & Execution MVP / 任务到路径规划与执行
-  MVP** 已完成 scoped path：retrieval / ranking、Task Path Planner / 任务
-  路径规划器、confirmation gate、replay execution、Task Result Reporter /
-  任务结果汇报器、tests / evidence closure。
-- **M11.2 Runtime Observation & Realistic Web Hardening / 运行时观察与真实
-  网页稳健性增强** 是当前 v0.1 后续优化轨道。11.2.2 已交付 step-level
-  `wait_result`；11.2.3 已交付 replay-level `observation_summary`。
-- 下一步建议进入 **11.2.4 Realistic Fixture Pages / 真实网页 fixture 页**。
-- M12 recovery / retry / abort / interruption 尚未开始。
-- Agent routing、L3 task runner、L2 guided teaching、Teaching Guide Agent /
-  教学引导器（legacy: Agent H）仍属后续规划，除非里程碑文档另有说明。
+- **M11.1 Task-to-Path Planning & Execution MVP** 已通过 11.1.8 收口。
+  证据记录：`1104` 个 API 测试通过，`25` 个 E2E 测试通过，ruff clean，
+  无 P1/P2 发现。
+- 当前交付包：**M12 Failure Recovery / Abort / Runtime Robustness / 失败恢复、
+  用户中断与运行时稳健性** 文档初始化。
+- M12 从 M11.1 的 `failed` / `blocked` / `uncertain` / `needs_review`
+  结果，以及运行时 user abort 信号出发，定义安全、可解释、可审计的
+  下一步。它不是自动 recovery、hidden relearning，也不是未经用户同意继续
+  操作浏览器。
+- M11.2 Runtime Observation / Wait-for-change 是另一条独立工作线。
+- L2 guided teaching 和 Teaching Guide Agent / 教学引导器（legacy: Agent H）
+  是后续规划，不是当前已实现。
 
 内部 Agent 命名规则：
 
@@ -321,7 +320,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/api/app/schemas/` —— Pydantic 契约（page_analysis、
   page_verification、llm、ast、common）。
 
-**当前重点 —— M11 runtime conversation 与 task planning foundation：**
+**当前重点 —— 基于 M11 runtime foundation 的 M12 failure recovery 规划：**
 
 - `apps/api/app/schemas/conversation.py` —— M11.0 conversation 枚举、领域
   contract 和 API request / response schema。
@@ -339,18 +338,23 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/cli/wagent/conversation.py` —— `wagent conversation` runtime
   conversation CLI。
 - `apps/cli/tests/test_conversation.py` —— CLI regression tests。
-- `apps/api/app/schemas/task_planning.py` —— 计划中的 M11.1 task-to-path
-  planning domain contract（`11.1.1`，已交付）。
+- `apps/api/app/schemas/task_planning.py` —— M11.1 task-to-path planning
+  domain contract（`11.1.1`，已交付）。
+- `apps/api/app/services/task_planning/result_reporter.py` —— M11.1
+  evidence-bound result reporting（`11.1.7`，已交付）。
+- `docs/iterations/m12/` —— 当前 M12 failure recovery / abort / runtime
+  robustness 文档初始化。
 
 **规划中 / 部分已实现的服务区域：**
 
 - Conversation domain / store / API / CLI / Orchestrator service skeleton、
   explicit replay hook、public dispatch endpoint、CLI dispatch 接入和
   conversation runtime E2E 已通过 M11.0.7 实现。
-- M11.1 task planning domain schema 在 11.1.1 已交付（24 个测试）。Task
-  Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器
-  （legacy: Agent D/E）、retrieval、slot binding、task execution、
-  result verification、confirmation、recovery、teaching 仍是后续工作。
+- M11.1 task-to-path MVP 已通过 11.1.8 交付：retrieval / ranking、Task
+  Path Planner、planning preview、confirmation / consent gate、replay
+  execution、Task Result Reporter 和 evidence closure。
+- M12 recovery / abort runtime behavior 当前只做文档初始化。Recovery 不得
+  自动执行；proposal 必须经过用户确认。
 - L2 teaching support、highlight targets 和 user action recording。
 - Artifact lifecycle handling。
 - Failure evidence / negative knowledge。

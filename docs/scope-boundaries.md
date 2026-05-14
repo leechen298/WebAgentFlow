@@ -12,16 +12,13 @@ pause and ask — don't invent.
 
 ## Current Delivery Milestone
 
-Current package: **11.1.2 LearnedPath Retrieval and Ranking** within
-**M11.1 Task-to-Path Planning & Execution MVP**. Iteration docs:
-[`docs/iterations/m11/11.1.2-learned-path-retrieval-ranking/`](./iterations/m11/11.1.2-learned-path-retrieval-ranking/).
+Current package: **M12 Failure Recovery / Abort / Runtime Robustness**
+documentation initialization. Iteration docs:
+[`docs/iterations/m12/`](./iterations/m12/).
 
-11.1.2 implements LearnedPath retrieval and ranking for a given task intent.
-It builds on the 11.1.1 domain contract (`TaskInput`, `TaskIntent`,
-`LearnedPathCandidate`).
-
-11.1.2 does not implement Task Path Planner / Task Result Reporter (legacy: Agent D/E), slot binding, execution, replay side
-effects, result verification, artifact lifecycle, or E2E.
+This package initializes the M12 safety boundary. It does not implement code,
+does not run API / CLI / E2E / `verify-scenario` tests, and does not add a
+`12.1-*` detail directory.
 
 M11.0 runtime loop foundation is complete. Its completed scope is:
 
@@ -47,13 +44,19 @@ Completed M11.0 execution packages:
 Completed M11.1 execution packages:
 
 - `11.1.1-task-planning-domain-contract`
+- `11.1.2-learned-path-retrieval-ranking`
+- `11.1.3-task-path-planner-mvp`
+- `11.1.4-task-planning-dispatch-preview`
+- `11.1.5-plan-confirmation-consent-gate`
+- `11.1.6-execution-via-replay`
+- `11.1.7-result-verification-task-result-reporter`
+- `11.1.8-task-to-path-tests-and-evidence`
 
-Last completed package: `11.1.1-task-planning-domain-contract`.
-Current planning package: `11.1.2-learned-path-retrieval-ranking`.
+Last completed package: `11.1.8-task-to-path-tests-and-evidence`.
 
-11.1.2 does not compose multi-step routes, bind slots, execute tasks, or
-implement Task Path Planner / Task Result Reporter / Failure Recovery Agent /
-User Abort Handler / Teaching Guide Agent behavior (legacy: Agents D-H).
+M11.1 can report `failed`, `blocked`, `uncertain`, and `needs_review`
+outcomes. It deliberately does not run recovery, hidden relearning, or
+autonomous exploration after those outcomes. M12 starts from that boundary.
 Planning language uses M<N> for delivery milestones and L1/L2/L3 for
 lifecycle stages.
 
@@ -97,20 +100,17 @@ did not implement the complete negative-knowledge store.
   so an AI coding agent can run scenarios without bypassing the
   Supervisor Agent. A broader registry for third-party Agents is
   still a later milestone.
-- **Task-to-Path implementation** — user task / chat input beyond schema,
-  Task Path Planner (legacy: Agent D) implementation, path retrieval / ranking,
-  slot binding, execution confirmation, task result verification, and Task
-  Result Reporter (legacy: Agent E) result reporting belong to later M11.1
-  packages. 11.1.1 only defines the domain contract.
-- **Recovery / abort dialogue** — Failure Recovery Agent (legacy: Agent F) and
-  User Abort Handler (legacy: Agent G) are M12, not M11.0.
+- **Task-to-Path expansion beyond the M11.1 MVP** — M12 must not expand slot
+  binding, multi-step task composition, artifact lifecycle, or L3 execution
+  scope while initializing recovery / abort documentation.
+- **Recovery / abort runtime implementation** — Failure Recovery Agent
+  (legacy: Agent F) and User Abort Handler (legacy: Agent G) are M12, but this
+  documentation initialization does not implement their runtime behavior.
 - **Teaching Guide Agent (legacy: Agent H)** — guided teaching belongs to M13, not
   M11.0.
-- **Runtime Agent implementations** — M11.0 may define routing
-  boundaries, but it does not implement Task Path Planner / Task Result
-  Reporter / Failure Recovery Agent / User Abort Handler / Teaching Guide
-  Agent logic (legacy: Agents D-H), L3 task running, slot binding, recovery
-  dialogue, or teaching behavior.
+- **Runtime Agent implementations outside the current package** — this M12
+  initialization does not add new runtime behavior for Failure Recovery Agent,
+  User Abort Handler, Teaching Guide Agent, or any broader Agent routing.
 - **Multi-page workflow composition** — composing multiple LearnedPaths
   into a cross-page workflow is M17, not M11.0.
 - **Action risk & consent gate** — risk classification, destructive

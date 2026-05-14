@@ -40,19 +40,18 @@ Current delivery status:
   **10.2 replay execution + drift detection** have shipped.
 - **M11.0 Runtime Conversation Shell & Agent Orchestration** has completed
   through 11.0.7.
-- 11.1.1 Task Planning Domain Contract shipped: 17 schema definitions,
-  24 tests passed (`apps/api/app/schemas/task_planning.py`).
-- **M11.1 Task-to-Path Planning & Execution MVP** has completed its scoped
-  path: retrieval / ranking, Task Path Planner, confirmation gate, replay
-  execution, Task Result Reporter, and tests / evidence closure.
-- **M11.2 Runtime Observation & Realistic Web Hardening** is the current
-  follow-up optimization track. 11.2.2 shipped step-level `wait_result`;
-  11.2.3 shipped replay-level `observation_summary`.
-- Next recommended package: **11.2.4 Realistic Fixture Pages**.
-- M12 recovery / retry / abort / interruption has not started.
-- Agent routing, L3 task runner, L2 guided teaching, and Teaching Guide Agent
-  (legacy: Agent H) remain future work unless a milestone document says
-  otherwise.
+- **M11.1 Task-to-Path Planning & Execution MVP** has closed through
+  11.1.8. Evidence records `1104` API tests passed, `25` E2E tests passed,
+  ruff clean, and no P1/P2 findings.
+- Current delivery package: **M12 Failure Recovery / Abort / Runtime
+  Robustness** documentation initialization.
+- M12 starts from M11.1 outcomes (`failed` / `blocked` / `uncertain` /
+  `needs_review`) plus runtime user-abort signals, and defines safe,
+  explainable, auditable next steps. It is not automatic recovery, hidden
+  relearning, or browser continuation without user consent.
+- M11.2 Runtime Observation / Wait-for-change remains a separate workstream.
+- L2 guided teaching and Teaching Guide Agent (legacy: Agent H) are planned
+  future work, not current implementation.
 
 Internal Agent naming:
 
@@ -308,7 +307,7 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 
 ## Key File Locations
 
-**Current focus — M11 runtime conversation and task planning foundation:**
+**Current focus — M12 failure recovery planning on top of M11 runtime foundations:**
 
 - `apps/api/app/schemas/conversation.py` — M11.0 conversation enums,
   domain contracts, and API request / response schemas.
@@ -326,8 +325,12 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/cli/wagent/conversation.py` — `wagent conversation` runtime
   conversation CLI.
 - `apps/cli/tests/test_conversation.py` — CLI regression tests.
-- `apps/api/app/schemas/task_planning.py` — planned M11.1 task-to-path
-  planning domain contract (`11.1.1`; shipped).
+- `apps/api/app/schemas/task_planning.py` — M11.1 task-to-path planning
+  domain contract (`11.1.1`; shipped).
+- `apps/api/app/services/task_planning/result_reporter.py` — M11.1
+  evidence-bound result reporting (`11.1.7`; shipped).
+- `docs/iterations/m12/` — current M12 failure recovery / abort / runtime
+  robustness documentation initialization.
 
 **Autonomous exploration + M10 path assets:**
 
@@ -371,10 +374,11 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - Conversation domain / store / API / CLI / Orchestrator service skeleton,
   explicit replay hook, public dispatch endpoint, CLI dispatch integration,
   and conversation runtime E2E are implemented through M11.0.7.
-- M11.1 task planning domain schemas shipped in 11.1.1 (24 tests). Task Path
-  Planner / Task Result Reporter (legacy: Agent D/E), retrieval, slot
-  binding, task execution, result verification, confirmation, recovery, and
-  teaching remain future work.
+- M11.1 task-to-path MVP has shipped through 11.1.8: retrieval / ranking, Task
+  Path Planner, planning preview, confirmation / consent gate, replay
+  execution, Task Result Reporter, and evidence closure.
+- M12 recovery / abort runtime behavior is being initialized in docs. Recovery
+  must not run automatically; proposals require user confirmation.
 - L2 teaching support, highlight targets, and user action recording.
 - Artifact lifecycle handling.
 - Failure evidence / negative knowledge.
