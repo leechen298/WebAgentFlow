@@ -1002,7 +1002,7 @@ Passive Runtime Observation 是非用户主动操作触发的页面变化。
 
 - `docs/iterations/m11/11.2.2-wait-for-change-mvp/README.md`
 - `docs/iterations/m11/11.2.2-wait-for-change-mvp/intent.md`
-- `docs/iterations/m11/11.2.2-wait-for-change-mvp/design.md`
+- `docs/iterations/m11/11.2.2-wait-for-change-mvp/contract.md`
 - `docs/iterations/m11/11.2.2-wait-for-change-mvp/plan.md`
 - `docs/iterations/m11/11.2.2-wait-for-change-mvp/review.md`
 

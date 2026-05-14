@@ -48,11 +48,11 @@ Wait-for-change MVP 是 replay action 执行后的短窗口观察机制，用于
 `passive_runtime` 变化保留在 11.2.1 contract 和后续设计中，不作为 11.2.2 MVP 的
 连续后台观察目标。
 
-## 核心设计文档
+## 核心契约文档
 
-本包的核心设计在 [`design.md`](./design.md)。
+本包的核心契约在 [`contract.md`](./contract.md)。
 
-`design.md` 定义：
+`contract.md` 定义：
 
 - Wait-for-change MVP。
 - MVP signal coverage。
@@ -63,9 +63,9 @@ Wait-for-change MVP 是 replay action 执行后的短窗口观察机制，用于
 - conservative reporting 边界。
 - 与 realistic runtime case catalog 的对齐关系。
 
-## 后续实现计划
+## 实施计划
 
-- [Implementation Plan](./implementation-plan.md)：后续代码实现计划，当前能力尚未实现。
+- [plan.md](./plan.md)：后续代码实现计划，当前能力尚未实现。
 
 ## Page Understanding Agent 边界
 

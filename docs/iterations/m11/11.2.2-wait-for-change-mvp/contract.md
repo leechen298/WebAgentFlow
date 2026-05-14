@@ -1,8 +1,8 @@
-# Wait-for-change MVP 设计
+# Wait-for-change MVP Contract
 
-状态：文档级 design proposal，能力未实现
+状态：文档级 contract proposal，能力未实现
 
-本文档定义 11.2.2 Wait-for-change MVP 的文档级设计。它不创建代码 schema，不修改
+本文档定义 11.2.2 Wait-for-change MVP 的文档级契约。它不创建代码 schema，不修改
 API，不修改 replay execution，也不接入 Task Result Reporter。
 
 ## 定义

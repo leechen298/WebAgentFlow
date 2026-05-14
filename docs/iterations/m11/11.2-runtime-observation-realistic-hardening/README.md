@@ -116,8 +116,8 @@ reporter integration。
 文档级 signal contract，不代表 runtime observation、wait-for-change 或 reporter
 integration 已实现。
 
-11.2.2 的核心设计文档是
-[`design.md`](../11.2.2-wait-for-change-mvp/design.md)。它只定义文档级
+11.2.2 的核心契约文档是
+[`contract.md`](../11.2.2-wait-for-change-mvp/contract.md)。它只定义文档级
 Wait Result 和 Wait Strategy，不代表 wait-for-change、page-load waiting、Agent
 判断或 reporter integration 已实现。
 
