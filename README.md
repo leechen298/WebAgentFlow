@@ -5,6 +5,12 @@ reusable web-operation paths, stores them as LearnedPaths, replays them
 deterministically, and exposes the workflow through a Vue operator console,
 FastAPI backend, Python CLI, validation fixtures, and Playwright runtime.
 
+## Version Status
+
+- **v0.1**: first working task-to-path MVP; release closeout prepared. See
+  [`docs/releases/v0.1.md`](./docs/releases/v0.1.md).
+- **v0.2**: planned; failure recovery / abort / runtime robustness.
+
 ## Features
 
 - **Autonomous Workbench** — user-driven autonomous scenario runs with live SSE

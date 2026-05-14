@@ -12,6 +12,12 @@ Operational view of what's shipped, what's current, and what's next.
 - For the historical 12-step architectural timeline, see
   [`architecture.md`](./architecture.md) §E.
 
+## Release Status
+
+- **v0.1**: first working task-to-path MVP; release closeout prepared. See
+  [`docs/releases/v0.1.md`](./releases/v0.1.md).
+- **v0.2**: planned; failure recovery / abort / runtime robustness.
+
 ## Shipped (foundation + autonomous exploration subsystem)
 
 Post-2026-04-20 cleanup, the only product surface in the repo is the
@@ -155,9 +161,9 @@ has a first evidence report (`PASS 12 / FAIL 0 / BLOCKED 0 / NOT_RUN 4`).
 evidence and drift evidence, but 10.2 did not implement a full
 negative-knowledge store.
 
-Current: **M11.1 Task-to-Path Planning & Execution MVP**. 11.1.1 domain
-contract shipped; next execution package is
-`11.1.2-learned-path-retrieval-ranking`.
+As of the v0.1 closeout, M11.0 and M11.1 have completed through
+`11.1.8-task-to-path-tests-and-evidence`. The branch is being prepared as the
+first working task-to-path MVP, not as a released/tagged artifact yet.
 
 ## M11.0 — Runtime Conversation Shell & Agent Orchestration
 
@@ -187,14 +193,7 @@ Progress:
   through dispatch (`179 passed` API + `67 passed` CLI).
 - 11.0.7 Conversation Tests and Evidence shipped: conversation runtime E2E
   smoke plus fresh replay / conversation evidence (`10 passed` E2E).
-- M11.0 execution packages are complete. M11.1 planning starts with
-  `11.1.1-task-planning-domain-contract`.
-- 11.1.1 Task Planning Domain Contract shipped: 17 schema definitions
-  (`TaskInput`, `TaskIntent`, `LearnedPathCandidate`, `RoutePlan`,
-  `RouteStep`, `SlotBindingProposal`, `ConfirmationRequirement`,
-  `RiskHint`, `ConsentRequirement`, `PostconditionSignal`,
-  `TaskExecutionResult`, `ArtifactReference`, `AgentDPlannerInput/Output`,
-  `AgentEReporterInput/Output`), 24 tests passed, ruff clean.
+- M11.0 execution packages are complete.
 
 Expected delivery:
 
@@ -223,9 +222,10 @@ parameterizes learned paths, executes them through the M10 replay
 engine, verifies the task result as far as possible, and reports the
 result.
 
-Current M11.1 package: `11.1.2-learned-path-retrieval-ranking`. It builds
-on the 11.1.1 domain contract to implement LearnedPath retrieval and
-ranking for a given task intent.
+M11.1 is complete for the v0.1 release closeout through
+`11.1.8-task-to-path-tests-and-evidence`. It connects natural-language task
+input to LearnedPath retrieval / ranking, Task Path Planner preview,
+confirmation, deterministic replay execution, and Task Result Reporter output.
 
 Internal Agents introduced / made concrete:
 
@@ -236,28 +236,33 @@ Internal Agents introduced / made concrete:
   postcondition checks, artifact status, and final-state signals, then
   returns a user-facing result with structured fields the UI can render.
 
-Expected delivery:
+Delivered for v0.1 closeout:
 
-- LearnedPath retrieval and ranking for the task.
-- Slot binding: map task terms such as names, dates, statuses, export
-  formats, or search terms into learned action values.
-- Pre-execution confirmation when the planner's route or bound values
-  are ambiguous.
-- Execution through the M10 replay engine, not through autonomous
-  exploration.
-- Task result verification MVP: postcondition checks, artifact status,
-  final-state signals, and explicit `uncertain` / `needs review`
-  reporting when the result cannot be verified.
-- Basic artifact capture / return for downloaded files, exports,
-  screenshots, and final artifact references when the task produces
-  them.
-- Action risk & consent gate MVP before execution for dangerous,
-  irreversible, externally sending, bulk modification, permission
-  modification, or user-defined sensitive operations.
+- 11.1.1 Task Planning Domain Contract.
+- 11.1.2 LearnedPath Retrieval and Ranking.
+- 11.1.3 Task Path Planner MVP.
+- 11.1.4 Task Planning Dispatch Preview.
+- 11.1.5 Plan Confirmation and Consent Gate.
+- 11.1.6 Execution via Replay.
+- 11.1.7 Result Verification and Task Result Reporter.
+- 11.1.8 Task-to-path Tests and Evidence (`1104` API tests passed,
+  `25` E2E passed, ruff clean, no unresolved P1/P2).
 
-The first risk gate can be deterministic policy plus user-configurable
-rules owned by the Orchestrator. Do not add a new Agent for this
-milestone.
+The v0.1 shipped chain is:
+
+```text
+TaskInput -> LearnedPath retrieval / ranking -> Task Path Planner
+-> planning preview -> confirmation -> replay execution
+-> Task Result Reporter
+```
+
+Current boundaries:
+
+- Slot Binding remains future scope.
+- `replay completed` does not mean `task succeeded`.
+- Missing postcondition evidence returns `uncertain` / `needs review`.
+- Failed / blocked execution does not trigger automatic recovery or hidden
+  relearning.
 
 Explicit non-goals for M11.1: no hidden autonomous relearning, no
 per-step LLM browser control, no full recovery dialogue beyond
