@@ -33,6 +33,9 @@ without explicit user consent.
   documentation initialized.
 - [12.0-failure-recovery-abort-runtime-robustness](./12.0-failure-recovery-abort-runtime-robustness/) —
   M12 scope, terms, and safety boundary. Status: documentation initialized.
+- [12.1-failure-classification-recovery-boundary](./12.1-failure-classification-recovery-boundary/) —
+  failure classification and recovery boundary planning. Status:
+  documentation initialized.
 
 ## Core Runtime Terms
 

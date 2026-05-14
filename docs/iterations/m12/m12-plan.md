@@ -27,7 +27,7 @@ M11.2 Runtime Observation / Wait-for-change is not part of this plan. M12 may
 later consume richer runtime observation as evidence, but it must not depend on
 M11.2 to define its first safety semantics.
 
-## Future Package Split
+## Package Split
 
 ### 12.0 · M12 overview / scope
 
@@ -36,8 +36,12 @@ abort handling, and runtime robustness.
 
 ### 12.1 · Failure classification and recovery boundary
 
-Classify `failure`, `blocked`, `uncertain`, and `needs_review` from structured
-execution and reporting evidence. The classifier must not execute recovery.
+Status: documentation initialized / current planning package.
+
+Classify `failure`, `blocked`, `uncertain`, and `needs_review` from M11.1
+structured execution and reporting evidence. The classifier returns evidence
+references and recovery boundary recommendations, but must not execute
+recovery.
 
 ### 12.2 · User abort / stop handling
 
@@ -66,8 +70,8 @@ Close M12 with deterministic tests, conversation/event evidence, and static
 review that prove no hidden recovery, no hidden relearning, and no browser
 continuation without user consent.
 
-This initialization creates only `12.0-*`. Do not create `12.1-*` or later
-detail directories in this round.
+12.1 creates only `12.1-failure-classification-recovery-boundary`. Do not
+create `12.2-*` or later detail directories in this round.
 
 ## Decision Rules
 
@@ -125,4 +129,6 @@ M12 decisions must preserve:
 
 - `git diff --check`
 - `git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'`
-- `find docs/iterations -maxdepth 2 -type d -name '12.1*' -print`
+- `find docs/iterations/m12 -maxdepth 1 -type d -name '12.2*' -print`
+- `find docs/iterations/m12 -maxdepth 1 -type d -name '12.3*' -print`
+- `find docs/iterations/m12 -maxdepth 1 -type d -name '12.4*' -print`
