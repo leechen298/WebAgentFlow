@@ -408,3 +408,280 @@ def test_run_replay_observational_path() -> None:
     assert result.drift_status == "none"
     assert result.steps == []
     mock_runtime.stop.assert_called_once()
+
+
+# ── Wait-for-change integration ─────────────────────────────────────────────
+
+
+def test_replay_step_carries_wait_result_for_fill() -> None:
+    """fill action produces a skipped wait_result in the replay step."""
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(_make_page_analysis()),
+        actions=[
+            {
+                "step": 0,
+                "action_type": "fill",
+                "target_selector": "#q",
+                "value": "hello",
+            }
+        ],
+    )
+
+    mock_locator = MagicMock()
+    mock_locator.count.return_value = 1
+    mock_locator.first.fill = MagicMock()
+    mock_locator.first.input_value.return_value = "hello"
+    mock_locator.first.wait_for = MagicMock()
+
+    mock_page = MagicMock()
+    mock_page.locator.return_value = mock_locator
+    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.title.return_value = "Users"
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop = MagicMock()
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_title.return_value = "Users"
+    mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
+
+    mock_analysis = _make_page_analysis()
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=mock_analysis,
+        ):
+            result = run_replay(path, "http://127.0.0.1:5175/users")
+
+    assert result.status == "succeeded"
+    assert len(result.steps) == 1
+    step = result.steps[0]
+    assert step.wait_result is not None
+    assert step.wait_result.status == "skipped"
+
+
+def test_replay_click_action_triggers_wait_for_change() -> None:
+    """click action triggers wait-for-change and produces a WaitResult."""
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(_make_page_analysis()),
+        actions=[
+            {
+                "step": 0,
+                "action_type": "click",
+                "target_selector": "#btn",
+            }
+        ],
+    )
+
+    mock_locator = MagicMock()
+    mock_locator.count.return_value = 1
+    mock_locator.first.click = MagicMock()
+    mock_locator.first.wait_for = MagicMock()
+
+    mock_page = MagicMock()
+    mock_page.locator.return_value = mock_locator
+    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.title.return_value = "Users"
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop = MagicMock()
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_title.return_value = "Users"
+    mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
+
+    mock_analysis = _make_page_analysis()
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=mock_analysis,
+        ):
+            result = run_replay(path, "http://127.0.0.1:5175/users")
+
+    assert result.status == "succeeded"
+    assert len(result.steps) == 1
+    step = result.steps[0]
+    assert step.wait_result is not None
+    # click with no URL/title change -> timeout
+    assert step.wait_result.status in ("observed", "timeout")
+    assert step.wait_result.wait_strategy == "short_stability_wait"
+
+
+def test_replay_observe_action_does_not_force_business_wait() -> None:
+    """observe action returns not_required wait_result, no forced wait."""
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(_make_page_analysis()),
+        actions=[
+            {
+                "step": 0,
+                "action_type": "observe",
+                "target_selector": "#info",
+            }
+        ],
+    )
+
+    mock_locator = MagicMock()
+    mock_locator.count.return_value = 1
+    mock_locator.first.wait_for = MagicMock()
+    mock_locator.first.text_content.return_value = "some text"
+
+    mock_page = MagicMock()
+    mock_page.locator.return_value = mock_locator
+    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.title.return_value = "Users"
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop = MagicMock()
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_title.return_value = "Users"
+    mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
+
+    mock_analysis = _make_page_analysis()
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=mock_analysis,
+        ):
+            result = run_replay(path, "http://127.0.0.1:5175/users")
+
+    assert result.status == "succeeded"
+    assert len(result.steps) == 1
+    step = result.steps[0]
+    assert step.wait_result is not None
+    assert step.wait_result.status == "not_required"
+
+
+def test_replay_action_failure_wait_result_does_not_misreport_succeeded() -> None:
+    """Failed action gets skipped wait_result, replay status stays failed."""
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(_make_page_analysis()),
+        actions=[
+            {
+                "step": 0,
+                "action_type": "click",
+                "target_selector": "#missing",
+            }
+        ],
+    )
+
+    mock_locator = MagicMock()
+    mock_locator.count.return_value = 1
+    mock_locator.first.click = MagicMock(side_effect=Exception("element detached"))
+    mock_locator.first.wait_for = MagicMock()
+
+    mock_page = MagicMock()
+    mock_page.locator.return_value = mock_locator
+    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.title.return_value = "Users"
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop = MagicMock()
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_title.return_value = "Users"
+    mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
+
+    mock_analysis = _make_page_analysis()
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=mock_analysis,
+        ):
+            result = run_replay(path, "http://127.0.0.1:5175/users")
+
+    assert result.status == "failed"
+    assert len(result.steps) == 1
+    step = result.steps[0]
+    assert step.ok is False
+    assert step.wait_result is not None
+    assert step.wait_result.status == "skipped"
+
+
+def test_replay_wait_service_exception_does_not_change_replay_status() -> None:
+    """If wait service raises internally, replay status is unaffected."""
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(_make_page_analysis()),
+        actions=[
+            {
+                "step": 0,
+                "action_type": "fill",
+                "target_selector": "#q",
+                "value": "hello",
+            }
+        ],
+    )
+
+    mock_locator = MagicMock()
+    mock_locator.count.return_value = 1
+    mock_locator.first.fill = MagicMock()
+    mock_locator.first.input_value.return_value = "hello"
+    mock_locator.first.wait_for = MagicMock()
+
+    mock_page = MagicMock()
+    mock_page.locator.return_value = mock_locator
+    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.title.return_value = "Users"
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop = MagicMock()
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_title.return_value = "Users"
+    mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
+
+    mock_analysis = _make_page_analysis()
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=mock_analysis,
+        ):
+            with patch(
+                "app.services.learning.learned_path_replay.wait_for_change_after_action",
+                side_effect=RuntimeError("wait service crash"),
+            ):
+                result = run_replay(path, "http://127.0.0.1:5175/users")
+
+    # The action succeeded; wait service exception produces conservative result.
+    assert result.status == "succeeded"
+    assert result.learned_path_id == path.id
+    assert len(result.steps) == 1
+    assert result.steps[0].ok is True
+    assert result.steps[0].wait_result is not None
+    assert result.steps[0].wait_result.status == "skipped"
+    assert "wait failed" in result.steps[0].wait_result.notes.lower()

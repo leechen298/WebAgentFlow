@@ -19,12 +19,16 @@ from app.schemas.learned_path_replay import (
     ReplayResult,
     ReplayStatus,
     ReplayStepLog,
+    WaitResult,
 )
 from app.schemas.page_analysis import PageAnalysis
 from app.services.execution.execution_runtime import create_execution_runtime
 from app.services.learning.page_analyzer import analyze_page
 from app.services.learning.page_signature import (
     build_signature_dict,
+)
+from app.services.learning.wait_for_change import (
+    wait_for_change_after_action,
 )
 
 SUPPORTED_ACTION_TYPES = {"fill", "click", "press", "observe"}
@@ -222,6 +226,7 @@ def _step_log_to_replay_step(log: dict[str, Any]) -> ReplayStepLog:
         url_after=log.get("url_after"),
         title_after=log.get("title_after"),
         screenshot_ref=log.get("screenshot_ref"),
+        wait_result=log.get("wait_result"),
     )
 
 
@@ -339,6 +344,19 @@ def run_replay(
         try:
             for action in precheck.actions:
                 log = execute_action(action, runtime)
+                try:
+                    wait_result = wait_for_change_after_action(
+                        page=runtime.page if runtime else None,
+                        action=action,
+                        step_log=log,
+                    )
+                except Exception as wait_exc:
+                    # wait service must never change replay status
+                    wait_result = WaitResult(
+                        status="skipped",
+                        notes=f"wait failed: {wait_exc}"[:300],
+                    )
+                log["wait_result"] = wait_result
                 step_logs.append(log)
                 if not log.get("ok", False) and action.action_type != "observe":
                     failed = True

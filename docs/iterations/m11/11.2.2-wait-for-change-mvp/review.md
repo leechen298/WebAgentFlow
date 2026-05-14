@@ -1,12 +1,75 @@
 # Review
 
-Status: initialized
+Status: completed
 
-本文档在 11.2.2 阶段初始化，用于后续记录 Wait-for-change MVP 的审查结论。
+## 11.2.2 Wait-for-change MVP — Implementation Review
 
-11.2.2 当前只定义文档级 wait-for-change MVP、wait result 和 wait strategy。
-本轮不实现 runtime observation、不实现 page-load waiting、不修改 schema、不修改
-API、不接入 replay execution、不接入 Task Result Reporter。
+### What was implemented
 
-本轮也不调用 Page Understanding Agent，不实现 Page Context Bridge，不创建 M11.3
-目录，不提前 M14。
+11.2.2 Wait-for-change MVP minimal implementation completed.
+
+- Replay steps can carry `wait_result`.
+- Only minimal post-action wait signals are supported.
+
+### Schema changes
+
+Added to `apps/api/app/schemas/learned_path_replay.py`:
+
+- `ObservationSignal` — a single post-action observation signal.
+- `WaitResult` — outcome of a post-action wait window.
+- `ObservationSignalKind` — `Literal["url_changed", "title_changed", "page_load_finished", "network_idle_observed"]`.
+- `WaitStatus` — `Literal["observed", "timeout", "skipped", "not_required"]`.
+- `ReplayStepLog.wait_result: WaitResult | None = None` — backward-compatible extension.
+
+### Wait service
+
+New file `apps/api/app/services/learning/wait_for_change.py`:
+
+- `wait_for_change_after_action(page, action, step_log, timeout_ms, wait_strategy)` returns `WaitResult`.
+- Action policy: `click` -> short_stability_wait, `fill`/`press` -> skipped, `observe` -> not_required, failed action -> skipped.
+- Budget splitting: `timeout_ms` is the total budget. Stability wait uses a bounded fraction (`min(300, timeout_ms // 2)`), network idle uses the remaining positive budget. Default `timeout_ms=1000` → 300ms stability + 700ms network idle.
+- `page_load_finished` is **not** emitted in MVP — URL/title change alone does not prove browser-level document load completion. Schema kind retained for future use.
+- `network_idle_observed` is emitted as a supporting signal only when the network-idle probe succeeds within the remaining budget. It can never be `primary_signal`.
+- When `remaining_ms <= 0`, the network-idle probe is skipped entirely (Playwright treats `timeout=0` as "disable timeout", which would hang).
+- Exception-safe: internal failures return conservative `skipped`/`timeout`.
+
+### Replay integration
+
+Updated `apps/api/app/services/learning/learned_path_replay.py`:
+
+- After `execute_action`, calls `wait_for_change_after_action` and stores result in `log["wait_result"]`.
+- Defensive wrapper catches unexpected wait service exceptions and constructs a conservative `WaitResult(status="skipped", notes="wait failed: ...")` so replay status is unaffected and the wait outcome is preserved.
+- `_step_log_to_replay_step` passes through `wait_result`.
+
+### Tests
+
+- `apps/api/tests/test_wait_for_change.py` — 24 tests covering schema validation, action policy, signal detection, primary vs supporting signals, budget splitting (stability fraction, network idle remaining budget, budget sums to total), exception policy, no-raw-HTML invariant.
+- `apps/api/tests/test_learned_path_replay.py` — 5 new tests for wait integration (fill carries skipped result, click triggers wait, observe returns not_required, failed action doesn't misreport, wait exception produces conservative result without changing replay status). All 22 existing tests continue passing.
+
+### Supported signals (MVP)
+
+- `url_changed` (primary)
+- `title_changed` (primary)
+- `network_idle_observed` (supporting only — uses remaining budget after stability wait)
+
+Not emitted in MVP (schema kinds retained for future use):
+
+- `page_load_finished` — requires action-related load evidence that the current wait service cannot reliably detect.
+
+### What is NOT implemented
+
+- No Agent business judgment.
+- No Task Result Reporter integration.
+- No Page Understanding Agent.
+- No recovery / retry / abort.
+- No Page Context Bridge.
+- No raw HTML persistence.
+- No M12 / M14 / 11.3 directories created.
+
+### Validation
+
+- `git diff --check`: PASS
+- Scoped wait/replay tests: 46/46 PASS
+- `ruff`: PASS
+- Full API suite: 1133 passed, 65 skipped
+- M12/M14/11.3 directory check: PASS (none found)

@@ -107,8 +107,8 @@ reporter integration。
 - 11.2.2 · [等待变化 MVP（Wait-for-change MVP）](../11.2.2-wait-for-change-mvp/)。
 - 11.2.3 · replay 与观察集成（Replay Integration with Observation）。
 - 11.2.4 · 真实场景 fixture 页面（Realistic Fixture Pages）。
-- 11.2.5 · 观察证据接入 Task Result Reporter（Observation Evidence into Task Result Reporter）。
 - later 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）。
+- 11.2.5 · 观察证据接入 Task Result Reporter（Observation Evidence into Task Result Reporter）。
 - 11.2.6 · Codex 真实网页 QA（Codex Realistic Web QA）。
 - 11.2.7 · 运行时观察测试与证据（Runtime Observation Tests and Evidence）。
 
