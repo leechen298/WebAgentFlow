@@ -44,6 +44,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.2-runtime-observation-realistic-hardening](./11.2-runtime-observation-realistic-hardening/) —— M11.2 总纲：运行时观察与真实网页稳健性增强。状态：11.2.0 文档初始化完成。
 - [11.2.1-observation-signal-contract](./11.2.1-observation-signal-contract/) —— Observation Signal Contract。状态：文档生成完成。
 - [11.2.2-wait-for-change-mvp](./11.2.2-wait-for-change-mvp/) —— Wait-for-change MVP。状态：文档生成完成，能力未实现。
+- 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）—— later M11.2.x 候选增强；记录组件库生成的 runtime surface detection and relation，不属于 11.2.2 当前 MVP。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -55,6 +56,34 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 `11.2.2-wait-for-change-mvp/` 只定义文档级 Wait Result 和 Wait Strategy，
 不代表 wait-for-change、page-load waiting、Agent 判断或 reporter integration
 已实现。
+
+## Later M11.2.x · Common Component Runtime Semantics
+
+M11.2 后续应补充常用组件库运行时语义兼容。该方向不是 popup support，而是
+component-generated runtime surface detection and relation：在 replay action 后，
+识别由常用组件库生成或改变的运行时界面片段，并尽可能把新出现或变化的 runtime
+surface 与触发它的 action / element 关联起来。
+
+runtime surface 可以是 dropdown、select option panel、autocomplete panel、
+cascader panel、date picker、time picker、popover、tooltip、modal、dialog、
+drawer、toast、message、notification、action sheet、bottom sheet、mobile picker、
+loading overlay、validation message、virtualized list、inserted option list，
+也可以只是 active / selected / checked / disabled / enabled 状态变化。
+
+后续实现原则：
+
+- 优先使用 DOM insertion / removal、visibility change、aria-expanded、
+  aria-controls、aria-owns、role=listbox / option / menu / dialog / tooltip、
+  selected / checked / disabled / active state、bounding rect proximity、
+  insertion timing relative to action、focus movement、active descendant 等通用
+  Web 信号。
+- 组件库 class 只作为 supporting evidence，例如 `ant-select-dropdown`、
+  `el-select-dropdown`、`n-select-menu`、`arco-select-popup`、
+  `t-select__dropdown`、`van-popup`、`van-action-sheet`、`nut-popup`、
+  `adm-popup`，不能作为唯一依据。
+- 后续兼容范围同时覆盖 PC / 管理后台组件库和移动端组件库。
+- 不调用 Agent 判断业务成功，不让 LLM 进入 L3 per-step execution loop。
+- 不阻塞 11.2.2 最小 wait_result / wait_strategy 实现。
 
 ## Possible M11.3 · Page Context Bridge Decision Point
 

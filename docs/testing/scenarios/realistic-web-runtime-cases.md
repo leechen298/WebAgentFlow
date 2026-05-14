@@ -158,6 +158,37 @@ Runtime Observation 覆盖不是由当前动作直接触发的页面变化。
 - 后续执行包（future package）：11.2.2 wait-for-change MVP / 11.2.4 realistic
   fixture pages。
 
+### 组件库交互后生成运行时界面片段（Component-generated Runtime Surface After Interaction）
+
+- 场景名称（case name）：component-generated runtime surface after interaction。
+- 场景（scenario）：用户点击、聚焦、选择或输入后，常用组件库生成新的运行时
+  界面片段。该片段可能插入到 `body`、当前元素内部、兄弟节点、portal / teleport
+  容器，或只表现为 class / aria / selected / disabled / active 状态变化。
+- 价值（why it matters）：replay 不能只依赖 URL / title / 原节点子树变化。真实
+  组件库经常把 option panel、picker、toast、modal、drawer、action sheet、
+  validation message 等渲染到触发元素之外。
+- M11.2 预期观察（expected observation）：记录 `element_appeared`、
+  `element_disappeared`、`modal_opened`、`modal_closed`、`toast_shown`、
+  `loading_finished`、`element_enabled`、`element_disabled`、
+  `form_validation_message`、`list_changed`，以及 future component relation
+  evidence。
+- 关联提示（relation hints）：action timing、aria-expanded / aria-controls /
+  aria-owns、role=listbox / option / menu / dialog、focus movement、active
+  descendant、bounding rect proximity、component class pattern as supporting
+  evidence。
+- PC 组件库示例（PC component examples）：Ant Design、Element Plus、Naive UI、
+  Arco Design、TDesign、MUI / Material-ish、Bootstrap-style components。
+- 移动端组件库示例（mobile component examples）：Ant Design Mobile、Vant、NutUI、
+  Varlet、Ionic、Framework7-style mobile components。
+- 不在范围（not in scope）：不在 11.2.2 MVP 中完整实现组件库行为识别；不调用
+  LLM 判断 popup / panel 归属；不让 Agent 进入 per-step execution loop；不把
+  组件库 class 作为唯一依据。
+- 后续 M12 含义（future M12 implication）：组件库界面片段缺失、状态未变化或
+  关联不确定时，后续可成为 result reporter uncertainty 或 M12 recovery / takeover
+  的输入，但 M11.2 不做决策。
+- 后续执行包（future package）：later 11.2.x Common Component Runtime Semantics /
+  11.2.4 realistic fixture pages / 11.2.5 reporter evidence integration。
+
 ### 服务端推送消息（Server Push Message）
 
 - 场景名称（case name）：server push message。

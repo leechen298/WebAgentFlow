@@ -108,6 +108,7 @@ reporter integration。
 - 11.2.3 · replay 与观察集成（Replay Integration with Observation）。
 - 11.2.4 · 真实场景 fixture 页面（Realistic Fixture Pages）。
 - 11.2.5 · 观察证据接入 Task Result Reporter（Observation Evidence into Task Result Reporter）。
+- later 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）。
 - 11.2.6 · Codex 真实网页 QA（Codex Realistic Web QA）。
 - 11.2.7 · 运行时观察测试与证据（Runtime Observation Tests and Evidence）。
 
@@ -120,6 +121,37 @@ integration 已实现。
 [`contract.md`](../11.2.2-wait-for-change-mvp/contract.md)。它只定义文档级
 Wait Result 和 Wait Strategy，不代表 wait-for-change、page-load waiting、Agent
 判断或 reporter integration 已实现。
+
+## Later M11.2.x · Common Component Runtime Semantics
+
+M11.2 后续应补充常用组件库运行时语义兼容。它不是只支持某一个 popup，而是
+component-generated runtime surface detection and relation，也就是组件库生成的
+运行时界面片段识别与关联。
+
+该方向要处理用户点击、聚焦、选择或输入后，组件库可能把新界面插入到 `body`、
+当前元素内部、兄弟节点、portal / teleport 容器，或者只通过 class / aria /
+selected / checked / disabled / active 状态表达变化。runtime surface 可以表现为
+dropdown、select option panel、autocomplete panel、cascader panel、date picker、
+time picker、popover、tooltip、modal、dialog、drawer、toast、message、
+notification、action sheet、bottom sheet、mobile picker、loading overlay、
+validation message、virtualized list 或 inserted option list。
+
+后续实现原则：
+
+- 优先使用通用 Web 信号，包括 DOM insertion / removal、visibility change、
+  aria-expanded、aria-controls、aria-owns、role=listbox / option / menu / dialog /
+  tooltip、selected / checked / disabled / active state、bounding rect proximity、
+  insertion timing relative to action、focus movement、active descendant。
+- 组件库 class 只能作为 supporting evidence，例如 `ant-select-dropdown`、
+  `el-select-dropdown`、`n-select-menu`、`arco-select-popup`、
+  `t-select__dropdown`、`van-popup`、`van-action-sheet`、`nut-popup`、
+  `adm-popup`。
+- 后续兼容范围同时覆盖 PC / 管理后台组件库（Ant Design、Element Plus、Naive UI、
+  Arco Design、TDesign、MUI / Material-ish components、Bootstrap-style
+  components）和移动端组件库（Ant Design Mobile、Vant、NutUI、Varlet、Ionic、
+  Framework7-style mobile components）。
+- 不调用 Agent 判断业务成功，不让 LLM 进入 L3 per-step execution loop。
+- 不属于 11.2.2 当前最小实现范围，不阻塞 wait_result / wait_strategy MVP。
 
 ## 硬边界
 

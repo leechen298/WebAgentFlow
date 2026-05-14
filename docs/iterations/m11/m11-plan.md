@@ -1009,6 +1009,10 @@ Passive Runtime Observation 是非用户主动操作触发的页面变化。
 设计边界：
 
 - Wait-for-change MVP 优先覆盖 `post_action` wait。
+- 11.2.2 当前最小实现只做 `url_changed`、`title_changed`、保守
+  `page_load_finished`，以及作为辅助信号的 `network_idle_observed`。
+- 11.2.2 不做完整组件库 runtime behavior detection，不把 later component-generated
+  runtime surface detection and relation 写入当前 MVP 范围。
 - `passive_runtime` 不作为 11.2.2 MVP 的连续后台观察目标。
 - Wait Result status 收敛为 `observed`、`timeout`、`skipped`、`not_required`。
 - `timeout` / `skipped` / `not_required` 是 wait outcome，不是 Observation Signal kind。
@@ -1064,6 +1068,41 @@ result 可以携带 observation evidence。不得改变 Task Path Planner 规划
 
 目标方向：让 Task Result Reporter 可以消费 observation evidence。无明确
 postcondition evidence 时仍必须保守返回 `uncertain` / `needs_review`。
+
+### later 11.2.x · Common Component Runtime Semantics
+
+状态：候选增强方向，不重新编号现有 11.2.3 / 11.2.4 / 11.2.5。
+
+目标方向：补充常用组件库运行时语义兼容。它不是 popup support，而是组件库生成的
+运行时界面片段识别与关联（component-generated runtime surface detection and
+relation）：在 replay action 后，识别由组件库生成或改变的 runtime surface，并
+尽可能把新 surface 或状态变化与触发它的 action / element 关联起来。
+
+runtime surface 包括但不限于 dropdown、select option panel、autocomplete panel、
+cascader panel、date picker / time picker、popover、tooltip、modal / dialog、
+drawer、toast / message、notification、action sheet、bottom sheet、mobile picker、
+loading overlay、validation message、virtualized list、inserted option list，
+以及 active / selected / checked / disabled / enabled 状态变化。
+
+后续实现原则：
+
+- 优先使用通用 Web 信号：DOM insertion / removal、visibility change、
+  aria-expanded、aria-controls、aria-owns、role=listbox / option / menu / dialog /
+  tooltip、selected / checked / disabled / active state、bounding rect proximity、
+  insertion timing relative to action、focus movement、active descendant。
+- 组件库 class 只作为 supporting evidence，例如 `ant-select-dropdown`、
+  `el-select-dropdown`、`n-select-menu`、`arco-select-popup`、
+  `t-select__dropdown`、`van-popup`、`van-action-sheet`、`nut-popup`、
+  `adm-popup`，不能作为唯一依据。
+- PC / 管理后台组件库兼容方向包括 Ant Design、Element Plus、Naive UI、Arco
+  Design、TDesign、MUI / Material-ish components、Bootstrap-style components。
+- 移动端组件库兼容方向包括 Ant Design Mobile、Vant、NutUI、Varlet、Ionic、
+  Framework7-style mobile components。
+- 不调用 Agent 判断业务成功，不让 LLM 进入 L3 per-step execution loop。
+- 不阻塞 11.2.2 最小 wait_result / wait_strategy；建议位置关系为 11.2.2 最小
+  wait_result / wait_strategy、11.2.3 replay integration、11.2.4 realistic fixture
+  pages、later 11.2.x Common Component Runtime Semantics、11.2.5 Reporter 消费
+  observation / wait evidence。
 
 ### 11.2.6 · Codex 真实网页 QA
 

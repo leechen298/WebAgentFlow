@@ -88,6 +88,37 @@ cases，但不实现观察、wait-for-change、replay integration 或 reporter i
 - Page Understanding Agent 不参与 11.2.2。
 - M11.3 只作为 M11.2 后的候选决策点，不创建 11.3 目录。
 
+## 后续 Common Component Runtime Semantics 记忆点
+
+later 11.2.x 应记录并拆分 Common Component Runtime Semantics（常用组件库运行时
+语义兼容）。该方向不是 popup support，而是组件库生成的运行时界面片段识别与关联：
+在 replay action 后，观察由常用组件库生成或改变的 runtime surface，并尽可能关联到
+触发它的 action / element。
+
+11.2.2 当前最小实现不做完整组件库 runtime behavior detection。它仍只做
+`url_changed`、`title_changed`、保守 `page_load_finished`，以及作为 supporting
+signal only 的 `network_idle_observed`。
+
+后续拆包建议保持现有编号不变：
+
+- 11.2.2：最小 wait_result / wait_strategy。
+- 11.2.3：replay integration。
+- 11.2.4：realistic fixture pages。
+- later 11.2.x：Common Component Runtime Semantics。
+- 11.2.5：Reporter 消费 observation / wait evidence。
+
+原则：
+
+- 优先通用 Web 信号：DOM insertion / removal、visibility change、aria-expanded、
+  aria-controls、aria-owns、role=listbox / option / menu / dialog / tooltip、
+  selected / checked / disabled / active state、bounding rect proximity、action 后
+  insertion timing、focus movement、active descendant。
+- 组件库 class 只作为 supporting evidence，不能作为唯一依据。
+- 兼容方向同时覆盖 Ant Design、Element Plus、Naive UI、Arco Design、TDesign、
+  MUI / Material-ish、Bootstrap-style components，以及 Ant Design Mobile、Vant、
+  NutUI、Varlet、Ionic、Framework7-style mobile components。
+- 不调用 Agent 判断业务成功，不让 LLM 进入 L3 per-step execution loop。
+
 ## 验证
 
 只运行：

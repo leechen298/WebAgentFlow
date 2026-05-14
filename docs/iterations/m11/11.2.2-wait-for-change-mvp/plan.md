@@ -78,6 +78,10 @@ page_load_finished
 network_idle_observed
 ```
 
+11.2.2 当前最小实现不做完整组件库 runtime behavior detection，不识别任意
+component-generated runtime surface，也不根据组件库 class 判定 popup / panel 归属。
+Common Component Runtime Semantics 记录为 later 11.2.x 增强方向。
+
 计划字段：
 
 - `signal_id`
@@ -252,6 +256,34 @@ notes = "network idle observed without primary page-change signal"
 
 如果没有 URL/title 变化，也没有明确 action-related load evidence，不应单独生成
 `page_load_finished`。
+
+## 后续增强：Common Component Runtime Semantics
+
+later 11.2.x 应补充常用组件库运行时语义兼容。它不是 popup support，而是
+component-generated runtime surface detection and relation：在 replay action 后，
+识别由常用组件库生成或改变的运行时界面片段，并尽可能把新 surface 与触发它的
+action / element 关联起来。
+
+runtime surface 包括 dropdown、select option panel、autocomplete panel、cascader
+panel、date picker / time picker、popover、tooltip、modal / dialog、drawer、
+toast / message、notification、action sheet、bottom sheet、mobile picker、loading
+overlay、validation message、virtualized list、inserted option list，以及 active /
+selected / checked / disabled / enabled 状态变化。
+
+后续实现原则：
+
+- 优先使用 DOM insertion / removal、visibility change、aria-expanded、
+  aria-controls、aria-owns、role=listbox / option / menu / dialog / tooltip、
+  selected / checked / disabled / active state、bounding rect proximity、
+  insertion timing relative to action、focus movement、active descendant 等通用
+  Web 信号。
+- 组件库 class 只作为 supporting evidence，不能作为唯一依据。
+- 后续兼容范围覆盖 PC / 管理后台组件库：Ant Design、Element Plus、Naive UI、
+  Arco Design、TDesign、MUI / Material-ish components、Bootstrap-style components。
+- 后续兼容范围覆盖移动端组件库：Ant Design Mobile、Vant、NutUI、Varlet、Ionic、
+  Framework7-style mobile components。
+- 不调用 Agent 判断业务成功，不让 LLM 进入 L3 per-step execution loop。
+- 不阻塞 11.2.2 最小 wait_result / wait_strategy 实现。
 
 ## 计划 Replay Integration
 

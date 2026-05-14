@@ -37,24 +37,17 @@ Wait-for-change MVP 是 replay action 执行后的短窗口观察机制，用于
 
 ### MVP 优先覆盖的 Signal
 
-MVP 优先覆盖这些 11.2.1 signal kind：
+MVP 最小实现优先覆盖这些 11.2.1 signal kind：
 
 ```text
 url_changed
 title_changed
-text_appeared
-element_appeared
-element_enabled
-element_disabled
-modal_opened
-toast_shown
-loading_finished
 page_load_finished
-list_changed
-form_validation_message
 network_idle_observed
-spa_content_changed
 ```
+
+`page_load_finished` 必须保守生成；`network_idle_observed` 只能作为 supporting
+signal，不能单独代表业务成功或 wait 命中。
 
 ### 可观察但非 MVP 主目标的 Signal
 
@@ -63,9 +56,19 @@ spa_content_changed
 ```text
 page_load_started
 loading_started
+text_appeared
 text_disappeared
+element_appeared
 element_disappeared
+element_enabled
+element_disabled
+modal_opened
 modal_closed
+toast_shown
+loading_finished
+list_changed
+form_validation_message
+spa_content_changed
 passive_dom_mutation
 server_push_update
 ```
@@ -75,6 +78,33 @@ server_push_update
 
 `passive_dom_mutation` 和 `server_push_update` 偏 `passive_runtime`，不作为 11.2.2
 MVP 的主要实现目标。
+
+### 非 11.2.2 范围：Common Component Runtime Semantics
+
+常用组件库运行时语义兼容（Common Component Runtime Semantics）是后续 later
+11.2.x 增强方向，不属于 11.2.2 当前最小实现。
+
+该方向不要写死为 popup support，而应写成 component-generated runtime surface
+detection and relation，即组件库生成的运行时界面片段识别与关联。原因是组件库在
+用户交互后可能插入到 `body`、当前元素内部、兄弟节点、portal / teleport 容器，
+也可能只是改变 class / aria / selected / checked / disabled / active 状态；移动端
+还可能表现为 bottom sheet、picker、action sheet，不一定是 popup。
+
+后续实现原则：
+
+- 优先使用通用 Web 信号：DOM insertion / removal、visibility change、
+  aria-expanded、aria-controls、aria-owns、role=listbox / option / menu / dialog /
+  tooltip、selected / checked / disabled / active state、bounding rect proximity、
+  insertion timing relative to action、focus movement、active descendant。
+- 组件库 class 只作为 supporting evidence，例如 `ant-select-dropdown`、
+  `el-select-dropdown`、`n-select-menu`、`arco-select-popup`、
+  `t-select__dropdown`、`van-popup`、`van-action-sheet`、`nut-popup`、
+  `adm-popup`，不能作为唯一依据。
+- PC / 管理后台组件库兼容方向包括 Ant Design、Element Plus、Naive UI、Arco
+  Design、TDesign、MUI / Material-ish components、Bootstrap-style components。
+- 移动端组件库兼容方向包括 Ant Design Mobile、Vant、NutUI、Varlet、Ionic、
+  Framework7-style mobile components。
+- 不调用 Agent 判断业务成功，不让 LLM 进入 L3 per-step execution loop。
 
 ## Wait Result
 
