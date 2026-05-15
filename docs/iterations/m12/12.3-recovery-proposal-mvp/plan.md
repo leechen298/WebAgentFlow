@@ -30,8 +30,20 @@ scope-boundaries。
 
 ## 步骤
 
-1. 执行 precheck：确认当前分支是 `v0.2-local`，工作区 clean，并审计
+1. 执行 precheck：显式切到 `v0.2-local`，确认工作区 clean，并审计
    `v0.2-local` 相对 `v0.2` 的本地堆叠差异。
+
+   ```bash
+   git switch v0.2-local
+   git status --short --branch
+   git merge-base --is-ancestor v0.2 v0.2-local
+   git log --oneline --decorate v0.2..v0.2-local
+   git diff --name-only v0.2..v0.2-local
+   git diff --name-only v0.2..v0.2-local -- apps packages docs/iterations/m11
+   ```
+
+   `git merge-base --is-ancestor v0.2 v0.2-local` 必须 exit code 0；否则停止
+   报告，不继续。
 2. 按最新 iteration templates 重写 12.3 `README.md`、`intent.md`、`plan.md`、
    `review.md`。
 3. 新增 `contract.md`、`technical-design.md`、`test-plan.md`。
@@ -49,6 +61,8 @@ tests 只写入 `test-plan.md`，不在本轮运行。
 
 | Command | Expected proof | Live autonomous verification excluded? | Notes |
 |---|---|---|---|
+| `git switch v0.2-local` | 当前工作树位于 local-only staging branch。 | Yes | 如果分支不存在，停止报告。 |
+| `git merge-base --is-ancestor v0.2 v0.2-local` | `v0.2-local` 正确堆叠在 `v0.2` 之上。 | Yes | exit code 必须为 0。 |
 | `test -f docs/iterations/m12/12.3-recovery-proposal-mvp/README.md` and six sibling checks | 12.3 七件套全部存在。 | Yes | 文件存在性检查。 |
 | `git diff --check` | 文档 diff 无 whitespace error。 | Yes | 静态检查。 |
 | `git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'` | 无代码 / package 改动。 | Yes | Scope guard。 |

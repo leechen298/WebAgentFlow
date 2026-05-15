@@ -29,6 +29,10 @@
 - 12.3 `plan.md` 更新为新模板结构。
 - 12.3 `review.md` 更新为新模板结构。
 - M12 README / m12-plan 同步 12.3 为 proposed / current design package。
+- 本轮实际交付是 12.3 implementation-gate design package alignment。
+- 本轮未实现 proposal schema、proposal generator 或 tests。
+- 12.3 implementation 必须在 `contract.md`、`technical-design.md`、
+  `test-plan.md`、`plan.md` 审核后另开任务。
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
@@ -51,6 +55,7 @@ execution。12.3 本轮是 docs-only design package alignment，不产生 `run_i
 
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
 |---|---|---|---|---|---|---|
+| `git switch v0.2-local` | Current branch is `v0.2-local` | Already on `v0.2-local` | 0 | PASS | command output inspected | Explicit branch switch precheck. |
 | `git merge-base --is-ancestor v0.2 v0.2-local` | `v0.2-local` contains `v0.2` | No output | 0 | PASS | exit code 0 | Precheck confirms stack base. |
 | `git log --oneline --decorate v0.2..v0.2-local` | Local stack reviewed | 10 local commits: 12.3 docs, selected-option boundary, iteration template / docs-local guidance. | 0 | PASS | command output inspected | No unexpected code commits. |
 | `git diff --name-only v0.2..v0.2-local` | No unexplained apps/packages/M11 changes | Existing local stack touches entry docs, docs-local guidance, iteration templates, and M12 docs. | 0 | PASS | command output inspected | `git diff --name-only v0.2..v0.2-local -- apps packages docs/iterations/m11` returned no output. |

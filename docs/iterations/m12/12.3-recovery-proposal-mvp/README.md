@@ -1,6 +1,6 @@
 # 12.3 · Recovery Proposal MVP
 
-状态：proposed
+状态：proposed / design package aligned
 里程碑：M12
 类型：code
 
@@ -18,7 +18,7 @@ deterministic proposal generator 和 focused unit tests。本轮只补齐实现�
 
 - 12.1 Failure Classification and Recovery Boundary 已实现并交付。
 - 12.2 User Abort / Stop Handling 已实现并交付。
-- 12.3 当前处于 implementation gate / design review pending 阶段。
+- 12.3 当前处于 implementation gate pending review 阶段。
 
 实现 Agent 不得跳过本设计包直接进入代码。进入 12.3 implementation 前必须先
 人工审核：
