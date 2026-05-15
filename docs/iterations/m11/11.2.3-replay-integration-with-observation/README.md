@@ -1,6 +1,6 @@
 # 11.2.3 · Replay Integration with Observation
 
-状态：implementation ready，待代码实现
+状态：implementation complete
 
 ## 目标
 

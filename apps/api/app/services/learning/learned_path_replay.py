@@ -27,6 +27,9 @@ from app.services.learning.page_analyzer import analyze_page
 from app.services.learning.page_signature import (
     build_signature_dict,
 )
+from app.services.learning.replay_observation import (
+    build_replay_observation_summary,
+)
 from app.services.learning.wait_for_change import (
     wait_for_change_after_action,
 )
@@ -324,6 +327,10 @@ def run_replay(
 
         # ── Observational path ──
         if not precheck.actions:
+            obs_summary = build_replay_observation_summary(
+                learned_path_id=str(learned_path.id),
+                steps=[],
+            )
             return ReplayResult(
                 learned_path_id=str(learned_path.id),
                 source_run_id=learned_path.source_run_id,
@@ -336,6 +343,7 @@ def run_replay(
                 steps=[],
                 final_url=current_url,
                 final_title=analysis.title if analysis else None,
+                observation_summary=obs_summary,
             )
 
         # ── Execute actions ──
@@ -364,6 +372,11 @@ def run_replay(
         except Exception as exc:
             # Unexpected failure during action execution — map to failed
             # so the endpoint never returns a raw 500.
+            replay_steps = [_step_log_to_replay_step(sl) for sl in step_logs]
+            obs_summary = build_replay_observation_summary(
+                learned_path_id=str(learned_path.id),
+                steps=replay_steps,
+            )
             return ReplayResult(
                 learned_path_id=str(learned_path.id),
                 source_run_id=learned_path.source_run_id,
@@ -374,15 +387,20 @@ def run_replay(
                 warnings=precheck.warnings,
                 stored_signature=stored_sig,
                 current_signature=current_sig,
-                steps=[_step_log_to_replay_step(sl) for sl in step_logs],
+                steps=replay_steps,
                 final_url=current_url,
                 final_title=analysis.title if analysis else None,
+                observation_summary=obs_summary,
             )
 
         final_url = runtime.current_url() if runtime.page else current_url
         final_title = runtime.current_title() if runtime.page else ""
 
         replay_steps = [_step_log_to_replay_step(sl) for sl in step_logs]
+        obs_summary = build_replay_observation_summary(
+            learned_path_id=str(learned_path.id),
+            steps=replay_steps,
+        )
 
         return ReplayResult(
             learned_path_id=str(learned_path.id),
@@ -396,6 +414,7 @@ def run_replay(
             steps=replay_steps,
             final_url=final_url,
             final_title=final_title,
+            observation_summary=obs_summary,
         )
 
     finally:

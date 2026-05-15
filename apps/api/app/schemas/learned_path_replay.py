@@ -67,6 +67,62 @@ ReplayDriftStatus = Literal[
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Replay Observation Summary (M11.2.3)
+# ──────────────────────────────────────────────────────────────────────────────
+
+ReplayObservationStatus = Literal[
+    "observed",
+    "no_primary_observation",
+    "partial_observation",
+    "not_applicable",
+]
+
+
+class StepObservationRef(BaseModel):
+    """Minimal reference to a step's observation outcome.
+
+    Does not copy full step log, screenshot, raw HTML, DOM dump, or
+    reporter wording.
+    """
+
+    step_index: int
+    wait_id: str = ""
+    wait_status: WaitStatus | None = None
+    primary_signal_kind: ObservationSignalKind | None = None
+    signal_kinds: list[ObservationSignalKind] = Field(default_factory=list)
+    has_primary_signal: bool = False
+    has_supporting_signal: bool = False
+    notes: str = ""
+
+
+class ReplayObservationSummary(BaseModel):
+    """Replay-level observation evidence aggregated from step wait_results.
+
+    This is diagnostic evidence only — it does not imply business success,
+    retry decisions, or recovery actions.
+    """
+
+    observation_summary_id: str = ""
+    replay_id: str | None = None
+    learned_path_id: str = ""
+    status: ReplayObservationStatus
+    step_count: int = 0
+    wait_result_count: int = 0
+    observed_step_count: int = 0
+    timeout_step_count: int = 0
+    skipped_step_count: int = 0
+    not_required_step_count: int = 0
+    primary_signal_kinds: list[ObservationSignalKind] = Field(default_factory=list)
+    supporting_signal_kinds: list[ObservationSignalKind] = Field(default_factory=list)
+    has_primary_observation: bool = False
+    has_timeout: bool = False
+    has_only_supporting_observation: bool = False
+    has_uncertain_observation: bool = False
+    observation_notes: str = ""
+    step_observation_refs: list[StepObservationRef] = Field(default_factory=list)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Observation signals (M11.2.2 Wait-for-change MVP)
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -166,3 +222,4 @@ class ReplayResult(BaseModel):
     steps: list[ReplayStepLog] = Field(default_factory=list)
     final_url: str | None = None
     final_title: str | None = None
+    observation_summary: ReplayObservationSummary | None = None
