@@ -846,8 +846,8 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 ## M11.2 · 运行时观察与真实网页稳健性增强
 
-状态：11.2.3 文档生成完成；11.2.3 能力未实现。11.2.2 最小
-`wait_result` 能力已 scoped 收口。
+状态：11.2.3 implementation ready，待代码实现。11.2.2 最小 `wait_result`
+能力已 scoped 收口。
 
 M11.2 是 v0.1 后续优化。它不继续扩展 task-to-path 规划逻辑，而是在
 M11.1 已完成的 replay execution / result reporting 后补运行时观察边界。
@@ -1052,13 +1052,13 @@ Page Understanding Agent 边界：
 
 ### 11.2.3 · replay 与观察集成
 
-状态：文档生成完成，能力未实现。
+状态：implementation ready，待代码实现。
 
 目标：
 
-- 定义 replay-level observation evidence aggregation contract。
+- 实现 replay-level observation evidence aggregation contract。
 - 把 11.2.2 step-level `wait_result` / observation signals 汇总为 replay-level
-  evidence summary 的文档级 proposal。
+  evidence summary。
 - 明确 observation summary status、primary / supporting signal 聚合、timeout /
   skipped / not_required 统计和 uncertainty flags。
 - 为 11.2.5 Task Result Reporter 消费 replay-level observation evidence 准备输入。
@@ -1068,15 +1068,17 @@ Page Understanding Agent 边界：
 - `docs/iterations/m11/11.2.3-replay-integration-with-observation/README.md`
 - `docs/iterations/m11/11.2.3-replay-integration-with-observation/intent.md`
 - `docs/iterations/m11/11.2.3-replay-integration-with-observation/contract.md`
+- `docs/iterations/m11/11.2.3-replay-integration-with-observation/technical-design.md`
+- `docs/iterations/m11/11.2.3-replay-integration-with-observation/test-plan.md`
 - `docs/iterations/m11/11.2.3-replay-integration-with-observation/plan.md`
 - `docs/iterations/m11/11.2.3-replay-integration-with-observation/review.md`
 
-边界：
+实现范围：
 
-- 不写代码。
-- 不新增测试代码。
-- 不修改 schema。
-- 不修改 replay execution。
+- 可以按 `technical-design.md` 修改 replay response schema。
+- 可以按 `technical-design.md` 新增 replay observation aggregation service。
+- 可以按 `technical-design.md` 修改 replay result 组装逻辑。
+- 可以按 `test-plan.md` 新增或更新 scoped tests。
 - 不接 Task Result Reporter。
 - 不改变 `ReplayResult.status`。
 - 不做 recovery / retry / abort / user takeover。

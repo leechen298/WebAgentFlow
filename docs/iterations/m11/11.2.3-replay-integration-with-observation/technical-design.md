@@ -38,7 +38,7 @@ aggregation 的概念、字段 proposal 和 status。本文档只定义后续实
 
 ## 实现方案（Proposed Implementation）
 
-后续代码实现应新增 replay-level aggregation，而不是扩展 wait-for-change 本身：
+代码实现应新增 replay-level aggregation，而不是扩展 wait-for-change 本身：
 
 1. 在 `apps/api/app/schemas/learned_path_replay.py` 中新增
    `ReplayObservationStatus`、`StepObservationRef`、`ReplayObservationSummary`。
@@ -194,7 +194,7 @@ def build_replay_observation_summary(
 
 ## 数据流（Data Flow）
 
-后续代码实现的数据流：
+代码实现的数据流：
 
 ```text
 run_replay()
@@ -313,7 +313,7 @@ else:
 
 ## 验证命令入口（Validation Commands）
 
-后续代码实现的最低验证命令：
+代码实现的最低验证命令：
 
 ```bash
 git diff --check

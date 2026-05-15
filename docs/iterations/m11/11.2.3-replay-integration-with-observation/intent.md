@@ -1,11 +1,12 @@
 # Intent
 
-状态：文档生成完成，能力未实现
+状态：implementation ready，待代码实现
 
 ## 本轮意图
 
 11.2.3 的意图是将 11.2.2 已实现的 step-level `wait_result` 提升为
-replay-level observation evidence contract。
+replay-level observation evidence contract，并按技术设计落地为 replay result
+上的可选 observation summary。
 
 11.2.2 已经回答：
 
@@ -27,12 +28,9 @@ replay-level observation evidence contract。
 
 ## 非目标
 
-本轮不做：
+11.2.3 代码实现可以修改 replay response schema、learning service、replay
+integration 和 scoped tests，但不做：
 
-- 不写代码。
-- 不新增测试代码。
-- 不修改 schema。
-- 不修改 replay runtime。
 - 不接 Task Result Reporter。
 - 不做 recovery / retry / abort / user takeover。
 - 不做 Page Understanding Agent。

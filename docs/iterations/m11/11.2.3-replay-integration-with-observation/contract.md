@@ -1,10 +1,11 @@
 # Replay Integration with Observation Contract
 
-状态：文档级 contract proposal，能力未实现
+状态：contract ready for implementation
 
-本文档定义 11.2.3 的 replay-level observation evidence aggregation contract。它不
-创建代码 schema，不修改 API，不修改 replay execution，也不接入 Task Result
-Reporter。
+本文档定义 11.2.3 的 replay-level observation evidence aggregation contract。代码
+实现应按 `technical-design.md` 将该 contract 落地为向后兼容的 replay response
+schema、aggregation service 和 replay integration。11.2.3 不新增 API route，不修改
+database schema，也不接入 Task Result Reporter。
 
 ## 定义
 
@@ -35,7 +36,8 @@ signals 聚合出来的 replay-level evidence summary。
 
 ## Replay Observation Summary
 
-Replay Observation Summary 是文档级 proposal，不是已实现 schema。
+Replay Observation Summary 是 contract proposal。代码实现应按
+`technical-design.md` 将它落地为向后兼容的可选 schema。
 
 建议字段：
 

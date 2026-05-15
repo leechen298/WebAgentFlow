@@ -1,15 +1,16 @@
 # 11.2.3 · Replay Integration with Observation
 
-状态：文档生成完成，能力未实现
+状态：implementation ready，待代码实现
 
 ## 目标
 
-11.2.3 定义 replay-level observation evidence aggregation 的文档级设计。
+11.2.3 定义并准备实现 replay-level observation evidence aggregation。
 它回答：replay 执行结束后，WebAgentFlow 应该如何把每个 step 的
 `wait_result` 和 observation signals 聚合为可审计的 replay-level evidence。
 
-本包只定义 contract 和后续实现计划，不实现 schema、不修改 replay runtime、不新增
-tests，也不接入 Task Result Reporter。
+实现阶段应按 `contract.md`、`technical-design.md` 和 `test-plan.md` 落地
+schema、replay aggregation service、replay integration 和对应测试。11.2.3 仍不接入
+Task Result Reporter。
 
 ## 背景
 
@@ -41,9 +42,9 @@ step-level wait evidence 汇总到 replay result 的 observation evidence 层。
 
 ## 开发文档
 
-- [technical-design.md](./technical-design.md)：后续代码实现的详细技术设计，当前能力尚未实现。
-- [test-plan.md](./test-plan.md)：后续代码实现的测试计划，当前没有新增测试代码。
-- [plan.md](./plan.md)：后续代码实现计划；更细执行依据以 `technical-design.md` 和
+- [technical-design.md](./technical-design.md)：代码实现的详细技术设计。
+- [test-plan.md](./test-plan.md)：代码实现完成后的测试计划。
+- [plan.md](./plan.md)：代码实现计划；更细执行依据以 `technical-design.md` 和
   `test-plan.md` 为准。
 
 ## 与 11.2.2 的区别
@@ -73,18 +74,19 @@ observation evidence 层，形成后续 reporter 可消费的结构化输入。
 Reporter 未来可以基于完整 replay evidence 做保守解释，但不能仅凭 observation
 summary 推断任务一定成功、业务一定完成、timeout 后应该 retry 或 abort。
 
-## 硬边界
+## 实现边界
 
-- 不写代码。
-- 不新增测试代码。
-- 不运行 E2E。
-- 不修改 public API。
+- 可以按 `technical-design.md` 修改 replay response schema，新增可选
+  `ReplayResult.observation_summary`。
+- 可以按 `technical-design.md` 新增 replay observation aggregation service。
+- 可以按 `technical-design.md` 在 replay result 返回前聚合 step-level
+  `wait_result`。
+- 可以按 `test-plan.md` 新增或更新 scoped unit tests。
+- 不运行 E2E / live UI smoke / `verify-scenario` / autonomous run。
+- 不新增 API route。
 - 不修改 database schema。
-- 不创建 Python / TypeScript schema 文件。
-- 不修改 replay execution。
 - 不修改 Task Result Reporter。
 - 不修改 conversation / task_planning / routers / CLI。
-- 不实现 replay observation aggregation。
 - 不实现 reporter integration。
 - 不实现 recovery / retry / abort / user takeover。
 - 不实现 Page Understanding Agent。

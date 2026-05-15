@@ -118,14 +118,15 @@ reporter integration。
 integration 已实现。
 
 11.2.2 的核心契约文档是
-[`contract.md`](../11.2.2-wait-for-change-mvp/contract.md)。它只定义文档级
-Wait Result 和 Wait Strategy，不代表 wait-for-change、page-load waiting、Agent
-判断或 reporter integration 已实现。
+[`contract.md`](../11.2.2-wait-for-change-mvp/contract.md)。11.2.2 已完成最小
+step-level wait result 能力；它不代表 page-load waiting、Agent 判断或 reporter
+integration 已实现。
 
 11.2.3 的核心契约文档是
-[`contract.md`](../11.2.3-replay-integration-with-observation/contract.md)。它只定义
-replay-level observation evidence aggregation contract，不代表 replay observation
-summary、reporter integration 或 recovery handling 已实现。
+[`contract.md`](../11.2.3-replay-integration-with-observation/contract.md)。它定义
+replay-level observation evidence aggregation contract；代码实现应按 11.2.3
+`technical-design.md` 和 `test-plan.md` 落地。11.2.3 仍不代表 reporter integration
+或 recovery handling 已实现。
 
 ## Later M11.2.x · Common Component Runtime Semantics
 
@@ -158,17 +159,17 @@ validation message、virtualized list 或 inserted option list。
 - 不调用 Agent 判断业务成功，不让 LLM 进入 L3 per-step execution loop。
 - 不属于 11.2.2 当前最小实现范围，不阻塞 wait_result / wait_strategy MVP。
 
-## 硬边界
+## 11.2.0 文档初始化硬边界
 
 - 11.2.0 不修改 runtime code。
 - 11.2.0 不修改 test code。
 - 11.2.0 不运行 E2E。
-- 不修改 replay execution。
-- 不修改 Task Result Reporter。
-- 不处理 recovery、retry、abort 或 interruption。
-- 不做 teaching mode。
-- 不触发 autonomous run。
-- 不引入 LLM provider 依赖。
-- 不做 raw HTML planner。
-- 不创建 M12 目录。
-- 不创建 v0.2 分支。
+- 11.2.0 不修改 replay execution。
+- 11.2.0 不修改 Task Result Reporter。
+- 11.2.0 不处理 recovery、retry、abort 或 interruption。
+- 11.2.0 不做 teaching mode。
+- 11.2.0 不触发 autonomous run。
+- 11.2.0 不引入 LLM provider 依赖。
+- 11.2.0 不做 raw HTML planner。
+- 11.2.0 不创建 M12 目录。
+- 11.2.0 不创建 v0.2 分支。

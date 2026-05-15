@@ -1,18 +1,17 @@
 # Review
 
-Status: technical design and test plan initialized
+Status: implementation design ready
 
-本文档在 11.2.3 阶段初始化，用于后续记录 Replay Integration with Observation 的审查结论。
+本文档用于记录 11.2.3 Replay Integration with Observation 的审查结论。
 
-11.2.3 当前只定义文档级 replay-level observation evidence aggregation contract。
-本轮不实现 schema、不修改 replay execution、不新增 tests、不接入 Task Result Reporter、
-不做 recovery / retry / abort / user takeover。
+11.2.3 已具备 `contract.md`、`technical-design.md`、`test-plan.md` 和 `plan.md`。
+执行型 Agent 可以按这些文档实现 replay-level observation evidence aggregation。
+实现仍不得接入 Task Result Reporter，也不得做 recovery / retry / abort / user takeover。
 
-## Documentation supplement
+## Implementation preparation
 
-- `technical-design.md` initialized.
-- `test-plan.md` initialized.
-- code not implemented.
-- schema not implemented.
-- replay aggregation not implemented.
-- tests not implemented.
+- `technical-design.md` is ready as implementation guidance.
+- `test-plan.md` is ready as validation guidance.
+- Code implementation evidence should be recorded here after implementation.
+- Validation evidence must include command, expected result, actual result, exit code, pass/fail/skip
+  counts, and any not-run reason.

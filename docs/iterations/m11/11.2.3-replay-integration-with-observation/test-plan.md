@@ -4,7 +4,7 @@
 
 ## 适用条件
 
-本文件适用于 11.2.3 后续代码实现。11.2.3 涉及 replay、observation evidence、
+本文件适用于 11.2.3 代码实现。11.2.3 涉及 replay、observation evidence、
 schema、aggregation 和 compatibility，因此必须维护测试计划。
 
 ## 测试范围（Test Scope）
@@ -92,7 +92,7 @@ schema、aggregation 和 compatibility，因此必须维护测试计划。
 
 ## 后续实现验证命令
 
-后续代码实现完成后运行：
+代码实现完成后运行：
 
 ```bash
 git diff --check
