@@ -1,53 +1,69 @@
-# Review
+# 复盘 / 评审（Review）
 
-Status: in_progress
+状态：in_progress
 
-## <YYYY-MM-DD HH:MM> Design Review
+## <YYYY-MM-DD HH:MM> 设计评审（Design Review）
 
-- Reviewer:
-- Decision: approved | changes_requested | rejected
-- Notes:
+- Reviewer：
+- Decision：approved | changes_requested | rejected
+- Notes：
 
-## <YYYY-MM-DD HH:MM> Code Review
+## <YYYY-MM-DD HH:MM> 代码评审（Code Review）
 
-- Reviewer:
-- Decision: approved | changes_requested | rejected
-- Notes:
+- Reviewer：
+- Decision：approved | changes_requested | rejected
+- Notes：
 
-## User Feedback
+## 用户反馈
 
-- <Feedback> -> accepted | rejected, reason: <reason>
+- <反馈> -> accepted | rejected，原因：<reason>
 
-## Final Delta
+## 最终差异（Final Delta）
 
-### What Shipped
+### 实际交付
 
-- <Actual delivered change.>
+- <实际交付内容。>
 
-### Deviations From Intent / Contract / Technical Design / Plan
+### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
-- <Deviation and reason, or `None`.>
+- <偏差和原因，或 `None`。>
 
-### WebAgentFlow Live Run Boundary
+### WebAgentFlow Live Run 边界（Live Run Boundary）
 
-Unless the user explicitly requests a live run, do not trigger
-`verify-scenario`, autonomous runs, or product-driven browser execution.
+除非用户明确要求 live run，不得触发 `verify-scenario`、autonomous run 或
+product-driven browser execution。
 
-If a live run is explicitly requested, record:
+如果用户明确要求 live run，必须记录：
 
-- invocation surface;
-- run_id;
-- pass_gate.status;
-- supervisor verdict;
-- scorecard;
-- whether the run was product-initiated UI traffic or skill invocation.
+- invocation surface；
+- run_id；
+- pass_gate.status；
+- supervisor verdict；
+- scorecard；
+- 是 product UI traffic 还是 skill invocation；
+- 原始输出或可复查路径。
 
-### Validation Evidence
+### E2E / Codex 外部测试操作员证据（E2E / Codex Evidence）
 
-| Command | Expected | Actual result | Exit code | Pass / Fail / Skip | Notes |
-|---|---|---|---|---|---|
-| `<command>` | `<expected>` | `<actual>` | `<0/1/...>` | `<counts>` | `<reason if failed/not run>` |
+- 如果没有真实打开浏览器或产品 UI，不得声称完成 E2E / UI smoke。
+- 如果没有真实运行 CLI / command，不得声称 CLI 已测试。
+- 如果 Codex / AI 只是阅读代码、做静态推理或审查 diff，必须写成 review / inspection，
+  不能写成 tested。
+- 没有 run_id、截图、日志、exit code、pass / fail count 或可复查输出时，结论必须写成
+  `not run` / `unverified`。
 
-### Follow-ups
+### 验证证据（Validation Evidence）
 
-- <Follow-up owner / iteration, or `None`.>
+| Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
+|---|---|---|---|---|---|---|
+| `<command or UI surface>` | `<expected>` | `<actual>` | `<0/1/... or N/A>` | `<counts>` | `<log / screenshot / run_id / output path>` | `<reason if failed/not run>` |
+
+### 未运行 / 未验证（Not Run / Unverified）
+
+| Item | Reason | Risk / Follow-up |
+|---|---|---|
+| <test item> | <why not run> | <risk or follow-up> |
+
+### 后续事项（Follow-ups）
+
+- <后续负责人 / 迭代，或 `None`。>

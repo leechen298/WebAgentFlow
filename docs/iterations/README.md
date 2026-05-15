@@ -28,6 +28,7 @@ docs/iterations/
 │   ├── intent.md
 │   ├── contract.md
 │   ├── technical-design.md
+│   ├── test-plan.md
 │   ├── plan.md
 │   └── review.md
 └── m<N>/
@@ -36,9 +37,10 @@ docs/iterations/
     │   ├── README.md                    # 本迭代包索引 + 状态
     │   ├── intent.md                    # 做什么 + 为什么 + 不做什么（迭代开始时写）
     │   ├── contract.md                  # 是什么：概念 / 状态 / 字段 / 边界契约
-    │   ├── technical-design.md          # 怎么实现：服务、schema、数据流、兼容性、测试矩阵
-    │   ├── plan.md                      # 改哪些文件 + 分步实施 + 验证命令
-    │   ├── review.md                    # codex-review / 用户反馈 / 最终差异
+    │   ├── technical-design.md          # 怎么实现：服务、schema、数据流、兼容性、高层测试入口
+    │   ├── test-plan.md                 # （强触发时必填）详细测试方案、E2E / live run 边界
+    │   ├── plan.md                      # 改哪些文件 + 分步实施 + 验证入口
+    │   ├── review.md                    # codex-review / 用户反馈 / 最终差异 / 实际验证证据
     │   ├── summary.md                   # （可选）收尾摘要：关键决策 + 主要交付 + commit 序列
     │   └── changes.txt                  # （可选）`git diff --name-status <base>..HEAD` 输出
     ├── 02-<slug>/
@@ -57,6 +59,7 @@ docs/iterations/
 README.md
 intent.md
 contract.md      # 涉及概念、状态、字段、边界、流程规则或模板变化时必须有；否则写明 N/A 并说明原因
+test-plan.md     # 触发复杂验证条件时才需要；普通 docs-only 迭代可省略
 plan.md
 review.md
 ```
@@ -74,6 +77,7 @@ README.md
 intent.md
 contract.md
 technical-design.md
+test-plan.md     # 触发复杂验证条件时必填
 plan.md
 review.md
 ```
@@ -86,9 +90,11 @@ review.md
 核心区别：
 
 - `contract.md` 定义“是什么”：概念、状态、字段、边界、输入输出语义。
-- `technical-design.md` 定义“怎么实现”：模块边界、数据流、兼容性、异常、测试矩阵。
-- `plan.md` 定义“改哪些文件、按什么顺序改、怎么验证”。
-- `review.md` 记录“实际做成什么、和原设计有什么偏差、哪些反馈被采纳”。
+- `technical-design.md` 定义“怎么实现”：模块边界、数据流、兼容性、异常、高层测试入口。
+- `test-plan.md` 定义“怎么验收”：当前迭代具体测什么、谁执行、走哪些命令或产品界面、
+  哪些 live run 明确不跑。
+- `plan.md` 定义“改哪些文件、按什么顺序改、验证入口是什么”。
+- `review.md` 记录“实际做成什么、和原设计有什么偏差、实际跑了什么、哪些没跑以及原因”。
 
 ## technical-design.md 硬规则
 
@@ -131,7 +137,7 @@ review.md
   `10.1.1-autonomous-use-case-catalog/`。使用这种形式时，里程碑 README 里的任务编号
   和目录名前缀必须完全一致。
 - **固定文件名**：`README.md` / `intent.md` / `contract.md` / `technical-design.md` /
-  `plan.md` / `review.md`。不要改名，不要用同义词。
+  `test-plan.md` / `plan.md` / `review.md`。不要改名，不要用同义词。
 
 ## 什么时候新开一个迭代目录
 
@@ -184,46 +190,46 @@ review.md
 固定章节：
 
 ```markdown
-# Technical Design
+# 技术设计（Technical Design）
 
-## Current State
+## 当前状态（Current State）
 当前已有代码、schema、service、测试是什么。
 
-## Contract Alignment / Invariants
+## 合约对齐 / 不变量（Contract Alignment / Invariants）
 contract.md 中的关键状态、边界、兼容性、非目标，如何落实到实现机制和测试。
 
-## Proposed Implementation
+## 实现方案（Proposed Implementation）
 本轮具体怎么实现。
 
-## Affected Surfaces
+## 影响面（Affected Surfaces）
 哪些入口面会改变：API、response schema、DB、CLI、Console UI、conversation events、
 replay、reporter、worker、tests / fixtures、docs。
 
-## Data Model / Schema Changes
+## 数据模型 / Schema 变更（Data Model / Schema Changes）
 新增或修改哪些 schema，是否向后兼容。
 
-## Service / Module Design
+## 服务 / 模块设计（Service / Module Design）
 新增哪些 service，函数签名是什么，输入输出是什么。
 
-## Data Flow
+## 数据流（Data Flow）
 从入口到输出的流程。
 
-## Status / State Derivation
+## 状态推导（Status / State Derivation）
 状态如何推导，优先级是什么。
 
-## Compatibility
+## 兼容性（Compatibility）
 旧数据、旧 API、旧 response 如何兼容。
 
-## Failure / Edge Cases
+## 失败 / 边界情况（Failure / Edge Cases）
 异常、空值、timeout、partial result 怎么处理。
 
-## Non-goals
+## 非目标（Non-goals）
 本轮明确不做什么。
 
-## Test Matrix
+## 测试矩阵入口（Test Matrix）
 必须覆盖哪些测试。
 
-## Validation Commands
+## 验证命令入口（Validation Commands）
 执行哪些命令。
 ```
 
@@ -232,14 +238,45 @@ replay、reporter、worker、tests / fixtures、docs。
 包含 contract alignment：`contract.md` 里的关键状态、边界、兼容性规则、非目标，
 都要映射到实现机制和测试覆盖；无法映射时必须写 `N/A` 并说明原因。
 
+`technical-design.md` 不承载完整测试执行手册。它只写高层 Test Matrix：哪些 API unit、
+service integration、Console E2E、reporter evidence、recovery boundary 等测试类型必须兜住
+哪些契约。详细场景、命令、界面入口、执行人、live run 边界和 not-run 风险放到
+`test-plan.md`。
+
+### test-plan.md（强触发时必填；定义“怎么验收”）
+
+`test-plan.md` 不是所有迭代的固定必填项，但只要满足任意一条就必须创建：
+
+- 涉及前后端协同；
+- 涉及 Agent / Reporter / recovery / abort / replay；
+- 涉及 E2E；
+- 涉及 `verify-scenario`、autonomous run、Codex / AI 作为外部测试操作员；
+- 测试矩阵超过 5 个 case；
+- 涉及人工测试、UI smoke、product-driven browser execution；
+- 需要区分 unit / integration / E2E / live product evidence。
+
+`test-plan.md` 必须说明：
+
+- 每个测试层级的范围：unit、integration、API、Console UI、E2E、Agent / Reporter /
+  Recovery、Codex / AI external operator、live autonomous run；
+- 每个场景的 command / product surface、expected evidence、required 与否；
+- 哪些 live run 被明确排除，为什么排除；
+- 如果需要真实浏览器、CLI、`verify-scenario` 或 autonomous run，谁来执行、从哪个入口执行、
+  需要留下什么可复查证据。
+
+没有真实打开浏览器或产品 UI，不得声称已完成 E2E / UI smoke。没有真实运行 CLI / command，
+不得声称 CLI 已测试。代码阅读、静态推理和 diff 审查只能写成 review / inspection，
+不能写成 tested。缺少 command output、`run_id`、截图、日志、exit code、pass / fail count
+或可复查输出时，结论必须写成 `not run` / `unverified`。
+
 ### plan.md（动手前写；随实际工作修订）
 
 把 intent / contract / technical-design 落成可执行步骤。回答三个问题：
 
 1. **要动的文件和模块** —— 列表，不含大段代码。
 2. **步骤** —— 顺序化的工作拆分，每步应该能独立验证。
-3. **验证** —— 运行哪些命令，如何对应成功标准和测试矩阵，并说明 live autonomous
-   verification 是否被明确排除。
+3. **验证入口** —— 运行哪些命令，如何对应成功标准和测试矩阵；如果触发 `test-plan.md`
+   条件，详细测试场景必须放在 `test-plan.md`，这里只保留执行入口和顺序。
 
 计划在执行中**允许修订**。如果中途发现原计划错了，在这个文件里更新，不要另开文档。
 
@@ -252,11 +289,12 @@ replay、reporter、worker、tests / fixtures、docs。
 3. **最终差异**：迭代收尾时回看一次：和 intent / contract / technical-design / plan 相比，
    实际做出来的有什么偏离？为什么？
 
-验证证据必须记录 command、expected、actual result、exit code、pass / fail / skip count
-和未运行原因。除非用户明确要求 live run，不得触发 `verify-scenario`、autonomous run
-或产品驱动的浏览器执行。若用户明确要求 live run，必须记录 invocation surface、`run_id`、
-`pass_gate.status`、supervisor verdict、scorecard，以及它是 product UI traffic 还是 skill
-invocation。
+验证证据必须记录 command / surface、expected、actual result、exit code、pass / fail / skip
+count、证据路径和未运行原因。除非用户明确要求 live run，不得触发 `verify-scenario`、
+autonomous run 或产品驱动的浏览器执行。若用户明确要求 live run，必须记录 invocation
+surface、`run_id`、`pass_gate.status`、supervisor verdict、scorecard，以及它是 product UI
+traffic 还是 skill invocation。`review.md` 只能记录实际执行过的验证；没跑的必须写成
+`not run` / `unverified`，不能用“应该可以”替代证据。
 
 ## 与其他文档的关系
 
@@ -272,18 +310,21 @@ invocation。
 ## 与 codex-review skill 的联动
 
 全局 review 工具如果只能自动读取 `intent.md` + `plan.md`，执行者必须在 review 请求里手动补充
-同目录的 `contract.md` 和 `technical-design.md`。对代码型迭代来说，缺少
-`technical-design.md` 的 review 不能作为实现前审核通过。
+同目录的 `contract.md`、`technical-design.md`，以及触发时的 `test-plan.md`。对代码型迭代来说，
+缺少 `technical-design.md` 的 review 不能作为实现前审核通过；对复杂验证迭代来说，缺少
+`test-plan.md` 的 review 不能作为验证方案审核通过。
 
 推荐 review 上下文顺序：
 
 1. `intent.md`
 2. `contract.md`
 3. `technical-design.md`
-4. `plan.md`
-5. 当前 diff
+4. `test-plan.md`（触发时）
+5. `plan.md`
+6. 当前 diff
 
-所以：**intent 说明目标，contract 钉住语义，technical-design 钉住实现边界，plan 才是施工步骤。**
+所以：**intent 说明目标，contract 钉住语义，technical-design 钉住实现边界，
+test-plan 钉住验收边界，plan 才是施工步骤。**
 
 ## 里程碑 README 怎么写
 
@@ -308,5 +349,9 @@ invocation。
    语义时，先写 `contract.md`。
 3. **technical-design 门禁**：非平凡代码迭代在包含 contract alignment 的
    `technical-design.md` 生成并审核前，不得进入实现。
-4. **review 当天写**：不要拖到“以后再补”。用户反馈和收尾反思要当天写进 `review.md`。
-5. **不删历史**：迭代做废了、方案推翻了，更新 `review.md` 说明为什么放弃，但**不要删**目录。
+4. **test-plan 强触发**：复杂代码迭代、跨层验证、E2E、live run 或 Codex / AI 外部测试操作员
+   相关迭代必须写 `test-plan.md`。
+5. **证据先于结论**：没有真实浏览器 / CLI / run_id / 截图 / 日志 / exit code 等证据，不得声称
+   已完成 E2E、UI smoke、CLI、`verify-scenario` 或 autonomous-run 测试。
+6. **review 当天写**：不要拖到“以后再补”。用户反馈和收尾反思要当天写进 `review.md`。
+7. **不删历史**：迭代做废了、方案推翻了，更新 `review.md` 说明为什么放弃，但**不要删**目录。

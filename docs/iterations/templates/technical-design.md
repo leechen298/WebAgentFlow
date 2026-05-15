@@ -1,25 +1,25 @@
-# Technical Design
+# 技术设计（Technical Design）
 
-Status: proposed
+状态：proposed
 
-## Current State
+## 当前状态（Current State）
 
-<Current code, schema, service, and test state.>
+<当前已有代码、schema、service、测试和文档状态。>
 
-## Contract Alignment / Invariants
+## 合约对齐 / 不变量（Contract Alignment / Invariants）
 
-Every key contract state, boundary, compatibility rule, and non-goal from
-`contract.md` must map to an implementation mechanism or a reasoned `N/A`.
+`contract.md` 中每个关键状态、边界、兼容性规则和非目标，都必须映射到实现机制和测试入口。
+无法映射时必须写出 `N/A` 和原因。
 
-| Contract requirement | Implementation mechanism | Test coverage | Notes |
+| Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
-| <contract rule> | <schema/service/check, or `N/A` with reason> | <test file/case, or `N/A` with reason> | <risk/edge> |
+| <contract rule> | <schema / service / check，或 `N/A` + 原因> | <测试层级或 `test-plan.md` 条目，或 `N/A` + 原因> | <风险 / 边界> |
 
-## Proposed Implementation
+## 实现方案（Proposed Implementation）
 
-<Concrete implementation approach for this iteration.>
+<本轮具体怎么实现。>
 
-## Affected Surfaces
+## 影响面（Affected Surfaces）
 
 | Surface | Changed? | Description | Compatibility notes |
 |---|---|---|---|
@@ -35,41 +35,47 @@ Every key contract state, boundary, compatibility rule, and non-goal from
 | Tests / fixtures | Yes / No |  |  |
 | Docs | Yes / No |  |  |
 
-## Data Model / Schema Changes
+## 数据模型 / Schema 变更（Data Model / Schema Changes）
 
-<New or changed schemas, request/response fields, migrations, and compatibility notes.>
+<新增或修改哪些 schema、request / response 字段、migration；是否向后兼容。>
 
-## Service / Module Design
+## 服务 / 模块设计（Service / Module Design）
 
-<Services/modules/functions to add or change, including input/output shape.>
+<新增或修改哪些 service / module / function；输入输出是什么。>
 
-## Data Flow
+## 数据流（Data Flow）
 
-<Flow from entrypoint to output, including intermediate events or persisted state.>
+<从入口到输出的流程，包括中间 event、持久化状态或 artifact。>
 
-## Status / State Derivation
+## 状态推导（Status / State Derivation）
 
-<How status is derived, including precedence and fallback behavior.>
+<状态如何推导，优先级是什么，fallback 行为是什么。>
 
-## Compatibility
+## 兼容性（Compatibility）
 
-<How old data, old API responses, and existing callers remain compatible.>
+<旧数据、旧 API response、既有调用方如何兼容。>
 
-## Failure / Edge Cases
+## 失败 / 边界情况（Failure / Edge Cases）
 
-<Nulls, timeouts, partial results, provider failures, stale data, or unsupported states.>
+<空值、timeout、partial result、provider failure、stale data、unsupported state 怎么处理。>
 
-## Non-goals
+## 非目标（Non-goals）
 
-- <Implementation scope this iteration explicitly does not cover.>
+- <本轮明确不覆盖的实现范围。>
 
-## Test Matrix
+## 测试矩阵入口（Test Matrix）
 
-| Case | Coverage | Expected Result |
+这里只写高层测试入口，不写完整执行手册。复杂测试、E2E、live run、Codex / AI 外部测试操作员、
+人工测试和跨层验证必须写入 `test-plan.md`。
+
+| Test area | Coverage goal | Detailed plan |
 |---|---|---|
-| <case> | <unit / integration / E2E / doc check> | <expected result> |
+| <API unit / service integration / Console E2E / reporter evidence / recovery boundary> | <必须证明什么> | <`test-plan.md` 条目，或 `N/A` + 原因> |
 
-## Validation Commands
+## 验证命令入口（Validation Commands）
+
+这里只列实现设计要求的最低验证命令。实际执行结果记录在 `review.md`；详细测试矩阵记录在
+`test-plan.md`。
 
 ```bash
 <command>
