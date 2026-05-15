@@ -42,14 +42,17 @@ Current delivery status:
   through 11.0.7.
 - 11.1.1 Task Planning Domain Contract shipped: 17 schema definitions,
   24 tests passed (`apps/api/app/schemas/task_planning.py`).
-- Current delivery package: **11.1.2 LearnedPath Retrieval and Ranking**
-  within **M11.1 Task-to-Path Planning & Execution MVP**.
-- M11.1 planning continues. 11.1.1 defined task / candidate / route / binding /
-  verification contracts; 11.1.2 implements retrieval. Task Path Planner /
-  Task Result Reporter (legacy: Agent D/E), slot binding, replay execution,
-  and result verification remain future work.
+- **M11.1 Task-to-Path Planning & Execution MVP** has completed its scoped
+  path: retrieval / ranking, Task Path Planner, confirmation gate, replay
+  execution, Task Result Reporter, and tests / evidence closure.
+- **M11.2 Runtime Observation & Realistic Web Hardening** is the current
+  follow-up optimization track. 11.2.2 shipped step-level `wait_result`;
+  11.2.3 shipped replay-level `observation_summary`.
+- Next recommended package: **11.2.4 Realistic Fixture Pages**.
+- M12 recovery / retry / abort / interruption has not started.
 - Agent routing, L3 task runner, L2 guided teaching, and Teaching Guide Agent
-  (legacy: Agent H) are planned future work, not current implementation.
+  (legacy: Agent H) remain future work unless a milestone document says
+  otherwise.
 
 Internal Agent naming:
 

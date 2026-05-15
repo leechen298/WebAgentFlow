@@ -40,14 +40,17 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
   Agent 编排** 已完成到 11.0.7。
 - 11.1.1 Task Planning Domain Contract 已交付：17 个 schema 定义，
   24 个测试通过（`apps/api/app/schemas/task_planning.py`）。
-- 当前交付包：**M11.1 Task-to-Path Planning & Execution MVP** 下的
-  **11.1.2 LearnedPath Retrieval and Ranking**。
-- M11.1 规划继续。11.1.1 定义了 task / candidate / route / binding /
-  verification contract；11.1.2 实现 retrieval。Task Path Planner /
-  任务路径规划器和 Task Result Reporter / 任务结果汇报器（legacy: Agent D/E）、
-  slot binding、replay execution、result verification 仍属后续工作。
+- **M11.1 Task-to-Path Planning & Execution MVP / 任务到路径规划与执行
+  MVP** 已完成 scoped path：retrieval / ranking、Task Path Planner / 任务
+  路径规划器、confirmation gate、replay execution、Task Result Reporter /
+  任务结果汇报器、tests / evidence closure。
+- **M11.2 Runtime Observation & Realistic Web Hardening / 运行时观察与真实
+  网页稳健性增强** 是当前 v0.1 后续优化轨道。11.2.2 已交付 step-level
+  `wait_result`；11.2.3 已交付 replay-level `observation_summary`。
+- 下一步建议进入 **11.2.4 Realistic Fixture Pages / 真实网页 fixture 页**。
+- M12 recovery / retry / abort / interruption 尚未开始。
 - Agent routing、L3 task runner、L2 guided teaching、Teaching Guide Agent /
-  教学引导器（legacy: Agent H）都是后续规划，不是当前已实现。
+  教学引导器（legacy: Agent H）仍属后续规划，除非里程碑文档另有说明。
 
 内部 Agent 命名规则：
 

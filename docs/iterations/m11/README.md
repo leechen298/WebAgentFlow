@@ -43,8 +43,8 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.1.8-task-to-path-tests-and-evidence](./11.1.8-task-to-path-tests-and-evidence/) —— Task-to-path Tests and Evidence。状态：完成（1104 API tests passed, 25 E2E passed, ruff clean, no P1/P2）。
 - [11.2-runtime-observation-realistic-hardening](./11.2-runtime-observation-realistic-hardening/) —— M11.2 总纲：运行时观察与真实网页稳健性增强。状态：11.2.0 文档初始化完成。
 - [11.2.1-observation-signal-contract](./11.2.1-observation-signal-contract/) —— Observation Signal Contract。状态：文档生成完成。
-- [11.2.2-wait-for-change-mvp](./11.2.2-wait-for-change-mvp/) —— Wait-for-change MVP。状态：最小代码实现完成，scoped review passed；full API suite 需在非 sandbox 环境补跑。
-- [11.2.3-replay-integration-with-observation](./11.2.3-replay-integration-with-observation/) —— Replay Integration with Observation。状态：implementation complete（55 scoped tests passed, 1167 full API tests passed, ruff clean）。
+- [11.2.2-wait-for-change-mvp](./11.2.2-wait-for-change-mvp/) —— Wait-for-change MVP。状态：最小代码实现完成，scoped review passed；后续 full API suite 已随 11.2.3 收口通过。
+- [11.2.3-replay-integration-with-observation](./11.2.3-replay-integration-with-observation/) —— Replay Integration with Observation。状态：implementation complete（56 scoped tests passed, 1168 full API tests passed, ruff clean）。
 - 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）—— later M11.2.x 候选增强；记录组件库生成的 runtime surface detection and relation，不属于 11.2.2 当前 MVP。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
@@ -59,8 +59,16 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 它不代表 page-load waiting、Agent 判断或 reporter integration 已实现。
 `11.2.3-replay-integration-with-observation/` 已完成 replay-level observation
 evidence aggregation 代码实现：schema、aggregation service、replay integration
-和 55 个 scoped tests。11.2.3 不接 Task Result Reporter，不做 recovery / retry /
+和 56 个 scoped tests。11.2.3 不接 Task Result Reporter，不做 recovery / retry /
 abort。
+
+11.2 后续 backlog：
+
+- 治理 `execute_action()` / `wait_for_change_after_action()` 的重复等待，避免
+  action executor 和 observation layer 双重等待拖慢多 step replay。
+- 在 11.2.5 Task Result Reporter 消费前细化 observation count 语义，例如
+  `wait_observed_step_count`、`primary_observed_step_count`、
+  `supporting_only_step_count`。
 
 ## Later M11.2.x · Common Component Runtime Semantics
 

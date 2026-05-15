@@ -12,8 +12,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.schemas.learned_path_replay import ObservationSignal, WaitResult
-
-PRIMARY_SIGNAL_KINDS = {"url_changed", "title_changed"}
+from app.services.learning.observation_signal_policy import PRIMARY_SIGNAL_KINDS
 
 
 def _now() -> datetime:

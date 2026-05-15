@@ -66,9 +66,19 @@ ReplayDriftStatus = Literal[
 ]
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Replay Observation Summary (M11.2.3)
-# ──────────────────────────────────────────────────────────────────────────────
+ObservationSignalKind = Literal[
+    "url_changed",
+    "title_changed",
+    "page_load_finished",
+    "network_idle_observed",
+]
+
+WaitStatus = Literal[
+    "observed",
+    "timeout",
+    "skipped",
+    "not_required",
+]
 
 ReplayObservationStatus = Literal[
     "observed",
@@ -76,6 +86,11 @@ ReplayObservationStatus = Literal[
     "partial_observation",
     "not_applicable",
 ]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Replay Observation Summary (M11.2.3)
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 class StepObservationRef(BaseModel):
@@ -125,20 +140,6 @@ class ReplayObservationSummary(BaseModel):
 # ──────────────────────────────────────────────────────────────────────────────
 # Observation signals (M11.2.2 Wait-for-change MVP)
 # ──────────────────────────────────────────────────────────────────────────────
-
-ObservationSignalKind = Literal[
-    "url_changed",
-    "title_changed",
-    "page_load_finished",
-    "network_idle_observed",
-]
-
-WaitStatus = Literal[
-    "observed",
-    "timeout",
-    "skipped",
-    "not_required",
-]
 
 
 class ObservationSignal(BaseModel):

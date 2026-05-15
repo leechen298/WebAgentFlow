@@ -14,6 +14,8 @@ Status: implementation complete
 - `apps/api/app/services/learning/learned_path_replay.py` — integrated
   `build_replay_observation_summary()` into `run_replay()` for action execution
   and observational paths; blocked/drifted/runtime_error paths remain `None`.
+- `apps/api/app/services/learning/wait_for_change.py` — uses shared observation
+  signal policy for primary signal classification.
 - `apps/api/tests/test_learned_path_replay.py` — added 6 integration tests for
   observation summary in replay context.
 
@@ -21,7 +23,9 @@ Status: implementation complete
 
 - `apps/api/app/services/learning/replay_observation.py` — aggregation service
   with `build_replay_observation_summary()`.
-- `apps/api/tests/test_replay_observation_summary.py` — 27 unit tests covering
+- `apps/api/app/services/learning/observation_signal_policy.py` — shared
+  primary / supporting signal classification policy.
+- `apps/api/tests/test_replay_observation_summary.py` — 28 unit tests covering
   schema, aggregation, and boundary invariants.
 
 ## Validation evidence
@@ -34,14 +38,14 @@ cd apps/api && ../../.venv/bin/python -m pytest tests/test_replay_observation_su
 ```
 
 Expected: all tests pass.
-Actual: **55 passed** in 8.28s.
+Actual: **56 passed**.
 Exit code: 0.
 
 ### Ruff lint
 
 Command:
 ```bash
-cd apps/api && ../../.venv/bin/ruff check app/schemas/learned_path_replay.py app/services/learning/replay_observation.py app/services/learning/learned_path_replay.py tests/test_replay_observation_summary.py tests/test_learned_path_replay.py
+cd apps/api && ../../.venv/bin/ruff check app/schemas/learned_path_replay.py app/services/learning/observation_signal_policy.py app/services/learning/wait_for_change.py app/services/learning/replay_observation.py app/services/learning/learned_path_replay.py tests/test_replay_observation_summary.py tests/test_learned_path_replay.py
 ```
 
 Expected: no errors.
@@ -67,7 +71,7 @@ cd apps/api && ../../.venv/bin/python -m pytest -q
 ```
 
 Expected: all tests pass (sandbox Playwright skips allowed).
-Actual: **1167 passed, 65 skipped** in 32.90s.
+Actual: **1168 passed, 65 skipped**.
 Exit code: 0.
 
 ### Forbidden directory check

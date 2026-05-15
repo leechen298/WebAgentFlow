@@ -846,8 +846,8 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 ## M11.2 · 运行时观察与真实网页稳健性增强
 
-状态：11.2.3 implementation ready，待代码实现。11.2.2 最小 `wait_result`
-能力已 scoped 收口。
+状态：11.2.3 implementation complete。11.2.2 最小 `wait_result` 能力和
+11.2.3 replay-level `observation_summary` 能力已 scoped 收口。
 
 M11.2 是 v0.1 后续优化。它不继续扩展 task-to-path 规划逻辑，而是在
 M11.1 已完成的 replay execution / result reporting 后补运行时观察边界。
@@ -987,7 +987,8 @@ Passive Runtime Observation 是非用户主动操作触发的页面变化。
 
 ### 11.2.2 · 等待变化 MVP
 
-状态：最小代码实现完成，scoped review passed；full API suite 需在非 sandbox 环境补跑。
+状态：最小代码实现完成，scoped review passed；后续 full API suite 已随 11.2.3
+收口通过。
 
 目标：
 
@@ -1052,7 +1053,8 @@ Page Understanding Agent 边界：
 
 ### 11.2.3 · replay 与观察集成
 
-状态：implementation ready，待代码实现。
+状态：implementation complete（56 scoped tests passed，1168 full API tests passed，
+ruff clean）。
 
 目标：
 
@@ -1084,6 +1086,19 @@ Page Understanding Agent 边界：
 - 不做 recovery / retry / abort / user takeover。
 - 不实现 Common Component Runtime Semantics。
 - 不读取或保存 raw HTML。
+
+### M11.2 deferred cleanup backlog
+
+状态：后续优化记录，不属于 11.2.3 当前实现范围。
+
+- 治理 `execute_action()` / `wait_for_change_after_action()` 的重复等待。当前
+  MVP 中 action executor 仍保留动作后的稳定等待，observation layer 也会执行
+  post-action wait；后续应逐步把“等待页面变化”的职责收敛到 observation layer。
+- 在 11.2.5 Task Result Reporter 消费 observation summary 前细化统计语义。
+  当前 `observed_step_count` 统计 wait outcome 为 `observed` 的 step；后续可新增
+  或改名为 `wait_observed_step_count`、`primary_observed_step_count`、
+  `supporting_only_step_count`，避免 reporter 把 supporting-only evidence 误读为
+  primary observation。
 
 ### 11.2.4 · 真实场景 fixture 页面
 

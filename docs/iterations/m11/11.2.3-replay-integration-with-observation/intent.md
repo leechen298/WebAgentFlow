@@ -1,12 +1,12 @@
 # Intent
 
-状态：implementation ready，待代码实现
+状态：implementation complete
 
 ## 本轮意图
 
 11.2.3 的意图是将 11.2.2 已实现的 step-level `wait_result` 提升为
-replay-level observation evidence contract，并按技术设计落地为 replay result
-上的可选 observation summary。
+replay-level observation evidence，并按技术设计落地为 replay result 上的可选
+observation summary。
 
 11.2.2 已经回答：
 

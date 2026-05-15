@@ -17,10 +17,10 @@ from app.schemas.learned_path_replay import (
     StepObservationRef,
     WaitStatus,
 )
-
-# Signal classification
-PRIMARY_SIGNAL_KINDS: set[ObservationSignalKind] = {"url_changed", "title_changed"}
-SUPPORTING_SIGNAL_KINDS: set[ObservationSignalKind] = {"network_idle_observed"}
+from app.services.learning.observation_signal_policy import (
+    PRIMARY_SIGNAL_KINDS,
+    SUPPORTING_SIGNAL_KINDS,
+)
 
 
 def _derive_status(

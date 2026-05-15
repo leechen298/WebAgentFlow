@@ -4,11 +4,11 @@
 
 ## 目标
 
-11.2.3 定义并准备实现 replay-level observation evidence aggregation。
+11.2.3 定义并实现 replay-level observation evidence aggregation。
 它回答：replay 执行结束后，WebAgentFlow 应该如何把每个 step 的
 `wait_result` 和 observation signals 聚合为可审计的 replay-level evidence。
 
-实现阶段应按 `contract.md`、`technical-design.md` 和 `test-plan.md` 落地
+实现已按 `contract.md`、`technical-design.md` 和 `test-plan.md` 落地
 schema、replay aggregation service、replay integration 和对应测试。11.2.3 仍不接入
 Task Result Reporter。
 
@@ -46,6 +46,20 @@ step-level wait evidence 汇总到 replay result 的 observation evidence 层。
 - [test-plan.md](./test-plan.md)：代码实现完成后的测试计划。
 - [plan.md](./plan.md)：代码实现计划；更细执行依据以 `technical-design.md` 和
   `test-plan.md` 为准。
+
+## 实现与验证
+
+11.2.3 已完成 replay-level observation summary 的 schema、aggregation service、
+replay integration 和 scoped tests。
+
+最新验证记录：
+
+- scoped wait/replay/summary tests：56 passed。
+- full API suite：1168 passed, 65 skipped。
+- ruff：clean。
+
+后续仍需注意：11.2.3 不包含 E2E / live UI smoke / `verify-scenario` /
+autonomous run 证据。
 
 ## 与 11.2.2 的区别
 

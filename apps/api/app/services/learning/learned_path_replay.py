@@ -1,8 +1,7 @@
-"""LearnedPath replay drift checker.
+"""LearnedPath replay orchestration.
 
-Determines whether a stored LearnedPath can be replayed against the
-current page state.  This module does NOT execute actions — that is the
-responsibility of the shared action executor (10.2.4).
+This module coordinates drift precheck, action execution through the shared
+executor, post-action wait results, and replay-level observation aggregation.
 """
 
 from __future__ import annotations

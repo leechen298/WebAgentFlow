@@ -128,6 +128,16 @@ replay-level observation evidence aggregation contract；代码实现应按 11.2
 `technical-design.md` 和 `test-plan.md` 落地。11.2.3 仍不代表 reporter integration
 或 recovery handling 已实现。
 
+## Deferred Cleanup Backlog
+
+以下事项不阻塞 11.2.4，但需要在后续 11.2.x / 11.2.5 前避免遗忘：
+
+- 治理 `execute_action()` / `wait_for_change_after_action()` 的重复等待，让
+  post-action page-change waiting 逐步收敛到 observation layer。
+- 细化 Task Result Reporter 消费前的 observation count 语义，例如
+  `wait_observed_step_count`、`primary_observed_step_count`、
+  `supporting_only_step_count`。
+
 ## Later M11.2.x · Common Component Runtime Semantics
 
 M11.2 后续应补充常用组件库运行时语义兼容。它不是只支持某一个 popup，而是
