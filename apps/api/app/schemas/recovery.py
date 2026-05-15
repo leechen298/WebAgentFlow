@@ -169,3 +169,91 @@ class AbortAcknowledgement(BaseModel):
             "The caller must not assume external side effects are reversible."
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# M12.3 recovery proposal schema contracts
+# ---------------------------------------------------------------------------
+
+ProposalSource = Literal[
+    "recovery_boundary",
+    "abort_acknowledgement",
+]
+
+RecoveryProposalKind = Literal[
+    "ask_user_for_context",
+    "review_evidence",
+    "suggest_reteach",
+    "consider_retry_later",
+    "abandon_task",
+    "handoff_to_takeover_later",
+    "wait_for_runtime_observation_later",
+]
+
+ProposalRiskHint = Literal[
+    "side_effects_unknown",
+    "policy_check_required",
+    "requires_user_context",
+    "evidence_insufficient",
+    "inflight_action_risk",
+]
+
+ProposalConfirmationRequirement = Literal[
+    "none",
+    "user_confirmation_required",
+    "downstream_policy_check_required",
+]
+
+ProposalOwner = Literal[
+    "user",
+    "retry_policy",
+    "conversation_flow",
+    "manual_review",
+    "teaching_flow",
+    "takeover_flow",
+]
+
+
+class RecoveryProposalOption(BaseModel):
+    """A single recovery proposal option for user display.
+
+    non_executable=True by default. Options are presentation-only and must not
+    trigger browser actions, retry, replan, or write-back.
+    """
+
+    kind: RecoveryProposalKind
+    title: str
+    description: str
+    non_executable: bool = Field(
+        default=True,
+        description="Always true for MVP. Options are display-only.",
+    )
+    evidence_refs: list[EvidenceReference] = Field(default_factory=list)
+    risk_hints: list[ProposalRiskHint] = Field(default_factory=list)
+    confirmation_requirement: ProposalConfirmationRequirement = "none"
+    next_owner: ProposalOwner | None = None
+    rank: int | None = Field(
+        default=None,
+        description="Display ordering hint. Lower rank = higher display priority. "
+        "Does NOT indicate system selection.",
+    )
+
+
+class RecoveryProposal(BaseModel):
+    """A set of recovery proposal options for user display.
+
+    Proposal is not execution. Proposal is not command.
+    """
+
+    source: ProposalSource
+    source_classification: str | None = None
+    source_recommendation: str | None = None
+    source_decision: str | None = None
+    options: list[RecoveryProposalOption] = Field(default_factory=list)
+    evidence_refs: list[EvidenceReference] = Field(default_factory=list)
+    recommended_option_kinds: list[RecoveryProposalKind] = Field(
+        default_factory=list,
+        description="Display emphasis only. NOT a selected state.",
+    )
+    source_boundary: RecoveryBoundary | None = None
+    source_abort: AbortAcknowledgement | None = None
