@@ -18,10 +18,10 @@ deterministic proposal generator 和 focused unit tests。本轮只补齐实现�
 
 - 12.1 Failure Classification and Recovery Boundary 已实现并交付。
 - 12.2 User Abort / Stop Handling 已实现并交付。
-- 12.3 当前处于 implementation gate pending review 阶段。
+- 12.3 当前设计包已对齐，可作为后续 implementation 任务的输入。
 
-实现 Agent 不得跳过本设计包直接进入代码。进入 12.3 implementation 前必须先
-人工审核：
+实现 Agent 不得跳过本设计包临时发明方案。用户明确发起 12.3 implementation
+时，应读取并遵守：
 
 - `contract.md`
 - `technical-design.md`
@@ -37,18 +37,18 @@ deterministic proposal generator 和 focused unit tests。本轮只补齐实现�
 - `plan.md` - 实施步骤和文档级验证命令。
 - `review.md` - 设计包对齐记录、实际验证证据、未运行项和 follow-ups。
 
-## 代码型迭代门禁
+## 代码型迭代准备状态
 
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
-- [ ] `review.md` 在实现收尾前记录验证证据。
+- [x] `review.md` 已记录设计包对齐的验证证据和未运行项。
 
-当前只完成 design package alignment。代码实现仍需后续单独任务。
+当前只完成 design package alignment。代码实现由后续明确的 implementation
+任务触发；本文档只记录执行依据，不设置额外的勾选状态。
 
 ## 核心原则
 

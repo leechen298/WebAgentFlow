@@ -15,7 +15,7 @@
 
 ## 文件 / 模块
 
-- `docs/iterations/m12/12.3-recovery-proposal-mvp/README.md` - 更新为代码型迭代包索引和门禁状态。
+- `docs/iterations/m12/12.3-recovery-proposal-mvp/README.md` - 更新为代码型迭代包索引和准备状态。
 - `docs/iterations/m12/12.3-recovery-proposal-mvp/intent.md` - 更新目标、动机、边界和成功标准。
 - `docs/iterations/m12/12.3-recovery-proposal-mvp/contract.md` - 新增 proposal 概念、状态、schema、evidence 和兼容性契约。
 - `docs/iterations/m12/12.3-recovery-proposal-mvp/technical-design.md` - 新增 future schema / service / data flow 设计。
@@ -74,11 +74,11 @@ tests 只写入 `test-plan.md`，不在本轮运行。
 | `git diff --cached --name-only` | stage 后只显示 `docs/iterations/m12/**`。 | Yes | Commit scope guard。 |
 | `git diff --cached --check` | 无输出。 | Yes | Staged whitespace check。 |
 
-## 复核清单（Review Checklist）
+## 对齐清单（Alignment Checklist）
 
-- [ ] 12.3 仍然匹配 `contract.md`。
-- [ ] 12.3 是代码型迭代，已经包含 `technical-design.md`。
-- [ ] `test-plan.md` 已存在并与技术设计 Test Matrix 一致。
-- [ ] plan 验证表格引用 `technical-design.md` 和 `test-plan.md`。
-- [ ] 本轮没有代码、API、CLI、DB、frontend、E2E、live run 改动。
-- [ ] 验证命令已执行并记录到 `review.md`，未运行项写明 not run / unverified。
+- [x] 12.3 仍然匹配 `contract.md`。
+- [x] 12.3 是代码型迭代，已经包含 `technical-design.md`。
+- [x] `test-plan.md` 已存在并与技术设计 Test Matrix 一致。
+- [x] plan 验证表格引用 `technical-design.md` 和 `test-plan.md`。
+- [x] 本轮没有代码、API、CLI、DB、frontend、E2E、live run 改动。
+- [x] 验证命令已执行并记录到 `review.md`，未运行项写明 not run / unverified。

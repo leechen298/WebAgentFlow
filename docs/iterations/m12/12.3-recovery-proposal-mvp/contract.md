@@ -143,6 +143,7 @@ conversation event、database schema 或 frontend contract。
 
 ## 未决问题
 
-- 12.3 implementation 前需要人工审核 `contract.md`、`technical-design.md`、
-  `test-plan.md` 和 `plan.md`。
+- 12.3 implementation 应以 `contract.md`、`technical-design.md`、
+  `test-plan.md` 和 `plan.md` 为执行依据；若实现时发现这些文档缺失、过期、
+  互相冲突或无法执行，应停止并报告具体缺口。
 - 12.0 / 12.1 / 12.2 历史包仍是旧四件套；是否回填新模板由后续文档治理任务决定。

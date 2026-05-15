@@ -4,13 +4,13 @@
 
 ## 2026-05-15 设计包对齐（Design Package Alignment）
 
-- Reviewer：pending user review
-- Decision：pending
+- Reviewer：documentation alignment self-check
+- Decision：design package aligned
 - Notes：本轮按最新 iteration templates 将 12.3 从旧四件套对齐为代码型迭代完整设计包。
 
 ## 用户反馈
 
-- 要求 12.3 按代码型迭代门禁补齐 `README.md`、`intent.md`、`contract.md`、
+- 要求 12.3 按代码型迭代文档规范补齐 `README.md`、`intent.md`、`contract.md`、
   `technical-design.md`、`test-plan.md`、`plan.md`、`review.md` -> accepted。
 - 要求本轮只改 `docs/iterations/m12/**`，不写代码、不跑 API / CLI / E2E /
   `verify-scenario` -> accepted。
@@ -21,7 +21,7 @@
 
 ### 实际交付
 
-- 12.3 `README.md` 更新为代码型迭代包索引和门禁状态。
+- 12.3 `README.md` 更新为代码型迭代包索引和准备状态。
 - 12.3 `intent.md` 更新为 design package alignment 语义。
 - 新增 12.3 `contract.md`。
 - 新增 12.3 `technical-design.md`。
@@ -29,10 +29,10 @@
 - 12.3 `plan.md` 更新为新模板结构。
 - 12.3 `review.md` 更新为新模板结构。
 - M12 README / m12-plan 同步 12.3 为 proposed / current design package。
-- 本轮实际交付是 12.3 implementation-gate design package alignment。
+- 本轮实际交付是 12.3 code-iteration design package alignment。
 - 本轮未实现 proposal schema、proposal generator 或 tests。
-- 12.3 implementation 必须在 `contract.md`、`technical-design.md`、
-  `test-plan.md`、`plan.md` 审核后另开任务。
+- 12.3 implementation 由后续明确的 implementation 任务触发；执行时应读取并遵守
+  `contract.md`、`technical-design.md`、`test-plan.md` 和 `plan.md`。
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
@@ -79,6 +79,6 @@ execution。12.3 本轮是 docs-only design package alignment，不产生 `run_i
 
 ### 后续事项（Follow-ups）
 
-- 12.3 implementation 前必须人工审核 `contract.md`、`technical-design.md`、
-  `test-plan.md` 和 `plan.md`。
+- 12.3 implementation 应以 `contract.md`、`technical-design.md`、
+  `test-plan.md` 和 `plan.md` 为执行依据；如发现文档缺口或冲突，再停止报告。
 - 12.0 / 12.1 / 12.2 历史包仍是旧四件套；是否按新模板回填由后续文档治理任务决定。

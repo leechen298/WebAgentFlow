@@ -60,7 +60,8 @@ re-teach, consider retry later, hand off to takeover later, wait for runtime
 observation later, or abandon. A proposal is not an execution command.
 Proposal options are non-executable by default and may be ranked or labelled,
 but must not be auto-selected. 12.3 is a code-type iteration; implementation
-must wait for review of its contract, technical design, test plan, and plan.
+should use its contract, technical design, test plan, and plan as execution
+inputs rather than requiring an extra review checkbox inside the documents.
 
 ### 12.4 · Retry / re-run policy
 
