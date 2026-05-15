@@ -45,7 +45,7 @@ recovery.
 
 ### 12.2 · User abort / stop handling
 
-Status: documentation initialized / current planning package.
+Status: implemented / shipped.
 
 Handle explicit user interruption. Abort should pause or stop immediately,
 record what was known, acknowledge the stop boundary, avoid new browser
@@ -53,8 +53,13 @@ actions, and hand later choices to 12.3 / 12.4 / 12.5.
 
 ### 12.3 · Recovery proposal MVP
 
-Generate recovery proposals such as retry, ask user, replan, suggest re-teach,
-or abandon. A proposal is not an execution command.
+Status: documentation initialized / current planning package.
+
+Generate recovery proposals such as ask user, review evidence, suggest
+re-teach, consider retry later, hand off to takeover later, wait for runtime
+observation later, or abandon. A proposal is not an execution command.
+Proposal options are non-executable by default and may be ranked or labelled,
+but must not be auto-selected.
 
 ### 12.4 · Retry / re-run policy
 
@@ -73,7 +78,7 @@ Close M12 with deterministic tests, conversation/event evidence, and static
 review that prove no hidden recovery, no hidden relearning, and no browser
 continuation without user consent.
 
-12.2 creates only `12.2-user-abort-stop-handling`. Do not create `12.3-*` or
+12.3 creates only `12.3-recovery-proposal-mvp`. Do not create `12.4-*` or
 later detail directories in this round.
 
 ## Decision Rules
@@ -111,6 +116,7 @@ M12 decisions must preserve:
 - user abort signal when present;
 - recovery proposal shown to the user;
 - user choice before any retry, replan, handoff, or abandon action;
+- evidence that proposal options were not executed or auto-selected by 12.3;
 - markers showing that autonomous recovery and hidden relearning did not run.
 
 ## Explicit Non-goals
@@ -132,6 +138,6 @@ M12 decisions must preserve:
 
 - `git diff --check`
 - `git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'`
-- `find docs/iterations/m12 -maxdepth 1 -type d -name '12.3*' -print`
 - `find docs/iterations/m12 -maxdepth 1 -type d -name '12.4*' -print`
 - `find docs/iterations/m12 -maxdepth 1 -type d -name '12.5*' -print`
+- `find docs/iterations/m12 -maxdepth 1 -type d -name '12.6*' -print`

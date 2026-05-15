@@ -37,7 +37,10 @@ without explicit user consent.
   failure classification and recovery boundary classifier. Status:
   implemented / shipped.
 - [12.2-user-abort-stop-handling](./12.2-user-abort-stop-handling/) —
-  user abort / stop handling boundary. Status: documentation initialized.
+  user abort / stop handling boundary. Status: implemented / shipped.
+- [12.3-recovery-proposal-mvp](./12.3-recovery-proposal-mvp/) —
+  recovery proposal semantics and non-execution boundary. Status:
+  documentation initialized.
 
 ## Core Runtime Terms
 
