@@ -128,7 +128,13 @@ def build_replay_observation_summary(
 
         step_has_primary = bool(step_primary)
         step_has_supporting = bool(step_supporting)
-        primary_kind = next(iter(step_primary), None)
+        # Prefer the WaitResult's own primary_signal designation; fall back
+        # to a deterministic pick from sorted collected primary kinds.
+        primary_kind: ObservationSignalKind | None = None
+        if wr.primary_signal is not None and wr.primary_signal.kind in PRIMARY_SIGNAL_KINDS:
+            primary_kind = wr.primary_signal.kind
+        elif step_primary:
+            primary_kind = sorted(step_primary)[0]
 
         step_refs.append(
             StepObservationRef(
@@ -136,7 +142,7 @@ def build_replay_observation_summary(
                 wait_id=wr.wait_id,
                 wait_status=wait_status,
                 primary_signal_kind=primary_kind,
-                signal_kinds=list(step_primary | step_supporting),
+                signal_kinds=sorted(step_primary | step_supporting),
                 has_primary_signal=step_has_primary,
                 has_supporting_signal=step_has_supporting,
                 notes=wr.notes,
@@ -164,7 +170,7 @@ def build_replay_observation_summary(
         has_skipped_or_uncertain=has_skipped_or_uncertain,
         all_not_required_or_empty=(
             step_count == 0
-            or (wait_result_count > 0 and not_required_step_count == wait_result_count)
+            or (wait_result_count == step_count and not_required_step_count == step_count)
         ),
     )
 

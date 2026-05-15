@@ -125,6 +125,29 @@ class TestBuildReplayObservationSummary:
         assert summary.step_count == 2
         assert summary.not_required_step_count == 2
 
+    def test_mixed_not_required_and_none_wait_result_not_applicable(self) -> None:
+        """not_required + wait_result=None is NOT not_applicable.
+
+        The wait_result=None step has no evidence, so the summary should be
+        no_primary_observation with uncertainty — not not_applicable.
+        """
+        steps = [
+            _make_step(
+                step=0,
+                action_type="observe",
+                wait_result=_make_wait_result(status="not_required"),
+            ),
+            _make_step(step=1, action_type="click", wait_result=None),
+        ]
+        summary = build_replay_observation_summary(
+            learned_path_id="lp-1", steps=steps
+        )
+        assert summary.status == "no_primary_observation"
+        assert summary.step_count == 2
+        assert summary.wait_result_count == 1
+        assert summary.not_required_step_count == 1
+        assert summary.has_uncertain_observation is True
+
     def test_observed_primary_signal(self) -> None:
         steps = [
             _make_step(
