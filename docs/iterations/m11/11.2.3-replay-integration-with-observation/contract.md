@@ -132,10 +132,25 @@ Step 0 primary_signal = url_changed
 Step 1 wait_result.status = skipped
 
 Replay observation summary:
-  status = observed
+  status = partial_observation
   has_primary_observation = true
   observed_step_count = 1
   skipped_step_count = 1
+  primary_signal_kinds = ["url_changed"]
+```
+
+纯 `observed` 示例：
+
+```text
+Step 0 wait_result.status = observed
+Step 0 primary_signal = url_changed
+
+Replay observation summary:
+  status = observed
+  has_primary_observation = true
+  observed_step_count = 1
+  skipped_step_count = 0
+  timeout_step_count = 0
   primary_signal_kinds = ["url_changed"]
 ```
 

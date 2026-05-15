@@ -846,7 +846,8 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 ## M11.2 · 运行时观察与真实网页稳健性增强
 
-状态：11.2.3 文档生成完成，能力未实现。
+状态：11.2.3 文档生成完成；11.2.3 能力未实现。11.2.2 最小
+`wait_result` 能力已 scoped 收口。
 
 M11.2 是 v0.1 后续优化。它不继续扩展 task-to-path 规划逻辑，而是在
 M11.1 已完成的 replay execution / result reporting 后补运行时观察边界。
