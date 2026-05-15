@@ -96,6 +96,45 @@ review.md
 - `plan.md` 定义“改哪些文件、按什么顺序改、验证入口是什么”。
 - `review.md` 记录“实际做成什么、和原设计有什么偏差、实际跑了什么、哪些没跑以及原因”。
 
+## 两阶段工作规则
+
+### 生成开发文档阶段
+
+当任务是为**代码型**或**混合型**迭代生成开发文档时，必须先按
+`docs/iterations/templates/` 生成完整迭代文档包：
+
+```text
+README.md
+intent.md
+contract.md
+technical-design.md
+test-plan.md
+plan.md
+review.md
+```
+
+这一步的目标是把“要做什么、边界是什么、怎么实现、怎么自测、怎么记录实际证据”一次性
+钉住。不能只写 `intent.md` + `plan.md` 就把任务交给实现 Agent。
+
+文档型迭代只有在**不准备后续代码实现**时，才可以省略 `technical-design.md` 和
+`test-plan.md`。如果文档型迭代改变流程规则、里程碑语义、Agent 边界、证据语义、
+迭代模板、概念、状态、字段或产品边界，仍必须包含 `contract.md`。
+
+### 代码开发阶段
+
+当任务是代码开发时，Agent 必须先读取当前迭代包，并按以下文档实现和自测：
+
+1. `intent.md`
+2. `contract.md`
+3. 已审核的 `technical-design.md`
+4. `test-plan.md`
+5. `plan.md`
+6. `review.md`（了解已有评审、偏差、未验证项）
+
+实现必须服从 `contract.md`、`technical-design.md`、`test-plan.md` 和 `plan.md`。不得绕过、
+重新解释或静默替换这些文档。若实现过程中发现设计问题，必须先停止实现，更新对应迭代文档
+并经过审核，再继续开发。
+
 ## technical-design.md 硬规则
 
 凡是**非平凡代码迭代**，在 `technical-design.md` 生成并完成审核前，不得进入代码实现。

@@ -84,16 +84,22 @@ CLI 术语：
 
 深度架构 / 演进：[`docs/architecture.zh.md`](./docs/architecture.zh.md)。
 
-## 迭代文档门禁
+## 迭代文档与实现门禁
 
-以 `docs/iterations/README.md` 作为每轮迭代的文档标准。凡是非平凡代码迭代，
-在 `technical-design.md` 生成并审核前，不得进入代码实现。代码型迭代必须把
-`intent.md`、`contract.md`、`technical-design.md`、触发时的 `test-plan.md`、
-`plan.md`、`review.md` 放在同一个里程碑迭代包里。文档型迭代可以不写
-`technical-design.md`，但只要
-涉及概念、状态、字段或边界变化，就必须写清楚 `contract.md`。
-代码型迭代必须包含已审核、且带 contract alignment 的 `technical-design.md`，
-然后才能进入实现。
+以 `docs/iterations/README.md` 作为每轮迭代的文档标准。
+
+当任务是为代码型或混合型迭代生成开发文档时，必须先按
+`docs/iterations/templates/` 生成完整迭代文档包：`README.md`、`intent.md`、
+`contract.md`、`technical-design.md`、`test-plan.md`、`plan.md`、`review.md`。
+纯文档迭代只有在不准备后续代码实现时，才可以省略 `technical-design.md` 和
+`test-plan.md`；但如果改变流程规则、里程碑语义、Agent 边界、证据语义、
+迭代模板、概念、状态、字段或产品边界，仍必须包含 `contract.md`。
+
+当任务是代码开发时，必须先读取当前迭代文档，并严格按照 `contract.md`、已审核的
+`technical-design.md`、`test-plan.md`、`plan.md` 实现和自测。不得绕过、
+重新解释或静默替换这些文档。如果实现过程中发现设计问题，必须先停止实现，
+更新对应迭代文档并经过审核，再继续开发。
+
 复杂代码迭代或涉及 live run 的迭代必须包含 `test-plan.md`；没有命令输出、
 `run_id`、截图、日志或已记录的产品界面证据时，不得声称完成 E2E、UI smoke、
 CLI、`verify-scenario` 或 autonomous-run 测试。
