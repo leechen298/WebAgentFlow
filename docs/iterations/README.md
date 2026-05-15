@@ -56,10 +56,13 @@ docs/iterations/
 ```
 README.md
 intent.md
-contract.md      # 涉及概念、状态、字段、边界时必须有；否则写明 N/A 并说明原因
+contract.md      # 涉及概念、状态、字段、边界、流程规则或模板变化时必须有；否则写明 N/A 并说明原因
 plan.md
 review.md
 ```
+
+文档型迭代只要改变 process rules、milestone semantics、Agent boundaries、
+evidence semantics 或 iteration templates，也必须写 `contract.md`。
 
 ### 代码型迭代
 

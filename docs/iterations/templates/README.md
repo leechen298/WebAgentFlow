@@ -2,7 +2,7 @@
 
 Status: proposed
 Milestone: M<N>
-Type: docs | code
+Type: docs | code | mixed
 
 ## Iteration Type
 
@@ -26,6 +26,7 @@ Required:
 
 - [ ] `intent.md` exists.
 - [ ] `contract.md` exists if this changes concepts, status, schemas, evidence, or boundaries.
+- [ ] `contract.md` exists if this changes process rules, milestone semantics, Agent boundaries, evidence semantics, or iteration templates.
 - [ ] `contract.md` says `N/A` with a reason if no contract changes exist.
 - [ ] `plan.md` exists.
 - [ ] `review.md` exists.
