@@ -1,6 +1,6 @@
 # 12.3 Recovery Proposal MVP Contract
 
-状态：proposed
+状态：implemented
 
 ## 概念 / 边界契约
 

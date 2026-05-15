@@ -4,7 +4,7 @@
 
 ## 适用条件
 
-本文件必填，因为 12.3 涉及 recovery，并且 future unit matrix 超过 5 个 case。
+本文件必填，因为 12.3 涉及 recovery，且 unit matrix 超过 5 个 case。
 
 ## 测试范围（Test Scope）
 

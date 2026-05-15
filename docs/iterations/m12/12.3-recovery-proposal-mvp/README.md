@@ -31,10 +31,10 @@ deterministic proposal generator 和 focused unit tests。
 
 - `intent.md` - 目标、动机、边界、成功标准。
 - `contract.md` - proposal 概念、状态、schema、evidence、兼容性和不变契约。
-- `technical-design.md` - 后续 schema / service / data flow / compatibility 设计。
-- `test-plan.md` - future unit matrix 和明确未运行的 API / UI / E2E / live run 边界。
-- `plan.md` - 实施步骤和文档级验证命令。
-- `review.md` - 设计包对齐记录、实际验证证据、未运行项和 follow-ups。
+- `technical-design.md` - schema / service / data flow / compatibility 设计。
+- `test-plan.md` - unit matrix 和未运行的 API / UI / E2E / live run 边界。
+- `plan.md` - 实施步骤和验证命令。
+- `review.md` - 实际验证证据、未运行项和 follow-ups。
 
 ## 代码型迭代准备状态
 

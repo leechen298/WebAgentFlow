@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：proposed
+状态：implemented
 
 ## 当前状态（Current State）
 
@@ -10,36 +10,40 @@
   - 12.1 `RecoveryEvidence` / `RecoveryBoundary`
   - 12.2 `UserAbortSignal` / `UserAbortState` / `AbortEvidence` /
     `AbortAcknowledgement`
+  - 12.3 `RecoveryProposal` / `RecoveryProposalOption` / `RecoveryProposalKind` /
+    `ProposalSource` / `ProposalRiskHint` / `ProposalConfirmationRequirement` /
+    `ProposalOwner`
 - `apps/api/app/services/recovery/classifier.py`
   - deterministic 12.1 recovery boundary classifier
 - `apps/api/app/services/recovery/abort_handler.py`
   - deterministic 12.2 user abort handler
+- `apps/api/app/services/recovery/proposal.py`
+  - deterministic 12.3 recovery proposal generator（commit `b139aab`）
 - `apps/api/tests/test_recovery_classifier.py`
 - `apps/api/tests/test_user_abort_handler.py`
-
-12.3 目前只有文档包。本轮不创建 proposal schema、service 或 tests。
+- `apps/api/tests/test_recovery_proposal.py`（35 tests, commit `b139aab`）
 
 ## 合约对齐 / 不变量（Contract Alignment / Invariants）
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
-| Proposal is not execution. | Future proposal generator returns pure data object only. | `test-plan.md`: non-execution / forbidden dependency tests. | No command field, no browser action field. |
-| Proposal option defaults to `non_executable=true`. | Future `RecoveryProposalOption` schema default and unit tests. | `test-plan.md`: all options non-executable. | Default must not depend on caller. |
-| Recommended option is not selected option. | Future schema may expose `recommended_option_ids`, `rank`, or `priority`, but no `selected_option_id`. | `test-plan.md`: no selected-state field and recommended not auto-selected. | User confirmation belongs to 12.5 flow. |
-| `consider_retry_later` is not retry. | Future generator maps retry-compatible boundary to proposal kind only. | `test-plan.md`: retry option is handoff-only. | 12.4 owns retry policy. |
-| `suggest_reteach` is not LearnedPath write-back. | Future generator only emits handoff option. | `test-plan.md`: no write-back dependency. | Teaching / path update is later work. |
-| `wait_for_runtime_observation_later` is not M11.2 implementation. | Future generator only labels future observation handoff. | `test-plan.md`: no M11.2 dependency. | M11.2 remains separate. |
-| Only consume 12.1 / 12.2 structured outputs. | Future service accepts `RecoveryBoundary` or `AbortAcknowledgement`. | `test-plan.md`: input source matrix. | No raw HTML / DB / browser / LLM access. |
+| Proposal is not execution. | `RecoveryProposalGenerator` returns pure data object only. | `test_recovery_proposal.py`: non-execution / forbidden dependency tests. | No command field, no browser action field. |
+| Proposal option defaults to `non_executable=true`. | `RecoveryProposalOption` schema default and unit tests. | `test_recovery_proposal.py`: all options non-executable. | Default must not depend on caller. |
+| Recommended option is not selected option. | Schema exposes `recommended_option_kinds` for display emphasis, no `selected_option_id`. | `test_recovery_proposal.py`: no selected-state field and recommended not auto-selected. | User confirmation belongs to 12.5 flow. |
+| `consider_retry_later` is not retry. | Generator maps retry-compatible boundary to proposal kind only. | `test_recovery_proposal.py`: retry option is handoff-only. | 12.4 owns retry policy. |
+| `suggest_reteach` is not LearnedPath write-back. | Generator only emits handoff option. | `test_recovery_proposal.py`: no write-back dependency. | Teaching / path update is later work. |
+| `wait_for_runtime_observation_later` is not M11.2 implementation. | Not emitted by current mapping; reserved for future. | `test_recovery_proposal.py`: no M11.2 dependency. | M11.2 remains separate. |
+| Only consume 12.1 / 12.2 structured outputs. | Service accepts `RecoveryBoundary` or `AbortAcknowledgement`. | `test_recovery_proposal.py`: input source matrix. | No raw HTML / DB / browser / LLM access. |
 
-## 实现方案（Proposed Implementation）
+## 实现方案（Implementation）
 
-Future implementation should add:
+Implemented in commit `b139aab`:
 
 - schema definitions in `apps/api/app/schemas/recovery.py`
 - deterministic proposal generator in `apps/api/app/services/recovery/proposal.py`
-- focused unit tests in `apps/api/tests/test_recovery_proposal.py`
+- focused unit tests in `apps/api/tests/test_recovery_proposal.py`（35 tests）
 
-The proposal generator should accept either:
+The proposal generator accepts either:
 
 - `RecoveryBoundary`
 - `AbortAcknowledgement`
@@ -65,12 +69,12 @@ replan execution, or LearnedPath write-back.
 | Replay execution | No | No replay command or continuation. | Replay semantics unchanged. |
 | Reporter | No | No Task Result Reporter changes. | Reporter output remains upstream evidence. |
 | Worker / async jobs | No | No worker path. | Async behavior unchanged. |
-| Tests / fixtures | Future unit tests only | `test_recovery_proposal.py` in implementation round. | No E2E or live run. |
-| Docs | Yes | This design package alignment. | Implementation docs now follow code iteration gate. |
+| Tests / fixtures | Yes | `test_recovery_proposal.py` — 35 unit tests. | No E2E or live run. |
+| Docs | Yes | Design package + implementation evidence. | Status synced to implemented. |
 
 ## 数据模型 / Schema 变更（Data Model / Schema Changes）
 
-Future schema additions may include:
+Schema additions（commit `b139aab`）:
 
 - `ProposalSource`
 - `RecoveryProposalKind`
@@ -94,19 +98,19 @@ These schema additions must be backward compatible with existing
 
 ## 服务 / 模块设计（Service / Module Design）
 
-Future module:
+Implemented module:
 
 ```text
 apps/api/app/services/recovery/proposal.py
 ```
 
-Suggested public entry:
+Public entry:
 
 ```python
 generate_recovery_proposal(source: RecoveryBoundary | AbortAcknowledgement | Mapping[str, Any]) -> RecoveryProposal
 ```
 
-Suggested class:
+Class:
 
 ```python
 RecoveryProposalGenerator.generate(...)
@@ -142,7 +146,7 @@ ordering, but must not derive a selected option.
 
 ## 状态推导（Status / State Derivation）
 
-Future mapping:
+Implemented mapping:
 
 | Input | Default proposal direction |
 |---|---|
@@ -154,7 +158,7 @@ Future mapping:
 | `needs_review` | `review_evidence` |
 | abort `accepted_stop` | `abandon_task`, `review_evidence`, or later handoff |
 | abort `cannot_interrupt_inflight_action` | `review_evidence` plus side-effect risk hint |
-| abort `needs_manual_review` | `review_evidence` |
+| abort `needs_manual_review` | `review_evidence`；if `inflight_caveat=True` then also `inflight_action_risk` / `side_effects_unknown` |
 
 Fallback: if source evidence is insufficient or unsupported, emit
 `review_evidence` with a risk hint rather than inventing an executable action.
@@ -204,15 +208,14 @@ Fallback: if source evidence is insufficient or unsupported, emit
 
 ## 验证命令入口（Validation Commands）
 
-Future implementation should run focused unit and static checks. This
-documentation alignment round runs docs-level checks only.
+Implementation ran focused unit and static checks:
 
 ```bash
-git diff --check
-git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.4*' -print
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.5*' -print
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.6*' -print
-git status --short docs/iterations/m11
-git diff --name-only
+# Unit tests（73 passed — 35 proposal + 19 classifier + 19 abort handler）
+cd apps/api && .venv/bin/pytest tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py -v
+
+# Lint
+cd apps/api && .venv/bin/ruff check app/schemas/recovery.py app/services/recovery/proposal.py tests/test_recovery_proposal.py
 ```
+
+Not run: API / CLI / E2E / `verify-scenario` / autonomous run / live run.
