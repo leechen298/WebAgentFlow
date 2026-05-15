@@ -90,30 +90,15 @@ WebAgentFlow into their own systems or operator consoles through CLI / API.
 
 Deep architecture / history: [`docs/architecture.md`](./docs/architecture.md).
 
-## Iteration Documentation and Implementation Gate
+## Iteration Documentation Gate
 
 Use `docs/iterations/README.md` as the per-iteration documentation standard.
-
-When generating development documentation for a code or mixed iteration, create
-the full iteration document set from `docs/iterations/templates/` before
-implementation: `README.md`, `intent.md`, `contract.md`,
-`technical-design.md`, `test-plan.md`, `plan.md`, and `review.md`.
-Documentation-only iterations may omit `technical-design.md` and
-`test-plan.md` only when they do not prepare code implementation, but they must
-still include `contract.md` if they change process rules, milestone semantics,
-Agent boundaries, evidence semantics, iteration templates, concepts, statuses,
-fields, or product boundaries.
-
-When implementing code, read the current iteration documents first and
-implement according to `contract.md`, reviewed `technical-design.md`,
-`test-plan.md`, and `plan.md`. Do not bypass, reinterpret, or silently replace
-those documents. If implementation reveals a design problem, stop and update
-the relevant iteration documents first, then continue only after review.
-
-Complex code iterations or live-run-related iterations must include
-`test-plan.md`; do not claim E2E, UI smoke, CLI, `verify-scenario`, or
-autonomous-run testing without reviewable evidence such as command output,
-`run_id`, screenshot, log, or recorded product surface.
+For non-trivial code iterations, do not implement before
+`technical-design.md` exists and has been reviewed. Code iterations must keep
+`intent.md`, `contract.md`, `technical-design.md`, `plan.md`, and `review.md`
+together in the same milestone iteration package. Documentation-only
+iterations may omit `technical-design.md`, but must still document contract
+changes when concepts, states, fields, or boundaries change.
 
 ## AI Coding Agent — Execution Boundary (HARD RULE)
 
@@ -442,8 +427,8 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
   for new contributors).
 - [`docs/iterations/README.md`](./docs/iterations/README.md) —
   **per-iteration doc convention** (milestone-scoped folders with
-  `intent.md` / `contract.md` / `technical-design.md` / `test-plan.md` /
-  `plan.md` / `review.md`). Write `intent.md` and the required design docs before
+  `intent.md` / `contract.md` / `technical-design.md` / `plan.md` /
+  `review.md`). Write `intent.md` and the required design docs before
   starting non-trivial work; code iterations require reviewed
   `technical-design.md` before implementation.
 - [`CLAUDE.md`](./CLAUDE.md) — primary English reference.

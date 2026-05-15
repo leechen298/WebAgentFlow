@@ -1,21 +1,21 @@
-# 意图（Intent）
+# <Iteration Title> Intent
 
-状态：proposed
+Status: proposed
 
-## 目标
+## Goal
 
-<用一句话描述本轮完成后的状态。>
+<One sentence describing the desired end state.>
 
-## 动机
+## Motivation
 
-<为什么现在做；它和当前里程碑、用户问题或技术债有什么关系。>
+<Why this matters now, and how it connects to the current milestone.>
 
-## 边界 / 非目标
+## Boundary / Non-goals
 
-- <本轮明确不做的相关事项。>
-- <另一个明确非目标。>
+- <Related work this iteration will not do.>
+- <Another explicit non-goal.>
 
-## 成功标准
+## Success Criteria
 
-- <可观察、可验证的标准 1。>
-- <可观察、可验证的标准 2。>
+- <Observable criterion 1.>
+- <Observable criterion 2.>
