@@ -16,6 +16,11 @@
 - 要求本次只修改 `docs/iterations/m12/**`，不写代码、不跑 API / CLI / E2E /
   `verify-scenario` -> accepted。
 - 要求 12.4 核心原则固定为 retry policy 不等于 retry execution -> accepted。
+- Review P3：future confirmation marker 不应命名得像执行触发器 -> accepted；
+  design now recommends `has_user_confirmation_marker` and states it affects
+  policy outcome only.
+- Review P3：`abandon_task` policy outcome 不应保留二选一 -> accepted；
+  design now defaults `abandon_task` to `no_retry_needed`.
 
 ## 最终差异（Final Delta）
 
@@ -36,6 +41,15 @@
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
 - None so far. 本次只做 design package generation，不实现 code。
+
+### Review-fix notes
+
+- `technical-design.md` 的 future evaluator signature 将 `user_confirmed`
+  收紧为 `has_user_confirmation_marker`，并明确该 marker 不触发 retry execution。
+- `contract.md` 的 evidence / unresolved question 已同步为
+  `has_user_confirmation_marker`。
+- `test-plan.md` 和 `technical-design.md` 已将 `abandon_task` 的默认 retry policy
+  outcome 固定为 `no_retry_needed`。
 
 ### WebAgentFlow Live Run 边界（Live Run Boundary）
 
@@ -73,6 +87,17 @@ product-driven browser execution。不产生 `run_id`。
 | Unit tests | 12.4 design package 不创建 retry policy code。 | Future implementation must run retry policy unit tests and recovery regressions. |
 | E2E / UI smoke | 12.4 design package 不接 UI / browser flow。 | UI behavior unverified by design. |
 | `verify-scenario` / autonomous run | 12.4 design package 不触发 live autonomous run。 | Product runtime not exercised by design. |
+
+## 2026-05-15 Review-fix Validation
+
+| Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Notes |
+|---|---|---|---|---|---|
+| `git diff --check` | No whitespace errors | No output | 0 | PASS | Docs-only static check. |
+| code/package status check | No code/package changes | No output | 0 | PASS | Scope guard. |
+| `git status --short docs/iterations/m11` | No output | No output | 0 | PASS | M11 history guard. |
+| `find docs/iterations/m12 ... 12.5/12.6` | No output | No output | 0 | PASS | Scope guard. |
+| `git diff --name-only` | Only 12.4 docs changed | 4 paths under `12.4-retry-rerun-policy/` | 0 | PASS | Review-fix scope guard. |
+| `rg user_confirmed / no_retry_needed or retry_denied` | No stale active design wording | Only historical review-fix note mentions `user_confirmed`; no `no_retry_needed or retry_denied` remains. | 0 | PASS | Confirms design wording tightened. |
 
 ## 后续事项（Follow-ups）
 

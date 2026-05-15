@@ -111,9 +111,13 @@ evaluate_retry_policy(
     source: RecoveryProposal | RecoveryBoundary | AbortAcknowledgement | Mapping[str, Any],
     *,
     selected_option_kind: RecoveryProposalKind | None = None,
-    user_confirmed: bool = False,
+    has_user_confirmation_marker: bool = False,
 ) -> RetryPolicyDecision
 ```
+
+`has_user_confirmation_marker` 只影响 policy outcome。它不是 execution consent
+consumer，不启动 retry，也不代表 retry 已经被执行。实际 confirmation 消费和
+conversation handoff 属于 12.5。
 
 Class:
 
@@ -139,7 +143,7 @@ Service properties:
 ```text
 12.3 RecoveryProposal
   + optional future selected option kind
-  + optional future user confirmation marker
+  + optional future has_user_confirmation_marker
   + structured evidence refs
   -> RetryPolicyEvaluator
   -> RetryPolicyDecision(outcome, reason, risk, confirmation requirement, evidence)
@@ -187,7 +191,9 @@ completed replay, or proposal recommendation alone.
 - `RecoveryProposalOption.kind=consider_retry_later` with side-effect risk ->
   `retry_denied`.
 - `RecoveryProposalOption.kind=review_evidence` -> `retry_needs_manual_review`.
-- `RecoveryProposalOption.kind=abandon_task` -> `no_retry_needed` or `retry_denied`.
+- `RecoveryProposalOption.kind=abandon_task` -> `no_retry_needed` by default.
+  Preserve side-effect risk in reason / evidence if present, but do not present
+  abandon as a retry failure.
 - Unknown source shape -> conservative `retry_needs_manual_review` / `retry_denied`.
 - Multiple proposal options -> policy evaluates explicit selected option only in future
   flow; recommended order is not selected state.

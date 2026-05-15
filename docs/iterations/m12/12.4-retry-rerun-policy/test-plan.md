@@ -25,7 +25,7 @@
 | Unit | `consider_retry_later` + clear evidence | `pytest tests/test_retry_policy.py` | `retry_allowed_requires_confirmation` | Yes | Does not start retry. |
 | Unit | `consider_retry_later` + `side_effects_unknown` | `pytest tests/test_retry_policy.py` | `retry_denied` | Yes | Fail-closed. |
 | Unit | `consider_retry_later` + missing evidence | `pytest tests/test_retry_policy.py` | `retry_needs_more_context` | Yes | Does not infer safety. |
-| Unit | `abandon_task` proposal | `pytest tests/test_retry_policy.py` | `no_retry_needed` or `retry_denied` | Yes | No retry path. |
+| Unit | `abandon_task` proposal | `pytest tests/test_retry_policy.py` | `no_retry_needed` | Yes | No retry path; preserve risk evidence without treating abandon as retry failure. |
 | Unit | `review_evidence` proposal | `pytest tests/test_retry_policy.py` | `retry_needs_manual_review` | Yes | Manual review boundary. |
 | Unit | abort `accepted_stop` | `pytest tests/test_retry_policy.py` | `retry_denied` unless future user-confirmed path exists | Yes | Abort boundary remains active. |
 | Unit | abort `cannot_interrupt_inflight_action` | `pytest tests/test_retry_policy.py` | `retry_denied` | Yes | Side effects may be unknown. |

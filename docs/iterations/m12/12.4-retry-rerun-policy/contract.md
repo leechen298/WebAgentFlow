@@ -6,7 +6,7 @@
 
 | Concept | Contract |
 |---|---|
-| `RetryPolicyInput` | Future policy evaluator 的输入。只聚合 12.1 boundary、12.2 abort acknowledgement、12.3 proposal / option、structured evidence refs、future user confirmation marker 和 future policy hints。 |
+| `RetryPolicyInput` | Future policy evaluator 的输入。只聚合 12.1 boundary、12.2 abort acknowledgement、12.3 proposal / option、structured evidence refs、future `has_user_confirmation_marker` 和 future policy hints。 |
 | `RetryPolicyDecision` | retry / re-run policy 的输出结果。它是 policy result，不是 retry command。 |
 | `RetryPolicyEvidence` | 用于解释 policy decision 的结构化 evidence references。必须来自上游结构化输出或 future confirmation / policy marker。 |
 | `RetryPolicyReason` | 触发 allow / deny / review / context 的结构化原因，不是自由文本推理。 |
@@ -93,8 +93,12 @@ LearnedPath write-back command。
 - 12.3 `RecoveryProposal`
 - 12.3 `RecoveryProposalOption` where `kind=consider_retry_later`
 - structured evidence refs already present in these outputs
-- future user confirmation marker
+- future `has_user_confirmation_marker`
 - future policy configuration / hints
+
+Future confirmation marker 推荐命名为 `has_user_confirmation_marker`。该 marker
+只能影响 retry policy outcome，不能触发 retry execution，也不能表示 WebAgentFlow 已经
+开始执行 retry。
 
 12.4 不得读取：
 
@@ -165,8 +169,8 @@ LearnedPath write-back command。
 
 - 12.4 implementation 前需要审核 `contract.md`、`technical-design.md`、
   `test-plan.md` 和 `plan.md`。
-- Future user confirmation marker 的具体字段名由 12.5 conversation flow 接入前
-  再定；12.4 只定义 policy 必须要求确认，不消费 runtime confirmation。
+- Future confirmation marker 推荐命名为 `has_user_confirmation_marker`；12.4 只定义
+  marker 对 policy outcome 的影响，不消费 runtime confirmation，也不执行 retry。
 - 12.1 / 12.2 历史包仍是旧四件套，缺少新模板的 `contract.md` /
   `technical-design.md` / `test-plan.md`；本次不回填，记录在 `review.md`
   Follow-ups。
