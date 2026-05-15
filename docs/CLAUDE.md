@@ -2,7 +2,7 @@
 
 Guidance for Claude Code when working under `docs/`.
 
-> Keep this file in sync with `docs/AGENTS.md`.
+> Keep this file in sync with `docs/AGENTS.md` and `docs/CLAUDE.zh.md`.
 
 ## Scope
 

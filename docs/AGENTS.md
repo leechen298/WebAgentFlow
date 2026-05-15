@@ -3,7 +3,7 @@
 Guidance for Codex and other AI coding agents when working under
 `docs/`.
 
-> Keep this file in sync with `docs/CLAUDE.md`.
+> Keep this file in sync with `docs/CLAUDE.md` and `docs/CLAUDE.zh.md`.
 
 ## Scope
 
