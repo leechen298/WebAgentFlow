@@ -1,12 +1,23 @@
 # 12.4 Review and Reflection
 
-状态：proposed
+状态：approved for implementation
 
 ## 2026-05-15 设计包生成（Design Package Generation）
 
 - Reviewer：documentation package self-check
 - Decision：design package generated
 - Notes：本次按最新 iteration templates 创建 12.4 代码型迭代完整设计包。
+
+## 2026-05-16 设计审核通过（Design Review Approval）
+
+- Reviewer：user / implementation gate review
+- Decision：PASS
+- Blocker：none
+- P1 / P2：none
+- P3：`has_user_confirmation_marker` naming and `abandon_task -> no_retry_needed`
+  were handled by commit `580b471`.
+- Implementation gate：approved. 12.4 code implementation may proceed using
+  `contract.md`, `technical-design.md`, `test-plan.md`, and `plan.md` as inputs.
 
 ## 用户反馈
 
@@ -99,11 +110,19 @@ product-driven browser execution。不产生 `run_id`。
 | `git diff --name-only` | Only 12.4 docs changed | 4 paths under `12.4-retry-rerun-policy/` | 0 | PASS | Review-fix scope guard. |
 | `rg user_confirmed / no_retry_needed or retry_denied` | No stale active design wording | Only historical review-fix note mentions `user_confirmed`; no `no_retry_needed or retry_denied` remains. | 0 | PASS | Confirms design wording tightened. |
 
+## 2026-05-16 Gate Sync Validation
+
+| Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Notes |
+|---|---|---|---|---|---|
+| `git diff --check` | No whitespace errors | No output | 0 | PASS | Docs-only static check. |
+| code/package status check | No code/package changes | No output | 0 | PASS | Scope guard. |
+| `git status --short docs/iterations/m11` | No output | No output | 0 | PASS | M11 history guard. |
+| `find docs/iterations/m12 ... 12.5/12.6` | No output | No output | 0 | PASS | Scope guard. |
+| `git diff --name-only` | Only 12.4 docs changed | 3 paths under `12.4-retry-rerun-policy/` | 0 | PASS | Gate sync scope guard. |
+
 ## 后续事项（Follow-ups）
 
-- 进入 12.4 implementation 前，需要人工审核 `contract.md`、
-  `technical-design.md`、`test-plan.md` 和 `plan.md`。
-- 12.4 implementation 应创建 retry policy schema、deterministic evaluator 和
+- 12.4 implementation 已获得 design gate approval，应创建 retry policy schema、deterministic evaluator 和
   focused unit tests；不要接 API / CLI / conversation dispatcher / browser action。
 - 12.1 / 12.2 历史包仍是旧四件套，缺少新模板的 `contract.md` /
   `technical-design.md` / `test-plan.md`。本次不回填；如需治理应另开文档任务。

@@ -1,6 +1,6 @@
 # 12.4 · Retry / Re-run Policy
 
-状态：proposed
+状态：approved for implementation
 里程碑：M12
 类型：code
 
@@ -19,7 +19,7 @@ deterministic policy evaluator 和 focused unit tests。本次提交的交付物
 - 12.1 Failure Classification and Recovery Boundary 已实现并交付。
 - 12.2 User Abort / Stop Handling 已实现并交付。
 - 12.3 Recovery Proposal MVP 已实现并交付。
-- 12.4 当前处于 implementation gate / design review pending 阶段。
+- 12.4 当前处于 implementation gate approved 阶段。
 
 实现 Agent 进入 12.4 代码实现前，应先读取并遵守：
 
@@ -42,11 +42,14 @@ deterministic policy evaluator 和 focused unit tests。本次提交的交付物
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design / test plan 一致。
 - [ ] `review.md` 在收尾前记录最终验证证据。
+
+`review.md` 的最终验证证据项保留到 12.4 代码实现完成时再勾选；当前设计包已完成
+实现前审核，可以进入 implementation。
 
 ## 核心原则
 

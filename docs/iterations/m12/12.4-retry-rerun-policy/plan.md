@@ -1,6 +1,6 @@
 # 12.4 Design Package Plan
 
-状态：proposed
+状态：approved for implementation
 
 ## 输入
 
@@ -34,6 +34,8 @@
 - `apps/api/tests/test_retry_policy.py`
 
 ## 步骤
+
+**Design package generation 已完成并通过审核。后续代码实现应以本包为输入另起实现任务。**
 
 1. 执行 precheck：同步 `v0.2`，确认工作区 clean，确认 12.3 proposal generator
    和 package-level recovery exports 存在。
@@ -71,6 +73,7 @@
 
 - [x] 12.4 是代码型迭代。
 - [x] 12.4 包含 `technical-design.md`。
+- [x] 12.4 technical design 已完成实现前审核。
 - [x] `test-plan.md` 已存在，因为 12.4 涉及 recovery / retry policy。
 - [x] `contract.md` 明确 `Retry policy is not retry execution`。
 - [x] `technical-design.md` 只设计 future implementation，不创建代码。
