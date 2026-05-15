@@ -88,6 +88,23 @@ cases，但不实现观察、wait-for-change、replay integration 或 reporter i
 - Page Understanding Agent 不参与 11.2.2。
 - M11.3 只作为 M11.2 后的候选决策点，不创建 11.3 目录。
 
+## 与 11.2.3 的关系
+
+11.2.3 在 11.2.2 的 step-level WaitResult 基础上定义 replay-level observation
+evidence aggregation。它不重复实现 wait-for-change，也不扩大当前 11.2.2 的 signal
+范围。
+
+11.2.3 必须明确：
+
+- WaitResult 是 step-level outcome。
+- Replay Observation Evidence 是 replay-level aggregation。
+- 11.2.3 只为 11.2.5 Task Result Reporter 准备输入，不接 reporter。
+- `has_primary_observation` 不等于任务成功。
+- `has_timeout` 不等于应该 retry。
+- `network_idle_observed` 只能作为 supporting evidence。
+- 不改变 `ReplayResult.status`。
+- 不做 recovery / retry / abort。
+
 ## 后续 Common Component Runtime Semantics 记忆点
 
 later 11.2.x 应记录并拆分 Common Component Runtime Semantics（常用组件库运行时
@@ -102,7 +119,7 @@ signal only 的 `network_idle_observed`。
 后续拆包建议保持现有编号不变：
 
 - 11.2.2：最小 wait_result / wait_strategy。
-- 11.2.3：replay integration。
+- 11.2.3：replay-level observation evidence aggregation。
 - 11.2.4：realistic fixture pages。
 - later 11.2.x：Common Component Runtime Semantics。
 - 11.2.5：Reporter 消费 observation / wait evidence。

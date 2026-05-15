@@ -43,7 +43,8 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.1.8-task-to-path-tests-and-evidence](./11.1.8-task-to-path-tests-and-evidence/) —— Task-to-path Tests and Evidence。状态：完成（1104 API tests passed, 25 E2E passed, ruff clean, no P1/P2）。
 - [11.2-runtime-observation-realistic-hardening](./11.2-runtime-observation-realistic-hardening/) —— M11.2 总纲：运行时观察与真实网页稳健性增强。状态：11.2.0 文档初始化完成。
 - [11.2.1-observation-signal-contract](./11.2.1-observation-signal-contract/) —— Observation Signal Contract。状态：文档生成完成。
-- [11.2.2-wait-for-change-mvp](./11.2.2-wait-for-change-mvp/) —— Wait-for-change MVP。状态：文档生成完成，能力未实现。
+- [11.2.2-wait-for-change-mvp](./11.2.2-wait-for-change-mvp/) —— Wait-for-change MVP。状态：最小代码实现完成，scoped review passed；full API suite 需在非 sandbox 环境补跑。
+- [11.2.3-replay-integration-with-observation](./11.2.3-replay-integration-with-observation/) —— Replay Integration with Observation。状态：文档生成完成，能力未实现。
 - 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）—— later M11.2.x 候选增强；记录组件库生成的 runtime surface detection and relation，不属于 11.2.2 当前 MVP。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
@@ -53,9 +54,11 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 文档初始化目录，不代表 runtime observation 功能已经实现。
 `11.2.1-observation-signal-contract/` 只定义文档级 Observation Signal Contract，
 不代表 wait-for-change、page-load waiting 或 reporter integration 已实现。
-`11.2.2-wait-for-change-mvp/` 只定义文档级 Wait Result 和 Wait Strategy，
-不代表 wait-for-change、page-load waiting、Agent 判断或 reporter integration
-已实现。
+`11.2.2-wait-for-change-mvp/` 已完成最小 step-level wait result 能力，但当前只支持
+`url_changed`、`title_changed` 和 supporting-only `network_idle_observed`。
+它不代表 page-load waiting、Agent 判断或 reporter integration 已实现。
+`11.2.3-replay-integration-with-observation/` 只定义 replay-level observation evidence
+aggregation contract，不代表 replay observation summary 已实现。
 
 ## Later M11.2.x · Common Component Runtime Semantics
 

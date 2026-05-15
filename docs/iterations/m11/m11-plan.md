@@ -846,7 +846,7 @@ Reporter / 任务结果汇报器（legacy: Agent D / E）。
 
 ## M11.2 · 运行时观察与真实网页稳健性增强
 
-状态：11.2.2 文档生成完成，能力未实现。
+状态：11.2.3 文档生成完成，能力未实现。
 
 M11.2 是 v0.1 后续优化。它不继续扩展 task-to-path 规划逻辑，而是在
 M11.1 已完成的 replay execution / result reporting 后补运行时观察边界。
@@ -986,7 +986,7 @@ Passive Runtime Observation 是非用户主动操作触发的页面变化。
 
 ### 11.2.2 · 等待变化 MVP
 
-状态：文档生成完成，能力未实现。
+状态：最小代码实现完成，scoped review passed；full API suite 需在非 sandbox 环境补跑。
 
 目标：
 
@@ -1006,11 +1006,12 @@ Passive Runtime Observation 是非用户主动操作触发的页面变化。
 - `docs/iterations/m11/11.2.2-wait-for-change-mvp/plan.md`
 - `docs/iterations/m11/11.2.2-wait-for-change-mvp/review.md`
 
-设计边界：
+实现边界：
 
 - Wait-for-change MVP 优先覆盖 `post_action` wait。
-- 11.2.2 当前最小实现只做 `url_changed`、`title_changed`、保守
-  `page_load_finished`，以及作为辅助信号的 `network_idle_observed`。
+- 11.2.2 当前最小实现只实际生成 `url_changed`、`title_changed`，以及作为
+  supporting-only signal 的 `network_idle_observed`。
+- `page_load_finished` 保留在 schema 中，当前 MVP 不实际生成。
 - 11.2.2 不做完整组件库 runtime behavior detection，不把 later component-generated
   runtime surface detection and relation 写入当前 MVP 范围。
 - `passive_runtime` 不作为 11.2.2 MVP 的连续后台观察目标。
@@ -1050,10 +1051,36 @@ Page Understanding Agent 边界：
 
 ### 11.2.3 · replay 与观察集成
 
-状态：计划中。
+状态：文档生成完成，能力未实现。
 
-目标方向：把 observation collection 接到 replay execution 边界，让 replay
-result 可以携带 observation evidence。不得改变 Task Path Planner 规划逻辑。
+目标：
+
+- 定义 replay-level observation evidence aggregation contract。
+- 把 11.2.2 step-level `wait_result` / observation signals 汇总为 replay-level
+  evidence summary 的文档级 proposal。
+- 明确 observation summary status、primary / supporting signal 聚合、timeout /
+  skipped / not_required 统计和 uncertainty flags。
+- 为 11.2.5 Task Result Reporter 消费 replay-level observation evidence 准备输入。
+
+交付：
+
+- `docs/iterations/m11/11.2.3-replay-integration-with-observation/README.md`
+- `docs/iterations/m11/11.2.3-replay-integration-with-observation/intent.md`
+- `docs/iterations/m11/11.2.3-replay-integration-with-observation/contract.md`
+- `docs/iterations/m11/11.2.3-replay-integration-with-observation/plan.md`
+- `docs/iterations/m11/11.2.3-replay-integration-with-observation/review.md`
+
+边界：
+
+- 不写代码。
+- 不新增测试代码。
+- 不修改 schema。
+- 不修改 replay execution。
+- 不接 Task Result Reporter。
+- 不改变 `ReplayResult.status`。
+- 不做 recovery / retry / abort / user takeover。
+- 不实现 Common Component Runtime Semantics。
+- 不读取或保存 raw HTML。
 
 ### 11.2.4 · 真实场景 fixture 页面
 

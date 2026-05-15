@@ -105,7 +105,7 @@ reporter integration。
 - 11.2.0 · 运行时观察范围与真实场景目录（Runtime Observation Scope & Realistic Case Catalog）。
 - 11.2.1 · [观察信号契约（Observation Signal Contract）](../11.2.1-observation-signal-contract/)。
 - 11.2.2 · [等待变化 MVP（Wait-for-change MVP）](../11.2.2-wait-for-change-mvp/)。
-- 11.2.3 · replay 与观察集成（Replay Integration with Observation）。
+- 11.2.3 · [replay 与观察集成（Replay Integration with Observation）](../11.2.3-replay-integration-with-observation/)。
 - 11.2.4 · 真实场景 fixture 页面（Realistic Fixture Pages）。
 - later 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）。
 - 11.2.5 · 观察证据接入 Task Result Reporter（Observation Evidence into Task Result Reporter）。
@@ -121,6 +121,11 @@ integration 已实现。
 [`contract.md`](../11.2.2-wait-for-change-mvp/contract.md)。它只定义文档级
 Wait Result 和 Wait Strategy，不代表 wait-for-change、page-load waiting、Agent
 判断或 reporter integration 已实现。
+
+11.2.3 的核心契约文档是
+[`contract.md`](../11.2.3-replay-integration-with-observation/contract.md)。它只定义
+replay-level observation evidence aggregation contract，不代表 replay observation
+summary、reporter integration 或 recovery handling 已实现。
 
 ## Later M11.2.x · Common Component Runtime Semantics
 
