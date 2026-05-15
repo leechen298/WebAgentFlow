@@ -1100,12 +1100,45 @@ ruff clean）。
   `supporting_only_step_count`，避免 reporter 把 supporting-only evidence 误读为
   primary observation。
 
-### 11.2.4 · 真实场景 fixture 页面
+### 11.2.4 · 真实网页场景目录与验证用例规划
 
-状态：计划中。
+状态：文档生成完成，fixture 页面 / mock backend / E2E 尚未实现。
 
-目标方向：为 realistic web runtime cases 建立受控 fixture 页面。fixture
-证明观察能力，不证明任意真实网页已经被覆盖。
+目标方向：规划 WebAgentFlow 自建真实网页验证场景库，先系统定义 PC / 移动端
+常见页面、业务场景、组件交互、网络延迟、错误响应、复杂度分层和 fixture phase
+路线。11.2.4 不是找线上网站验证，也不是直接开发页面；它是后续 validation-site
+页面、mock backend 和 E2E 的开发文档输入。
+
+交付：
+
+- `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/README.md`
+- `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/intent.md`
+- `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/contract.md`
+- `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/technical-design.md`
+- `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/test-plan.md`
+- `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/plan.md`
+- `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/review.md`
+
+Phase 边界：
+
+- Phase 1 聚焦单页面 fixture，可用确定性前端 timer 模拟 delay、loading、
+  validation、empty state 和 error surface，不要求真实后端。
+- Phase 2 再引入 mock backend，覆盖 slow response、server validation、HTTP
+  error status、polling、upload / export 和 async job completion。
+- Phase 1 的前端 timer 只用于 deterministic fixture，不代表真实 network
+  evidence；Phase 2 的 mock backend 才负责 HTTP 层 slow response / error status
+  evidence。
+
+边界：
+
+- 不写源码。
+- 不新增测试代码。
+- 不实现 fixture 页面。
+- 不实现 mock backend。
+- 不运行 E2E / autonomous run。
+- 不依赖外部真实网站。
+- 不接 Task Result Reporter。
+- 不做 recovery / retry / abort。
 
 ### 11.2.5 · 观察证据接入 Task Result Reporter
 
@@ -1145,8 +1178,8 @@ loading overlay、validation message、virtualized list、inserted option list�
   Framework7-style mobile components。
 - 不调用 Agent 判断业务成功，不让 LLM 进入 L3 per-step execution loop。
 - 不阻塞 11.2.2 最小 wait_result / wait_strategy；建议位置关系为 11.2.2 最小
-  wait_result / wait_strategy、11.2.3 replay integration、11.2.4 realistic fixture
-  pages、later 11.2.x Common Component Runtime Semantics、11.2.5 Reporter 消费
+  wait_result / wait_strategy、11.2.3 replay integration、11.2.4 realistic scenario
+  catalog / fixture planning、later 11.2.x Common Component Runtime Semantics、11.2.5 Reporter 消费
   observation / wait evidence。
 
 ### 11.2.6 · Codex 真实网页 QA

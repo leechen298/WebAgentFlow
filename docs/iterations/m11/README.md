@@ -45,6 +45,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.2.1-observation-signal-contract](./11.2.1-observation-signal-contract/) —— Observation Signal Contract。状态：文档生成完成。
 - [11.2.2-wait-for-change-mvp](./11.2.2-wait-for-change-mvp/) —— Wait-for-change MVP。状态：最小代码实现完成，scoped review passed；后续 full API suite 已随 11.2.3 收口通过。
 - [11.2.3-replay-integration-with-observation](./11.2.3-replay-integration-with-observation/) —— Replay Integration with Observation。状态：implementation complete（56 scoped tests passed, 1168 full API tests passed, ruff clean）。
+- [11.2.4-realistic-scenario-catalog-fixture-planning](./11.2.4-realistic-scenario-catalog-fixture-planning/) —— Realistic Scenario Catalog & Fixture Planning。状态：文档生成完成，fixture 页面 / mock backend / E2E 尚未实现。
 - 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）—— later M11.2.x 候选增强；记录组件库生成的 runtime surface detection and relation，不属于 11.2.2 当前 MVP。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
@@ -61,6 +62,10 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 evidence aggregation 代码实现：schema、aggregation service、replay integration
 和 56 个 scoped tests。11.2.3 不接 Task Result Reporter，不做 recovery / retry /
 abort。
+`11.2.4-realistic-scenario-catalog-fixture-planning/` 只规划 WebAgentFlow 自建
+真实网页验证场景库。它定义 PC / 移动端 scenario catalog、复杂度分层、Phase 1
+单页面 fixture、Phase 2 mock backend 和后续 E2E evidence 路线；不代表 fixture
+页面、mock backend 或 E2E 已实现。
 
 11.2 后续 backlog：
 

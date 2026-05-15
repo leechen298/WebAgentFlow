@@ -106,7 +106,7 @@ reporter integration。
 - 11.2.1 · [观察信号契约（Observation Signal Contract）](../11.2.1-observation-signal-contract/)。
 - 11.2.2 · [等待变化 MVP（Wait-for-change MVP）](../11.2.2-wait-for-change-mvp/)。
 - 11.2.3 · [replay 与观察集成（Replay Integration with Observation）](../11.2.3-replay-integration-with-observation/)。
-- 11.2.4 · 真实场景 fixture 页面（Realistic Fixture Pages）。
+- 11.2.4 · [真实网页场景目录与验证用例规划（Realistic Scenario Catalog & Fixture Planning）](../11.2.4-realistic-scenario-catalog-fixture-planning/)。
 - later 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）。
 - 11.2.5 · 观察证据接入 Task Result Reporter（Observation Evidence into Task Result Reporter）。
 - 11.2.6 · Codex 真实网页 QA（Codex Realistic Web QA）。
@@ -127,6 +127,12 @@ integration 已实现。
 replay-level observation evidence aggregation contract；代码实现应按 11.2.3
 `technical-design.md` 和 `test-plan.md` 落地。11.2.3 仍不代表 reporter integration
 或 recovery handling 已实现。
+
+11.2.4 的核心文档包是
+[`11.2.4-realistic-scenario-catalog-fixture-planning`](../11.2.4-realistic-scenario-catalog-fixture-planning/)。
+它只规划自建 PC / 移动端真实网页场景目录、fixture contract、Phase 1 单页面
+fixture、Phase 2 mock backend 和后续 E2E evidence 路线，不代表 fixture 页面、
+mock backend 或 E2E 已实现。
 
 ## Deferred Cleanup Backlog
 

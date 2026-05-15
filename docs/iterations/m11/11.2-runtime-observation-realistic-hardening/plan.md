@@ -120,9 +120,27 @@ signal only 的 `network_idle_observed`。
 
 - 11.2.2：最小 wait_result / wait_strategy。
 - 11.2.3：replay-level observation evidence aggregation。
-- 11.2.4：realistic fixture pages。
+- 11.2.4：realistic scenario catalog / fixture planning。
 - later 11.2.x：Common Component Runtime Semantics。
 - 11.2.5：Reporter 消费 observation / wait evidence。
+
+## 与 11.2.4 的关系
+
+11.2.4 不直接实现 fixture 页面。它先建立 WebAgentFlow 自建真实网页验证场景库的
+开发文档，明确 PC / 移动端页面类型、网络延迟 / 错误场景、simple -> very complex
+复杂度分层，以及 Phase 1 单页面 fixture 和 Phase 2 mock backend 的边界。
+
+11.2.4 必须明确：
+
+- 不依赖外部真实网站作为验证依赖。
+- Phase 1 可用确定性前端 timer 模拟 delay / loading / error surface，但不把它
+  写成真实 network evidence。
+- Phase 2 才引入 mock backend，覆盖 HTTP slow response、error status、polling、
+  upload / export 和 async job completion。
+- 当前 MVP 只支持 `url_changed`、`title_changed`、supporting-only
+  `network_idle_observed`、`wait_result` 和 `observation_summary`。
+- toast、modal、loading、form validation、list change、mobile picker、component
+  runtime surface relation 都是 future expected observation，不得写成已实现。
 
 原则：
 

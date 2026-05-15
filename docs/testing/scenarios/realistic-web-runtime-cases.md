@@ -15,6 +15,182 @@ M11.2 负责观察和记录运行时变化。M12 决定当这些变化表示失�
 Post-action Observation 覆盖用户或 replay 动作后短时间内的页面变化。Passive
 Runtime Observation 覆盖不是由当前动作直接触发的页面变化。
 
+## PC Page Scenario Catalog
+
+PC 场景目录用于覆盖常见后台、SaaS、运营、内容和业务管理页面。后续 fixture
+应优先自建在 validation-site 中，不依赖外部真实网站。
+
+至少覆盖：
+
+- 登录页。
+- 注册页。
+- 搜索 / 筛选页。
+- 后台列表页。
+- 表格管理页。
+- 详情页。
+- 创建 / 编辑表单页。
+- 弹窗编辑页。
+- 文件上传页。
+- 导出 / 下载页。
+- 设置页。
+- 权限 / 角色管理页。
+- 订单 / 用户 / 商品 / 内容管理页。
+- 报表 / dashboard 页。
+- 审批 / workflow 页。
+- wizard / stepper 页。
+
+## Mobile Page Scenario Catalog
+
+移动端场景目录用于覆盖常见 H5、移动 Web、移动组件库和窄屏交互。
+
+至少覆盖：
+
+- 登录 / 手机验证码页。
+- 搜索页。
+- 列表页。
+- 详情页。
+- 表单页。
+- 底部弹层页。
+- picker 选择页。
+- 地址选择页。
+- 日期 / 时间选择页。
+- 支付确认页。
+- 订单提交页。
+- 个人中心页。
+- 设置页。
+- 消息 / 通知页。
+- 滚动加载页。
+- 下拉刷新页。
+
+## Network Delay and Error Scenarios
+
+真实网页运行时不只有 UI 弹层和内容变化，也包括慢响应、失败响应、服务端校验、
+空结果、权限错误和异步任务失败。11.2.4 只规划这些 fixture；M11.2 记录 runtime
+evidence，不实现 recovery / retry / abort。
+
+### Network delay
+
+- slow search response。
+- slow save response。
+- slow detail loading。
+- slow export preparation。
+- delayed polling result。
+- delayed async job completion。
+
+### Server / API errors
+
+- HTTP 400 validation error。
+- HTTP 401 unauthorized。
+- HTTP 403 forbidden。
+- HTTP 404 missing resource。
+- HTTP 409 conflict。
+- HTTP 429 rate limited。
+- HTTP 500 server error。
+- network timeout。
+- request cancelled / aborted。
+
+### UI error surfaces
+
+- inline validation message。
+- form item error message。
+- toast error。
+- modal error。
+- banner / alert error。
+- empty result state。
+- retry button shown。
+- disabled submit after error。
+- loading overlay stuck then timeout。
+
+### File / artifact errors
+
+- upload progress then failure。
+- upload file type rejected。
+- upload size exceeded。
+- export generation failed。
+- download unavailable。
+
+## Complexity Ladder
+
+### Simple
+
+- toast。
+- modal。
+- validation message。
+- button enabled / disabled。
+- URL changed。
+- title changed。
+
+### Medium
+
+- loading skeleton -> content。
+- search result refresh。
+- partial list refresh。
+- same-url reload。
+- SPA content update。
+- autocomplete。
+- select panel。
+- mobile picker。
+
+### Complex
+
+- virtualized list。
+- portal / teleport runtime surface。
+- nested modal / drawer。
+- async job completion。
+- polling update。
+- server validation + retry input。
+- file upload progress。
+- export / download artifact。
+
+### Very Complex
+
+- multi-step wizard。
+- multi-page workflow。
+- role / permission dependent UI。
+- real-time push。
+- WebSocket / SSE。
+- cross-page state。
+- component library runtime relation resolver。
+- mobile gesture / scroll / picker interaction。
+
+## Fixture Phase Plan
+
+### Phase 1 · Single-page Runtime Fixtures
+
+Phase 1 只规划单页面 fixture。它可以使用确定性前端 timer 模拟 delay、loading、
+validation、empty state 和 error surface，但不代表真实 network evidence。
+
+候选 fixture：
+
+- single-page-toast。
+- single-page-modal。
+- single-page-loading。
+- single-page-delayed-button。
+- single-page-search-refresh。
+- single-page-spa-update。
+- single-page-validation-message。
+- single-page-same-url-reload。
+- single-page-component-surface。
+- single-page-mobile-picker。
+- single-page-mobile-action-sheet。
+
+### Phase 2 · Single-page With Mock Backend
+
+Phase 2 引入 mock backend，让同类场景通过真实 HTTP 请求、mock API 状态和延迟
+响应触发。它负责 slow response、server validation、error status code、polling、
+upload / export 和 async job completion。
+
+### Phase 3 · Multi-state / Component-library-heavy Fixtures
+
+Phase 3 覆盖 select option panel、autocomplete、cascader、date picker、time
+picker、drawer、bottom sheet、virtualized list、nested modal、portal / teleport
+runtime surface。
+
+### Phase 4 · Multi-page / Workflow Fixtures
+
+Phase 4 覆盖 list -> detail、create -> edit -> save、search -> select -> export、
+wizard / stepper、multi-page approval flow。
+
 ## 场景目录
 
 ### 点击后出现 Modal（Modal After Click）
@@ -29,7 +205,7 @@ Runtime Observation 覆盖不是由当前动作直接触发的页面变化。
 - 后续 M12 含义（future M12 implication）：modal 缺失或出现非预期 modal，
   后续可能进入 recovery 或 takeover 决策。
 - 后续执行包（future package）：11.2.2 wait-for-change MVP / 11.2.4 realistic
-  fixture pages。
+  scenario catalog / fixture planning。
 
 ### 提交后出现 Toast（Toast After Submit）
 
@@ -70,7 +246,7 @@ Runtime Observation 覆盖不是由当前动作直接触发的页面变化。
 - 后续 M12 含义（future M12 implication）：timeout 或结果未变化后续可能需要
   用户选择或 recovery。
 - 后续执行包（future package）：11.2.2 wait-for-change MVP / 11.2.4 realistic
-  fixture pages。
+  scenario catalog / fixture planning。
 
 ### 局部列表刷新（Partial List Refresh）
 
@@ -141,7 +317,7 @@ Runtime Observation 覆盖不是由当前动作直接触发的页面变化。
 - 后续 M12 含义（future M12 implication）：loading 持续存在后续可能成为 blocked
   或 recovery dialogue。
 - 后续执行包（future package）：11.2.2 wait-for-change MVP / 11.2.4 realistic
-  fixture pages。
+  scenario catalog / fixture planning。
 
 ### 延迟出现的 Popup（Delayed Popup）
 
@@ -156,7 +332,7 @@ Runtime Observation 覆盖不是由当前动作直接触发的页面变化。
 - 后续 M12 含义（future M12 implication）：popup 缺失后续可能需要 takeover 或
   teaching。
 - 后续执行包（future package）：11.2.2 wait-for-change MVP / 11.2.4 realistic
-  fixture pages。
+  scenario catalog / fixture planning。
 
 ### 组件库交互后生成运行时界面片段（Component-generated Runtime Surface After Interaction）
 
@@ -187,7 +363,8 @@ Runtime Observation 覆盖不是由当前动作直接触发的页面变化。
   关联不确定时，后续可成为 result reporter uncertainty 或 M12 recovery / takeover
   的输入，但 M11.2 不做决策。
 - 后续执行包（future package）：later 11.2.x Common Component Runtime Semantics /
-  11.2.4 realistic fixture pages / 11.2.5 reporter evidence integration。
+  11.2.4 realistic scenario catalog / fixture planning / 11.2.5 reporter evidence
+  integration。
 
 ### 服务端推送消息（Server Push Message）
 

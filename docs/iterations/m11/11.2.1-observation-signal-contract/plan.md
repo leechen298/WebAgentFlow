@@ -48,7 +48,8 @@
 - 11.2.1 定义 signal contract。
 - 11.2.2 基于 contract 做 wait-for-change MVP。
 - 11.2.3 将 observation 接入 replay execution。
-- 11.2.4 用 realistic fixture pages 覆盖典型场景。
+- 11.2.4 规划 realistic scenario catalog / fixture planning，作为后续自建
+  validation-site fixture 页面和 mock backend 的设计输入。
 - 11.2.5 将 observation evidence 接入 Task Result Reporter。
 - 11.2.6 / 11.2.7 做 QA、测试和 evidence closure。
 
