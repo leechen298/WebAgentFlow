@@ -31,7 +31,11 @@
 - 常见交互和组件库运行时 surface。
 - 网络慢响应、错误响应、空结果、权限错误、上传 / 导出失败。
 - simple / medium / complex / very complex 复杂度分层。
-- Phase 1 单页面 fixture 和 Phase 2 mock backend 的边界。
+- 11.2.4.1 - 11.2.4.4 单页面 fixture 与 11.2.4.5 mock backend 的边界。
+
+11.2.4.0 已将 scenario catalog 固化为“业务页面复杂度 × 运行条件矩阵 ×
+runtime behavior”模型。Toast、modal、loading、picker 等属于 runtime behavior，
+不作为页面业务复杂度分类依据。
 
 ## 文档
 
@@ -68,16 +72,23 @@
 
 ## Phase 策略
 
-- Phase 1：Single-page runtime fixtures。使用确定性前端状态和 timer 模拟 delay、
-  loading、validation、empty state 和 error surface，不要求真实后端。
-- Phase 2：Single-page with mock backend。使用 mock API 制造 slow response、
-  server validation、error status、polling、upload / export 和 async job completion。
-- Phase 3：Multi-state / component-library-heavy fixtures。
-- Phase 4：Multi-page / workflow fixtures。
+- 11.2.4.1：Single-page Runtime Fixture Shell，建立入口、route shell、reset
+  convention 和 stable anchor convention。
+- 11.2.4.2：Single-page Basic Business Pages，覆盖 login、register、sms_login、
+  simple_search、simple_detail、simple_settings、simple_confirm。
+- 11.2.4.3：Single-page Medium Business Pages，覆盖 user_list、order_list、
+  product_list、table_management、create_edit_form、file_upload、export_download。
+- 11.2.4.4：Single-page Complex Business Pages，覆盖 dynamic_form、wizard_stepper、
+  batch_operation、master_detail、mode switch 和 permission conditional UI。
+- 11.2.4.5：Mock Backend Runtime Conditions，覆盖 slow response、server
+  validation、HTTP error、polling、upload / export 和 async job completion。
+- 11.2.4.6：Mobile Single-page Patterns，覆盖 mobile_login_sms、mobile_search、
+  mobile_list、mobile_form、mobile_picker、mobile_action_sheet 等。
+- 11.2.4.7：E2E Evidence and Review。
 
-Phase 1 的前端 timer 只用于 deterministic fixture，不代表真实 network evidence。
-Phase 2 的 mock backend 才负责 HTTP 层 slow response、error status code、polling、
-upload 和 export。
+前端 timer 只用于 deterministic fixture，不代表真实 network evidence。
+Mock backend 才负责 HTTP 层 slow response、error status code、polling、upload 和
+export。
 
 ## 明确不做
 

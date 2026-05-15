@@ -48,7 +48,8 @@ Replay action
 - 新增完整 11.2.4 文档包。
 - PC / 移动端页面类型被系统纳入 scenario catalog。
 - 网络延迟、服务端错误、UI 错误 surface、上传 / 导出失败被纳入规划。
-- simple / medium / complex / very complex 复杂度分层清楚。
-- Phase 1 单页面 fixture 和 Phase 2 mock backend 边界清楚。
+- simple / medium / complex / very_complex 按业务页面复杂度分层清楚。
+- 11.2.4.1 - 11.2.4.4 单页面 fixture 与 11.2.4.5 mock backend 边界清楚。
+- runtime behavior / interaction pattern 不作为页面业务复杂度分类依据。
 - 当前 MVP 支持信号和未来 expected observation 明确区分。
 - 后续实现者可以根据本文档拆出 11.2.4.x 实现包。

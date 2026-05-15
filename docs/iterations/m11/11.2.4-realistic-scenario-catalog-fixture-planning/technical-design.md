@@ -14,20 +14,54 @@
 - 当前缺少自建 runtime observation fixture 页面规划。
 - 当前不依赖外部真实网站验证。
 
+## Business Complexity Model
+
+11.2.4.0 采用以下组合模型整理 scenario catalog：
+
+```text
+业务页面复杂度
+×
+运行条件矩阵
+×
+runtime behavior / interaction pattern
+```
+
+业务页面复杂度按页面业务结构分类：
+
+- `simple_business_page`：单一目标、单一区块、少量输入、没有复杂状态切换。
+- `medium_business_page`：有列表、表格、筛选、分页、简单操作，但主要围绕一个业务对象。
+- `complex_business_page`：一个页面内有业务状态切换、多个操作阶段、动态字段、
+  元素增减、显示隐藏、页面模式切换或组合操作。
+- `very_complex_business_page`：跨页面、跨角色、长流程、强状态依赖、实时更新或
+  复杂权限矩阵。
+
+`toast`、`modal`、`loading`、`drawer`、`picker`、`virtualized list`、
+`WebSocket`、`portal / teleport` 等属于 runtime behavior / interaction
+pattern，不作为页面业务复杂度分类依据。
+
+Runtime conditions are cross-cutting variants. They can be applied to simple,
+medium, complex, and very complex pages, and must not be treated as page types.
+
+`very_complex_business_page` 当前只进入 scenario catalog，不进入 11.2.4.1 -
+11.2.4.5 的近期实现范围。
+
 ## 合约对齐 / 不变量（Contract Alignment / Invariants）
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
+| 页面复杂度按业务结构分类 | 使用 business complexity model，runtime behavior 独立建 catalog。 | documentation validation | 防止把 toast / modal / loading 当成页面类型。 |
+| 运行条件是横向变体 | Runtime Condition Matrix 可叠加到所有 business complexity。 | documentation validation | 弱网、错误、空结果不是页面类型。 |
+| very complex 只记录 | very_complex_business_page 只进入 catalog，不进入近期 fixture 实现。 | documentation validation | 后续单独拆包。 |
 | scenario catalog 不改变产品模型 | 只在 M11.2 文档中规划 fixture，不修改 product model。 | documentation validation | 不新增 Agent / lifecycle。 |
 | fixture 不依赖外部网站 | 后续 fixture 放在 validation-site 和 mock backend。 | future fixture smoke | 外部网站只可作为研究参考，不作为验证依赖。 |
-| fixture 必须 deterministic | 每个 fixture 记录 initial state、trigger、reset behavior。 | future route smoke | Phase 1 可用固定 timer。 |
+| fixture 必须 deterministic | 每个 fixture 记录 initial state、trigger、reset behavior。 | future route smoke | 11.2.4.2 - 11.2.4.4 可用固定 timer。 |
 | fixture 可 reset | 每个 fixture contract 包含 reset behavior。 | future route smoke | 避免状态污染。 |
 | fixture 不接 reporter | 11.2.4 只规划 runtime observation fixture。 | boundary tests | 11.2.5 才接 reporter。 |
 | fixture 不触发 recovery | M11.2 只记录 evidence。 | boundary tests | M12 才做 retry / abort。 |
 | 区分 current MVP vs future expected observation | scenario / fixture 均包含 current MVP limit 和 future signal support。 | documentation validation | 防止误称已实现。 |
 | PC / mobile 都纳入规划 | catalog 分 PC / mobile 页面类型。 | documentation validation | 不只覆盖管理后台。 |
-| simple -> very complex 分阶段 | catalog 使用 complexity ladder。 | documentation validation | Phase 1 只做单页面。 |
-| 前端 timer 不代表 network evidence | Phase 1 timer 只用于 deterministic UI state；Phase 2 mock backend 才覆盖 HTTP evidence。 | future fixture tests | 防止误读 slow response。 |
+| simple -> very complex 分阶段 | catalog 使用 complexity ladder。 | documentation validation | 11.2.4.1 - 11.2.4.4 只做单页面与 shell。 |
+| 前端 timer 不代表 network evidence | 前端 timer 只用于 deterministic UI state；11.2.4.5 mock backend 才覆盖 HTTP evidence。 | future fixture tests | 防止误读 slow response。 |
 
 ## 实现方案（Proposed Fixture Architecture）
 
@@ -36,8 +70,9 @@
 ```text
 apps/validation-site/src/pages/runtime-observation/
 apps/validation-site/src/pages/runtime-observation/RuntimeObservationIndex.vue
-apps/validation-site/src/pages/runtime-observation/SinglePageBasic.vue
-apps/validation-site/src/pages/runtime-observation/SinglePageAsync.vue
+apps/validation-site/src/pages/runtime-observation/SinglePageBasicBusiness.vue
+apps/validation-site/src/pages/runtime-observation/SinglePageMediumBusiness.vue
+apps/validation-site/src/pages/runtime-observation/SinglePageComplexBusiness.vue
 apps/validation-site/src/pages/runtime-observation/MobileRuntimePatterns.vue
 apps/validation-site/specs/runtime-observation/
 apps/e2e/tests/runtime-observation/
@@ -64,7 +99,7 @@ apps/api/app/routers/validation_api.py
 | `docs/testing/scenarios` | Yes | 本轮扩展 scenario catalog。 | 文档级变化。 |
 | validation-site pages | Planned | 后续实现 runtime observation fixture pages。 | 本轮不改源码。 |
 | validation-site specs | Planned | 后续增加 fixture specs。 | 本轮不改源码。 |
-| validation API mock backend | Planned | Phase 2 后续实现 mock API。 | 本轮不改源码。 |
+| validation API mock backend | Planned | 11.2.4.5 后续实现 mock API。 | 本轮不改源码。 |
 | E2E tests | Planned | 后续补 scoped E2E。 | 本轮不新增测试。 |
 | API routes | No | 不新增运行时 API route。 | N/A |
 | DB schema | No | 不修改 DB schema。 | N/A |
@@ -75,40 +110,78 @@ apps/api/app/routers/validation_api.py
 | M12 recovery | No | 不做 retry / abort。 | M12 |
 | Docs | Yes | 新增 11.2.4 文档包。 | planning only |
 
-## Phase 1 · Single-page Fixtures
+## 11.2.4.1 · Single-page Runtime Fixture Shell
 
-Phase 1 聚焦单页面，使用前端本地状态和确定性 timer 模拟 runtime behavior。
+Shell 阶段只建立入口和约定，不实现具体业务页面：
 
-Phase 1 不要求真实后端调用。前端 timer 模拟 delay / loading / error surface 只用于
-deterministic fixture，不代表真实 network evidence。
+- runtime observation fixture index。
+- route shell。
+- category navigation。
+- reset convention。
+- stable anchor convention。
 
-| Fixture | Route | Initial state | User action | Runtime behavior | Visible result | Current MVP expected | Future expected |
-|---|---|---|---|---|---|---|---|
-| single-page-toast | `/runtime-observation/basic#toast` | no toast | click submit | toast appears then disappears | success / error toast | no primary unless URL/title changes | `toast_shown` |
-| single-page-modal | `/runtime-observation/basic#modal` | modal closed | click open | modal/dialog visible | dialog with title/actions | no primary | `modal_opened` |
-| single-page-loading | `/runtime-observation/async#loading` | content hidden | click load | skeleton -> content | content replaces loading | maybe supporting only | `loading_finished` |
-| single-page-delayed-button | `/runtime-observation/basic#delayed-button` | submit disabled | fill / timer | disabled -> enabled | button enabled | no primary | `element_enabled` |
-| single-page-search-refresh | `/runtime-observation/async#search` | old rows | click search | list region changes | new rows / empty state | no primary | `list_changed` |
-| single-page-spa-update | `/runtime-observation/basic#spa-update` | panel A | click tab | content changes without URL | panel B content | no primary | `spa_content_changed` |
-| single-page-validation-message | `/runtime-observation/basic#validation` | empty form | blur / submit | validation message appears | inline error | no primary | `form_validation_message` |
-| single-page-same-url-reload | `/runtime-observation/async#same-url-reload` | revision A | click refresh | simulated document-like refresh | revision B | no `page_load_finished` in current MVP | future page-load evidence |
-| single-page-component-surface | `/runtime-observation/basic#component-surface` | dropdown closed | click select | panel rendered outside trigger | option panel visible | no primary | component relation |
-| single-page-mobile-picker | `/runtime-observation/mobile#picker` | picker closed | tap picker | mobile picker surface appears | picker wheel / options | no primary | mobile picker relation |
-| single-page-mobile-action-sheet | `/runtime-observation/mobile#action-sheet` | sheet closed | tap action | bottom sheet appears | action list | no primary | action sheet relation |
-
-每个 Phase 1 fixture 需要：
+每个后续 fixture 需要：
 
 - stable heading。
 - stable trigger selector。
 - stable result region。
 - reset button。
-- deterministic timer duration。
+- deterministic timer duration when timer is used。
 - visible state label。
 
-## Phase 2 · Mock Backend Runtime Fixtures
+## 11.2.4.2 · Single-page Basic Business Pages
 
-Phase 2 引入 mock backend 行为。它负责 HTTP 层 slow response、error status code、
-polling、upload、export 和 async job completion。
+实现 simple business pages 的单页面前端 fixture。11.2.4.2 可使用前端本地
+状态和 deterministic timer 模拟 visible delay、loading、validation、empty state
+和 error surface，但不代表真实 network evidence。
+
+| Business page | Route candidate | Initial state | User action | Runtime behavior variants | Current MVP expected | Future expected |
+|---|---|---|---|---|---|---|
+| login | `/runtime-observation/basic/login` | empty form | submit credentials | validation, toast, URL/title navigation | title/url only if navigation happens | `form_validation_message`, `toast_shown` |
+| register | `/runtime-observation/basic/register` | empty form | submit form | validation, delayed success | title/url only if navigation happens | `form_validation_message`, `toast_shown` |
+| sms_login | `/runtime-observation/basic/sms-login` | phone input | request code / submit | countdown, validation | title/url only if navigation happens | `form_validation_message`, `toast_shown` |
+| simple_search | `/runtime-observation/basic/search` | empty query / default result | search | loading, empty result | no primary unless URL/title changes | `list_changed`, `loading_finished` |
+| simple_detail | `/runtime-observation/basic/detail` | detail region | refresh / load detail | loading, not found | title/url only if navigation happens | `text_appeared`, `loading_finished` |
+| simple_settings | `/runtime-observation/basic/settings` | toggle state | save | disabled submit, toast | no primary unless URL/title changes | `toast_shown`, `element_enabled` |
+| simple_confirm | `/runtime-observation/basic/confirm` | confirm action visible | confirm | modal, toast, loading | no primary unless URL/title changes | `modal_opened`, `toast_shown` |
+
+## 11.2.4.3 · Single-page Medium Business Pages
+
+实现 medium business pages 的单页面前端 fixture，先用本地前端状态模拟，不接真实
+mock backend。
+
+| Business page | Route candidate | Runtime behavior variants | Current MVP expected | Future expected |
+|---|---|---|---|---|
+| user_list | `/runtime-observation/medium/users` | filtering, pagination, empty result | no primary unless URL/title changes | `list_changed`, `loading_finished` |
+| order_list | `/runtime-observation/medium/orders` | filtering, sorting, row action | no primary unless URL/title changes | `list_changed`, `toast_shown` |
+| product_list | `/runtime-observation/medium/products` | enable/disable, row status | no primary unless URL/title changes | `list_changed`, `element_enabled` |
+| table_management | `/runtime-observation/medium/table` | pagination, sorting, partial refresh | no primary unless URL/title changes | `list_changed` |
+| create_edit_form | `/runtime-observation/medium/form` | validation, delayed success | title/url only if navigation happens | `form_validation_message`, `toast_shown` |
+| file_upload | `/runtime-observation/medium/upload` | upload progress, rejection | no primary unless URL/title changes | `loading_finished`, `form_validation_message` |
+| export_download | `/runtime-observation/medium/export` | preparation, artifact unavailable | no primary unless URL/title changes | `loading_finished`, artifact evidence |
+
+## 11.2.4.4 · Single-page Complex Business Pages
+
+实现 complex 单页面业务：
+
+- dynamic_form。
+- wizard_stepper。
+- batch_operation。
+- master_detail。
+- view_edit_preview_mode_switch。
+- permission_conditional_ui。
+- conditional_fields。
+
+这些页面可以包含 modal、drawer、field show/hide、mode switch、partial success 等
+runtime behaviors，但业务复杂度来自页面业务结构，而不是单个技术行为。
+
+`very_complex_business_page` 当前只进入 scenario catalog，不进入 11.2.4.1 -
+11.2.4.5 的近期实现范围。
+
+## 11.2.4.5 · Mock Backend Runtime Conditions
+
+引入 mock backend 行为。它负责 HTTP 层 slow response、error status code、polling、
+upload、export 和 async job completion。
 
 计划 mock endpoints：
 
@@ -120,12 +193,12 @@ polling、upload、export 和 async job completion。
 - mock upload endpoint。
 - mock export endpoint。
 
-Phase 2 覆盖：
+覆盖：
 
 - slow search response。
 - slow save response。
 - slow detail loading。
-- server validation error。
+- backend validation error。
 - 401 / 403 / 404 / 409 / 429 / 500。
 - network timeout。
 - request cancelled / aborted。
@@ -135,32 +208,26 @@ Phase 2 覆盖：
 - export generation failed。
 - download unavailable。
 
-## Phase 3 · Component-library-heavy Fixtures
+## 11.2.4.6 · Mobile Single-page Patterns
 
-Phase 3 覆盖复杂组件库行为：
+实现移动端单页面：
 
-- select option panel。
-- autocomplete。
-- cascader。
-- date picker。
-- time picker。
-- drawer。
-- bottom sheet。
-- virtualized list。
-- nested modal。
-- portal / teleport runtime surface。
+- mobile_login_sms。
+- mobile_search。
+- mobile_list。
+- mobile_form。
+- mobile_picker。
+- mobile_action_sheet。
+- mobile_pull_to_refresh。
+- mobile_infinite_scroll。
 
-这些场景可作为 later 11.2.x Common Component Runtime Semantics 的输入。
+Mobile picker、action sheet、bottom sheet、mobile toast 和 mobile dialog 都是 mobile
+business pages 上的 runtime behavior，不是页面业务复杂度本身。
 
-## Phase 4 · Multi-page / Workflow Fixtures
+## 11.2.4.7 · E2E Evidence and Review
 
-Phase 4 再规划跨页面 workflow：
-
-- list -> detail。
-- create -> edit -> save。
-- search -> select -> export。
-- wizard / stepper。
-- multi-page approval flow。
+补 scoped E2E 和 evidence closure。必须记录实际命令、入口 URL、截图 / 日志 /
+exit code，不得把未运行项写成通过。
 
 ## 数据模型 / Schema 变更（Data Model / Schema Changes）
 
@@ -177,7 +244,9 @@ route
 platform
 page_type
 scenario_id
-complexity
+business_complexity
+runtime_conditions
+runtime_behaviors
 trigger_selector
 result_selector
 reset_selector
@@ -194,15 +263,20 @@ future_expected_observation
 后续实现阶段可按职责拆分：
 
 - validation-site route index：展示 runtime observation fixture 入口。
-- single-page basic fixtures：toast、modal、validation、enabled state、component surface。
-- single-page async fixtures：loading、search refresh、same-url reload、empty state。
-- mobile pattern fixtures：picker、action sheet、bottom sheet、mobile toast。
+- single-page basic business pages：login、register、sms_login、simple_search、
+  simple_detail、simple_settings、simple_confirm。
+- single-page medium business pages：user_list、order_list、product_list、
+  table_management、create_edit_form、file_upload、export_download。
+- single-page complex business pages：dynamic_form、wizard_stepper、batch_operation、
+  master_detail、mode switch、permission conditional UI、conditional fields。
+- mobile single-page patterns：mobile_login_sms、mobile_search、mobile_list、
+  mobile_form、mobile_picker、mobile_action_sheet、mobile pull-to-refresh。
 - validation API mock backend：slow response、error status、polling、upload、export。
 - E2E specs：验证 fixture determinism 和 observation boundary。
 
 ## 数据流（Data Flow）
 
-后续 Phase 1 数据流：
+后续 single-page frontend fixture 数据流：
 
 ```text
 open fixture route
@@ -213,7 +287,7 @@ open fixture route
 -> reset restores initial state
 ```
 
-后续 Phase 2 数据流：
+后续 mock backend runtime condition 数据流：
 
 ```text
 open fixture route
@@ -224,8 +298,8 @@ open fixture route
 -> wait_result / observation_summary record supported evidence
 ```
 
-Phase 1 timer-based flow is deterministic UI evidence only. Phase 2 mock backend
-flow is the first phase that can produce HTTP-layer slow response / error status evidence.
+Timer-based frontend flow is deterministic UI evidence only. Mock backend flow is the
+first phase that can produce HTTP-layer slow response / error status evidence.
 
 ## 状态推导（Status / State Derivation）
 
@@ -312,47 +386,62 @@ PC 页面类型至少覆盖：
 
 ## Complexity Ladder
 
-Simple:
+Complexity ladder 按业务复杂度整理，不按单个 UI 技术行为整理。
 
-- toast。
-- modal。
-- validation message。
-- button enabled / disabled。
-- URL changed。
-- title changed。
+Simple business pages:
 
-Medium:
+- login。
+- register。
+- sms_login。
+- forgot_password。
+- simple_search。
+- simple_detail。
+- simple_settings。
+- simple_confirm。
 
-- loading skeleton -> content。
-- search result refresh。
-- partial list refresh。
-- same-url reload。
-- SPA content update。
-- autocomplete。
-- select panel。
-- mobile picker。
+Medium business pages:
 
-Complex:
+- user_list。
+- order_list。
+- product_list。
+- content_list。
+- search_filter。
+- table_management。
+- detail_with_actions。
+- create_edit_form。
+- file_upload。
+- export_download。
 
-- virtualized list。
-- portal / teleport runtime surface。
-- nested modal / drawer。
-- async job completion。
-- polling update。
-- server validation + retry input。
-- file upload progress。
-- export / download artifact。
+Complex business pages:
 
-Very Complex:
+- multi_step_form。
+- wizard_stepper。
+- dynamic_form。
+- batch_operation。
+- modal_drawer_edit。
+- master_detail。
+- list_detail_linked。
+- view_edit_preview_mode_switch。
+- permission_conditional_ui。
+- conditional_fields。
+- upload_form_validation_combo。
 
-- multi-step wizard。
-- multi-page workflow。
-- role / permission dependent UI。
-- real-time push。
-- WebSocket / SSE。
-- cross-page state。
-- component library runtime relation resolver。
-- mobile gesture / scroll / picker interaction。
+Very complex business pages:
+
+- approval_workflow。
+- ticket_workflow。
+- order_lifecycle。
+- payment_flow。
+- inventory_order_logistics_flow。
+- collaborative_editing。
+- websocket_realtime_status。
+- cross_page_wizard。
+- permission_matrix。
+- report_builder。
+- low_code_configurator。
+
+Toast、modal、loading、picker、virtualized list、WebSocket / SSE、portal /
+teleport 等只作为 runtime behavior / interaction pattern 叠加到业务页面类型上。
 
 ## 非目标（Non-goals）
 

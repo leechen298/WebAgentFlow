@@ -15,181 +15,497 @@ M11.2 负责观察和记录运行时变化。M12 决定当这些变化表示失�
 Post-action Observation 覆盖用户或 replay 动作后短时间内的页面变化。Passive
 Runtime Observation 覆盖不是由当前动作直接触发的页面变化。
 
-## PC Page Scenario Catalog
+## Business Page Complexity Model
+
+11.2.4.0 使用业务页面复杂度，而不是单个 UI 技术行为，作为 scenario catalog
+的主分类。
+
+分类模型：
+
+```text
+业务页面复杂度
+×
+运行条件矩阵
+×
+runtime behavior / interaction pattern
+```
+
+`toast`、`modal`、`loading`、`drawer`、`picker`、`virtualized list`、
+`WebSocket`、`portal / teleport` 等属于 runtime behavior，不作为页面业务复杂度
+分类依据。
+
+### simple_business_page
+
+定义：单一目标、单一区块、少量输入、没有复杂状态切换。
+
+页面类型：
+
+- login。
+- register。
+- sms_login。
+- forgot_password。
+- simple_search。
+- simple_detail。
+- simple_settings。
+- simple_confirm。
+
+说明：
+
+- 当前 validation-site 已有 `/login` 属于 simple business page。
+- simple 页面也可以叠加弱网、后端错误、前端校验、空结果等运行条件。
+- simple 不代表没有错误状态，只代表业务结构简单。
+
+### medium_business_page
+
+定义：有列表、表格、筛选、分页、简单操作，但主要仍围绕一个业务对象。
+
+页面类型：
+
+- user_list。
+- order_list。
+- product_list。
+- content_list。
+- search_filter。
+- table_management。
+- detail_with_actions。
+- create_edit_form。
+- file_upload。
+- export_download。
+
+说明：
+
+- 当前 validation-site 已有 `/users` 类页面通常属于 medium business page。
+- 表格默认归为 medium。
+- 如果表格包含复杂动态列、批量操作、权限差异、行内编辑、主从联动，可以升级为
+  complex。
+
+### complex_business_page
+
+定义：一个页面内存在明显业务状态切换、多个操作阶段、动态字段、元素增减、显示
+隐藏、页面模式切换或组合操作。
+
+页面类型：
+
+- multi_step_form。
+- wizard_stepper。
+- dynamic_form。
+- batch_operation。
+- modal_drawer_edit。
+- master_detail。
+- list_detail_linked。
+- view_edit_preview_mode_switch。
+- permission_conditional_ui。
+- conditional_fields。
+- upload_form_validation_combo。
+
+说明：
+
+- 页面元素增减 / 显示隐藏 / 页面类型切换属于 complex。
+- complex 仍可以是单页面。
+- 11.2.4.4 优先覆盖 complex 单页面业务。
+
+### very_complex_business_page
+
+定义：跨页面、跨角色、长流程、强状态依赖、实时更新或复杂权限矩阵。
+
+页面类型：
+
+- approval_workflow。
+- ticket_workflow。
+- order_lifecycle。
+- payment_flow。
+- inventory_order_logistics_flow。
+- collaborative_editing。
+- websocket_realtime_status。
+- cross_page_wizard。
+- permission_matrix。
+- report_builder。
+- low_code_configurator。
+
+说明：
+
+- very_complex 当前只进入 scenario catalog。
+- very_complex 不进入 11.2.4.1 - 11.2.4.5 的近期实现范围。
+- 后续需要单独拆包设计。
+
+## PC Business Page Catalog
 
 PC 场景目录用于覆盖常见后台、SaaS、运营、内容和业务管理页面。后续 fixture
 应优先自建在 validation-site 中，不依赖外部真实网站。
 
-至少覆盖：
+| scenario_id | business_complexity | page_type | common_user_goal | runtime_behaviors | condition_variants | recommended_phase | current MVP | future observation |
+|---|---|---|---|---|---|---|---|---|
+| pc_login_basic | simple_business_page | login | 用户登录系统 | submit, validation, toast/error | normal_network, slow_network, backend_validation_error, frontend_validation_error, unauthorized_401 | 11.2.4.2 / 11.2.4.5 | title/url only if navigation happens | form_validation_message, toast_shown |
+| pc_register_basic | simple_business_page | register | 创建账号或提交注册信息 | submit, validation, delayed success | normal_network, backend_validation_error, server_error_500 | 11.2.4.2 / 11.2.4.5 | title/url only if navigation happens | form_validation_message, toast_shown |
+| pc_simple_search | simple_business_page | simple_search | 输入关键词并查看结果 | input, search, empty result | normal_network, slow_network, empty_result, timeout | 11.2.4.2 / 11.2.4.5 | no primary unless URL/title changes | list_changed, loading_finished |
+| pc_simple_detail | simple_business_page | simple_detail | 查看单个对象详情 | load detail, status label | normal_network, slow_detail_loading, not_found_404 | 11.2.4.2 / 11.2.4.5 | title/url only if navigation happens | text_appeared, loading_finished |
+| pc_simple_settings | simple_business_page | simple_settings | 修改简单设置 | toggle, save, toast | normal_network, slow_save_response, backend_business_conflict | 11.2.4.2 / 11.2.4.5 | no primary unless URL/title changes | toast_shown, element_enabled |
+| pc_simple_confirm | simple_business_page | simple_confirm | 确认一个单步操作 | click confirm, modal, toast | normal_network, slow_save_response, server_error_500 | 11.2.4.2 / 11.2.4.5 | no primary unless URL/title changes | modal_opened, toast_shown |
+| pc_user_list | medium_business_page | user_list | 查询、筛选、分页用户 | filter, pagination, partial refresh | normal_network, slow_search_response, empty_result, rate_limited_429 | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | list_changed, loading_finished |
+| pc_order_list | medium_business_page | order_list | 筛选订单并查看状态 | filter, sort, row action | normal_network, slow_search_response, backend_business_conflict, empty_result | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | list_changed, toast_shown |
+| pc_product_list | medium_business_page | product_list | 管理商品列表 | search, enable/disable, row action | normal_network, partial_success, server_error_500 | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | list_changed, element_enabled |
+| pc_content_list | medium_business_page | content_list | 管理内容条目 | filter, batch status, preview | normal_network, empty_result, forbidden_403 | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | list_changed, modal_opened |
+| pc_search_filter | medium_business_page | search_filter | 组合筛选并刷新结果 | form filters, partial refresh | normal_network, slow_search_response, empty_result, timeout | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | list_changed, loading_finished |
+| pc_table_management | medium_business_page | table_management | 管理表格数据 | sort, pagination, row action | normal_network, empty_result, rate_limited_429 | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | list_changed |
+| pc_detail_with_actions | medium_business_page | detail_with_actions | 在详情页执行简单动作 | click action, modal, toast | normal_network, slow_save_response, conflict_409 | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | modal_opened, toast_shown |
+| pc_create_edit_form | medium_business_page | create_edit_form | 创建或编辑业务对象 | form submit, validation | normal_network, frontend_validation_error, backend_validation_error, server_error_500 | 11.2.4.3 / 11.2.4.5 | title/url only if navigation happens | form_validation_message, toast_shown |
+| pc_modal_edit | complex_business_page | modal_edit | 在弹窗中编辑对象 | modal open, form submit, list update | normal_network, backend_validation_error, conflict_409 | 11.2.4.4 / 11.2.4.5 | no primary unless URL/title changes | modal_opened, form_validation_message, list_changed |
+| pc_drawer_edit | complex_business_page | drawer_edit | 在抽屉中编辑对象 | drawer open, conditional fields | normal_network, backend_validation_error, forbidden_403 | 11.2.4.4 / 11.2.4.5 | no primary unless URL/title changes | modal_opened, field_show_hide |
+| pc_file_upload | medium_business_page | file_upload | 上传文件并查看结果 | upload progress, validation | normal_network, upload_file_type_rejected, upload_size_exceeded, upload_progress_then_failure | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | loading_finished, form_validation_message |
+| pc_export_download | medium_business_page | export_download | 导出并下载文件 | export preparation, artifact link | normal_network, slow_export_preparation, export_generation_failed, download_unavailable | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | loading_finished, toast_shown |
+| pc_dashboard_report | complex_business_page | dashboard_report | 查看报表和局部刷新 | cards, charts, partial refresh | normal_network, slow_detail_loading, partial_success, stuck_loading | 11.2.4.4 / 11.2.4.5 | no primary unless URL/title changes | list_changed, loading_finished |
+| pc_role_permission | complex_business_page | role_permission | 配置角色权限 | tree/table, conditional UI | normal_network, forbidden_403, conflict_409, partial_success | 11.2.4.4 / 11.2.4.5 | no primary unless URL/title changes | field_show_hide, element_enabled |
+| pc_approval_workflow | very_complex_business_page | approval_workflow | 处理多状态审批流 | multi-step state, role-dependent actions | normal_network, forbidden_403, conflict_409, partial_success | future package | planning only | workflow-level evidence, reporter integration |
+| pc_wizard_stepper | complex_business_page | wizard_stepper | 按步骤完成配置 | step transition, validation, mode switch | normal_network, backend_validation_error, stuck_loading | 11.2.4.4 / future workflow package | no primary unless URL/title changes | mode_switch, form_validation_message |
 
-- 登录页。
-- 注册页。
-- 搜索 / 筛选页。
-- 后台列表页。
-- 表格管理页。
-- 详情页。
-- 创建 / 编辑表单页。
-- 弹窗编辑页。
-- 文件上传页。
-- 导出 / 下载页。
-- 设置页。
-- 权限 / 角色管理页。
-- 订单 / 用户 / 商品 / 内容管理页。
-- 报表 / dashboard 页。
-- 审批 / workflow 页。
-- wizard / stepper 页。
-
-## Mobile Page Scenario Catalog
+## Mobile Business Page Catalog
 
 移动端场景目录用于覆盖常见 H5、移动 Web、移动组件库和窄屏交互。
 
-至少覆盖：
+| scenario_id | business_complexity | page_type | common_user_goal | runtime_behaviors | condition_variants | recommended_phase | current MVP | future observation |
+|---|---|---|---|---|---|---|---|---|
+| mobile_login_sms | simple_business_page | mobile_login_sms | 使用手机号验证码登录 | input, countdown, validation | normal_network, slow_network, backend_validation_error, unauthorized_401 | 11.2.4.2 / 11.2.4.6 / 11.2.4.5 | title/url only if navigation happens | form_validation_message, toast_shown |
+| mobile_search | simple_business_page | mobile_search | 搜索并查看结果 | input, loading, empty result | normal_network, slow_search_response, empty_result, timeout | 11.2.4.2 / 11.2.4.6 / 11.2.4.5 | no primary unless URL/title changes | list_changed, loading_finished |
+| mobile_list | medium_business_page | mobile_list | 浏览列表并筛选 | list, infinite scroll, pull refresh | normal_network, slow_network, empty_result, rate_limited_429 | 11.2.4.3 / 11.2.4.6 / 11.2.4.5 | no primary unless URL/title changes | list_changed |
+| mobile_detail | simple_business_page | mobile_detail | 查看详情 | load detail, status region | normal_network, slow_detail_loading, not_found_404 | 11.2.4.2 / 11.2.4.6 / 11.2.4.5 | title/url only if navigation happens | text_appeared, loading_finished |
+| mobile_form | medium_business_page | mobile_form | 提交移动端表单 | form submit, validation, toast | normal_network, frontend_validation_error, backend_validation_error | 11.2.4.3 / 11.2.4.6 / 11.2.4.5 | no primary unless URL/title changes | form_validation_message, toast_shown |
+| mobile_bottom_sheet | complex_business_page | mobile_bottom_sheet | 在底部弹层中选择动作 | bottom sheet, action selection | normal_network, request_cancelled, forbidden_403 | 11.2.4.4 / 11.2.4.6 | no primary | mobile action sheet relation |
+| mobile_picker | complex_business_page | mobile_picker | 通过 picker 选择值 | picker open, option select | normal_network, frontend_validation_error | 11.2.4.4 / 11.2.4.6 | no primary | mobile picker relation |
+| mobile_address_picker | complex_business_page | mobile_address_picker | 选择省市区地址 | cascaded picker, field update | normal_network, backend_validation_error | 11.2.4.4 / 11.2.4.6 | no primary | mobile picker relation, field_show_hide |
+| mobile_date_time_picker | complex_business_page | mobile_date_time_picker | 选择日期或时间 | date/time picker, validation | normal_network, frontend_validation_error | 11.2.4.4 / 11.2.4.6 | no primary | mobile picker relation |
+| mobile_payment_confirm | very_complex_business_page | mobile_payment_confirm | 确认支付 | confirm, loading, redirect/status | normal_network, timeout, request_cancelled, server_error_500 | future package | planning only | payment-flow evidence |
+| mobile_order_submit | complex_business_page | mobile_order_submit | 提交订单 | form, confirm, loading, toast | normal_network, backend_business_conflict, server_error_500 | 11.2.4.4 / 11.2.4.5 / 11.2.4.6 | title/url only if navigation happens | toast_shown, loading_finished |
+| mobile_profile | simple_business_page | mobile_profile | 查看个人中心 | load profile, simple navigation | normal_network, unauthorized_401 | 11.2.4.2 / 11.2.4.6 | title/url only if navigation happens | text_appeared |
+| mobile_settings | simple_business_page | mobile_settings | 修改移动端设置 | toggle, save, toast | normal_network, slow_save_response, backend_business_conflict | 11.2.4.2 / 11.2.4.6 / 11.2.4.5 | no primary unless URL/title changes | toast_shown, element_enabled |
+| mobile_notification | medium_business_page | mobile_notification | 查看通知列表 | list, mark read, partial refresh | normal_network, empty_result, delayed_polling_result | 11.2.4.3 / 11.2.4.6 / 11.2.4.5 | no primary unless URL/title changes | list_changed |
+| mobile_infinite_scroll | medium_business_page | mobile_infinite_scroll | 滚动加载更多 | infinite scroll, loading footer | normal_network, slow_network, empty_result, rate_limited_429 | 11.2.4.3 / 11.2.4.6 / 11.2.4.5 | no primary | list_changed, loading_finished |
+| mobile_pull_to_refresh | medium_business_page | mobile_pull_to_refresh | 下拉刷新列表 | pull refresh, list update | normal_network, timeout, server_error_500 | 11.2.4.3 / 11.2.4.6 / 11.2.4.5 | no primary | list_changed, loading_finished |
 
-- 登录 / 手机验证码页。
-- 搜索页。
-- 列表页。
-- 详情页。
-- 表单页。
-- 底部弹层页。
-- picker 选择页。
-- 地址选择页。
-- 日期 / 时间选择页。
-- 支付确认页。
-- 订单提交页。
-- 个人中心页。
-- 设置页。
-- 消息 / 通知页。
-- 滚动加载页。
-- 下拉刷新页。
+## Runtime Condition Matrix
 
-## Network Delay and Error Scenarios
+运行条件是横向变体，可以叠加到 simple / medium / complex / very_complex 页面上，
+不作为页面类型。M11.2 只记录 runtime evidence，recovery / retry / abort 属于 M12。
+
+| condition_id | description | typical_visible_surface | requires_backend | recommended_phase | m12_boundary_note |
+|---|---|---|---|---|---|
+| normal_network | 正常响应和正常 UI 变化 | success state, result content | No | 11.2.4.2 / 11.2.4.3 / 11.2.4.4 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| slow_network | 响应变慢但最终完成 | loading, skeleton, delayed result | 11.2.4.5 for HTTP evidence | 11.2.4.2 timer / 11.2.4.5 backend | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| timeout | 等待窗口内未出现预期结果 | stuck loading, timeout note | 11.2.4.5 for HTTP evidence | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| request_cancelled | 请求被取消或中断 | cancelled state, stale result | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| frontend_validation_error | 前端校验阻止提交 | inline field error | No | 11.2.4.2 / 11.2.4.3 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| backend_validation_error | 后端校验拒绝提交 | form error, toast error | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| backend_business_conflict | 服务端业务冲突 | conflict toast, row state unchanged | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| unauthorized_401 | 未登录或登录失效 | login prompt, error banner | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| forbidden_403 | 无权限操作 | forbidden message, disabled action | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| not_found_404 | 资源不存在 | not found state | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| conflict_409 | 状态冲突或版本冲突 | conflict message, reload prompt | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| rate_limited_429 | 请求频率受限 | rate limit banner/toast | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| server_error_500 | 服务端错误 | error toast, error page region | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| empty_result | 查询结果为空 | empty state | No for timer, Yes for backend | 11.2.4.3 / 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| partial_success | 部分操作成功 | mixed status rows, partial warning | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| stuck_loading | loading 未结束 | loading overlay remains visible | No for timer, Yes for backend | 11.2.4.3 / 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| retry_available | UI 显示重试入口 | retry button shown | Yes | 11.2.4.5 | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+
+## Runtime Behavior / Interaction Pattern Catalog
+
+Runtime behavior 是页面类型下的行为变体，不是业务复杂度本身。
+
+| interaction_id | runtime_behavior | business_page_applicability | recommended_phase | current_mvp_expected_observation | future_expected_observation | needs_backend |
+|---|---|---|---|---|---|---|
+| click_to_toast | click -> toast | simple / medium / complex | 11.2.4.2 | no primary unless URL/title changes | `toast_shown` | No |
+| click_to_modal | click -> modal | simple / medium / complex | 11.2.4.2 | no primary | `modal_opened` | No |
+| click_to_drawer | click -> drawer | medium / complex | 11.2.4.4 | no primary | drawer / modal relation | No |
+| click_to_dropdown | click -> dropdown / select panel | medium / complex | 11.2.4.4 | no primary | component-generated runtime surface relation | No |
+| click_to_loading_then_result | click -> loading -> result | simple / medium / complex | 11.2.4.3 / 11.2.4.5 | supporting only unless URL/title changes | `loading_finished`, `list_changed` | Optional |
+| input_to_autocomplete | input -> autocomplete | medium / complex | 11.2.4.4 | no primary | component relation, list_changed | Optional |
+| input_to_validation_message | input -> validation message | simple / medium / complex | 11.2.4.2 | no primary | `form_validation_message` | No |
+| submit_to_delayed_success | submit -> delayed success | simple / medium / complex | 11.2.4.3 / 11.2.4.5 | title/url only if navigation happens | toast_shown, loading_finished | Optional |
+| submit_to_server_validation_error | submit -> server validation error | simple / medium / complex | 11.2.4.5 | no primary unless URL/title changes | form_validation_message, toast_shown | Yes |
+| button_disabled_to_enabled | button disabled -> enabled | simple / medium / complex | 11.2.4.2 | no primary | `element_enabled`, `element_disabled` | Optional |
+| field_show_hide | field show/hide | complex | 11.2.4.4 | no primary | field_show_hide | No |
+| mode_switch_view_edit_preview | view/edit/preview mode switch | complex | 11.2.4.4 | no primary unless title changes | mode_switch | No |
+| partial_list_refresh | partial list refresh | medium / complex | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | `list_changed` | Optional |
+| spa_content_update_without_url_change | SPA content update without URL change | simple / medium / complex | 11.2.4.3 | no primary | `spa_content_changed` | No |
+| same_url_reload | same-url reload | simple / medium | 11.2.4.3 / future page-load package | no `page_load_finished` in current MVP | page-load evidence | Optional |
+| url_changed_navigation | URL changed navigation | simple / medium / complex | 11.2.4.2 | `url_changed` primary | route-level observation | No |
+| title_changed_navigation | title changed navigation | simple / medium / complex | 11.2.4.2 | `title_changed` primary | route-level observation | No |
+| infinite_scroll | infinite scroll | medium / very_complex | 11.2.4.6 | no primary | `list_changed`, loading_finished | Optional |
+| virtualized_list | virtualized list | complex / very_complex | later 11.2.x | no primary | component runtime semantics | Optional |
+| mobile_bottom_sheet | mobile bottom sheet | complex | 11.2.4.6 | no primary | mobile bottom sheet relation | No |
+| mobile_action_sheet | mobile action sheet | complex | 11.2.4.6 | no primary | mobile action sheet relation | No |
+| mobile_picker | mobile picker | complex | 11.2.4.6 | no primary | mobile picker relation | No |
+| mobile_toast | mobile toast | simple / medium | 11.2.4.6 | no primary unless URL/title changes | `toast_shown` | No |
+| mobile_dialog | mobile dialog | simple / medium / complex | 11.2.4.6 | no primary | `modal_opened` | No |
+
+## Network Delay and Error Scenario Catalog
 
 真实网页运行时不只有 UI 弹层和内容变化，也包括慢响应、失败响应、服务端校验、
 空结果、权限错误和异步任务失败。11.2.4 只规划这些 fixture；M11.2 记录 runtime
 evidence，不实现 recovery / retry / abort。
 
-### Network delay
-
-- slow search response。
-- slow save response。
-- slow detail loading。
-- slow export preparation。
-- delayed polling result。
-- delayed async job completion。
-
-### Server / API errors
-
-- HTTP 400 validation error。
-- HTTP 401 unauthorized。
-- HTTP 403 forbidden。
-- HTTP 404 missing resource。
-- HTTP 409 conflict。
-- HTTP 429 rate limited。
-- HTTP 500 server error。
-- network timeout。
-- request cancelled / aborted。
-
-### UI error surfaces
-
-- inline validation message。
-- form item error message。
-- toast error。
-- modal error。
-- banner / alert error。
-- empty result state。
-- retry button shown。
-- disabled submit after error。
-- loading overlay stuck then timeout。
-
-### File / artifact errors
-
-- upload progress then failure。
-- upload file type rejected。
-- upload size exceeded。
-- export generation failed。
-- download unavailable。
+| scenario_id | condition_type | business_page_applicability | visible_error_surface | requires_mock_backend | recommended_phase | current_mvp_expected_observation | future_expected_observation | m12_boundary_note |
+|---|---|---|---|---|---|---|---|---|
+| slow_search_response | network_delay | simple_search / list / search_filter | loading then result | Yes for HTTP evidence | 11.2.4.5 | supporting only unless URL/title changes | loading_finished, list_changed | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| slow_save_response | network_delay | settings / form / detail action | disabled submit, loading, toast | Yes | 11.2.4.5 | supporting only unless URL/title changes | loading_finished, toast_shown | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| slow_detail_loading | network_delay | detail / dashboard | skeleton then detail | Yes | 11.2.4.5 | supporting only unless URL/title changes | loading_finished, text_appeared | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| slow_export_preparation | network_delay | export_download | preparing state, artifact link | Yes | 11.2.4.5 | supporting only unless URL/title changes | loading_finished, artifact evidence | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| delayed_polling_result | async_delay | notification / async job / dashboard | pending -> completed | Yes | 11.2.4.5 | no primary unless URL/title changes | list_changed, server_push_update | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| delayed_async_job_completion | async_delay | export / import / batch operation | job status changes | Yes | 11.2.4.5 | no primary unless URL/title changes | loading_finished, list_changed | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| http_400_validation_error | api_error | forms | form item error | Yes | 11.2.4.5 | no primary | form_validation_message | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| http_401_unauthorized | api_error | login-gated pages | login prompt / unauthorized banner | Yes | 11.2.4.5 | title/url only if navigation happens | toast_shown, form_validation_message | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| http_403_forbidden | api_error | role / permission pages | forbidden banner / disabled action | Yes | 11.2.4.5 | no primary unless URL/title changes | element_disabled, toast_shown | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| http_404_missing_resource | api_error | detail pages | not found state | Yes | 11.2.4.5 | title/url only if navigation happens | text_appeared, loading_finished | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| http_409_conflict | api_error | edit / approval / order | conflict message | Yes | 11.2.4.5 | no primary | toast_shown, form_validation_message | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| http_429_rate_limited | api_error | search / submit / export | rate limit banner | Yes | 11.2.4.5 | no primary | toast_shown, banner alert | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| http_500_server_error | api_error | any backend page | error toast / alert | Yes | 11.2.4.5 | no primary | toast_shown, banner alert | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| network_timeout | network_error | search / save / detail | stuck loading / timeout surface | Yes | 11.2.4.5 | timeout wait outcome only | loading_finished absent, timeout evidence | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| request_cancelled | network_error | search / save / detail | stale state or cancelled message | Yes | 11.2.4.5 | no primary | toast_shown, uncertainty note | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| inline_validation_message | ui_error_surface | forms | inline field text | No | 11.2.4.2 | no primary | form_validation_message | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| form_item_error_message | ui_error_surface | forms | form item error | No | 11.2.4.2 | no primary | form_validation_message | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| toast_error | ui_error_surface | any submit action | error toast | No | 11.2.4.2 | no primary | toast_shown | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| modal_error | ui_error_surface | detail / form / confirm | modal with error | No | 11.2.4.2 | no primary | modal_opened | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| banner_alert_error | ui_error_surface | list / detail / dashboard | banner alert | No | 11.2.4.3 | no primary | text_appeared, banner alert | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| empty_result_state | ui_error_surface | search / list | empty state | Optional | 11.2.4.3 / 11.2.4.5 | no primary unless URL/title changes | list_changed, text_appeared | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| retry_button_shown | ui_error_surface | async / backend pages | retry button | Yes | 11.2.4.5 | no primary | element_appeared, element_enabled | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| disabled_submit_after_error | ui_error_surface | forms | disabled submit | Optional | 11.2.4.2 / 11.2.4.5 | no primary | element_disabled | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| loading_overlay_stuck_then_timeout | timeout_surface | async pages | loading overlay remains | Optional | 11.2.4.3 / 11.2.4.5 | timeout wait outcome only | loading_finished absent, timeout evidence | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| upload_progress_then_failure | file_error | file_upload | progress then failure message | Yes | 11.2.4.5 | no primary | loading_finished, toast_shown | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| upload_file_type_rejected | file_error | file_upload | file type error | Optional | 11.2.4.3 / 11.2.4.5 | no primary | form_validation_message | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| upload_size_exceeded | file_error | file_upload | size error | Optional | 11.2.4.3 / 11.2.4.5 | no primary | form_validation_message | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| export_generation_failed | file_error | export_download | export failure message | Yes | 11.2.4.5 | no primary | toast_shown, loading_finished absent | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
+| download_unavailable | file_error | export_download | unavailable artifact | Yes | 11.2.4.5 | no primary | toast_shown, artifact evidence | M11.2 records runtime evidence only. Recovery / retry / abort belongs to M12. |
 
 ## Complexity Ladder
 
-### Simple
+Complexity ladder 按业务复杂度整理，不按单个 UI 技术行为整理。
 
-- toast。
-- modal。
+### simple
+
+页面类型：
+
+- login。
+- register。
+- sms_login。
+- forgot_password。
+- simple_search。
+- simple_detail。
+- simple_settings。
+- simple_confirm。
+
+可叠加 runtime behavior：
+
 - validation message。
-- button enabled / disabled。
-- URL changed。
-- title changed。
+- toast。
+- loading。
+- url/title navigation。
 
-### Medium
+可叠加 conditions：
 
-- loading skeleton -> content。
-- search result refresh。
+- normal_network。
+- slow_network。
+- frontend_validation_error。
+- backend_validation_error。
+- server_error_500。
+- unauthorized_401。
+
+### medium
+
+页面类型：
+
+- user_list。
+- order_list。
+- product_list。
+- content_list。
+- search_filter。
+- table_management。
+- detail_with_actions。
+- create_edit_form。
+- file_upload。
+- export_download。
+
+可叠加 runtime behavior：
+
 - partial list refresh。
-- same-url reload。
-- SPA content update。
-- autocomplete。
-- select panel。
-- mobile picker。
+- pagination。
+- sorting。
+- filtering。
+- empty result。
+- upload progress。
+- export preparation。
+- modal/drawer simple edit。
 
-### Complex
+可叠加 conditions：
 
-- virtualized list。
-- portal / teleport runtime surface。
-- nested modal / drawer。
-- async job completion。
-- polling update。
+- slow_search_response。
+- empty_result。
+- backend_business_conflict。
+- rate_limited_429。
+- upload failure。
+- export failure。
+
+### complex
+
+页面类型：
+
+- multi_step_form。
+- wizard_stepper。
+- dynamic_form。
+- batch_operation。
+- modal_drawer_edit。
+- master_detail。
+- list_detail_linked。
+- view_edit_preview_mode_switch。
+- permission_conditional_ui。
+- conditional_fields。
+- upload_form_validation_combo。
+
+可叠加 runtime behavior：
+
+- field show/hide。
+- step transition。
+- mode switch。
+- nested modal/drawer。
+- partial success。
 - server validation + retry input。
-- file upload progress。
-- export / download artifact。
+- permission-dependent UI。
 
-### Very Complex
+可叠加 conditions：
 
-- multi-step wizard。
-- multi-page workflow。
-- role / permission dependent UI。
-- real-time push。
-- WebSocket / SSE。
-- cross-page state。
-- component library runtime relation resolver。
-- mobile gesture / scroll / picker interaction。
+- backend_validation_error。
+- conflict_409。
+- partial_success。
+- forbidden_403。
+- stuck_loading。
+- retry_available。
 
-## Fixture Phase Plan
+### very_complex
 
-### Phase 1 · Single-page Runtime Fixtures
+页面类型：
 
-Phase 1 只规划单页面 fixture。它可以使用确定性前端 timer 模拟 delay、loading、
-validation、empty state 和 error surface，但不代表真实 network evidence。
+- approval_workflow。
+- ticket_workflow。
+- order_lifecycle。
+- payment_flow。
+- inventory_order_logistics_flow。
+- collaborative_editing。
+- websocket_realtime_status。
+- cross_page_wizard。
+- permission_matrix。
+- report_builder。
+- low_code_configurator。
 
-候选 fixture：
+处理方式：
 
-- single-page-toast。
-- single-page-modal。
-- single-page-loading。
-- single-page-delayed-button。
-- single-page-search-refresh。
-- single-page-spa-update。
-- single-page-validation-message。
-- single-page-same-url-reload。
-- single-page-component-surface。
-- single-page-mobile-picker。
-- single-page-mobile-action-sheet。
+- 记录为 future scenario。
+- 当前不进入 11.2.4.1 - 11.2.4.5 的近期实现。
+- 后续需要单独拆包设计。
 
-### Phase 2 · Single-page With Mock Backend
+## Fixture Phase Mapping
 
-Phase 2 引入 mock backend，让同类场景通过真实 HTTP 请求、mock API 状态和延迟
-响应触发。它负责 slow response、server validation、error status code、polling、
-upload / export 和 async job completion。
+### 11.2.4.1 · Single-page Runtime Fixture Shell
 
-### Phase 3 · Multi-state / Component-library-heavy Fixtures
+只建立 runtime observation fixture index、route shell、category navigation、
+reset convention 和 stable anchor convention。不实现具体业务页面。
 
-Phase 3 覆盖 select option panel、autocomplete、cascader、date picker、time
-picker、drawer、bottom sheet、virtualized list、nested modal、portal / teleport
-runtime surface。
+### 11.2.4.2 · Single-page Basic Business Pages
 
-### Phase 4 · Multi-page / Workflow Fixtures
+实现 simple business pages 的单页面前端 fixture：
 
-Phase 4 覆盖 list -> detail、create -> edit -> save、search -> select -> export、
-wizard / stepper、multi-page approval flow。
+- login。
+- register。
+- sms_login。
+- simple_search。
+- simple_detail。
+- simple_settings。
+- simple_confirm。
+
+可以使用 deterministic frontend timer 模拟 loading、validation、visible error surface
+和 empty state。
+
+### 11.2.4.3 · Single-page Medium Business Pages
+
+实现 medium business pages 的单页面前端 fixture：
+
+- user_list。
+- order_list。
+- product_list。
+- table_management。
+- create_edit_form。
+- file_upload。
+- export_download。
+
+先用本地前端状态模拟，不接真实 mock backend。
+
+### 11.2.4.4 · Single-page Complex Business Pages
+
+实现 complex 单页面业务：
+
+- dynamic_form。
+- wizard_stepper。
+- batch_operation。
+- master_detail。
+- view_edit_preview_mode_switch。
+- permission_conditional_ui。
+- conditional_fields。
+
+### 11.2.4.5 · Mock Backend Runtime Conditions
+
+引入 mock backend：
+
+- slow response。
+- backend validation。
+- 401 / 403 / 404 / 409 / 429 / 500。
+- timeout。
+- polling。
+- upload / export failure。
+- async job completion。
+
+### 11.2.4.6 · Mobile Single-page Patterns
+
+实现移动端单页面：
+
+- mobile_login_sms。
+- mobile_search。
+- mobile_list。
+- mobile_form。
+- mobile_picker。
+- mobile_action_sheet。
+- mobile_pull_to_refresh。
+- mobile_infinite_scroll。
+
+### 11.2.4.7 · E2E Evidence and Review
+
+补充 scoped E2E 和 evidence closure。
+
+## Current MVP vs Future Observation Boundary
+
+当前 11.2.2 / 11.2.3 已支持：
+
+```text
+url_changed
+title_changed
+network_idle_observed supporting only
+wait_result
+observation_summary
+```
+
+当前不支持但纳入规划：
+
+```text
+toast_shown
+modal_opened
+loading_finished
+element_enabled
+element_disabled
+form_validation_message
+list_changed
+field_show_hide
+mode_switch
+component-generated runtime surface relation
+mobile picker / action sheet relation
+```
+
+文档不得把 future signals 写成当前已实现。
 
 ## 场景目录
 

@@ -11,6 +11,13 @@ Status: initialized
 - technical-design。
 - test-plan。
 - phased implementation plan。
+- 11.2.4.0 scenario catalog finalization。
+- Business complexity model updated。
+- PC / mobile business page catalogs covered。
+- Runtime condition matrix covered。
+- Network delay and error scenarios covered。
+- Runtime behavior catalog separated from business complexity。
+- Fixture phase mapping updated。
 
 代码、fixture 页面、mock backend、E2E、evidence 尚未实现。
 
@@ -27,6 +34,6 @@ Status: initialized
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
 | Fixture pages | 本轮只生成规划文档。 | 后续 11.2.4.x 实现。 |
-| Mock backend | 本轮只生成规划文档。 | 后续 Phase 2 实现。 |
+| Mock backend | 本轮只生成规划文档。 | 后续 11.2.4.5 实现。 |
 | E2E | 本轮不实现页面，不运行 E2E。 | 后续 11.2.4.6 evidence closure。 |
 | `verify-scenario` / autonomous run | 本轮不触发 live run。 | 无 live supervisor evidence。 |

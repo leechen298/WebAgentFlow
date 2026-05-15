@@ -9,7 +9,7 @@
 
 ## 测试范围（Test Scope）
 
-- Unit：N/A，本轮不写代码。后续 Phase 2 mock backend 可补 API unit tests。
+- Unit：N/A，本轮不写代码。后续 11.2.4.5 mock backend 可补 API unit tests。
 - Integration：N/A，本轮不写代码。后续 replay / fixture integration 另开实现包。
 - API：N/A，本轮不改 API。后续 mock backend 实现后补。
 - Console UI：N/A，本轮不改 Console。
@@ -37,7 +37,7 @@
 | documentation | mobile catalog exists | inspect docs | mobile page types covered | Yes | docs-only validation |
 | documentation | complexity ladder | inspect docs | simple / medium / complex / very complex present | Yes | docs-only validation |
 | documentation | current vs future observation | inspect docs | MVP signals separated from future signals | Yes | no false implementation claims |
-| documentation | network delay and errors | inspect docs | slow response / HTTP errors / upload-export failures covered | Yes | Phase 2 planning |
+| documentation | network delay and errors | inspect docs | slow response / HTTP errors / upload-export failures covered | Yes | 11.2.4.5 planning |
 | future route smoke | each fixture route opens | validation-site route | route loads with stable heading | Yes later | not run in this docs package |
 | future route smoke | trigger visible | validation-site page | trigger action visible and stable | Yes later | stable selector required |
 | future route smoke | deterministic initial state | validation-site page | reset restores baseline | Yes later | no state bleed |
@@ -82,8 +82,8 @@ find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name
 - toast / modal / loading / list refresh fixture -> current MVP 不误报已支持 signal。
 - `network_idle_observed` 不进入 primary signal。
 - `observation_summary` 不改变 `ReplayResult.status`。
-- Phase 1 timer-based delay 不写成真实 network evidence。
-- Phase 2 mock backend 才验证 HTTP slow response / error status。
+- Frontend timer-based delay 不写成真实 network evidence。
+- 11.2.4.5 mock backend 才验证 HTTP slow response / error status。
 
 ## E2E / UI Smoke 边界（E2E / UI Smoke Boundary）
 

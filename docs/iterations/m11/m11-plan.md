@@ -1109,6 +1109,10 @@ ruff clean）。
 路线。11.2.4 不是找线上网站验证，也不是直接开发页面；它是后续 validation-site
 页面、mock backend 和 E2E 的开发文档输入。
 
+11.2.4.0 已将 scenario catalog 固化为“业务页面复杂度 × 运行条件矩阵 ×
+runtime behavior”模型。页面复杂度按业务结构分类；toast、modal、loading、picker
+等属于 runtime behavior / interaction pattern，不作为页面业务复杂度分类依据。
+
 交付：
 
 - `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/README.md`
@@ -1121,13 +1125,16 @@ ruff clean）。
 
 Phase 边界：
 
-- Phase 1 聚焦单页面 fixture，可用确定性前端 timer 模拟 delay、loading、
-  validation、empty state 和 error surface，不要求真实后端。
-- Phase 2 再引入 mock backend，覆盖 slow response、server validation、HTTP
-  error status、polling、upload / export 和 async job completion。
-- Phase 1 的前端 timer 只用于 deterministic fixture，不代表真实 network
-  evidence；Phase 2 的 mock backend 才负责 HTTP 层 slow response / error status
-  evidence。
+- 11.2.4.1 建立 Single-page Runtime Fixture Shell。
+- 11.2.4.2 实现 Single-page Basic Business Pages。
+- 11.2.4.3 实现 Single-page Medium Business Pages。
+- 11.2.4.4 实现 Single-page Complex Business Pages。
+- 11.2.4.5 引入 Mock Backend Runtime Conditions，覆盖 slow response、server
+  validation、HTTP error status、polling、upload / export 和 async job completion。
+- 11.2.4.6 实现 Mobile Single-page Patterns。
+- 11.2.4.7 补 E2E Evidence and Review。
+- 前端 timer 只用于 deterministic fixture，不代表真实 network evidence；mock
+  backend 才负责 HTTP 层 slow response / error status evidence。
 
 边界：
 

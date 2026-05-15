@@ -26,6 +26,46 @@
 - 不改变 M12 recovery 边界。
 - 不把外部真实网站作为稳定验证依赖。
 
+## Business Complexity Contract
+
+11.2.4 的页面复杂度按业务结构分类，不按单个 UI 技术行为分类。
+
+页面业务复杂度固定为：
+
+- `simple_business_page`
+- `medium_business_page`
+- `complex_business_page`
+- `very_complex_business_page`
+
+`toast`、`modal`、`loading`、`drawer`、`picker`、`virtualized list`、
+`WebSocket`、`portal / teleport` 等属于 runtime behavior / interaction
+pattern，不作为页面业务复杂度分类依据。
+
+11.2.4 使用组合模型：
+
+```text
+业务页面复杂度
+×
+运行条件矩阵
+×
+runtime behavior
+```
+
+每个 scenario 应同时标明：
+
+- business complexity。
+- runtime conditions。
+- runtime behavior / interaction pattern。
+- current MVP expected observation。
+- future expected observation。
+
+`very_complex_business_page` 当前只进入 scenario catalog，不进入 11.2.4.1 -
+11.2.4.5 的近期实现范围。它们需要后续单独拆包设计。
+
+运行条件是横向变体，可以叠加到 `simple_business_page`、
+`medium_business_page`、`complex_business_page` 和
+`very_complex_business_page` 上，不作为页面类型。
+
 ## Scenario Catalog Contract
 
 每个 scenario 至少包含：
@@ -35,7 +75,8 @@ scenario_id
 platform
 page_type
 business_domain
-complexity
+business_complexity
+runtime_conditions
 interaction_pattern
 runtime_behavior
 frontend_fixture_needed
@@ -49,10 +90,13 @@ future_package
 字段语义：
 
 - `platform`：`pc`、`mobile` 或 `both`。
-- `complexity`：`simple`、`medium`、`complex`、`very_complex`。
+- `business_complexity`：`simple_business_page`、`medium_business_page`、
+  `complex_business_page` 或 `very_complex_business_page`。
+- `runtime_conditions`：横向运行条件变体，例如 normal network、slow
+  network、timeout、validation error、server error、empty result。
 - `current_mvp_expected_observation`：只能写当前 11.2.2 / 11.2.3 已支持能力。
 - `future_expected_observation`：可以写未来 signal 或 component relation 方向，但必须标注未实现。
-- `backend_fixture_needed`：说明该场景是否需要 Phase 2 mock backend。
+- `backend_fixture_needed`：说明该场景是否需要 11.2.4.5 mock backend。
 
 ## Fixture Contract
 
@@ -216,4 +260,4 @@ response。
 ## 未决问题
 
 - 具体 11.2.4.x 实现包边界：由本轮 `plan.md` 建议，后续执行前再审核。
-- Phase 1 route 命名：后续实现包可按 `technical-design.md` 建议确认。
+- 11.2.4.1 route shell 命名：后续实现包可按 `technical-design.md` 建议确认。

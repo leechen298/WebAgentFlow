@@ -43,35 +43,97 @@
 
 ### 11.2.4.0 · Scenario Catalog Finalization
 
-完成 PC / mobile scenario catalog，确认每个 scenario 的 platform、page type、
-complexity、interaction pattern、current MVP limit 和 future observation。
+整理并固化 realistic scenario catalog。输出业务页面复杂度、运行条件矩阵、
+runtime behavior catalog、PC / mobile business page catalog、fixture phase mapping
+和 current MVP / future observation boundary。
+
+本轮只整理 catalog：
+
+- 不创建 validation-site 页面。
+- 不创建 mock backend。
+- 不新增 E2E。
+- 不改 validation-site routes。
+
+11.2.4.0 完成后，下一步建议进入 11.2.4.1 Single-page Runtime Fixture Shell。
 
 ### 11.2.4.1 · Single-page Runtime Fixture Shell
 
 建立 runtime observation fixture index 和基础 route。目标是让后续所有 fixture 有统一入口、
 reset 模式和 stable anchors。
 
-### 11.2.4.2 · Single-page Basic Interactions
+只建立：
 
-实现 toast、modal、validation message、button enabled / disabled、component surface
-等单页面基础交互。
+- runtime observation fixture index。
+- route shell。
+- category navigation。
+- reset convention。
+- stable anchor convention。
 
-### 11.2.4.3 · Single-page Async Interactions
+不实现具体业务页面。
 
-实现 loading、delayed search、partial refresh、same-url reload、empty state 和
-timer-based error surface。该阶段使用前端 timer，不代表真实 HTTP evidence。
+### 11.2.4.2 · Single-page Basic Business Pages
 
-### 11.2.4.4 · Mobile Single-page Patterns
+实现 simple business pages 的单页面前端 fixture：
 
-实现 mobile picker、action sheet、bottom sheet、mobile toast、mobile dialog、
-scroll / refresh 基础模式。
+- login。
+- register。
+- sms_login。
+- simple_search。
+- simple_detail。
+- simple_settings。
+- simple_confirm。
 
-### 11.2.4.5 · Mock Backend Runtime Fixtures
+可以使用 deterministic frontend timer 模拟 loading、validation、visible error surface
+和 empty state。
+
+### 11.2.4.3 · Single-page Medium Business Pages
+
+实现 medium business pages 的单页面前端 fixture：
+
+- user_list。
+- order_list。
+- product_list。
+- table_management。
+- create_edit_form。
+- file_upload。
+- export_download。
+
+先用本地前端状态模拟，不接真实 mock backend。
+
+### 11.2.4.4 · Single-page Complex Business Pages
+
+实现 complex 单页面业务：
+
+- dynamic_form。
+- wizard_stepper。
+- batch_operation。
+- master_detail。
+- view_edit_preview_mode_switch。
+- permission_conditional_ui。
+- conditional_fields。
+
+very_complex business pages 当前只进入 scenario catalog，不进入 11.2.4.1 - 11.2.4.5
+的近期实现范围。
+
+### 11.2.4.5 · Mock Backend Runtime Conditions
 
 引入 mock API driven scenarios，覆盖 slow response、server validation、error status、
 polling、async job、upload、export、download unavailable。
 
-### 11.2.4.6 · E2E Evidence and Review
+### 11.2.4.6 · Mobile Single-page Patterns
+
+实现移动端单页面：
+
+- mobile_login_sms。
+- mobile_search。
+- mobile_list。
+- mobile_form。
+- mobile_picker。
+- mobile_action_sheet。
+- mobile_pull_to_refresh。
+- mobile_infinite_scroll。
+
+### 11.2.4.7 · E2E Evidence and Review
 
 补 scoped E2E 和 evidence 文档。必须记录实际命令、入口 URL、截图 / 日志 / exit code，
 不得把未运行项写成通过。
@@ -91,11 +153,16 @@ find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name
 
 - [ ] 只出现文档变更。
 - [ ] 新增完整 11.2.4 文档包。
+- [ ] `contract.md` 包含 Business Complexity Contract。
+- [ ] 业务页面复杂度 × 运行条件矩阵 × runtime behavior 模型清楚。
 - [ ] PC / mobile scenario catalog 都存在。
+- [ ] Runtime Condition Matrix 和 Runtime Behavior Catalog 都存在。
 - [ ] 网络延迟 / 错误场景纳入规划。
-- [ ] simple / medium / complex / very complex 分层清楚。
-- [ ] Phase 1 明确单页面 fixture，不要求后端。
-- [ ] Phase 2 明确 mock backend。
+- [ ] simple / medium / complex / very_complex 按业务页面复杂度分层。
+- [ ] 不把 toast / modal / loading 等技术行为当成页面业务复杂度。
+- [ ] 11.2.4.1 明确只建立 fixture shell。
+- [ ] 11.2.4.2 / 11.2.4.3 / 11.2.4.4 按 basic / medium / complex business pages 拆包。
+- [ ] 11.2.4.5 明确 mock backend runtime conditions。
 - [ ] 当前 MVP vs future observation signals 边界清楚。
 - [ ] 不依赖外部真实网站。
 - [ ] 不接 Task Result Reporter。
