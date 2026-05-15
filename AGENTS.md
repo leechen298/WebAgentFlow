@@ -88,6 +88,16 @@ WebAgentFlow into their own systems or operator consoles through CLI / API.
 
 Deep architecture / history: [`docs/architecture.md`](./docs/architecture.md).
 
+## Iteration Documentation Gate
+
+Use `docs/iterations/README.md` as the per-iteration documentation standard.
+For non-trivial code iterations, do not implement before
+`technical-design.md` exists and has been reviewed. Code iterations must keep
+`intent.md`, `contract.md`, `technical-design.md`, `plan.md`, and `review.md`
+together in the same milestone iteration package. Documentation-only
+iterations may omit `technical-design.md`, but must still document contract
+changes when concepts, states, fields, or boundaries change.
+
 ## AI Coding Agent — Execution Boundary (HARD RULE)
 
 WebAgentFlow IS an autonomous web-operation engine with its own internal
@@ -410,8 +420,9 @@ All responses: `{"code": 0, "msg": "ok", "data": {...}}` via
   for new contributors).
 - [`docs/iterations/README.md`](./docs/iterations/README.md) —
   **per-iteration doc convention** (milestone-scoped folders with
-  `intent.md` / `plan.md` / `review.md`). Write `intent.md` before
-  starting non-trivial work; the `codex-review` skill reads these as
-  context.
+  `intent.md` / `contract.md` / `technical-design.md` / `plan.md` /
+  `review.md`). Write `intent.md` and the required design docs before
+  starting non-trivial work; code iterations require reviewed
+  `technical-design.md` before implementation.
 - [`CLAUDE.md`](./CLAUDE.md) — primary English reference.
 - [`CLAUDE.zh.md`](./CLAUDE.zh.md) — Chinese mirror.

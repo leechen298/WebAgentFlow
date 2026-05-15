@@ -84,6 +84,14 @@ CLI 术语：
 
 深度架构 / 演进：[`docs/architecture.zh.md`](./docs/architecture.zh.md)。
 
+## 迭代文档门禁
+
+以 `docs/iterations/README.md` 作为每轮迭代的文档标准。凡是非平凡代码迭代，
+在 `technical-design.md` 生成并审核前，不得进入代码实现。代码型迭代必须把
+`intent.md`、`contract.md`、`technical-design.md`、`plan.md`、`review.md`
+放在同一个里程碑迭代包里。文档型迭代可以不写 `technical-design.md`，但只要
+涉及概念、状态、字段或边界变化，就必须写清楚 `contract.md`。
+
 ## AI 编码 Agent —— 执行边界（硬约束）
 
 WebAgentFlow **本身就是**一个自主 web 操作引擎，内置有项目自己的
@@ -388,7 +396,8 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   搭建步骤（比上面的"常用命令"更详细，面向新 contributor）。
 - [`docs/iterations/README.md`](./docs/iterations/README.md) ——
   **迭代文档规范**（按里程碑组织目录，每次迭代留 `intent.md` /
-  `plan.md` / `review.md` 三件套）。开始一轮非平凡工作前先写 `intent.md`；
-  `codex-review` skill 会自动把这些作为上下文喂给 Codex。
+  `contract.md` / `technical-design.md` / `plan.md` / `review.md`）。
+  开始一轮非平凡工作前先写 `intent.md` 和必要设计文档；代码型迭代必须在
+  `technical-design.md` 审核后才能进入实现。
 - [`CLAUDE.md`](./CLAUDE.md) —— 英文原版。
 - [`AGENTS.md`](./AGENTS.md) —— 给 Codex 等 AI 编码 Agent 的版本。
