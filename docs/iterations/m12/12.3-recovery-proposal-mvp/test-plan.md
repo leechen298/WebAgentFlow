@@ -9,7 +9,7 @@
 ## 测试范围（Test Scope）
 
 - Unit：implemented。覆盖 deterministic recovery proposal generator。
-  35 tests passed（commit `b139aab`）。
+  36 tests passed（12.3 implementation plus schema-polish review fix）。
 - Integration：N/A for 12.3 implementation MVP；不接 conversation flow、API 或 DB。
 - API：N/A；12.3 不新增 route 或 response contract。
 - Console UI：N/A；12.3 不新增 UI。
@@ -28,7 +28,7 @@
 | Unit | needs_review boundary | `pytest tests/test_recovery_proposal.py` | Emits `review_evidence`. | Yes | Keeps evidence refs. |
 | Unit | abort `accepted_stop` | `pytest tests/test_recovery_proposal.py` | Emits `abandon_task`, `review_evidence`, or later handoff options without execution. | Yes | Preserves no-new-action boundary. |
 | Unit | abort `cannot_interrupt_inflight_action` | `pytest tests/test_recovery_proposal.py` | Emits `review_evidence` with side-effects-unknown risk hint. | Yes | Does not promise rollback. |
-| Unit | all options non-executable | `pytest tests/test_recovery_proposal.py` | Every option has `non_executable=true`. | Yes | Default must be stable. |
+| Unit | all options non-executable | `pytest tests/test_recovery_proposal.py` | Every option has `non_executable=true`; schema rejects `non_executable=false`. | Yes | Boundary is schema-enforced, not only generator discipline. |
 | Unit | recommended option is not auto-selected | `pytest tests/test_recovery_proposal.py` | Output has no selected option state. | Yes | `recommended != selected`. |
 | Unit | no `selected_option_id` | `pytest tests/test_recovery_proposal.py` | Proposal schema/output has no `selected_option_id` or equivalent. | Yes | Allows `recommended_option_ids`, `rank`, `priority`. |
 | Unit | retry option handoff only | `pytest tests/test_recovery_proposal.py` | Retry-related output is only `consider_retry_later` and requires 12.4 policy. | Yes | No retry command. |

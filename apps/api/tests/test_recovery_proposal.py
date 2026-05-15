@@ -5,6 +5,9 @@ from __future__ import annotations
 import copy
 import inspect
 
+import pytest
+from pydantic import ValidationError
+
 from app.schemas.recovery import RecoveryProposalOption
 from app.services.recovery import proposal as proposal_module
 from app.services.recovery.proposal import (
@@ -222,6 +225,16 @@ def test_all_options_non_executable_abort() -> None:
                 f"Option {opt.kind} from decision={decision} "
                 f"should be non_executable"
             )
+
+
+def test_option_schema_rejects_executable_false() -> None:
+    with pytest.raises(ValidationError):
+        RecoveryProposalOption(
+            kind="review_evidence",
+            title="Review evidence",
+            description="Review preserved evidence before choosing a next step.",
+            non_executable=False,
+        )
 
 
 # ------------------------------------------------------------------

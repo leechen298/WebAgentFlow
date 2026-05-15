@@ -37,7 +37,8 @@
 
 - 新增 `apps/api/app/services/recovery/proposal.py` — deterministic
   `RecoveryProposalGenerator`。
-- 新增 `apps/api/tests/test_recovery_proposal.py` — 35 unit tests。
+- 新增 `apps/api/tests/test_recovery_proposal.py` — 36 unit tests after
+  schema-polish review fix。
 - `apps/api/app/schemas/recovery.py` — 新增 `RecoveryProposal`、
   `RecoveryProposalOption`、`RecoveryProposalKind`、`ProposalSource`、
   `ProposalRiskHint`、`ProposalConfirmationRequirement`、`ProposalOwner`。
@@ -72,9 +73,9 @@ execution。不产生 `run_id`。
 
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
 |---|---|---|---|---|---|---|
-| `pytest tests/test_recovery_proposal.py -v` | 35 passed | 35 passed | 0 | PASS | command output | Proposal unit tests. |
+| `pytest tests/test_recovery_proposal.py -v` | 36 passed | 36 passed | 0 | PASS | command output | Proposal unit tests. |
 | `pytest tests/test_recovery_classifier.py tests/test_user_abort_handler.py -v` | 38 passed | 38 passed | 0 | PASS | command output | Regression: 12.1 + 12.2 tests. |
-| `pytest ... (all 3 combined)` | 73 passed | 73 passed | 0 | PASS | command output | Full recovery suite. |
+| `pytest ... (all 3 combined)` | 74 passed | 74 passed | 0 | PASS | command output | Full recovery suite. |
 | `ruff check ...` | All checks passed | All checks passed | 0 | PASS | command output | Lint clean. |
 | `git branch --show-current` | `v0.2-local` | `v0.2-local` | 0 | PASS | command output | Branch gate. |
 | `test -d docs/iterations/m12/12.3-recovery-proposal-mvp` | EXISTS | EXISTS | 0 | PASS | command output | Design docs on branch. |
@@ -95,6 +96,6 @@ execution。不产生 `run_id`。
 - 12.4 retry policy 和 12.5 conversation flow 可基于 12.3 proposal schema 继续。
 - `recommended_option_kinds` 当前更像 display order；12.5 接入时可考虑改名为
   `display_order_kinds` 或在 docs/tests 中明确它只是排序/强调。
-- `non_executable` 当前是默认值而非 schema 强约束；后续可改为 `Literal[True]` 或加
-  validator。
+- `non_executable` 已升级为 schema-level `Literal[True]`，并用单元测试锁住
+  `non_executable=false` 会被拒绝。
 - 12.0 / 12.1 / 12.2 历史包仍是旧四件套；是否按新模板回填由后续文档治理任务决定。

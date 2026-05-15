@@ -21,14 +21,14 @@
   - deterministic 12.3 recovery proposal generator（commit `b139aab`）
 - `apps/api/tests/test_recovery_classifier.py`
 - `apps/api/tests/test_user_abort_handler.py`
-- `apps/api/tests/test_recovery_proposal.py`（35 tests, commit `b139aab`）
+- `apps/api/tests/test_recovery_proposal.py`（36 tests; 12.3 implementation plus schema-polish review fix）
 
 ## 合约对齐 / 不变量（Contract Alignment / Invariants）
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
 | Proposal is not execution. | `RecoveryProposalGenerator` returns pure data object only. | `test_recovery_proposal.py`: non-execution / forbidden dependency tests. | No command field, no browser action field. |
-| Proposal option defaults to `non_executable=true`. | `RecoveryProposalOption` schema default and unit tests. | `test_recovery_proposal.py`: all options non-executable. | Default must not depend on caller. |
+| Proposal option is `non_executable=true`. | `RecoveryProposalOption.non_executable` is constrained as `Literal[True]`. | `test_recovery_proposal.py`: all options non-executable and schema rejects `False`. | Boundary must not depend on caller discipline. |
 | Recommended option is not selected option. | Schema exposes `recommended_option_kinds` for display emphasis, no `selected_option_id`. | `test_recovery_proposal.py`: no selected-state field and recommended not auto-selected. | User confirmation belongs to 12.5 flow. |
 | `consider_retry_later` is not retry. | Generator maps retry-compatible boundary to proposal kind only. | `test_recovery_proposal.py`: retry option is handoff-only. | 12.4 owns retry policy. |
 | `suggest_reteach` is not LearnedPath write-back. | Generator only emits handoff option. | `test_recovery_proposal.py`: no write-back dependency. | Teaching / path update is later work. |
@@ -41,7 +41,7 @@ Implemented in commit `b139aab`:
 
 - schema definitions in `apps/api/app/schemas/recovery.py`
 - deterministic proposal generator in `apps/api/app/services/recovery/proposal.py`
-- focused unit tests in `apps/api/tests/test_recovery_proposal.py`（35 tests）
+- focused unit tests in `apps/api/tests/test_recovery_proposal.py`（36 tests）
 
 The proposal generator accepts either:
 
@@ -69,7 +69,7 @@ replan execution, or LearnedPath write-back.
 | Replay execution | No | No replay command or continuation. | Replay semantics unchanged. |
 | Reporter | No | No Task Result Reporter changes. | Reporter output remains upstream evidence. |
 | Worker / async jobs | No | No worker path. | Async behavior unchanged. |
-| Tests / fixtures | Yes | `test_recovery_proposal.py` — 35 unit tests. | No E2E or live run. |
+| Tests / fixtures | Yes | `test_recovery_proposal.py` — 36 unit tests. | No E2E or live run. |
 | Docs | Yes | Design package + implementation evidence. | Status synced to implemented. |
 
 ## 数据模型 / Schema 变更（Data Model / Schema Changes）
@@ -87,7 +87,7 @@ Schema additions（commit `b139aab`）:
 Expected properties:
 
 - `RecoveryProposal.options` contains display options only.
-- Each option has `non_executable=true` by default.
+- Each option has `non_executable=true`; the schema rejects `False`.
 - No `selected_option_id` or equivalent selected-state field.
 - Optional `recommended_option_ids`, `rank`, or `priority` can express display
   ordering or emphasis only.
@@ -211,7 +211,7 @@ Fallback: if source evidence is insufficient or unsupported, emit
 Implementation ran focused unit and static checks:
 
 ```bash
-# Unit tests（73 passed — 35 proposal + 19 classifier + 19 abort handler）
+# Unit tests（74 passed — 36 proposal + 19 classifier + 19 abort handler）
 cd apps/api && .venv/bin/pytest tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py -v
 
 # Lint

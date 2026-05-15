@@ -31,7 +31,8 @@
 - `apps/api/app/schemas/recovery.py` - 新增 proposal schema definitions。
 - `apps/api/app/services/recovery/proposal.py` - 新增 deterministic proposal generator。
 - `apps/api/app/services/recovery/__init__.py` - 新增 proposal generator 导出。
-- `apps/api/tests/test_recovery_proposal.py` - 新增 35 unit tests。
+- `apps/api/tests/test_recovery_proposal.py` - 36 unit tests after
+  schema-polish review fix。
 
 **Round 3 — Docs sync（commit `f37eeba`）:**
 
@@ -87,7 +88,7 @@
 
 | Command | Expected proof | Notes |
 |---|---|---|
-| `pytest tests/test_recovery_proposal.py -v` | 35 passed | Proposal unit tests. |
+| `pytest tests/test_recovery_proposal.py -v` | 36 passed | Proposal unit tests. |
 | `pytest tests/test_recovery_classifier.py tests/test_user_abort_handler.py -v` | 38 passed | 12.1 / 12.2 regression. |
 | `ruff check ...` | All checks passed | Lint clean. |
 
@@ -105,6 +106,6 @@
 - [x] `test-plan.md` 已存在并与技术设计 Test Matrix 一致。
 - [x] plan 验证表格引用 `technical-design.md` 和 `test-plan.md`。
 - [x] 12.3 已实现 proposal schema / generator / tests（`b139aab`）。
-- [x] 73 tests passed, ruff clean。
+- [x] 74 tests passed, ruff clean。
 - [x] API / CLI / DB / frontend / E2E / live run 不在本轮范围。
 - [x] 验证命令已执行并记录到 `review.md`，未运行项写明 not run / unverified。

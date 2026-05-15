@@ -46,8 +46,9 @@ deterministic proposal generator 和 focused unit tests。
 - [x] `plan.md` 与 contract / technical design 一致。
 - [x] `review.md` 已记录设计包对齐的验证证据和未运行项。
 
-Design package alignment 和代码实现均已完成（commit `b139aab`）。
-73 tests passed, ruff clean。API / CLI / E2E / live run 不在本轮范围。
+Design package alignment 和代码实现均已完成（commit `b139aab`，后续
+schema-polish review fix 加固 `non_executable` 契约）。
+74 tests passed, ruff clean。API / CLI / E2E / live run 不在本轮范围。
 
 ## 核心原则
 

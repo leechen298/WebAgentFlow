@@ -217,16 +217,16 @@ ProposalOwner = Literal[
 class RecoveryProposalOption(BaseModel):
     """A single recovery proposal option for user display.
 
-    non_executable=True by default. Options are presentation-only and must not
+    non_executable is always True. Options are presentation-only and must not
     trigger browser actions, retry, replan, or write-back.
     """
 
     kind: RecoveryProposalKind
     title: str
     description: str
-    non_executable: bool = Field(
+    non_executable: Literal[True] = Field(
         default=True,
-        description="Always true for MVP. Options are display-only.",
+        description="Always true. Recovery proposal options are display-only.",
     )
     evidence_refs: list[EvidenceReference] = Field(default_factory=list)
     risk_hints: list[ProposalRiskHint] = Field(default_factory=list)
