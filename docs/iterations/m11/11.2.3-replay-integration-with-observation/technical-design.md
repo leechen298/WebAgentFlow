@@ -47,11 +47,13 @@ aggregation 的概念、字段 proposal 和 status。本文档只定义后续实
 3. 新增 `apps/api/app/services/learning/replay_observation.py`，实现
    `build_replay_observation_summary(...)`。
 4. 在 `run_replay()` 构造最终 `ReplayResult` 前，从 steps 聚合 summary。
-5. 对 precheck blocked / drifted / candidate missing 等没有 steps 的结果，保持兼容；
-   可不生成 summary，或生成 `not_applicable` summary，具体以实现包的最小侵入为准。
-6. 不改变 `ReplayResult.status`。
-7. 不调用 Task Result Reporter。
-8. 不做 recovery / retry / abort。
+5. 对 precheck blocked / drifted / unsupported / candidate missing 等未进入
+   action execution 的结果，不生成 `observation_summary`，保持为 `None`。
+6. 对已进入 replay 流程但 `actions=[]` 的 observational path，生成
+   `status=not_applicable` 的 `observation_summary`。
+7. 不改变 `ReplayResult.status`。
+8. 不调用 Task Result Reporter。
+9. 不做 recovery / retry / abort。
 
 ## 影响面（Affected Surfaces）
 
@@ -256,6 +258,8 @@ else:
 - 旧 `ReplayStepLog` 没有 `wait_result` 时仍合法。
 - 若 steps 中没有任何 `wait_result`，summary 可返回 `no_primary_observation`，并通过
   `wait_result_count=0` 表示旧数据或未接入状态。
+- Precheck blocked / drifted / unsupported / candidate missing 等未进入 action
+  execution 的结果不生成 `observation_summary`，保持为 `None`。
 - `actions=[]` observational path 应为 `not_applicable`。
 - 全部 `not_required` 应为 `not_applicable`。
 - `skipped only` 应为 `no_primary_observation`，不是失败，也不是 `not_applicable`。

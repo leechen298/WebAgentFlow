@@ -51,7 +51,8 @@ schema、aggregation 和 compatibility，因此必须维护测试计划。
 | replay integration | replay status unchanged | `tests/test_learned_path_replay.py` | observation summary does not alter `ReplayResult.status` | Yes | core invariant |
 | replay integration | failed replay may carry summary | `tests/test_learned_path_replay.py` | failure semantics unchanged | Yes | summary is diagnostic evidence |
 | replay integration | wait service exception produced skipped wait result | `tests/test_learned_path_replay.py` | summary aggregates skipped safely | Yes | follows 11.2.2 behavior |
-| replay integration | blocked / drifted precheck without steps | `tests/test_learned_path_replay.py` | summary omitted or `not_applicable`, matching implementation choice | Yes | must match technical-design |
+| replay integration | blocked / drifted precheck without action execution | `tests/test_learned_path_replay.py` | `observation_summary is None` | Yes | no observation window exists |
+| replay integration | `actions=[]` observational path | `tests/test_learned_path_replay.py` | `observation_summary.status == not_applicable` | Yes | legal replay result with no action steps |
 | boundary | reporter not called | `tests/test_replay_observation_summary.py` or patch assertions | no Task Result Reporter import/call | Yes | 11.2.5 only |
 | boundary | recovery / retry / abort not called | `tests/test_replay_observation_summary.py` or import boundary checks | no recovery side effects | Yes | M12 only |
 | boundary | Page Understanding Agent not called | `tests/test_replay_observation_summary.py` or import boundary checks | no Page Understanding Agent dependency | Yes | M14 / L1 only |
