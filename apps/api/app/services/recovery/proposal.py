@@ -312,7 +312,7 @@ class RecoveryProposalGenerator:
             return self._from_abort(abort)
         # Unknown shape: conservative review
         return RecoveryProposal(
-            source="recovery_boundary",
+            source="unknown_input",
             options=[self._option(
                 kind="review_evidence",
                 title="Review current evidence",

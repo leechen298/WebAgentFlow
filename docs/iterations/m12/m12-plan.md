@@ -1,6 +1,8 @@
 # M12 Plan
 
-Status: documentation initialized.
+Status: in progress.
+
+Current package: 12.4 Retry / re-run policy planning.
 
 ## Goal
 
@@ -80,8 +82,8 @@ Close M12 with deterministic tests, conversation/event evidence, and static
 review that prove no hidden recovery, no hidden relearning, and no browser
 continuation without user consent.
 
-12.3 creates only `12.3-recovery-proposal-mvp`. Do not create `12.4-*` or
-later detail directories in this round.
+12.3 is implemented. The next package should start with 12.4 documentation
+planning before implementation.
 
 ## Decision Rules
 

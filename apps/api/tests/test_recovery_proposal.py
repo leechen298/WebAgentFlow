@@ -605,6 +605,7 @@ def test_proposal_does_not_import_classifier() -> None:
 def test_unknown_source_shape_returns_conservative_review() -> None:
     result = generate({"foo": "bar", "baz": 123})
 
+    assert result.source == "unknown_input"
     assert len(result.options) == 1
     assert result.options[0].kind == "review_evidence"
     assert "unrecognized" in result.options[0].description.lower()

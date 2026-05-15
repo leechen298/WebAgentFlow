@@ -178,6 +178,7 @@ class AbortAcknowledgement(BaseModel):
 ProposalSource = Literal[
     "recovery_boundary",
     "abort_acknowledgement",
+    "unknown_input",
 ]
 
 RecoveryProposalKind = Literal[
