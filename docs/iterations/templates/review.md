@@ -28,9 +28,25 @@ Status: in_progress
 
 - <Deviation and reason, or `None`.>
 
+### WebAgentFlow Live Run Boundary
+
+Unless the user explicitly requests a live run, do not trigger
+`verify-scenario`, autonomous runs, or product-driven browser execution.
+
+If a live run is explicitly requested, record:
+
+- invocation surface;
+- run_id;
+- pass_gate.status;
+- supervisor verdict;
+- scorecard;
+- whether the run was product-initiated UI traffic or skill invocation.
+
 ### Validation Evidence
 
-- `<command>` -> <result summary>
+| Command | Expected | Actual result | Exit code | Pass / Fail / Skip | Notes |
+|---|---|---|---|---|---|
+| `<command>` | `<expected>` | `<actual>` | `<0/1/...>` | `<counts>` | `<reason if failed/not run>` |
 
 ### Follow-ups
 

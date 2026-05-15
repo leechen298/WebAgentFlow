@@ -51,11 +51,12 @@ docs/iterations/
 ### 文档型迭代
 
 用于 roadmap、product model、scope、文档治理、方案讨论等不改运行时代码的工作。
+文档型迭代可以不写 `technical-design.md`。
 
 ```
 README.md
 intent.md
-contract.md      # 涉及概念、状态、字段、边界时必须有；否则写明 N/A
+contract.md      # 涉及概念、状态、字段、边界时必须有；否则写明 N/A 并说明原因
 plan.md
 review.md
 ```
@@ -73,6 +74,11 @@ technical-design.md
 plan.md
 review.md
 ```
+
+### 混合型迭代
+
+只要同一轮同时包含文档治理和任何代码 / schema / API / service / UI / CLI / 测试 /
+迁移改动，就按**代码型迭代**处理，必须通过 `technical-design.md` 门禁。
 
 核心区别：
 
@@ -160,7 +166,15 @@ review.md
 - 和现有 product model、scope boundary、roadmap 的关系；
 - 明确不改变的旧契约。
 
-如果确实没有契约变化，也要写 `No contract changes`，并说明原因。
+必须显式回答：
+
+- 是否改变 product lifecycle stage、internal Agent role、milestone boundary；
+- 如果改变，先更新哪些权威文档；
+- 哪些 public API、database schema、replay status semantics、reporter / recovery / abort
+  boundary 保持不变。
+
+如果确实没有契约变化，也要写 `No contract changes` 或 `N/A`，并说明原因。空白或隐式省略
+不算完成。
 
 ### technical-design.md（代码型迭代必填；定义“怎么实现”）
 
@@ -172,8 +186,15 @@ review.md
 ## Current State
 当前已有代码、schema、service、测试是什么。
 
+## Contract Alignment / Invariants
+contract.md 中的关键状态、边界、兼容性、非目标，如何落实到实现机制和测试。
+
 ## Proposed Implementation
 本轮具体怎么实现。
+
+## Affected Surfaces
+哪些入口面会改变：API、response schema、DB、CLI、Console UI、conversation events、
+replay、reporter、worker、tests / fixtures、docs。
 
 ## Data Model / Schema Changes
 新增或修改哪些 schema，是否向后兼容。
@@ -204,7 +225,9 @@ review.md
 ```
 
 技术设计不是最终实现的重复描述。它要先把语义边界、状态推导、兼容性和测试矩阵钉住，
-防止后续实现变成“能跑，但语义歪了也能跑”。
+防止后续实现变成“能跑，但语义歪了也能跑”。代码型迭代的 `technical-design.md` 必须
+包含 contract alignment：`contract.md` 里的关键状态、边界、兼容性规则、非目标，
+都要映射到实现机制和测试覆盖；无法映射时必须写 `N/A` 并说明原因。
 
 ### plan.md（动手前写；随实际工作修订）
 
@@ -212,7 +235,8 @@ review.md
 
 1. **要动的文件和模块** —— 列表，不含大段代码。
 2. **步骤** —— 顺序化的工作拆分，每步应该能独立验证。
-3. **验证** —— 运行哪些命令，如何对应成功标准和测试矩阵。
+3. **验证** —— 运行哪些命令，如何对应成功标准和测试矩阵，并说明 live autonomous
+   verification 是否被明确排除。
 
 计划在执行中**允许修订**。如果中途发现原计划错了，在这个文件里更新，不要另开文档。
 
@@ -224,6 +248,12 @@ review.md
 2. **用户反馈**：人工审核里用户提出的关键意见，记一句话 + 是否采纳。
 3. **最终差异**：迭代收尾时回看一次：和 intent / contract / technical-design / plan 相比，
    实际做出来的有什么偏离？为什么？
+
+验证证据必须记录 command、expected、actual result、exit code、pass / fail / skip count
+和未运行原因。除非用户明确要求 live run，不得触发 `verify-scenario`、autonomous run
+或产品驱动的浏览器执行。若用户明确要求 live run，必须记录 invocation surface、`run_id`、
+`pass_gate.status`、supervisor verdict、scorecard，以及它是 product UI traffic 还是 skill
+invocation。
 
 ## 与其他文档的关系
 
@@ -273,6 +303,7 @@ review.md
 1. **intent 先行**：没有 `intent.md` 就不要开始写代码。哪怕只有两句话也行。
 2. **contract 先钉语义**：涉及概念、字段、状态、边界、evidence、Agent / Reporter / recovery
    语义时，先写 `contract.md`。
-3. **technical-design 门禁**：非平凡代码迭代在 `technical-design.md` 生成并审核前，不得进入实现。
+3. **technical-design 门禁**：非平凡代码迭代在包含 contract alignment 的
+   `technical-design.md` 生成并审核前，不得进入实现。
 4. **review 当天写**：不要拖到“以后再补”。用户反馈和收尾反思要当天写进 `review.md`。
 5. **不删历史**：迭代做废了、方案推翻了，更新 `review.md` 说明为什么放弃，但**不要删**目录。

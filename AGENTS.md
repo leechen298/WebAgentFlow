@@ -97,6 +97,8 @@ For non-trivial code iterations, do not implement before
 together in the same milestone iteration package. Documentation-only
 iterations may omit `technical-design.md`, but must still document contract
 changes when concepts, states, fields, or boundaries change.
+Code iterations must include reviewed `technical-design.md` with contract
+alignment before implementation.
 
 ## AI Coding Agent — Execution Boundary (HARD RULE)
 

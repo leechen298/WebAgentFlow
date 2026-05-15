@@ -91,6 +91,8 @@ CLI 术语：
 `intent.md`、`contract.md`、`technical-design.md`、`plan.md`、`review.md`
 放在同一个里程碑迭代包里。文档型迭代可以不写 `technical-design.md`，但只要
 涉及概念、状态、字段或边界变化，就必须写清楚 `contract.md`。
+代码型迭代必须包含已审核、且带 contract alignment 的 `technical-design.md`，
+然后才能进入实现。
 
 ## AI 编码 Agent —— 执行边界（硬约束）
 
