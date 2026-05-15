@@ -8,7 +8,7 @@
 12.2 `AbortAcknowledgement` 转成可展示给用户的恢复选项，同时保持 proposal 与
 execution 完全分离。
 
-本轮只完成实现前设计包，不写代码。
+已实现 proposal schema、deterministic generator 和 unit tests。
 
 ## Motivation
 
@@ -41,8 +41,8 @@ M12 已经形成两个安全边界：
 - proposal non-execution contract；
 - proposal confirmation requirement marker；
 - proposal display boundary；
-- deterministic proposal generator design；
-- future unit test matrix；
+- deterministic proposal generator；
+- unit test matrix；
 - handoff to 12.4 retry policy；
 - handoff to 12.5 conversation flow。
 
@@ -74,12 +74,12 @@ M12 已经形成两个安全边界：
 - 文档明确 `Proposal is not execution` 和 `Proposal is not command`。
 - 文档明确所有 proposal options 默认 `non_executable=true`。
 - 文档明确 recommended option 不是 selected option。
-- 文档明确未来 schema 不设计 `selected_option_id`。
+- schema 不设计 `selected_option_id`。
 - 文档明确 `consider_retry_later` 不是 retry，12.4 才定义 retry policy。
 - 文档明确 `suggest_reteach` 不是 hidden relearning 或 LearnedPath write-back。
 - 文档明确 `wait_for_runtime_observation_later` 不是 M11.2 实现。
-- `technical-design.md` 只设计未来实现，不创建代码。
-- `test-plan.md` 覆盖 recovery proposal future unit matrix，并明确 API / UI / E2E /
+- `technical-design.md` 记录实现设计和实际文件。
+- `test-plan.md` 覆盖 recovery proposal unit matrix，并明确 API / UI / E2E /
   live run 不在本轮执行。
 - `plan.md` 的验证表格引用 `technical-design.md` 和 `test-plan.md`。
 - `review.md` 按实际运行结果记录 validation evidence 和未运行项。
