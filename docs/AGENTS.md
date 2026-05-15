@@ -23,18 +23,50 @@ Before changing iteration documents, read:
 3. `iterations/README.md`
 4. The relevant milestone index, for example `iterations/m10/README.md`
 5. The relevant milestone plan, for example `iterations/m10/m10-plan.md`
-6. The specific iteration `intent.md`, `plan.md`, and `review.md`
+6. The specific iteration documents, in order:
+   - `README.md`
+   - `intent.md`
+   - `contract.md`
+   - `technical-design.md` for code / mixed iterations
+   - `test-plan.md` for code / mixed iterations or triggered validation
+   - `plan.md`
+   - `review.md`
 
 Do not rely on an older chat summary when these files are cheap to read.
 
-## Iteration Docs Are A Set
+## Iteration Docs Are A Package
 
-For a real iteration, `intent.md`, `plan.md`, and `review.md` are a unit:
+For a real iteration, the iteration documents are a package:
 
+- `README.md` records iteration type, status, document inventory, and gate
+  status.
 - `intent.md` says why the work exists and what is out of scope.
+- `contract.md` defines concepts, states, schemas, evidence, and boundaries.
+- `technical-design.md` defines implementation design for code / mixed
+  iterations and must include contract alignment.
+- `test-plan.md` defines detailed validation for code / mixed iterations, or
+  whenever complex validation is triggered.
 - `plan.md` says how the work should be implemented and verified.
 - `review.md` records what actually happened, what changed from the plan,
-  what was verified, and any remaining risk.
+  what was verified, what was not run, and any remaining risk.
+
+When generating development documentation for a code or mixed iteration, create
+the full package from `iterations/templates/` before implementation:
+`README.md`, `intent.md`, `contract.md`, `technical-design.md`,
+`test-plan.md`, `plan.md`, and `review.md`. Do not create only
+`intent.md` + `plan.md` + `review.md`.
+
+Documentation-only iterations may omit `technical-design.md` and
+`test-plan.md` only when they do not prepare code implementation. If a docs-only
+iteration changes process rules, milestone semantics, Agent boundaries,
+evidence semantics, iteration templates, concepts, statuses, fields, or product
+boundaries, it must still include `contract.md`.
+
+When updating docs for a code implementation task, preserve the implementation
+gate: implementation Agents must read the current iteration documents first and
+implement according to `contract.md`, reviewed `technical-design.md`,
+`test-plan.md`, and `plan.md`. If the design is wrong or incomplete, update the
+relevant docs and get review before continuing implementation.
 
 Do not treat `review.md` as optional. If implementation work happened, the
 iteration is not closed until `review.md` reflects the actual outcome.
@@ -64,7 +96,9 @@ When adding, completing, renaming, or superseding an iteration under
 
 - `docs/iterations/m<N>/README.md`
 - `docs/iterations/m<N>/m<N>-plan.md` when it exists
-- The iteration's own `intent.md`, `plan.md`, and `review.md`
+- The iteration's own `README.md`, `intent.md`, `contract.md`,
+  `technical-design.md`, `test-plan.md`, `plan.md`, and `review.md` when
+  required by the iteration type
 - Any earlier summary or review that now contains misleading current-state
   wording
 
