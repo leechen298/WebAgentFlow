@@ -1,6 +1,6 @@
 # 12.3 Recovery Proposal MVP Test Plan
 
-状态：proposed
+状态：implemented
 
 ## 适用条件
 
@@ -8,12 +8,13 @@
 
 ## 测试范围（Test Scope）
 
-- Unit：future required。覆盖 deterministic recovery proposal generator。
+- Unit：implemented。覆盖 deterministic recovery proposal generator。
+  35 tests passed（commit `b139aab`）。
 - Integration：N/A for 12.3 implementation MVP；不接 conversation flow、API 或 DB。
 - API：N/A；12.3 不新增 route 或 response contract。
 - Console UI：N/A；12.3 不新增 UI。
 - E2E：not run / out of scope。
-- Agent / Reporter / Recovery：future unit-level recovery proposal tests。
+- Agent / Reporter / Recovery：unit-level recovery proposal tests 已实现。
 - Codex / AI External Operator：review only, not test。
 - Live autonomous run：explicitly excluded。
 
@@ -21,21 +22,21 @@
 
 | Layer | Scenario | Command / Surface | Expected | Required? | Notes |
 |---|---|---|---|---|---|
-| Unit | failure boundary -> review / retry / reteach options | future `pytest tests/test_recovery_proposal.py` | Emits `review_evidence`, `consider_retry_later`, or `suggest_reteach` according to boundary recommendation. | Yes | `consider_retry_later` is not retry. |
-| Unit | blocked boundary | future `pytest tests/test_recovery_proposal.py` | Emits `ask_user_for_context` with evidence refs. | Yes | No browser continuation. |
-| Unit | uncertain boundary | future `pytest tests/test_recovery_proposal.py` | Emits `review_evidence`. | Yes | Does not claim success. |
-| Unit | needs_review boundary | future `pytest tests/test_recovery_proposal.py` | Emits `review_evidence`. | Yes | Keeps evidence refs. |
-| Unit | abort `accepted_stop` | future `pytest tests/test_recovery_proposal.py` | Emits `abandon_task`, `review_evidence`, or later handoff options without execution. | Yes | Preserves no-new-action boundary. |
-| Unit | abort `cannot_interrupt_inflight_action` | future `pytest tests/test_recovery_proposal.py` | Emits `review_evidence` with side-effects-unknown risk hint. | Yes | Does not promise rollback. |
-| Unit | all options non-executable | future `pytest tests/test_recovery_proposal.py` | Every option has `non_executable=true`. | Yes | Default must be stable. |
-| Unit | recommended option is not auto-selected | future `pytest tests/test_recovery_proposal.py` | Output has no selected option state. | Yes | `recommended != selected`. |
-| Unit | no `selected_option_id` | future `pytest tests/test_recovery_proposal.py` | Proposal schema/output has no `selected_option_id` or equivalent. | Yes | Allows `recommended_option_ids`, `rank`, `priority`. |
-| Unit | retry option handoff only | future `pytest tests/test_recovery_proposal.py` | Retry-related output is only `consider_retry_later` and requires 12.4 policy. | Yes | No retry command. |
-| Unit | re-teach handoff only | future `pytest tests/test_recovery_proposal.py` | `suggest_reteach` does not write LearnedPath. | Yes | No hidden relearning. |
-| Unit | takeover handoff only | future `pytest tests/test_recovery_proposal.py` | `handoff_to_takeover_later` does not implement takeover. | Yes | Future owner only. |
-| Unit | runtime observation handoff only | future `pytest tests/test_recovery_proposal.py` | `wait_for_runtime_observation_later` does not implement M11.2. | Yes | No M11.2 dependency. |
-| Unit | input immutability | future `pytest tests/test_recovery_proposal.py` | Input `RecoveryBoundary` / `AbortAcknowledgement` is not mutated. | Yes | Pure generator. |
-| Unit | forbidden dependency scan | future `pytest tests/test_recovery_proposal.py` | No DB/browser/network/LLM/conversation dispatcher/retry execution/LearnedPath write-back imports. | Yes | Scope guard. |
+| Unit | failure boundary -> review / retry / reteach options | `pytest tests/test_recovery_proposal.py` | Emits `review_evidence`, `consider_retry_later`, or `suggest_reteach` according to boundary recommendation. | Yes | `consider_retry_later` is not retry. |
+| Unit | blocked boundary | `pytest tests/test_recovery_proposal.py` | Emits `ask_user_for_context` with evidence refs. | Yes | No browser continuation. |
+| Unit | uncertain boundary | `pytest tests/test_recovery_proposal.py` | Emits `review_evidence`. | Yes | Does not claim success. |
+| Unit | needs_review boundary | `pytest tests/test_recovery_proposal.py` | Emits `review_evidence`. | Yes | Keeps evidence refs. |
+| Unit | abort `accepted_stop` | `pytest tests/test_recovery_proposal.py` | Emits `abandon_task`, `review_evidence`, or later handoff options without execution. | Yes | Preserves no-new-action boundary. |
+| Unit | abort `cannot_interrupt_inflight_action` | `pytest tests/test_recovery_proposal.py` | Emits `review_evidence` with side-effects-unknown risk hint. | Yes | Does not promise rollback. |
+| Unit | all options non-executable | `pytest tests/test_recovery_proposal.py` | Every option has `non_executable=true`. | Yes | Default must be stable. |
+| Unit | recommended option is not auto-selected | `pytest tests/test_recovery_proposal.py` | Output has no selected option state. | Yes | `recommended != selected`. |
+| Unit | no `selected_option_id` | `pytest tests/test_recovery_proposal.py` | Proposal schema/output has no `selected_option_id` or equivalent. | Yes | Allows `recommended_option_ids`, `rank`, `priority`. |
+| Unit | retry option handoff only | `pytest tests/test_recovery_proposal.py` | Retry-related output is only `consider_retry_later` and requires 12.4 policy. | Yes | No retry command. |
+| Unit | re-teach handoff only | `pytest tests/test_recovery_proposal.py` | `suggest_reteach` does not write LearnedPath. | Yes | No hidden relearning. |
+| Unit | takeover handoff only | `pytest tests/test_recovery_proposal.py` | `handoff_to_takeover_later` does not implement takeover. | Yes | Future owner only. |
+| Unit | runtime observation handoff only | `pytest tests/test_recovery_proposal.py` | `wait_for_runtime_observation_later` does not implement M11.2. | Yes | No M11.2 dependency. |
+| Unit | input immutability | `pytest tests/test_recovery_proposal.py` | Input `RecoveryBoundary` / `AbortAcknowledgement` is not mutated. | Yes | Pure generator. |
+| Unit | forbidden dependency scan | `pytest tests/test_recovery_proposal.py` | No DB/browser/network/LLM/conversation dispatcher/retry execution/LearnedPath write-back imports. | Yes | Scope guard. |
 
 ## E2E / UI Smoke 边界（E2E / UI Smoke Boundary）
 
@@ -64,8 +65,7 @@
 
 | Item | Reason | Risk |
 |---|---|---|
-| API tests | 本轮只做 docs-only design package alignment。 | 12.3 尚未实现 API surface。 |
-| CLI tests | 本轮不改 CLI。 | None for this docs-only round. |
-| E2E / UI smoke | 本轮不接 UI 或 browser flow。 | UI behavior unverified, by design. |
-| `verify-scenario` / autonomous run | 本轮不触发 live autonomous run。 | Product runtime not exercised, by design. |
-| Future proposal unit tests | 本轮不写代码。 | 需要在 12.3 implementation 中补齐。 |
+| API tests | 12.3 不新增 route 或 response contract。 | None. |
+| CLI tests | 12.3 不改 CLI。 | None. |
+| E2E / UI smoke | 12.3 不接 UI 或 browser flow。 | UI behavior unverified, by design. |
+| `verify-scenario` / autonomous run | 12.3 不触发 live autonomous run。 | Product runtime not exercised, by design. |

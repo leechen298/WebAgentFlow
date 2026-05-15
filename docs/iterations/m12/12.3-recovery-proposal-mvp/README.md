@@ -1,6 +1,6 @@
 # 12.3 · Recovery Proposal MVP
 
-状态：proposed / design package aligned
+状态：implemented
 里程碑：M12
 类型：code
 
@@ -10,15 +10,14 @@
 - [x] 代码型迭代
 - [ ] 混合型迭代
 
-12.3 是代码型迭代，因为后续会实现 recovery proposal schema、
-deterministic proposal generator 和 focused unit tests。本轮只补齐实现前
-设计包，不写代码。
+12.3 是代码型迭代。已实现 recovery proposal schema、
+deterministic proposal generator 和 focused unit tests。
 
 ## 当前状态
 
 - 12.1 Failure Classification and Recovery Boundary 已实现并交付。
 - 12.2 User Abort / Stop Handling 已实现并交付。
-- 12.3 当前设计包已对齐，可作为后续 implementation 任务的输入。
+- 12.3 Recovery Proposal MVP 已实现并交付（commit `b139aab`）。
 
 实现 Agent 不得跳过本设计包临时发明方案。用户明确发起 12.3 implementation
 时，应读取并遵守：
@@ -47,8 +46,8 @@ deterministic proposal generator 和 focused unit tests。本轮只补齐实现�
 - [x] `plan.md` 与 contract / technical design 一致。
 - [x] `review.md` 已记录设计包对齐的验证证据和未运行项。
 
-当前只完成 design package alignment。代码实现由后续明确的 implementation
-任务触发；本文档只记录执行依据，不设置额外的勾选状态。
+Design package alignment 和代码实现均已完成（commit `b139aab`）。
+73 tests passed, ruff clean。API / CLI / E2E / live run 不在本轮范围。
 
 ## 核心原则
 

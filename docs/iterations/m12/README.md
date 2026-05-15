@@ -39,8 +39,7 @@ without explicit user consent.
 - [12.2-user-abort-stop-handling](./12.2-user-abort-stop-handling/) —
   user abort / stop handling boundary. Status: implemented / shipped.
 - [12.3-recovery-proposal-mvp](./12.3-recovery-proposal-mvp/) —
-  recovery proposal MVP design package. Status: proposed / design package
-  aligned.
+  recovery proposal MVP. Status: implemented.
 
 ## Core Runtime Terms
 

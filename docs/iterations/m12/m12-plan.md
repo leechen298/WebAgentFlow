@@ -53,7 +53,7 @@ actions, and hand later choices to 12.3 / 12.4 / 12.5.
 
 ### 12.3 · Recovery proposal MVP
 
-Status: proposed / current design package.
+Status: implemented.
 
 Generate recovery proposals such as ask user, review evidence, suggest
 re-teach, consider retry later, hand off to takeover later, wait for runtime

@@ -1,6 +1,6 @@
 # 12.3 Recovery Proposal MVP Intent
 
-状态：proposed
+状态：implemented
 
 ## Goal
 
