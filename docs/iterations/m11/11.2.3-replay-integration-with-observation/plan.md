@@ -59,6 +59,13 @@ replay-level observation summary。
 - observational path `actions=[]` remains `not_applicable` or no summary。
 - reporter is not called。
 
+## Technical Design and Test Plan
+
+- `technical-design.md` 已补齐后续代码实现的详细技术设计。
+- `test-plan.md` 已补齐后续代码实现的详细验证计划。
+- 未来代码实现必须遵循 `contract.md`、`technical-design.md` 和 `test-plan.md`。
+- 本文档保留为后续实现计划和入口索引；更细执行依据以 `technical-design.md` 为准。
+
 ## 与 11.2.2 的关系
 
 11.2.2 已经实现最小 step-level wait result：

@@ -39,6 +39,13 @@ step-level wait evidence 汇总到 replay result 的 observation evidence 层。
 - 与 later 11.2.x Common Component Runtime Semantics 的边界。
 - 与 M12 recovery / retry / abort 的边界。
 
+## 开发文档
+
+- [technical-design.md](./technical-design.md)：后续代码实现的详细技术设计，当前能力尚未实现。
+- [test-plan.md](./test-plan.md)：后续代码实现的测试计划，当前没有新增测试代码。
+- [plan.md](./plan.md)：后续代码实现计划；更细执行依据以 `technical-design.md` 和
+  `test-plan.md` 为准。
+
 ## 与 11.2.2 的区别
 
 ```text
