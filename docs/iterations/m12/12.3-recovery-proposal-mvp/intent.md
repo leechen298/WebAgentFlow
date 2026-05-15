@@ -77,6 +77,7 @@ M12 已经有两个前置边界：
 - 文档定义 proposal source、option kinds、option shape 和 next owner。
 - 文档明确所有 proposal options 默认 `non_executable=true`。
 - 文档明确 12.3 可以排序或标记推荐，但不能自动选择 proposal。
+- 文档明确 12.3 不设计 `selected_option_id`，避免把推荐误读成用户已选择。
 - 文档明确 `consider_retry_later` 不是 retry，12.4 才处理 retry policy。
 - 文档明确 `handoff_to_takeover_later` 不是 takeover implementation。
 - 文档明确 `wait_for_runtime_observation_later` 不是 M11.2 实现。

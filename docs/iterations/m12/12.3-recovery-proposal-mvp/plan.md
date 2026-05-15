@@ -74,6 +74,10 @@ boundary。若发现 stale reference，只记录到 `review.md` Follow-up。
 5. Allow deterministic ordering or labels only:
    - proposal generator may rank options or mark one as recommended；
    - it must not auto-select an option；
+   - it must not produce `selected_option_id` or any equivalent selected-state
+     field；
+   - `recommended_option_ids`, `rank`, and `priority` may be used only for
+     display ordering or emphasis；
    - any next step belongs to later user confirmation and downstream package.
 6. Update 12.3 review evidence after implementation.
 
@@ -89,6 +93,7 @@ Focused unit tests should cover:
 - abort acknowledgement -> `abandon_task` / `review_evidence` / later handoff options；
 - all options have `non_executable=true` by default；
 - recommended option is not auto-selected；
+- proposal output has no `selected_option_id` or equivalent selected-state field；
 - retry-related option is only `consider_retry_later` and requires 12.4 policy；
 - re-teach option does not write LearnedPath；
 - takeover option does not implement takeover；
@@ -106,6 +111,7 @@ Focused unit tests should cover:
   teaching, conversation dispatch, or LearnedPath write-back.
 - `consider_retry_later` is routed to 12.4 for policy evaluation.
 - Proposal ordering / recommendation never becomes auto-selection.
+- Proposal schema has no `selected_option_id`.
 - Focused unit tests and ruff pass.
 
 ## Validation for This Documentation Round

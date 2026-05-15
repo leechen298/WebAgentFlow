@@ -50,6 +50,10 @@ option 指向 later retry / replan / takeover / teaching flow，选择它也不�
 12.3 可以排序或标记推荐选项，但不能自动选择 proposal。`recommended` 只表示
 展示优先级，不表示 system-selected action。
 
+未来实现不应设计 `selected_option_id` 这类字段。可以使用
+`recommended_option_ids`、`rank` 或 `priority` 表达展示顺序和推荐程度，但
+不能用任何字段暗示系统已经替用户选中了下一步。
+
 ## Proposal Sources
 
 建议 source 值：
@@ -92,6 +96,9 @@ option 指向 later retry / replan / takeover / teaching flow，选择它也不�
 | `evidence_refs` | 来源 evidence references。 |
 | `next_owner` | 后续 owner，例如 user、12.4、12.5 或 manual review。 |
 | `non_executable` | 12.3 默认必须为 true。 |
+
+不要在 12.3 schema 中加入 `selected_option_id`。12.3 可以表达推荐顺序，但
+selected option 只能来自后续用户确认链路，不能由 proposal generator 产生。
 
 建议 `next_owner`：
 
