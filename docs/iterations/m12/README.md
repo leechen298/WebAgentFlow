@@ -1,6 +1,6 @@
 # M12 · Failure Recovery / Abort / Runtime Robustness
 
-Status: documentation initialized.
+Status: in progress.
 
 M12 turns failure, blocked execution, uncertainty, and user abort into
 auditable runtime decisions. It is the follow-up layer after the M11.1
@@ -30,7 +30,7 @@ without explicit user consent.
 ## Iteration Index
 
 - [m12-plan](./m12-plan.md) — M12 overview and future package split. Status:
-  documentation initialized.
+  in progress.
 - [12.0-failure-recovery-abort-runtime-robustness](./12.0-failure-recovery-abort-runtime-robustness/) —
   M12 scope, terms, and safety boundary. Status: documentation initialized.
 - [12.1-failure-classification-recovery-boundary](./12.1-failure-classification-recovery-boundary/) —
@@ -40,6 +40,9 @@ without explicit user consent.
   user abort / stop handling boundary. Status: implemented / shipped.
 - [12.3-recovery-proposal-mvp](./12.3-recovery-proposal-mvp/) —
   recovery proposal MVP. Status: implemented.
+- [12.4-retry-rerun-policy](./12.4-retry-rerun-policy/) —
+  retry / re-run policy design package. Status: proposed / implementation gate
+  pending.
 
 ## Core Runtime Terms
 

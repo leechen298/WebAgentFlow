@@ -67,10 +67,17 @@ inputs rather than requiring an extra review checkbox inside the documents.
 
 ### 12.4 · Retry / re-run policy
 
+Status: proposed / current design package.
+
 Define when retry is allowed, when it is unsafe, and what user confirmation is
-required before a retry or re-run.
+required before a retry or re-run. 12.4 is a code-type iteration; this package
+starts with a complete design package before implementation. Retry policy is
+not retry execution, and `retry_allowed_requires_confirmation` is not
+`retry_started`.
 
 ### 12.5 · Recovery conversation flow
+
+Status: future.
 
 Route recovery and abort conversations through WebAgentFlow's runtime
 conversation surface while preserving the internal role boundaries for Failure
@@ -78,12 +85,15 @@ Recovery Agent (legacy: Agent F) and User Abort Handler (legacy: Agent G).
 
 ### 12.6 · Recovery tests and evidence
 
+Status: future.
+
 Close M12 with deterministic tests, conversation/event evidence, and static
 review that prove no hidden recovery, no hidden relearning, and no browser
 continuation without user consent.
 
-12.3 is implemented. The next package should start with 12.4 documentation
-planning before implementation.
+12.4 is the current design package. The next implementation task should use
+`12.4-retry-rerun-policy/contract.md`, `technical-design.md`, `test-plan.md`,
+and `plan.md` as inputs.
 
 ## Decision Rules
 
@@ -142,6 +152,5 @@ M12 decisions must preserve:
 
 - `git diff --check`
 - `git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'`
-- `find docs/iterations/m12 -maxdepth 1 -type d -name '12.4*' -print`
 - `find docs/iterations/m12 -maxdepth 1 -type d -name '12.5*' -print`
 - `find docs/iterations/m12 -maxdepth 1 -type d -name '12.6*' -print`
