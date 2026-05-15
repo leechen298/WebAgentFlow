@@ -53,13 +53,14 @@ actions, and hand later choices to 12.3 / 12.4 / 12.5.
 
 ### 12.3 · Recovery proposal MVP
 
-Status: documentation initialized / current planning package.
+Status: proposed / current design package.
 
 Generate recovery proposals such as ask user, review evidence, suggest
 re-teach, consider retry later, hand off to takeover later, wait for runtime
 observation later, or abandon. A proposal is not an execution command.
 Proposal options are non-executable by default and may be ranked or labelled,
-but must not be auto-selected.
+but must not be auto-selected. 12.3 is a code-type iteration; implementation
+must wait for review of its contract, technical design, test plan, and plan.
 
 ### 12.4 · Retry / re-run policy
 

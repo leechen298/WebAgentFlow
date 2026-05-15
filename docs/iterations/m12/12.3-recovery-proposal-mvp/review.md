@@ -1,126 +1,79 @@
 # 12.3 Review and Reflection
 
-Status: documentation initialized.
+状态：in_progress
 
-## 初始化记录
+## 2026-05-15 设计包对齐（Design Package Alignment）
 
-本轮初始化 12.3 Recovery Proposal MVP 文档。
+- Reviewer：pending user review
+- Decision：pending
+- Notes：本轮按最新 iteration templates 将 12.3 从旧四件套对齐为代码型迭代完整设计包。
 
-创建：
+## 用户反馈
 
-- `README.md`
-- `intent.md`
-- `plan.md`
-- `review.md`
+- 要求 12.3 按代码型迭代门禁补齐 `README.md`、`intent.md`、`contract.md`、
+  `technical-design.md`、`test-plan.md`、`plan.md`、`review.md` -> accepted。
+- 要求本轮只改 `docs/iterations/m12/**`，不写代码、不跑 API / CLI / E2E /
+  `verify-scenario` -> accepted。
+- 要求审计 `v0.2-local` 相对 `v0.2` 的本地堆叠差异 -> accepted。
+- 要求检查 12.3 七件套存在性 -> accepted。
 
-更新：
+## 最终差异（Final Delta）
 
-- `docs/iterations/m12/README.md`
-- `docs/iterations/m12/m12-plan.md`
+### 实际交付
 
-## Scope Summary
+- 12.3 `README.md` 更新为代码型迭代包索引和门禁状态。
+- 12.3 `intent.md` 更新为 design package alignment 语义。
+- 新增 12.3 `contract.md`。
+- 新增 12.3 `technical-design.md`。
+- 新增 12.3 `test-plan.md`。
+- 12.3 `plan.md` 更新为新模板结构。
+- 12.3 `review.md` 更新为新模板结构。
+- M12 README / m12-plan 同步 12.3 为 proposed / current design package。
 
-12.3 被定义为 recovery proposal generator / formatter 的文档包。它基于：
+### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
-- 12.1 `RecoveryBoundary`；
-- 12.2 `AbortAcknowledgement`。
+- None. 本轮实际交付与 12.3 design package alignment 计划一致。
 
-12.3 设计可展示给用户的 proposal options，但不执行任何 option。
+### WebAgentFlow Live Run 边界（Live Run Boundary）
 
-## Proposal Semantics
+本轮未触发 `verify-scenario`、autonomous run 或 product-driven browser
+execution。12.3 本轮是 docs-only design package alignment，不产生 `run_id`。
 
-`RecoveryProposal` 是用户可见的后续选择集合，不是 command。它必须携带：
+### E2E / Codex 外部测试操作员证据（E2E / Codex Evidence）
 
-- proposal source；
-- option kind；
-- user-facing title / message；
-- evidence references；
-- confirmation marker；
-- policy-check marker；
-- downstream owner；
-- `non_executable=true` marker。
+- 本轮没有打开浏览器或产品 UI。
+- 本轮没有运行 CLI / API / E2E。
+- Codex 只执行文档编辑、git inspection 和静态检查。
+- 因为没有 run_id、截图、产品日志或 browser output，本轮所有 live / E2E 项都标记为
+  `not run` / `unverified`。
 
-所有 proposal options 默认不可执行。12.3 可以排序或标记推荐选项，但不能自动
-选择 proposal。
+### 验证证据（Validation Evidence）
 
-## Explicit Non-goals Preserved
+| Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
+|---|---|---|---|---|---|---|
+| `git merge-base --is-ancestor v0.2 v0.2-local` | `v0.2-local` contains `v0.2` | No output | 0 | PASS | exit code 0 | Precheck confirms stack base. |
+| `git log --oneline --decorate v0.2..v0.2-local` | Local stack reviewed | 10 local commits: 12.3 docs, selected-option boundary, iteration template / docs-local guidance. | 0 | PASS | command output inspected | No unexpected code commits. |
+| `git diff --name-only v0.2..v0.2-local` | No unexplained apps/packages/M11 changes | Existing local stack touches entry docs, docs-local guidance, iteration templates, and M12 docs. | 0 | PASS | command output inspected | `git diff --name-only v0.2..v0.2-local -- apps packages docs/iterations/m11` returned no output. |
+| `test -f` for 12.3 seven docs | All seven files exist | All seven checks returned no output. | 0 | PASS | `README.md`, `intent.md`, `contract.md`, `technical-design.md`, `test-plan.md`, `plan.md`, `review.md` | Document package complete. |
+| `git diff --check` | No whitespace errors | No output | 0 | PASS | command output empty | Docs static check. |
+| code / package status check | No output | No output | 0 | PASS | command output empty | No code/package changes. |
+| `find docs/iterations/m12 ... 12.4* / 12.5* / 12.6*` | No output | No output for all three commands | 0 | PASS | command output empty | Future dirs not created. |
+| `git status --short docs/iterations/m11` | No output | No output | 0 | PASS | command output empty | M11 history untouched. |
+| `git diff --name-only` | Only `docs/iterations/m12/**` | Only tracked M12 docs listed. New 12.3 docs are under `docs/iterations/m12/**`. | 0 | PASS | command output inspected | Diff scope is M12 only. |
+| `git diff --cached --name-only` | Only `docs/iterations/m12/**` | Only nine M12 docs listed. | 0 | PASS | command output inspected | Staged scope is M12 only. |
+| `git diff --cached --check` | No staged whitespace errors | No output | 0 | PASS | command output empty | Final staged whitespace check. |
 
-本轮没有实现：
+### 未运行 / 未验证（Not Run / Unverified）
 
-- schema；
-- service；
-- unit tests；
-- API endpoint；
-- CLI command；
-- frontend UI；
-- DB / migration；
-- conversation dispatcher；
-- retry / re-run policy；
-- retry execution；
-- replan execution；
-- browser continuation；
-- takeover；
-- teaching mode；
-- LearnedPath write-back；
-- autonomous exploration；
-- hidden relearning；
-- M11.2 Runtime Observation / Wait-for-change；
-- E2E；
-- `verify-scenario`。
+| Item | Reason | Risk / Follow-up |
+|---|---|---|
+| API tests | 本轮不改 API 或代码。 | 12.3 implementation 需补 future unit tests。 |
+| CLI tests | 本轮不改 CLI。 | None for this docs-only round. |
+| E2E / UI smoke | 本轮不接 UI / browser flow。 | UI behavior unverified by design. |
+| `verify-scenario` / autonomous run | 本轮明确禁止 live autonomous run。 | Product runtime not exercised by design. |
 
-## Relationship to 12.1
+### 后续事项（Follow-ups）
 
-12.1 已实现 evidence-bound classifier。12.3 未来可以消费 12.1 的
-classification、reason、evidence references 和 boundary recommendation，
-但不重新分类 failure，也不执行 recovery。
-
-`retry_possible_requires_confirmation` 在 12.3 中只能变成
-`consider_retry_later` proposal option。它不是 retry command，也不是完整 safe
-retry 判断。
-
-## Relationship to 12.2
-
-12.2 已实现 user abort acknowledgement。12.3 未来可以基于 abort decision 和
-abort evidence 展示后续选择，但不能绕过 12.2 的 no-new-browser-action boundary。
-
-Abort 后的 proposal 不能自动触发 retry、replan、recovery proposal execution、
-takeover、teaching mode 或 browser continuation。
-
-## Relationship to 12.4 / 12.5 / 12.6
-
-- 12.4 owns retry / re-run policy.
-- 12.5 owns recovery conversation flow and user-choice routing.
-- 12.6 owns recovery tests and evidence closure.
-
-12.3 只定义 proposal 形态和 future implementation plan。
-
-## Follow-up
-
-发现全局入口文档仍有旧状态文案，例如 `AGENTS.md` / `CLAUDE.md` 中的 M12
-documentation initialization 描述。按本轮边界，不修改这些全局文档；后续应开
-单独入口文档同步任务处理。
-
-## 未运行的验证
-
-本轮没有运行：
-
-- API tests；
-- CLI tests；
-- E2E tests；
-- `verify-scenario`；
-- autonomous run；
-- browser UI smoke。
-
-## Expected Validation
-
-```bash
-git diff --check
-git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.4*' -print
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.5*' -print
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.6*' -print
-git status --short docs/iterations/m11
-git diff --name-only
-git diff --cached --name-only
-git diff --cached --check
-```
+- 12.3 implementation 前必须人工审核 `contract.md`、`technical-design.md`、
+  `test-plan.md` 和 `plan.md`。
+- 12.0 / 12.1 / 12.2 历史包仍是旧四件套；是否按新模板回填由后续文档治理任务决定。
