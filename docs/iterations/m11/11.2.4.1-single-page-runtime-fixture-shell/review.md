@@ -1,31 +1,36 @@
 # Review
 
-Status: initialized
+Status: implemented
 
 本文档用于记录 11.2.4.1 Single-page Runtime Fixture Shell 的后续审查结论。
 
-当前仅完成文档设计：
+当前已完成 shell 实现：
 
 - shell contract。
 - technical-design。
 - test-plan。
 - implementation plan。
+- validation-site runtime observation route。
+- validation-site 首页 Runtime Observation 入口。
+- planned fixture cards。
+- stable anchor / reset convention 展示。
 
-代码、validation-site route、fixture shell 页面、tests、E2E 尚未实现。
+具体业务 fixture、mock backend、tests、E2E、`verify-scenario`、autonomous run 仍不属于本轮。
 
 ## Validation
 
-已记录：
+已运行：
 
-- `git diff --check`: PASS
-- code/package status check: PASS
+- `git diff --check`: PASS。
+- `pnpm --filter @web-agent-flow/validation-site build`: PASS。
+- package status check: PASS。
 - forbidden directory check: PASS
 
-本轮未运行：
+未运行：
 
-- validation-site component tests：not run，原因是本轮只生成文档，不实现 shell 页面。
-- route smoke：not run，原因是本轮不新增 `/runtime-observation` route。
-- E2E / `verify-scenario` / autonomous run：not run，原因是本轮为文档生成任务。
+- validation-site component tests：not run，原因是当前 package 未提供 `test` script。
+- route smoke / UI smoke：not run，原因是本轮按 scoped build 验证，不做浏览器 smoke。
+- E2E / `verify-scenario` / autonomous run：not run，原因是这些不属于 11.2.4.1 shell 实现范围。
 
 不得写成：
 

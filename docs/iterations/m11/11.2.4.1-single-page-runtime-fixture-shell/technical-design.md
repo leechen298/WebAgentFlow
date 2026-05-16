@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：documentation generated; implementation not started
+状态：implemented
 
 ## 当前状态（Current State）
 
@@ -9,14 +9,14 @@
 - 当前没有 `/runtime-observation` 专用入口。
 - 当前没有 runtime observation fixture shell。
 - 11.2.4.0 已完成业务页面复杂度 catalog。
-- 11.2.4.1 只设计 shell，不实现具体业务页面。
+- 11.2.4.1 实现 shell，但不实现具体业务页面。
 
 ## 合约对齐 / 不变量（Contract Alignment / Invariants）
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
-| 不重写现有 IndexPage 架构 | 后续仅在 `PAGES` catalog 增加 Runtime Observation 分类入口 | route smoke / component test | 保留 `/login`、`/users` |
-| route namespace 完整 | 后续使用 `/runtime-observation/*` 命名空间 | route smoke | 不创建 `/medium` 这类全局 route |
+| 不重写现有 IndexPage 架构 | 仅在 `PAGES` catalog 增加 Runtime Observation 分类入口 | route smoke / component test | 保留 `/login`、`/users` |
+| route namespace 完整 | 使用 `/runtime-observation/*` 命名空间 | route smoke | 不创建 `/medium` 这类全局 route |
 | fixture metadata 与 11.2.4.0 catalog 对齐 | card metadata 使用 `business_complexity`、`runtime_conditions`、`runtime_behaviors` | component test | 不按 toast/modal/loading 定义业务复杂度 |
 | current MVP / future signal label 分离 | UI label 分成 current signals、evidence capabilities、future labels | component test / review | future labels 不得写成 implemented |
 | stable anchors 约定 | 后续 fixture 页面提供 heading、trigger、result、reset、status anchors | route smoke / E2E | 本轮只定义，不实现 |
@@ -27,7 +27,7 @@
 
 ## 实现方案（Proposed Implementation）
 
-后续实现阶段建议新增：
+实现阶段建议新增：
 
 ```text
 apps/validation-site/src/pages/runtime-observation/
@@ -35,7 +35,7 @@ apps/validation-site/src/pages/runtime-observation/RuntimeObservationIndex.vue
 apps/validation-site/src/pages/runtime-observation/RuntimeObservationShell.vue
 ```
 
-后续实现应：
+实现应：
 
 1. 读取 `apps/validation-site/src/pages/IndexPage.vue` 的当前 `PAGES` catalog。
 2. 在 `PAGES` catalog 中新增 Runtime Observation 分类入口。
@@ -53,15 +53,15 @@ apps/validation-site/src/pages/runtime-observation/RuntimeObservationShell.vue
 8. 展示统一 reset convention。
 9. 展示 stable anchor convention。
 
-11.2.4.1 文档生成阶段不执行上述代码改动。
+11.2.4.1 实现阶段执行上述 shell 代码改动，但不实现具体业务 fixture。
 
 ## 影响面（Affected Surfaces）
 
 | Surface | Changed? | Description | Compatibility notes |
 |---|---|---|---|
-| `apps/validation-site/src/pages/IndexPage.vue` | No | 本轮不改；后续实现会增加 Runtime Observation catalog entry | 不重写首页架构 |
-| validation-site route config | No | 本轮不改；后续实现新增 `/runtime-observation` namespace | 保留现有 routes |
-| runtime observation fixture index page | No | 本轮只规划；后续实现新增页面 | 不实现具体业务 fixture |
+| `apps/validation-site/src/pages/IndexPage.vue` | Yes | 增加 Runtime Observation catalog entry | 不重写首页架构 |
+| validation-site route config | Yes | 新增 `/runtime-observation` namespace | 保留现有 routes |
+| runtime observation fixture index page | Yes | 新增 shell index 页面 | 不实现具体业务 fixture |
 | validation-site specs | No | 本轮不改；后续可新增 runtime-observation specs | 不影响现有 specs |
 | E2E tests | No | 本轮不新增 | 后续实现后再补 |
 | API routes | No | 不新增 API | N/A |
@@ -76,7 +76,7 @@ apps/validation-site/src/pages/runtime-observation/RuntimeObservationShell.vue
 
 No runtime schema changes.
 
-后续 shell 可以使用静态 frontend metadata，但本轮不创建 TypeScript schema 文件。
+Shell 可以使用静态 frontend metadata，但不创建共享 TypeScript schema 文件。
 Metadata fields must follow `contract.md`:
 
 ```text
@@ -98,7 +98,7 @@ status
 
 No backend service changes.
 
-后续 frontend module responsibility:
+Frontend module responsibility:
 
 - `RuntimeObservationIndex.vue`：展示 shell index、category navigation 和 fixture cards。
 - `RuntimeObservationShell.vue`：可选共享 shell layout，承载 reset / stable anchor convention。
@@ -106,7 +106,7 @@ No backend service changes.
 
 ## 数据流（Data Flow）
 
-后续 shell 静态数据流：
+Shell 静态数据流：
 
 ```text
 IndexPage PAGES catalog
@@ -143,7 +143,7 @@ fixture card as `implemented` or `tested`.
 
 ## 兼容性（Compatibility）
 
-后续实现必须：
+实现必须：
 
 - 不破坏现有 `/` 首页。
 - 不删除 `/login`、`/users`。
@@ -163,9 +163,6 @@ fixture card as `implemented` or `tested`.
 
 ## 非目标（Non-goals）
 
-- 不写 validation-site 源码。
-- 不新增 route。
-- 不实现 fixture shell 页面。
 - 不实现具体业务 fixture。
 - 不实现 mock backend。
 - 不新增 tests。
@@ -183,11 +180,11 @@ fixture card as `implemented` or `tested`.
 
 ## 验证命令入口（Validation Commands）
 
-本轮只运行文档级 validation：
+实现后运行 scoped validation：
 
 ```bash
 git diff --check
-git status --short
-git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
+pnpm --filter @web-agent-flow/validation-site build
+git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```

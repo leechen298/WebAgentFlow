@@ -7,6 +7,7 @@ export default {
   categories: {
     Authentication: '认证',
     'Listing & Search': '列表与搜索',
+    'Runtime Observation': '运行时观察',
   },
   index: {
     specBadge: '规范',

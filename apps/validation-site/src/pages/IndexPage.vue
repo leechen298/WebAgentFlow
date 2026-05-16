@@ -123,6 +123,15 @@ const PAGES: TestPage[] = [
     specId: 'users',
     scenarios: ['filter_by_name', 'no_match'],
   },
+  {
+    id: 'runtime-observation',
+    category: 'Runtime Observation',
+    name: 'Runtime Observation Fixtures',
+    path: '/runtime-observation',
+    description:
+      'Planning shell for M11.2 runtime observation fixture pages. It groups future basic, medium, complex, mobile, and mock-backend scenarios without claiming those fixtures are implemented.',
+    scenarios: ['fixture_shell', 'planned_catalog'],
+  },
 ];
 
 const byCategory = computed<Record<string, TestPage[]>>(() => {

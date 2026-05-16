@@ -7,6 +7,7 @@ export default {
   categories: {
     Authentication: '認証',
     'Listing & Search': 'リスト & 検索',
+    'Runtime Observation': 'ランタイム観測',
   },
   index: {
     specBadge: 'spec',

@@ -1,10 +1,10 @@
 # 测试计划（Test Plan）
 
-状态：documentation generated; implementation not started
+状态：implemented
 
 ## Test Scope
 
-后续 11.2.4.1 实现完成后应覆盖：
+11.2.4.1 实现完成后应覆盖：
 
 - validation-site index catalog。
 - runtime observation route shell。
@@ -50,9 +50,9 @@
 - Stable anchor convention text exists。
 - Mobile category exists but is labeled as later 11.2.4.6 priority。
 
-## Future Route Smoke
+## Route Smoke
 
-后续实现后可验证：
+实现后可验证：
 
 - `/runtime-observation` 可打开。
 - 首页 `/` 有 Runtime Observation 分类入口。
@@ -72,25 +72,27 @@
 - 不触发 `verify-scenario`。
 - 不依赖外部网站。
 
-## Planned Commands
+## Commands
 
-后续实现完成后可能运行：
+当前实现完成后运行：
 
 ```bash
 git diff --check
-pnpm --filter @web-agent-flow/validation-site test
-pnpm --filter @web-agent-flow/e2e exec playwright test tests/runtime-observation/*.spec.ts
+pnpm --filter @web-agent-flow/validation-site build
+git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
+find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```
 
-后续实现前需确认 validation-site / e2e 的实际 test command。没有真实运行不得写成 PASS。
+validation-site 当前没有 `test` script；不得虚构 component test PASS。
 
-本轮文档生成只运行文档级 validation：
+如后续新增 component tests 或 E2E，再补充真实命令和证据。当前 11.2.4.1 不运行 E2E /
+`verify-scenario` / autonomous run。
+
+文档边界检查可额外运行：
 
 ```bash
-git diff --check
 git status --short
 git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
-find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```
 
 ## Evidence Requirements

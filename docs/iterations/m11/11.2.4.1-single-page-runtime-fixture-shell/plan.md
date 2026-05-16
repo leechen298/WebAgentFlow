@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：documentation generated; implementation not started
+状态：implemented
 
 ## 输入
 
@@ -12,9 +12,9 @@
 - `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/`
 - `docs/testing/scenarios/realistic-web-runtime-cases.md`
 
-## 本轮文件
+## Implementation Files
 
-本轮新增：
+已存在文档包：
 
 - `docs/iterations/m11/11.2.4.1-single-page-runtime-fixture-shell/README.md`
 - `docs/iterations/m11/11.2.4.1-single-page-runtime-fixture-shell/intent.md`
@@ -24,23 +24,22 @@
 - `docs/iterations/m11/11.2.4.1-single-page-runtime-fixture-shell/plan.md`
 - `docs/iterations/m11/11.2.4.1-single-page-runtime-fixture-shell/review.md`
 
-本轮轻量更新：
+本轮允许修改：
 
-- `docs/iterations/m11/README.md`
-- `docs/iterations/m11/m11-plan.md`
-- `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/README.md`
-- `docs/iterations/m11/11.2.4-realistic-scenario-catalog-fixture-planning/plan.md`
+- `apps/validation-site/src/pages/IndexPage.vue`
+- `apps/validation-site/src/router/index.ts`
+- `apps/validation-site/src/pages/runtime-observation/RuntimeObservationIndex.vue`
+- `apps/validation-site/src/pages/runtime-observation/RuntimeObservationShell.vue`（如需要）
+- `apps/validation-site/src/i18n/locales/*.ts`（如入口文案需要本地化）
 
 本轮不修改：
 
-- frontend source code。
 - backend source code。
-- test code。
 - package / lock files。
 - `docs/roadmap.md`。
 - `docs/product-model.md`。
 
-## 后续实现路线
+## 实现路线
 
 ### Step 1 · Inspect current validation-site structure
 
@@ -107,33 +106,35 @@ Route namespace 保持完整路径：
 
 ### Step 7 · Add scoped tests or smoke notes
 
-根据现有 validation-site 测试能力决定。后续实现前必须确认实际 test command，不能虚构
-PASS。
+根据现有 validation-site 测试能力决定。当前 validation-site 有 `build` script，未提供
+`test` script；不能虚构 component test PASS。
 
 ## 验证
 
-本轮只运行：
+本轮运行：
 
 ```bash
 git diff --check
-git status --short
-git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
+pnpm --filter @web-agent-flow/validation-site build
+git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```
 
 ## 复核清单（Review Checklist）
 
-- [ ] 只出现文档变更。
-- [ ] 新增完整 11.2.4.1 文档包。
+- [ ] validation-site 首页新增 Runtime Observation 入口。
+- [ ] `/runtime-observation` shell route 可构建。
 - [ ] 明确已有 `IndexPage.vue` / `PAGES` catalog。
-- [ ] 明确后续只新增 Runtime Observation 分类入口，不重写首页架构。
+- [ ] 只新增 Runtime Observation 分类入口，不重写首页架构。
 - [ ] 明确 route namespace。
 - [ ] 明确 shell metadata contract。
 - [ ] 明确 stable anchor convention。
 - [ ] 明确 reset convention。
 - [ ] 明确 PC 优先，mobile 后移到 11.2.4.6。
 - [ ] 明确 current MVP / future signal label 分离。
-- [ ] 不出现源码 / 测试代码 / package 变更。
+- [ ] 不实现具体业务 fixture。
+- [ ] 不出现 backend / test / package 变更。
 - [ ] `git diff --check` clean。
-- [ ] code/package status check 无输出。
+- [ ] validation-site build PASS。
+- [ ] package status check 无输出。
 - [ ] forbidden directory check 无输出。

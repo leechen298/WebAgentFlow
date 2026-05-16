@@ -1,11 +1,11 @@
 # 契约（Contract）
 
-状态：documentation generated; implementation not started
+状态：implemented
 
 ## 概念 / 边界契约
 
-11.2.4.1 定义 Single-page Runtime Fixture Shell。它是后续 validation-site
-runtime observation fixture 的入口、分类和元数据规范，不是 fixture 页面实现。
+11.2.4.1 实现 Single-page Runtime Fixture Shell。它是 validation-site runtime
+observation fixture 的入口、分类和元数据壳，不是具体业务 fixture 页面实现。
 
 Shell 只提供导航和规划级 metadata，不接 replay runtime、不接 wait service、不接
 Task Result Reporter、不接 mock backend。
@@ -48,8 +48,8 @@ future_signal_label
 /runtime-observation/mobile
 ```
 
-11.2.4.1 文档包不创建这些 routes。后续实现包必须确认 validation-site 当前 router
-结构后再落地。
+11.2.4.1 实现包可以创建这些 routes。实现前必须确认 validation-site 当前 router
+结构，并确保不创建 `/medium`、`/complex` 这类全局 route。
 
 ## Fixture Metadata Contract
 
@@ -169,24 +169,25 @@ Shell card `status` 只表示 fixture planning / implementation state：
 
 No runtime schema/API changes.
 
-本轮不创建 Python / TypeScript schema，不修改 API route，不修改 DB schema，不修改 replay
-response。
+本轮不创建 Python schema，不修改 API route，不修改 DB schema，不修改 replay response。
+前端 shell 可以使用组件内静态 TypeScript metadata 类型。
 
 ## Evidence / Observation 契约
 
-11.2.4.1 的 evidence 是文档级规划证据，不是运行证据。
+11.2.4.1 的 runtime evidence 仍由后续 replay observation 流程产生。Shell 本身只提供
+可导航、可审查的 fixture planning metadata，不产生 `wait_result` 或
+`observation_summary`。
 
 允许：
 
-- 记录 shell metadata contract。
-- 记录 route namespace proposal。
-- 记录 current MVP / future signal labels。
-- 记录后续测试计划。
+- 实现 `/runtime-observation` shell route。
+- 在 validation-site 首页增加 Runtime Observation 入口。
+- 展示 shell metadata contract。
+- 展示 current MVP / future signal labels。
 
 禁止：
 
-- 声称 `/runtime-observation` route 已实现。
-- 声称 fixture shell 页面已实现。
+- 把 planned fixture card 链接成已实现业务页面。
 - 声称 E2E 已运行。
 - 声称 future signals 已被 runtime observation 支持。
 
@@ -216,7 +217,6 @@ response。
 
 ## 非目标
 
-- 不实现 fixture shell 页面。
 - 不实现具体业务 fixture。
 - 不实现 mock backend。
 - 不实现 E2E。

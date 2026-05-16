@@ -7,6 +7,7 @@ export default {
   categories: {
     Authentication: 'Authentication',
     'Listing & Search': 'Listing & Search',
+    'Runtime Observation': 'Runtime Observation',
   },
   index: {
     specBadge: 'spec',

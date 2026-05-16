@@ -1,10 +1,10 @@
 # 意图（Intent）
 
-状态：documentation generated; implementation not started
+状态：implemented
 
 ## 目标
 
-设计 Single-page Runtime Fixture Shell，为后续 PC single-page runtime observation
+实现 Single-page Runtime Fixture Shell，为后续 PC single-page runtime observation
 fixtures 提供统一入口、分类、route shell、reset convention 和 stable anchor
 convention。
 
@@ -25,13 +25,15 @@ runtime behavior
 
 后续 11.2.4.2 / 11.2.4.3 / 11.2.4.4 会逐步实现 basic、medium、complex
 business pages。为了避免这些 fixture 散落在 validation-site 中，11.2.4.1
-先定义统一 shell 规范。
+先落地统一 shell。
 
 ## 成功标准
 
-- 11.2.4.1 文档包完整。
+- `IndexPage.vue` 中有 Runtime Observation 入口，且不重写首页架构。
+- `/runtime-observation` route 可打开。
+- shell 页面展示 category navigation 和 planned fixture cards。
 - shell contract 明确。
-- 后续 route namespace 明确。
+- route namespace 明确。
 - fixture metadata shape 明确。
 - stable anchor convention 明确。
 - reset convention 明确。
