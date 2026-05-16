@@ -27,6 +27,7 @@ from app.schemas.recovery import (
     RecoveryConversationResponse,
     RecoveryConversationState,
     RecoveryProposal,
+    RecoveryProposalKind,
     RecoveryProposalOption,
     RetryPolicyDecision,
 )
@@ -41,7 +42,7 @@ def build_recovery_conversation_response(
     abort: AbortAcknowledgement | None = None,
     proposal: RecoveryProposal | None = None,
     retry_policy: RetryPolicyDecision | None = None,
-    chosen_option_kind: str | None = None,
+    chosen_option_kind: RecoveryProposalKind | None = None,
 ) -> RecoveryConversationResponse:
     """Build a user-facing recovery conversation response from recovery outputs.
 
@@ -130,7 +131,7 @@ def _derive_decision(
     abort: AbortAcknowledgement | None,
     proposal: RecoveryProposal | None,
     retry_policy: RetryPolicyDecision | None,
-    chosen_option_kind: str | None,
+    chosen_option_kind: RecoveryProposalKind | None,
 ) -> RecoveryConversationDecision:
     """Derive the recovery conversation decision from inputs.
 
@@ -158,15 +159,16 @@ def _derive_decision(
             # Merge boundary message and evidence into proposal decision.
             # Boundary provides root-cause context; proposal provides options.
             boundary_note = boundary.message or "The task did not complete successfully."
+            boundary_reason = _boundary_reason(boundary)
             decision = decision.model_copy(update={
                 "user_response": f"{boundary_note} {decision.user_response}",
-                "reason": "boundary_failure",
+                "reason": boundary_reason,
             })
             if decision.event_payload is not None:
                 merged_evidence = list(boundary.evidence) + decision.event_payload.evidence_refs
                 decision.event_payload = decision.event_payload.model_copy(update={
                     "evidence_refs": merged_evidence,
-                    "reason": "boundary_failure",
+                    "reason": boundary_reason,
                 })
         return decision
 
@@ -183,6 +185,23 @@ def _derive_decision(
         ),
         session_status=session_status,
     )
+
+
+def _boundary_reason(boundary: RecoveryBoundary) -> RecoveryConversationReason:
+    """Map recovery boundary shape to conversation reason without changing state."""
+    if boundary.classification == "blocked":
+        return "boundary_blocked"
+    if boundary.classification == "uncertain":
+        return "boundary_uncertain"
+    if boundary.classification == "needs_review":
+        return "boundary_needs_review"
+    if boundary.classification == "failure":
+        return "boundary_failure"
+    if boundary.recommendation == "ask_user":
+        return "boundary_ask_user"
+    if boundary.recommendation == "needs_review":
+        return "boundary_needs_review"
+    return "boundary_no_recovery_needed"
 
 
 def _build_abort_decision(
@@ -552,6 +571,8 @@ def _options_to_dicts(options: list[RecoveryProposalOption]) -> list[dict[str, A
                 "description": opt.description,
                 "non_executable": opt.non_executable,
                 "execution_boundary": "not_executed",
+                "evidence_refs": [ev.model_dump() for ev in opt.evidence_refs],
+                "risk_hints": list(opt.risk_hints),
                 "confirmation_requirement": opt.confirmation_requirement,
                 "next_owner": opt.next_owner,
                 "rank": opt.rank,

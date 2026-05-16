@@ -88,12 +88,16 @@ def _option(
     title: str,
     description: str,
     rank: int | None = None,
+    evidence_refs: list[EvidenceReference] | None = None,
+    risk_hints: list[str] | None = None,
 ) -> RecoveryProposalOption:
     return RecoveryProposalOption(
         kind=kind,  # type: ignore[arg-type]
         title=title,
         description=description,
         rank=rank,
+        evidence_refs=evidence_refs or [],
+        risk_hints=risk_hints or [],  # type: ignore[arg-type]
     )
 
 
@@ -140,6 +144,44 @@ def test_failure_boundary_shows_proposal_options() -> None:
     assert any(ev.source == "classifier" for ev in resp.event_payload_suggestion.evidence_refs)
     # No execution command
     assert resp.event_payload_suggestion.non_executable is True
+
+
+@pytest.mark.parametrize(
+    ("classification", "recommendation", "reason", "expected_reason"),
+    [
+        ("blocked", "ask_user", "missing_context", "boundary_blocked"),
+        ("uncertain", "needs_review", "insufficient_postcondition_evidence", "boundary_uncertain"),
+        ("needs_review", "needs_review", "explicit_needs_review", "boundary_needs_review"),
+    ],
+)
+def test_boundary_with_proposal_preserves_precise_boundary_reason(
+    classification: str,
+    recommendation: str,
+    reason: str,
+    expected_reason: str,
+) -> None:
+    boundary = _boundary(
+        classification,
+        recommendation,
+        reason,
+        message=f"{classification} boundary context.",
+    )
+    proposal = _proposal(
+        _option("review_evidence", "Review", "Review evidence"),
+    )
+
+    resp = build_recovery_conversation_response(
+        session_status="execution_failed",
+        boundary=boundary,
+        proposal=proposal,
+    )
+
+    assert resp.decision == "show_recovery_options"
+    assert resp.reason == expected_reason
+    assert f"{classification} boundary context." in resp.user_response
+    assert resp.event_payload_suggestion is not None
+    assert resp.event_payload_suggestion.reason == expected_reason
+    assert any(ev.source == "classifier" for ev in resp.event_payload_suggestion.evidence_refs)
 
 
 def test_failure_boundary_without_proposal_returns_manual_review() -> None:
@@ -281,6 +323,33 @@ def test_proposal_with_consider_retry_later_shows_options() -> None:
     # Does not start retry
     assert resp.event_payload_suggestion is not None
     assert resp.event_payload_suggestion.execution_boundary == "not_executed"
+
+
+def test_event_payload_shown_options_include_option_risk_and_evidence() -> None:
+    option_evidence = EvidenceReference(
+        source="proposal_generator",
+        key="option_reason",
+        value="side_effects_unknown",
+    )
+    proposal = _proposal(
+        _option(
+            "review_evidence",
+            "Review Evidence",
+            "Inspect risk before proceeding",
+            evidence_refs=[option_evidence],
+            risk_hints=["side_effects_unknown"],
+        ),
+    )
+
+    resp = build_recovery_conversation_response(
+        session_status="execution_failed",
+        proposal=proposal,
+    )
+
+    assert resp.event_payload_suggestion is not None
+    shown = resp.event_payload_suggestion.shown_options
+    assert shown[0]["risk_hints"] == ["side_effects_unknown"]
+    assert shown[0]["evidence_refs"] == [option_evidence.model_dump()]
 
 
 # ---------------------------------------------------------------------------
