@@ -79,14 +79,14 @@ defineExpose({ reset });
 const { t } = useI18n();
 const { setDelay, clearAll } = useFixtureTimer();
 
-const notifications = ref(false);
+const notifications = ref(true);
 const frequency = ref('daily');
 const quietHours = ref(false);
 const saving = ref(false);
 const saved = ref(false);
 const hint = ref('');
 
-const INITIAL_VALUES = { notifications: false, frequency: 'daily', quietHours: false };
+const INITIAL_VALUES = { notifications: true, frequency: 'daily', quietHours: false };
 const savedBaseline = ref({ ...INITIAL_VALUES });
 
 const dirty = computed(() => {

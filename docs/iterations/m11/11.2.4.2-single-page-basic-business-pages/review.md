@@ -44,6 +44,8 @@ Follow-up review fixes applied:
 - all 7 fixtures expose `basic-fixture-secondary-trigger` as an exact `data-testid` value。
 - shell route switching resets status/result and remounts the active fixture with `:key="fixtureId"`。
 - settings reset restores fixed initial values instead of last-saved values。
+- settings initial / reset state now uses a clean combination (`notifications=true`, `frequency=daily`,
+  `quietHours=false`) so the warning surface is cleared after reset。
 
 ## Validation Evidence
 
