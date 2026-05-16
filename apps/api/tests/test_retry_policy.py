@@ -100,6 +100,23 @@ def test_consider_retry_later_clear_evidence_allows_with_confirmation() -> None:
     ))
 
     assert result.outcome == "retry_allowed_requires_confirmation"
+    assert result.reason == "missing_user_confirmation"
+    assert result.confirmation_requirement == "user_confirmation_required"
+
+
+def test_consider_retry_later_clear_evidence_with_marker() -> None:
+    result = evaluate(
+        _proposal(
+            options=[_option(
+                kind="consider_retry_later",
+                risk_hints=["policy_check_required"],
+            )],
+            evidence_refs=[{"source": "test", "key": "k", "value": "v"}],
+        ),
+        has_user_confirmation_marker=True,
+    )
+
+    assert result.outcome == "retry_allowed_requires_confirmation"
     assert result.reason == "retry_candidate_with_clear_evidence"
     assert result.confirmation_requirement == "user_confirmation_required"
 
@@ -240,7 +257,7 @@ def test_boundary_stop_denies_retry() -> None:
     ))
 
     assert result.outcome == "retry_denied"
-    assert result.reason == "abort_boundary_active"
+    assert result.reason == "unsupported_replay_state"
 
 
 def test_boundary_ask_user_needs_context() -> None:
@@ -642,7 +659,7 @@ def test_selected_option_kind_consider_retry_selected() -> None:
     )
 
     assert result.outcome == "retry_allowed_requires_confirmation"
-    assert result.reason == "retry_candidate_with_clear_evidence"
+    assert result.reason == "missing_user_confirmation"
 
 
 def test_selected_option_kind_not_found_fallback() -> None:
@@ -719,3 +736,4 @@ def test_consider_retry_uses_option_evidence_for_safety_check() -> None:
 
     # Option-level evidence should satisfy the evidence check
     assert result.outcome == "retry_allowed_requires_confirmation"
+    assert result.reason == "missing_user_confirmation"

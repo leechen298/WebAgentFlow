@@ -36,7 +36,7 @@
   `RetryPolicyEvaluator` 和 `evaluate_retry_policy`。
 - `apps/api/app/services/recovery/__init__.py`：导出
   `RetryPolicyEvaluator` / `evaluate_retry_policy`。
-- `apps/api/tests/test_retry_policy.py`：新增 41 个 focused unit tests。
+- `apps/api/tests/test_retry_policy.py`：新增 42 个 focused unit tests。
 - `apps/api/tests/test_recovery_exports.py`：覆盖 12.1 / 12.2 / 12.3 /
   12.4 package-level exports。
 
@@ -53,9 +53,9 @@
 ### 测试证据
 
 - `cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py -q`：
-  41 passed.
+  42 passed.
 - `cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_exports.py -q`：
-  116 passed.
+  117 passed.
 - `cd apps/api && .venv/bin/ruff check app/schemas/recovery.py app/services/recovery tests/test_retry_policy.py tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_exports.py`：
   All checks passed.
 
@@ -134,8 +134,8 @@ product-driven browser execution。不产生 `run_id`。
 
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Notes |
 |---|---|---|---|---|---|
-| `cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py -q` | Retry policy unit tests pass | 41 passed | 0 | PASS | Focused 12.4 unit coverage. |
-| `cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_exports.py -q` | Focused recovery suite passes | 116 passed | 0 | PASS | 12.1 / 12.2 / 12.3 regression coverage plus 12.4. |
+| `cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py -q` | Retry policy unit tests pass | 42 passed | 0 | PASS | Focused 12.4 unit coverage. |
+| `cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_exports.py -q` | Focused recovery suite passes | 117 passed | 0 | PASS | 12.1 / 12.2 / 12.3 regression coverage plus 12.4. |
 | `cd apps/api && .venv/bin/ruff check app/schemas/recovery.py app/services/recovery tests/test_retry_policy.py tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_exports.py` | Ruff clean | All checks passed | 0 | PASS | Static validation. |
 | `git diff --check` | No whitespace errors | No output | 0 | PASS | Workspace diff check. |
 | code/package status check | No frontend/package changes | No output | 0 | PASS | Scope guard for frontend/package/lockfiles. |

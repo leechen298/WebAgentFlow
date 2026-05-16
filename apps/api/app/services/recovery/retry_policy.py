@@ -125,7 +125,7 @@ class RetryPolicyEvaluator:
                 )
             return self._decision(
                 "retry_allowed_requires_confirmation",
-                "retry_candidate_with_clear_evidence",
+                "missing_user_confirmation",
                 "low",
                 "user_confirmation_required",
                 evidence,
@@ -211,7 +211,7 @@ class RetryPolicyEvaluator:
 
         if recommendation == "stop":
             return self._deny(
-                "abort_boundary_active",
+                "unsupported_replay_state",
                 "high",
                 evidence,
                 "Retry denied: recovery boundary recommends stop.",

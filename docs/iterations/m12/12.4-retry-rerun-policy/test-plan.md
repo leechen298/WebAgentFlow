@@ -72,7 +72,7 @@
 
 ## 实现验证证据（Implementation Evidence）
 
-- `tests/test_retry_policy.py`：41 passed.
-- Focused recovery suite：116 passed.
+- `tests/test_retry_policy.py`：42 passed.
+- Focused recovery suite：117 passed.
 - Ruff：All checks passed.
 - API / CLI / UI / E2E / `verify-scenario` / autonomous run：not run / out of scope.
