@@ -1,6 +1,6 @@
 # M12 · Failure Recovery / Abort / Runtime Robustness
 
-Status: in progress.
+Status: completed with follow-ups.
 
 M12 turns failure, blocked execution, uncertainty, and user abort into
 auditable runtime decisions. It is the follow-up layer after the M11.1
@@ -45,8 +45,8 @@ without explicit user consent.
 - [12.5-recovery-conversation-flow](./12.5-recovery-conversation-flow/) —
   recovery conversation flow. Status: implemented / shipped.
 - [12.6-recovery-tests-and-evidence](./12.6-recovery-tests-and-evidence/) —
-  recovery tests and evidence closure. Status: proposed / evidence closure
-  design package.
+  recovery tests and evidence closure. Status: evidence closed / reviewed.
+  Completion: `m12_completed_with_followups`.
 
 ## Core Runtime Terms
 

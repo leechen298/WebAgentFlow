@@ -1,8 +1,8 @@
 # M12 Plan
 
-Status: in progress.
+Status: completed with follow-ups.
 
-Current package: 12.6 Recovery tests and evidence design package.
+Current package: 12.6 Recovery tests and evidence — evidence closed.
 
 ## Goal
 
@@ -88,15 +88,16 @@ continuation, takeover, teaching mode, or LearnedPath write-back.
 
 ### 12.6 · Recovery tests and evidence
 
-Status: proposed / current evidence closure design package.
+Status: evidence closed.
 
 Close M12 with deterministic tests, conversation/event evidence, and static
 review that prove no hidden recovery, no hidden relearning, and no browser
 continuation without user consent.
 
-12.6 is the current design package. The later evidence-closure submission
-should use `12.6-recovery-tests-and-evidence/contract.md`,
-`technical-design.md`, `test-plan.md`, and `plan.md` as inputs.
+Evidence-closure submission has executed the required recovery suite,
+recovery ruff command, and `git diff --check`. Result: 157 passed, ruff clean,
+diff clean. Completion decision recorded in
+`docs/testing/results/2026-05-16-m12-recovery-tests-and-evidence.md`.
 
 ## Decision Rules
 
