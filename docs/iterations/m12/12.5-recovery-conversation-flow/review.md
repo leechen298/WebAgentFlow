@@ -16,6 +16,10 @@
   `verify-scenario` -> accepted。
 - 要求 12.5 核心原则固定为 recovery conversation flow 不等于 recovery execution ->
   accepted。
+- Review 后要求收紧 event payload / event type 默认策略 -> accepted，已补入
+  `contract.md`、`technical-design.md` 和 `test-plan.md`。
+- Review 后要求收紧 selected user option 字段命名和 execution boundary -> accepted，
+  已补入 `contract.md`、`technical-design.md` 和 `test-plan.md`。
 
 ## 最终差异（Final Delta）
 
@@ -33,6 +37,12 @@
 - 新建 12.5 `review.md`：本次设计包生成记录。
 - 更新 M12 README / m12-plan：12.5 标记为 proposed / current design package，
   12.6 保持 future。
+- Polish：明确 future implementation 默认复用 existing conversation event payload
+  mechanisms，不默认新增 `ConversationEventType` / `ConversationStatus`；如必须新增，
+  需要实现 review 记录原因、enum、兼容性影响和测试证据。
+- Polish：明确 future user choice 字段优先使用 `chosen_option_kind`、
+  `conversation_choice`、`requested_next_step`，避免 `selected_action`、
+  `execute_choice`、`run_choice`、`retry_choice` 等暗示执行的字段名。
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
@@ -81,5 +91,9 @@ product-driven browser execution。不产生 `run_id`。
   focused unit tests，并按需添加 limited conversation integration tests；不要接 retry
   execution、browser continuation、takeover、teaching mode 或 LearnedPath write-back。
 - 若 12.5 implementation 需要新增 `ConversationEventType` 或 `ConversationStatus`，
-  需要在实现 review 中明确记录 public/runtime contract impact。
+  需要在实现 review 中明确记录 public/runtime contract impact；默认路径是复用
+  existing conversation event payload，不新增 enum。
+- 12.5 implementation 应避免 `selected_action`、`execute_choice`、`run_choice`、
+  `retry_choice` 等字段名；用户选择只能表示 conversation choice / requested next step，
+  不能表示 execution。
 - 12.1 / 12.2 历史包仍是旧四件套；本次不回填。如需治理应另开文档任务。

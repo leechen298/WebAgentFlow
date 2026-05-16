@@ -39,11 +39,12 @@ recovery boundary / abort acknowledgement / proposal / retry policy decision 包
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
 | Conversation flow is not execution. | Future `RecoveryConversationResponse` contains display/event/state suggestion only, no command fields. | `test-plan.md`: no execution command / forbidden dependency tests. | Prevents retry/replan/browser continuation. |
-| Proposal options are shown, not auto-selected. | Future response preserves option list and display metadata; selected option only comes from explicit user choice input. | `test-plan.md`: recommended displayed but not selected; selected user option is conversation choice only. | Keeps 12.3 boundary. |
+| Proposal options are shown, not auto-selected. | Future response preserves option list and display metadata; user choice fields use names such as `chosen_option_kind`, `conversation_choice`, or `requested_next_step`. | `test-plan.md`: recommended displayed but not selected; selected user option is conversation choice only. | Avoid `selected_action`, `execute_choice`, `run_choice`, or names that imply execution. |
 | Retry policy result is displayed, not started. | Future flow wraps `RetryPolicyDecision` and writes event payload with policy outcome only. | `test-plan.md`: retry allowed requires confirmation but no execution. | Keeps 12.4 boundary. |
 | Abort is acknowledged without new browser actions. | Future abort response uses `AbortAcknowledgement.no_new_actions_after` and `inflight_caveat`. | `test-plan.md`: accepted stop and inflight caveat cases. | Preserves user control. |
 | Upstream recovery outputs remain unchanged. | Future service consumes copies / Pydantic models and returns new response data. | `test-plan.md`: input immutability. | Compatibility with 12.1-12.4. |
 | No raw HTML / browser / network / LLM reads. | Future service consumes structured recovery and conversation inputs only. | `test-plan.md`: forbidden dependency scan. | Keeps deterministic conversation flow. |
+| Event payloads remain conversation records. | Prefer existing conversation event payload mechanisms; do not add `ConversationEventType` or `ConversationStatus` by default. | `test-plan.md`: event payload / enum boundary tests if orchestrator is touched. | Any enum addition requires implementation review with compatibility notes. |
 
 ## 实现方案（Proposed Implementation）
 
@@ -78,7 +79,7 @@ updates。
 | Database schema / migration | No | No persistence or migration. | Existing conversation tables untouched. |
 | CLI | No | No CLI behavior expansion for MVP design. | `wagent conversation` unchanged. |
 | Console UI | No | No frontend display in 12.5 design package. | UI belongs to future work if scoped. |
-| Conversation events | Future | Future internal event payload design may wrap recovery outputs. | New event enum/status changes require implementation review. |
+| Conversation events | Future | Future internal event payload design should wrap recovery outputs using existing event payload mechanisms first. | New event enum/status changes are not the default path and require implementation review. |
 | Replay execution | No | No replay command or continuation. | Replay semantics unchanged. |
 | Reporter | No | Task Result Reporter remains upstream evidence. | Reporter output unchanged. |
 | Recovery services | Future | Future conversation flow wrapper consumes 12.1-12.4 outputs. | Upstream services unchanged. |
@@ -105,6 +106,12 @@ Expected properties:
   evidence refs, source recovery objects, policy outcome and next-state suggestion.
 - `RecoveryChoiceOption` contains display label, kind, downstream owner and
   non-execution marker.
+- User choice fields should use conversation-only wording such as
+  `chosen_option_kind`, `conversation_choice`, or `requested_next_step`.
+- Do not use `selected_action`, `execute_choice`, `run_choice`, or `retry_choice`;
+  those names imply execution and violate the 12.5 boundary.
+- Choice payloads must preserve an explicit `non_executable`, `execution_boundary`,
+  or equivalent field / description.
 - No schema contains retry command, replan command, browser action, takeover command,
   teaching command or LearnedPath write-back field.
 - Inputs are structured Pydantic models or mappings validated into those models.
@@ -162,6 +169,23 @@ Conversation session/status + user message/command
 Future orchestrator integration should append conversation messages/events using existing
 repo paths. Pure recovery conversation service must not write DB directly.
 
+## Event Payload Strategy
+
+Default strategy:
+
+1. Reuse existing conversation event payload mechanisms.
+2. Store recovery conversation data as structured payload fields:
+   source kind, decision/state suggestion, shown options, evidence refs, retry
+   policy outcome, user-facing explanation and conversation choice marker.
+3. Treat any user choice as a conversation record only. It is not a replay command,
+   retry command, browser command or cleanup command.
+
+Implementation should not add `ConversationEventType` or `ConversationStatus` by
+default. If a new enum value is unavoidable, the implementation review must record
+why existing values are insufficient, the exact enum addition, compatibility impact
+for event consumers and focused tests proving the enum still represents conversation
+state only.
+
 ## 状态推导（Status / State Derivation）
 
 Recommended derivation order:
@@ -205,8 +229,11 @@ proposal recommendation, retry policy allow, or selected user choice alone.
   cleanup or external rollback.
 - User selects takeover / re-teach handoff -> record `handoff_pending` only; no
   takeover or teaching implementation.
-- Multiple options -> display recommended / rank as emphasis only; selected option
-  must come from explicit user input.
+- Multiple options -> display recommended / rank as emphasis only; chosen option
+  must come from explicit user input and must be represented as conversation choice
+  only.
+- Do not infer execution from `chosen_option_kind`, `conversation_choice`,
+  `requested_next_step` or any equivalent user choice marker.
 
 ## 非目标（Non-goals）
 

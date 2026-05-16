@@ -52,6 +52,19 @@ LearnedPath write-back command。
 - `handoff_pending != takeover executed`。
 - selected user option is conversation choice only, not execution.
 
+User choice naming contract:
+
+- Prefer `chosen_option_kind`, `conversation_choice`, or `requested_next_step`
+  for future internal fields.
+- Avoid `selected_action`, `execute_choice`, `run_choice`, `retry_choice`,
+  or any field name that implies execution.
+- A selected user option only records a conversation choice / requested next
+  step. It must carry or preserve a non-execution marker such as
+  `non_executable`, `execution_boundary`, or equivalent wording in the response
+  / event payload.
+- Even when a choice points to retry, replan, takeover, teaching, or observation
+  handoff, 12.5 must not execute that downstream action.
+
 ## Schema / API 契约
 
 本次设计包不新增 API，不新增 CLI，不新增 DB，不新增 frontend。
@@ -69,6 +82,20 @@ LearnedPath write-back command。
 这些 schema 必须是纯数据结构。12.5 design package 不新增 public API route。
 Conversation API expansion, if needed, must remain within existing conversation
 runtime boundary and require implementation review.
+
+Event payload / event type contract:
+
+- Prefer wrapping recovery conversation data inside existing conversation event
+  payload mechanisms.
+- Do not add a new public API route for recovery conversation in 12.5.
+- Do not add a new `ConversationEventType` or `ConversationStatus` by default.
+- If implementation proves a new event type or status is required, the
+  implementation review must explicitly record:
+  - why existing event types / statuses are insufficient;
+  - the exact enum addition;
+  - compatibility impact for existing event consumers;
+  - focused tests proving the new enum records conversation state only and does
+    not imply recovery execution.
 
 明确保持：
 
@@ -162,6 +189,7 @@ context 或 manual review，不能假装已恢复或已执行。
   和 `plan.md` 为输入；若实现时发现这些文档缺失、过期、互相冲突或无法执行，
   应停止并报告具体缺口。
 - 若实现需要新增 `ConversationEventType` 或 `ConversationStatus`，必须在实现任务中
-  明确 review，因为本设计包只定义 future internal payload / state suggestion。
+  明确 review，因为本设计包只定义 future internal payload / state suggestion。默认
+  策略是复用 existing conversation event payload，不新增 enum。
 
 不允许空白或隐式省略。只有写明原因时，才允许使用 `N/A`。

@@ -36,10 +36,13 @@
 | Unit | retry policy `retry_needs_manual_review` | `pytest tests/test_recovery_conversation_flow.py` | asks review | Yes | No action. |
 | Unit | `abandon_task` option | `pytest tests/test_recovery_conversation_flow.py` | can record abandon intent for conversation only | Yes | No browser cleanup. |
 | Unit | recommended option display | `pytest tests/test_recovery_conversation_flow.py` | recommended/rank shown but not selected automatically | Yes | Preserves 12.3 boundary. |
-| Unit | selected user option | `pytest tests/test_recovery_conversation_flow.py` | represented as conversation choice only | Yes | Not execution. |
+| Unit | selected user option | `pytest tests/test_recovery_conversation_flow.py` | represented as `chosen_option_kind`, `conversation_choice`, `requested_next_step`, or equivalent conversation-only marker | Yes | Not execution. |
+| Unit | choice naming boundary | `pytest tests/test_recovery_conversation_flow.py` | response / payload does not expose `selected_action`, `execute_choice`, `run_choice`, or `retry_choice` fields | Yes | Prevents field names that imply execution. |
+| Unit | choice execution boundary marker | `pytest tests/test_recovery_conversation_flow.py` | user choice preserves `non_executable`, `execution_boundary`, or equivalent marker | Yes | Choice is not command. |
 | Unit | input immutability | `pytest tests/test_recovery_conversation_flow.py` | recovery inputs are not mutated | Yes | Pure service. |
 | Unit | forbidden dependency scan | `pytest tests/test_recovery_conversation_flow.py` | no browser/network/LLM/retry/replan/LearnedPath write-back imports | Yes | Scope guard. |
 | Integration | orchestrator/event wrapping | `pytest tests/test_conversation_recovery_flow.py` | event payload records response and choice boundaries only | Future | Only if implementation touches orchestrator. |
+| Integration | event enum boundary | `pytest tests/test_conversation_recovery_flow.py` | implementation reuses existing event payload mechanisms by default; any new `ConversationEventType` / `ConversationStatus` is explicitly reviewed and covered | Future | Only if implementation touches orchestrator/state enums. |
 
 ## E2E / UI Smoke 边界（E2E / UI Smoke Boundary）
 
