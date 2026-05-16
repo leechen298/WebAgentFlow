@@ -76,11 +76,15 @@ execution, and `retry_allowed_requires_confirmation` is not `retry_started`.
 
 ### 12.5 · Recovery conversation flow
 
-Status: future.
+Status: proposed / current design package.
 
 Route recovery and abort conversations through WebAgentFlow's runtime
 conversation surface while preserving the internal role boundaries for Failure
 Recovery Agent (legacy: Agent F) and User Abort Handler (legacy: Agent G).
+12.5 starts with a complete code-type design package before implementation.
+Recovery conversation flow is not recovery execution; it may display, explain,
+ask, route, and record choices, but must not execute retry, replan, browser
+continuation, takeover, teaching mode, or LearnedPath write-back.
 
 ### 12.6 · Recovery tests and evidence
 
@@ -90,8 +94,9 @@ Close M12 with deterministic tests, conversation/event evidence, and static
 review that prove no hidden recovery, no hidden relearning, and no browser
 continuation without user consent.
 
-12.4 is implemented. The next package should start with 12.5 documentation
-planning before implementation.
+12.5 is the current design package. The next implementation task should use
+`12.5-recovery-conversation-flow/contract.md`, `technical-design.md`,
+`test-plan.md`, and `plan.md` as inputs.
 
 ## Decision Rules
 
