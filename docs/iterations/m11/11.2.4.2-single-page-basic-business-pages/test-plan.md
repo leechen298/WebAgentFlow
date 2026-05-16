@@ -1,32 +1,10 @@
 # 测试计划（Test Plan）
 
-状态：redesign required
+状态：implementation complete, review pending
 
-## Test Scope For Documentation Redesign
+## Test Scope For Implementation Closure
 
-本轮只验证文档修订：
-
-- `fixture-designs/*.md` 是否存在。
-- 每个 fixture design 是否包含 happy path、local error states、loading / pending、success、reset、
-  stable anchors 和 deferred states。
-- `contract.md` 是否包含 production-like basic fixture contract 和 error scope clarification。
-- `review.md` 是否标记 redesign required after human review。
-- code / package / backend status 是否无变化。
-
-本轮不覆盖：
-
-- validation-site build。
-- route smoke。
-- E2E evidence closure。
-- `verify-scenario`。
-- autonomous run。
-- Task Result Reporter。
-- M12 recovery。
-- mock backend HTTP behavior。
-
-## Future Implementation Test Scope
-
-重做代码后必须覆盖：
+本轮验证 11.2.4.2 production-like fixture implementation：
 
 - validation-site build。
 - `/runtime-observation/basic/*` route registration。
@@ -38,6 +16,15 @@
 - stable anchors。
 - current MVP / future observation label separation。
 - package / backend boundary unchanged。
+
+本轮不覆盖：
+
+- E2E evidence closure。
+- `verify-scenario`。
+- autonomous run。
+- Task Result Reporter。
+- M12 recovery。
+- mock backend HTTP behavior。
 
 ## Per-fixture State Matrix
 
@@ -51,9 +38,9 @@
 | basic-settings | change controls -> save -> saved | warning surface for invalid local combination | saving | restore controls, dirty false, save disabled |
 | basic-confirm | open confirm -> confirm -> success | cancel confirm | pending after confirm | close confirm, clear pending/success |
 
-## Future Route Smoke
+## Route Smoke
 
-If a local dev server is started explicitly, a lightweight browser smoke may check:
+If a local dev server is started explicitly, a lightweight browser smoke checks:
 
 - `/runtime-observation/basic/login`
 - `/runtime-observation/basic/register`
@@ -87,21 +74,22 @@ Do not report browser smoke as E2E. Do not trigger `verify-scenario` or autonomo
 - Weak network / HTTP errors are not tested in 11.2.4.2.
 - Recovery / retry / abort are not tested in 11.2.4.2.
 
-## Required Commands For This Docs Pass
+## Required Commands
 
 ```bash
 git diff --check
+pnpm --filter @web-agent-flow/validation-site build
 git status --short
-git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
+git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```
 
 Expected:
 
 - `git diff --check`: no output。
-- worktree status: docs changes only。
-- code/package status check: no output。
-- forbidden directory check: no output。
+- validation-site build exits 0。
+- backend / package / lock status check: no output。
+- forbidden directory check: report output honestly; existing directories may be noted as not introduced by this package。
 
 ## Evidence Requirements
 

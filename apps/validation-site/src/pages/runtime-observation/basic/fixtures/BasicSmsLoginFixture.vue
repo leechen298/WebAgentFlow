@@ -95,6 +95,10 @@ function reset() {
   emit('update:result', '');
 }
 
+function isValidPhone(value: string) {
+  return /^1[3-9]\d{9}$/.test(value.trim());
+}
+
 function onRequestCode() {
   clearAll();
   hint.value = '';
@@ -108,8 +112,7 @@ function onRequestCode() {
     return;
   }
 
-  const phoneValid = /^1[3-9]\d{9}$/.test(phone.value.trim());
-  if (!phoneValid) {
+  if (!isValidPhone(phone.value)) {
     alert.value = t('runtimeFixtures.smsLogin.phoneInvalid');
     emit('update:status', 'error');
     emit('update:result', alert.value);
@@ -130,6 +133,12 @@ function onSubmit() {
 
   if (!phone.value.trim()) {
     alert.value = t('runtimeFixtures.smsLogin.phoneRequired');
+    emit('update:status', 'error');
+    emit('update:result', alert.value);
+    return;
+  }
+  if (!isValidPhone(phone.value)) {
+    alert.value = t('runtimeFixtures.smsLogin.phoneInvalid');
     emit('update:status', 'error');
     emit('update:result', alert.value);
     return;

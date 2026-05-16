@@ -1,11 +1,12 @@
 # 契约（Contract）
 
-状态：redesign required
+状态：implementation complete, review pending
 
 ## 概念 / 边界契约
 
-11.2.4.2 重新定义 basic business page fixtures 的验收标准。当前实现 build 通过，但因业务密度不足被
-人工 review 否决，需要按 production-like basic fixture contract 重做。
+11.2.4.2 定义并实现 basic business page fixtures 的验收标准。此前 toy-like 实现 build 通过，
+但因业务密度不足被人工 review 否决；当前实现已按 production-like basic fixture contract 重做，
+并等待最终 review / evidence closure。
 
 Basic business page 的含义是：
 
@@ -61,7 +62,7 @@ or network failures.
 
 ## Page-level Design Contract
 
-后续代码重做前，必须先完成并读取：
+本包页面实现必须以这些设计文档为 source of truth：
 
 ```text
 fixture-designs/basic-login.md
@@ -195,12 +196,12 @@ Fixtures may display future expected observation labels, but they must remain pl
 
 No backend schema/API changes.
 
-This redesign may plan frontend component-local TypeScript types or metadata objects for the future code pass.
-It must not add Python schemas, FastAPI routes, DB migrations, replay response fields, or reporter contracts.
+This package uses frontend component-local TypeScript types and metadata objects only. It must not add Python
+schemas, FastAPI routes, DB migrations, replay response fields, or reporter contracts.
 
 ## Compatibility Contract
 
-Future implementation must preserve:
+Implementation must preserve:
 
 - `/` validation-site index。
 - existing `/login` fixture。
@@ -210,12 +211,11 @@ Future implementation must preserve:
 - existing validation-site specs。
 - `/runtime-observation/basic/*` route namespace。
 
-Current toy-like implementation is not the final acceptance standard; future implementation may replace or
-refactor it while preserving the route namespace and shell links.
+The rejected toy-like implementation is not the final acceptance standard. The current implementation may
+refactor internals further, but must preserve the route namespace and shell links.
 
 ## Non-goals
 
-- No source code changes in this documentation revision。
 - No mock backend。
 - No medium / complex / mobile fixtures。
 - No E2E evidence closure。

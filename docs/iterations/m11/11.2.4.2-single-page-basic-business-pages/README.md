@@ -1,27 +1,29 @@
 # 11.2.4.2 · Single-page Basic Business Pages
 
-状态：redesign required
+状态：implementation complete, review pending
 里程碑：M11.2
 类型：code
 
 ## 迭代定位
 
-11.2.4.2 原目标是在 validation-site 的 runtime observation shell 下实现第一批 PC
-single-page basic business fixtures。当前 `/runtime-observation/basic/*` 代码已实现并通过
-build 级验证，但人工 review 否决该实现：页面业务密度不足，更像 UI-minimal toy fixtures，
-不符合 WebAgentFlow 自建真实网页验证场景库目标。
+11.2.4.2 在 validation-site 的 runtime observation shell 下实现第一批 PC
+single-page basic business fixtures。此前 `/runtime-observation/basic/*` 有一版
+toy-like 实现并通过 build，但人工 review 否决该实现：页面业务密度不足，更像
+UI-minimal toy fixtures，不符合 WebAgentFlow 自建真实网页验证场景库目标。
 
-本轮先修订文档，不改源码。后续代码重做必须以本包新增的页面级设计文档为 source of truth。
+当前实现已按本包页面级设计文档重做为 production-like basic fixtures，保留
+`/runtime-observation/basic/*` route namespace 和 shell links。当前状态为代码实现完成，
+等待最终 review / evidence closure。
 
 ## Redesign Decision
 
 当前实现状态：
 
-- 7 个 basic routes 已实现。
+- 7 个 basic routes 已按 production-like 页面标准重做。
+- implementation uses shared shell + per-fixture components。
 - validation-site build 已通过。
-- 人工 review 结论：rejected for redesign。
-- 否决原因：页面只覆盖输入、按钮、结果区和 reset，缺少完整业务页面结构、secondary actions、
-  distractors、本地业务失败状态和 production-like 页面密度。
+- 当前仍不代表 E2E / autonomous run evidence。
+- 仍需 review 确认 browser route smoke 和文档证据是否足够。
 
 新的标准：
 
@@ -36,7 +38,7 @@ stable anchors。
 
 ## Fixture Design Documents
 
-后续重做前必须先读取 7 个页面设计文档：
+本轮实现以 7 个页面设计文档为 source of truth：
 
 - [basic-login](./fixture-designs/basic-login.md)
 - [basic-register](./fixture-designs/basic-register.md)
@@ -122,7 +124,6 @@ runtime observation support.
 
 ## 明确不做
 
-- 本轮不修改 validation-site 源码。
 - 本轮不新增测试代码。
 - 不实现 medium / complex / mobile fixtures。
 - 不实现 mock backend。

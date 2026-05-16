@@ -11,17 +11,17 @@
 
       <div class="control-row">
         <label>{{ t('runtimeFixtures.settings.digestFrequency') }}</label>
-        <div class="radio-row">
+        <div class="radio-row" data-testid="basic-settings-frequency">
           <label>
-            <input v-model="frequency" type="radio" value="daily" data-testid="basic-settings-frequency" />
+            <input v-model="frequency" type="radio" value="daily" data-testid="basic-settings-frequency-daily" />
             {{ t('runtimeFixtures.settings.daily') }}
           </label>
           <label>
-            <input v-model="frequency" type="radio" value="weekly" data-testid="basic-settings-frequency" />
+            <input v-model="frequency" type="radio" value="weekly" data-testid="basic-settings-frequency-weekly" />
             {{ t('runtimeFixtures.settings.weekly') }}
           </label>
           <label>
-            <input v-model="frequency" type="radio" value="never" data-testid="basic-settings-frequency" />
+            <input v-model="frequency" type="radio" value="never" data-testid="basic-settings-frequency-never" />
             {{ t('runtimeFixtures.settings.never') }}
           </label>
         </div>

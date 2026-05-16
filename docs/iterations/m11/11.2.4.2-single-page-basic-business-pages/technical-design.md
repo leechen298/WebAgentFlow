@@ -1,13 +1,14 @@
 # 技术设计（Technical Design）
 
-状态：redesign required
+状态：implementation complete, review pending
 
 ## 当前状态（Current State）
 
 - 11.2.4.1 已实现 runtime observation shell、category navigation 和 route namespace。
-- 11.2.4.2 当前代码已实现 7 个 `/runtime-observation/basic/*` routes，并通过 build 级验证。
-- 人工 review 否决当前 basic fixtures：页面业务密度不足，更像 toy UI demo。
-- 当前实现不作为最终验收标准；后续重做必须以 `fixture-designs/*.md` 为 source of truth。
+- 11.2.4.2 第一版代码已实现 7 个 `/runtime-observation/basic/*` routes，并通过 build 级验证。
+- 人工 review 否决第一版 basic fixtures：页面业务密度不足，更像 toy UI demo。
+- 当前代码已按 `fixture-designs/*.md` 重做为 shared shell + per-fixture components。
+- 当前实现等待最终 review / evidence closure。
 - validation-site 当前没有 mock backend dependency。
 - validation-site 当前 package 有 `build` script，没有独立 `test` script。
 
@@ -29,13 +30,13 @@
 
 ## 影响面（Affected Surfaces）
 
-| Surface | Changed? in redesign docs | Future implementation impact | Compatibility notes |
+| Surface | Changed? | Implementation impact | Compatibility notes |
 |---|---|---|---|
 | `fixture-designs/*.md` | Yes | 作为页面实现 source of truth | 新增文档 |
-| `apps/validation-site/src/pages/runtime-observation/basic/*` | No in this docs pass | 重做 richer business fixture 页面 / 组件 | 保留 route namespace |
-| validation-site router | No in this docs pass | 可能保留现有 routes | 不新增全局 basic routes |
+| `apps/validation-site/src/pages/runtime-observation/basic/*` | Yes | shared shell + per-fixture components | 保留 route namespace |
+| validation-site router | Yes | existing basic routes point to the shared shell | 不新增全局 basic routes |
 | validation-site index `/` | No | 通常不需要改首页 | 已有 Runtime Observation 入口 |
-| validation-site i18n | No in this docs pass | 未来需要同步 en / zh / ja labels | 不强制本轮 |
+| validation-site i18n | Yes | en / zh / ja labels for richer fixtures | 三语同步 |
 | validation-site specs | No | 可后续补 route smoke/spec | 不跑 E2E 假通过 |
 | API routes | No | 不新增 API | N/A |
 | DB schema | No | 不新增 migration | N/A |
@@ -43,12 +44,9 @@
 | Task Result Reporter | No | 不接 reporter | N/A |
 | E2E tests | No | 11.2.4.7 | 本轮不运行 |
 
-## Recommended Future Implementation Structure
+## Implementation Structure
 
-当前单个 `BasicBusinessFixturePage.vue` 可以保留，但必须支持更丰富的页面结构。如果继续把全部页面逻辑塞进
-一个巨大组件，会降低可读性和后续维护质量。
-
-推荐方案：
+当前实现采用 shared shell + per-fixture components：
 
 ```text
 apps/validation-site/src/pages/runtime-observation/basic/
@@ -71,14 +69,14 @@ Design intent:
 - shared utilities may manage deterministic timers so reset behavior is consistent。
 - existing route namespace stays unchanged。
 
-Alternative:
+Rejected alternative:
 
-- one `BasicBusinessFixturePage.vue` with per-fixture sections is acceptable only if each section remains readable and each
-  page-level design requirement is explicitly represented.
+- keep one `BasicBusinessFixturePage.vue` with all per-fixture sections. This was rejected because the previous
+  monolith became harder to review and encouraged toy-like UI slices instead of page-level fixtures.
 
 ## Fixture Design Source of Truth
 
-Future implementation must satisfy these documents:
+Implementation must satisfy these documents:
 
 | Fixture | Design doc | Route |
 |---|---|---|
@@ -186,7 +184,6 @@ These states are fixture UI states only. They do not change `WaitResult.status`,
 
 ## Non-goals
 
-- No source code changes in this documentation pass。
 - No backend service。
 - No mock API。
 - No E2E / Playwright tests。
@@ -194,13 +191,14 @@ These states are fixture UI states only. They do not change `WaitResult.status`,
 - No reporter integration。
 - No new observation signal policy。
 
-## Validation Commands For This Docs Pass
+## Validation Commands
 
 ```bash
 git diff --check
+pnpm --filter @web-agent-flow/validation-site build
 git status --short
-git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
+git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```
 
-Do not run E2E, `verify-scenario`, or autonomous run for this documentation revision.
+Do not run E2E, `verify-scenario`, or autonomous run for this implementation package.

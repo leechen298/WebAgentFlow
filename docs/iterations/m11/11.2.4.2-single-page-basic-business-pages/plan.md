@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：redesign required
+状态：implementation complete, review pending
 
 ## Inputs
 
@@ -15,10 +15,10 @@
 
 ## Current Decision
 
-当前 `/runtime-observation/basic/*` 代码实现不作为最终验收标准。它已经 build 通过，但被人工 review
+第一版 `/runtime-observation/basic/*` 代码实现不作为最终验收标准。它已经 build 通过，但被人工 review
 否决，原因是页面业务密度不足、过于 toy-like。
 
-后续重做时可以在保留 route namespace 和 shell links 的前提下替换或重构现有页面结构。
+当前实现已在保留 route namespace 和 shell links 的前提下重构为 shared shell + per-fixture components。
 
 ## Step 0 · Complete Page-level Fixture Designs
 
@@ -32,7 +32,7 @@ Before writing code, read and satisfy:
 - `fixture-designs/basic-settings.md`
 - `fixture-designs/basic-confirm.md`
 
-Do not start code implementation until the design docs are present and reviewed.
+Status: complete.
 
 ## Step 1 · Inspect Existing Implementation
 
@@ -48,6 +48,8 @@ apps/validation-site/package.json
 
 Confirm what can be reused and what must be replaced.
 
+Status: complete.
+
 ## Step 2 · Choose Structure
 
 Recommended:
@@ -57,6 +59,8 @@ shared shell + per-fixture components
 ```
 
 The implementer may keep one component only if each fixture remains readable and fully satisfies its design doc.
+
+Status: complete; selected shared shell + per-fixture components.
 
 ## Step 3 · Redesign Fixture Metadata
 
@@ -72,6 +76,8 @@ Keep metadata for:
 
 Metadata must include fixture id, route, platform, business complexity, runtime behaviors,
 runtime conditions, current MVP expected observation, future expected observation, and status.
+
+Status: complete.
 
 ## Step 4 · Preserve Basic Routes
 
@@ -89,6 +95,8 @@ Preserve routes under:
 
 Do not create global `/basic/*` routes.
 
+Status: complete.
+
 ## Step 5 · Rebuild Production-like Basic Fixtures
 
 Each fixture must implement:
@@ -105,6 +113,8 @@ Each fixture must implement:
 
 Do not implement weak network, HTTP errors, real server validation, retry, recovery, abort, or takeover.
 
+Status: complete.
+
 ## Step 6 · Update Shell Cards
 
 Update `RuntimeObservationIndex.vue` only as needed:
@@ -114,7 +124,9 @@ Update `RuntimeObservationIndex.vue` only as needed:
 - not-yet-implemented medium / complex / mobile / mock-backend cards remain planned or deferred.
 - future signal labels remain future labels.
 
-## Step 7 · Validate Future Implementation
+Status: complete.
+
+## Step 7 · Validate Implementation
 
 Run:
 
@@ -127,6 +139,8 @@ find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name
 
 Optional route smoke may be run only if explicitly requested. Do not run E2E / `verify-scenario` /
 autonomous run unless separately requested.
+
+Status: in progress; record final evidence in `review.md`.
 
 ## Review Checklist
 

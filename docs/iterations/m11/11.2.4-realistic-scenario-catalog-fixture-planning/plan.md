@@ -77,9 +77,9 @@ reset 模式和 stable anchors。
 
 ### 11.2.4.2 · Single-page Basic Business Pages
 
-实现 simple business pages 的单页面前端 fixture。当前 11.2.4.2 已有 build-passing 代码实现，
-但人工 review 判定页面业务密度不足、过于 toy-like，因此该包进入 redesign required 状态。
-后续重做必须先读取页面级设计文档，并按 production-like basic fixture 标准实现。
+实现 simple business pages 的单页面前端 fixture。11.2.4.2 第一版 build-passing 代码实现
+因业务密度不足、过于 toy-like 被人工 review 否决；当前已按页面级设计文档重做为
+production-like basic fixtures，状态为 implementation complete, review pending。
 
 重做范围仍为：
 

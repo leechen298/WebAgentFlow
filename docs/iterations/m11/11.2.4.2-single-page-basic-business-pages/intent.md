@@ -1,24 +1,23 @@
 # 意图（Intent）
 
-状态：redesign required
+状态：implementation complete, review pending
 
 ## 目标
 
-修订 11.2.4.2 Single-page Basic Business Pages 的设计文档，否决当前 toy-like basic
-fixtures，并为 7 个 basic routes 补齐页面级 production-like 设计。
+实现 11.2.4.2 Single-page Basic Business Pages，将此前被人工 review 否决的
+toy-like basic fixtures 重做为 production-like frontend-local fixtures。
 
 成功状态：
 
-- 当前实现被明确标记为 implemented but rejected by human review。
 - `fixture-designs/` 下存在 7 个页面级设计文档。
+- 7 个 `/runtime-observation/basic/*` routes 按页面级设计文档实现。
 - 每个页面设计都定义 happy path、本地错误状态、loading / pending、success、reset、
   stable anchors 和 deferred states。
-- contract / technical-design / test-plan / plan / review 均指向 redesign-first 流程。
-- 后续代码实现必须以 `fixture-designs/*.md` 为 source of truth。
+- contract / technical-design / test-plan / plan / review 均记录实现与验证边界。
 
 ## 动机
 
-11.2.4.2 当前实现虽然提供了 7 个 `/runtime-observation/basic/*` routes，并通过 build 级验证，
+11.2.4.2 的第一版实现虽然提供了 7 个 `/runtime-observation/basic/*` routes，并通过 build 级验证，
 但页面业务密度不足。它们主要是输入、按钮、结果区和 reset，不足以代表真实业务页面。
 
 WebAgentFlow 自建 fixture 的目标不是制造最小 UI 片段，而是制造可复现、可观察的真实页面运行时表面。
@@ -61,9 +60,7 @@ recovery / retry / abort / user takeover 进入 M12。
 
 ## 非目标
 
-- 不写 validation-site 源码。
 - 不新增测试代码。
-- 不实现新版页面。
 - 不实现 mock backend 或真实 HTTP delay。
 - 不新增 observation signal，不修改 wait service。
 - 不接 Task Result Reporter。
