@@ -61,11 +61,11 @@ runtime behavior catalog、PC / mobile business page catalog、fixture phase map
 建立 runtime observation fixture index 和基础 route。目标是让后续所有 fixture 有统一入口、
 reset 模式和 stable anchors。
 
-11.2.4.1 文档包已拆出到：
+11.2.4.1 文档包已拆出并实现到：
 
 - `docs/iterations/m11/11.2.4.1-single-page-runtime-fixture-shell/`
 
-后续实现只建立：
+已实现：
 
 - runtime observation fixture index。
 - route shell。
@@ -89,6 +89,10 @@ reset 模式和 stable anchors。
 
 可以使用 deterministic frontend timer 模拟 loading、validation、visible error surface
 和 empty state。
+
+11.2.4.2 implementation package 已拆出到：
+
+- `docs/iterations/m11/11.2.4.2-single-page-basic-business-pages/`
 
 ### 11.2.4.3 · Single-page Medium Business Pages
 
@@ -143,6 +147,9 @@ polling、async job、upload、export、download unavailable。
 不得把未运行项写成通过。
 
 ## 验证
+
+以下验证只适用于 11.2.4 scenario catalog / fixture planning 文档包。后续
+11.2.4.x implementation packages 按各自 `test-plan.md` 执行。
 
 本轮只运行：
 

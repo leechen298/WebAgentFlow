@@ -46,7 +46,8 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.2.2-wait-for-change-mvp](./11.2.2-wait-for-change-mvp/) —— Wait-for-change MVP。状态：最小代码实现完成，scoped review passed；后续 full API suite 已随 11.2.3 收口通过。
 - [11.2.3-replay-integration-with-observation](./11.2.3-replay-integration-with-observation/) —— Replay Integration with Observation。状态：implementation complete（56 scoped tests passed, 1168 full API tests passed, ruff clean）。
 - [11.2.4-realistic-scenario-catalog-fixture-planning](./11.2.4-realistic-scenario-catalog-fixture-planning/) —— Realistic Scenario Catalog & Fixture Planning。状态：文档生成完成，fixture 页面 / mock backend / E2E 尚未实现。
-- [11.2.4.1-single-page-runtime-fixture-shell](./11.2.4.1-single-page-runtime-fixture-shell/) —— Single-page Runtime Fixture Shell。状态：文档生成完成，shell / route / fixture 页面尚未实现。
+- [11.2.4.1-single-page-runtime-fixture-shell](./11.2.4.1-single-page-runtime-fixture-shell/) —— Single-page Runtime Fixture Shell。状态：完成（validation-site runtime observation shell / route / index entry implemented）。
+- [11.2.4.2-single-page-basic-business-pages](./11.2.4.2-single-page-basic-business-pages/) —— Single-page Basic Business Pages。状态：implementation-ready。
 - 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）—— later M11.2.x 候选增强；记录组件库生成的 runtime surface detection and relation，不属于 11.2.2 当前 MVP。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
@@ -67,9 +68,11 @@ abort。
 真实网页验证场景库。它定义 PC / 移动端 scenario catalog、复杂度分层、Phase 1
 单页面 fixture、Phase 2 mock backend 和后续 E2E evidence 路线；不代表 fixture
 页面、mock backend 或 E2E 已实现。
-`11.2.4.1-single-page-runtime-fixture-shell/` 只定义 runtime observation fixture
-shell 的入口、route namespace、fixture metadata、stable anchor 和 reset convention；
-不代表 `/runtime-observation` route、shell 页面或 fixture 页面已实现。
+`11.2.4.1-single-page-runtime-fixture-shell/` 已实现 runtime observation fixture
+shell 的入口、route namespace、fixture metadata、stable anchor 和 reset convention。
+它不代表具体业务 fixture 页面、mock backend 或 E2E 已实现。
+`11.2.4.2-single-page-basic-business-pages/` 是下一步 code package，准备实现
+`/runtime-observation/basic/*` 下的 PC basic business fixtures。
 
 11.2 后续 backlog：
 

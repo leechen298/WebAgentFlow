@@ -76,9 +76,10 @@ Current evidence capabilities:
 ## Phase 策略
 
 - [11.2.4.1](../11.2.4.1-single-page-runtime-fixture-shell/)：Single-page Runtime Fixture Shell，建立入口、route shell、reset
-  convention 和 stable anchor convention。
-- 11.2.4.2：Single-page Basic Business Pages，覆盖 login、register、sms_login、
-  simple_search、simple_detail、simple_settings、simple_confirm。
+  convention 和 stable anchor convention。状态：implemented。
+- [11.2.4.2](../11.2.4.2-single-page-basic-business-pages/)：Single-page Basic Business Pages，覆盖 login、register、
+  sms_login、simple_search、simple_detail、simple_settings、simple_confirm。状态：
+  implementation-ready。
 - 11.2.4.3：Single-page Medium Business Pages，覆盖 user_list、order_list、
   product_list、table_management、create_edit_form、file_upload、export_download。
 - 11.2.4.4：Single-page Complex Business Pages，覆盖 dynamic_form、wizard_stepper、
@@ -94,6 +95,9 @@ Mock backend 才负责 HTTP 层 slow response、error status code、polling、up
 export。
 
 ## 明确不做
+
+以下边界只适用于 11.2.4 scenario catalog / fixture planning 文档包。后续
+11.2.4.x implementation packages 按各自目录内的 code package 文档执行。
 
 - 不写源码。
 - 不新增测试代码。

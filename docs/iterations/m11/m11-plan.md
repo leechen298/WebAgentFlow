@@ -1127,8 +1127,10 @@ Phase 边界：
 
 - 11.2.4.1 建立 Single-page Runtime Fixture Shell。文档包：
   `docs/iterations/m11/11.2.4.1-single-page-runtime-fixture-shell/`；当前 shell /
-  route / fixture 页面尚未实现。
-- 11.2.4.2 实现 Single-page Basic Business Pages。
+  route / index entry 已实现，具体业务 fixture 尚未实现。
+- 11.2.4.2 实现 Single-page Basic Business Pages。文档包：
+  `docs/iterations/m11/11.2.4.2-single-page-basic-business-pages/`；状态：
+  implementation-ready。
 - 11.2.4.3 实现 Single-page Medium Business Pages。
 - 11.2.4.4 实现 Single-page Complex Business Pages。
 - 11.2.4.5 引入 Mock Backend Runtime Conditions，覆盖 slow response、server
@@ -1138,7 +1140,7 @@ Phase 边界：
 - 前端 timer 只用于 deterministic fixture，不代表真实 network evidence；mock
   backend 才负责 HTTP 层 slow response / error status evidence。
 
-边界：
+11.2.4 planning package 边界：
 
 - 不写源码。
 - 不新增测试代码。
@@ -1148,6 +1150,11 @@ Phase 边界：
 - 不依赖外部真实网站。
 - 不接 Task Result Reporter。
 - 不做 recovery / retry / abort。
+
+上述边界只适用于
+`11.2.4-realistic-scenario-catalog-fixture-planning/` 这个规划包。后续 child
+implementation packages（例如 11.2.4.1、11.2.4.2）按各自目录内的 `README.md`、
+`contract.md`、`technical-design.md`、`test-plan.md` 和 `plan.md` 执行。
 
 ### 11.2.5 · 观察证据接入 Task Result Reporter
 
