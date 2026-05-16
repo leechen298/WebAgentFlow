@@ -163,12 +163,13 @@ negative-knowledge store.
 
 M11.1 Task-to-Path Planning & Execution MVP is now closed through
 `11.1.8-task-to-path-tests-and-evidence`. Current work has moved to
-M12.4 retry / re-run policy planning:
+M12.5 recovery conversation flow planning:
 [`docs/iterations/m12/`](./iterations/m12/).
 
-M12.1 recovery boundary classifier, M12.2 user abort handler, and M12.3
-recovery proposal generator have shipped as pure deterministic recovery
-services. Runtime conversation recovery flow has not shipped yet.
+M12.1 recovery boundary classifier, M12.2 user abort handler, M12.3
+recovery proposal generator, and M12.4 retry / re-run policy evaluator have
+shipped as pure deterministic recovery services. Runtime conversation recovery
+flow has not shipped yet.
 
 ## M11.0 — Runtime Conversation Shell & Agent Orchestration
 
@@ -261,9 +262,9 @@ per-step LLM browser control, no full recovery dialogue beyond
 returning a clear failure state and handing the session to M12-capable
 flows.
 
-Current: **M12.4 Retry / re-run policy planning**. M12.1-12.3 have shipped
-as pure deterministic recovery services; M12.5 conversation recovery flow
-remains future. See [`docs/iterations/m12/`](./iterations/m12/).
+Current: **M12.5 Recovery conversation flow planning**. M12.1-12.4 have
+shipped as pure deterministic recovery services. See
+[`docs/iterations/m12/`](./iterations/m12/).
 
 ## M12 — Recovery & Abort Dialogue
 

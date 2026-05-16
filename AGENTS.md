@@ -42,16 +42,18 @@ Current delivery status:
 - **M11.1 Task-to-Path Planning & Execution MVP** has closed through
   11.1.8. Evidence records `1104` API tests passed, `25` E2E tests passed,
   ruff clean, and no P1/P2 findings.
-- Current delivery package: **M12.4 Retry / re-run policy planning**.
+- Current delivery package: **M12.5 Recovery conversation flow planning**.
 - M12.1 Failure Classification and Recovery Boundary, M12.2 User Abort /
-  Stop Handling, and M12.3 Recovery Proposal MVP have shipped as pure
+  Stop Handling, M12.3 Recovery Proposal MVP, and M12.4 Retry / Re-run Policy
+  have shipped as pure
   deterministic recovery services: classifier, abort handler, and proposal
-  generator.
+  generator, and retry policy evaluator.
 - M12 starts from M11.1 outcomes (`failed` / `blocked` / `uncertain` /
   `needs_review`) plus runtime user-abort signals, and defines safe,
   explainable, auditable next steps. It is not automatic recovery, hidden
   relearning, or browser continuation without user consent.
-- Runtime conversation recovery flow has not shipped yet; M12.5 remains future.
+- Runtime conversation recovery flow has not shipped yet; M12.5 is the current
+  planning package.
 - M11.2 Runtime Observation / Wait-for-change remains a separate workstream.
 - L2 guided teaching and Teaching Guide Agent (legacy: Agent H) are planned
   future work, not current implementation.
@@ -318,8 +320,8 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/api/app/services/task_planning/result_reporter.py` — M11.1
   evidence-bound result reporting (`11.1.7`; shipped).
 - `docs/iterations/m12/` — M12 failure recovery / abort / runtime
-  robustness. 12.1-12.3 have shipped; current planning is 12.4 retry /
-  re-run policy.
+  robustness. 12.1-12.4 have shipped; current planning is 12.5 recovery
+  conversation flow.
 
 **Autonomous exploration + M10 path assets:**
 
@@ -366,11 +368,11 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - M11.1 task-to-path MVP has shipped through 11.1.8: retrieval / ranking, Task
   Path Planner, planning preview, confirmation / consent gate, replay
   execution, Task Result Reporter, and evidence closure.
-- M12.1 recovery boundary classifier, M12.2 abort handler, and M12.3 recovery
-  proposal generator have shipped as pure deterministic recovery services.
-  M12.4 retry / re-run policy and M12.5 conversation recovery flow remain
-  future; recovery must not run automatically and proposals require user
-  confirmation.
+- M12.1 recovery boundary classifier, M12.2 abort handler, M12.3 recovery
+  proposal generator, and M12.4 retry / re-run policy evaluator have shipped as
+  pure deterministic recovery services. M12.5 conversation recovery flow is the
+  current planning package; recovery must not run automatically and proposals
+  require user confirmation.
 - L2 teaching support, highlight targets, and user action recording.
 - Artifact lifecycle handling.
 - Failure evidence / negative knowledge.

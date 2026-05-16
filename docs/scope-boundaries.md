@@ -12,14 +12,15 @@ pause and ask — don't invent.
 
 ## Current Delivery Milestone
 
-Current package: **M12.4 Retry / re-run policy planning**. Iteration docs:
+Current package: **M12.5 Recovery conversation flow planning**. Iteration docs:
 [`docs/iterations/m12/`](./iterations/m12/).
 
-M12.1 recovery boundary classifier, M12.2 user abort handler, and M12.3
-recovery proposal generator have shipped as pure deterministic recovery
-services. They do not execute recovery, retry, replan, browser continuation,
-conversation routing, or LearnedPath write-back. Runtime conversation recovery
-flow has not shipped yet; M12.5 remains future.
+M12.1 recovery boundary classifier, M12.2 user abort handler, M12.3 recovery
+proposal generator, and M12.4 retry / re-run policy evaluator have shipped as
+pure deterministic recovery services. They do not execute recovery, retry,
+replan, browser continuation, conversation routing, or LearnedPath write-back.
+Runtime conversation recovery flow has not shipped yet; M12.5 is the current
+planning package.
 
 M11.0 runtime loop foundation is complete. Its completed scope is:
 
@@ -104,16 +105,16 @@ did not implement the complete negative-knowledge store.
 - **Task-to-Path expansion beyond the M11.1 MVP** — M12 must not expand slot
   binding, multi-step task composition, artifact lifecycle, or L3 execution
   scope while defining recovery / abort / retry boundaries.
-- **Recovery / abort conversation flow and execution** — M12.1-12.3 shipped
-  pure deterministic services. They do not attach to runtime conversation,
-  retry execution, replan execution, browser continuation, or LearnedPath
-  write-back.
+- **Recovery / abort conversation flow and execution** — M12.1-12.4 shipped
+  pure deterministic services. M12.5 may plan recovery conversation routing,
+  but it must not turn proposal or retry-policy results into retry execution,
+  replan execution, browser continuation, or LearnedPath write-back.
 - **Teaching Guide Agent (legacy: Agent H)** — guided teaching belongs to M13, not
   M11.0.
 - **Runtime Agent implementations outside the current package** — the current
-  M12.4 planning package does not add broader runtime routing for Failure
-  Recovery Agent, User Abort Handler, Teaching Guide Agent, or any broader
-  Agent orchestration.
+  M12.5 planning package is limited to recovery conversation flow boundaries.
+  It does not add Teaching Guide Agent runtime behavior or any broader Agent
+  orchestration outside that recovery boundary.
 - **Multi-page workflow composition** — composing multiple LearnedPaths
   into a cross-page workflow is M17, not M11.0.
 - **Action risk & consent gate** — risk classification, destructive

@@ -41,15 +41,16 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - **M11.1 Task-to-Path Planning & Execution MVP** 已通过 11.1.8 收口。
   证据记录：`1104` 个 API 测试通过，`25` 个 E2E 测试通过，ruff clean，
   无 P1/P2 发现。
-- 当前交付包：**M12.4 Retry / re-run policy / 重试与重新运行策略** 规划中。
+- 当前交付包：**M12.5 Recovery conversation flow / 恢复对话流** 规划中。
 - M12.1 Failure Classification and Recovery Boundary、M12.2 User Abort /
-  Stop Handling、M12.3 Recovery Proposal MVP 已作为纯确定性 recovery
-  service 交付：classifier、abort handler 和 proposal generator。
+  Stop Handling、M12.3 Recovery Proposal MVP、M12.4 Retry / Re-run Policy
+  已作为纯确定性 recovery service 交付：classifier、abort handler、
+  proposal generator 和 retry policy evaluator。
 - M12 从 M11.1 的 `failed` / `blocked` / `uncertain` / `needs_review`
   结果，以及运行时 user abort 信号出发，定义安全、可解释、可审计的
   下一步。它不是自动 recovery、hidden relearning，也不是未经用户同意继续
   操作浏览器。
-- Runtime conversation recovery flow 尚未交付；M12.5 仍是后续工作。
+- Runtime conversation recovery flow 尚未交付；M12.5 是当前规划包。
 - M11.2 Runtime Observation / Wait-for-change 是另一条独立工作线。
 - L2 guided teaching 和 Teaching Guide Agent / 教学引导器（legacy: Agent H）
   是后续规划，不是当前已实现。
@@ -334,7 +335,8 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - `apps/api/app/services/task_planning/result_reporter.py` —— M11.1
   evidence-bound result reporting（`11.1.7`，已交付）。
 - `docs/iterations/m12/` —— M12 failure recovery / abort / runtime
-  robustness。12.1-12.3 已交付；当前规划是 12.4 retry / re-run policy。
+  robustness。12.1-12.4 已交付；当前规划是 12.5 recovery conversation
+  flow。
 
 **规划中 / 部分已实现的服务区域：**
 
@@ -344,10 +346,10 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - M11.1 task-to-path MVP 已通过 11.1.8 交付：retrieval / ranking、Task
   Path Planner、planning preview、confirmation / consent gate、replay
   execution、Task Result Reporter 和 evidence closure。
-- M12.1 recovery boundary classifier、M12.2 abort handler 和 M12.3 recovery
-  proposal generator 已作为纯确定性 recovery service 交付。M12.4 retry /
-  re-run policy 和 M12.5 conversation recovery flow 仍是后续工作；recovery
-  不得自动执行，proposal 必须经过用户确认。
+- M12.1 recovery boundary classifier、M12.2 abort handler、M12.3 recovery
+  proposal generator 和 M12.4 retry / re-run policy evaluator 已作为纯确定性
+  recovery service 交付。M12.5 conversation recovery flow 是当前规划包；
+  recovery 不得自动执行，proposal 必须经过用户确认。
 - L2 teaching support、highlight targets 和 user action recording。
 - Artifact lifecycle handling。
 - Failure evidence / negative knowledge。
