@@ -48,11 +48,14 @@ runtime behavior”模型。Toast、modal、loading、picker 等属于 runtime b
 
 ## 当前 MVP 边界
 
-当前 11.2.2 / 11.2.3 已支持：
+Current MVP observation signals:
 
 - `url_changed`
 - `title_changed`
 - `network_idle_observed` supporting only
+
+Current evidence capabilities:
+
 - `wait_result`
 - `observation_summary`
 
@@ -72,7 +75,7 @@ runtime behavior”模型。Toast、modal、loading、picker 等属于 runtime b
 
 ## Phase 策略
 
-- 11.2.4.1：Single-page Runtime Fixture Shell，建立入口、route shell、reset
+- [11.2.4.1](../11.2.4.1-single-page-runtime-fixture-shell/)：Single-page Runtime Fixture Shell，建立入口、route shell、reset
   convention 和 stable anchor convention。
 - 11.2.4.2：Single-page Basic Business Pages，覆盖 login、register、sms_login、
   simple_search、simple_detail、simple_settings、simple_confirm。

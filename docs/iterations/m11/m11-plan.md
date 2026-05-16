@@ -1125,7 +1125,9 @@ runtime behavior”模型。页面复杂度按业务结构分类；toast、modal
 
 Phase 边界：
 
-- 11.2.4.1 建立 Single-page Runtime Fixture Shell。
+- 11.2.4.1 建立 Single-page Runtime Fixture Shell。文档包：
+  `docs/iterations/m11/11.2.4.1-single-page-runtime-fixture-shell/`；当前 shell /
+  route / fixture 页面尚未实现。
 - 11.2.4.2 实现 Single-page Basic Business Pages。
 - 11.2.4.3 实现 Single-page Medium Business Pages。
 - 11.2.4.4 实现 Single-page Complex Business Pages。

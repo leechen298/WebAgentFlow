@@ -61,7 +61,11 @@ runtime behavior catalog、PC / mobile business page catalog、fixture phase map
 建立 runtime observation fixture index 和基础 route。目标是让后续所有 fixture 有统一入口、
 reset 模式和 stable anchors。
 
-只建立：
+11.2.4.1 文档包已拆出到：
+
+- `docs/iterations/m11/11.2.4.1-single-page-runtime-fixture-shell/`
+
+后续实现只建立：
 
 - runtime observation fixture index。
 - route shell。
@@ -69,7 +73,7 @@ reset 模式和 stable anchors。
 - reset convention。
 - stable anchor convention。
 
-不实现具体业务页面。
+不实现具体业务页面，不接 mock backend，不新增 E2E。
 
 ### 11.2.4.2 · Single-page Basic Business Pages
 
