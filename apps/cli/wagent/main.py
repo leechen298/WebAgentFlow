@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from wagent import __version__, conversation, skill, verify
+from wagent import __version__, chat, conversation, skill, verify
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -39,6 +39,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     verify.configure_parser(verify_parser)
     verify_parser.set_defaults(func=verify.run)
+
+    # wagent chat
+    chat_parser = subparsers.add_parser(
+        "chat",
+        help="Interactive chat entry for ordinary users.",
+    )
+    chat.configure_parser(chat_parser)
 
     # wagent conversation {start,status,send,messages,transcript,events}
     conversation_parser = subparsers.add_parser(

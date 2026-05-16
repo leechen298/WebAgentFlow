@@ -196,6 +196,10 @@ def dispatch_input(
     from app.repos.learned_paths_repo import LearnedPathRepository
     from app.services.conversation.orchestrator import ConversationOrchestrator
     from app.services.conversation.replay_hook import run_explicit_replay
+    from app.services.learning.learning_run_service import (
+        LearningRunRequest,
+        LearningRunService,
+    )
     from app.services.task_planning import (
         LearnedPathRetrievalService,
         PlanningPreviewService,
@@ -208,6 +212,17 @@ def dispatch_input(
     def replay_handler(learned_path_id: str, url: str):
         return run_explicit_replay(db, learned_path_id, url)
 
+    def learning_handler(url: str, raw_input: str):
+        return LearningRunService(db).run(
+            LearningRunRequest(
+                url=url,
+                spec_id="login",
+                scenario="valid_credentials",
+                goal=raw_input,
+                language="zh",
+            )
+        )
+
     learned_path_repo = LearnedPathRepository(db)
     retrieval = LearnedPathRetrievalService(learned_path_repo)
     planner = TaskPathPlanner()
@@ -218,6 +233,7 @@ def dispatch_input(
         replay_handler=replay_handler,
         planning_handler=preview_service.preview,
         execution_handler=replay_handler,
+        learning_handler=learning_handler,
     )
     result = orchestrator.dispatch_user_input(
         session_id,

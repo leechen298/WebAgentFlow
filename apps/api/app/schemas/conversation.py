@@ -69,6 +69,13 @@ class ConversationEventType(StrEnum):
     PLAN_EXECUTION_FAILED = "plan_execution_failed"
     PLAN_EXECUTION_BLOCKED = "plan_execution_blocked"
     TASK_RESULT_REPORTED = "task_result_reported"
+    CHAT_LEARNING_STARTED = "chat_learning_started"
+    CHAT_LEARNING_COMPLETED = "chat_learning_completed"
+    CHAT_LEARNING_FAILED = "chat_learning_failed"
+    CHAT_EXECUTION_STARTED = "chat_execution_started"
+    CHAT_EXECUTION_COMPLETED = "chat_execution_completed"
+    CHAT_EXECUTION_FAILED = "chat_execution_failed"
+    CHAT_NO_PATH = "chat_no_path"
     SESSION_COMPLETED = "session_completed"
     SESSION_FAILED = "session_failed"
 

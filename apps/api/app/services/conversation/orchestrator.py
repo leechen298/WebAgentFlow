@@ -44,11 +44,13 @@ class ConversationOrchestrator:
         replay_handler: Any | None = None,
         planning_handler: Any | None = None,
         execution_handler: Any | None = None,
+        learning_handler: Any | None = None,
     ) -> None:
         self._repo = repo
         self._replay_handler = replay_handler
         self._planning_handler = planning_handler
         self._execution_handler = execution_handler
+        self._learning_handler = learning_handler
 
     def dispatch_user_input(
         self,
@@ -86,6 +88,28 @@ class ConversationOrchestrator:
 
         # 2. Parse command
         command = parse_command(raw_input)
+
+        # 11.3 — Productized interactive chat happy path.
+        if (
+            session.current_mode == "interactive_chat"
+            and command.kind == ConversationCommandKind.FREE_TEXT
+        ):
+            from app.services.conversation.chat_runtime import InteractiveChatRuntime
+
+            chat_result = InteractiveChatRuntime(
+                self._repo,
+                learning_handler=self._learning_handler,
+                replay_handler=self._replay_handler,
+            ).try_handle(
+                session=session,
+                session_id=session_id,
+                raw_input=raw_input,
+                command=command,
+                message_id=message.id,
+                metadata=metadata,
+            )
+            if chat_result is not None:
+                return chat_result
 
         # 11.1.5 — Confirmation gate for awaiting_confirmation
         if previous_status == ConversationStatus.AWAITING_CONFIRMATION.value:

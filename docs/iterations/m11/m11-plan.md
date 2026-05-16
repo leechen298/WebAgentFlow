@@ -1208,12 +1208,62 @@ loading overlay、validation message、virtualized list、inserted option list�
 目标方向：对 M11.2 observation 能力做测试和证据收口。它是 evidence closure，
 不是新 runtime feature 包。
 
-## Possible M11.3 · Page Context Bridge Decision Point
+## 11.3 · Interactive Chat Closed Loop
+
+状态：implementation complete（scoped tests passed, manual smoke not run）。
+
+目标：将 M11.0 / M11.1 已有的 conversation、LearnedPath、learning、replay
+能力收束成第一个普通用户入口 `wagent chat`。用户不需要理解 session id、
+Workbench、LearnedPath、preview 或 confirm，只通过持续聊天完成“学习页面 ->
+执行已学操作”的最小闭环。
+
+本包第一阶段只覆盖 validation-site `/login` happy path：
+
+```text
+wagent chat
+-> 学习一下这个登录页怎么登录，地址是 http://localhost:5175/login
+-> 学习完成：我学会了登录页的登录操作。之后你可以说“帮我登录”。
+-> 帮我登录
+-> 执行中。
+-> 登录完成。
+```
+
+关键契约：
+
+- `wagent chat` 是顶层 CLI 命令，不替代 `wagent conversation ...` developer
+  workflow。
+- `wagent chat` 创建 `current_mode=interactive_chat` session，并写入
+  `metadata.client=wagent_chat`、`metadata.runtime_policy=auto_execute_happy_path`。
+- Conversation runtime 只在 `session.current_mode == "interactive_chat"` 时启用
+  chat happy path；dispatch metadata 只作为审计辅助。
+- 学习完成必须以 `learned_path_id` 真实产生且可查询为准。
+- 当前 session `learned_actions` 按 alias 去重，同 alias 后写覆盖前写。
+- “帮我登录”只命中当前 session learned action；不做 global LearnedPath fallback。
+- 命中单一 learned action 后直接 replay，不进入 11.1.5 confirmation gate。
+- 非 `interactive_chat` session 继续走现有 planning preview / confirmation /
+  execution via replay。
+- `wagent chat` 默认 HTTP timeout 不低于 180s，并支持 `--timeout` 覆盖。
+- validation-site 端口固定为 `http://localhost:5175`，console 为
+  `http://localhost:5174`，API 为 `http://localhost:8001`。
+
+执行包目录：
+
+- `docs/iterations/m11/11.3-interactive-chat-closed-loop/`
+
+非目标：
+
+- 不做 `/users`、真实业务页或多页面 workflow。
+- 不做 M12 recovery / retry / abort / takeover。
+- 不做复杂 LLM 意图理解。
+- 不废除 confirmation gate。
+- 不做 streaming conversation。
+
+## Later M11.x · Page Context Bridge Decision Point
 
 状态：候选决策点，不是已确定执行包。
 
-M11.2 完成后，可以根据实际验证结果决定是否插入一个小型 M11.3。M11.3 的候选
-方向是 Page Context Bridge / 页面语义上下文桥接。
+M11.2 / M11.3 完成后，可以根据实际验证结果决定是否插入一个小型 later M11.x。
+候选方向是 Page Context Bridge / 页面语义上下文桥接。
 
 它不是完整 M14，也不是完整 Page Understanding Agent 提前实现。
 
@@ -1238,11 +1288,12 @@ M11.1 / M11.2 可以在没有 Page Understanding Agent 的情况下跑通：
 - Task Result Reporter 汇报像执行日志，不像任务结果。
 - execution evidence 有了，但缺少页面级语义解释。
 
-则可以考虑插入 M11.3 Page Context Bridge。
+则可以考虑插入 Page Context Bridge。
 
-### M11.3 candidate scope
+### Candidate scope
 
-M11.3 只作为候选后续包记录，不在 11.2.2 实现，也不在本轮创建目录。
+Page Context Bridge 只作为候选后续包记录，不在 11.2.2 或 11.3 interactive
+chat closed loop 中实现。
 
 候选目标：
 
@@ -1266,9 +1317,9 @@ M11.3 只作为候选后续包记录，不在 11.2.2 实现，也不在本轮创
 
 ### Explicit non-goals
 
-M11.3 不等于 M14 提前。
+Page Context Bridge 不等于 M14 提前。
 
-M11.3 不做：
+Page Context Bridge 不做：
 
 - 不实现完整 Page Understanding Agent。
 - 不实现 Attempt Evaluation Agent。
@@ -1283,8 +1334,8 @@ M11.3 不做：
 
 完整 Page Understanding Agent 仍然属于后续 M14 范围。
 
-M11.3 只是一个 M11.2 之后的可选决策点：如果语义上下文成为瓶颈，再考虑插入；
-否则继续进入 M12 Recovery & Abort Dialogue。
+Page Context Bridge 只是一个 later M11.x 可选决策点：如果语义上下文成为瓶颈，
+再考虑插入；否则继续进入 M12 Recovery & Abort Dialogue。
 
 ## 执行规则
 

@@ -49,6 +49,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.2.4.1-single-page-runtime-fixture-shell](./11.2.4.1-single-page-runtime-fixture-shell/) —— Single-page Runtime Fixture Shell。状态：完成（validation-site runtime observation shell / route / index entry implemented）。
 - [11.2.4.2-single-page-basic-business-pages](./11.2.4.2-single-page-basic-business-pages/) —— Single-page Basic Business Pages。状态：redesign required after human review；当前 toy-like 实现已 build 通过但被否决，需按页面级 fixture designs 重做。
 - 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）—— later M11.2.x 候选增强；记录组件库生成的 runtime surface detection and relation，不属于 11.2.2 当前 MVP。
+- [11.3-interactive-chat-closed-loop](./11.3-interactive-chat-closed-loop/) —— Interactive Chat Closed Loop：`wagent chat` 小白用户闭环，当前只覆盖 `/login` happy path。状态：implementation complete（scoped tests passed, manual smoke not run）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -112,12 +113,12 @@ loading overlay、validation message、virtualized list、inserted option list�
 - 不调用 Agent 判断业务成功，不让 LLM 进入 L3 per-step execution loop。
 - 不阻塞 11.2.2 最小 wait_result / wait_strategy 实现。
 
-## Possible M11.3 · Page Context Bridge Decision Point
+## Later M11.x · Page Context Bridge Decision Point
 
-M11.2 完成后，可以根据实际验证结果决定是否插入一个小型 M11.3。这个条目是
-候选决策点，不是已确定执行包；本轮不创建 11.3 目录。
+M11.2 / M11.3 完成后，可以根据实际验证结果决定是否插入一个小型 later
+M11.x。这个条目是候选决策点，不是已确定执行包。
 
-M11.3 的候选方向是 Page Context Bridge / 页面语义上下文桥接。它不是完整 M14，
+候选方向是 Page Context Bridge / 页面语义上下文桥接。它不是完整 M14，
 也不是完整 Page Understanding Agent 提前实现。
 
 如果 M11.2 收口后发现主要瓶颈不是“执行和观察”，而是 learned path 的业务语义
@@ -133,7 +134,7 @@ M11.3 的候选方向是 Page Context Bridge / 页面语义上下文桥接。它
 - 不要求 L3 实时读取 raw HTML。
 - 不让 LLM 进入 per-step execution loop。
 
-M11.3 不做：
+Page Context Bridge 不做：
 
 - 不实现完整 Page Understanding Agent。
 - 不实现 Attempt Evaluation Agent。
