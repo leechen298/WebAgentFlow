@@ -39,11 +39,14 @@ without explicit user consent.
 - [12.2-user-abort-stop-handling](./12.2-user-abort-stop-handling/) —
   user abort / stop handling boundary. Status: implemented / shipped.
 - [12.3-recovery-proposal-mvp](./12.3-recovery-proposal-mvp/) —
-  recovery proposal MVP. Status: implemented.
+  recovery proposal MVP. Status: implemented / shipped.
 - [12.4-retry-rerun-policy](./12.4-retry-rerun-policy/) —
-  retry / re-run policy. Status: implemented.
+  retry / re-run policy. Status: implemented / shipped.
 - [12.5-recovery-conversation-flow](./12.5-recovery-conversation-flow/) —
-  recovery conversation flow. Status: approved for implementation.
+  recovery conversation flow. Status: implemented / shipped.
+- [12.6-recovery-tests-and-evidence](./12.6-recovery-tests-and-evidence/) —
+  recovery tests and evidence closure. Status: proposed / evidence closure
+  design package.
 
 ## Core Runtime Terms
 

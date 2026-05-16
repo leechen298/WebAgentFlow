@@ -2,7 +2,7 @@
 
 Status: in progress.
 
-Current package: 12.5 Recovery conversation flow implementation.
+Current package: 12.6 Recovery tests and evidence design package.
 
 ## Goal
 
@@ -55,7 +55,7 @@ actions, and hand later choices to 12.3 / 12.4 / 12.5.
 
 ### 12.3 · Recovery proposal MVP
 
-Status: implemented.
+Status: implemented / shipped.
 
 Generate recovery proposals such as ask user, review evidence, suggest
 re-teach, consider retry later, hand off to takeover later, wait for runtime
@@ -67,7 +67,7 @@ inputs rather than requiring an extra review checkbox inside the documents.
 
 ### 12.4 · Retry / re-run policy
 
-Status: implemented.
+Status: implemented / shipped.
 
 Define when retry is allowed, when it is unsafe, and what user confirmation is
 required before a retry or re-run. 12.4 is a code-type iteration and has shipped
@@ -76,28 +76,27 @@ execution, and `retry_allowed_requires_confirmation` is not `retry_started`.
 
 ### 12.5 · Recovery conversation flow
 
-Status: approved for implementation.
+Status: implemented / shipped.
 
 Route recovery and abort conversations through WebAgentFlow's runtime
 conversation surface while preserving the internal role boundaries for Failure
 Recovery Agent (legacy: Agent F) and User Abort Handler (legacy: Agent G).
-12.5 has a complete reviewed code-type design package and is ready for
-implementation.
+12.5 has shipped a pure deterministic recovery conversation flow service.
 Recovery conversation flow is not recovery execution; it may display, explain,
 ask, route, and record choices, but must not execute retry, replan, browser
 continuation, takeover, teaching mode, or LearnedPath write-back.
 
 ### 12.6 · Recovery tests and evidence
 
-Status: future.
+Status: proposed / current evidence closure design package.
 
 Close M12 with deterministic tests, conversation/event evidence, and static
 review that prove no hidden recovery, no hidden relearning, and no browser
 continuation without user consent.
 
-12.5 is the current implementation package. The implementation task should use
-`12.5-recovery-conversation-flow/contract.md`, `technical-design.md`,
-`test-plan.md`, and `plan.md` as inputs.
+12.6 is the current design package. The later evidence-closure submission
+should use `12.6-recovery-tests-and-evidence/contract.md`,
+`technical-design.md`, `test-plan.md`, and `plan.md` as inputs.
 
 ## Decision Rules
 
@@ -154,11 +153,10 @@ M12 decisions must preserve:
 
 ## Validation for Current Planning State
 
-12.5 now exists as the current implementation package. Current planning-state
-checks should ensure no code/package drift and no premature 12.6 detail package,
-not reject the 12.5 directory itself.
+12.6 now exists as the current evidence closure design package. Current
+planning-state checks should ensure no code/package drift and no M11 history
+document changes.
 
 - `git diff --check`
 - `git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'`
-- `find docs/iterations/m12 -maxdepth 1 -type d -name '12.6*' -print`
 - `git status --short docs/iterations/m11`
