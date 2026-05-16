@@ -1,6 +1,6 @@
 # 12.4 Retry / Re-run Policy Intent
 
-状态：proposed
+状态：implemented
 
 ## Goal
 
@@ -8,8 +8,8 @@
 12.2 `AbortAcknowledgement`、12.3 `RecoveryProposal` 的基础上，判断 retry
 何时可以进入后续用户确认链路，何时必须拒绝，何时需要更多上下文或人工 review。
 
-本次提交只交付设计包。后续实现提交将以本设计包为输入，实现 policy schema、
-deterministic evaluator 和 focused unit tests。
+12.4 已基于本设计包实现 policy schema、deterministic evaluator 和 focused unit
+tests。实现只返回 policy decision，不执行 retry。
 
 ## Motivation
 
@@ -39,8 +39,8 @@ side effects unknown 时继续操作浏览器。
 - policy confirmation requirements；
 - policy denial reasons；
 - policy handoff to 12.5 conversation flow；
-- future deterministic policy evaluator design；
-- future unit test matrix。
+- deterministic policy evaluator implementation；
+- focused unit test matrix。
 
 12.4 不做：
 
@@ -70,12 +70,12 @@ side effects unknown 时继续操作浏览器。
 - 文档明确 `retry_allowed_requires_confirmation != retry started`。
 - 文档明确 retry 必须检查 side effects、idempotency、policy evidence 和
   user confirmation。
-- 文档明确 unknown / unsafe side effects、non-idempotent action、irreversible
+- 实现明确 unknown / unsafe side effects、non-idempotent action、irreversible
   action possible、unsupported replay state、abort boundary active 等情况必须
   deny 或进入 review/context。
 - `contract.md` 定义 retry policy concepts、outcomes、reasons、evidence 和
   compatibility。
-- `technical-design.md` 设计 future schema / evaluator / data flow，但本次不创建代码。
-- `test-plan.md` 覆盖 future unit matrix，并明确 API / UI / E2E / live run 不在本次执行。
+- `technical-design.md` 记录 implemented schema / evaluator / data flow。
+- `test-plan.md` 覆盖 unit matrix，并明确 API / UI / E2E / live run 不在本次执行。
 - `plan.md` 的验证表格引用 `technical-design.md` 和 `test-plan.md`。
 - `review.md` 按实际运行结果记录 validation evidence 和未运行项。

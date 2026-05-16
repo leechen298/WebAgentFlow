@@ -41,8 +41,7 @@ without explicit user consent.
 - [12.3-recovery-proposal-mvp](./12.3-recovery-proposal-mvp/) —
   recovery proposal MVP. Status: implemented.
 - [12.4-retry-rerun-policy](./12.4-retry-rerun-policy/) —
-  retry / re-run policy design package. Status: proposed / implementation gate
-  pending.
+  retry / re-run policy. Status: implemented.
 
 ## Core Runtime Terms
 

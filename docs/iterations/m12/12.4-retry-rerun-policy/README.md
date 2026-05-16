@@ -1,6 +1,6 @@
 # 12.4 · Retry / Re-run Policy
 
-状态：approved for implementation
+状态：implemented
 里程碑：M12
 类型：code
 
@@ -10,18 +10,18 @@
 - [x] 代码型迭代
 - [ ] 混合型迭代
 
-12.4 是代码型迭代。后续会实现 retry / re-run policy schema、
-deterministic policy evaluator 和 focused unit tests。本次提交的交付物限定为
-设计文档包；代码实现将基于本设计包在后续实现提交中进行。
+12.4 是代码型迭代。已实现 retry / re-run policy schema、deterministic
+policy evaluator 和 focused unit tests。实现仍保持 policy-only 边界：不执行
+retry，不继续浏览器，不接 conversation flow。
 
 ## 当前状态
 
 - 12.1 Failure Classification and Recovery Boundary 已实现并交付。
 - 12.2 User Abort / Stop Handling 已实现并交付。
 - 12.3 Recovery Proposal MVP 已实现并交付。
-- 12.4 当前处于 implementation gate approved 阶段。
+- 12.4 Retry / Re-run Policy 已实现并完成 focused unit validation。
 
-实现 Agent 进入 12.4 代码实现前，应先读取并遵守：
+12.4 实现和后续维护应继续遵守：
 
 - `contract.md`
 - `technical-design.md`
@@ -32,10 +32,10 @@ deterministic policy evaluator 和 focused unit tests。本次提交的交付物
 
 - `intent.md` - 目标、动机、边界、成功标准。
 - `contract.md` - retry policy 概念、状态、schema、evidence、兼容性和不变契约。
-- `technical-design.md` - future schema / service / data flow / compatibility 设计。
-- `test-plan.md` - future unit matrix 和未运行的 API / UI / E2E / live run 边界。
-- `plan.md` - 实施步骤和验证命令。
-- `review.md` - 本次设计包生成记录、实际验证证据、未运行项和 follow-ups。
+- `technical-design.md` - implemented schema / service / data flow / compatibility 设计。
+- `test-plan.md` - unit matrix、实际验证证据和未运行的 API / UI / E2E / live run 边界。
+- `plan.md` - 实施步骤、验证命令和实现记录。
+- `review.md` - 设计包生成、实现验证证据、未运行项和 follow-ups。
 
 ## 代码型迭代门禁
 
@@ -46,10 +46,10 @@ deterministic policy evaluator 和 focused unit tests。本次提交的交付物
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design / test plan 一致。
-- [ ] `review.md` 在收尾前记录最终验证证据。
+- [x] `review.md` 已记录最终验证证据。
 
-`review.md` 的最终验证证据项保留到 12.4 代码实现完成时再勾选；当前设计包已完成
-实现前审核，可以进入 implementation。
+当前实现已完成并通过 focused recovery suite；未运行 API / CLI / E2E /
+`verify-scenario` / autonomous run，因为 12.4 不新增这些 surfaces。
 
 ## 核心原则
 
@@ -80,6 +80,6 @@ conversation flow，也不把 12.3 proposal option 直接变成 command。
 
 ## Live Run 边界
 
-本次设计包生成不触发 live run、`verify-scenario`、autonomous run、UI smoke 或
+本次设计和实现不触发 live run、`verify-scenario`、autonomous run、UI smoke 或
 E2E。若未来需要 live run，必须按仓库根 `AGENTS.md` 记录 `pass_gate.status`、
 Supervisor verdict、scorecard 和 `run_id`。

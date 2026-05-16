@@ -1,20 +1,20 @@
 # 12.4 Retry / Re-run Policy Test Plan
 
-状态：proposed
+状态：implemented
 
 ## 适用条件
 
-本文件必填，因为 12.4 涉及 recovery / retry policy，且 future unit matrix
-超过 5 个 case。
+本文件必填，因为 12.4 涉及 recovery / retry policy，且 unit matrix 超过
+5 个 case。
 
 ## 测试范围（Test Scope）
 
-- Unit：future required。覆盖 deterministic retry policy evaluator。
+- Unit：implemented。覆盖 deterministic retry policy evaluator。
 - Integration：N/A for 12.4 implementation MVP；不接 conversation flow、API 或 DB。
 - API：N/A；12.4 不新增 route 或 response contract。
 - Console UI：N/A；12.4 不新增 UI。
 - E2E：not run / out of scope。
-- Agent / Reporter / Recovery：future unit-level retry policy tests。
+- Agent / Reporter / Recovery：unit-level retry policy tests implemented.
 - Codex / AI External Operator：review only, not test。
 - Live autonomous run：explicitly excluded。
 
@@ -65,8 +65,14 @@
 
 | Item | Reason | Risk |
 |---|---|---|
-| Unit tests | 本次提交只生成设计包，不创建 retry policy code。 | Future implementation must run `test_retry_policy.py` and recovery regressions. |
-| API tests | 12.4 design package 不新增 route 或 response contract。 | None for docs-only package. |
-| CLI tests | 12.4 design package 不改 CLI。 | None for docs-only package. |
-| E2E / UI smoke | 12.4 design package 不接 UI 或 browser flow。 | UI behavior unverified, by design. |
-| `verify-scenario` / autonomous run | 12.4 design package 不触发 live autonomous run。 | Product runtime not exercised, by design. |
+| API tests | 12.4 implementation 不新增 route 或 response contract。 | None for policy-only service. |
+| CLI tests | 12.4 implementation 不改 CLI。 | None for policy-only service. |
+| E2E / UI smoke | 12.4 implementation 不接 UI 或 browser flow。 | UI behavior unverified, by design. |
+| `verify-scenario` / autonomous run | 12.4 implementation 不触发 live autonomous run。 | Product runtime not exercised, by design. |
+
+## 实现验证证据（Implementation Evidence）
+
+- `tests/test_retry_policy.py`：41 passed.
+- Focused recovery suite：116 passed.
+- Ruff：All checks passed.
+- API / CLI / UI / E2E / `verify-scenario` / autonomous run：not run / out of scope.

@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：proposed
+状态：implemented
 
 ## 当前状态（Current State）
 
@@ -19,40 +19,39 @@
   - deterministic 12.2 user abort handler
 - `apps/api/app/services/recovery/proposal.py`
   - deterministic 12.3 recovery proposal generator
+- `apps/api/app/services/recovery/retry_policy.py`
+  - deterministic 12.4 retry / re-run policy evaluator
 - `apps/api/app/services/recovery/__init__.py`
-  - package-level exports for 12.1 / 12.2 / 12.3 service entrypoints
+  - package-level exports for 12.1 / 12.2 / 12.3 / 12.4 service entrypoints
 - `apps/api/tests/test_recovery_classifier.py`
 - `apps/api/tests/test_user_abort_handler.py`
 - `apps/api/tests/test_recovery_proposal.py`
 - `apps/api/tests/test_recovery_exports.py`
+- `apps/api/tests/test_retry_policy.py`
 
-12.4 当前只生成 design package。后续实现提交才会新增 retry policy schema、
-service 和 tests。
+12.4 已实现 retry policy schema、service 和 tests。
 
 ## 合约对齐 / 不变量（Contract Alignment / Invariants）
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
-| Retry policy is not retry execution. | Future `RetryPolicyDecision` is pure data; no command/browser/replay fields. | `test-plan.md`: forbidden dependency and no execution command tests. | Policy output cannot start retry. |
+| Retry policy is not retry execution. | `RetryPolicyDecision` is pure data; no command/browser/replay fields. | `test_retry_policy.py`: forbidden dependency and no execution command tests. | Policy output cannot start retry. |
 | Retry allowed is not retry started. | Outcome `retry_allowed_requires_confirmation` requires later user confirmation. | `test-plan.md`: missing confirmation scenario. | 12.5 owns confirmation flow. |
-| Retry must be denied when side effects are unknown or unsafe. | Future evaluator maps side-effect / inflight / irreversible risk to `retry_denied`. | `test-plan.md`: side effects unknown, inflight, irreversible cases. | Fail-closed. |
-| Retry must not duplicate irreversible external actions. | Future risk / reason model includes non-idempotent and irreversible action reasons. | `test-plan.md`: non-idempotent / irreversible matrix. | No browser action in 12.4. |
-| 12.1 / 12.2 / 12.3 outputs remain unchanged. | Future service consumes existing models and does not mutate inputs. | `test-plan.md`: compatibility and input immutability. | Backward compatible. |
-| No raw HTML / DB / browser / network / LLM reads. | Future evaluator uses only structured input models and evidence refs. | `test-plan.md`: forbidden dependency scan. | Keeps policy deterministic. |
+| Retry must be denied when side effects are unknown or unsafe. | Evaluator maps side-effect / inflight / irreversible risk to `retry_denied`. | `test_retry_policy.py`: side effects unknown, inflight, irreversible cases. | Fail-closed. |
+| Retry must not duplicate irreversible external actions. | Risk / reason model includes non-idempotent and irreversible action reasons. | `test_retry_policy.py`: non-idempotent / irreversible matrix. | No browser action in 12.4. |
+| 12.1 / 12.2 / 12.3 outputs remain unchanged. | Service consumes existing models and does not mutate inputs. | `test_retry_policy.py`: compatibility and input immutability. | Backward compatible. |
+| No raw HTML / DB / browser / network / LLM reads. | Evaluator uses only structured input models and evidence refs. | `test_retry_policy.py`: forbidden dependency scan. | Keeps policy deterministic. |
 
 ## 实现方案（Proposed Implementation）
 
-Future implementation files:
+Implemented files:
 
 - `apps/api/app/schemas/recovery.py`
-  - Add retry policy literals and Pydantic models.
+  - Added retry policy literals and Pydantic models.
 - `apps/api/app/services/recovery/retry_policy.py`
-  - Add deterministic retry policy evaluator.
+  - Added deterministic retry policy evaluator.
 - `apps/api/tests/test_retry_policy.py`
-  - Add focused unit tests from `test-plan.md`.
-
-本次提交不创建或修改这些代码文件。它只创建 12.4 design package and M12 index
-updates。
+  - Added focused unit tests from `test-plan.md`.
 
 ## 影响面（Affected Surfaces）
 
@@ -67,19 +66,18 @@ updates。
 | Replay execution | No | No replay command or continuation. | Replay semantics unchanged. |
 | Reporter | No | No Task Result Reporter changes. | Reporter output remains upstream evidence. |
 | Worker / async jobs | No | No worker path. | Async behavior unchanged. |
-| Tests / fixtures | Future only | `test_retry_policy.py` in future implementation. | No E2E or live run. |
-| Docs | Yes | 12.4 design package and M12 index sync. | Current commit is docs-only. |
+| Tests / fixtures | Yes | `test_retry_policy.py` added. | No E2E or live run. |
+| Docs | Yes | 12.4 docs and M12 index sync. | Records implementation evidence. |
 
 ## 数据模型 / Schema 变更（Data Model / Schema Changes）
 
-Future schema additions in `apps/api/app/schemas/recovery.py`:
+Schema additions in `apps/api/app/schemas/recovery.py`:
 
 - `RetryPolicyOutcome`
 - `RetryPolicyReason`
 - `RetryRiskLevel`
 - `RetryConfirmationRequirement`
 - `RetryPolicyEvidence`
-- `RetryPolicyInput`
 - `RetryPolicyDecision`
 
 Expected properties:
@@ -98,7 +96,7 @@ Expected properties:
 
 ## 服务 / 模块设计（Service / Module Design）
 
-Future module:
+Implemented module:
 
 ```text
 apps/api/app/services/recovery/retry_policy.py
@@ -229,7 +227,7 @@ completed replay, or proposal recommendation alone.
 
 ## 验证命令入口（Validation Commands）
 
-Design package generation runs docs-only checks:
+Implementation validation runs focused recovery tests and static checks:
 
 ```bash
 git diff --check
@@ -241,8 +239,6 @@ git diff --name-only
 git diff --cached --name-only
 git diff --cached --check
 ```
-
-Future implementation should run:
 
 ```bash
 cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_exports.py -q

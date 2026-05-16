@@ -14,12 +14,18 @@ from app.services.recovery.proposal import (
     RecoveryProposalGenerator,
     generate_recovery_proposal,
 )
+from app.services.recovery.retry_policy import (
+    RetryPolicyEvaluator,
+    evaluate_retry_policy,
+)
 
 __all__ = [
     "RecoveryBoundaryClassifier",
     "RecoveryProposalGenerator",
+    "RetryPolicyEvaluator",
     "UserAbortHandler",
     "classify_recovery_boundary",
+    "evaluate_retry_policy",
     "generate_recovery_proposal",
     "handle_user_abort",
 ]

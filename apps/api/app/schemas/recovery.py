@@ -258,3 +258,69 @@ class RecoveryProposal(BaseModel):
     )
     source_boundary: RecoveryBoundary | None = None
     source_abort: AbortAcknowledgement | None = None
+
+
+# ---------------------------------------------------------------------------
+# M12.4 retry / re-run policy schema contracts
+# ---------------------------------------------------------------------------
+
+RetryPolicyOutcome = Literal[
+    "retry_allowed_requires_confirmation",
+    "retry_denied",
+    "retry_needs_more_context",
+    "retry_needs_manual_review",
+    "no_retry_needed",
+]
+
+RetryPolicyReason = Literal[
+    "retry_candidate_with_clear_evidence",
+    "side_effects_unknown",
+    "non_idempotent_action",
+    "irreversible_action_possible",
+    "missing_execution_evidence",
+    "missing_user_confirmation",
+    "unsupported_replay_state",
+    "abort_boundary_active",
+    "policy_source_unknown",
+    "already_succeeded",
+    "task_abandoned",
+    "not_running",
+]
+
+RetryRiskLevel = Literal[
+    "none",
+    "low",
+    "medium",
+    "high",
+    "critical",
+]
+
+RetryConfirmationRequirement = Literal[
+    "none",
+    "user_confirmation_required",
+    "downstream_policy_check_required",
+]
+
+
+class RetryPolicyEvidence(BaseModel):
+    """Evidence reference used to explain a retry policy decision."""
+
+    source: str
+    key: str
+    value: Any | None = None
+    description: str | None = None
+
+
+class RetryPolicyDecision(BaseModel):
+    """Retry / re-run policy output. Policy result, not retry command.
+
+    Contains no execution command, browser action, replay command,
+    selected proposal execution, or LearnedPath write-back field.
+    """
+
+    outcome: RetryPolicyOutcome
+    reason: RetryPolicyReason
+    risk_level: RetryRiskLevel = "none"
+    confirmation_requirement: RetryConfirmationRequirement = "none"
+    evidence: list[RetryPolicyEvidence] = Field(default_factory=list)
+    message: str | None = None

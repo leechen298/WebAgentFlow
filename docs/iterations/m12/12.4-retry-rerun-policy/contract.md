@@ -1,12 +1,11 @@
 # 12.4 Retry / Re-run Policy Contract
 
-状态：proposed
+状态：implemented
 
 ## 概念 / 边界契约
 
 | Concept | Contract |
 |---|---|
-| `RetryPolicyInput` | Future policy evaluator 的输入。只聚合 12.1 boundary、12.2 abort acknowledgement、12.3 proposal / option、structured evidence refs、future `has_user_confirmation_marker` 和 future policy hints。 |
 | `RetryPolicyDecision` | retry / re-run policy 的输出结果。它是 policy result，不是 retry command。 |
 | `RetryPolicyEvidence` | 用于解释 policy decision 的结构化 evidence references。必须来自上游结构化输出或 future confirmation / policy marker。 |
 | `RetryPolicyReason` | 触发 allow / deny / review / context 的结构化原因，不是自由文本推理。 |
@@ -50,6 +49,8 @@ Retry must not duplicate irreversible external actions.
 | `abort_boundary_active` | abort / stop boundary 仍然有效。 |
 | `policy_source_unknown` | policy input 来源不清，不能安全判断。 |
 | `already_succeeded` | 已有 success / no recovery needed evidence。 |
+| `task_abandoned` | proposal 明确放弃当前任务，不需要 retry。 |
+| `not_running` | abort state 表明没有运行中的自动化，不需要 retry。 |
 
 必须明确：
 
@@ -60,11 +61,10 @@ Retry must not duplicate irreversible external actions.
 
 ## Schema / API 契约
 
-本次设计包不新增 API，不新增 CLI，不新增 DB，不新增 frontend。
+本次实现不新增 API，不新增 CLI，不新增 DB，不新增 frontend。
 
-未来可以在 `apps/api/app/schemas/recovery.py` 设计纯 schema：
+已在 `apps/api/app/schemas/recovery.py` 增加纯 schema：
 
-- `RetryPolicyInput`
 - `RetryPolicyDecision`
 - `RetryPolicyEvidence`
 - `RetryPolicyOutcome`
@@ -93,10 +93,9 @@ LearnedPath write-back command。
 - 12.3 `RecoveryProposal`
 - 12.3 `RecoveryProposalOption` where `kind=consider_retry_later`
 - structured evidence refs already present in these outputs
-- future `has_user_confirmation_marker`
-- future policy configuration / hints
+- `has_user_confirmation_marker`
 
-Future confirmation marker 推荐命名为 `has_user_confirmation_marker`。该 marker
+Confirmation marker 命名为 `has_user_confirmation_marker`。该 marker
 只能影响 retry policy outcome，不能触发 retry execution，也不能表示 WebAgentFlow 已经
 开始执行 retry。
 
@@ -167,10 +166,8 @@ Future confirmation marker 推荐命名为 `has_user_confirmation_marker`。该 
 
 ## 未决问题
 
-- 12.4 implementation 前需要审核 `contract.md`、`technical-design.md`、
-  `test-plan.md` 和 `plan.md`。
-- Future confirmation marker 推荐命名为 `has_user_confirmation_marker`；12.4 只定义
-  marker 对 policy outcome 的影响，不消费 runtime confirmation，也不执行 retry。
+- `has_user_confirmation_marker` 只影响 policy outcome，不消费 runtime
+  confirmation，也不执行 retry。
 - 12.1 / 12.2 历史包仍是旧四件套，缺少新模板的 `contract.md` /
   `technical-design.md` / `test-plan.md`；本次不回填，记录在 `review.md`
   Follow-ups。

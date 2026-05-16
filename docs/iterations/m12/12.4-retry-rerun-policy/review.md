@@ -1,6 +1,6 @@
 # 12.4 Review and Reflection
 
-状态：approved for implementation
+状态：implemented
 
 ## 2026-05-15 设计包生成（Design Package Generation）
 
@@ -18,6 +18,46 @@
   were handled by commit `580b471`.
 - Implementation gate：approved. 12.4 code implementation may proceed using
   `contract.md`, `technical-design.md`, `test-plan.md`, and `plan.md` as inputs.
+
+## 2026-05-16 代码实现（Code Implementation）
+
+- Reviewer：implementation self-check + Codex review
+- Decision：PASS with docs sync
+- Blocker：none
+- P1 / P2：none after docs sync
+- P3：unused retry input wrapper schema removed from code and docs.
+
+### 实际交付
+
+- `apps/api/app/schemas/recovery.py`：新增 retry policy schema：
+  `RetryPolicyOutcome`、`RetryPolicyReason`、`RetryRiskLevel`、
+  `RetryConfirmationRequirement`、`RetryPolicyEvidence`、`RetryPolicyDecision`。
+- `apps/api/app/services/recovery/retry_policy.py`：新增 deterministic
+  `RetryPolicyEvaluator` 和 `evaluate_retry_policy`。
+- `apps/api/app/services/recovery/__init__.py`：导出
+  `RetryPolicyEvaluator` / `evaluate_retry_policy`。
+- `apps/api/tests/test_retry_policy.py`：新增 41 个 focused unit tests。
+- `apps/api/tests/test_recovery_exports.py`：覆盖 12.1 / 12.2 / 12.3 /
+  12.4 package-level exports。
+
+### 边界确认
+
+- Retry policy is not retry execution.
+- `retry_allowed_requires_confirmation` is not `retry_started`.
+- `has_user_confirmation_marker` affects policy outcome only; it does not
+  trigger execution.
+- No API / CLI / DB / frontend / conversation dispatcher changes.
+- No browser action, retry execution, replan execution, autonomous run,
+  LearnedPath write-back, or hidden relearning.
+
+### 测试证据
+
+- `cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py -q`：
+  41 passed.
+- `cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_exports.py -q`：
+  116 passed.
+- `cd apps/api && .venv/bin/ruff check app/schemas/recovery.py app/services/recovery tests/test_retry_policy.py tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_exports.py`：
+  All checks passed.
 
 ## 用户反馈
 
@@ -51,7 +91,8 @@
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
-- None so far. 本次只做 design package generation，不实现 code。
+- None for current implementation. 12.4 has now implemented code according to
+  the reviewed design package.
 
 ### Review-fix notes
 
@@ -89,15 +130,25 @@ product-driven browser execution。不产生 `run_id`。
 | `git diff --cached --name-only` | Only `docs/iterations/m12/**` | 9 M12 doc paths listed | 0 | PASS | command output | Staged scope guard. |
 | `git diff --cached --check` | No whitespace errors | No output | 0 | PASS | command output | Commit gate. |
 
+## 2026-05-16 Implementation Validation
+
+| Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Notes |
+|---|---|---|---|---|---|
+| `cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py -q` | Retry policy unit tests pass | 41 passed | 0 | PASS | Focused 12.4 unit coverage. |
+| `cd apps/api && .venv/bin/python -m pytest tests/test_retry_policy.py tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_exports.py -q` | Focused recovery suite passes | 116 passed | 0 | PASS | 12.1 / 12.2 / 12.3 regression coverage plus 12.4. |
+| `cd apps/api && .venv/bin/ruff check app/schemas/recovery.py app/services/recovery tests/test_retry_policy.py tests/test_recovery_proposal.py tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_exports.py` | Ruff clean | All checks passed | 0 | PASS | Static validation. |
+| `git diff --check` | No whitespace errors | No output | 0 | PASS | Workspace diff check. |
+| code/package status check | No frontend/package changes | No output | 0 | PASS | Scope guard for frontend/package/lockfiles. |
+| `git status --short docs/iterations/m11` | No output | No output | 0 | PASS | M11 history guard. |
+
 ## 未运行 / 未验证（Not Run / Unverified）
 
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
-| API tests | 12.4 design package 不新增 route 或 response contract。 | None for docs-only package. |
-| CLI tests | 12.4 design package 不改 CLI。 | None for docs-only package. |
-| Unit tests | 12.4 design package 不创建 retry policy code。 | Future implementation must run retry policy unit tests and recovery regressions. |
-| E2E / UI smoke | 12.4 design package 不接 UI / browser flow。 | UI behavior unverified by design. |
-| `verify-scenario` / autonomous run | 12.4 design package 不触发 live autonomous run。 | Product runtime not exercised by design. |
+| API tests | 12.4 implementation 不新增 route 或 response contract。 | None for policy-only service. |
+| CLI tests | 12.4 implementation 不改 CLI。 | None for policy-only service. |
+| E2E / UI smoke | 12.4 implementation 不接 UI / browser flow。 | UI behavior unverified by design. |
+| `verify-scenario` / autonomous run | 12.4 implementation 不触发 live autonomous run。 | Product runtime not exercised by design. |
 
 ## 2026-05-15 Review-fix Validation
 
