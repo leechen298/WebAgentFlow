@@ -144,6 +144,11 @@ export interface LearnedPathListPage {
   next_cursor: string | null;
 }
 
+export interface LearnedPathDeleteResult {
+  path_id: string;
+  deleted: boolean;
+}
+
 export interface ReplayStepLog {
   step: number;
   action_type: string;
@@ -215,6 +220,12 @@ export async function replayLearnedPath(
     `/exploration/learned-paths/${pathId}/replay`,
     payload,
   )) as unknown as ReplayResult;
+}
+
+export async function deleteLearnedPath(pathId: string): Promise<LearnedPathDeleteResult> {
+  return (await apiClient.delete(
+    `/exploration/learned-paths/${pathId}`,
+  )) as unknown as LearnedPathDeleteResult;
 }
 
 export async function listAutonomousRuns(params: {

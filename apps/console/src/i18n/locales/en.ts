@@ -256,13 +256,17 @@ export default {
     confirmPath: 'Confirm path',
     markFlaky: 'Mark flaky',
     deprecatePath: 'Deprecate path',
+    deletePath: 'Delete path',
     confirmPathPrompt:
       'Mark this LearnedPath as confirmed? This affects future planning — other runs that hit this path will also see this trust level.',
     markFlakyPrompt:
       'Mark this LearnedPath as flaky? This affects future planning — other runs that hit this path will also see this trust level.',
     deprecatePathPrompt:
       'Mark this LearnedPath as deprecated? This affects future planning — other runs that hit this path will also see this trust level.',
+    deletePathPrompt:
+      'Delete this LearnedPath? This only deletes the path asset and keeps run history intact.',
     pathUpdated: 'LearnedPath updated',
+    pathDeleted: 'LearnedPath deleted',
     empty: 'No LearnedPaths have been sunk yet.',
     loadFailed: 'Failed to load LearnedPaths',
     noActions: 'No actions available',

@@ -5,6 +5,7 @@ const listLearnedPaths = vi.fn();
 const getLearnedPath = vi.fn();
 const patchLearnedPathTrust = vi.fn();
 const replayLearnedPath = vi.fn();
+const deleteLearnedPath = vi.fn();
 const mockPush = vi.fn();
 
 vi.mock('vue-router', () => ({
@@ -17,6 +18,7 @@ vi.mock('@/api/exploration', () => ({
   getLearnedPath,
   patchLearnedPathTrust,
   replayLearnedPath,
+  deleteLearnedPath,
 }));
 
 vi.mock('ant-design-vue', async (importOriginal) => {
@@ -279,6 +281,33 @@ describe('LearnedPathCatalogPage', () => {
       await flushPromises();
       expect(patchLearnedPathTrust).toHaveBeenCalledWith('path-001', { status: 'deprecated' });
     }
+  });
+
+  it('calls deleteLearnedPath and reloads the list on delete click', async () => {
+    deleteLearnedPath.mockResolvedValue({ path_id: 'path-001', deleted: true });
+    const wrapper = await loadPage();
+    await flushPromises();
+    vi.clearAllMocks();
+    listLearnedPaths.mockResolvedValue({
+      items: [],
+      has_next: false,
+      next_cursor: null,
+    });
+
+    const buttons = wrapper.findAll('button');
+    const deleteBtn = buttons.find((b) =>
+      b.text().toLowerCase().includes('delete') || b.text().includes('删除'),
+    );
+    expect(deleteBtn).toBeTruthy();
+    await deleteBtn!.trigger('click');
+    await flushPromises();
+
+    expect(deleteLearnedPath).toHaveBeenCalledWith('path-001');
+    expect(listLearnedPaths).toHaveBeenCalledWith({
+      limit: 20,
+      cursor: null,
+      trust: null,
+    });
   });
 
   it('does not trigger patch when trust already matches target status', async () => {

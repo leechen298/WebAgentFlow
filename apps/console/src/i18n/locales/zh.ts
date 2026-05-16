@@ -256,13 +256,17 @@ export default {
     confirmPath: '确认路径',
     markFlaky: '标记为不稳定',
     deprecatePath: '废弃路径',
+    deletePath: '删除路径',
     confirmPathPrompt:
       '把这条 LearnedPath 标记为 confirmed？这会影响未来规划——其他命中此路径的运行也会看到这个信任级别。',
     markFlakyPrompt:
       '把这条 LearnedPath 标记为 flaky？这会影响未来规划——其他命中此路径的运行也会看到这个信任级别。',
     deprecatePathPrompt:
       '把这条 LearnedPath 标记为 deprecated？这会影响未来规划——其他命中此路径的运行也会看到这个信任级别。',
+    deletePathPrompt:
+      '确定删除这条 LearnedPath？这只删除路径资产，不会删除历史运行记录。',
     pathUpdated: 'LearnedPath 已更新',
+    pathDeleted: 'LearnedPath 已删除',
     empty: '还没有沉淀出 LearnedPath',
     loadFailed: '加载 LearnedPath 失败',
     noActions: '暂无动作数据',

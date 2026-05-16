@@ -129,6 +129,20 @@
               >
                 {{ $t('learnedPaths.deprecatePath') }}
               </a-button>
+              <a-popconfirm
+                :title="$t('learnedPaths.deletePathPrompt')"
+                :ok-text="$t('learnedPaths.deletePath')"
+                :cancel-text="$t('common.cancel')"
+                @confirm="deletePath(record.id)"
+              >
+                <a-button
+                  size="small"
+                  danger
+                  :loading="deletingId === record.id"
+                >
+                  {{ $t('learnedPaths.deletePath') }}
+                </a-button>
+              </a-popconfirm>
             </a-space>
           </template>
         </template>
@@ -296,6 +310,7 @@ import {
   getLearnedPath,
   patchLearnedPathTrust,
   replayLearnedPath,
+  deleteLearnedPath,
   type LearnedPathSummary,
   type LearnedPathDetail,
   type LearnedPathTrust,
@@ -325,6 +340,7 @@ const replayResult = ref<ReplayResult | null>(null);
 
 const updatingId = ref<string | null>(null);
 const pendingStatus = ref<LearnedPathPatchStatus | null>(null);
+const deletingId = ref<string | null>(null);
 
 const trustOptions = [
   { value: 'all', label: t('learnedPaths.allTrust') },
@@ -342,7 +358,7 @@ const columns = [
   { key: 'source_run_id', dataIndex: 'source_run_id', title: t('learnedPaths.sourceRun'), width: 140 },
   { key: 'created_at', dataIndex: 'created_at', title: t('learnedPaths.createdAt'), width: 180 },
   { key: 'updated_at', dataIndex: 'updated_at', title: t('learnedPaths.updatedAt'), width: 180 },
-  { key: 'actions', title: t('common.actions'), width: 360, fixed: 'right' as const },
+  { key: 'actions', title: t('common.actions'), width: 440, fixed: 'right' as const },
 ];
 
 function trustColor(trust: LearnedPathTrust): string {
@@ -487,6 +503,26 @@ async function updateTrust(pathId: string, status: LearnedPathPatchStatus): Prom
   } finally {
     updatingId.value = null;
     pendingStatus.value = null;
+  }
+}
+
+async function deletePath(pathId: string): Promise<void> {
+  if (deletingId.value) return;
+  deletingId.value = pathId;
+  try {
+    await deleteLearnedPath(pathId);
+    if (selectedPath.value && selectedPath.value.id === pathId) {
+      drawerOpen.value = false;
+      selectedPath.value = null;
+      replayResult.value = null;
+      replayError.value = '';
+    }
+    message.success(t('learnedPaths.pathDeleted'));
+    await loadFirstPage();
+  } catch (err) {
+    message.error((err as Error).message || String(err));
+  } finally {
+    deletingId.value = null;
   }
 }
 

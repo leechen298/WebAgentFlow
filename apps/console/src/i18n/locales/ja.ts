@@ -256,13 +256,17 @@ export default {
     confirmPath: 'パスを確認',
     markFlaky: '不安定をマーク',
     deprecatePath: 'パスを非推奨',
+    deletePath: 'パスを削除',
     confirmPathPrompt:
       'この LearnedPath を confirmed にしますか？将来の計画に影響します — 同じパスにヒットする他の実行もこの信頼レベルを参照します。',
     markFlakyPrompt:
       'この LearnedPath を flaky にしますか？将来の計画に影響します — 同じパスにヒットする他の実行もこの信頼レベルを参照します。',
     deprecatePathPrompt:
       'この LearnedPath を deprecated にしますか？将来の計画に影響します — 同じパスにヒットする他の実行もこの信頼レベルを参照します。',
+    deletePathPrompt:
+      'この LearnedPath を削除しますか？パス資産のみを削除し、実行履歴は残します。',
     pathUpdated: 'LearnedPath を更新しました',
+    pathDeleted: 'LearnedPath を削除しました',
     empty: 'まだ LearnedPath が沈殿されていません。',
     loadFailed: 'LearnedPath の読み込みに失敗しました',
     noActions: 'アクションデータがありません',
