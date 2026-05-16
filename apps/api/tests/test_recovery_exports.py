@@ -31,6 +31,7 @@ def test_recovery_package_exports_all_m12_service_entrypoints() -> None:
         "RecoveryProposalGenerator",
         "RetryPolicyEvaluator",
         "UserAbortHandler",
+        "build_recovery_conversation_response",
         "classify_recovery_boundary",
         "evaluate_retry_policy",
         "generate_recovery_proposal",

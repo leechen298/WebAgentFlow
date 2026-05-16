@@ -324,3 +324,155 @@ class RetryPolicyDecision(BaseModel):
     confirmation_requirement: RetryConfirmationRequirement = "none"
     evidence: list[RetryPolicyEvidence] = Field(default_factory=list)
     message: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# M12.5 recovery conversation flow schema contracts
+# ---------------------------------------------------------------------------
+
+RecoveryConversationState = Literal[
+    "recovery_response_ready",
+    "ask_user_for_context",
+    "show_recovery_options",
+    "show_retry_policy_result",
+    "acknowledge_abort",
+    "needs_manual_review",
+    "abandon_confirmed_for_conversation",
+    "handoff_pending",
+]
+
+RecoveryConversationReason = Literal[
+    "abort_present",
+    "retry_policy_present",
+    "proposal_present",
+    "boundary_blocked",
+    "boundary_ask_user",
+    "boundary_uncertain",
+    "boundary_needs_review",
+    "boundary_failure",
+    "boundary_no_recovery_needed",
+    "missing_recovery_source",
+    "conflicting_recovery_source",
+]
+
+RecoveryConversationChoiceKind = Literal[
+    "chosen_option_kind",
+    "conversation_choice",
+    "requested_next_step",
+]
+
+
+class RecoveryChoiceOption(BaseModel):
+    """A user-visible recovery option.
+
+    This is a conversation-level choice only. It is not an executable action.
+    """
+
+    kind: RecoveryProposalKind
+    label: str
+    description: str
+    non_executable: Literal[True] = Field(
+        default=True,
+        description="Always true. Recovery choice options are display-only.",
+    )
+    execution_boundary: Literal["not_executed"] = Field(
+        default="not_executed",
+        description="Marker confirming this option has not been executed.",
+    )
+    evidence_refs: list[EvidenceReference] = Field(default_factory=list)
+    risk_hints: list[ProposalRiskHint] = Field(default_factory=list)
+    confirmation_requirement: ProposalConfirmationRequirement = "none"
+    downstream_owner: ProposalOwner | None = None
+    rank: int | None = Field(
+        default=None,
+        description="Display ordering hint. Lower rank = higher display priority. "
+        "Does NOT indicate system selection.",
+    )
+
+
+class RecoveryChoicePrompt(BaseModel):
+    """A prompt asking the user to choose among recovery options."""
+
+    title: str
+    explanation: str
+    options: list[RecoveryChoiceOption] = Field(default_factory=list)
+    evidence_refs: list[EvidenceReference] = Field(default_factory=list)
+
+
+class RecoveryConversationEventPayload(BaseModel):
+    """Structured payload suggestion for a conversation event.
+
+    This records recovery evidence, shown options, and user choice markers.
+    It does not contain execution commands.
+    """
+
+    source_kind: str | None = None
+    decision: RecoveryConversationState | None = None
+    reason: RecoveryConversationReason | None = None
+    shown_options: list[dict[str, Any]] = Field(default_factory=list)
+    evidence_refs: list[EvidenceReference] = Field(default_factory=list)
+    retry_policy_outcome: RetryPolicyOutcome | None = None
+    retry_policy_reason: RetryPolicyReason | None = None
+    user_facing_explanation: str | None = None
+    conversation_choice_marker: dict[str, Any] | None = None
+    non_executable: Literal[True] = True
+    execution_boundary: Literal["not_executed"] = "not_executed"
+
+
+class RecoveryConversationDecision(BaseModel):
+    """Conversation-level decision result.
+
+    Determines what to display, ask, record, or hand off. Not an execution command.
+    """
+
+    state: RecoveryConversationState
+    reason: RecoveryConversationReason
+    user_response: str
+    prompt: RecoveryChoicePrompt | None = None
+    event_payload: RecoveryConversationEventPayload | None = None
+    next_status_suggestion: str | None = None
+    chosen_option_kind: RecoveryProposalKind | None = Field(
+        default=None,
+        description="Conversation choice marker only. Not an execution command.",
+    )
+
+
+class RecoveryConversationResponse(BaseModel):
+    """User-facing recovery conversation response.
+
+    Contains display text, prompt/options when relevant, evidence references,
+    event payload suggestion, and next-state suggestion. No execution commands.
+    """
+
+    user_response: str
+    decision: RecoveryConversationState
+    reason: RecoveryConversationReason
+    prompt: RecoveryChoicePrompt | None = None
+    event_payload_suggestion: RecoveryConversationEventPayload | None = None
+    next_status_suggestion: str | None = None
+    evidence_refs: list[EvidenceReference] = Field(default_factory=list)
+    source_boundary: RecoveryBoundary | None = None
+    source_abort: AbortAcknowledgement | None = None
+    source_proposal: RecoveryProposal | None = None
+    source_retry_policy: RetryPolicyDecision | None = None
+    chosen_option_kind: RecoveryProposalKind | None = Field(
+        default=None,
+        description="Conversation choice marker only. Not an execution command.",
+    )
+
+
+class RecoveryConversationInput(BaseModel):
+    """Input to the recovery conversation flow service.
+
+    Aggregates conversation session status, user message / command kind,
+    and structured recovery outputs from M12.1-M12.4.
+    """
+
+    session_status: str
+    user_input: str | None = None
+    command_kind: str | None = None
+    boundary: RecoveryBoundary | None = None
+    abort: AbortAcknowledgement | None = None
+    proposal: RecoveryProposal | None = None
+    retry_policy: RetryPolicyDecision | None = None
+    chosen_option_kind: RecoveryProposalKind | None = None
