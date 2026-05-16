@@ -858,6 +858,11 @@ class AutonomousRunDeleteResult(BaseModel):
     deleted_learned_path_ids: list[str] = Field(default_factory=list)
 
 
+class LearnedPathDeleteResult(BaseModel):
+    path_id: str
+    deleted: bool
+
+
 class RunReviewPatchRequest(BaseModel):
     status: Literal["accepted", "rejected", "unreviewed"]
     note: str | None = Field(default=None, max_length=500)
@@ -1206,6 +1211,22 @@ def get_learned_path(
             status_code=404, detail=f"learned_path not found: {path_id}"
         )
     return ApiResponse(data=_learned_path_to_detail(row))
+
+
+@router.delete(
+    "/learned-paths/{path_id}",
+    response_model=ApiResponse[LearnedPathDeleteResult],
+)
+def delete_learned_path(
+    db: DbSession,
+    path_id: str,
+) -> ApiResponse[LearnedPathDeleteResult]:
+    deleted = LearnedPathRepository(db).delete(path_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=404, detail=f"learned_path not found: {path_id}"
+        )
+    return ApiResponse(data=LearnedPathDeleteResult(path_id=path_id, deleted=True))
 
 
 @router.patch(

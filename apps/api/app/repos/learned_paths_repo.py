@@ -195,6 +195,16 @@ class LearnedPathRepository:
             self.session.commit()
         return ids
 
+    def delete(self, path_id: str, *, commit: bool = True) -> bool:
+        """Delete one LearnedPath by id."""
+        row = self.get(path_id)
+        if row is None:
+            return False
+        self.session.delete(row)
+        if commit:
+            self.session.commit()
+        return True
+
     def list_page(
         self,
         *,

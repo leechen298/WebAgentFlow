@@ -119,6 +119,26 @@ def test_get_learned_path_unknown_is_404(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
+def test_delete_learned_path_removes_path_only(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(db_session)
+    row_id = _ingest_sample(db_session, source_run_id=run_id)
+
+    resp = client.delete(f"/exploration/learned-paths/{row_id}")
+
+    assert resp.status_code == 200
+    assert resp.json()["data"] == {"path_id": row_id, "deleted": True}
+    assert db_session.get(LearnedPath, row_id) is None
+    assert db_session.get(ExplorationRun, run_id) is not None
+
+
+def test_delete_learned_path_unknown_is_404(client: TestClient) -> None:
+    resp = client.delete("/exploration/learned-paths/missing-id")
+    assert resp.status_code == 404
+
+
 def test_patch_trust_promotes_row(
     client: TestClient, db_session: Session
 ) -> None:
