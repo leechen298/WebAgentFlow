@@ -77,7 +77,11 @@ reset 模式和 stable anchors。
 
 ### 11.2.4.2 · Single-page Basic Business Pages
 
-实现 simple business pages 的单页面前端 fixture：
+实现 simple business pages 的单页面前端 fixture。当前 11.2.4.2 已有 build-passing 代码实现，
+但人工 review 判定页面业务密度不足、过于 toy-like，因此该包进入 redesign required 状态。
+后续重做必须先读取页面级设计文档，并按 production-like basic fixture 标准实现。
+
+重做范围仍为：
 
 - login。
 - register。
@@ -89,6 +93,10 @@ reset 模式和 stable anchors。
 
 可以使用 deterministic frontend timer 模拟 loading、validation、visible error surface
 和 empty state。
+
+11.2.4.2 的错误范围只包含 frontend-local deterministic 状态；weak network、HTTP
+error、server validation 和 backend conflict 进入 11.2.4.5 Mock Backend Runtime
+Conditions；recovery / retry / abort / user takeover 进入 M12。
 
 11.2.4.2 implementation package 已拆出到：
 

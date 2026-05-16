@@ -1,20 +1,31 @@
 # 契约（Contract）
 
-状态：implementation-ready
+状态：redesign required
 
 ## 概念 / 边界契约
 
-11.2.4.2 实现 basic business page fixtures。它们是 validation-site 中自建、确定性、
-单页面、前端本地状态驱动的 fixture 页面。
+11.2.4.2 重新定义 basic business page fixtures 的验收标准。当前实现 build 通过，但因业务密度不足被
+人工 review 否决，需要按 production-like basic fixture contract 重做。
 
-Basic business page 的定义来自 11.2.4.0：
+Basic business page 的含义是：
 
 ```text
-单一目标、单一区块、少量输入、没有复杂状态切换。
+业务目标单一
+页面流程相对简单
+页面结构完整
+状态面真实可见
+```
+
+它不是：
+
+```text
+一个输入
+一个按钮
+一行结果
 ```
 
 Runtime behaviors，例如 toast、modal、loading、validation message、disabled button，
-不是业务复杂度本身。它们是 fixture 页面里的行为变体。
+不是业务复杂度本身。它们是完整业务 fixture 内部的状态和行为变体。
 
 ## Product Model / Scope / Roadmap Alignment
 
@@ -26,9 +37,64 @@ Runtime behaviors，例如 toast、modal、loading、validation message、disabl
 - 不改变 M12 recovery 边界。
 - 不依赖外部真实网站。
 
+## Production-like Basic Fixture Contract
+
+Each basic fixture must include:
+
+- main business goal。
+- primary action。
+- secondary action or distractor。
+- visible loading / pending state。
+- visible success state。
+- visible local validation or deterministic business failure state。
+- stable heading。
+- stable trigger。
+- stable result region。
+- stable status label。
+- stable reset control。
+- deterministic reset。
+- current MVP expected observation。
+- future expected observation。
+
+Basic fixture failure states are frontend-local deterministic business states. They are not real backend
+or network failures.
+
+## Page-level Design Contract
+
+后续代码重做前，必须先完成并读取：
+
+```text
+fixture-designs/basic-login.md
+fixture-designs/basic-register.md
+fixture-designs/basic-sms-login.md
+fixture-designs/basic-search.md
+fixture-designs/basic-detail.md
+fixture-designs/basic-settings.md
+fixture-designs/basic-confirm.md
+```
+
+每个 design doc 必须包含：
+
+- business goal。
+- page anatomy。
+- happy path。
+- local validation / deterministic business failure states。
+- loading / pending states。
+- success states。
+- secondary actions / distractors。
+- reset behavior。
+- stable anchors。
+- current MVP expected observation。
+- future expected observation。
+- in-scope states。
+- deferred states。
+- implementation notes。
+- business density checklist。
+- acceptance checklist。
+
 ## Fixture Scope Contract
 
-本轮实现的 fixture 范围固定为：
+重做范围仍固定为：
 
 | fixture_id | route | page_type | business_complexity |
 |---|---|---|---|
@@ -42,33 +108,42 @@ Runtime behaviors，例如 toast、modal、loading、validation message、disabl
 
 Do not add medium / complex / mobile / mock-backend fixtures in this package.
 
-## Fixture Behavior Contract
+## Error Scope Clarification
 
-Each fixture must provide:
+11.2.4.2 covers frontend-local deterministic success / failure / validation / empty states only.
 
-- stable heading。
-- stable trigger element。
-- stable result region。
-- stable reset control。
-- stable status label。
-- deterministic initial state。
-- deterministic visible state transition after action。
-- visible current MVP / future observation boundary where useful。
+In scope:
 
-Each fixture must support reset:
+- required field validation。
+- invalid credentials as local deterministic business error。
+- email format error。
+- password mismatch。
+- terms not accepted。
+- invalid SMS code。
+- empty search result。
+- missing detail / not found。
+- settings warning。
+- confirm cancel。
+- loading / pending via deterministic frontend timer。
 
-- clear inputs。
-- clear validation / status messages。
-- close confirm / modal-like surface。
-- restore initial list / detail / settings state。
-- stop pending timer。
-- restore button enabled / disabled initial state。
+Out of scope:
+
+- weak network。
+- offline。
+- real HTTP timeout。
+- HTTP 400 / 401 / 403 / 404 / 409 / 429 / 500。
+- real server validation。
+- backend business conflict。
+- retry after backend failure。
+- user recovery / abort / takeover dialogue。
+
+11.2.4.5 owns mock backend runtime conditions. M12 owns recovery / retry / abort / user takeover.
 
 ## Route Namespace Contract
 
 All routes stay under `/runtime-observation/basic/*`.
 
-Allowed new routes:
+Allowed routes:
 
 ```text
 /runtime-observation/basic/login
@@ -82,23 +157,6 @@ Allowed new routes:
 
 Do not create global `/login-basic`, `/register`, `/search-basic`, `/basic/*`, `/medium/*`,
 or `/complex/*` routes.
-
-## Runtime Behavior Contract
-
-Allowed deterministic frontend behaviors:
-
-- input validation message。
-- delayed status change via frontend timer。
-- loading region。
-- empty result。
-- toast-like status region。
-- modal-like confirm region。
-- disabled / enabled button state。
-- title / URL change only when intentionally navigating within validation-site.
-
-Timer behavior must be deterministic and short enough for local build / smoke workflows. It does not
-represent true network evidence. HTTP slow response / status code evidence belongs to 11.2.4.5 mock
-backend runtime conditions.
 
 ## Current MVP vs Future Signal Boundary
 
@@ -137,22 +195,27 @@ Fixtures may display future expected observation labels, but they must remain pl
 
 No backend schema/API changes.
 
-This package may add frontend component-local TypeScript types or metadata objects. It must not add Python
-schemas, FastAPI routes, DB migrations, replay response fields, or reporter contracts.
+This redesign may plan frontend component-local TypeScript types or metadata objects for the future code pass.
+It must not add Python schemas, FastAPI routes, DB migrations, replay response fields, or reporter contracts.
 
 ## Compatibility Contract
 
-Implementation must preserve:
+Future implementation must preserve:
 
 - `/` validation-site index。
 - existing `/login` fixture。
 - existing `/users` fixture。
 - existing `/runtime-observation` shell。
 - existing Workbench deep link behavior from the validation index。
-- existing validation-site specs.
+- existing validation-site specs。
+- `/runtime-observation/basic/*` route namespace。
+
+Current toy-like implementation is not the final acceptance standard; future implementation may replace or
+refactor it while preserving the route namespace and shell links.
 
 ## Non-goals
 
+- No source code changes in this documentation revision。
 - No mock backend。
 - No medium / complex / mobile fixtures。
 - No E2E evidence closure。

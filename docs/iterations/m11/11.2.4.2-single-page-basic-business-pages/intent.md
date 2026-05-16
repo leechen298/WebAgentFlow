@@ -1,42 +1,69 @@
 # 意图（Intent）
 
-状态：implementation-ready
+状态：redesign required
 
 ## 目标
 
-实现 11.2.4.2 Single-page Basic Business Pages，为 WebAgentFlow 自建 runtime
-observation fixture 库提供第一批简单业务页面。
+修订 11.2.4.2 Single-page Basic Business Pages 的设计文档，否决当前 toy-like basic
+fixtures，并为 7 个 basic routes 补齐页面级 production-like 设计。
 
 成功状态：
 
-- `/runtime-observation/basic/login` 可打开。
-- `/runtime-observation/basic/register` 可打开。
-- `/runtime-observation/basic/sms-login` 可打开。
-- `/runtime-observation/basic/search` 可打开。
-- `/runtime-observation/basic/detail` 可打开。
-- `/runtime-observation/basic/settings` 可打开。
-- `/runtime-observation/basic/confirm` 可打开。
-- `/runtime-observation` shell 中 basic fixture cards 链接到已实现 route。
-- 每个 fixture 有 stable heading、trigger、result region、reset control 和 status label。
-- 每个 fixture 能 reset 到 deterministic initial state。
-- validation-site build 通过。
+- 当前实现被明确标记为 implemented but rejected by human review。
+- `fixture-designs/` 下存在 7 个页面级设计文档。
+- 每个页面设计都定义 happy path、本地错误状态、loading / pending、success、reset、
+  stable anchors 和 deferred states。
+- contract / technical-design / test-plan / plan / review 均指向 redesign-first 流程。
+- 后续代码实现必须以 `fixture-designs/*.md` 为 source of truth。
 
 ## 动机
 
-11.2.4.1 已建立 runtime observation fixture shell，但 basic fixture card 仍是 planned
-metadata。11.2.4.2 要把第一批 simple business pages 变成可打开、可交互、可 reset
-的自建 fixture，为后续 11.2.4.3 / 11.2.4.4 / 11.2.4.5 继续扩展提供样板。
+11.2.4.2 当前实现虽然提供了 7 个 `/runtime-observation/basic/*` routes，并通过 build 级验证，
+但页面业务密度不足。它们主要是输入、按钮、结果区和 reset，不足以代表真实业务页面。
 
-这些 fixtures 不是为了证明当前 wait service 已能识别所有 UI 变化。它们用于稳定制造
-真实页面运行时表面：validation message、toast-like status、modal-like confirm、
-loading、empty result、disabled / enabled 等，让后续 observation 信号和 E2E
-evidence 有可复现的目标。
+WebAgentFlow 自建 fixture 的目标不是制造最小 UI 片段，而是制造可复现、可观察的真实页面运行时表面。
+Basic business page 的业务流程可以简单，但页面本身不能是 toy demo。
+
+## Redesign Principle
+
+```text
+business-simple, production-like
+not UI-minimal
+```
+
+Basic pages must have:
+
+- clear primary business goal。
+- complete page anatomy。
+- main flow。
+- local deterministic error / validation flow。
+- loading / pending state。
+- visible success state。
+- secondary action or distractor。
+- deterministic reset。
+- stable anchors。
+
+## Error Boundary
+
+11.2.4.2 只做 frontend-local deterministic 状态：
+
+- required field validation。
+- invalid credentials。
+- password mismatch。
+- invalid SMS code。
+- empty result。
+- local not found。
+- settings warning。
+- confirm cancel。
+
+弱网、断网、HTTP status code、真实 server validation、backend conflict 进入 11.2.4.5。
+recovery / retry / abort / user takeover 进入 M12。
 
 ## 非目标
 
-- 不实现 medium business pages。
-- 不实现 complex business pages。
-- 不实现 mobile pages。
+- 不写 validation-site 源码。
+- 不新增测试代码。
+- 不实现新版页面。
 - 不实现 mock backend 或真实 HTTP delay。
 - 不新增 observation signal，不修改 wait service。
 - 不接 Task Result Reporter。

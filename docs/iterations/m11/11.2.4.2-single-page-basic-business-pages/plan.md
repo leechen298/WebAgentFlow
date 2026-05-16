@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：implementation-ready
+状态：redesign required
 
 ## Inputs
 
@@ -9,42 +9,58 @@
 - `contract.md`
 - `technical-design.md`
 - `test-plan.md`
+- `fixture-designs/*.md`
 - `docs/iterations/m11/11.2.4.1-single-page-runtime-fixture-shell/`
 - `docs/testing/scenarios/realistic-web-runtime-cases.md`
 
-## Allowed Files
+## Current Decision
 
-Implementation may modify:
+当前 `/runtime-observation/basic/*` 代码实现不作为最终验收标准。它已经 build 通过，但被人工 review
+否决，原因是页面业务密度不足、过于 toy-like。
 
-- `apps/validation-site/src/router/index.ts`
-- `apps/validation-site/src/pages/runtime-observation/RuntimeObservationIndex.vue`
-- `apps/validation-site/src/pages/runtime-observation/basic/*`
-- `apps/validation-site/src/i18n/locales/*.ts` if needed for visible labels
+后续重做时可以在保留 route namespace 和 shell links 的前提下替换或重构现有页面结构。
 
-Implementation should not modify:
+## Step 0 · Complete Page-level Fixture Designs
 
-- backend source code。
-- API routers。
-- replay / wait / reporter services。
-- package / lock files。
-- docs outside this package unless a design conflict is found and reported first。
+Before writing code, read and satisfy:
 
-## Step 1 · Inspect Existing Shell
+- `fixture-designs/basic-login.md`
+- `fixture-designs/basic-register.md`
+- `fixture-designs/basic-sms-login.md`
+- `fixture-designs/basic-search.md`
+- `fixture-designs/basic-detail.md`
+- `fixture-designs/basic-settings.md`
+- `fixture-designs/basic-confirm.md`
+
+Do not start code implementation until the design docs are present and reviewed.
+
+## Step 1 · Inspect Existing Implementation
 
 Read:
 
 ```text
 apps/validation-site/src/pages/runtime-observation/RuntimeObservationIndex.vue
+apps/validation-site/src/pages/runtime-observation/basic/BasicBusinessFixturePage.vue
+apps/validation-site/src/pages/runtime-observation/basic/basicFixtures.ts
 apps/validation-site/src/router/index.ts
-apps/validation-site/src/pages/IndexPage.vue
 apps/validation-site/package.json
 ```
 
-Confirm current shell route and build command.
+Confirm what can be reused and what must be replaced.
 
-## Step 2 · Add Basic Fixture Metadata
+## Step 2 · Choose Structure
 
-Add metadata for:
+Recommended:
+
+```text
+shared shell + per-fixture components
+```
+
+The implementer may keep one component only if each fixture remains readable and fully satisfies its design doc.
+
+## Step 3 · Redesign Fixture Metadata
+
+Keep metadata for:
 
 - basic-login。
 - basic-register。
@@ -57,9 +73,9 @@ Add metadata for:
 Metadata must include fixture id, route, platform, business complexity, runtime behaviors,
 runtime conditions, current MVP expected observation, future expected observation, and status.
 
-## Step 3 · Add Basic Routes
+## Step 4 · Preserve Basic Routes
 
-Add routes under:
+Preserve routes under:
 
 ```text
 /runtime-observation/basic/login
@@ -73,44 +89,32 @@ Add routes under:
 
 Do not create global `/basic/*` routes.
 
-## Step 4 · Implement Basic Fixture Page
+## Step 5 · Rebuild Production-like Basic Fixtures
 
-Implement either:
+Each fixture must implement:
 
-- one metadata-driven `BasicBusinessFixturePage.vue`; or
-- separate small fixture components if that is simpler.
+- complete page anatomy。
+- primary business flow。
+- secondary action or distractor。
+- local validation / deterministic business failure。
+- loading / pending。
+- success state。
+- deterministic reset。
+- stable anchors。
+- current MVP / future observation labels where useful。
 
-Each route must expose stable anchors:
-
-- heading。
-- trigger。
-- result region。
-- reset control。
-- status label。
-
-## Step 5 · Implement Deterministic Behaviors
-
-Use frontend local state:
-
-- validation message。
-- delayed success via short deterministic timer。
-- loading then result。
-- empty result。
-- confirm surface。
-- disabled / enabled button state。
-
-Reset must clear pending timer and restore initial state.
+Do not implement weak network, HTTP errors, real server validation, retry, recovery, abort, or takeover.
 
 ## Step 6 · Update Shell Cards
 
-Update `RuntimeObservationIndex.vue`:
+Update `RuntimeObservationIndex.vue` only as needed:
 
 - basic category lists all seven fixtures。
-- implemented basic routes become clickable。
+- implemented basic routes stay clickable。
 - not-yet-implemented medium / complex / mobile / mock-backend cards remain planned or deferred.
 - future signal labels remain future labels.
 
-## Step 7 · Validate
+## Step 7 · Validate Future Implementation
 
 Run:
 
@@ -121,12 +125,15 @@ git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```
 
-Do not run E2E / `verify-scenario` / autonomous run unless the user separately asks.
+Optional route smoke may be run only if explicitly requested. Do not run E2E / `verify-scenario` /
+autonomous run unless separately requested.
 
 ## Review Checklist
 
-- [ ] Seven basic routes are registered.
-- [ ] Seven basic fixtures render deterministic local state.
+- [ ] Seven page-level design documents are read.
+- [ ] Seven basic routes remain registered.
+- [ ] Seven basic fixtures render production-like local business pages.
+- [ ] Each fixture has happy path, local error path, loading / pending, success, reset.
 - [ ] Stable anchors exist.
 - [ ] Reset clears visible state and pending timers.
 - [ ] Shell basic cards link only implemented routes.

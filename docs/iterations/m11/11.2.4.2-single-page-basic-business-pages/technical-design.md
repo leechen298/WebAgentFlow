@@ -1,13 +1,13 @@
 # 技术设计（Technical Design）
 
-状态：implementation-ready
+状态：redesign required
 
 ## 当前状态（Current State）
 
-- `apps/validation-site/src/pages/runtime-observation/RuntimeObservationIndex.vue` 已实现
-  runtime observation shell。
-- `/runtime-observation` 和 `/runtime-observation/basic` 等 category routes 已存在。
-- Shell 中 basic category 目前只展示 planned fixture card，不提供全部 basic business pages。
+- 11.2.4.1 已实现 runtime observation shell、category navigation 和 route namespace。
+- 11.2.4.2 当前代码已实现 7 个 `/runtime-observation/basic/*` routes，并通过 build 级验证。
+- 人工 review 否决当前 basic fixtures：页面业务密度不足，更像 toy UI demo。
+- 当前实现不作为最终验收标准；后续重做必须以 `fixture-designs/*.md` 为 source of truth。
 - validation-site 当前没有 mock backend dependency。
 - validation-site 当前 package 有 `build` script，没有独立 `test` script。
 
@@ -15,72 +15,80 @@
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
-| basic pages only | 只新增 `/runtime-observation/basic/*` routes | build / route review | 不加 medium / complex / mobile |
-| deterministic frontend state | 组件内固定 state + short timer | build / future route smoke | 不代表真实 network evidence |
-| stable anchors | 每页提供 heading、trigger、result、reset、status `data-testid` | future route smoke | anchors 必须稳定 |
-| reset convention | 每页 reset 回 initial state，并清 pending timer | future route smoke | reset 不是 recovery |
+| production-like basic fixtures | 每个页面按 fixture design doc 实现完整页面结构 | future route smoke / review | business-simple, not UI-minimal |
+| page-level design first | 代码重做前读取 7 个 `fixture-designs/*.md` | review | design docs 是 source of truth |
+| basic pages only | 只重做 `/runtime-observation/basic/*` routes | build / route review | 不加 medium / complex / mobile |
+| deterministic frontend state | 前端本地 state + deterministic timer | build / future route smoke | 不代表真实 network evidence |
+| local error scope only | 只做本地校验 / deterministic business failure | route smoke / review | 不模拟真实 HTTP failure |
+| stable anchors | 每页提供 heading、primary trigger、secondary trigger、result、reset、status anchors | future route smoke | anchors 必须稳定 |
+| reset convention | 每页 reset 回 initial state，并清 pending timer / countdown / confirm surface | future route smoke | reset 不是 recovery |
 | current/future boundary | UI 文案区分 current MVP signals 与 future labels | review | future signals 不写成 implemented |
 | no backend dependency | 不调用 API，不新增 mock backend | build / review | 11.2.4.5 才接 mock backend |
 | no reporter / M12 | 不调用 reporter，不做 retry / abort / recovery | review | 仅 fixture 页面 |
-| shell compatibility | 更新 RuntimeObservationIndex cards link 到 implemented routes | build / review | 不重写 shell 架构 |
+| shell compatibility | 保留 `/runtime-observation` shell 和 basic links | build / review | 不重写 shell 架构 |
 
 ## 影响面（Affected Surfaces）
 
-| Surface | Changed? | Description | Compatibility notes |
+| Surface | Changed? in redesign docs | Future implementation impact | Compatibility notes |
 |---|---|---|---|
-| `apps/validation-site/src/pages/runtime-observation/*` | Yes | 新增 basic fixtures 页面 / 组件 | 保留 shell |
-| validation-site router | Yes | 新增 `/runtime-observation/basic/*` routes | 不新增全局 basic routes |
-| validation-site index `/` | No / optional | 通常不需要改首页 | 已有 Runtime Observation 入口 |
-| validation-site i18n | Optional | 如新增共享文案可更新 | 不强制 |
-| validation-site specs | Optional | 本轮可不新增 spec；若新增必须不跑 E2E 假通过 | 不影响现有 specs |
+| `fixture-designs/*.md` | Yes | 作为页面实现 source of truth | 新增文档 |
+| `apps/validation-site/src/pages/runtime-observation/basic/*` | No in this docs pass | 重做 richer business fixture 页面 / 组件 | 保留 route namespace |
+| validation-site router | No in this docs pass | 可能保留现有 routes | 不新增全局 basic routes |
+| validation-site index `/` | No | 通常不需要改首页 | 已有 Runtime Observation 入口 |
+| validation-site i18n | No in this docs pass | 未来需要同步 en / zh / ja labels | 不强制本轮 |
+| validation-site specs | No | 可后续补 route smoke/spec | 不跑 E2E 假通过 |
 | API routes | No | 不新增 API | N/A |
 | DB schema | No | 不新增 migration | N/A |
 | Replay / wait service | No | 不改 observation runtime | N/A |
 | Task Result Reporter | No | 不接 reporter | N/A |
-| E2E tests | No | 不新增 / 不运行 | 11.2.4.7 |
+| E2E tests | No | 11.2.4.7 | 本轮不运行 |
 
-## Proposed Implementation
+## Recommended Future Implementation Structure
 
-Recommended structure:
+当前单个 `BasicBusinessFixturePage.vue` 可以保留，但必须支持更丰富的页面结构。如果继续把全部页面逻辑塞进
+一个巨大组件，会降低可读性和后续维护质量。
+
+推荐方案：
 
 ```text
 apps/validation-site/src/pages/runtime-observation/basic/
-apps/validation-site/src/pages/runtime-observation/basic/BasicBusinessFixturePage.vue
+apps/validation-site/src/pages/runtime-observation/basic/BasicBusinessFixtureShell.vue
+apps/validation-site/src/pages/runtime-observation/basic/fixtures/
+apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicLoginFixture.vue
+apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicRegisterFixture.vue
+apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicSmsLoginFixture.vue
+apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicSearchFixture.vue
+apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicDetailFixture.vue
+apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicSettingsFixture.vue
+apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicConfirmFixture.vue
 apps/validation-site/src/pages/runtime-observation/basic/basicFixtures.ts
 ```
 
-Alternative with one component per fixture is acceptable if it stays small and does not duplicate reset /
-timer handling. Prefer a single metadata-driven component if it keeps the implementation clearer.
+Design intent:
 
-Implementation steps:
+- shared shell handles fixture header, metadata, reset hook, current/future labels, and layout。
+- per-fixture components own their local fields, local validation, local success/error surfaces, and page anatomy。
+- shared utilities may manage deterministic timers so reset behavior is consistent。
+- existing route namespace stays unchanged。
 
-1. Add basic fixture metadata for seven fixtures.
-2. Add `/runtime-observation/basic/<fixture>` routes.
-3. Render one page per route with stable heading / trigger / result / reset / status anchors.
-4. Implement deterministic local state transitions:
-   - validation message。
-   - delayed success / loading。
-   - empty result。
-   - confirm surface。
-   - disabled / enabled state。
-5. Update `RuntimeObservationIndex.vue` basic fixture cards:
-   - include all seven fixtures。
-   - mark implemented routes as `implemented` only after the routes exist。
-   - link only implemented basic routes。
-   - keep future signal labels as future expected observation。
-6. Preserve existing `/runtime-observation` shell and category navigation.
+Alternative:
 
-## Fixture Details
+- one `BasicBusinessFixturePage.vue` with per-fixture sections is acceptable only if each section remains readable and each
+  page-level design requirement is explicitly represented.
 
-| Fixture | Route | Initial state | Trigger | Visible result | Current MVP expected | Future expected |
-|---|---|---|---|---|---|---|
-| login | `/runtime-observation/basic/login` | empty username/password | submit | validation error or success status | title/url only if route title changes | form_validation_message, toast_shown |
-| register | `/runtime-observation/basic/register` | empty registration form | submit | inline validation or delayed success | title/url only if route title changes | form_validation_message, toast_shown |
-| sms_login | `/runtime-observation/basic/sms-login` | phone/code inputs | request code / submit | countdown, validation, success status | title/url only if route title changes | form_validation_message, element_enabled |
-| simple_search | `/runtime-observation/basic/search` | default result list | search | loading then results or empty state | no primary unless URL/title changes | list_changed, loading_finished |
-| simple_detail | `/runtime-observation/basic/detail` | detail card visible | refresh / load missing | loading then detail or not found | title/url only if route title changes | text_appeared, loading_finished |
-| simple_settings | `/runtime-observation/basic/settings` | toggle + save button | toggle/save | disabled/enabled and saved status | no primary unless URL/title changes | element_enabled, toast_shown |
-| simple_confirm | `/runtime-observation/basic/confirm` | action visible | open confirm / confirm | confirm surface and success status | no primary unless URL/title changes | modal_opened, toast_shown |
+## Fixture Design Source of Truth
+
+Future implementation must satisfy these documents:
+
+| Fixture | Design doc | Route |
+|---|---|---|
+| login | `fixture-designs/basic-login.md` | `/runtime-observation/basic/login` |
+| register | `fixture-designs/basic-register.md` | `/runtime-observation/basic/register` |
+| sms_login | `fixture-designs/basic-sms-login.md` | `/runtime-observation/basic/sms-login` |
+| simple_search | `fixture-designs/basic-search.md` | `/runtime-observation/basic/search` |
+| simple_detail | `fixture-designs/basic-detail.md` | `/runtime-observation/basic/detail` |
+| simple_settings | `fixture-designs/basic-settings.md` | `/runtime-observation/basic/settings` |
+| simple_confirm | `fixture-designs/basic-confirm.md` | `/runtime-observation/basic/confirm` |
 
 ## Stable Anchor Design
 
@@ -88,49 +96,41 @@ Every fixture page should expose:
 
 ```text
 data-testid="basic-fixture-heading"
-data-testid="basic-fixture-trigger"
+data-testid="basic-fixture-primary-trigger"
+data-testid="basic-fixture-secondary-trigger"
 data-testid="basic-fixture-result"
-data-testid="basic-fixture-reset"
 data-testid="basic-fixture-status"
+data-testid="basic-fixture-reset"
 ```
 
-If a fixture has multiple triggers, suffix the selector:
+Page-specific controls should use stable selectors, for example:
 
 ```text
-basic-fixture-trigger-primary
-basic-fixture-trigger-secondary
+basic-login-username
+basic-register-confirm-password
+basic-sms-request-code
+basic-search-category-filter
+basic-settings-save
+basic-confirm-surface
 ```
 
 Do not rely on random text, CSS order, or translated labels as the only selector.
 
 ## Timer / State Design
 
-- Use deterministic durations, preferably 300-600 ms.
-- Store timer handles and clear them during reset and component unmount.
+- Use deterministic durations, preferably 300-600 ms for submit/search/save/confirm.
+- SMS countdown may be short and deterministic; avoid real-time waits longer than needed for local smoke.
+- Store timer handles and clear them during reset, route switch, and component unmount.
 - Keep all data local to the fixture component.
 - Do not call real HTTP APIs.
 - Do not use random values or current time in visible result state.
-
-## Service / Module Design
-
-No backend service changes.
-
-Frontend module responsibilities:
-
-- `basicFixtures.ts` owns static fixture metadata and route identifiers.
-- `BasicBusinessFixturePage.vue` renders a fixture from metadata and owns deterministic local state.
-- `RuntimeObservationIndex.vue` remains the category shell and links implemented basic cards only after
-  their routes exist.
-- `router/index.ts` registers `/runtime-observation/basic/*` routes under the existing namespace.
-
-No module may import replay, wait service, reporter, API clients, or autonomous-run code.
 
 ## Data Flow
 
 ```text
 router basic route
--> BasicBusinessFixturePage
--> fixture metadata by route key
+-> BasicBusinessFixtureShell
+-> fixture-specific component
 -> local state transition after user action
 -> stable status / result region
 -> reset returns local state to initial values
@@ -153,11 +153,13 @@ Fixture state is local and deterministic:
 - `idle`：initial fixture state。
 - `editing`：input has changed but no result is shown。
 - `validating`：frontend validation is being evaluated。
-- `loading`：short deterministic timer is pending。
+- `loading` / `pending`：short deterministic timer is pending。
 - `success`：visible success / saved / result state。
-- `error`：visible frontend validation or visible error surface。
-- `empty`：search/detail fixture has no result。
+- `error`：visible frontend validation or deterministic business error surface。
+- `empty`：search fixture has no result。
+- `not_found`：detail fixture local missing item state。
 - `confirming`：confirm fixture shows modal-like confirmation surface。
+- `dirty`：settings fixture has unsaved local changes。
 
 These states are fixture UI states only. They do not change `WaitResult.status`,
 `ReplayObservationSummary.status`, or runtime task success semantics.
@@ -167,21 +169,24 @@ These states are fixture UI states only. They do not change `WaitResult.status`,
 - Reset while timer is pending must clear the timer before restoring initial state.
 - Route key missing from metadata should render a stable fallback state or redirect within the
   `/runtime-observation` namespace; it must not create a blank page.
-- Empty search/detail results must be deterministic.
+- Search empty result and detail not-found must be deterministic.
 - Validation errors must be frontend-local and must not imply backend validation support.
 - Implemented cards must link only to routes that exist.
 - Medium / complex / mobile cards remain planned / deferred.
+- Weak network / HTTP status / backend validation are deferred to 11.2.4.5.
+- Recovery / retry / abort / takeover are deferred to M12.
 
 ## Compatibility
 
 - Existing `/login` and `/users` remain unchanged.
 - Existing `/runtime-observation` shell remains the entrypoint.
-- Basic cards can link to implemented basic fixture routes after this package.
+- `/runtime-observation/basic/*` route namespace remains stable.
 - Planned medium / complex / mobile / mock-backend cards remain planned or deferred.
 - Current MVP observation signal labels remain unchanged.
 
 ## Non-goals
 
+- No source code changes in this documentation pass。
 - No backend service。
 - No mock API。
 - No E2E / Playwright tests。
@@ -189,24 +194,13 @@ These states are fixture UI states only. They do not change `WaitResult.status`,
 - No reporter integration。
 - No new observation signal policy。
 
-## Test Matrix
-
-| Test area | Coverage goal | Command / evidence |
-|---|---|---|
-| Build | Vue + TypeScript compiles | `pnpm --filter @web-agent-flow/validation-site build` |
-| Diff hygiene | No whitespace errors | `git diff --check` |
-| Package boundary | No package / lock / backend changes | `git status --short -- '*.py' 'package.json' ...` |
-| Future route smoke | Route opens and anchors visible | not required in this package unless explicitly run |
-
-## Validation Commands
-
-Required after implementation:
+## Validation Commands For This Docs Pass
 
 ```bash
 git diff --check
-pnpm --filter @web-agent-flow/validation-site build
-git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
+git status --short
+git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```
 
-Do not run E2E, `verify-scenario`, or autonomous run unless the user separately asks for live evidence.
+Do not run E2E, `verify-scenario`, or autonomous run for this documentation revision.
