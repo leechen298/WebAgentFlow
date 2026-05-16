@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：proposed
+状态：approved for implementation
 
 ## 当前状态（Current State）
 
@@ -38,17 +38,17 @@ recovery boundary / abort acknowledgement / proposal / retry policy decision 包
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
-| Conversation flow is not execution. | Future `RecoveryConversationResponse` contains display/event/state suggestion only, no command fields. | `test-plan.md`: no execution command / forbidden dependency tests. | Prevents retry/replan/browser continuation. |
-| Proposal options are shown, not auto-selected. | Future response preserves option list and display metadata; user choice fields use names such as `chosen_option_kind`, `conversation_choice`, or `requested_next_step`. | `test-plan.md`: recommended displayed but not selected; selected user option is conversation choice only. | Avoid `selected_action`, `execute_choice`, `run_choice`, or names that imply execution. |
-| Retry policy result is displayed, not started. | Future flow wraps `RetryPolicyDecision` and writes event payload with policy outcome only. | `test-plan.md`: retry allowed requires confirmation but no execution. | Keeps 12.4 boundary. |
-| Abort is acknowledged without new browser actions. | Future abort response uses `AbortAcknowledgement.no_new_actions_after` and `inflight_caveat`. | `test-plan.md`: accepted stop and inflight caveat cases. | Preserves user control. |
-| Upstream recovery outputs remain unchanged. | Future service consumes copies / Pydantic models and returns new response data. | `test-plan.md`: input immutability. | Compatibility with 12.1-12.4. |
-| No raw HTML / browser / network / LLM reads. | Future service consumes structured recovery and conversation inputs only. | `test-plan.md`: forbidden dependency scan. | Keeps deterministic conversation flow. |
+| Conversation flow is not execution. | `RecoveryConversationResponse` contains display/event/state suggestion only, no command fields. | `test-plan.md`: no execution command / forbidden dependency tests. | Prevents retry/replan/browser continuation. |
+| Proposal options are shown, not auto-selected. | Response preserves option list and display metadata; user choice fields use names such as `chosen_option_kind`, `conversation_choice`, or `requested_next_step`. | `test-plan.md`: recommended displayed but not selected; selected user option is conversation choice only. | Avoid `selected_action`, `execute_choice`, `run_choice`, or names that imply execution. |
+| Retry policy result is displayed, not started. | Flow wraps `RetryPolicyDecision` and writes event payload with policy outcome only. | `test-plan.md`: retry allowed requires confirmation but no execution. | Keeps 12.4 boundary. |
+| Abort is acknowledged without new browser actions. | Abort response uses `AbortAcknowledgement.no_new_actions_after` and `inflight_caveat`. | `test-plan.md`: accepted stop and inflight caveat cases. | Preserves user control. |
+| Upstream recovery outputs remain unchanged. | Service consumes copies / Pydantic models and returns new response data. | `test-plan.md`: input immutability. | Compatibility with 12.1-12.4. |
+| No raw HTML / browser / network / LLM reads. | Service consumes structured recovery and conversation inputs only. | `test-plan.md`: forbidden dependency scan. | Keeps deterministic conversation flow. |
 | Event payloads remain conversation records. | Prefer existing conversation event payload mechanisms; do not add `ConversationEventType` or `ConversationStatus` by default. | `test-plan.md`: event payload / enum boundary tests if orchestrator is touched. | Any enum addition requires implementation review with compatibility notes. |
 
 ## 实现方案（Proposed Implementation）
 
-Future implementation files:
+Implementation files:
 
 - `apps/api/app/schemas/recovery.py`
   - Add internal recovery conversation schema if needed.
@@ -56,40 +56,41 @@ Future implementation files:
   - Add deterministic pure service that converts recovery outputs into user-facing
     conversation response, event payload, and next-state suggestion.
 - `apps/api/app/services/conversation/orchestrator.py`
-  - Future integration point only; should route existing engine events / session
+  - Integration point only if needed; should route existing engine events / session
     state to the recovery conversation service without executing recovery.
 - `apps/api/app/services/conversation/state.py`
-  - Future state transition review point if recovery-specific status suggestion
+  - State transition review point if recovery-specific status suggestion
     needs mapping to existing statuses.
 - `apps/api/tests/test_recovery_conversation_flow.py`
   - Focused unit tests for pure recovery conversation service.
 - `apps/api/tests/test_conversation_recovery_flow.py`
-  - Limited integration tests around orchestrator/event boundary if implementation
-    touches conversation runtime.
+  - Limited integration tests around orchestrator/event boundary only if
+    implementation touches conversation runtime.
 
-本次提交不创建或修改这些代码文件。它只创建 12.5 design package and M12 index
-updates。
+Implementation should start with the pure recovery conversation service and focused
+unit tests. Only touch orchestrator / state after the pure service boundary is
+implemented and only when a documented integration point is required.
 
 ## 影响面（Affected Surfaces）
 
 | Surface | Changed? | Description | Compatibility notes |
 |---|---|---|---|
 | API routes | No | No new public route in design package; future implementation may use existing conversation API only. | Existing API routes remain unchanged. |
-| API response schema | No | Future internal response shape only unless separately reviewed. | No public response shape changes in design package. |
+| API response schema | No | Internal recovery conversation response shape only unless separately reviewed. | No public response shape changes in 12.5 MVP. |
 | Database schema / migration | No | No persistence or migration. | Existing conversation tables untouched. |
 | CLI | No | No CLI behavior expansion for MVP design. | `wagent conversation` unchanged. |
 | Console UI | No | No frontend display in 12.5 design package. | UI belongs to future work if scoped. |
-| Conversation events | Future | Future internal event payload design should wrap recovery outputs using existing event payload mechanisms first. | New event enum/status changes are not the default path and require implementation review. |
+| Conversation events | Maybe | Internal event payload design should wrap recovery outputs using existing event payload mechanisms first. | New event enum/status changes are not the default path and require explicit implementation notes and tests. |
 | Replay execution | No | No replay command or continuation. | Replay semantics unchanged. |
 | Reporter | No | Task Result Reporter remains upstream evidence. | Reporter output unchanged. |
-| Recovery services | Future | Future conversation flow wrapper consumes 12.1-12.4 outputs. | Upstream services unchanged. |
+| Recovery services | Yes | Conversation flow wrapper consumes 12.1-12.4 outputs. | Upstream services unchanged. |
 | Worker / async jobs | No | No worker path. | Async behavior unchanged. |
-| Tests / fixtures | Future | Unit and limited conversation integration tests in future implementation. | No E2E or live run. |
-| Docs | Yes | 12.5 design package and M12 index sync. | Current commit is docs-only. |
+| Tests / fixtures | Yes | Unit tests and conditional limited conversation integration tests. | No E2E or live run. |
+| Docs | No | Implementation Agent treats iteration docs as read-only. | Documentation updates happen in separate docs tasks if needed. |
 
 ## 数据模型 / Schema 变更（Data Model / Schema Changes）
 
-Future internal schema additions may include:
+Internal schema additions may include:
 
 - `RecoveryConversationInput`
 - `RecoveryConversationDecision`
@@ -118,7 +119,7 @@ Expected properties:
 
 ## 服务 / 模块设计（Service / Module Design）
 
-Future module:
+Module:
 
 ```text
 apps/api/app/services/recovery/conversation_flow.py
@@ -162,11 +163,11 @@ Conversation session/status + user message/command
   + 12.4 RetryPolicyDecision
   -> RecoveryConversationFlow
   -> RecoveryConversationResponse(user_response, prompt/options, evidence)
-  -> proposed RecoveryConversationEventPayload
+  -> RecoveryConversationEventPayload suggestion
   -> next conversation state suggestion
 ```
 
-Future orchestrator integration should append conversation messages/events using existing
+If needed, orchestrator integration should append conversation messages/events using existing
 repo paths. Pure recovery conversation service must not write DB directly.
 
 ## Event Payload Strategy
@@ -266,17 +267,18 @@ proposal recommendation, retry policy allow, or selected user choice alone.
 
 ## 验证命令入口（Validation Commands）
 
-Design package generation runs docs-only checks:
+Implementation runs focused unit tests and static checks:
 
 ```bash
+cd apps/api && .venv/bin/python -m pytest tests/test_recovery_conversation_flow.py -q
+cd apps/api && .venv/bin/python -m pytest tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_proposal.py tests/test_retry_policy.py tests/test_recovery_exports.py -q
+cd apps/api && .venv/bin/ruff check app/schemas/recovery.py app/services/recovery tests/test_recovery_conversation_flow.py
 git diff --check
-git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'
-find docs/iterations/m12 -maxdepth 1 -type d -name '12.6*' -print
-git status --short docs/iterations/m11
-git diff --name-only
-git diff --cached --name-only
-git diff --cached --check
 ```
 
-Future implementation should run focused unit and limited integration tests named in
-`test-plan.md`.
+If implementation touches orchestrator or state integration, also run:
+
+```bash
+cd apps/api && .venv/bin/python -m pytest tests/test_conversation_recovery_flow.py -q
+cd apps/api && .venv/bin/ruff check app/services/conversation tests/test_conversation_recovery_flow.py
+```

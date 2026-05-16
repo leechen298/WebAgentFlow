@@ -2,7 +2,7 @@
 
 Status: in progress.
 
-Current package: 12.5 Recovery conversation flow planning.
+Current package: 12.5 Recovery conversation flow implementation.
 
 ## Goal
 
@@ -76,12 +76,13 @@ execution, and `retry_allowed_requires_confirmation` is not `retry_started`.
 
 ### 12.5 · Recovery conversation flow
 
-Status: proposed / current design package.
+Status: approved for implementation.
 
 Route recovery and abort conversations through WebAgentFlow's runtime
 conversation surface while preserving the internal role boundaries for Failure
 Recovery Agent (legacy: Agent F) and User Abort Handler (legacy: Agent G).
-12.5 starts with a complete code-type design package before implementation.
+12.5 has a complete reviewed code-type design package and is ready for
+implementation.
 Recovery conversation flow is not recovery execution; it may display, explain,
 ask, route, and record choices, but must not execute retry, replan, browser
 continuation, takeover, teaching mode, or LearnedPath write-back.
@@ -94,7 +95,7 @@ Close M12 with deterministic tests, conversation/event evidence, and static
 review that prove no hidden recovery, no hidden relearning, and no browser
 continuation without user consent.
 
-12.5 is the current design package. The next implementation task should use
+12.5 is the current implementation package. The implementation task should use
 `12.5-recovery-conversation-flow/contract.md`, `technical-design.md`,
 `test-plan.md`, and `plan.md` as inputs.
 
@@ -105,7 +106,7 @@ continuation without user consent.
 | Replay failed, drifted, or returned an error | Stop execution, explain the failure evidence, and hand off to a later recovery-proposal flow. |
 | Required context is missing | Stay blocked, ask for the missing context, and do not execute. |
 | Result cannot be verified | Report `uncertain` / `needs_review`, preserve evidence, and ask for review or clarification. |
-| User aborts | Pause or stop immediately, record current state, acknowledge that no new browser action may start, and hand later choices to future recovery flow. |
+| User aborts | Pause or stop immediately, record current state, acknowledge that no new browser action may start, and hand later choices to recovery conversation flow. |
 | Partial state may be unsafe | Must stop; retry or re-run requires explicit user confirmation. |
 | Missing path coverage or repeated drift | Suggest re-teach / update LearnedPath, but do not write a new path automatically. |
 
@@ -151,9 +152,13 @@ M12 decisions must preserve:
 - teaching mode implementation;
 - account, tenant, commercial, remote trigger, WeChat, or Feishu integration.
 
-## Validation for This Initialization
+## Validation for Current Planning State
+
+12.5 now exists as the current implementation package. Current planning-state
+checks should ensure no code/package drift and no premature 12.6 detail package,
+not reject the 12.5 directory itself.
 
 - `git diff --check`
 - `git status --short -- '*.py' '*.ts' '*.tsx' '*.js' '*.jsx' 'package.json' 'pnpm-lock.yaml' 'package-lock.json'`
-- `find docs/iterations/m12 -maxdepth 1 -type d -name '12.5*' -print`
 - `find docs/iterations/m12 -maxdepth 1 -type d -name '12.6*' -print`
+- `git status --short docs/iterations/m11`

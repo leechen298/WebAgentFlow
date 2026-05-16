@@ -1,15 +1,21 @@
-# 12.5 Design Package Plan
+# 12.5 Implementation Plan
 
-状态：proposed
+状态：approved for implementation
 
 ## 输入
 
-- `README.md`
-- `intent.md`
-- `contract.md`
-- `technical-design.md`
-- `test-plan.md`
-- `review.md`
+Implementation Agent must read these documents in order:
+
+1. `README.md`
+2. `intent.md`
+3. `contract.md`
+4. `technical-design.md`
+5. `test-plan.md`
+6. `plan.md`
+7. `review.md` as read-only history
+
+Additional context:
+
 - `docs/iterations/m12/README.md`
 - `docs/iterations/m12/m12-plan.md`
 - 12.1 / 12.2 / 12.3 / 12.4 recovery code and tests
@@ -17,67 +23,113 @@
 
 ## 文件 / 模块
 
-**本次设计包生成：**
-
-- `docs/iterations/m12/12.5-recovery-conversation-flow/README.md` - 新建代码型迭代包索引和当前状态。
-- `docs/iterations/m12/12.5-recovery-conversation-flow/intent.md` - 新建目标、动机、边界和成功标准。
-- `docs/iterations/m12/12.5-recovery-conversation-flow/contract.md` - 新建 conversation response / choice / event / state / evidence 契约。
-- `docs/iterations/m12/12.5-recovery-conversation-flow/technical-design.md` - 新建 future schema / pure service / data flow 设计。
-- `docs/iterations/m12/12.5-recovery-conversation-flow/test-plan.md` - 新建 future unit / limited integration matrix 和未运行项。
-- `docs/iterations/m12/12.5-recovery-conversation-flow/review.md` - 新建本次设计包生成记录。
-- `docs/iterations/m12/README.md` - 同步 12.5 状态。
-- `docs/iterations/m12/m12-plan.md` - 同步 12.5 状态。
-
-**后续实现提交可触及，但本次不创建或修改：**
+Implementation may touch:
 
 - `apps/api/app/schemas/recovery.py`
+  - Add internal recovery conversation schema if needed.
 - `apps/api/app/services/recovery/conversation_flow.py`
+  - Add deterministic pure service that converts 12.1-12.4 recovery outputs into
+    user-facing conversation response, event payload, and next-state suggestion.
+- `apps/api/app/services/recovery/__init__.py`
+  - Add package-level exports only if a new recovery conversation service entrypoint
+    is created.
+- `apps/api/tests/test_recovery_conversation_flow.py`
+  - Add focused unit tests required by `test-plan.md`.
 - `apps/api/app/services/conversation/orchestrator.py`
 - `apps/api/app/services/conversation/state.py`
-- `apps/api/tests/test_recovery_conversation_flow.py`
 - `apps/api/tests/test_conversation_recovery_flow.py`
+  - Touch these only if the implementation intentionally integrates the pure service
+    with existing conversation runtime boundaries.
+
+Implementation Agent must not edit iteration documents or global planning docs during
+the implementation pass:
+
+- `docs/iterations/**`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `CLAUDE.zh.md`
+
+If implementation reveals a document conflict or missing requirement, stop and report
+the blocker instead of patching the documents inside the implementation workflow.
 
 ## 步骤
 
-1. 执行 precheck：同步 `v0.2`，确认工作区 clean，确认 HEAD 包含 `f1c2606` 或后续提交。
-2. 确认 `12.5-recovery-conversation-flow/` 和 `12.6-*` 不存在。
-3. 阅读 iteration templates、M12 README / plan、12.3 / 12.4 design packages、
-   recovery services、conversation schema / state / orchestrator。
-4. 创建 12.5 七件套：
-   `README.md`、`intent.md`、`contract.md`、`technical-design.md`、
-   `test-plan.md`、`plan.md`、`review.md`。
-5. 最小同步 M12 README / m12-plan 的 12.5 状态。
-6. 运行七件套存在性检查、文档级静态检查和 scope checks。
-7. 将实际验证结果回填到 `review.md`。
-8. 只 stage `docs/iterations/m12`，确认 staged diff 只包含 M12 文档。
-9. 本地提交，不 push。
+1. Precheck:
+   - `git status --short --branch`
+   - confirm current branch is not a `-local` branch before any push
+   - confirm no unrelated dirty changes block a narrow implementation
+2. Read the required 12.5 documents in the input order.
+3. Inspect current recovery services and conversation foundations:
+   - `apps/api/app/schemas/recovery.py`
+   - `apps/api/app/services/recovery/classifier.py`
+   - `apps/api/app/services/recovery/abort_handler.py`
+   - `apps/api/app/services/recovery/proposal.py`
+   - `apps/api/app/services/recovery/retry_policy.py`
+   - `apps/api/app/schemas/conversation.py`
+   - `apps/api/app/services/conversation/commands.py`
+   - `apps/api/app/services/conversation/state.py`
+   - `apps/api/app/services/conversation/orchestrator.py`
+4. Implement the pure recovery conversation service first:
+   - consume structured 12.1-12.4 outputs;
+   - return user-facing response, prompt/options when relevant, evidence refs,
+     event payload suggestion and next-state suggestion;
+   - keep the service deterministic and side-effect free.
+5. Add internal schema only as needed to express the contract:
+   - `RecoveryConversationInput`
+   - `RecoveryConversationDecision`
+   - `RecoveryConversationResponse`
+   - `RecoveryConversationEventPayload`
+   - `RecoveryChoicePrompt`
+   - `RecoveryChoiceOption`
+   - `RecoveryConversationState`
+   - `RecoveryConversationReason`
+6. Add focused unit tests from `test-plan.md`.
+7. Touch orchestrator / state only if required after the pure service is complete.
+   If touched, add limited integration tests proving event payload / state suggestions
+   do not execute recovery.
+8. Run required validation commands.
+9. Report actual files changed, validation evidence, not-run items and remaining risk
+   in the final response. Do not write implementation evidence back into
+   `review.md` during the implementation workflow.
 
 ## 验证
 
-验证计划来自 `technical-design.md` 的高层 Test Matrix 和 `test-plan.md` 的详细
-测试矩阵。本次作为 docs-only design package generation，只执行文档级静态检查。
+Validation plan comes from `technical-design.md` and `test-plan.md`.
+
+Required for pure service implementation:
 
 | Command | Expected proof | Notes |
 |---|---|---|
-| `git fetch --all --prune` | Remote refs refreshed. | Git metadata sync. |
-| `git switch v0.2` | Current branch is `v0.2`. | If switch fails, stop. |
-| `git pull --ff-only origin v0.2` | Branch is fast-forward synced. | If not fast-forward, stop. |
-| `test -f` for 12.5 seven docs | 七件套全部存在。 | 文件存在性检查。 |
-| `git diff --check` | 文档 diff 无 whitespace error。 | 静态检查。 |
-| code/package status check | No code/package changes. | `*.py`, frontend files, package/lockfile status must be empty. |
-| `find docs/iterations/m12 ... 12.6` | No 12.6 dirs. | Scope guard. |
-| `git status --short docs/iterations/m11` | No M11 history docs changed. | Scope guard. |
-| `git diff --name-only` | Only `docs/iterations/m12/**`. | Scope guard. |
-| `git diff --cached --name-only` | Only `docs/iterations/m12/**`. | Staged scope guard. |
-| `git diff --cached --check` | No staged whitespace errors. | Commit gate. |
+| `cd apps/api && .venv/bin/python -m pytest tests/test_recovery_conversation_flow.py -q` | Recovery conversation unit tests pass. | Required when pure service is implemented. |
+| `cd apps/api && .venv/bin/python -m pytest tests/test_recovery_classifier.py tests/test_user_abort_handler.py tests/test_recovery_proposal.py tests/test_retry_policy.py tests/test_recovery_exports.py -q` | Existing recovery regressions pass. | Guards 12.1-12.4 services. |
+| `cd apps/api && .venv/bin/ruff check app/schemas/recovery.py app/services/recovery tests/test_recovery_conversation_flow.py` | Ruff clean for touched recovery surfaces. | Add integration test file to command if created. |
+| `git diff --check` | No whitespace errors. | Static check. |
 
-## 对齐清单（Alignment Checklist）
+Conditional if orchestrator / state integration is touched:
 
-- [x] 12.5 是代码型迭代。
-- [x] 12.5 包含 `technical-design.md`。
-- [x] `test-plan.md` 已存在，因为 12.5 涉及 recovery / conversation flow。
-- [x] `contract.md` 明确 conversation flow is not execution。
-- [x] `technical-design.md` 只设计 future implementation，不创建代码。
-- [x] `test-plan.md` 明确 API / UI / E2E / live run 不在本次执行。
-- [x] plan 验证表格引用 `technical-design.md` 和 `test-plan.md`。
-- [x] 验证命令执行结果记录到 `review.md`，未运行项写明 not run / unverified。
+| Command | Expected proof | Notes |
+|---|---|---|
+| `cd apps/api && .venv/bin/python -m pytest tests/test_conversation_recovery_flow.py -q` | Limited conversation integration tests pass. | Required only if implementation touches conversation runtime integration. |
+| `cd apps/api && .venv/bin/ruff check app/services/conversation tests/test_conversation_recovery_flow.py` | Ruff clean for touched conversation surfaces. | Required only for touched files. |
+
+Not required for 12.5 MVP unless separately scoped:
+
+- API tests
+- CLI tests
+- UI smoke
+- E2E
+- `verify-scenario`
+- autonomous run
+
+## 对齐清单（Implementation Checklist）
+
+- [x] 12.5 is a code iteration.
+- [x] Required iteration documents exist.
+- [x] `technical-design.md` has been reviewed for implementation.
+- [x] `test-plan.md` exists because 12.5 involves recovery / conversation flow.
+- [x] `contract.md` states conversation flow is not execution.
+- [x] `technical-design.md` maps contract requirements to implementation mechanisms
+  and test entries.
+- [x] `test-plan.md` defines required unit tests and conditional integration tests.
+- [x] Plan is implementation-ready and does not require the implementation Agent to
+  rewrite iteration documents.

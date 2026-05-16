@@ -1,6 +1,6 @@
 # 12.5 Recovery Conversation Flow Intent
 
-状态：proposed
+状态：approved for implementation
 
 ## Goal
 
@@ -9,9 +9,9 @@
 `RetryPolicyDecision` 的基础上，生成用户可读、可审计、可选择的 conversation
 response，并给现有 conversation runtime 一个安全的后续状态建议。
 
-本次提交只交付设计包。后续实现提交将以本设计包为输入，设计并实现 pure
-conversation-flow service、必要内部 schema、focused unit tests 和有限的
-conversation integration tests。
+设计包已完成 implementation gate review。实现提交应以本设计包为输入，实现 pure
+conversation-flow service、必要内部 schema、focused unit tests，并且只有在触碰
+orchestrator / state 时才增加有限的 conversation integration tests。
 
 ## Motivation
 
@@ -41,7 +41,7 @@ M12.1-M12.4 已经提供了 deterministic recovery decision chain，但这些输
 - ask-user / review-evidence / abandon dialogue design；
 - safe handoff to future retry / replan / takeover flows；
 - conversation state transition design；
-- future unit / integration test matrix。
+- unit / conditional integration test matrix。
 
 12.5 不做：
 
@@ -72,9 +72,12 @@ M12.1-M12.4 已经提供了 deterministic recovery decision chain，但这些输
   replan、browser continuation、takeover、teaching mode 或 LearnedPath write-back。
 - `contract.md` 定义 recovery conversation concepts、decision/state、schema/API、
   evidence、compatibility 和不变契约。
-- `technical-design.md` 设计 future pure service、existing conversation
-  orchestrator/state integration boundary、data flow 和 edge cases。
-- `test-plan.md` 覆盖 future unit / limited integration matrix，并明确 API / UI /
-  E2E / live run 不在本次执行。
-- `plan.md` 的验证表格引用 `technical-design.md` 和 `test-plan.md`。
-- `review.md` 按实际运行结果记录 validation evidence 和未运行项。
+- 实现提供 deterministic recovery conversation pure service，并保持 no DB write in
+  pure service、no browser、no network、no LLM、no retry / replan / takeover
+  execution、no LearnedPath write-back。
+- 实现保留 proposal display、retry policy display、abort acknowledgement、user
+  choice marker 和 event payload 的 non-execution boundary。
+- 实现按 `test-plan.md` 运行 required unit tests；若触碰 orchestrator / state，
+  同时运行 limited conversation integration tests。
+- 实现报告真实验证证据，未运行 API / CLI / UI / E2E / `verify-scenario` /
+  autonomous run 时必须标记 `not run` / `unverified` 和原因。

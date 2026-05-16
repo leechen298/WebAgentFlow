@@ -1,6 +1,6 @@
 # 12.5 Recovery Conversation Flow Test Plan
 
-状态：proposed
+状态：approved for implementation
 
 ## 适用条件
 
@@ -9,13 +9,14 @@
 
 ## 测试范围（Test Scope）
 
-- Unit：future required。覆盖 deterministic recovery conversation flow service。
-- Integration：future limited conversation-flow tests。仅覆盖 conversation
-  orchestrator / event boundary，不执行 browser 或 retry。
-- API：N/A for design package；12.5 design package 不新增 route。
-- Console UI：N/A；12.5 design package 不新增 UI。
+- Unit：required for implementation。覆盖 deterministic recovery conversation flow service。
+- Integration：required only if implementation touches conversation orchestrator /
+  event / state boundary；不执行 browser 或 retry。
+- API：N/A for 12.5 MVP unless implementation explicitly changes existing
+  conversation API contract；默认不新增 route。
+- Console UI：N/A；12.5 MVP 不新增 UI。
 - E2E：not run / out of scope。
-- Agent / Reporter / Recovery：future unit-level recovery conversation tests。
+- Agent / Reporter / Recovery：unit-level recovery conversation tests。
 - Codex / AI External Operator：review only, not test。
 - Live autonomous run：explicitly excluded。
 
@@ -41,19 +42,21 @@
 | Unit | choice execution boundary marker | `pytest tests/test_recovery_conversation_flow.py` | user choice preserves `non_executable`, `execution_boundary`, or equivalent marker | Yes | Choice is not command. |
 | Unit | input immutability | `pytest tests/test_recovery_conversation_flow.py` | recovery inputs are not mutated | Yes | Pure service. |
 | Unit | forbidden dependency scan | `pytest tests/test_recovery_conversation_flow.py` | no browser/network/LLM/retry/replan/LearnedPath write-back imports | Yes | Scope guard. |
-| Integration | orchestrator/event wrapping | `pytest tests/test_conversation_recovery_flow.py` | event payload records response and choice boundaries only | Future | Only if implementation touches orchestrator. |
-| Integration | event enum boundary | `pytest tests/test_conversation_recovery_flow.py` | implementation reuses existing event payload mechanisms by default; any new `ConversationEventType` / `ConversationStatus` is explicitly reviewed and covered | Future | Only if implementation touches orchestrator/state enums. |
+| Integration | orchestrator/event wrapping | `pytest tests/test_conversation_recovery_flow.py` | event payload records response and choice boundaries only | Conditional | Required only if implementation touches orchestrator. |
+| Integration | event enum boundary | `pytest tests/test_conversation_recovery_flow.py` | implementation reuses existing event payload mechanisms by default; any new `ConversationEventType` / `ConversationStatus` is explicitly documented and covered | Conditional | Required only if implementation touches orchestrator/state enums. |
 
 ## E2E / UI Smoke 边界（E2E / UI Smoke Boundary）
 
-- 本次设计包生成没有真实打开浏览器或产品 UI。
-- 本次不得声称完成 UI smoke / E2E。
+- 12.5 implementation MVP does not require browser or product UI validation.
+- 不得声称完成 UI smoke / E2E unless a future scoped task actually runs those
+  surfaces and records evidence.
 - 12.5 implementation MVP 不需要 UI smoke unless implementation explicitly scopes
   a product UI surface.
 
 ## Codex / AI 外部测试操作员边界（Codex / AI External Operator Boundary）
 
-本次 Codex / AI 只做文档编辑和静态检查，不作为外部测试操作员运行产品。
+12.5 implementation does not require Codex / AI to act as an external product
+test operator.
 
 如果后续要运行 product-driven browser execution，必须记录实际入口、操作路径、
 截图或可复查输出，并按根 `AGENTS.md` 报告 pass gate / run_id。
@@ -72,9 +75,7 @@
 
 | Item | Reason | Risk |
 |---|---|---|
-| Unit tests | 本次提交只生成设计包，不创建 recovery conversation code。 | Future implementation must run `test_recovery_conversation_flow.py` and recovery regressions. |
-| Integration tests | 本次不接 orchestrator / event runtime。 | Future implementation must run limited integration tests if it touches orchestrator/state. |
-| API tests | 12.5 design package 不新增 route 或 response contract。 | None for docs-only package. |
-| CLI tests | 12.5 design package 不改 CLI。 | None for docs-only package. |
-| E2E / UI smoke | 12.5 design package 不接 UI 或 browser flow。 | UI behavior unverified, by design. |
-| `verify-scenario` / autonomous run | 12.5 design package 不触发 live autonomous run。 | Product runtime not exercised, by design. |
+| API tests | 12.5 MVP 默认不新增 route 或 response contract。 | If implementation changes existing conversation API, add focused API tests in that task. |
+| CLI tests | 12.5 MVP 默认不改 CLI。 | If implementation changes CLI, add focused CLI tests in that task. |
+| E2E / UI smoke | 12.5 MVP 不接 UI 或 browser flow。 | UI behavior remains `not run` / `unverified` unless explicitly scoped later. |
+| `verify-scenario` / autonomous run | 12.5 MVP 不触发 live autonomous run。 | Product live runtime remains `not run` / `unverified` unless explicitly requested later. |

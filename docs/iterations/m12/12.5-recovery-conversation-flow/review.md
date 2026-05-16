@@ -1,12 +1,20 @@
 # 12.5 Review and Reflection
 
-状态：design package generated
+状态：approved for implementation
 
 ## 2026-05-16 设计包生成（Design Package Generation）
 
 - Reviewer：documentation package self-check
 - Decision：design package generated
 - Notes：本次按 iteration templates 创建 12.5 代码型迭代完整设计包。
+
+## 2026-05-16 Implementation Gate Review
+
+- Reviewer：user / implementation-readiness review
+- Decision：approved for implementation
+- Notes：12.5 七件套已存在，`contract.md`、`technical-design.md`、`test-plan.md`
+  和 `plan.md` 已按 `webagentflow-iteration-dev` 开工要求收紧。实现 Agent 可按本
+  迭代包开工；实现过程中不应改写迭代文档，若发现文档冲突或缺口应停止并报告。
 
 ## 用户反馈
 
@@ -20,6 +28,11 @@
   `contract.md`、`technical-design.md` 和 `test-plan.md`。
 - Review 后要求收紧 selected user option 字段命名和 execution boundary -> accepted，
   已补入 `contract.md`、`technical-design.md` 和 `test-plan.md`。
+- Review 后要求移除阻碍开工的表述 -> accepted，已将 12.5 状态同步为
+  `approved for implementation`，并把 `plan.md` 从 design package generation
+  改为 implementation-ready plan。
+- Review 后要求参考 `webagentflow-iteration-dev` -> accepted，已明确实现 Agent
+  读取文档后按文档实现和自测，不在实现 workflow 中改写迭代文档。
 
 ## 最终差异（Final Delta）
 
@@ -29,13 +42,13 @@
 - 新建 12.5 `intent.md`：goal、motivation、boundary / non-goals、success criteria。
 - 新建 12.5 `contract.md`：conversation response、choice、event payload、state、
   evidence、compatibility、不变契约和非目标。
-- 新建 12.5 `technical-design.md`：future recovery conversation schema / pure
+- 新建 12.5 `technical-design.md`：recovery conversation schema / pure
   service / conversation integration boundary / data flow / validation commands。
-- 新建 12.5 `test-plan.md`：future recovery conversation unit / limited integration
+- 新建 12.5 `test-plan.md`：recovery conversation unit / limited integration
   matrix 和 not-run boundaries。
-- 新建 12.5 `plan.md`：实施步骤、验证表格和对齐清单。
+- 新建并更新 12.5 `plan.md`：implementation-ready 步骤、验证表格和对齐清单。
 - 新建 12.5 `review.md`：本次设计包生成记录。
-- 更新 M12 README / m12-plan：12.5 标记为 proposed / current design package，
+- 更新 M12 README / m12-plan：12.5 已标记为 approved for implementation，
   12.6 保持 future。
 - Polish：明确 future implementation 默认复用 existing conversation event payload
   mechanisms，不默认新增 `ConversationEventType` / `ConversationStatus`；如必须新增，
@@ -43,14 +56,19 @@
 - Polish：明确 future user choice 字段优先使用 `chosen_option_kind`、
   `conversation_choice`、`requested_next_step`，避免 `selected_action`、
   `execute_choice`、`run_choice`、`retry_choice` 等暗示执行的字段名。
+- Polish：12.5 状态从 design package generated / proposed 调整为 approved for
+  implementation；README / intent / contract / technical-design / test-plan / plan /
+  review 和 M12 index 已同步开工状态。
+- Polish：移除让 implementation Agent 在实现 workflow 中更新 `review.md` 的表述。
+  实现 Agent 应在最终回复中报告真实验证证据；文档回填如有需要应另开文档任务。
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
-- None so far. 本次只做 design package generation，不实现 code。
+- None so far. 当前文档包已进入 implementation-ready 状态；代码实现尚未发生。
 
 ### WebAgentFlow Live Run 边界（Live Run Boundary）
 
-12.5 design package generation 未触发 `verify-scenario`、autonomous run 或
+12.5 design package generation / implementation-readiness polish 未触发 `verify-scenario`、autonomous run 或
 product-driven browser execution。不产生 `run_id`。
 
 ### E2E / Codex 外部测试操作员证据（E2E / Codex Evidence）
@@ -78,10 +96,10 @@ product-driven browser execution。不产生 `run_id`。
 
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
-| API tests | 12.5 design package 不新增 route 或 response contract。 | None for docs-only package. |
-| CLI tests | 12.5 design package 不改 CLI。 | None for docs-only package. |
-| Unit tests | 12.5 design package 不创建 recovery conversation code。 | Future implementation must run recovery conversation unit tests and recovery regressions. |
-| Integration tests | 12.5 design package 不接 orchestrator / event runtime。 | Future implementation must run limited integration tests if it touches orchestrator/state. |
+| API tests | 12.5 MVP 默认不新增 route 或 response contract。 | If implementation changes existing conversation API, add focused API tests in that task. |
+| CLI tests | 12.5 MVP 默认不改 CLI。 | If implementation changes CLI, add focused CLI tests in that task. |
+| Unit tests | Design-package / polish rounds did not change runtime code. | Implementation must run recovery conversation unit tests and recovery regressions. |
+| Integration tests | Design-package / polish rounds did not touch orchestrator / event runtime. | Implementation must run limited integration tests if it touches orchestrator/state. |
 | E2E / UI smoke | 12.5 design package 不接 UI / browser flow。 | UI behavior unverified by design. |
 | `verify-scenario` / autonomous run | 12.5 design package 不触发 live autonomous run。 | Product runtime not exercised by design. |
 

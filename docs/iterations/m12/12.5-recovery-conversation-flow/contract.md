@@ -1,12 +1,12 @@
 # 12.5 Recovery Conversation Flow Contract
 
-状态：proposed
+状态：approved for implementation
 
 ## 概念 / 边界契约
 
 | Concept | Contract |
 |---|---|
-| `RecoveryConversationInput` | Future conversation-flow service 的输入。聚合当前 conversation session/status、user message / command kind、12.1 boundary、12.2 abort acknowledgement、12.3 proposal、12.4 retry policy decision 和 structured evidence refs。 |
+| `RecoveryConversationInput` | conversation-flow service 的输入。聚合当前 conversation session/status、user message / command kind、12.1 boundary、12.2 abort acknowledgement、12.3 proposal、12.4 retry policy decision 和 structured evidence refs。 |
 | `RecoveryConversationDecision` | conversation-level 决策结果。它决定显示、询问、记录或 handoff，不是 execution command。 |
 | `RecoveryConversationResponse` | 面向用户的 response。它是 user-facing explanation，不是 retry / replan / browser command。 |
 | `RecoveryConversationEventPayload` | 可写入现有 conversation event 的 structured payload。它记录 recovery evidence、shown options 和 user choice marker，不执行动作。 |
@@ -67,7 +67,7 @@ User choice naming contract:
 
 ## Schema / API 契约
 
-本次设计包不新增 API，不新增 CLI，不新增 DB，不新增 frontend。
+12.5 MVP 不新增 API，不新增 CLI，不新增 DB，不新增 frontend。
 
 未来可以在 `apps/api/app/schemas/recovery.py` 或 recovery conversation module 中设计
 内部 schema：

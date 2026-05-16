@@ -43,8 +43,7 @@ without explicit user consent.
 - [12.4-retry-rerun-policy](./12.4-retry-rerun-policy/) —
   retry / re-run policy. Status: implemented.
 - [12.5-recovery-conversation-flow](./12.5-recovery-conversation-flow/) —
-  recovery conversation flow design package. Status: proposed / current design
-  package.
+  recovery conversation flow. Status: approved for implementation.
 
 ## Core Runtime Terms
 
