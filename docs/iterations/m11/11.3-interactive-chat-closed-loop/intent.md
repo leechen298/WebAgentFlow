@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：proposed
+状态：accepted（manual smoke passed）
 
 ## 目标
 

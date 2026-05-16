@@ -1,6 +1,6 @@
 # 11.3 Interactive Chat Closed Loop
 
-状态：implementation complete（scoped tests passed, manual smoke not run）
+状态：accepted（implementation review passed, manual smoke passed）
 里程碑：M11
 类型：code
 
@@ -40,3 +40,7 @@ execution via replay 和 result reporter。当前缺口是普通用户不能只�
 本包新增 `wagent chat` 作为人工自测主入口。第一阶段只验证 validation-site
 `/login` happy path，不扩大到 `/users`、真实业务页、M12 recovery / retry /
 takeover 或复杂 LLM 意图理解。
+
+当前代码实现和 scoped regression 已通过审查；M11.3 已通过真实
+`wagent chat` 人工闭环 smoke。该 smoke 使用当前工作区 API 临时端口 `8002`
+执行，因为当时本机 `8001` 被旧 API 进程占用。

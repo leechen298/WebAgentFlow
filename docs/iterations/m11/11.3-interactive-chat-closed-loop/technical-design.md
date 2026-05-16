@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：proposed
+状态：accepted（manual smoke passed）
 
 ## 当前状态
 
@@ -13,6 +13,11 @@
 
 当前 autonomous exploration endpoint 会持久化 run，并在 pass gate 通过时尝试 ingest
 LearnedPath，但 response data 只暴露 `run_id`，不直接暴露 `learned_path_id`。
+
+M11.3 代码只保证 `wagent chat` learning path 使用 `LearningRunService` 并显式返回
+`run_id` / `learned_path_id`。`POST /exploration/autonomous-runs` / Workbench 仍保留
+既有 router pipeline；将 exploration router 复用该 service 是后续 refactor，不作为本轮
+验收条件。
 
 ## Contract Alignment
 

@@ -1210,7 +1210,7 @@ loading overlay、validation message、virtualized list、inserted option list�
 
 ## 11.3 · Interactive Chat Closed Loop
 
-状态：implementation complete（scoped tests passed, manual smoke not run）。
+状态：accepted（implementation review passed, manual smoke passed）。
 
 目标：将 M11.0 / M11.1 已有的 conversation、LearnedPath、learning、replay
 能力收束成第一个普通用户入口 `wagent chat`。用户不需要理解 session id、

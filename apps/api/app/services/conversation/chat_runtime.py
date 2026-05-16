@@ -70,6 +70,7 @@ class InteractiveChatRuntime:
         if command.kind != ConversationCommandKind.FREE_TEXT:
             return None
 
+        previous_status = str(session.status or ConversationStatus.IDLE.value)
         intent = parse_chat_intent(raw_input)
         if intent.kind == "learn_page":
             return self._handle_learn_page(
@@ -77,6 +78,7 @@ class InteractiveChatRuntime:
                 intent=intent,
                 message_id=message_id,
                 metadata=metadata,
+                previous_status=previous_status,
             )
         if intent.kind == "execute_task":
             return self._handle_execute_task(
@@ -84,12 +86,14 @@ class InteractiveChatRuntime:
                 intent=intent,
                 message_id=message_id,
                 metadata=metadata,
+                previous_status=previous_status,
             )
         return self._handle_no_path(
             session_id=session_id,
             command_kind="unknown",
             message_id=message_id,
             metadata=metadata,
+            previous_status=previous_status,
         )
 
     def _handle_learn_page(
@@ -99,6 +103,7 @@ class InteractiveChatRuntime:
         intent: ChatIntent,
         message_id: str | None,
         metadata: dict[str, Any] | None,
+        previous_status: str,
     ) -> DispatchResult:
         events = self._append_chat_command_event(
             session_id=session_id,
@@ -121,6 +126,7 @@ class InteractiveChatRuntime:
                 user_response=response,
                 events=events,
                 message_id=message_id,
+                previous_status=previous_status,
                 allowed=False,
                 error="Only /login learning is supported in M11.3.",
             )
@@ -139,6 +145,7 @@ class InteractiveChatRuntime:
                 "Learning handler is not configured.",
                 events,
                 message_id,
+                previous_status,
             )
 
         try:
@@ -147,7 +154,13 @@ class InteractiveChatRuntime:
                 intent.raw_text,
             )
         except Exception as exc:
-            return self._learning_failed(session_id, str(exc), events, message_id)
+            return self._learning_failed(
+                session_id,
+                str(exc),
+                events,
+                message_id,
+                previous_status,
+            )
 
         path = (
             LearnedPathRepository(self._repo.session).get(
@@ -158,7 +171,13 @@ class InteractiveChatRuntime:
         )
         if learning_result.status != "learned" or path is None:
             error = learning_result.error or "LearnedPath was not persisted."
-            return self._learning_failed(session_id, error, events, message_id)
+            return self._learning_failed(
+                session_id,
+                error,
+                events,
+                message_id,
+                previous_status,
+            )
 
         action = _action_from_learning_result(learning_result)
         old_action = self._upsert_learned_action(session_id, action)
@@ -187,6 +206,7 @@ class InteractiveChatRuntime:
             user_response=user_response,
             events=events,
             message_id=message_id,
+            previous_status=previous_status,
         )
 
     def _handle_execute_task(
@@ -196,6 +216,7 @@ class InteractiveChatRuntime:
         intent: ChatIntent,
         message_id: str | None,
         metadata: dict[str, Any] | None,
+        previous_status: str,
     ) -> DispatchResult:
         events = self._append_chat_command_event(
             session_id=session_id,
@@ -211,6 +232,7 @@ class InteractiveChatRuntime:
                 message_id=message_id,
                 metadata=metadata,
                 existing_events=events,
+                previous_status=previous_status,
             )
         if self._replay_handler is None:
             response = "执行失败：replay handler 未配置。"
@@ -227,6 +249,7 @@ class InteractiveChatRuntime:
                 user_response=response,
                 events=events,
                 message_id=message_id,
+                previous_status=previous_status,
                 allowed=False,
                 error="Replay handler is not configured.",
             )
@@ -275,6 +298,7 @@ class InteractiveChatRuntime:
             user_response="执行中。\n" + final_message,
             events=events,
             message_id=message_id,
+            previous_status=previous_status,
             allowed=allowed,
             error=error,
             replay_result=replay_summary,
@@ -288,6 +312,7 @@ class InteractiveChatRuntime:
         message_id: str | None,
         metadata: dict[str, Any] | None,
         existing_events: list[str] | None = None,
+        previous_status: str = ConversationStatus.TASK_INTAKE.value,
     ) -> DispatchResult:
         events = existing_events or self._append_chat_command_event(
             session_id=session_id,
@@ -308,6 +333,7 @@ class InteractiveChatRuntime:
             user_response=_NO_PATH_RESPONSE,
             events=events,
             message_id=message_id,
+            previous_status=previous_status,
         )
 
     def _learning_failed(
@@ -316,6 +342,7 @@ class InteractiveChatRuntime:
         error: str,
         events: list[str],
         message_id: str | None,
+        previous_status: str,
     ) -> DispatchResult:
         response = f"学习失败：{error}"
         self._append_agent_message(session_id, response)
@@ -331,6 +358,7 @@ class InteractiveChatRuntime:
             user_response=response,
             events=events,
             message_id=message_id,
+            previous_status=previous_status,
             allowed=False,
             error=error,
         )
@@ -432,6 +460,7 @@ class InteractiveChatRuntime:
         user_response: str,
         events: list[str],
         message_id: str | None,
+        previous_status: str,
         allowed: bool = True,
         error: str | None = None,
         replay_result: ConversationReplaySummary | None = None,
@@ -442,7 +471,7 @@ class InteractiveChatRuntime:
         )
         return DispatchResult(
             session_id=session_id,
-            previous_status=ConversationStatus.TASK_INTAKE.value,
+            previous_status=previous_status,
             next_status=ConversationStatus.TASK_INTAKE.value,
             command_kind=command_kind,
             user_response=user_response,

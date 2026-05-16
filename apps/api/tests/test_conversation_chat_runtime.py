@@ -129,6 +129,8 @@ def test_interactive_chat_learns_login_and_writes_session_action(
 
     assert result.allowed is True
     assert result.command_kind == "learn_page"
+    assert result.previous_status == "idle"
+    assert result.next_status == "task_intake"
     assert "开始学习页面操作。" in result.user_response
     assert "学习完成：我学会了登录页的登录操作" in result.user_response
 
@@ -281,6 +283,7 @@ def test_interactive_chat_executes_current_session_action_without_confirmation(
 
     assert result.allowed is True
     assert result.command_kind == "execute_task"
+    assert result.previous_status == "idle"
     assert result.next_status == "task_intake"
     assert result.user_response == "执行中。\n登录完成。"
     assert calls == [(learned_path_id, "http://localhost:5175/login")]
@@ -326,6 +329,8 @@ def test_interactive_chat_missing_session_action_does_not_use_global_paths(
 
     assert result.allowed is True
     assert result.command_kind == "execute_task"
+    assert result.previous_status == "idle"
+    assert result.next_status == "task_intake"
     assert result.user_response == "还没学过这个操作，需要先学习。"
     assert replay_called is False
 
