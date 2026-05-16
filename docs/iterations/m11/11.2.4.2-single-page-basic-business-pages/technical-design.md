@@ -111,6 +111,67 @@ Do not rely on random text, CSS order, or translated labels as the only selector
 - Do not call real HTTP APIs.
 - Do not use random values or current time in visible result state.
 
+## Service / Module Design
+
+No backend service changes.
+
+Frontend module responsibilities:
+
+- `basicFixtures.ts` owns static fixture metadata and route identifiers.
+- `BasicBusinessFixturePage.vue` renders a fixture from metadata and owns deterministic local state.
+- `RuntimeObservationIndex.vue` remains the category shell and links implemented basic cards only after
+  their routes exist.
+- `router/index.ts` registers `/runtime-observation/basic/*` routes under the existing namespace.
+
+No module may import replay, wait service, reporter, API clients, or autonomous-run code.
+
+## Data Flow
+
+```text
+router basic route
+-> BasicBusinessFixturePage
+-> fixture metadata by route key
+-> local state transition after user action
+-> stable status / result region
+-> reset returns local state to initial values
+```
+
+Shell card flow:
+
+```text
+RuntimeObservationIndex basic category
+-> implemented basic fixture card
+-> /runtime-observation/basic/<fixture>
+```
+
+No data flows through API, DB, replay, reporter, `wait_result`, or `observation_summary` in this package.
+
+## State Derivation
+
+Fixture state is local and deterministic:
+
+- `idle`：initial fixture state。
+- `editing`：input has changed but no result is shown。
+- `validating`：frontend validation is being evaluated。
+- `loading`：short deterministic timer is pending。
+- `success`：visible success / saved / result state。
+- `error`：visible frontend validation or visible error surface。
+- `empty`：search/detail fixture has no result。
+- `confirming`：confirm fixture shows modal-like confirmation surface。
+
+These states are fixture UI states only. They do not change `WaitResult.status`,
+`ReplayObservationSummary.status`, or runtime task success semantics.
+
+## Failure / Edge Cases
+
+- Reset while timer is pending must clear the timer before restoring initial state.
+- Route key missing from metadata should render a stable fallback state or redirect within the
+  `/runtime-observation` namespace; it must not create a blank page.
+- Empty search/detail results must be deterministic.
+- Validation errors must be frontend-local and must not imply backend validation support.
+- Implemented cards must link only to routes that exist.
+- Medium / complex / mobile cards remain planned / deferred.
+
 ## Compatibility
 
 - Existing `/login` and `/users` remain unchanged.
@@ -136,3 +197,16 @@ Do not rely on random text, CSS order, or translated labels as the only selector
 | Diff hygiene | No whitespace errors | `git diff --check` |
 | Package boundary | No package / lock / backend changes | `git status --short -- '*.py' 'package.json' ...` |
 | Future route smoke | Route opens and anchors visible | not required in this package unless explicitly run |
+
+## Validation Commands
+
+Required after implementation:
+
+```bash
+git diff --check
+pnpm --filter @web-agent-flow/validation-site build
+git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
+find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
+```
+
+Do not run E2E, `verify-scenario`, or autonomous run unless the user separately asks for live evidence.

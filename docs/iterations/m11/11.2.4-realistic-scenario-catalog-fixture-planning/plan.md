@@ -148,10 +148,11 @@ polling、async job、upload、export、download unavailable。
 
 ## 验证
 
-以下验证只适用于 11.2.4 scenario catalog / fixture planning 文档包。后续
-11.2.4.x implementation packages 按各自 `test-plan.md` 执行。
+以下验证只记录 11.2.4 scenario catalog / fixture planning 文档包当时执行的检查。
+后续 11.2.4.x implementation packages 按各自 `test-plan.md` 执行；不要把本父规划包
+的历史验证范围当作 child package 的实现限制。
 
-本轮只运行：
+当时运行：
 
 ```bash
 git diff --check

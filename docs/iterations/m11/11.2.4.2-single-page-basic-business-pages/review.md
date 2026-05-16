@@ -6,10 +6,19 @@ Status: implementation-ready
 
 当前状态：
 
-- implementation package ready。
+- implementation package ready and reviewed for execution。
 - execution agent may start implementation after reading this package。
 - implementation evidence will be recorded here after execution。
 - tests have not been run for this package before implementation。
+
+Gate status for `webagentflow-iteration-dev`:
+
+- type: code。
+- required docs: present。
+- technical-design: reviewed and contains contract alignment, affected surfaces,
+  module design, data flow, state derivation, compatibility, edge cases, test matrix,
+  and validation commands。
+- test-plan: present and required commands are explicit。
 
 Implementation target:
 

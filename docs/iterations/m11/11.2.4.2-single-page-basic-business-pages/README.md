@@ -19,6 +19,10 @@ reporter / observation runtime，也不运行 E2E / `verify-scenario` / autonomo
   `业务页面复杂度 × 运行条件矩阵 × runtime behavior`。
 - 11.2.4.1 已实现 `/runtime-observation` shell、category navigation 和 planned
   fixture cards。
+- 本包包含 code iteration 必需文档：`intent.md`、`contract.md`、已审核
+  `technical-design.md`、`test-plan.md`、`plan.md` 和 `review.md`。
+- Execution agent may start implementation after reading this package in the
+  order required by `webagentflow-iteration-dev`。
 
 ## 目标
 

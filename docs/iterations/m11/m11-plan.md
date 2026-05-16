@@ -1140,21 +1140,16 @@ Phase 边界：
 - 前端 timer 只用于 deterministic fixture，不代表真实 network evidence；mock
   backend 才负责 HTTP 层 slow response / error status evidence。
 
-11.2.4 planning package 边界：
+11.2.4 planning package boundary:
 
-- 不写源码。
-- 不新增测试代码。
-- 不实现 fixture 页面。
-- 不实现 mock backend。
-- 不运行 E2E / autonomous run。
-- 不依赖外部真实网站。
-- 不接 Task Result Reporter。
-- 不做 recovery / retry / abort。
+`11.2.4-realistic-scenario-catalog-fixture-planning/` only defined the scenario
+catalog and fixture roadmap. It did not implement runtime source, tests, fixture
+pages, mock backend, E2E, API / DB / CLI / Reporter contracts, Task Result
+Reporter, M12 recovery / retry / abort, autonomous run, or `verify-scenario`.
 
-上述边界只适用于
-`11.2.4-realistic-scenario-catalog-fixture-planning/` 这个规划包。后续 child
-implementation packages（例如 11.2.4.1、11.2.4.2）按各自目录内的 `README.md`、
-`contract.md`、`technical-design.md`、`test-plan.md` 和 `plan.md` 执行。
+Child implementation packages（例如 11.2.4.1、11.2.4.2）按各自目录内的
+`README.md`、`contract.md`、`technical-design.md`、`test-plan.md` 和 `plan.md`
+执行；父规划包边界不得阻止 child package 开工。
 
 ### 11.2.5 · 观察证据接入 Task Result Reporter
 

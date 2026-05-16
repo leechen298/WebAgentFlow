@@ -94,20 +94,19 @@ Current evidence capabilities:
 Mock backend 才负责 HTTP 层 slow response、error status code、polling、upload 和
 export。
 
-## 明确不做
+## Planning Package Boundary
 
-以下边界只适用于 11.2.4 scenario catalog / fixture planning 文档包。后续
-11.2.4.x implementation packages 按各自目录内的 code package 文档执行。
+This parent planning package only defines the scenario catalog and fixture roadmap.
+Implementation packages under `11.2.4.x` are allowed to modify the files listed in
+their own `plan.md`.
 
-- 不写源码。
-- 不新增测试代码。
-- 不运行 E2E。
-- 不实现 fixture 页面。
-- 不实现 mock backend。
-- 不修改 API / DB / CLI / Reporter。
-- 不接 Task Result Reporter。
-- 不做 M12 recovery / retry / abort。
-- 不实现 Common Component Runtime Semantics resolver。
-- 不调用 autonomous run / verify-scenario。
-- 不使用外部真实网站作为验证依赖。
+Parent-package boundary:
+
+- no runtime source was implemented in this planning package。
+- no tests or E2E were added in this planning package。
+- no fixture pages or mock backend were implemented in this planning package。
+- no API / DB / CLI / Reporter contract changed in this planning package。
+- Task Result Reporter, M12 recovery / retry / abort, autonomous run, and
+  `verify-scenario` remain outside this planning package。
+- external real websites are not validation dependencies。
 - 不读取或保存 raw HTML。
