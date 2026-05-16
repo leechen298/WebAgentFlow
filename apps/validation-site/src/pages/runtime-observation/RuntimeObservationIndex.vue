@@ -117,9 +117,19 @@
             <h4>Future expected observation</h4>
             <p>{{ fixture.future_expected_observation }}</p>
           </div>
-          <p class="planned-note">
-            Planned fixture card only. No business fixture route is linked until implementation lands.
-          </p>
+          <div class="fixture-actions">
+            <router-link
+              v-if="fixture.status === 'implemented'"
+              class="btn btn-primary"
+              :to="fixture.route"
+              data-testid="fixture-card-link"
+            >
+              Open fixture
+            </router-link>
+            <p v-else class="planned-note">
+              Planned fixture card only. No business fixture route is linked until implementation lands.
+            </p>
+          </div>
         </article>
       </div>
     </section>
@@ -153,6 +163,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
+import { BASIC_FIXTURES } from './basic/basicFixtures';
 
 type BusinessComplexity =
   | 'simple_business_page'
@@ -216,36 +227,7 @@ const categories: FixtureCategory[] = [
     priority: 'PC priority',
     description:
       'Simple single-purpose pages that can be exercised with deterministic local state.',
-    fixtures: [
-      {
-        fixture_id: 'basic-login',
-        title: 'Login state surfaces',
-        platform: 'pc',
-        business_complexity: 'simple_business_page',
-        page_type: 'login',
-        route: '/runtime-observation/basic/login',
-        phase: '11.2.4.2',
-        runtime_behaviors: ['input_to_validation_message', 'submit_to_delayed_success'],
-        runtime_conditions: ['normal_network', 'frontend_validation_error'],
-        current_mvp_expected_observation: 'URL or title changes only if the fixture navigates.',
-        future_expected_observation: 'form_validation_message and toast_shown.',
-        status: 'planned',
-      },
-      {
-        fixture_id: 'basic-simple-search',
-        title: 'Simple search result refresh',
-        platform: 'pc',
-        business_complexity: 'simple_business_page',
-        page_type: 'simple_search',
-        route: '/runtime-observation/basic/search',
-        phase: '11.2.4.2',
-        runtime_behaviors: ['click_to_loading_then_result', 'partial_list_refresh'],
-        runtime_conditions: ['normal_network', 'empty_result'],
-        current_mvp_expected_observation: 'May record network_idle_observed as supporting evidence only.',
-        future_expected_observation: 'loading_finished and list_changed.',
-        status: 'planned',
-      },
-    ],
+    fixtures: BASIC_FIXTURES as FixtureCard[],
   },
   {
     id: 'medium',
@@ -661,6 +643,32 @@ code {
 .planned-note {
   margin-top: auto;
   color: #6b7280;
+}
+
+.fixture-actions {
+  margin-top: auto;
+}
+
+.fixture-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.fixture-actions .btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.fixture-actions .btn-primary:hover {
+  background: #1d4ed8;
 }
 
 .rules-layout {

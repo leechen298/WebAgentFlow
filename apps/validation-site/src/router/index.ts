@@ -4,6 +4,7 @@ import LoginPage from '../pages/LoginPage.vue';
 import DashboardPage from '../pages/DashboardPage.vue';
 import UserDirectoryPage from '../pages/UserDirectoryPage.vue';
 import RuntimeObservationIndex from '../pages/runtime-observation/RuntimeObservationIndex.vue';
+import BasicBusinessFixturePage from '../pages/runtime-observation/basic/BasicBusinessFixturePage.vue';
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -17,6 +18,55 @@ export const router = createRouter({
       name: 'runtime-observation',
       component: RuntimeObservationIndex,
       meta: { title: 'Runtime Observation Fixtures — Validation Site' },
+    },
+    {
+      path: '/runtime-observation/basic/login',
+      name: 'basic-login',
+      component: BasicBusinessFixturePage,
+      props: { fixtureId: 'basic-login' },
+      meta: { title: 'Basic Login — Validation Site' },
+    },
+    {
+      path: '/runtime-observation/basic/register',
+      name: 'basic-register',
+      component: BasicBusinessFixturePage,
+      props: { fixtureId: 'basic-register' },
+      meta: { title: 'Basic Register — Validation Site' },
+    },
+    {
+      path: '/runtime-observation/basic/sms-login',
+      name: 'basic-sms-login',
+      component: BasicBusinessFixturePage,
+      props: { fixtureId: 'basic-sms-login' },
+      meta: { title: 'Basic SMS Login — Validation Site' },
+    },
+    {
+      path: '/runtime-observation/basic/search',
+      name: 'basic-search',
+      component: BasicBusinessFixturePage,
+      props: { fixtureId: 'basic-search' },
+      meta: { title: 'Basic Search — Validation Site' },
+    },
+    {
+      path: '/runtime-observation/basic/detail',
+      name: 'basic-detail',
+      component: BasicBusinessFixturePage,
+      props: { fixtureId: 'basic-detail' },
+      meta: { title: 'Basic Detail — Validation Site' },
+    },
+    {
+      path: '/runtime-observation/basic/settings',
+      name: 'basic-settings',
+      component: BasicBusinessFixturePage,
+      props: { fixtureId: 'basic-settings' },
+      meta: { title: 'Basic Settings — Validation Site' },
+    },
+    {
+      path: '/runtime-observation/basic/confirm',
+      name: 'basic-confirm',
+      component: BasicBusinessFixturePage,
+      props: { fixtureId: 'basic-confirm' },
+      meta: { title: 'Basic Confirm — Validation Site' },
     },
     {
       path: '/runtime-observation/:category(basic|medium|complex|mobile)',
