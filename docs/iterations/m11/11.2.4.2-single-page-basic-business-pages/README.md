@@ -2,7 +2,7 @@
 
 状态：redesign required
 里程碑：M11.2
-类型：design-redesign-before-code
+类型：code
 
 ## 迭代定位
 
