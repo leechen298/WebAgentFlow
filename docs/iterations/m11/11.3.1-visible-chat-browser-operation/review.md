@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：docs_review_passed（implementation ready, code not started）
+状态：implementation_complete（scoped tests passed, manual visible-browser smoke pending）
 
 ## 2026-05-17 设计反馈
 
@@ -41,9 +41,16 @@
 
 ## 代码评审（Code Review）
 
-- Reviewer：N/A
-- Decision：not_started
-- Notes：本阶段只生成文档包，尚未进入实现。
+- Reviewer：Codex
+- Decision：implementation_complete_with_manual_smoke_pending
+- Notes：
+  - 当前 HEAD 已包含 `86b947c feat: enable visible chat browser loop`。
+  - `wagent chat` 支持 `--headless`，默认 create session metadata 写入
+    `browser_visibility=visible`。
+  - Conversation runtime 从 session metadata 推导 `headless`，并传给 learning / replay
+    handlers。
+  - scoped CLI / API tests passed。
+  - 真实可见浏览器人工 smoke 尚未在本 review 中记录。
 
 ## 用户反馈
 
@@ -57,8 +64,11 @@
 
 ### 实际交付
 
-- Docs review passed; implementation ready.
-- Code implementation pending.
+- `wagent chat` 默认 visible browser policy 已实现。
+- `wagent chat --headless` opt-out 已实现。
+- learning / replay 链路已接收并传递 headless policy。
+- scoped CLI / API tests passed。
+- Manual visible browser smoke pending。
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
@@ -66,16 +76,16 @@
 
 ### WebAgentFlow Live Run 边界（Live Run Boundary）
 
-本阶段未触发 `verify-scenario`、autonomous run 或 product-driven browser execution。
+本次收口未触发 `verify-scenario`、autonomous run 或 product-driven browser execution。
 
-实现完成后的人工 smoke 如果通过 `wagent chat` 学习页面，会触发真实 autonomous learning；
-届时必须记录 `pass_gate.status`、Supervisor verdict、scorecard 和 `run_id`。
+后续人工 smoke 如果通过 `wagent chat` 学习页面，会触发真实 autonomous learning；届时必须
+记录 `pass_gate.status`、Supervisor verdict、scorecard 和 `run_id`。
 
 ### E2E / Codex 外部测试操作员证据（E2E / Codex Evidence）
 
-- 文档阶段未执行 E2E。
-- 文档阶段未真实打开可见浏览器。
-- 文档阶段未运行 `wagent chat`。
+- 本次收口执行了 scoped CLI / API tests。
+- 本次收口未真实打开可见浏览器。
+- 本次收口未运行 live `wagent chat` learning smoke。
 
 ### 验证证据（Validation Evidence）
 
@@ -86,16 +96,18 @@
 | `git diff --check` | whitespace clean | clean | 0 | pass | no output | 文档阶段检查 |
 | `git ls-remote origin refs/heads/v0.1` | remote v0.1 points at docs entry fix | `0b1b276afc9771f112c3fa51f5747a1f5da7a303` | 0 | pass | remote ref output | 确认 0b1b276 已落到远端 v0.1 |
 | `git ls-remote origin refs/heads/v0.1` | remote v0.1 points at rendered table fix | `e62b2ca3e606ccca7b1efb64de9db4a1f91f5cf5` | 0 | pass | remote ref output | 确认 e62b2ca 已落到远端 v0.1 |
+| `cd apps/cli && ../../.venv/bin/pytest tests/test_chat.py tests/test_conversation.py -q` | CLI scoped tests pass | 30 passed | 0 | pass | pytest output | 覆盖 `wagent chat` payload / wording / conversation regression |
+| `cd apps/api && PYTHONPATH=. ../../.venv/bin/pytest tests/test_conversation_chat_runtime.py tests/test_conversation_replay_hook.py tests/test_learned_path_replay.py -q` | API scoped tests pass | 61 passed | 0 | pass | pytest output | 覆盖 visible/headless learning/replay 参数传递 |
 
 ### 未运行 / 未验证（Not Run / Unverified）
 
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
-| Unit tests | 文档阶段尚未实现代码 | 实现后必须补 scoped tests |
-| CLI smoke | 文档阶段不运行产品入口 | 实现后必须验证 `wagent chat` 默认 visible |
-| Manual browser smoke | 文档阶段不触发 live browser operation | 实现后必须记录真实可见浏览器 evidence |
+| Live `wagent chat` smoke | 本次收口不触发 product-driven browser execution | 后续必须记录真实 CLI 输出 / run_id / visible browser evidence |
+| Manual browser smoke | 本次收口未真实打开可见浏览器 | 通过前不得声称 MANUAL-1 passed |
+| Ruff scoped lint | 本次只补 scoped pytest 和文档状态 | 如继续做 implementation closeout，可补 ruff evidence |
 
 ### 后续事项（Follow-ups）
 
-- 进入 11.3.1 实现阶段。
-- 实现后按 `test-plan.md` 记录 scoped tests 和真实可见浏览器 smoke evidence。
+- 补真实可见浏览器人工 smoke evidence。
+- 如需要发布级 closeout，再补 ruff evidence 并将 manual smoke 状态更新为 passed。

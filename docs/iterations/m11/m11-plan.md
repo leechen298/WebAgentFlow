@@ -1262,7 +1262,7 @@ wagent chat
 
 ## 11.3.1 · Visible Chat Browser Operation
 
-状态：ready for implementation（docs review passed, code pending）。
+状态：implementation complete（scoped tests passed, manual visible-browser smoke pending）。
 
 目标：让 `wagent chat` 的学习和执行网页操作默认以用户可见的项目内置 Playwright
 Chromium 运行。普通用户可以看到浏览器打开、页面加载、输入、点击和跳转；不希望看到
@@ -1270,6 +1270,10 @@ Chromium 运行。普通用户可以看到浏览器打开、页面加载、输�
 
 本包是 11.3 Interactive Chat Closed Loop 的产品体验收尾增强。它不把能力绑定到具体页面；
 具体页面只作为 `test-plan.md` 中的人工验收靶子。
+
+当前 scoped implementation 已完成：CLI 支持默认 visible 和 `--headless` opt-out，
+Conversation runtime 会把 session-level visibility policy 传入 learning / replay 链路。
+scoped CLI / API tests passed；真实可见浏览器人工 smoke 尚未在 review 中记录。
 
 关键契约：
 

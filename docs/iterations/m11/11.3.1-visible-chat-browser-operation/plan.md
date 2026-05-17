@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：approved_for_implementation
+状态：implementation_complete（scoped tests passed, manual visible-browser smoke pending）
 
 ## 输入
 

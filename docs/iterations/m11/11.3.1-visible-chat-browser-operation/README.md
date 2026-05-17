@@ -1,6 +1,6 @@
 # 11.3.1 Visible Chat Browser Operation
 
-状态：ready_for_implementation（docs review passed, implementation pending）
+状态：implementation_complete（scoped tests passed, manual visible-browser smoke pending）
 里程碑：M11
 类型：code
 
@@ -35,12 +35,15 @@
 ## 当前状态
 
 M11.3 已经提供 `wagent chat` 普通用户闭环：用户可以在交互式 CLI 里要求
-WebAgentFlow 学习页面操作，再用自然语言执行已学操作。当前缺口是学习和执行虽然
-由 Playwright Chromium 驱动，但默认运行在 headless 模式，普通用户看不到网页被打开、
-输入、点击和跳转。
+WebAgentFlow 学习页面操作，再用自然语言执行已学操作。M11.3.1 已完成 scoped
+implementation：`wagent chat` 默认创建 `browser_visibility=visible` 的
+`interactive_chat` session，并把可见 / headless 策略传入 learning 和 replay 链路。
 
-本包把 `wagent chat` 的产品入口体验调整为默认可见浏览器运行。能力本身不绑定具体
-业务页面；具体页面只作为 `test-plan.md` 中的验收靶子。
+用户不传参数时，学习和执行会使用用户可见的项目内置 Playwright Chromium；用户传
+`wagent chat --headless` 时，学习和执行在后台运行。
 
-文档审核已通过，可进入实现阶段。实现仍需按 `technical-design.md`、`test-plan.md`
-和 `plan.md` 落地代码、测试和真实可见浏览器 smoke。
+本包能力不绑定具体业务页面；具体页面只作为 `test-plan.md` 中的验收靶子。
+
+当前 scoped CLI / API tests 已通过。真实可见浏览器人工 smoke 尚未在本 review 中记录，
+因此当前状态是 implementation complete / scoped tests passed / manual visible-browser
+smoke pending。
