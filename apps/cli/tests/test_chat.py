@@ -59,8 +59,37 @@ def test_chat_is_top_level_command_and_creates_interactive_session() -> None:
     assert first_dispatch.kwargs["json"]["metadata"] == {"client": "wagent_chat"}
     output = stdout.getvalue()
     assert "WAgent > 你好，我可以学习页面操作，也可以执行已经学会的操作。" in output
+    assert "WAgent > 我会学习：在登录页输入账号密码，并点击“登录”按钮。" in output
+    assert "WAgent > 我会执行：输入账号密码，并点击“登录”按钮完成登录。" in output
+    assert "WAgent > 开始学习页面操作。" not in output
+    assert "WAgent > 执行中。" not in output
+    assert "LearnedPath" not in output
+    assert "learned_path" not in output
+    assert "run_id" not in output
+    assert "#username" not in output
+    assert "button.btn" not in output
     assert "WAgent > 学习完成：我学会了登录页的登录操作。之后你可以说“帮我登录”。" in output
     assert "WAgent > 登录完成。" in output
+
+
+def test_chat_explains_unknown_task_before_no_path_fallback() -> None:
+    client = _mock_client()
+    client.post.side_effect = [
+        _mock_response({"id": "sess-1", "status": "idle"}),
+        _mock_response({"user_response": "还没学过这个操作，需要先学习。"}),
+    ]
+    with patch.object(chat_module.httpx, "Client", return_value=client), patch(
+        "builtins.input",
+        side_effect=["帮我导出报表", "exit"],
+    ):
+        stdout = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(StringIO()):
+            rc = wagent_main.main(["chat"])
+
+    assert rc == 0
+    output = stdout.getvalue()
+    assert "WAgent > 我会执行：导出报表。" in output
+    assert "WAgent > 还没学过这个操作，需要先学习。" in output
 
 
 def test_chat_default_timeout_is_180_seconds() -> None:

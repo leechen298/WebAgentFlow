@@ -72,6 +72,12 @@ LearnedPath retrieval fallback 明确推迟到后续迭代。
 - `execute_task` 命中当前 session learned action：直接 replay，不进入
   `awaiting_confirmation`。
 - `execute_task` 未命中：返回“还没学过这个操作，需要先学习。”
+- CLI 必须在等待后端同步处理前给普通用户可理解的即时反馈：
+  - 学习登录页时：`我会学习：在登录页输入账号密码，并点击“登录”按钮。`
+  - 执行登录时：`我会执行：输入账号密码，并点击“登录”按钮完成登录。`
+  - 未学过任务也要先说明用户请求的操作，例如：`我会执行：导出报表。`
+- 普通用户可见输出不得包含 selector、className、id、LearnedPath、run_id、
+  replay id、confidence score 等开发者内部信息。
 
 ## Schema / API 契约
 
@@ -105,6 +111,8 @@ CLI 契约：
   - `执行中。`
   - `登录完成。`
   - `还没学过这个操作，需要先学习。`
+- CLI 可以把后端返回的通用等待语去重，改为更面向普通用户的动作级反馈；
+  transcript 仍保留后端 agent messages 作为审计记录。
 
 ## 产品模型 / 范围 / 路线图对齐
 

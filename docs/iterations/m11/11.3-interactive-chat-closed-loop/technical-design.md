@@ -48,6 +48,13 @@ M11.3 代码只保证 `wagent chat` learning path 使用 `LearningRunService` �
   ```
 - 打印欢迎语。
 - 循环读取 stdin，支持 `exit` / `quit` / `:q`。
+- 每轮发 dispatch 前先打印普通用户可理解的动作级反馈：
+  - 学习登录页：`我会学习：在登录页输入账号密码，并点击“登录”按钮。`
+  - 执行登录：`我会执行：输入账号密码，并点击“登录”按钮完成登录。`
+  - 其它任务：去掉“帮我 / 请 / 麻烦”等口语前缀后，打印例如
+    `我会执行：导出报表。`
+- CLI 输出不得暴露 selector、className、id、LearnedPath、run_id 或 replay id。
+- 后端返回 `开始学习页面操作。` / `执行中。` 时，CLI 可去重，避免用户看到重复等待语。
 - 每轮 `POST /conversation/sessions/{session_id}/dispatch`，body：
   ```json
   {

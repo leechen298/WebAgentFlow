@@ -62,12 +62,13 @@ preview / confirmation 行为未被破坏。
 $ wagent chat
 WAgent > 你好，我可以学习页面操作，也可以执行已经学会的操作。
 You > 学习一下这个登录页怎么登录，地址是 http://localhost:5175/login
-WAgent > 开始学习页面操作。
+WAgent > 我会学习：在登录页输入账号密码，并点击“登录”按钮。
 WAgent > 学习完成：我学会了登录页的登录操作。之后你可以说“帮我登录”。
 You > 帮我登录
-WAgent > 执行中。
+WAgent > 我会执行：输入账号密码，并点击“登录”按钮完成登录。
 WAgent > 登录完成。
 You > 帮我导出报表
+WAgent > 我会执行：导出报表。
 WAgent > 还没学过这个操作，需要先学习。
 ```
 
@@ -76,6 +77,8 @@ WAgent > 还没学过这个操作，需要先学习。
 - LearnedPath catalog 中存在新路径。
 - transcript 中包含用户可见 agent messages。
 - “帮我登录”未出现确认门槛。
+- 用户可见输出不得包含 selector、className、id、LearnedPath、run_id、
+  replay id 等开发者内部信息。
 
 ## Live Run Boundary
 
