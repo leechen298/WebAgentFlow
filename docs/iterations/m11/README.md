@@ -47,7 +47,8 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.2.3-replay-integration-with-observation](./11.2.3-replay-integration-with-observation/) —— Replay Integration with Observation。状态：implementation complete（56 scoped tests passed, 1168 full API tests passed, ruff clean）。
 - [11.2.4-realistic-scenario-catalog-fixture-planning](./11.2.4-realistic-scenario-catalog-fixture-planning/) —— Realistic Scenario Catalog & Fixture Planning。状态：文档生成完成，fixture 页面 / mock backend / E2E 尚未实现。
 - [11.2.4.1-single-page-runtime-fixture-shell](./11.2.4.1-single-page-runtime-fixture-shell/) —— Single-page Runtime Fixture Shell。状态：完成（validation-site runtime observation shell / route / index entry implemented）。
-- [11.2.4.2-single-page-basic-business-pages](./11.2.4.2-single-page-basic-business-pages/) —— Single-page Basic Business Pages。状态：implementation complete, review pending；当前已按页面级 fixture designs 重做 7 个 PC basic fixtures。
+- [11.2.4.2-single-page-basic-business-pages](./11.2.4.2-single-page-basic-business-pages/) —— Single-page Basic Business Pages。状态：implementation complete, review passed；当前已按页面级 fixture designs 重做 7 个 PC basic fixtures。
+- 11.2.4.3 · Single-page Medium Business Pages —— 状态：待开发（docs/code pending）。
 - 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）—— later M11.2.x 候选增强；记录组件库生成的 runtime surface detection and relation，不属于 11.2.2 当前 MVP。
 - [11.3-interactive-chat-closed-loop](./11.3-interactive-chat-closed-loop/) —— Interactive Chat Closed Loop：`wagent chat` 小白用户闭环，当前只覆盖 `/login` happy path。状态：accepted（implementation review passed, manual smoke passed）。
 - [11.3.1-visible-chat-browser-operation](./11.3.1-visible-chat-browser-operation/) —— Visible Chat Browser Operation：`wagent chat` 默认以用户可见的项目内置 Playwright Chromium 学习和执行网页操作，支持 `--headless` opt-out。状态：ready for implementation（docs review passed, code pending）。
@@ -75,9 +76,11 @@ abort。
 shell 的入口、route namespace、fixture metadata、stable anchor 和 reset convention。
 它不代表具体业务 fixture 页面、mock backend 或 E2E 已实现。
 `11.2.4.2-single-page-basic-business-pages/` 已按 `fixture-designs/*.md` 页面级设计文档
-重做 `/runtime-observation/basic/*` 下的 7 个 PC basic business fixtures。当前实现采用
-shared shell + per-fixture components，保持 frontend-local deterministic error scope；
-不接 mock backend、replay、reporter 或 M12 recovery。
+重做 `/runtime-observation/basic/*` 下的 7 个 PC basic business fixtures，并通过实现
+review。当前实现采用 shared shell + per-fixture components，保持 frontend-local
+deterministic error scope；不接 mock backend、replay、reporter 或 M12 recovery。
+`11.2.4.3 · Single-page Medium Business Pages` 是下一包待开发入口，当前尚未创建
+详情目录。
 `11.3.1-visible-chat-browser-operation/` 是 11.3 interactive chat 的收尾增强。它定义
 `wagent chat` 学习和执行网页操作时默认打开用户可见的项目内置 Playwright Chromium，
 并允许用户通过 `--headless` 选择后台运行。该能力不绑定具体页面；具体页面只作为

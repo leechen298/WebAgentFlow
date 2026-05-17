@@ -1130,10 +1130,10 @@ Phase 边界：
   route / index entry 已实现，具体业务 fixture 尚未实现。
 - 11.2.4.2 实现 Single-page Basic Business Pages。文档包：
   `docs/iterations/m11/11.2.4.2-single-page-basic-business-pages/`；状态：
-  implementation complete, review pending。当前 basic fixtures 已按
-  `fixture-designs/*.md` 重做为 shared shell + per-fixture components；仍保持
+  implementation complete, review passed。当前 basic fixtures 已按
+  `fixture-designs/*.md` 重做为 shared shell + per-fixture components；保持
   frontend-local deterministic error scope，不接 mock backend / reporter / M12。
-- 11.2.4.3 实现 Single-page Medium Business Pages。
+- 11.2.4.3 实现 Single-page Medium Business Pages。状态：待开发（docs/code pending）。
 - 11.2.4.4 实现 Single-page Complex Business Pages。
 - 11.2.4.5 引入 Mock Backend Runtime Conditions，覆盖 slow response、server
   validation、HTTP error status、polling、upload / export 和 async job completion。

@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：implementation complete, review pending
+状态：implementation complete, review passed
 
 ## 当前状态（Current State）
 
@@ -8,7 +8,7 @@
 - 11.2.4.2 第一版代码已实现 7 个 `/runtime-observation/basic/*` routes，并通过 build 级验证。
 - 人工 review 否决第一版 basic fixtures：页面业务密度不足，更像 toy UI demo。
 - 当前代码已按 `fixture-designs/*.md` 重做为 shared shell + per-fixture components。
-- 当前实现等待最终 review / evidence closure。
+- 当前实现已通过 review，可作为后续 11.2.4.3 medium fixtures 的输入。
 - validation-site 当前没有 mock backend dependency。
 - validation-site 当前 package 有 `build` script，没有独立 `test` script。
 
