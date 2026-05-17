@@ -27,6 +27,7 @@ from app.schemas.conversation import (
     ConversationSessionListResponse,
     ConversationSessionResponse,
 )
+from app.services.conversation.provenance import normalize_response_provenance
 
 router = APIRouter(prefix="/conversation", tags=["conversation"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -51,6 +52,10 @@ def _message_response(orm) -> ConversationMessageResponse:
         role=orm.role,
         content=orm.content,
         metadata=orm.metadata_json,
+        response_provenance=normalize_response_provenance(
+            orm.metadata_json,
+            orm.role,
+        ),
         created_at=orm.created_at,
     )
 
@@ -233,6 +238,7 @@ def dispatch_input(
     body: ConversationDispatchRequest,
 ) -> ApiResponse[ConversationDispatchResponse]:
     from app.repos.learned_paths_repo import LearnedPathRepository
+    from app.services.conversation.intake import build_runtime_intake_service
     from app.services.conversation.orchestrator import ConversationOrchestrator
     from app.services.conversation.replay_hook import run_explicit_replay
     from app.services.learning.learning_run_service import (
@@ -280,6 +286,7 @@ def dispatch_input(
         planning_handler=preview_service.preview,
         execution_handler=replay_handler,
         learning_handler=learning_handler,
+        intake_service=build_runtime_intake_service(),
     )
     result = orchestrator.dispatch_user_input(
         session_id,

@@ -251,10 +251,15 @@ M11.3 把 runtime conversation 底座收束成面向普通用户的 `wagent chat
   与 validation-site 分离，产品级 chat learning 不再依赖 validation specs / assertions。
 - **11.3.4 Conversation Intake Agent / 对话理解 Agent**：proposed；新增
   schema-constrained 自然语言入口角色，在 Conversation Orchestrator 校验前理解用户
-  intent、target、action、slots 和 missing information。
+  intent、target、action、slots 和 missing information；同时要求 conversation history
+  detail 展示每条 WAgent 回复由代码还是内部 Agent 生成，并在涉及 LLM 时展示脱敏后的
+  provider / model / raw trace。
 
 M11.3.4 不让 LLM 操作浏览器。LLM 只理解用户语言；代码校验 scope 和执行策略；
 Learning / Replay 服务负责真实浏览器工作。
+
+Codex CLI 可以作为外部开发 Agent 读取 history 辅助调试，但它不是产品运行时的
+Reply Producer。
 
 ## M12 —— Recovery & Abort Dialogue / 恢复与中断对话
 

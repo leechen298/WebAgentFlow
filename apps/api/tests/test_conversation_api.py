@@ -7,8 +7,13 @@ import inspect
 from fastapi.testclient import TestClient
 
 from app.models.learned_path import TrustStatus
+from app.repos.conversation_repo import ConversationRepository
 from app.repos.learned_paths_repo import LearnedPathRepository
 from app.schemas.conversation import ConversationReplaySummary
+from app.schemas.conversation_intake import (
+    ConversationIntakeAction,
+    ConversationIntakeResult,
+)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -407,7 +412,13 @@ def test_dispatch_replay_success_returns_replay_summary(
 ) -> None:
     session_id = _create_session(client)
 
-    def fake_replay(_db, learned_path_id: str, url: str) -> ConversationReplaySummary:
+    def fake_replay(
+        _db,
+        learned_path_id: str,
+        url: str,
+        *,
+        headless: bool = True,
+    ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
             url=url,
@@ -441,7 +452,13 @@ def test_dispatch_replay_drift_returns_failed_summary(
 ) -> None:
     session_id = _create_session(client)
 
-    def fake_replay(_db, learned_path_id: str, url: str) -> ConversationReplaySummary:
+    def fake_replay(
+        _db,
+        learned_path_id: str,
+        url: str,
+        *,
+        headless: bool = True,
+    ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
             url=url,
@@ -807,7 +824,13 @@ def test_dispatch_execute_after_confirmed_plan_with_target_url(
         mock_preview,
     )
 
-    def fake_replay(_db, learned_path_id: str, url: str) -> ConversationReplaySummary:
+    def fake_replay(
+        _db,
+        learned_path_id: str,
+        url: str,
+        *,
+        headless: bool = True,
+    ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
             url=url,
@@ -879,7 +902,13 @@ def test_dispatch_explicit_replay_compatible_outside_awaiting_confirmation(
     client: TestClient, monkeypatch
 ) -> None:
     """Explicit /replay still works independently of confirmed-plan execution."""
-    def fake_replay(_db, learned_path_id: str, url: str) -> ConversationReplaySummary:
+    def fake_replay(
+        _db,
+        learned_path_id: str,
+        url: str,
+        *,
+        headless: bool = True,
+    ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
             url=url,
@@ -901,6 +930,75 @@ def test_dispatch_explicit_replay_compatible_outside_awaiting_confirmation(
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert data["next_status"] == "completed"
+
+
+def test_dispatch_interactive_chat_uses_runtime_intake_service(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    class ProviderBackedIntake:
+        confidence_threshold = 0.6
+
+        def analyze(self, raw_message: str, *, session_metadata=None):
+            return ConversationIntakeResult(
+                intent="execute_operation",
+                action=ConversationIntakeAction(
+                    goal="登录",
+                    canonical_goal="登录",
+                    aliases=["登录"],
+                ),
+                confidence=0.92,
+            )
+
+    monkeypatch.setattr(
+        "app.services.conversation.intake.build_runtime_intake_service",
+        lambda: ProviderBackedIntake(),
+    )
+
+    def fake_replay(
+        _db,
+        learned_path_id: str,
+        url: str,
+        *,
+        headless: bool = True,
+    ) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=learned_path_id,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    monkeypatch.setattr(
+        "app.services.conversation.replay_hook.run_explicit_replay",
+        fake_replay,
+    )
+
+    session_id = _create_session(
+        client,
+        current_mode="interactive_chat",
+        metadata={
+            "client": "wagent_chat",
+            "learned_actions": [
+                {
+                    "alias": "登录",
+                    "utterances": ["帮我登录"],
+                    "learned_path_id": "path-1",
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                }
+            ],
+        },
+    )
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "请进入系统"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["command_kind"] == "execute_task"
+    assert data["user_response"] == "执行中。\n登录完成。"
     assert data["replay_result"] is not None
     assert data["replay_result"]["replay_status"] == "succeeded"
 
@@ -934,7 +1032,13 @@ def test_dispatch_execute_failed_replay_includes_task_result_reported(
         mock_preview,
     )
 
-    def fake_replay(_db, learned_path_id: str, url: str) -> ConversationReplaySummary:
+    def fake_replay(
+        _db,
+        learned_path_id: str,
+        url: str,
+        *,
+        headless: bool = True,
+    ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
             url=url,
@@ -1142,6 +1246,160 @@ def test_get_history_returns_aggregate_payload(client: TestClient) -> None:
     assert data["replay_summaries"] == []
     assert "raw" in data
     assert "session" in data["raw"]
+
+
+def test_get_history_returns_unknown_provenance_for_legacy_agent_message(
+    client: TestClient,
+    db_session,
+) -> None:
+    session_id = _create_session(client, current_mode="interactive_chat")
+    ConversationRepository(db_session).append_message(
+        session_id=session_id,
+        role="agent",
+        content="legacy reply",
+        metadata={"source": "legacy_runtime"},
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/history")
+
+    assert resp.status_code == 200
+    message = resp.json()["data"]["messages"][0]
+    assert message["response_provenance"]["source_type"] == "unknown"
+    assert message["response_provenance"]["producer"]["type"] == "unknown"
+    assert message["response_provenance"]["llm_trace_ids"] == []
+    assert message["response_provenance"]["fallback"] is False
+
+
+def test_get_history_extracts_redacted_llm_traces(
+    client: TestClient,
+) -> None:
+    session_id = _create_session(client, current_mode="interactive_chat")
+    trace_payload = {
+        "trace_id": "trace-1",
+        "purpose": "conversation_intake",
+        "agent_role": "conversation_intake_agent",
+        "provider": "openai_compatible",
+        "model": "m-test",
+        "request_id": "req-1",
+        "prompt_template_id": "conversation_intake_agent.v1",
+        "prompt_hash": "hash-1",
+        "schema_name": "ConversationIntakeResult",
+        "schema_version": "m11.3.4",
+        "schema_validation": {"ok": True},
+        "latency_ms": 42,
+        "token_usage": {
+            "prompt_tokens": 10,
+            "completion_tokens": 5,
+            "total_tokens": 15,
+        },
+        "raw_request": {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        "学习这个入口：http://localhost:5176/workspace-login，"
+                        "demo / 123456"
+                    ),
+                }
+            ],
+        },
+        "raw_response": {"text": '{"password": "123456"}'},
+        "parsed_output": {
+            "slots": [
+                {
+                    "semantic_type": "password",
+                    "value": "123456",
+                    "sensitive": True,
+                }
+            ]
+        },
+        "redaction": {"applied": True},
+    }
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={"type": "llm_trace_recorded", "payload": trace_payload},
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/history")
+
+    assert resp.status_code == 200
+    payload = resp.json()["data"]
+    assert "123456" not in str(payload)
+    assert payload["llm_traces"][0]["trace_id"] == "trace-1"
+    assert payload["llm_traces"][0]["provider"] == "openai_compatible"
+    assert payload["llm_traces"][0]["model"] == "m-test"
+    assert payload["llm_traces"][0]["request_id"] == "req-1"
+    assert payload["llm_traces"][0]["schema_name"] == "ConversationIntakeResult"
+    assert payload["llm_traces"][0]["latency_ms"] == 42
+    assert payload["llm_traces"][0]["token_usage"]["total_tokens"] == 15
+    assert payload["llm_traces"][0]["redaction"]["applied"] is True
+    assert payload["raw"]["llm_traces"][0]["trace_id"] == "trace-1"
+    assert "[REDACTED]" in str(payload["raw"]["llm_traces"][0])
+
+
+def test_get_history_redacts_sensitive_intake_values(client: TestClient) -> None:
+    session_id = _create_session(
+        client,
+        current_mode="interactive_chat",
+        metadata={
+            "pending_intake": {
+                "intent": "learn_operation",
+                "slots": [
+                    {
+                        "semantic_type": "password",
+                        "value": "123456",
+                        "sensitive": True,
+                    }
+                ],
+            }
+        },
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={
+            "role": "user",
+            "content": "学习登录页，用户名 demo，密码 123456",
+        },
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={
+            "type": "command_parsed",
+            "payload": {
+                "raw": "学习登录页，用户名 demo，密码 123456",
+                "slots": [
+                    {
+                        "semantic_type": "password",
+                        "value": "123456",
+                        "sensitive": True,
+                    }
+                ],
+            },
+        },
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/history")
+    assert resp.status_code == 200
+    payload = resp.json()["data"]
+    assert "123456" not in str(payload)
+    assert "[REDACTED]" in str(payload)
+
+
+def test_get_history_redacts_positional_product_credentials(client: TestClient) -> None:
+    session_id = _create_session(client, current_mode="interactive_chat")
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={
+            "role": "user",
+            "content": "学习这个入口：http://localhost:5176/workspace-login，demo / 123456",
+        },
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/history")
+    assert resp.status_code == 200
+    payload = resp.json()["data"]
+    assert "123456" not in str(payload)
+    assert "demo / [REDACTED]" in str(payload)
 
 
 def test_get_history_extracts_learning_runs(client: TestClient) -> None:

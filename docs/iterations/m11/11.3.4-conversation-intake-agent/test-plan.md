@@ -124,6 +124,41 @@ no global cross-site fallback
 - LLM prompt payload / request log / provider trace 不长期保存明文 sensitive slot。
 - 用户可见回复不重复明文密码。
 
+### Response provenance / LLM trace
+
+覆盖 code-generated WAgent 回复：
+
+```text
+messages[].response_provenance.source_type=code
+producer.id=interactive_chat_runtime_code 或 conversation_orchestrator_code
+llm_trace_ids=[]
+```
+
+覆盖 Agent / LLM-generated 回复：
+
+```text
+messages[].response_provenance.source_type=agent
+producer.internal_agent_role=conversation_intake_agent
+llm_trace_ids references top-level llm_traces
+```
+
+覆盖 LLM trace detail：
+
+- provider / model / request_id 可见。
+- schema_name / schema_validation 可见。
+- latency_ms / token_usage 可见。
+- raw_request / raw_response 默认 redacted。
+- `llm_trace_recorded` event 能被 history read model 聚合。
+
+覆盖 fallback：
+
+- LLM provider failure 后 code fallback message 标记 `fallback=true`。
+- LLM-backed failure explanation 标记具体 Agent role。
+
+覆盖旧数据：
+
+- 旧 agent message 没有 provenance 时，history detail 显示 `unknown`，页面不报错。
+
 ### Regression
 
 覆盖：
@@ -131,6 +166,7 @@ no global cross-site fallback
 - 非 `interactive_chat` session 继续走 preview / confirmation / developer workflow。
 - `wagent conversation send` 不启用 M11.3.4 auto execute path。
 - M11.3.3 product-level target URL scope 不回退。
+- LLM trace 不写入 LearnedPath、replay result、Supervisor verdict 或 page observation evidence。
 
 ## 推荐命令
 
@@ -138,7 +174,9 @@ no global cross-site fallback
 
 ```bash
 cd apps/api && ../../.venv/bin/pytest tests/test_conversation_intake.py tests/test_conversation_chat_runtime.py -q
+cd apps/api && ../../.venv/bin/pytest tests/test_conversation_api.py::test_get_history_redacts_sensitive_intake_values -q
 cd apps/cli && ../../.venv/bin/pytest tests/test_chat.py -q
+cd apps/console && pnpm test -- ConversationHistoryDetailPage
 git diff --check
 ```
 

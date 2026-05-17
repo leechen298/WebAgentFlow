@@ -76,6 +76,7 @@ class ConversationEventType(StrEnum):
     CHAT_EXECUTION_COMPLETED = "chat_execution_completed"
     CHAT_EXECUTION_FAILED = "chat_execution_failed"
     CHAT_NO_PATH = "chat_no_path"
+    LLM_TRACE_RECORDED = "llm_trace_recorded"
     SESSION_COMPLETED = "session_completed"
     SESSION_FAILED = "session_failed"
 
@@ -136,6 +137,57 @@ class ConversationEvent(BaseModel):
     created_at: datetime | None = None
 
 
+class ConversationResponseSourceType(StrEnum):
+    CODE = "code"
+    AGENT = "agent"
+    HYBRID = "hybrid"
+    UNKNOWN = "unknown"
+
+
+class ConversationResponseProducerType(StrEnum):
+    CODE = "code"
+    AGENT = "agent"
+    UNKNOWN = "unknown"
+
+
+class ConversationResponseProducer(BaseModel):
+    type: ConversationResponseProducerType
+    id: str
+    display_name: str
+    internal_agent_role: str | None = None
+
+
+class ConversationResponseProvenance(BaseModel):
+    source_type: ConversationResponseSourceType
+    producer: ConversationResponseProducer
+    llm_trace_ids: list[str] = Field(default_factory=list)
+    generated_from_event_ids: list[str] = Field(default_factory=list)
+    fallback: bool = False
+
+
+class ConversationLlmTraceResponse(BaseModel):
+    trace_id: str
+    purpose: str | None = None
+    agent_role: str | None = None
+    provider: str | None = None
+    model: str | None = None
+    request_id: str | None = None
+    prompt_template_id: str | None = None
+    prompt_hash: str | None = None
+    schema_name: str | None = None
+    schema_version: str | None = None
+    schema_validation: dict[str, Any] = Field(default_factory=dict)
+    latency_ms: int | None = None
+    token_usage: dict[str, Any] = Field(default_factory=dict)
+    raw_request: dict[str, Any] = Field(default_factory=dict)
+    raw_response: dict[str, Any] = Field(default_factory=dict)
+    parsed_output: dict[str, Any] = Field(default_factory=dict)
+    redaction: dict[str, Any] = Field(default_factory=dict)
+    raw: dict[str, Any] = Field(default_factory=dict)
+    source_event_id: str | None = None
+    created_at: datetime | None = None
+
+
 # ---------------------------------------------------------------------------
 # 11.0.3 API request / response schemas
 # ---------------------------------------------------------------------------
@@ -174,6 +226,7 @@ class ConversationMessageResponse(BaseModel):
     role: ConversationRole
     content: str
     metadata: dict[str, Any] = Field(default_factory=dict)
+    response_provenance: ConversationResponseProvenance | None = None
     created_at: datetime | None = None
 
 
@@ -282,4 +335,5 @@ class ConversationHistoryResponse(BaseModel):
     learned_actions: list[dict[str, Any]] = Field(default_factory=list)
     learning_runs: list[ConversationLearningRunSummary] = Field(default_factory=list)
     replay_summaries: list[ConversationReplayHistorySummary] = Field(default_factory=list)
+    llm_traces: list[ConversationLlmTraceResponse] = Field(default_factory=list)
     raw: dict[str, Any] = Field(default_factory=dict)

@@ -23,7 +23,7 @@ metadata / replay summaries，但不得通过内部 service 绕过 product runti
 
 ### Aggregate History Payload
 
-`Aggregate History Payload` 是给 Console、Codex、Kimi Code 和 CLI debug 使用的聚合 read model。
+`Aggregate History Payload` 是给 Console、Codex CLI 和 CLI debug 使用的聚合 read model。
 它一次性返回 session、messages、events、learned_actions、learning_runs、replay_summaries 和 raw JSON。
 
 外部 AI 调试员可以读取 payload、复制 session id、通过已有 `wagent conversation send` 或

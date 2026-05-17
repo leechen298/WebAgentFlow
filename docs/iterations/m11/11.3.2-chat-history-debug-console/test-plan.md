@@ -84,7 +84,7 @@ http://localhost:5174/conversation/history
 
 ## Codex / AI 外部测试操作员边界（Codex / AI External Operator Boundary）
 
-Codex / Kimi Code 可以使用以下 read / debug surfaces：
+Codex CLI 可以使用以下 read / debug surfaces：
 
 ```bash
 wagent conversation list --mode interactive_chat --limit 20 --pretty

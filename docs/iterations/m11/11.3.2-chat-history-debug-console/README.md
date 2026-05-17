@@ -49,7 +49,7 @@ M11.0 / M11.3 已经具备 conversation 底层持久化和 `wagent chat` 普通�
 - Console 没有 Conversation / Chat History 页面。
 - `wagent chat` 创建 session 后没有把 session id 明确告诉用户。
 - `wagent chat` 不能 resume 某个历史 `interactive_chat` session。
-- Codex / Kimi Code 调试时必须先知道 session id，再手动组合 messages / events / transcript 命令。
+- Codex CLI 调试时必须先知道 session id，再手动组合 messages / events / transcript 命令。
 
 本包把这些底层水管补成可观察、可复制、可复用的调试入口。它不新增任务执行能力，不新增 internal Agent role，也不改变 replay / Reporter / recovery 边界。
 
@@ -68,4 +68,4 @@ M11.0 / M11.3 已经具备 conversation 底层持久化和 `wagent chat` 普通�
 - 不做多用户权限、账号体系、云端用户数据或脱敏策略。
 - 不做 LLM 总结历史、评分系统或失败恢复。
 - 不新增 autonomous run、`verify-scenario` 或 product-driven live run。
-- 不让 Codex / Kimi Code 冒充内部 WebAgentFlow Agent。
+- 不让 Codex CLI 冒充内部 WebAgentFlow Agent。

@@ -40,9 +40,22 @@
 - prompt payload / provider trace 不长期保存明文 sensitive slot。
 - 用户可见回复不重复明文敏感值。
 
-### 5. Verification
+### 5. Response provenance / LLM trace
+
+- 为每条 user-visible agent message 写入 `response_provenance`。
+- code-generated 回复标记具体 code producer。
+- LLM-backed Agent 回复记录 internal Agent role 和 `llm_trace_ids`。
+- provider failure + code fallback 标记 `fallback=true`。
+- 追加 `llm_trace_recorded` event，并在写入前完成 redaction。
+- History read model 聚合 top-level `llm_traces`，并在 message 上附加 provenance。
+- Console history detail transcript 展示 `代码生成` / `Agent 生成` / `混合生成` / `未知来源`。
+- Codex CLI 只作为外部开发 / 测试 Agent，不写成产品内部 Reply Producer。
+
+### 6. Verification
 
 - 单测覆盖自然说法、pending intake、失败负例和 redaction。
+- 单测覆盖 response provenance、LLM trace 聚合、old history compatibility。
+- Console 组件测试覆盖 history detail provenance 展示。
 - scoped API / CLI tests。
 - fake provider tests 通过后再做真实 LLM smoke。
 
@@ -57,3 +70,7 @@
 - [ ] sensitive slots 默认 redacted。
 - [ ] provider unavailable / malformed JSON / low confidence 均不触发 browser action。
 - [ ] 非 `interactive_chat` regression 通过。
+- [ ] 每条 WAgent 回复有 code / agent / hybrid / unknown 来源。
+- [ ] LLM-backed 回复可在 history 中看到 provider / model / schema / trace。
+- [ ] Raw LLM record 默认 redacted。
+- [ ] Codex CLI 不被写成产品内部 Agent。

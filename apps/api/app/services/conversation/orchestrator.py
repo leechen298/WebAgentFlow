@@ -18,6 +18,11 @@ from app.schemas.conversation import (
     ConversationStatus,
 )
 from app.services.conversation.commands import parse_command
+from app.services.conversation.provenance import (
+    CODE_PRODUCER_ORCHESTRATOR,
+    code_response_provenance,
+    metadata_with_response_provenance,
+)
 from app.services.conversation.state import next_state
 
 
@@ -45,12 +50,14 @@ class ConversationOrchestrator:
         planning_handler: Any | None = None,
         execution_handler: Any | None = None,
         learning_handler: Any | None = None,
+        intake_service: Any | None = None,
     ) -> None:
         self._repo = repo
         self._replay_handler = replay_handler
         self._planning_handler = planning_handler
         self._execution_handler = execution_handler
         self._learning_handler = learning_handler
+        self._intake_service = intake_service
 
     def dispatch_user_input(
         self,
@@ -89,6 +96,13 @@ class ConversationOrchestrator:
         # 2. Parse command
         command = parse_command(raw_input)
 
+        if (
+            session.current_mode == "interactive_chat"
+            and command.kind
+            in {ConversationCommandKind.CANCEL, ConversationCommandKind.ABORT}
+        ):
+            self._clear_pending_intake(session_id)
+
         # 11.3 — Productized interactive chat happy path.
         if (
             session.current_mode == "interactive_chat"
@@ -100,6 +114,7 @@ class ConversationOrchestrator:
                 self._repo,
                 learning_handler=self._learning_handler,
                 replay_handler=self._replay_handler,
+                intake_service=self._intake_service,
             ).try_handle(
                 session=session,
                 session_id=session_id,
@@ -252,7 +267,10 @@ class ConversationOrchestrator:
                 session_id=session_id,
                 role="agent",
                 content=preview.user_response,
-                metadata={"source": "planning_preview"},
+                metadata=metadata_with_response_provenance(
+                    {"source": "planning_preview"},
+                    code_response_provenance(CODE_PRODUCER_ORCHESTRATOR),
+                ),
             )
 
             # Append planning preview event.
@@ -525,7 +543,10 @@ class ConversationOrchestrator:
             session_id=session_id,
             role="agent",
             content=user_response,
-            metadata={"source": "confirmation_gate", "decision": "replay_blocked"},
+            metadata=metadata_with_response_provenance(
+                {"source": "confirmation_gate", "decision": "replay_blocked"},
+                code_response_provenance(CODE_PRODUCER_ORCHESTRATOR),
+            ),
         )
 
         pending_plan = self._get_pending_plan(session_id)
@@ -596,7 +617,10 @@ class ConversationOrchestrator:
             session_id=session_id,
             role="agent",
             content=result.user_response,
-            metadata={"source": "confirmation_gate", "decision": result.decision},
+            metadata=metadata_with_response_provenance(
+                {"source": "confirmation_gate", "decision": result.decision},
+                code_response_provenance(CODE_PRODUCER_ORCHESTRATOR),
+            ),
         )
 
         pending_plan = self._get_pending_plan(session_id)
@@ -755,12 +779,15 @@ class ConversationOrchestrator:
                 session_id=session_id,
                 role="agent",
                 content=report.user_response,
-                metadata={
-                    "source": "execution_gate",
-                    "status": validation.status,
-                    "verification_outcome": report.outcome,
-                    "needs_review": report.needs_review,
-                },
+                metadata=metadata_with_response_provenance(
+                    {
+                        "source": "execution_gate",
+                        "status": validation.status,
+                        "verification_outcome": report.outcome,
+                        "needs_review": report.needs_review,
+                    },
+                    code_response_provenance(CODE_PRODUCER_ORCHESTRATOR),
+                ),
             )
             return DispatchResult(
                 session_id=session_id,
@@ -849,12 +876,15 @@ class ConversationOrchestrator:
             session_id=session_id,
             role="agent",
             content=report.user_response,
-            metadata={
-                "source": "execution_gate",
-                "status": result.status,
-                "verification_outcome": report.outcome,
-                "needs_review": report.needs_review,
-            },
+            metadata=metadata_with_response_provenance(
+                {
+                    "source": "execution_gate",
+                    "status": result.status,
+                    "verification_outcome": report.outcome,
+                    "needs_review": report.needs_review,
+                },
+                code_response_provenance(CODE_PRODUCER_ORCHESTRATOR),
+            ),
         )
 
         # Transition to final status
@@ -887,3 +917,20 @@ class ConversationOrchestrator:
             error=None,
             replay_result=replay_summary,
         )
+
+    def _clear_pending_intake(self, session_id: str) -> None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = dict(session.metadata_json or {})
+        if "pending_intake" not in metadata:
+            return
+        metadata.pop("pending_intake", None)
+        from app.services.conversation.chat_runtime import (
+            clear_pending_sensitive_values,
+        )
+
+        clear_pending_sensitive_values(session_id)
+        session.metadata_json = metadata
+        self._repo.session.commit()
+        self._repo.session.refresh(session)

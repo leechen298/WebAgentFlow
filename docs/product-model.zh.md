@@ -147,6 +147,26 @@ LLM 理解用户说的话。
 代码决定 WebAgentFlow 是否以及如何行动。
 ```
 
+### 2.4 Response Provenance and LLM Trace / 回复来源与 LLM 记录
+
+随着 `wagent chat` 从纯代码回复走向 LLM-backed intake 和后续 LLM-backed reporting，
+每条用户可见的 WAgent 回复都需要留下 provenance。
+
+Response provenance 回答：
+
+- 这条回复是确定性代码生成、内部 Agent 生成，还是混合路径生成？
+- 产品运行时里具体哪个组件生成了这条回复？
+- 如果涉及 LLM，背后是哪一个 provider、model、schema、request id，以及脱敏后的 raw trace？
+- 如果失败回复由 Agent 生成，对应 trace 在哪里？
+
+这是 Conversation Intake Agent 路线下的运行时可观察性概念，不是新的执行 Agent。
+Codex CLI 可以在用户要求时操作 CLI / Console 并读取 history 辅助测试和调试，
+但它不是 WebAgentFlow 内部 Reply Producer。
+
+Response provenance 不得污染 LearnedPath、replay result、page observation、Supervisor verdict
+或 pass-gate evidence。LLM trace 只能作为 conversation evidence 保存；raw record 在 history
+展示或从 debug JSON 复制前必须脱敏。
+
 ## 3. 页面的三个生命周期阶段
 
 每个页面在 WebAgentFlow 的生命周期里都要经历 3 个固定阶段。功能

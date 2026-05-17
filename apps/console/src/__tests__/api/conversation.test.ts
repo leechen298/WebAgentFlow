@@ -80,6 +80,7 @@ describe('Conversation API', () => {
       learned_actions: [],
       learning_runs: [],
       replay_summaries: [],
+      llm_traces: [],
       raw: {},
     };
     get.mockResolvedValueOnce(payload);

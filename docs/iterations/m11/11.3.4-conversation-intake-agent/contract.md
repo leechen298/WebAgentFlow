@@ -207,6 +207,154 @@ Intake output 是 conversation intake evidence，不是页面事实。
 - page observation evidence。
 - LearnedPath execution proof。
 
+## Response Provenance / LLM Trace 契约
+
+M11.3.4 引入 Conversation Intake Agent 后，Conversation History 必须能解释每条
+WAgent 用户可见回复的来源。这个能力属于本轮提交范围，不另拆后续编号。
+
+### Response Provenance
+
+`Response Provenance` 指一条 WAgent 回复的生成来源说明。
+
+必须区分：
+
+```text
+code
+agent
+hybrid
+unknown
+```
+
+- `code`：由确定性代码路径 / 模板生成。
+- `agent`：由 WebAgentFlow 内部 Agent 生成，通常背后有 LLM call。
+- `hybrid`：由代码生成主回复，但包含 Agent 产出的解释片段或 summary。
+- `unknown`：旧数据或历史记录缺失来源信息。
+
+### Reply Producer
+
+`Reply Producer` 指产品运行时里实际生成用户可见文字的组件。
+
+示例：
+
+- `conversation_orchestrator_code`
+- `interactive_chat_runtime_code`
+- `conversation_intake_agent`
+- `task_result_reporter`
+- `failure_recovery_agent`
+
+Codex CLI 是外部开发 / 测试 Agent，不是 WebAgentFlow runtime 的 Reply Producer。
+History 页面可以帮助 Codex CLI 调试产品会话，但不得把 Codex CLI 写成产品内部 Agent。
+
+### Message metadata
+
+每条 `conversation_messages.role == "agent"` 的 message 应写入：
+
+```json
+{
+  "response_provenance": {
+    "source_type": "code",
+    "producer": {
+      "type": "code",
+      "id": "interactive_chat_runtime_code",
+      "display_name": "Interactive Chat Runtime",
+      "internal_agent_role": null
+    },
+    "llm_trace_ids": [],
+    "generated_from_event_ids": ["event-id"],
+    "fallback": false
+  }
+}
+```
+
+LLM-backed 示例：
+
+```json
+{
+  "response_provenance": {
+    "source_type": "agent",
+    "producer": {
+      "type": "agent",
+      "id": "conversation_intake_agent",
+      "display_name": "Conversation Intake Agent",
+      "internal_agent_role": "conversation_intake_agent"
+    },
+    "llm_trace_ids": ["trace-id"],
+    "generated_from_event_ids": ["event-id"],
+    "fallback": false
+  }
+}
+```
+
+### LLM Trace
+
+涉及 LLM 的回复、intake 或失败解释必须留下脱敏 trace。推荐 event：
+
+```text
+llm_trace_recorded
+```
+
+payload 至少包含：
+
+```json
+{
+  "trace_id": "trace-id",
+  "purpose": "reply_generation",
+  "agent_role": "conversation_intake_agent",
+  "provider": "openai",
+  "model": "gpt-5.4",
+  "request_id": "provider-request-id",
+  "prompt_template_id": "conversation_intake.v1",
+  "prompt_hash": "sha256:...",
+  "schema_name": "ConversationIntakeResult",
+  "schema_version": "m11.3.4",
+  "schema_validation": "passed",
+  "latency_ms": 1200,
+  "token_usage": {
+    "input_tokens": 1000,
+    "output_tokens": 200
+  },
+  "raw_request": {
+    "redacted": true
+  },
+  "raw_response": {
+    "redacted": true
+  },
+  "parsed_output": {},
+  "redaction": {
+    "applied": true,
+    "sensitive_fields": ["password"]
+  }
+}
+```
+
+如果 raw request / response 太大，payload 可以只保存摘要和 artifact pointer；但 history API
+必须明确返回 `raw_record_available=false` 或 pointer 信息，不得假装有完整原始记录。
+
+### History API / UI
+
+`GET /conversation/sessions/{session_id}/history` 应向后兼容地扩展：
+
+- `messages[].response_provenance`
+- top-level `llm_traces`
+- `raw` 中包含 redacted provenance / trace 数据
+
+`/conversation/history/:session_id` transcript 中应显示：
+
+- `代码生成`
+- `Agent 生成`
+- `混合生成`
+- `未知来源`
+
+LLM-backed 回复展开后应能看到 provider、model、schema、request id、latency、token usage
+和 redaction 状态。普通 transcript 不直接铺开完整 prompt 或 raw provider body。
+
+### Evidence boundary
+
+- Response Provenance 是 reply generation evidence，不是业务成功判定。
+- LLM Trace 是 LLM call evidence，不是 Supervisor verdict。
+- LLM Trace 不得写入 LearnedPath 作为页面事实。
+- LLM Trace 不得替代 replay result、page verification、pass_gate 或 scorecard。
+
 ## 敏感信息契约
 
 - `password` / `token` / `access_secret` 等 slot 必须标记为 `sensitive=true`。

@@ -14,7 +14,7 @@
 - 不知道 session id 时无法复查历史。
 - 知道 session id 后也需要分别调用 messages / transcript / events 再手动拼上下文。
 - Console 只有 autonomous history 和 LearnedPath catalog，没有 Conversation / Chat History 页面。
-- Codex / Kimi Code 若要基于某次历史会话继续调试，需要用户先提供 session id，并且调试入口太碎。
+- Codex CLI 若要基于某次历史会话继续调试，需要用户先提供 session id，并且调试入口太碎。
 
 M11.3.1 解决“用户看得见浏览器操作”。M11.3.2 解决“开发者和外部 AI 调试员看得见会话过程”。两者共同补齐 interactive chat 的可用性和可观察性。
 
@@ -27,7 +27,7 @@ M11.3.1 解决“用户看得见浏览器操作”。M11.3.2 解决“开发者�
 - 不做账号体系、多用户权限、云端用户数据、数据脱敏策略或闭源产品壳。
 - 不做 LLM 总结历史、任务评分系统、失败归因系统或 M12 recovery。
 - 不触发 `verify-scenario`、autonomous run 或 product-driven live browser execution。
-- 不让 Codex / Kimi Code 冒充内部 Supervisor Agent、Task Path Planner 或 Task Result Reporter。
+- 不让 Codex CLI 冒充内部 Supervisor Agent、Task Path Planner 或 Task Result Reporter。
 
 ## 成功标准
 
@@ -39,5 +39,5 @@ M11.3.1 解决“用户看得见浏览器操作”。M11.3.2 解决“开发者�
 - `wagent conversation history <session_id> --pretty` 可输出完整 history payload。
 - `wagent chat` 创建新 session 后输出本次 session id。
 - `wagent chat --resume <session_id>` 可以继续一个已有 `interactive_chat` session。
-- `wagent conversation send <session_id> --content "..." --pretty` 继续保持可用，Codex / Kimi Code 可用它向已知 session 追加调试输入。
+- `wagent conversation send <session_id> --content "..." --pretty` 继续保持可用，Codex CLI 可用它向已知 session 追加调试输入。
 - 所有新增 read surfaces 都忠实展示已持久化数据，不发明 internal Agent verdict，不把 `unverified` 或缺失 evidence 写成 pass。

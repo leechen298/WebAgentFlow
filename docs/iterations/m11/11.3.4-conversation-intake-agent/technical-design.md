@@ -40,6 +40,7 @@ apps/api/tests/test_conversation_intake.py
 - 读取当前 session learned actions 摘要。
 - 调用 LLM-backed provider 或 fake / deterministic fallback。
 - 校验并返回 `ConversationIntakeResult`。
+- 记录 LLM-backed intake 的 redacted trace，供 history detail 展示。
 
 M11.3.4 的 contract 定义角色和 schema，不绑定具体 LLM provider。
 实现测试可以使用 fake / stub Intake provider。真实 LLM smoke 才能标记
@@ -107,6 +108,67 @@ Prompt 只允许包含完成 intake 所需的最小上下文：
 
 如果运行时必须临时传入敏感值，必须作为 runtime-only 数据处理。
 
+## Response Provenance / LLM Trace 集成
+
+M11.3.4 的实现必须同时补齐回复来源记录，因为 Conversation Intake Agent 一旦参与回复或失败解释，
+history 页面必须能说明这条 WAgent 回复是谁生成的。
+
+### Schema
+
+建议新增或扩展：
+
+```text
+ConversationReplySourceType = code | agent | hybrid | unknown
+ConversationReplyProducer = type, id, display_name, internal_agent_role
+ConversationLlmTraceSummary = trace_id, purpose, agent_role, provider, model, request_id,
+  prompt_template_id, prompt_hash, schema_name, schema_version, schema_validation,
+  latency_ms, token_usage, raw_request, raw_response, parsed_output, redaction
+ConversationResponseProvenance = source_type, producer, llm_trace_ids, generated_from_event_ids, fallback
+```
+
+### Write path
+
+Every user-visible `agent` message produced by interactive chat should include
+`metadata_json.response_provenance`:
+
+- deterministic progress / prompt / fallback replies -> `source_type=code`
+- Conversation Intake Agent-generated clarification or failure explanation -> `source_type=agent`
+- LLM failure with code fallback -> `source_type=code`, `fallback=true`
+
+LLM-backed provider calls append a `llm_trace_recorded` event before or alongside the final agent message.
+
+### History read model
+
+`ConversationHistoryService.get_history()` should:
+
+- extract `llm_trace_recorded` events into top-level `llm_traces`
+- attach `messages[].response_provenance`
+- join message `llm_trace_ids` to trace summaries when available
+- synthesize `unknown` for old agent messages without provenance
+- keep `raw` redacted
+
+No database migration is required for the first version; use `conversation_messages.metadata_json`
+and `conversation_events.payload_json`.
+
+### Console UI
+
+`ConversationHistoryDetailPage.vue` should show compact tags in transcript:
+
+- `代码生成`
+- `Agent 生成`
+- `混合生成`
+- `未知来源`
+
+For LLM-backed messages, an expandable detail should show provider / model / request id / schema /
+latency / token usage / redaction status. Raw request / response stays in Debug / Raw JSON and must be
+redacted.
+
+### External development Agent boundary
+
+Codex CLI is the current external development / testing Agent. It can read history and continue a session
+through product APIs, but it is not a WebAgentFlow internal Reply Producer and must not be shown as the
+Agent that generated a runtime WAgent reply.
+
 ## Orchestrator Guardrails
 
 Orchestrator 必须二次校验：
@@ -122,7 +184,8 @@ Orchestrator 必须二次校验：
 
 - 对齐 product model：新增受控自然语言入口 Agent，但不让 LLM 操作浏览器。
 - 对齐 M11.3.3：继续只学习和操作用户输入的 target site，不读取 validation oracle。
-- 对齐 M11.3.2：history/debug console 展示时必须 redacted sensitive slots。
+- 对齐 M11.3.2：history/debug console 展示时必须 redacted sensitive slots，并展示 reply provenance
+  / LLM trace。
 - 对齐 M11.1/M12：不改变 confirmation gate、recovery、abort 或 developer workflow。
 
 ## 非目标
@@ -132,3 +195,5 @@ Orchestrator 必须二次校验：
 - 不实现多页面 workflow。
 - 不实现 global LearnedPath 自动召回。
 - 不实现 UI 看板改造。
+- 不新增 dedicated LLM trace DB table；首版复用 message metadata / event payload。
+- 不展示未脱敏 raw prompt / provider body。

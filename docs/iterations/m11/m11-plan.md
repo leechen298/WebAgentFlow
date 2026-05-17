@@ -1306,7 +1306,7 @@ scoped CLI / API tests passed；真实可见浏览器人工 smoke 尚未在 revi
 状态：implementation complete（implementation review passed, UI smoke pending）。
 
 目标：为已有 Conversation 持久化补齐产品化 history / debug 入口。当前不是没有聊天记录存储，
-而是有底层 session / message / event store，没有能让用户、开发者、Codex 或 Kimi Code
+而是有底层 session / message / event store，没有能让用户、开发者或 Codex CLI
 方便复查和复用历史会话的看板与 CLI 聚合入口。
 
 本包定位是可观察性和调试入口，不是新执行能力：
@@ -1317,7 +1317,7 @@ wagent chat
 -> 输出 session id
 -> 后续可在 Console Chat History 看到该 session
 -> 可查看 transcript / events / learned actions / replay evidence / raw JSON
--> Codex / Kimi Code 可用 history payload 判断上下文
+-> Codex CLI 可用 history payload 判断上下文
 -> 可通过 wagent conversation send 或 wagent chat --resume 继续调试
 ```
 
@@ -1443,6 +1443,15 @@ parser / regex / alias 匹配。11.3.4 定义 Conversation Intake Agent / 对话
   replay result、Supervisor verdict 或 execution proof。
 - `password` / `token` / `access_secret` 等 sensitive slots 在 history / events /
   debug console / prompt logs 中默认 redacted。
+- 每条 WAgent 用户可见回复必须记录 response provenance，区分 `code`、`agent`、
+  `hybrid`、`unknown`。
+- LLM-backed 回复必须留下脱敏 LLM trace，包括 provider、model、request id / trace id、
+  schema validation、latency、token usage、raw request / response redaction 状态。
+- 代码生成的回复也必须标注 producer，例如 `conversation_orchestrator_code` 或
+  `interactive_chat_runtime_code`。
+- Codex CLI 是外部开发 / 测试 Agent，不是 WebAgentFlow runtime 的 Reply Producer。
+- LLM trace 是 reply generation evidence，不得写入 LearnedPath、replay result、
+  Supervisor verdict 或 page observation evidence。
 - malformed JSON、schema 校验失败、低 confidence 或 provider unavailable 时不得触发
   learning / replay；provider unavailable 可 fallback deterministic parser，但不得标记
   LLM-intake acceptance passed。

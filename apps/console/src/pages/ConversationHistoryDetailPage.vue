@@ -41,8 +41,33 @@
                 :key="msg.id"
                 :color="msg.role === 'user' ? 'blue' : 'green'"
               >
-                <p><strong>{{ msg.role }}</strong> <span class="time">{{ msg.created_at }}</span></p>
+                <p>
+                  <strong>{{ msg.role }}</strong>
+                  <span class="time">{{ msg.created_at }}</span>
+                  <span v-if="msg.role === 'agent'" class="provenance-tag">
+                    {{ provenanceLabel(msg) }}
+                  </span>
+                  <span
+                    v-if="msg.role === 'agent' && msg.response_provenance?.fallback"
+                    class="fallback-tag"
+                  >
+                    fallback
+                  </span>
+                </p>
                 <p>{{ msg.content }}</p>
+                <div
+                  v-for="trace in tracesForMessage(msg)"
+                  :key="trace.trace_id"
+                  class="trace-summary"
+                >
+                  <span>{{ trace.provider || '-' }}</span>
+                  <span>{{ trace.model || '-' }}</span>
+                  <span>{{ trace.request_id || '-' }}</span>
+                  <span>{{ trace.schema_name || '-' }}</span>
+                  <span>{{ trace.latency_ms ?? '-' }} ms</span>
+                  <span>{{ tokenUsageLabel(trace.token_usage) }}</span>
+                  <span>{{ redactionLabel(trace.redaction) }}</span>
+                </div>
               </a-timeline-item>
             </a-timeline>
             <a-empty v-if="history.messages.length === 0" />
@@ -94,7 +119,12 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
-import { getConversationHistory, type ConversationHistoryPayload } from '@/api/conversation';
+import {
+  getConversationHistory,
+  type ConversationHistoryMessage,
+  type ConversationHistoryPayload,
+  type ConversationLlmTrace,
+} from '@/api/conversation';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -108,6 +138,14 @@ const sessionId = computed(() => String(route.params.session_id));
 const rawJson = computed(() => {
   if (!history.value) return '';
   return JSON.stringify(history.value.raw, null, 2);
+});
+
+const tracesById = computed(() => {
+  const index = new Map<string, ConversationLlmTrace>();
+  for (const trace of history.value?.llm_traces || []) {
+    index.set(trace.trace_id, trace);
+  }
+  return index;
 });
 
 async function load() {
@@ -132,6 +170,32 @@ async function copyRawJson() {
   }
 }
 
+function provenanceLabel(messageItem: ConversationHistoryMessage): string {
+  const sourceType = messageItem.response_provenance?.source_type || 'unknown';
+  if (sourceType === 'code') return '代码生成';
+  if (sourceType === 'agent') return 'Agent 生成';
+  if (sourceType === 'hybrid') return '混合生成';
+  return '未知来源';
+}
+
+function tracesForMessage(messageItem: ConversationHistoryMessage): ConversationLlmTrace[] {
+  const ids = messageItem.response_provenance?.llm_trace_ids || [];
+  return ids
+    .map((id) => tracesById.value.get(id))
+    .filter((trace): trace is ConversationLlmTrace => Boolean(trace));
+}
+
+function tokenUsageLabel(tokenUsage: Record<string, unknown>): string {
+  const prompt = tokenUsage.prompt_tokens ?? '-';
+  const completion = tokenUsage.completion_tokens ?? '-';
+  const total = tokenUsage.total_tokens ?? '-';
+  return `prompt ${prompt} / completion ${completion} / total ${total}`;
+}
+
+function redactionLabel(redaction: Record<string, unknown>): string {
+  return redaction.applied === false ? 'not redacted' : 'redacted';
+}
+
 onMounted(() => {
   load();
 });
@@ -153,5 +217,29 @@ onMounted(() => {
   overflow-x: auto;
   font-size: 12px;
   max-height: 500px;
+}
+.provenance-tag,
+.fallback-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  color: #595959;
+  font-size: 12px;
+  line-height: 18px;
+}
+.fallback-tag {
+  color: #ad6800;
+  border-color: #ffd591;
+  background: #fff7e6;
+}
+.trace-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  color: #595959;
+  font-size: 12px;
 }
 </style>

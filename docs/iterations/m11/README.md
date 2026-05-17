@@ -51,9 +51,9 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）—— later M11.2.x 候选增强；记录组件库生成的 runtime surface detection and relation，不属于 11.2.2 当前 MVP。
 - [11.3-interactive-chat-closed-loop](./11.3-interactive-chat-closed-loop/) —— Interactive Chat Closed Loop：`wagent chat` 小白用户闭环，当前只覆盖 `/login` happy path。状态：accepted（implementation review passed, manual smoke passed）。
 - [11.3.1-visible-chat-browser-operation](./11.3.1-visible-chat-browser-operation/) —— Visible Chat Browser Operation：`wagent chat` 默认以用户可见的项目内置 Playwright Chromium 学习和执行网页操作，支持 `--headless` opt-out。状态：implementation complete（scoped tests passed, manual visible-browser smoke pending）。
-- [11.3.2-chat-history-debug-console](./11.3.2-chat-history-debug-console/) —— Chat History & Debug Console：补 Conversation session list、aggregate history、Console history 页面、CLI list/history/resume，服务人工测试和 Codex / Kimi Code 调试复用。状态：implementation complete（implementation review passed, UI smoke pending）。
+- [11.3.2-chat-history-debug-console](./11.3.2-chat-history-debug-console/) —— Chat History & Debug Console：补 Conversation session list、aggregate history、Console history 页面、CLI list/history/resume，服务人工测试和 Codex CLI 调试复用。状态：implementation complete（implementation review passed, UI smoke pending）。
 - [11.3.3-product-chat-test-site-separation](./11.3.3-product-chat-test-site-separation/) —— Product-Level Chat Test Site Separation：拆分 validation-site 工程验证靶场与 product-test-site 产品级 chat 人工验收靶场，避免 validation spec / assertion oracle 污染 `wagent chat` 产品路径。状态：accepted（implementation review passed, product-level CLI smoke passed）。
-- [11.3.4-conversation-intake-agent](./11.3.4-conversation-intake-agent/) —— Conversation Intake Agent：为 `wagent chat` 定义 schema-constrained 自然语言入口层，让 LLM 理解用户话语并输出结构化 intent / target / action / slots / missing fields，代码继续负责校验和执行。状态：ready_for_implementation（docs review passed, implementation not started）。
+- [11.3.4-conversation-intake-agent](./11.3.4-conversation-intake-agent/) —— Conversation Intake Agent：为 `wagent chat` 定义 schema-constrained 自然语言入口层，让 LLM 理解用户话语并输出结构化 intent / target / action / slots / missing fields，代码继续负责校验和执行；同时要求 Conversation History detail 展示 WAgent 回复来源和脱敏 LLM trace。状态：ready_for_implementation（docs review passed, implementation not started）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -88,7 +88,7 @@ shared shell + per-fixture components，保持 frontend-local deterministic erro
 `11.3.2-chat-history-debug-console/` 是 11.3 interactive chat 的可观察性和调试入口补齐。
 它不新增聊天 / 学习 / 执行能力，而是把已有 conversation sessions、messages、events 和
 session metadata 产品化为 history list、aggregate history detail、Console 页面以及 CLI debug
-命令，方便人工测试和 Codex / Kimi Code 复用历史会话继续调试。
+命令，方便人工测试和 Codex CLI 复用历史会话继续调试。
 `11.3.3-product-chat-test-site-separation/` 是 11.3 interactive chat 的产品级验收边界
 拆分包。它已新增 `apps/product-test-site`，端口 `5176`，并把 product-level
 `wagent chat` learning 从 validation specs / `spec_id` / `scenario` oracle 中拆出。
@@ -99,7 +99,10 @@ session metadata 产品化为 history list、aggregate history detail、Console 
 `11.3.4-conversation-intake-agent/` 是 11.3 interactive chat 的自然语言入口补齐包。
 它新增产品模型角色 Conversation Intake Agent / 对话理解 Agent，但不让 LLM 直接操作浏览器。
 本包只定义 schema-constrained intake、pending_intake、redaction 和 Orchestrator guardrails；
-后续实现必须保持 “LLM 理解用户语言，代码校验和执行” 的边界。
+后续实现必须保持 “LLM 理解用户语言，代码校验和执行” 的边界。本包也包含 response provenance
+/ LLM trace 要求：`/conversation/history/:session_id` 应能显示每条 WAgent 回复的生成来源，
+包括代码路径、内部 Agent role、LLM provider / model / trace，以及脱敏后的 raw record。
+Codex CLI 是外部开发 / 测试 Agent，不是产品内部 Reply Producer。
 
 11.2 后续 backlog：
 

@@ -13,7 +13,15 @@ from app.repos.conversation_repo import ConversationRepository
 from app.repos.exploration_run_repo import ExplorationRunRepository
 from app.repos.learned_paths_repo import LearnedPathRepository
 from app.schemas.conversation import ConversationReplaySummary
-from app.services.conversation.chat_runtime import parse_chat_intent
+from app.schemas.conversation_intake import (
+    ConversationIntakeAction,
+    ConversationIntakeResult,
+    ConversationIntakeTarget,
+)
+from app.services.conversation.chat_runtime import (
+    _PENDING_SENSITIVE_VALUES,
+    parse_chat_intent,
+)
 from app.services.conversation.orchestrator import ConversationOrchestrator
 from app.services.learning.learning_run_service import LearningRunResult
 
@@ -152,6 +160,42 @@ def test_parse_chat_intent_execute_task_for_regular_text() -> None:
     assert intent.url is None
 
 
+def _fake_llm_trace_payload(trace_id: str = "trace-intake-1") -> dict[str, Any]:
+    return {
+        "trace_id": trace_id,
+        "purpose": "conversation_intake",
+        "agent_role": "conversation_intake_agent",
+        "provider": "fake-provider",
+        "model": "fake-model",
+        "request_id": "req-intake-1",
+        "prompt_template_id": "conversation_intake_agent.v1",
+        "prompt_hash": "hash-intake-1",
+        "schema_name": "ConversationIntakeResult",
+        "schema_version": "m11.3.4",
+        "schema_validation": {"ok": True},
+        "latency_ms": 12,
+        "token_usage": {
+            "prompt_tokens": 7,
+            "completion_tokens": 5,
+            "total_tokens": 12,
+        },
+        "raw_request": {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        "学习这个入口：http://localhost:5176/workspace-login，"
+                        "demo / 123456"
+                    ),
+                }
+            ],
+        },
+        "raw_response": {"text": '{"intent":"learn_operation"}'},
+        "parsed_output": {"intent": "learn_operation"},
+        "redaction": {"applied": True},
+    }
+
+
 def test_interactive_chat_learns_login_and_writes_session_action(
     db_session: Session,
     repo: ConversationRepository,
@@ -206,6 +250,158 @@ def test_interactive_chat_learns_login_and_writes_session_action(
     assert len(completed) == 1
     assert completed[0].payload_json["old_learned_path_id"] is None
     assert completed[0].payload_json["new_learned_path_id"] == actions[0]["learned_path_id"]
+
+
+def test_interactive_chat_code_reply_writes_response_provenance(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(repo)
+
+    orch.dispatch_user_input(
+        session_id,
+        "帮我登录",
+        metadata={"client": "wagent_chat"},
+    )
+
+    agent_message = next(
+        message for message in repo.list_messages(session_id) if message.role == "agent"
+    )
+    provenance = agent_message.metadata_json["response_provenance"]
+    assert provenance["source_type"] == "code"
+    assert provenance["producer"]["type"] == "code"
+    assert provenance["producer"]["id"] == "interactive_chat_runtime_code"
+    assert provenance["producer"]["internal_agent_role"] is None
+    assert provenance["llm_trace_ids"] == []
+    assert provenance["generated_from_event_ids"] == []
+    assert provenance["fallback"] is False
+
+
+def test_interactive_chat_llm_intake_question_writes_agent_provenance_and_trace(
+    repo: ConversationRepository,
+) -> None:
+    class LlmBackedQuestionIntake:
+        confidence_threshold = 0.6
+
+        def __init__(self) -> None:
+            self._trace_payload: dict[str, Any] | None = _fake_llm_trace_payload()
+
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            return ConversationIntakeResult(
+                intent="learn_operation",
+                target=ConversationIntakeTarget(
+                    url="http://localhost:5176/workspace-login",
+                    site_origin="http://localhost:5176",
+                ),
+                action=ConversationIntakeAction(
+                    goal="进入工作台",
+                    canonical_goal="进入工作台",
+                    aliases=["进入工作台"],
+                ),
+                missing_fields=[
+                    {"semantic_type": "username", "display_name": "用户名或账号"},
+                    {"semantic_type": "password", "display_name": "密码或口令"},
+                ],
+                confidence=0.88,
+                should_ask_user=True,
+                ask_user_message_hint="请提供登录用的用户名和密码。",
+            )
+
+        def consume_last_trace_payload(self) -> dict[str, Any] | None:
+            payload = self._trace_payload
+            self._trace_payload = None
+            return payload
+
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(
+        repo,
+        intake_service=LlmBackedQuestionIntake(),
+    )
+
+    result = orch.dispatch_user_input(
+        session_id,
+        "学习这个工作台入口：http://localhost:5176/workspace-login",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.user_response == "请提供登录用的用户名和密码。"
+    trace_events = [
+        event for event in repo.list_events(session_id) if event.type == "llm_trace_recorded"
+    ]
+    assert len(trace_events) == 1
+    assert trace_events[0].payload_json["trace_id"] == "trace-intake-1"
+    assert "123456" not in str(trace_events[0].payload_json)
+
+    agent_message = next(
+        message for message in repo.list_messages(session_id) if message.role == "agent"
+    )
+    provenance = agent_message.metadata_json["response_provenance"]
+    assert provenance["source_type"] == "agent"
+    assert provenance["producer"]["type"] == "agent"
+    assert provenance["producer"]["id"] == "conversation_intake_agent"
+    assert provenance["producer"]["internal_agent_role"] == "conversation_intake_agent"
+    assert provenance["llm_trace_ids"] == ["trace-intake-1"]
+    assert provenance["generated_from_event_ids"] == [trace_events[0].id]
+    assert provenance["fallback"] is False
+
+
+def test_interactive_chat_provider_failure_fallback_provenance_references_trace(
+    repo: ConversationRepository,
+) -> None:
+    class ParseFailureIntake:
+        confidence_threshold = 0.6
+        provider_fallback = True
+
+        def __init__(self) -> None:
+            self._trace_payload: dict[str, Any] | None = _fake_llm_trace_payload(
+                "trace-parse-failure"
+            )
+
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            return ConversationIntakeResult(
+                intent="unknown",
+                confidence=0.0,
+                should_ask_user=True,
+                ask_user_message_hint="我还需要再确认一下你的意思。",
+                source="provider_parse_error",
+            )
+
+        def consume_last_trace_payload(self) -> dict[str, Any] | None:
+            payload = self._trace_payload
+            self._trace_payload = None
+            return payload
+
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(repo, intake_service=ParseFailureIntake())
+
+    orch.dispatch_user_input(
+        session_id,
+        "学习这个页面",
+        metadata={"client": "wagent_chat"},
+    )
+
+    trace_events = [
+        event for event in repo.list_events(session_id) if event.type == "llm_trace_recorded"
+    ]
+    agent_message = next(
+        message for message in repo.list_messages(session_id) if message.role == "agent"
+    )
+    provenance = agent_message.metadata_json["response_provenance"]
+    assert provenance["source_type"] == "code"
+    assert provenance["producer"]["id"] == "interactive_chat_runtime_code"
+    assert provenance["llm_trace_ids"] == ["trace-parse-failure"]
+    assert provenance["generated_from_event_ids"] == [trace_events[0].id]
+    assert provenance["fallback"] is True
 
 
 def test_product_learning_uses_user_url_and_utterance_inputs(
@@ -263,6 +459,428 @@ def test_product_learning_uses_user_url_and_utterance_inputs(
     assert actions[0]["target_url"] == "http://localhost:5176/workspace-login"
     assert actions[0]["site_origin"] == "http://localhost:5176"
     assert actions[0]["page_template"] == "/workspace-login"
+
+
+def test_interactive_chat_missing_learning_info_saves_pending_intake(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    learning_called = False
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        nonlocal learning_called
+        learning_called = True
+        raise AssertionError("missing fields must not start learning")
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert learning_called is False
+    assert result.allowed is True
+    assert result.command_kind == "learn_page"
+    assert "用户名" in result.user_response
+    assert "密码" in result.user_response
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    pending = session.metadata_json["pending_intake"]
+    assert pending["intent"] == "learn_operation"
+    assert pending["target"]["url"] == "http://localhost:5176/workspace-login"
+    assert pending["missing_fields"] == ["username", "password"]
+
+    events = repo.list_events(session_id)
+    assert not any(e.type == "chat_learning_started" for e in events)
+
+
+def test_interactive_chat_merges_pending_intake_and_starts_learning(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        calls.append((url, raw_input, kwargs))
+        learned_path_id = _ingest_workspace_path(
+            db_session,
+            source_run_id="run-pending-intake",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-pending-intake",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/workspace-login",
+            scenario=None,
+            action_label="进入工作台",
+            suggested_utterances=["帮我进入工作台", "打开工作台"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        metadata={"client": "wagent_chat"},
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "用户名 demo，密码 123456",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert result.command_kind == "learn_page"
+    assert len(calls) == 1
+    assert calls[0] == (
+        "http://localhost:5176/workspace-login",
+        "用户名 demo，密码 123456",
+        {"headless": False, "fill_values": {"username": "demo", "password": "123456"}},
+    )
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_intake" not in session.metadata_json
+
+
+def test_interactive_chat_merges_sensitive_slot_saved_before_missing_info(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    calls: list[dict[str, Any]] = []
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        calls.append(kwargs)
+        learned_path_id = _ingest_workspace_path(
+            db_session,
+            source_run_id="run-sensitive-pending",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-sensitive-pending",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/workspace-login",
+            scenario=None,
+            action_label="进入工作台",
+            suggested_utterances=["帮我进入工作台"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    first = orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页：http://localhost:5176/workspace-login，密码 123456",
+        metadata={"client": "wagent_chat"},
+    )
+    assert "用户名" in first.user_response
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json["pending_intake"]["slots"][0]["value"] == "[REDACTED]"
+
+    orch.dispatch_user_input(
+        session_id,
+        "用户名 demo",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert calls == [
+        {"headless": False, "fill_values": {"username": "demo", "password": "123456"}}
+    ]
+
+
+def test_interactive_chat_reasks_when_pending_sensitive_cache_is_missing(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    calls: list[dict[str, Any]] = []
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        calls.append(kwargs)
+        learned_path_id = _ingest_workspace_path(
+            db_session,
+            source_run_id="run-sensitive-cache-missing",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-sensitive-cache-missing",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/workspace-login",
+            scenario=None,
+            action_label="进入工作台",
+            suggested_utterances=["帮我进入工作台"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页：http://localhost:5176/workspace-login，密码 123456",
+        metadata={"client": "wagent_chat"},
+    )
+    _PENDING_SENSITIVE_VALUES.pop(session_id, None)
+
+    result = orch.dispatch_user_input(
+        session_id,
+        "用户名 demo",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert calls == []
+    assert "密码" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json["pending_intake"]["missing_fields"] == ["password"]
+
+
+def test_interactive_chat_cancel_clears_runtime_sensitive_cache(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(repo)
+    orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页：http://localhost:5176/workspace-login，密码 123456",
+        metadata={"client": "wagent_chat"},
+    )
+    assert _PENDING_SENSITIVE_VALUES.get(session_id) == {"password": "123456"}
+
+    orch.dispatch_user_input(
+        session_id,
+        "/cancel",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert session_id not in _PENDING_SENSITIVE_VALUES
+
+
+def test_interactive_chat_rejects_missing_info_without_pending_intake(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    learning_called = False
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        nonlocal learning_called
+        learning_called = True
+        raise AssertionError("missing info alone must not start learning")
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "用户名 demo，密码 123456",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert learning_called is False
+    assert "先说明要学习或执行什么操作" in result.user_response
+
+
+def test_interactive_chat_rejects_pending_intake_target_change(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    learning_called = False
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        nonlocal learning_called
+        learning_called = True
+        raise AssertionError("changed target must not auto-merge pending intake")
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        metadata={"client": "wagent_chat"},
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "http://localhost:5177/workspace-login 用户名 demo，密码 123456",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert learning_called is False
+    assert "页面地址变了" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json["pending_intake"]["target"]["url"] == (
+        "http://localhost:5176/workspace-login"
+    )
+
+
+def test_interactive_chat_cancel_clears_pending_intake(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(repo)
+    orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        metadata={"client": "wagent_chat"},
+    )
+    assert repo.get_session(session_id).metadata_json.get("pending_intake")
+
+    orch.dispatch_user_input(
+        session_id,
+        "/cancel",
+        metadata={"client": "wagent_chat"},
+    )
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_intake" not in session.metadata_json
+
+
+def test_interactive_chat_pending_intake_expires_after_turns_remaining(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(repo)
+    orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        metadata={"client": "wagent_chat"},
+    )
+
+    for _ in range(3):
+        result = orch.dispatch_user_input(
+            session_id,
+            "用户名 demo",
+            metadata={"client": "wagent_chat"},
+        )
+
+    assert "补充信息超时" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_intake" not in session.metadata_json
+
+
+def test_interactive_chat_invalid_provider_output_preserves_pending_intake(
+    repo: ConversationRepository,
+) -> None:
+    class InvalidProviderIntake:
+        confidence_threshold = 0.6
+
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            self.calls += 1
+            if self.calls == 1:
+                return ConversationIntakeResult(
+                    intent="learn_operation",
+                    target=ConversationIntakeTarget(
+                        url="http://localhost:5176/workspace-login",
+                        site_origin="http://localhost:5176",
+                    ),
+                    action=ConversationIntakeAction(
+                        goal="登录",
+                        canonical_goal="进入工作台",
+                        aliases=["登录", "进入工作台"],
+                    ),
+                    missing_fields=[
+                        {"semantic_type": "username", "display_name": "用户名或账号"},
+                        {"semantic_type": "password", "display_name": "密码或口令"},
+                    ],
+                    confidence=0.8,
+                    should_ask_user=True,
+                )
+            return ConversationIntakeResult(
+                intent="unknown",
+                confidence=0.0,
+                should_ask_user=True,
+                ask_user_message_hint="我还需要再确认一下你的意思。",
+                source="provider_error",
+            )
+
+    session_id = _create_interactive_chat_session(repo)
+    learning_called = False
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        nonlocal learning_called
+        learning_called = True
+        raise AssertionError("invalid provider output must not start learning")
+
+    orch = ConversationOrchestrator(
+        repo,
+        learning_handler=learning_handler,
+        intake_service=InvalidProviderIntake(),
+    )
+    orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        metadata={"client": "wagent_chat"},
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "用户名 demo，密码 123456",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert learning_called is False
+    assert "我还需要再确认" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json.get("pending_intake")
+
+
+def test_interactive_chat_low_confidence_intake_does_not_start_browser_action(
+    repo: ConversationRepository,
+) -> None:
+    class LowConfidenceIntake:
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            return ConversationIntakeResult(
+                intent="learn_operation",
+                target=ConversationIntakeTarget(
+                    url="http://localhost:5176/workspace-login",
+                    site_origin="http://localhost:5176",
+                ),
+                action=ConversationIntakeAction(
+                    goal="登录",
+                    canonical_goal="进入工作台",
+                    aliases=["登录", "进入工作台"],
+                ),
+                confidence=0.2,
+                should_ask_user=False,
+            )
+
+    session_id = _create_interactive_chat_session(repo)
+    learning_called = False
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        nonlocal learning_called
+        learning_called = True
+        raise AssertionError("low confidence intake must not start learning")
+
+    orch = ConversationOrchestrator(
+        repo,
+        learning_handler=learning_handler,
+        intake_service=LowConfidenceIntake(),
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "学习这个页面",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert learning_called is False
+    assert "我还需要再确认" in result.user_response
+    assert result.allowed is True
 
 
 def test_learning_does_not_claim_success_when_path_is_not_queryable(
@@ -561,6 +1179,50 @@ def test_interactive_chat_requires_url_for_same_alias_multiple_targets(
 
     assert result.user_response == "这个操作在多个站点学过，请带上要操作的页面地址。"
     assert replay_called is False
+
+
+def test_interactive_chat_execute_uses_canonical_goal_aliases(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_workspace_path(db_session)
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/workspace-login",
+                    "scenario": None,
+                }
+            ]
+        },
+    )
+    calls: list[tuple[str, str]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "打开工作台",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert result.user_response == "执行中。\n进入工作台完成。"
+    assert calls == [(learned_path_id, "http://localhost:5176/workspace-login")]
 
 
 def test_interactive_chat_missing_session_action_does_not_use_global_paths(
