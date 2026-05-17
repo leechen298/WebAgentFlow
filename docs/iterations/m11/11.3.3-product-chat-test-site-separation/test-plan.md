@@ -34,9 +34,12 @@
 | Product site | SITE-3 login page smoke | `http://localhost:5176/workspace-login` | 页面显示工作台入口 / 操作员账号 / 访问口令 / 进入工作台 | Future | 实现阶段 |
 | Product site | SITE-4 login behavior | browser manual smoke | demo / 123456 进入工作台首页；错误输入显示错误 | Future | 实现阶段 |
 | Chat | CHAT-1 product learning no spec | `wagent chat` | learning request 不读取 validation specs，不传 `spec_id / scenario` | Future | acceptance blocker |
-| Chat | CHAT-2 product learning success | `wagent chat` | 学习 product-test-site 后沉淀 LearnedPath | Future | 记录 LearnedPath id |
-| Chat | CHAT-3 execute learned action | `wagent chat` | “帮我进入工作台”直接执行，返回“已进入工作台” | Future | 不要求确认 |
-| Chat | CHAT-4 no path fallback | `wagent chat` | 未学过任务返回“还没学过这个操作，需要先学习。” | Future | 用户文案 |
+| Chat | CHAT-2 user URL only | `wagent chat` | 学习时只打开用户输入 URL，不保留 `/login` only gate | Future | acceptance blocker |
+| Chat | CHAT-3 product learning success | `wagent chat` | 学习 product-test-site 后沉淀 LearnedPath，metadata 保留 target_url / site scope | Future | 记录 LearnedPath id |
+| Chat | CHAT-4 execute learned action | `wagent chat` | “帮我进入工作台”直接执行，返回“已进入工作台” | Future | 不要求确认 |
+| Chat | CHAT-5 unlearned target URL fallback | `wagent chat` | 指定未学习过的 URL 时返回“还没学过这个站点或页面，需要先学习。” | Future | 不跨站点命中 |
+| Chat | CHAT-6 same alias different URL | `wagent chat` | 同 alias 不同 URL 不互相覆盖；无 URL 时不能跨站点猜测 | Future | target scope |
+| Chat | CHAT-7 no path fallback | `wagent chat` | 未学过任务返回“还没学过这个操作，需要先学习。” | Future | 用户文案 |
 | Regression | REG-1 validation build | `pnpm --filter @web-agent-flow/validation-site build` | validation-site 不受影响 | Future | 实现阶段 |
 | Regression | REG-2 assertions independence | modify/delete `login.assertions.json` in controlled test | product-test-site learning 不受影响 | Future | 不提交破坏性修改 |
 
@@ -93,12 +96,26 @@ WAgent > 已进入工作台。
 WAgent > 还没学过这个操作，需要先学习。
 ```
 
+未学习过的站点或页面：
+
+```text
+帮我在 http://localhost:5176/orders 导出订单
+```
+
+期望：
+
+```text
+WAgent > 还没学过这个站点或页面，需要先学习。
+```
+
 ## E2E / UI Smoke 边界（E2E / UI Smoke Boundary）
 
 - 没有真实打开 product-test-site，不得声称产品级 smoke 通过。
 - 如果只打开 validation-site，不得声称 product-test-site 验收通过。
 - 如果 `pnpm run dev` 没有启动 product-test-site，不得声称 M11.3.3 人工验收通过。
 - 如果学习路径仍使用 `spec_id / scenario`，不得 accepted。
+- 如果产品级学习仍限制为 `/login` 或固定站点，不得 accepted。
+- 如果未学习过的 target URL 跨站点命中历史 LearnedPath，不得 accepted。
 - 如果没有 LearnedPath id、CLI 输出或可复查 history，不得声称学习沉淀已验证。
 
 ## Codex / AI 外部测试操作员边界（Codex / AI External Operator Boundary）
@@ -114,8 +131,10 @@ Codex / AI 只能记录自己真实执行过的 CLI 和浏览器结果。不得�
 
 - CLI invocation。
 - product-test-site URL。
+- 用户输入的 target URL 和实际打开 URL 是否一致。
 - 浏览器可见行为。
 - LearnedPath id。
+- learned action 中记录的 target_url / site scope。
 - conversation session id 或 history URL（如果 11.3.2 已实现）。
 - 未使用 validation spec 的证据。
 

@@ -49,7 +49,11 @@
    - 从用户 utterance 解析 URL 和必要输入。
    - 不读取 validation assertions。
    - 不传 `spec_id / scenario`。
+   - 移除 product-level learning 的 `/login` only gate。
+   - 学习时只打开用户输入的 target URL。
    - 学习成功后沉淀 LearnedPath。
+   - `learned_actions` 至少按 alias + target URL / site scope 区分。
+   - 执行未学习过的 target URL / site 时返回用户级未学习反馈。
 
 6. 后续实现阶段：验证。
    - product-test-site build。
@@ -82,6 +86,9 @@
 - [ ] product-test-site 不复用 validation specs / assertions。
 - [ ] product-test-site 已接入根目录 `pnpm run dev`。
 - [ ] product-level learning 不传 `spec_id / scenario`。
+- [ ] product-level learning 不再限制为 `/login`。
+- [ ] 学习和执行都以用户输入或当前 session 已学习的 target URL 为边界。
+- [ ] 未学习过的站点 / 页面返回用户级反馈，不跨站点命中历史 LearnedPath。
 - [ ] 修改或删除 `login.assertions.json` 不影响 product-test-site learning。
 - [ ] validation-site 原有 verify / smoke 能力不被破坏。
 - [ ] 实际验证证据记录到 `review.md`，未运行项写明原因。

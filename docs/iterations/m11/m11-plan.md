@@ -1373,6 +1373,9 @@ wagent chat
   `apps/validation-site/specs/*.assertions.json`。
 - 产品级 `wagent chat` learning path 不应传 `spec_id` / `scenario`，也不应从
   assertions 取输入值。
+- 产品级 learning 不应硬编码 `/login`、固定 host 或固定 route；学习目标必须来自用户输入的 URL。
+- 执行只能命中当前 session 已学习过的 target URL / site；未学习过的站点或页面必须返回
+  `还没学过这个站点或页面，需要先学习。`，不得跨站点命中历史 LearnedPath。
 - 用户必须通过自然语言提供 URL 和必要输入，例如
   `地址是 http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456`。
 - 修改或删除 `login.assertions.json` 不应影响 product-test-site 学习。

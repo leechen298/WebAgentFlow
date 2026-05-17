@@ -53,3 +53,5 @@ pass_gate / scorecard / `verify-scenario`。它不迁移到 11.3。
 而不是读取 `apps/validation-site/specs/*.assertions.json`。
 实现完成后，根目录 `pnpm run dev` 必须同时启动 product-test-site，普通用户不需要
 为了产品级验收额外运行第二套站点命令。
+产品级路径还必须只学习和操作用户输入的目标站点；未学习过的站点或页面必须给出
+普通用户能理解的反馈，而不是跨站点命中历史 LearnedPath。

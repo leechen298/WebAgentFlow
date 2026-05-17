@@ -108,8 +108,10 @@ validation-backed learning:
 product-level learning:
   spec_id = None
   scenario = None
+  target_url = parsed from user utterance
   inputs from user utterance
   no validation assertions
+  no fixed /login gate
 ```
 
 第一版 deterministic parser 可支持：
@@ -120,7 +122,39 @@ product-level learning:
 访问口令是 <value>
 ```
 
+学习请求必须以用户输入的 URL 为唯一目标页面来源。实现阶段需要移除当前
+`/login` only gate，不能再对 product-level learning 返回“当前只支持学习登录页”。
+
 不引入复杂 LLM 意图理解。
+
+### Target URL / Site Scope Matching
+
+后续实现阶段需要让当前 session 的 `learned_actions` 具备明确 target scope。
+最小结构继续复用 metadata，但每条 action 必须包含：
+
+```json
+{
+  "alias": "进入工作台",
+  "utterances": ["帮我进入工作台"],
+  "learned_path_id": "...",
+  "target_url": "http://localhost:5176/workspace-login",
+  "site_origin": "http://localhost:5176",
+  "page_template": "/workspace-login"
+}
+```
+
+匹配策略：
+
+- learn：只打开用户输入的 `target_url`。
+- execute with URL：如果用户执行指令包含 URL，必须按该 URL 优先匹配当前 session 已学 action。
+- execute without URL：只能在当前 session 存在单一 alias / utterance match 且 target scope
+  清晰时自动执行。
+- no learned target：如果目标 URL / site 没有学过，返回
+  `还没学过这个站点或页面，需要先学习。`。
+- same alias across sites：同一 alias 在不同 target URL 上不能互相覆盖；需要按
+  alias + target URL / site scope 区分。
+
+第一版不做全局 LearnedPath fallback，避免历史 validation-site path 污染 product-level smoke。
 
 ## 影响面（Affected Surfaces）
 
@@ -129,7 +163,7 @@ product-level learning:
 | API routes | Future | 可能调整 conversation learning handler 分支 | 文档阶段不改 |
 | API response schema | No | 不改变 envelope | N/A |
 | Database schema / migration | No | 继续用 LearnedPath / conversation 现有表 | N/A |
-| CLI | Future | product-level utterance parsing / smoke | 不回退 `.venv/bin/wagent` 入口 |
+| CLI | Future | product-level utterance parsing / smoke / target URL feedback | 不回退 `.venv/bin/wagent` 入口 |
 | Console UI | No | 本轮不做 history/debug console | 11.3.2 owns |
 | Conversation events | Future | 可记录 product-level learning mode | 不发明 Agent verdict |
 | Replay execution | No | 已学 path 的 replay 继续复用现有能力 | N/A |
@@ -153,6 +187,8 @@ product-level learning:
 - product-level：服务 `wagent chat` 普通用户路径，输入来自 utterance。
 
 不要让 product-level handler 调用 validation spec loader。
+不要让 product-level handler 检查 path 必须等于 `/login`。
+不要让 execute path 在未学习目标 URL 时 fallback 到其他站点的 LearnedPath。
 
 ## 数据流（Data Flow）
 
@@ -164,9 +200,10 @@ wagent chat utterance
 -> open product-test-site URL
 -> autonomous learning with user-provided inputs
 -> persist LearnedPath
--> session learned_actions
+-> session learned_actions with target_url / site_origin
 -> user says "帮我进入工作台"
--> replay learned action
+-> match current-session learned action by alias + target scope
+-> replay learned action on learned target_url
 ```
 
 ## 状态推导（Status / State Derivation）
@@ -190,9 +227,13 @@ no path -> task_intake
 ## 失败 / 边界情况（Failure / Edge Cases）
 
 - 用户未提供必要输入：产品级 learning 不得回退去读 validation spec；应返回可理解的缺少输入提示或学习失败。
+- 用户未提供学习 URL：不默认跳到任何固定站点，提示需要提供页面地址。
 - product-test-site 未启动：CLI/API 返回目标页面不可访问的普通用户文案。
 - product-test-site 登录失败：不标记学习完成，不沉淀 LearnedPath。
 - validation assertions 被修改：不应影响 product-test-site 学习路径。
+- 用户要求操作未学习过的 URL / site：返回 `还没学过这个站点或页面，需要先学习。`。
+- 同一 alias 在多个 target URL 上都存在：没有 URL 时不应跨站点猜测，需返回需要更明确目标的用户级反馈。
+- 用户执行已学 alias 但指定另一个 URL：不得用已学 URL 的 path 去操作指定 URL，除非该 URL 已在当前 session 学过。
 
 ## 非目标（Non-goals）
 
@@ -209,7 +250,7 @@ no path -> task_intake
 | Docs | 文档包完整、索引一致、CLI 入口不回退 | `test-plan.md` DOC |
 | Product site build | product-test-site 可构建 | `test-plan.md` SITE |
 | Product page smoke | `/workspace-login` 页面可手动操作 | `test-plan.md` SITE |
-| Chat product smoke | 不读 validation specs 也能学习 / 执行 | `test-plan.md` CHAT |
+| Chat product smoke | 不读 validation specs，也只学习 / 执行用户指定或已学习的目标站点 | `test-plan.md` CHAT |
 | Validation regression | validation-site build 和 verify/smoke 能力保留 | `test-plan.md` REG |
 
 ## 验证命令入口（Validation Commands）

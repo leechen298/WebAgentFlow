@@ -26,6 +26,9 @@
 - “11.2.4.2 不应该放到 11.3。” -> accepted；11.2.4.2 继续属于 M11.2 validation fixture 体系。
 - “项目的一键启动也要包含这次的站点拆分。” -> accepted；实现阶段 `pnpm run dev`
   必须同时启动 product-test-site。
+- “只学习和操作用户输入的站点；未学习过的站点需要给用户反馈。” -> accepted；
+  实现阶段必须移除 product-level `/login` gate，并按 target URL / site scope 匹配当前 session
+  learned actions。
 
 ## 最终差异（Final Delta）
 
@@ -73,6 +76,8 @@
 - 如果用户未在聊天中提供必要输入而系统从 validation spec 自动拿输入，不得 accepted。
 - 如果 product-test-site 与 validation-site 页面结构、文案、路由一比一复制，不得 accepted。
 - 如果根目录 `pnpm run dev` 不启动 product-test-site，不得 accepted。
+- 如果产品级学习仍限制为 `/login` 或固定站点，不得 accepted。
+- 如果未学习过的 target URL / site 跨站点命中历史 LearnedPath，不得 accepted。
 
 ### 后续事项（Follow-ups）
 
