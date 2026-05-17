@@ -20,23 +20,20 @@ function normalizeLocale(raw: string): SupportedLocale {
 }
 
 function detectLocale(): SupportedLocale {
-  // Playwright-driven autonomous runs will see an empty localStorage
-  // and fall back to navigator.language, which in headless Chromium is
-  // en-US — this keeps specs that assert on English DOM content stable
-  // regardless of what human locale the operator has set in their
-  // real browser.
+  // Validation fixtures default to Chinese so product-facing chat runs and
+  // authored assertions speak the same language. Users can still switch locale
+  // explicitly; the choice is persisted in localStorage.
   const stored = typeof localStorage !== 'undefined'
     ? localStorage.getItem('validation_locale')
     : null;
   if (stored) return normalizeLocale(stored);
-  if (typeof navigator !== 'undefined') return normalizeLocale(navigator.language);
-  return 'en';
+  return 'zh';
 }
 
 const i18n = createI18n({
   legacy: false,
   locale: detectLocale(),
-  fallbackLocale: 'en',
+  fallbackLocale: 'zh',
   messages: { en, zh, ja },
 });
 

@@ -19,7 +19,9 @@ from app.services.learning.learned_path_replay import run_replay
 class ReplayHandler(Protocol):
     """Callable that runs an explicit replay and returns a summary."""
 
-    def __call__(self, learned_path_id: str, url: str) -> ConversationReplaySummary:
+    def __call__(
+        self, learned_path_id: str, url: str, *, headless: bool = True
+    ) -> ConversationReplaySummary:
         ...
 
 
@@ -27,6 +29,8 @@ def run_explicit_replay(
     db_session: Session,
     learned_path_id: str,
     url: str,
+    *,
+    headless: bool = True,
 ) -> ConversationReplaySummary:
     """Look up a LearnedPath and run M10 replay against *url*.
 
@@ -53,7 +57,7 @@ def run_explicit_replay(
             error="LearnedPath is deprecated",
         )
 
-    result = run_replay(learned_path, url)
+    result = run_replay(learned_path, url, headless=headless)
 
     return ConversationReplaySummary(
         learned_path_id=result.learned_path_id,

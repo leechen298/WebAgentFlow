@@ -106,7 +106,7 @@ def test_interactive_chat_learns_login_and_writes_session_action(
 ) -> None:
     session_id = _create_interactive_chat_session(repo, metadata={"keep": "yes"})
 
-    def learning_handler(url: str, raw_input: str) -> LearningRunResult:
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
         learned_path_id = _ingest_login_path(db_session, source_run_id="run-001")
         return LearningRunResult(
             status="learned",
@@ -161,7 +161,7 @@ def test_learning_does_not_claim_success_when_path_is_not_queryable(
 ) -> None:
     session_id = _create_interactive_chat_session(repo)
 
-    def learning_handler(url: str, raw_input: str) -> LearningRunResult:
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
         return LearningRunResult(
             status="learned",
             run_id="run-001",
@@ -208,7 +208,7 @@ def test_same_alias_learning_overwrites_session_action(
         },
     )
 
-    def learning_handler(url: str, raw_input: str) -> LearningRunResult:
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
         new_path_id = _ingest_login_path(db_session, source_run_id="run-new")
         return LearningRunResult(
             status="learned",
@@ -263,7 +263,7 @@ def test_interactive_chat_executes_current_session_action_without_confirmation(
     )
     calls: list[tuple[str, str]] = []
 
-    def replay_handler(lid: str, url: str) -> ConversationReplaySummary:
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
         calls.append((lid, url))
         return ConversationReplaySummary(
             learned_path_id=lid,
@@ -310,7 +310,7 @@ def test_interactive_chat_missing_session_action_does_not_use_global_paths(
     session_id = _create_interactive_chat_session(repo)
     replay_called = False
 
-    def replay_handler(lid: str, url: str) -> ConversationReplaySummary:
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
         nonlocal replay_called
         replay_called = True
         return ConversationReplaySummary(
@@ -353,7 +353,7 @@ def test_non_interactive_chat_session_keeps_existing_confirmation_flow(
 
     learning_called = False
 
-    def learning_handler(url: str, raw_input: str) -> LearningRunResult:
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
         nonlocal learning_called
         learning_called = True
         raise AssertionError("non-chat session must not call learning handler")
@@ -373,3 +373,235 @@ def test_non_interactive_chat_session_keeps_existing_confirmation_flow(
     assert learning_called is False
     assert result.next_status == "awaiting_confirmation"
     assert result.user_response.startswith("Preview for:")
+
+
+# ── 11.3.1 visible browser operation ─────────────────────────────────────────
+
+
+def test_visible_session_passes_headless_false_to_learning_handler(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    """API-1: visible session calls learning handler with headless=False."""
+    session_id = _create_interactive_chat_session(
+        repo, metadata={"browser_visibility": "visible"}
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        calls.append((url, raw_input, kwargs))
+        learned_path_id = _ingest_login_path(db_session, source_run_id="run-vis")
+        return LearningRunResult(
+            status="learned",
+            run_id="run-vis",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/login",
+            scenario="valid_credentials",
+            action_label="登录",
+            suggested_utterances=["帮我登录"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert len(calls) == 1
+    assert calls[0][2].get("headless") is False
+
+
+def test_visible_session_passes_headless_false_to_replay_handler(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    """API-2: visible session calls replay handler with headless=False."""
+    learned_path_id = _ingest_login_path(db_session)
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "browser_visibility": "visible",
+            "learned_actions": [
+                {
+                    "alias": "登录",
+                    "utterances": ["帮我登录"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5175/login",
+                    "page_template": "/login",
+                    "scenario": "valid_credentials",
+                }
+            ],
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我登录",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert len(calls) == 1
+    assert calls[0][2].get("headless") is False
+
+
+def test_headless_session_passes_headless_true_to_handlers(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    """API-3: headless session passes headless=True to learning and replay."""
+    session_id = _create_interactive_chat_session(
+        repo, metadata={"browser_visibility": "headless"}
+    )
+    learn_calls: list[dict[str, Any]] = []
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        learn_calls.append(kwargs)
+        learned_path_id = _ingest_login_path(db_session, source_run_id="run-hl")
+        return LearningRunResult(
+            status="learned",
+            run_id="run-hl",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/login",
+            scenario="valid_credentials",
+            action_label="登录",
+            suggested_utterances=["帮我登录"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert len(learn_calls) == 1
+    assert learn_calls[0].get("headless") is True
+
+    # replay
+    replay_calls: list[dict[str, Any]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        replay_calls.append(kwargs)
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    # seed learned action for replay
+    session = repo.get_session(session_id)
+    assert session is not None
+    path_id = _ingest_login_path(db_session, source_run_id="run-hl-2")
+    repo.update_session_status(
+        session_id=session_id,
+        status="task_intake",
+        metadata_patch={
+            "learned_actions": [
+                {
+                    "alias": "登录",
+                    "utterances": ["帮我登录"],
+                    "learned_path_id": path_id,
+                    "target_url": "http://localhost:5175/login",
+                    "page_template": "/login",
+                    "scenario": "valid_credentials",
+                }
+            ]
+        },
+    )
+
+    orch2 = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    orch2.dispatch_user_input(
+        session_id,
+        "帮我登录",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert len(replay_calls) == 1
+    assert replay_calls[0].get("headless") is True
+
+
+def test_missing_browser_visibility_defaults_to_visible(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    """API-4: missing browser_visibility defaults to visible for interactive chat."""
+    session_id = _create_interactive_chat_session(repo)
+    calls: list[dict[str, Any]] = []
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        calls.append(kwargs)
+        learned_path_id = _ingest_login_path(db_session, source_run_id="run-def")
+        return LearningRunResult(
+            status="learned",
+            run_id="run-def",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/login",
+            scenario="valid_credentials",
+            action_label="登录",
+            suggested_utterances=["帮我登录"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    orch.dispatch_user_input(
+        session_id,
+        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert len(calls) == 1
+    assert calls[0].get("headless") is False
+
+
+def test_missing_replay_handler_emits_execution_failed_event(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    """Missing replay handler must emit CHAT_EXECUTION_FAILED, not CHAT_EXECUTION_STARTED."""
+    learned_path_id = _ingest_login_path(db_session)
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "登录",
+                    "utterances": ["帮我登录"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5175/login",
+                    "page_template": "/login",
+                    "scenario": "valid_credentials",
+                }
+            ]
+        },
+    )
+
+    orch = ConversationOrchestrator(repo, replay_handler=None)
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我登录",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is False
+    assert "replay handler 未配置" in result.user_response
+
+    events = repo.list_events(session_id)
+    assert any(e.type == "chat_execution_failed" for e in events)
+    assert not any(e.type == "chat_execution_started" for e in events)

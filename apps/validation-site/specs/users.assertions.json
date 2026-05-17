@@ -35,7 +35,7 @@
     },
     {
       "role": "view_row_button",
-      "match_by": { "tag": "button", "text_contains": "View" }
+      "match_by": { "tag": "button", "text_contains": "查看" }
     }
   ],
 
@@ -68,7 +68,7 @@
       ],
       "success_signals": {
         "url_contains": "name=xyz999",
-        "dom_contains_all_of": ["No users found"]
+        "dom_contains_all_of": ["未找到匹配的用户"]
       },
       "must_not_transition_to": "/login",
       "expected_verdict": "success"

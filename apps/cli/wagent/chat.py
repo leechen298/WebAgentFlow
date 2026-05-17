@@ -33,14 +33,21 @@ def configure_parser(parser: argparse.ArgumentParser) -> None:
         default=_DEFAULT_TIMEOUT_SEC,
         help="HTTP timeout in seconds (default 180).",
     )
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        default=False,
+        help="Run browser in headless mode (no visible window).",
+    )
     parser.set_defaults(func=run)
 
 
 def run(args: argparse.Namespace) -> int:
     api_base = args.api_base.rstrip("/")
+    headless = bool(args.headless)
     try:
         with httpx.Client(base_url=api_base, timeout=float(args.timeout)) as client:
-            session = _create_session(client)
+            session = _create_session(client, headless=headless)
             if session is None:
                 return 2
             session_id = session["id"]
@@ -55,10 +62,10 @@ def run(args: argparse.Namespace) -> int:
                     return 0
                 if not user_input.strip():
                     continue
-                progress_message = _progress_message(user_input)
+                progress_message = _progress_message(user_input, headless=headless)
                 if progress_message:
                     _print_agent(progress_message)
-                response = _dispatch(client, session_id, user_input)
+                response = _dispatch(client, session_id, user_input, headless=headless)
                 if response is None:
                     return 2
                 visible_response = _dedupe_response(
@@ -79,7 +86,12 @@ def run(args: argparse.Namespace) -> int:
         return 2
 
 
-def _create_session(client: httpx.Client) -> dict[str, Any] | None:
+def _create_session(
+    client: httpx.Client,
+    *,
+    headless: bool = False,
+) -> dict[str, Any] | None:
+    visibility = "headless" if headless else "visible"
     return _api_post(
         client,
         "/conversation/sessions",
@@ -88,6 +100,7 @@ def _create_session(client: httpx.Client) -> dict[str, Any] | None:
             "metadata": {
                 "client": "wagent_chat",
                 "runtime_policy": "auto_execute_happy_path",
+                "browser_visibility": visibility,
             },
         },
     )
@@ -97,13 +110,19 @@ def _dispatch(
     client: httpx.Client,
     session_id: str,
     user_input: str,
+    *,
+    headless: bool = False,
 ) -> dict[str, Any] | None:
+    visibility = "headless" if headless else "visible"
     return _api_post(
         client,
         f"/conversation/sessions/{session_id}/dispatch",
         {
             "input": user_input,
-            "metadata": {"client": "wagent_chat"},
+            "metadata": {
+                "client": "wagent_chat",
+                "browser_visibility": visibility,
+            },
         },
     )
 
@@ -132,19 +151,20 @@ def _api_post(
     return envelope.get("data")
 
 
-def _progress_message(user_input: str) -> str:
+def _progress_message(user_input: str, *, headless: bool = False) -> str:
     text = user_input.strip()
     url = _extract_url(text)
+    prefix = "我会在后台" if headless else "我会打开浏览器"
     if url and _is_learn_input(text):
-        return f"我会学习：{_learning_target_label(url)}。"
-    return f"我会执行：{_task_label(text)}。"
+        return f"{prefix}学习：{_learning_target_label(url)}。"
+    return f"{prefix}执行：{_task_label(text)}。"
 
 
 def _dedupe_response(message: str, *, progress_message: str) -> str:
     lines = message.splitlines()
-    if progress_message.startswith("我会学习："):
+    if "学习" in progress_message and progress_message.startswith("我会"):
         lines = [line for line in lines if line.strip() != "开始学习页面操作。"]
-    if progress_message.startswith("我会执行："):
+    if "执行" in progress_message and progress_message.startswith("我会"):
         lines = [line for line in lines if line.strip() != "执行中。"]
     return "\n".join(lines)
 

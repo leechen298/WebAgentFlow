@@ -36,9 +36,9 @@ scope for the Phase 9 gate (see §7).
 | Region Cascader | Ant Design Cascader at `#search-region` | Popup tree |
 | Month picker | `#search-month` (Ant Design MonthPicker) | Popup panel. Filters by registration month (backend query param `month=YYYY-MM`). |
 | Department tag filter | `<span class="ant-tag tag-filter">` cluster | Click-to-toggle pills. Filters by user department (backend `department=<comma-sep>`). |
-| Search button | `<button id="btn-search" type="submit">` | Primary submit; should be chosen over Reset and the per-row View buttons |
-| Reset button | `<button id="btn-reset">` | Distraction — clears form state, should never be clicked during a filter task |
-| Per-row View buttons | `<button class="btn-view-row" data-user-id="…">` (one per table row) | Distraction for filter tasks — operates on a single row, not on the filter |
+| Search button | `<button id="btn-search" type="submit">搜索</button>` | Primary submit; should be chosen over Reset and the per-row View buttons |
+| Reset button | `<button id="btn-reset">重置</button>` | Distraction — clears form state, should never be clicked during a filter task |
+| Per-row View buttons | `<button class="btn-view-row" data-user-id="…">查看</button>` (one per table row) | Distraction for filter tasks — operates on a single row, not on the filter |
 | Results table | `<table>` with columns Name / Email / Role / Status / Registered / Department / Actions | Column headers carry sort / filter affordances (popup-style) |
 
 ## 3. Key Actions (Phase 9 scope)
@@ -68,13 +68,13 @@ For a filter scenario the run is correct when, after Search:
 - The URL query includes the filter that was applied (e.g.
   `?name=alice` after typing "alice" in Name)
 - The table shows only matching rows (or the empty-state text
-  `No users found`)
+  `未找到匹配的用户`)
 - The Reset button has NOT been clicked
 - No per-row View button has been clicked
 
 For `no_match` specifically:
 - The URL carries the filter value that produced zero results
-- The empty-state text `No users found` is visible
+- The empty-state text `未找到匹配的用户` is visible
 - The page is still `/users` (no transition away)
 
 ## 5. Out-of-scope for this spec (deferred to Phase 10)
@@ -111,8 +111,8 @@ assert on them.
 Elements that must **not** be chosen as the primary submit during a
 filter task:
 
-- `#btn-reset` (Reset button)
-- Any `.btn-view-row` (per-row View buttons — there's one per table
+- `#btn-reset` (Reset button / `重置`)
+- Any `.btn-view-row` (per-row View buttons / `查看` — there's one per table
   row, which also tests that the planner doesn't get confused by
   N distinct buttons all of which are plausible clicks)
 

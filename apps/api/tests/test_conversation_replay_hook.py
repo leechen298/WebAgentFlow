@@ -422,3 +422,63 @@ def test_orchestrator_does_not_import_autonomous_or_llm() -> None:
     ]
     for token in forbidden_tokens:
         assert token not in source
+
+
+# ── 11.3.1 visible browser operation ─────────────────────────────────────────
+
+
+def test_run_explicit_replay_default_headless_remains_true(
+    db_session: Session,
+) -> None:
+    """API-5: default headless remains True; override False reaches run_replay."""
+    from unittest.mock import MagicMock, patch
+
+    from app.services.conversation.replay_hook import run_explicit_replay
+
+    row, _ = LearnedPathRepository(db_session).ingest_run(
+        page_template="/users",
+        query_signature={},
+        dom_fingerprint="a" * 64,
+        scenario="filter_by_status",
+        actions=[{"step": 1, "action_type": "fill", "target_selector": "#q"}],
+        source_run_id=None,
+    )
+    LearnedPathRepository(db_session).set_trust(
+        row.id, TrustStatus.CONFIRMED, reason="test"
+    )
+
+    with patch(
+        "app.services.conversation.replay_hook.run_replay"
+    ) as mock_run_replay:
+        mock_run_replay.return_value = MagicMock(
+            learned_path_id=str(row.id),
+            status="succeeded",
+            drift_status="none",
+            drift_reasons=[],
+            warnings=[],
+            final_url="http://127.0.0.1:5175/users",
+            final_title="Users",
+            steps=[],
+        )
+        run_explicit_replay(db_session, str(row.id), "http://127.0.0.1:5175/users")
+
+    assert mock_run_replay.call_args.kwargs.get("headless") is True
+
+    with patch(
+        "app.services.conversation.replay_hook.run_replay"
+    ) as mock_run_replay:
+        mock_run_replay.return_value = MagicMock(
+            learned_path_id=str(row.id),
+            status="succeeded",
+            drift_status="none",
+            drift_reasons=[],
+            warnings=[],
+            final_url="http://127.0.0.1:5175/users",
+            final_title="Users",
+            steps=[],
+        )
+        run_explicit_replay(
+            db_session, str(row.id), "http://127.0.0.1:5175/users", headless=False
+        )
+
+    assert mock_run_replay.call_args.kwargs.get("headless") is False

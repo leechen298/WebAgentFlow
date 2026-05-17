@@ -28,11 +28,11 @@
   "distractions": [
     {
       "role": "forgot_password_link",
-      "match_by": { "tag": "a", "text_contains": "Forgot password" }
+      "match_by": { "tag": "a", "text_contains": "忘记密码" }
     },
     {
       "role": "contact_admin_link",
-      "match_by": { "tag": "a", "text_contains": "Contact admin" }
+      "match_by": { "tag": "a", "text_contains": "联系管理员" }
     }
   ],
 
@@ -51,7 +51,7 @@
       "success_signals": {
         "url_contains": "/dashboard",
         "title_contains": "Dashboard",
-        "dom_contains_all_of": ["Welcome", "Validation Site — Dashboard"],
+        "dom_contains_all_of": ["欢迎，admin", "验证站点 — 控制台"],
         "dom_has_test_id": "dashboard-welcome"
       },
       "must_not_transition_to": null,

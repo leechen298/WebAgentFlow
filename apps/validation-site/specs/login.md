@@ -25,10 +25,10 @@ This is the simplest closed-loop page in the validation suite:
 |---|---|---|
 | Username input | `<input id="username" name="username" type="text">` | Primary fillable |
 | Password input | `<input id="password" name="password" type="password">` | Primary fillable, obscured input |
-| Submit button | `<button type="submit">Sign in</button>` | Inside the `<form>`; HTML default behavior submits the form |
+| Submit button | `<button type="submit">登录</button>` | Inside the `<form>`; HTML default behavior submits the form |
 | Error alert | `<div role="alert" data-testid="login-error">` | Only mounted after a failed submit (`v-if="errorMessage"`). Verified via `failure_signals` in the assertions JSON, **not** as a `critical_element` — page analysis runs before any action, so this region doesn't exist yet at analysis time. |
-| Secondary link — Forgot password | `<a href="#forgot">Forgot password?</a>` | Distraction |
-| Secondary link — Contact admin | `<a href="#contact">Contact admin</a>` | Distraction |
+| Secondary link — Forgot password | `<a href="#forgot">忘记密码？</a>` | Distraction |
+| Secondary link — Contact admin | `<a href="#contact">联系管理员</a>` | Distraction |
 
 ## 3. Key Actions
 
@@ -49,7 +49,7 @@ All of:
 
 - Navigation transitions away from `/login` to `/dashboard`
 - `document.title` changes to contain `"Dashboard"`
-- DOM contains both strings: `"Welcome"` and `"Validation Site — Dashboard"` (the exact page header)
+- DOM contains both strings: `"欢迎，admin"` and `"验证站点 — 控制台"` (the exact page header)
 - DOM contains the structural marker `data-testid="dashboard-welcome"`
 - No `role="alert"` element is visible on the final page
 
@@ -71,8 +71,8 @@ These elements must be **present on the page** but must **not be chosen
 as the primary submit action**. If WebAgentFlow ever clicks one of these
 during a login attempt, it is a distraction-avoidance failure.
 
-- `<a href="#forgot">Forgot password?</a>`
-- `<a href="#contact">Contact admin</a>`
+- `<a href="#forgot">忘记密码？</a>`
+- `<a href="#contact">联系管理员</a>`
 
 ## 7. Expected Coverage Scope
 

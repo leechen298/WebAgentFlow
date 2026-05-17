@@ -21,7 +21,7 @@ from app.schemas.learned_path_replay import (
     WaitResult,
 )
 from app.schemas.page_analysis import PageAnalysis
-from app.services.execution.execution_runtime import create_execution_runtime
+from app.services.execution.execution_runtime import RuntimeConfig, create_execution_runtime
 from app.services.learning.page_analyzer import analyze_page
 from app.services.learning.page_signature import (
     build_signature_dict,
@@ -240,6 +240,8 @@ def _step_log_to_replay_step(log: dict[str, Any]) -> ReplayStepLog:
 def run_replay(
     learned_path: LearnedPath,
     url: str,
+    *,
+    headless: bool = True,
 ) -> ReplayResult:
     """Run a full LearnedPath replay against *url*.
 
@@ -253,7 +255,9 @@ def run_replay(
     # ── Start runtime ──
     runtime = None
     try:
-        runtime = create_execution_runtime()
+        runtime = create_execution_runtime(
+            config=RuntimeConfig(headless=headless)
+        )
         runtime.start()
     except Exception as exc:
         return ReplayResult(

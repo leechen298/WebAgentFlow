@@ -209,10 +209,10 @@ def dispatch_input(
     repo = ConversationRepository(db)
     _require_session(repo, session_id)
 
-    def replay_handler(learned_path_id: str, url: str):
-        return run_explicit_replay(db, learned_path_id, url)
+    def replay_handler(learned_path_id: str, url: str, *, headless: bool = True):
+        return run_explicit_replay(db, learned_path_id, url, headless=headless)
 
-    def learning_handler(url: str, raw_input: str):
+    def learning_handler(url: str, raw_input: str, *, headless: bool = True):
         return LearningRunService(db).run(
             LearningRunRequest(
                 url=url,
@@ -220,6 +220,7 @@ def dispatch_input(
                 scenario="valid_credentials",
                 goal=raw_input,
                 language="zh",
+                headless=headless,
             )
         )
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from app.models.learned_path import LearnedPath, TrustStatus
@@ -944,3 +945,41 @@ def test_replay_runtime_error_returns_no_observation_summary() -> None:
 
     assert result.status == "runtime_error"
     assert result.observation_summary is None
+
+
+# ── 11.3.1 visible browser operation ─────────────────────────────────────────
+
+
+def test_run_replay_passes_headless_to_runtime_factory() -> None:
+    """run_replay passes headless flag to create_execution_runtime via RuntimeConfig."""
+    path = _make_learned_path(actions=[])
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = None
+    mock_runtime.start = MagicMock()
+    mock_runtime.stop = MagicMock()
+
+    captured_configs: list[Any] = []
+
+    def _capture_create_execution_runtime(config=None):
+        captured_configs.append(config)
+        return mock_runtime
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        side_effect=_capture_create_execution_runtime,
+    ):
+        run_replay(path, "http://127.0.0.1:5175/users")
+
+    assert len(captured_configs) == 1
+    assert captured_configs[0].headless is True
+
+    captured_configs.clear()
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        side_effect=_capture_create_execution_runtime,
+    ):
+        run_replay(path, "http://127.0.0.1:5175/users", headless=False)
+
+    assert len(captured_configs) == 1
+    assert captured_configs[0].headless is False

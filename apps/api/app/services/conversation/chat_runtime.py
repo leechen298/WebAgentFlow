@@ -32,6 +32,11 @@ class ChatIntent:
     url: str | None = None
 
 
+def _chat_headless(session: Any) -> bool:
+    metadata = session.metadata_json or {}
+    return metadata.get("browser_visibility") == "headless"
+
+
 def parse_chat_intent(raw_input: str) -> ChatIntent:
     text = raw_input.strip()
     if not text:
@@ -71,6 +76,7 @@ class InteractiveChatRuntime:
             return None
 
         previous_status = str(session.status or ConversationStatus.IDLE.value)
+        headless = _chat_headless(session)
         intent = parse_chat_intent(raw_input)
         if intent.kind == "learn_page":
             return self._handle_learn_page(
@@ -79,6 +85,7 @@ class InteractiveChatRuntime:
                 message_id=message_id,
                 metadata=metadata,
                 previous_status=previous_status,
+                headless=headless,
             )
         if intent.kind == "execute_task":
             return self._handle_execute_task(
@@ -87,6 +94,7 @@ class InteractiveChatRuntime:
                 message_id=message_id,
                 metadata=metadata,
                 previous_status=previous_status,
+                headless=headless,
             )
         return self._handle_no_path(
             session_id=session_id,
@@ -104,6 +112,7 @@ class InteractiveChatRuntime:
         message_id: str | None,
         metadata: dict[str, Any] | None,
         previous_status: str,
+        headless: bool = True,
     ) -> DispatchResult:
         events = self._append_chat_command_event(
             session_id=session_id,
@@ -135,7 +144,7 @@ class InteractiveChatRuntime:
         self._append_event(
             session_id,
             ConversationEventType.CHAT_LEARNING_STARTED,
-            {"url": intent.url},
+            {"url": intent.url, "browser_visibility": "headless" if headless else "visible"},
             events,
         )
 
@@ -152,6 +161,7 @@ class InteractiveChatRuntime:
             learning_result: LearningRunResult = self._learning_handler(
                 intent.url,
                 intent.raw_text,
+                headless=headless,
             )
         except Exception as exc:
             return self._learning_failed(
@@ -217,6 +227,7 @@ class InteractiveChatRuntime:
         message_id: str | None,
         metadata: dict[str, Any] | None,
         previous_status: str,
+        headless: bool = True,
     ) -> DispatchResult:
         events = self._append_chat_command_event(
             session_id=session_id,
@@ -240,7 +251,10 @@ class InteractiveChatRuntime:
             self._append_event(
                 session_id,
                 ConversationEventType.CHAT_EXECUTION_FAILED,
-                {"reason": "missing_replay_handler"},
+                {
+                    "reason": "missing_replay_handler",
+                    "browser_visibility": "headless" if headless else "visible",
+                },
                 events,
             )
             return self._result(
@@ -262,12 +276,14 @@ class InteractiveChatRuntime:
                 "learned_path_id": action["learned_path_id"],
                 "target_url": action["target_url"],
                 "alias": action["alias"],
+                "browser_visibility": "headless" if headless else "visible",
             },
             events,
         )
         replay_summary = self._replay_handler(
             action["learned_path_id"],
             action["target_url"],
+            headless=headless,
         )
         if replay_summary.replay_status in ("succeeded", "observed"):
             final_message = "登录完成。"
