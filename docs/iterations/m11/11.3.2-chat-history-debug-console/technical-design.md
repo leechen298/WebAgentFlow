@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：proposed
+状态：ready_for_implementation
 
 ## 当前状态（Current State）
 
@@ -26,7 +26,7 @@
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
-| Session list by mode / status / time | `ConversationRepository.list_sessions()` + router query params | API-1 / API-2 | Sort by `updated_at desc` |
+| Session list by mode / status / time | `ConversationRepository.list_sessions()` + router query params | API-1 / API-2 | Sort by `updated_at desc`; time filters apply to session `updated_at` |
 | Session summary includes counts and last messages | history service computes counts / last user / last agent from existing messages/events | API-3 | No DB schema change |
 | Aggregate history returns messages + events + learned_actions + replay / learning evidence | `ConversationHistoryService.get_history()` builds read model from repo + event payloads | API-4 / API-5 | No invented verdicts |
 | Existing endpoints unchanged | only add routes / schemas; no existing response mutation | REG-1 | Backward compatibility |
@@ -203,6 +203,30 @@ class ConversationHistoryResponse(BaseModel):
     raw: dict[str, Any]
 ```
 
+Normalized evidence shapes:
+
+```python
+class ConversationLearningRunSummary(BaseModel):
+    source_event_id: str
+    source_event_type: str
+    run_id: str | None = None
+    learned_path_id: str | None = None
+    status: str | None = None
+    summary: str | None = None
+    raw: dict[str, Any] = Field(default_factory=dict)
+```
+
+```python
+class ConversationReplayHistorySummary(BaseModel):
+    source_event_id: str
+    source_event_type: str
+    learned_path_id: str | None = None
+    run_id: str | None = None
+    status: str | None = None
+    summary: str | None = None
+    raw: dict[str, Any] = Field(default_factory=dict)
+```
+
 ## 服务 / 模块设计（Service / Module Design）
 
 `ConversationHistoryService`:
@@ -263,11 +287,15 @@ Summary fields:
 - `last_user_message` = latest message with `role=user`.
 - `last_agent_message` = latest message with `role=agent`.
 - `learned_action_count` = length of `session.metadata_json.learned_actions or []`.
+- Session list order = `updated_at desc`.
+- `updated_from` and `updated_to` filter on `conversation_sessions.updated_at`.
 
 History evidence:
 
 - `learning_runs` are extracted only from known event payloads.
 - `replay_summaries` are extracted only from known event payloads.
+- Extracted evidence uses normalized `source_event_id` / `source_event_type` / `status` / `summary` /
+  `raw` fields so Console and CLI do not branch on raw event-specific field names.
 - Missing payloads remain missing.
 
 ## 兼容性（Compatibility）

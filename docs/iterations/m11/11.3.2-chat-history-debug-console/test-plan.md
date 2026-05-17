@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：proposed
+状态：ready_for_implementation
 
 ## 适用条件
 
@@ -44,11 +44,12 @@
 | Console Component | UI-3 list page | `ConversationHistoryPage.test.ts` | renders filters, table fields, empty/error/loading states | Yes | mock API |
 | Console Component | UI-4 detail page | `ConversationHistoryDetailPage.test.ts` | renders tabs, transcript/events/learned actions/replay/raw JSON | Yes | mock API |
 | Boundary | BOUNDARY-1 no live run | source scan / review | no direct `/exploration/autonomous-runs` or `verify-scenario` invocation in this iteration | Yes | docs/code review |
-| Manual smoke | MANUAL-1 Console route smoke | browser or in-app browser after implementation | `/conversation/history` and detail page load against local API | Optional before acceptance | record screenshot/URL if run |
+| Manual smoke | MANUAL-1 Console route smoke | browser or in-app browser after implementation | `/conversation/history` and detail page load against local API | Required before final acceptance | If not run, status must remain implementation complete / unaccepted |
 
-## Manual Smoke 样例（Optional）
+## Manual Smoke 样例（Required Before Final Acceptance）
 
-本轮不要求 live autonomous run。若实现完成后需要人工验证 Console 页面，可以使用已有或测试造数 conversation session。
+本轮不要求 live autonomous run。实现完成后，最终 acceptance 前必须真实打开一次 Console
+history 页面；可以使用已有或测试造数 conversation session。
 
 启动项目：
 
@@ -76,6 +77,8 @@ http://localhost:5174/conversation/history
 
 - 如果没有真实打开 Console 页面，不得声称 `MANUAL-1` 已通过。
 - 如果只运行了 Vitest / unit tests，必须写成“Console route smoke not run”。
+- 如果 `MANUAL-1` 未运行，本轮状态只能写成 `implementation complete` / `unverified UI smoke`，
+  不能写成 `accepted`。
 - 本轮 UI smoke 只验证 history read surface，不验证 WebAgentFlow 操作网页。
 - 不得调用 `/exploration/autonomous-runs` 或 `verify-scenario` 作为本轮验收。
 
@@ -112,6 +115,6 @@ wagent chat --resume <session_id>
 
 | Item | Reason | Risk |
 |---|---|---|
-| E2E | 首版 read surface 可由 API / CLI / component tests 覆盖 | 真实浏览器集成问题只能通过 optional smoke 发现 |
+| E2E | 首版 read surface 可由 API / CLI / component tests 覆盖 | 真实浏览器集成问题需要通过 required Console route smoke 兜底 |
 | `verify-scenario` | 本轮不需要 live autonomous verification | 无；history read surface 不应触发 autonomous run |
 | autonomous run | 本轮不改变 learning / execution behavior | 无；只读 history |

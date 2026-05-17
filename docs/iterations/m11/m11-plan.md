@@ -1299,7 +1299,7 @@ Chromium 运行。普通用户可以看到浏览器打开、页面加载、输�
 
 ## 11.3.2 · Chat History & Debug Console
 
-状态：proposed（docs generated, implementation pending）。
+状态：ready for implementation（docs review passed with minor changes, code pending）。
 
 目标：为已有 Conversation 持久化补齐产品化 history / debug 入口。当前不是没有聊天记录存储，
 而是有底层 session / message / event store，没有能让用户、开发者、Codex 或 Kimi Code

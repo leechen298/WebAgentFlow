@@ -1,6 +1,6 @@
 # 11.3.2 Chat History & Debug Console
 
-状态：proposed（docs generated, implementation pending）
+状态：ready_for_implementation（docs review passed with minor changes, implementation pending）
 里程碑：M11
 类型：code
 
@@ -26,11 +26,11 @@
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
-- [x] `review.md` 已创建；实现收尾时继续补代码验证证据。
+- [x] `review.md` 已记录文档审核和实现前验证边界；实现收尾时继续补代码验证证据。
 
 ## 当前状态
 

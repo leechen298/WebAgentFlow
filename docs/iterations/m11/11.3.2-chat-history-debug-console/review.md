@@ -1,18 +1,27 @@
 # 复盘 / 评审（Review）
 
-状态：in_progress
+状态：ready_for_implementation
 
 ## 2026-05-17 设计初始化（Design Draft）
 
 - Reviewer：N/A
-- Decision：pending_review
+- Decision：passed_with_minor_changes
 - Notes：按用户要求新增 11.3.2 Chat History & Debug Console 迭代文档。当前仅生成文档，未实现代码。
+
+## 2026-05-17 设计评审（Design Review）
+
+- Reviewer：User
+- Decision：passed_with_minor_changes
+- Notes：文档可作为 M11.3.2 的需求 / 设计输入进入实现阶段。需要把 Console manual route smoke 调整为最终验收必需，补充 `learning_runs` / `replay_summaries` normalized shape，并在 contract 明确 session list 默认 `updated_at desc` 及时间过滤边界。
 
 ## 用户反馈
 
 - “新增一个迭代来做。” -> accepted，创建独立 `11.3.2-chat-history-debug-console` 迭代。
 - “现有迭代文档不要动。” -> accepted，未修改既有具体迭代目录。
 - “11.3.2吧。总的规划文档可以相应修改。” -> accepted，允许同步 M11 总规划入口。
+- “Console manual route smoke 不应该是 optional。” -> accepted，改为 final acceptance required。
+- “`learning_runs` / `replay_summaries` 的 extraction 规则可以再具体一点。” -> accepted，补 normalized shape。
+- “列表接口可以明确排序和时间边界。” -> accepted，contract / technical design 明确 `updated_at desc` 和 `updated_at` 过滤。
 
 ## 最终差异（Final Delta）
 
@@ -25,6 +34,10 @@
 - `test-plan.md`
 - `plan.md`
 - `review.md`
+- Review follow-up fixes:
+  - Console manual route smoke is required before final acceptance.
+  - `learning_runs` / `replay_summaries` have normalized extraction shapes.
+  - Session list sorting and time filter semantics are explicit.
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 

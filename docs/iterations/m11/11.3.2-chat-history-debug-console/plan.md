@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：proposed
+状态：ready_for_implementation
 
 ## 输入
 
@@ -103,7 +103,7 @@
 | `cd apps/api && ../../.venv/bin/ruff check app/routers/conversation.py app/repos/conversation_repo.py app/services/conversation app/schemas/conversation.py tests/test_conversation_api.py tests/test_conversation_repo.py` | API lint clean | Yes | scoped |
 | `cd apps/cli && ../../.venv/bin/ruff check wagent/conversation.py wagent/chat.py tests/test_conversation.py tests/test_chat.py` | CLI lint clean | Yes | scoped |
 | `git diff --check` | whitespace clean | Yes | all changed files |
-| Console manual route smoke | `/conversation/history` and detail page load | Yes | optional; not live autonomous verification |
+| Console manual route smoke | `/conversation/history` and detail page load | Yes | required before final acceptance; not live autonomous verification |
 
 ## 复核清单（Review Checklist）
 
@@ -116,5 +116,6 @@
 - [ ] `wagent chat` 输出 session id。
 - [ ] `wagent chat --resume` 只能 resume `interactive_chat` session。
 - [ ] Console list / detail 页面可读、可复制 session id / raw JSON。
+- [ ] 最终 acceptance 前已真实打开 `/conversation/history` 并记录 route smoke evidence；如未运行，状态不得写成 accepted。
 - [ ] 未触发 `verify-scenario` 或 autonomous run。
 - [ ] 验证命令已执行并记录到 `review.md`，或写明 not run / unverified 和原因。

@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：proposed
+状态：ready_for_implementation
 
 ## 概念 / 边界契约
 
@@ -81,6 +81,9 @@ Query params：
 - `updated_to?: datetime` - 可选更新时间上界。
 - `limit?: int` - 默认 50，范围 `[1, 100]`。
 
+Session list 默认按 `updated_at desc` 排序。`updated_from` / `updated_to` 均作用于
+`conversation_sessions.updated_at`，不按 message created time 或 event created time 过滤。
+
 Response envelope 保持 `ApiResponse[T]`。`data` shape：
 
 ```json
@@ -155,11 +158,39 @@ Response envelope 保持 `ApiResponse[T]`。`data` shape：
 
 - `chat_learning_completed` event payload 中的 `run_id`、`new_learned_path_id`、`target_url`、`alias` 等字段。
 
+Normalized shape：
+
+```json
+{
+  "source_event_id": "event-id",
+  "source_event_type": "chat_learning_completed",
+  "run_id": "run-id",
+  "learned_path_id": "path-id",
+  "status": "learned",
+  "summary": "学习完成：我学会了登录页的登录操作。",
+  "raw": {}
+}
+```
+
 `replay_summaries` 来源：
 
 - `chat_execution_completed` / `chat_execution_failed` event payload 中的 `replay`。
 - `plan_execution_completed` / `plan_execution_failed` event payload 中已有 replay summary 字段。
 - `replay_completed` / `replay_failed` event payload 中已有 explicit replay summary 字段。
+
+Normalized shape：
+
+```json
+{
+  "source_event_id": "event-id",
+  "source_event_type": "chat_execution_completed",
+  "learned_path_id": "path-id",
+  "run_id": null,
+  "status": "succeeded",
+  "summary": "replay succeeded",
+  "raw": {}
+}
+```
 
 如果历史 event payload 缺少这些字段，返回空数组或缺失字段，不得补造。
 
