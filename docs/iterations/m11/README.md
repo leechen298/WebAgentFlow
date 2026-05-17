@@ -50,6 +50,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.2.4.2-single-page-basic-business-pages](./11.2.4.2-single-page-basic-business-pages/) —— Single-page Basic Business Pages。状态：implementation complete, review pending；当前已按页面级 fixture designs 重做 7 个 PC basic fixtures。
 - 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）—— later M11.2.x 候选增强；记录组件库生成的 runtime surface detection and relation，不属于 11.2.2 当前 MVP。
 - [11.3-interactive-chat-closed-loop](./11.3-interactive-chat-closed-loop/) —— Interactive Chat Closed Loop：`wagent chat` 小白用户闭环，当前只覆盖 `/login` happy path。状态：accepted（implementation review passed, manual smoke passed）。
+- [11.3.1-visible-chat-browser-operation](./11.3.1-visible-chat-browser-operation/) —— Visible Chat Browser Operation：`wagent chat` 默认以用户可见的项目内置 Playwright Chromium 学习和执行网页操作，支持 `--headless` opt-out。状态：proposed。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -76,6 +77,10 @@ shell 的入口、route namespace、fixture metadata、stable anchor 和 reset c
 重做 `/runtime-observation/basic/*` 下的 7 个 PC basic business fixtures。当前实现采用
 shared shell + per-fixture components，保持 frontend-local deterministic error scope；
 不接 mock backend、replay、reporter 或 M12 recovery。
+`11.3.1-visible-chat-browser-operation/` 是 11.3 interactive chat 的收尾增强。它定义
+`wagent chat` 学习和执行网页操作时默认打开用户可见的项目内置 Playwright Chromium，
+并允许用户通过 `--headless` 选择后台运行。该能力不绑定具体页面；具体页面只作为
+测试计划中的验收样例。
 
 11.2 后续 backlog：
 

@@ -1260,6 +1260,43 @@ wagent chat
 - 不废除 confirmation gate。
 - 不做 streaming conversation。
 
+## 11.3.1 · Visible Chat Browser Operation
+
+状态：proposed。
+
+目标：让 `wagent chat` 的学习和执行网页操作默认以用户可见的项目内置 Playwright
+Chromium 运行。普通用户可以看到浏览器打开、页面加载、输入、点击和跳转；不希望看到
+浏览器时，可以通过 `wagent chat --headless` 选择后台运行。
+
+本包是 11.3 Interactive Chat Closed Loop 的产品体验收尾增强。它不把能力绑定到具体页面；
+具体页面只作为 `test-plan.md` 中的人工验收靶子。
+
+关键契约：
+
+- `wagent chat` 默认 create session metadata 写入 `browser_visibility=visible`。
+- `wagent chat --headless` 写入 `browser_visibility=headless`。
+- Conversation runtime 必须优先读取 session metadata；dispatch metadata 只做审计。
+- 默认 visible 只作用于 `session.current_mode == "interactive_chat"`。
+- 非 `interactive_chat` 的 `wagent conversation ...`、planning preview、confirmation gate
+  和 explicit replay 继续保持既有行为。
+- 学习链路把 visibility policy 转换为 `LearningRunRequest.headless`。
+- 执行链路把 visibility policy 传到 replay hook / `run_replay`。
+- Playwright 使用项目已安装的 Chromium，不使用用户系统 Chrome profile。
+- CLI 文案继续面向普通用户，不暴露 selector、id、className、LearnedPath、run_id 或
+  replay id。
+
+执行包目录：
+
+- `docs/iterations/m11/11.3.1-visible-chat-browser-operation/`
+
+非目标：
+
+- 不实现用户系统 Chrome / profile 复用。
+- 不做 streaming step progress。
+- 不做用户接管、恢复、重试或 M12 recovery。
+- 不改变 confirmation gate。
+- 不把具体页面写成功能边界。
+
 ## Later M11.x · Page Context Bridge Decision Point
 
 状态：候选决策点，不是已确定执行包。
