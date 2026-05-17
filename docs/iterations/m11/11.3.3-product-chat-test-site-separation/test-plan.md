@@ -30,8 +30,9 @@
 | Docs | DOC-2 CLI 入口不回退 | `docs/user-guide/wagent-chat.md` | 主入口仍是 `.venv/bin/wagent chat` | Yes | 不只提示 source |
 | Docs | DOC-3 whitespace | `git diff --check` | clean | Yes | 文档阶段唯一必跑命令 |
 | Product site | SITE-1 build | `pnpm --filter @web-agent-flow/product-test-site build` | build pass | Future | 实现阶段 |
-| Product site | SITE-2 login page smoke | `http://localhost:5176/workspace-login` | 页面显示工作台入口 / 操作员账号 / 访问口令 / 进入工作台 | Future | 实现阶段 |
-| Product site | SITE-3 login behavior | browser manual smoke | demo / 123456 进入工作台首页；错误输入显示错误 | Future | 实现阶段 |
+| Product site | SITE-2 one-click dev | `pnpm run dev` | 同时启动 console / api / worker / validation-site / product-test-site | Future | product-test-site 必须包含在一键启动里 |
+| Product site | SITE-3 login page smoke | `http://localhost:5176/workspace-login` | 页面显示工作台入口 / 操作员账号 / 访问口令 / 进入工作台 | Future | 实现阶段 |
+| Product site | SITE-4 login behavior | browser manual smoke | demo / 123456 进入工作台首页；错误输入显示错误 | Future | 实现阶段 |
 | Chat | CHAT-1 product learning no spec | `wagent chat` | learning request 不读取 validation specs，不传 `spec_id / scenario` | Future | acceptance blocker |
 | Chat | CHAT-2 product learning success | `wagent chat` | 学习 product-test-site 后沉淀 LearnedPath | Future | 记录 LearnedPath id |
 | Chat | CHAT-3 execute learned action | `wagent chat` | “帮我进入工作台”直接执行，返回“已进入工作台” | Future | 不要求确认 |
@@ -46,6 +47,12 @@
 ```bash
 pnpm run dev
 .venv/bin/wagent chat
+```
+
+`pnpm run dev` 必须同时启动 product-test-site。人工验收前应能访问：
+
+```text
+http://localhost:5176/workspace-login
 ```
 
 输入：
@@ -90,6 +97,7 @@ WAgent > 还没学过这个操作，需要先学习。
 
 - 没有真实打开 product-test-site，不得声称产品级 smoke 通过。
 - 如果只打开 validation-site，不得声称 product-test-site 验收通过。
+- 如果 `pnpm run dev` 没有启动 product-test-site，不得声称 M11.3.3 人工验收通过。
 - 如果学习路径仍使用 `spec_id / scenario`，不得 accepted。
 - 如果没有 LearnedPath id、CLI 输出或可复查 history，不得声称学习沉淀已验证。
 
@@ -116,5 +124,6 @@ Codex / AI 只能记录自己真实执行过的 CLI 和浏览器结果。不得�
 | Item | Reason | Risk |
 |---|---|---|
 | product-test-site build | 文档阶段未实现站点 | 实现阶段必须补 |
+| `pnpm run dev` one-click startup | 文档阶段未实现站点 | 实现阶段必须验证 product-test-site 已接入一键启动 |
 | product-level chat smoke | 文档阶段不运行产品 flow | 实现阶段必须补 |
 | validation regression build | 文档阶段未改代码 | 实现阶段必须补 |

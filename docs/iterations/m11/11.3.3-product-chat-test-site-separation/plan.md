@@ -43,6 +43,7 @@
    - `@web-agent-flow/product-test-site`。
    - port `5176`。
    - 第一阶段实现 `/workspace-login`。
+   - 接入根目录 `pnpm run dev` 一键启动。
 
 5. 后续实现阶段：改造 `wagent chat` product learning。
    - 从用户 utterance 解析 URL 和必要输入。
@@ -52,6 +53,7 @@
 
 6. 后续实现阶段：验证。
    - product-test-site build。
+   - `pnpm run dev` 一键启动包含 product-test-site。
    - validation-site regression build。
    - product-level chat smoke。
 
@@ -68,6 +70,7 @@
 | Command | Expected proof | Live autonomous verification excluded? | Notes |
 |---|---|---|---|
 | `pnpm --filter @web-agent-flow/product-test-site build` | product-test-site build pass | Yes | 不触发 browser |
+| `pnpm run dev` | product-test-site 随 console / api / worker / validation-site 一起启动 | Yes | 实现阶段必须验证 |
 | `pnpm --filter @web-agent-flow/validation-site build` | validation-site regression pass | Yes | 保留工程靶场 |
 | `.venv/bin/wagent chat` | product-level learning / execution smoke | No | 必须记录真实 evidence |
 
@@ -77,6 +80,7 @@
 - [ ] 11.2.4.2 仍属于 M11.2 validation fixture 体系。
 - [ ] 用户指南没有回退到只写 `source .venv/bin/activate && wagent chat`。
 - [ ] product-test-site 不复用 validation specs / assertions。
+- [ ] product-test-site 已接入根目录 `pnpm run dev`。
 - [ ] product-level learning 不传 `spec_id / scenario`。
 - [ ] 修改或删除 `login.assertions.json` 不影响 product-test-site learning。
 - [ ] validation-site 原有 verify / smoke 能力不被破坏。

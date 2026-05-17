@@ -80,8 +80,20 @@ success: 工作台首页 / 已进入工作台
 
 - 将 `@web-agent-flow/product-test-site` 加入 pnpm workspace。
 - 提供独立 `pnpm --filter @web-agent-flow/product-test-site dev`。
-- 在根 `pnpm run dev` 中增加 product-test-site，或明确提供单独启动命令。
+- 在根 `pnpm run dev` 中增加 product-test-site，作为普通用户和人工验收的一键启动路径。
 - 固定端口 `5176`，不得和 console `5174`、validation-site `5175`、api `8001` 冲突。
+
+根目录一键启动的目标进程应变为：
+
+```text
+console      -> http://localhost:5174
+api          -> http://localhost:8001
+worker       -> async worker
+validation   -> http://localhost:5175
+product      -> http://localhost:5176
+```
+
+独立 filter dev 只作为开发调试入口，不作为 M11.3.3 人工验收主路径。
 
 ### Chat Learning Mode
 
@@ -170,6 +182,7 @@ no path -> task_intake
 ## 兼容性（Compatibility）
 
 - validation-site regression 不受 product-test-site 影响。
+- `pnpm run dev` 一键启动后 product-test-site 可访问。
 - `wagent verify` 继续使用 validation specs。
 - `wagent chat` 主入口继续使用 `.venv/bin/wagent chat`。
 - 11.3.2 history/debug console 可并行开发；它读取 conversation 历史，不依赖本包页面实现。
@@ -212,4 +225,5 @@ git diff --check
 ```bash
 pnpm --filter @web-agent-flow/product-test-site build
 pnpm --filter @web-agent-flow/validation-site build
+pnpm run dev
 ```

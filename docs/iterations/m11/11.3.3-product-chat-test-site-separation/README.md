@@ -51,3 +51,5 @@ pass_gate / scorecard / `verify-scenario`。它不迁移到 11.3。
 后续实现阶段应新增 `apps/product-test-site`，默认端口 `5176`，并改造
 `wagent chat` 产品级学习路径，使其从用户自然语言读取 URL 和必要输入，
 而不是读取 `apps/validation-site/specs/*.assertions.json`。
+实现完成后，根目录 `pnpm run dev` 必须同时启动 product-test-site，普通用户不需要
+为了产品级验收额外运行第二套站点命令。

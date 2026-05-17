@@ -1362,6 +1362,8 @@ wagent chat
 - `validation-site` 继续作为工程验证靶场，不删除、不弱化、不重命名。
 - 后续产品级验收站点推荐新增 `apps/product-test-site`，package name 为
   `@web-agent-flow/product-test-site`，dev port 为 `5176`。
+- 根目录 `pnpm run dev` 必须同时启动 product-test-site；单独 filter dev 只能作为
+  开发调试入口，不能替代普通用户一键启动路径。
 - 当前端口边界保持：console `5174`、validation-site `5175`、product-test-site
   `5176`、API `8001`。
 - 第一阶段产品级页面规划为 `/workspace-login`，文案与 validation-site `/login`

@@ -24,6 +24,8 @@
 - “先写文档，11.3.2 已经在开工了，不过两个冲突不大。” -> accepted；11.3.3 只追加文档和索引，不修改 11.3.2 目录。
 - “用户指南入口修复不得回退。” -> accepted；用户指南继续以 `.venv/bin/wagent chat` 为主入口。
 - “11.2.4.2 不应该放到 11.3。” -> accepted；11.2.4.2 继续属于 M11.2 validation fixture 体系。
+- “项目的一键启动也要包含这次的站点拆分。” -> accepted；实现阶段 `pnpm run dev`
+  必须同时启动 product-test-site。
 
 ## 最终差异（Final Delta）
 
@@ -70,6 +72,7 @@
 - 如果产品级学习读取 `apps/validation-site/specs/*.assertions.json`，不得 accepted。
 - 如果用户未在聊天中提供必要输入而系统从 validation spec 自动拿输入，不得 accepted。
 - 如果 product-test-site 与 validation-site 页面结构、文案、路由一比一复制，不得 accepted。
+- 如果根目录 `pnpm run dev` 不启动 product-test-site，不得 accepted。
 
 ### 后续事项（Follow-ups）
 

@@ -31,6 +31,16 @@ dev port: 5176
 base URL: http://localhost:5176
 ```
 
+实现阶段必须把 product-test-site 接入项目一键启动：
+
+```bash
+pnpm run dev
+```
+
+一键启动应同时启动 console、api、worker、validation-site 和 product-test-site。
+`pnpm --filter @web-agent-flow/product-test-site dev` 可以保留为单独调试入口，但不能替代
+根目录 `pnpm run dev` 的普通用户启动路径。
+
 ### Product-level chat learning
 
 `product-level chat learning` 指产品级 `wagent chat` 学习路径：
@@ -47,6 +57,32 @@ base URL: http://localhost:5176
 - 不传 `spec_id / scenario`。
 - 不从 assertions 取 inputs。
 - 不硬编码 `/login` 或 `valid_credentials`。
+- 不硬编码目标测试站点、host、path 或 route。学习目标必须来自用户输入的 URL。
+
+### Product-level target site boundary
+
+产品级 `wagent chat` 必须把“要学习 / 要操作哪个站点”作为用户输入的一部分处理。
+
+学习时：
+
+- 用户必须提供目标 URL。
+- 系统只能打开并学习用户输入的 URL。
+- 不得在用户未提供 URL 时默认跳到 validation-site、product-test-site 或任何固定站点。
+- 不得因为 path 不是 `/login` 就拒绝产品级学习；产品级路径不应保留 `/login` 特化。
+
+执行时：
+
+- 系统只能执行当前 conversation session 中已经学习过的 target URL / target site 上的操作。
+- 如果用户执行指令里包含 URL，必须优先按该 URL 匹配已学操作。
+- 如果用户执行指令没有包含 URL，只能在当前 session 内存在单一清晰匹配时直接执行。
+- 如果目标站点 / 页面没有学过，必须返回普通用户可理解的反馈，例如：
+
+```text
+还没学过这个站点或页面，需要先学习。
+```
+
+- 不得因为存在 validation-site 的历史 LearnedPath，就跨站点执行。
+- 不得把同一 alias（例如“登录”）在不同 target URL 上混成同一个 learned action。
 
 ## 状态 / 结果契约
 
@@ -57,6 +93,9 @@ base URL: http://localhost:5176
 - 如果产品级学习仍通过 `spec_id=login / scenario=valid_credentials` 完成，不得 accepted。
 - 如果用户没有在聊天中提供必要输入，而系统从 validation spec 自动拿到输入，不得 accepted。
 - 如果修改或删除 `login.assertions.json` 会影响 product-test-site 学习，不得 accepted。
+- 如果根目录 `pnpm run dev` 不启动 product-test-site，不得 accepted。
+- 如果产品级学习仍限制为 `/login`，或仍返回“当前只支持学习登录页”，不得 accepted。
+- 如果执行未学习过的 target site 时跨站点命中历史 LearnedPath，不得 accepted。
 
 ## Schema / API 契约
 
@@ -67,12 +106,16 @@ base URL: http://localhost:5176
 - 新增 product-test-site 前端 package。
 - 调整 `wagent chat` 产品级学习入口，使其支持从用户自然语言解析 target URL 和必要输入。
 - 增加 product-level learning mode 或等价内部分支，用来和 validation-backed learning 区分。
+- 调整 session `learned_actions` 匹配策略，使 learned action 至少按 alias + target URL / site scope
+  区分。
 
 后续实现阶段不得：
 
 - 改变 API response envelope。
 - 为 product-test-site 引入 validation `spec_id / scenario` requirement。
 - 把 product-test-site 注册为 validation specs 的消费者。
+- 在 product-level chat learning 中保留 `/login` only gate。
+- 对未学习过的 target URL 使用其他站点的 LearnedPath 自动执行。
 
 ## Evidence / Observation 契约
 
@@ -103,6 +146,8 @@ validation evidence 继续来自：
 ## 兼容性契约
 
 - `validation-site` 原有 routes、specs、fixtures、verify / smoke 能力必须保留。
+- 根目录 `pnpm run dev` 必须继续保留现有 console / api / worker / validation-site，并新增
+  product-test-site；不能为了新增产品验收站移除原有一键启动成员。
 - `11.2.4.2-single-page-basic-business-pages` 继续属于 M11.2，不迁移。
 - `11.3.2-chat-history-debug-console` 继续使用已有编号和目录。
 - `wagent chat` CLI 入口文档不得回退到只依赖 `source .venv/bin/activate`。

@@ -28,6 +28,9 @@ M11.3.3 计划新增独立的 product-test-site，用于产品级 `wagent chat` 
 它会和 validation-site 分开，目标是验证普通用户通过聊天提供页面地址和必要输入，
 系统再学习并执行网页操作。
 
+M11.3.3 实现后，项目的一键启动 `pnpm run dev` 应同时启动 product-test-site。
+在实现前，`pnpm run dev` 仍按当前项目实际进程为准。
+
 M11.3.3 实现前，product-test-site 还不可用。不要把
 `http://localhost:5176/workspace-login` 当成当前可用入口，也不要把“产品级测试站已可用”
 写入验收结论。
