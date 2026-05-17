@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：implementation complete（scoped tests passed, real LLM smoke pending）
 
 ## 2026-05-17 需求确认
 
@@ -46,21 +46,79 @@
   - M11.3.4 文档包、产品模型更新、技术设计和测试计划通过审核。
   - 角色定位通过：Conversation Intake Agent 是受控自然语言入口层，不是浏览器操作 Agent。
   - 边界通过：LLM 负责听懂用户语言，代码负责裁决，Learning / Replay 负责行动。
-  - 可进入实现阶段；实现前状态更新为 `ready_for_implementation`。
+  - 当时可进入实现阶段；后续已完成实现并在本 review 下方记录收口证据。
 
-## 文档阶段验证
+## 文档阶段验证记录
 
-计划运行：
+已运行：
 
 ```bash
 git diff --check
 ```
 
+## 2026-05-17 实现收口
+
+- Reviewer：User / Codex
+- Decision：implementation_review_passed_scoped
+- Commit：`a08d434 feat: add conversation intake provenance tracing`
+- Scope：
+  - Conversation Intake Agent 基础设施已实现。
+  - schema-constrained intake、LLM-backed provider entry、deterministic fallback 已接入 runtime。
+  - malformed JSON / schema failure / low confidence guardrails 已覆盖。
+  - pending intake guardrails 和 sensitive redaction 已覆盖。
+  - WAgent 回复已记录 `response_provenance`。
+  - LLM-backed intake trace 已记录为 redacted conversation evidence。
+  - Conversation History detail 已展示代码生成 / Agent 生成 / 混合生成 / 未知来源，以及脱敏 LLM trace 摘要。
+- Verification：
+
+```bash
+cd apps/api
+../../.venv/bin/python -m pytest tests/test_conversation_intake.py tests/test_conversation_chat_runtime.py tests/test_conversation_api.py -q
+# 101 passed
+
+cd apps/cli
+../../.venv/bin/python -m pytest tests/test_chat.py -q
+# 13 passed
+
+cd apps/console
+pnpm test -- ConversationHistoryDetailPage
+# 24 files passed, 169 tests passed
+
+cd apps/api
+../../.venv/bin/ruff check app/services/conversation app/schemas tests/test_conversation_intake.py tests/test_conversation_chat_runtime.py tests/test_conversation_api.py
+# All checks passed
+
+git diff --check
+# clean
+```
+
+## 2026-05-17 人工测试发现：上下文恢复缺口
+
+- Session：`a497358b-7c85-4b38-bf5a-7a8b555283fe`
+- 输入：
+
+```text
+You > http://localhost:5176/workspace-login
+WAgent > 我会打开浏览器执行：http://localhost:5176/workspace-login。
+WAgent > 还没学过这个站点或页面，需要先学习。
+You > 学习
+WAgent > 我会打开浏览器执行：学习。
+```
+
+- Decision：deferred_to_m11_3_5
+- Notes：
+  - 该失败说明 `wagent chat` 仍缺少“小白用户”上下文恢复体验。
+  - 裸 URL 应保存为 pending target，而不是被当作 execute。
+  - 下一句“学习”应能引用上一轮 URL。
+  - no-path 应主动引导学习，而不是冷拒绝。
+  - CLI 应提供不误导用户的 loading / progress 状态。
+  - 这些属于 Chat Context Recovery UX，不继续压在 M11.3.4 基础设施收口里。
+
 ## 代码评审
 
-- Reviewer：not_started
-- Decision：not_started
-- Notes：本轮只生成文档包，不实现代码。
+- Reviewer：Codex
+- Decision：passed_scoped
+- Notes：Scoped code review passed；真实 LLM-backed smoke 和 live UI smoke 未执行。
 
 ## Acceptance Blockers
 
@@ -80,7 +138,6 @@ git diff --check
 
 ## 未完成 / 风险
 
-- Conversation Intake Agent 尚未实现。
-- LLM-backed provider 尚未接入。
+- 真实 LLM-backed provider smoke 尚未执行。
 - fake / stub provider 可以用于实现测试，但真实 LLM smoke 才能标记 LLM-intake acceptance passed。
-- Response provenance / LLM trace 尚未实现。
+- Chat Context Recovery UX 尚未实现，已转入 11.3.5。

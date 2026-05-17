@@ -1,17 +1,32 @@
 # 实施计划（Plan）
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：implementation complete（scoped tests passed, real LLM smoke pending）
 
-## 本轮文档生成
+## 文档生成阶段记录
 
 1. 新增 11.3.4 七件套文档。
 2. 更新产品模型中英文镜像，新增 Conversation Intake Agent / 对话理解 Agent。
 3. 更新 roadmap 中英文镜像，登记 M11.3.4 为 interactive chat productization 后续包。
 4. 更新 M11 README / m11-plan 索引。
-5. 更新 `docs/user-guide/wagent-chat.md`，只写为计划能力，不写成当前已可用。
+5. 更新 `docs/user-guide/wagent-chat.md`，文档生成阶段只写为计划能力，不写成当前已可用。
 6. 运行 `git diff --check`。
 
-## 后续实现阶段建议
+## 实现阶段收口
+
+实现已在 `a08d434 feat: add conversation intake provenance tracing` 中完成。
+本包收口 Conversation Intake Agent 基础设施和 history provenance / LLM trace 可观察性。
+
+不在本包继续扩展：
+
+- 裸 URL 保存为 pending target。
+- 用户下一句“学习”继承上一轮 URL。
+- no-path 后主动引导学习。
+- CLI loading / progress 体验细化。
+- History 列表本地时区格式。
+
+这些进入后续 11.3.5 Chat Context Recovery UX。
+
+## 已实现阶段拆解
 
 ### 1. Schema and service contract
 

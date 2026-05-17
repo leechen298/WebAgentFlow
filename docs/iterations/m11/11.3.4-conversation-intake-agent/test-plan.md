@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：implementation complete（scoped tests passed, real LLM smoke pending）
 
 ## 文档阶段
 
@@ -12,7 +12,35 @@ git diff --check
 
 不得触发 `verify-scenario`、autonomous run、product-driven browser execution 或 live LLM smoke。
 
-## 后续实现阶段测试
+## 实现阶段验证结果
+
+已完成 scoped verification：
+
+```bash
+cd apps/api
+../../.venv/bin/python -m pytest tests/test_conversation_intake.py tests/test_conversation_chat_runtime.py tests/test_conversation_api.py -q
+# 101 passed
+
+cd apps/cli
+../../.venv/bin/python -m pytest tests/test_chat.py -q
+# 13 passed
+
+cd apps/console
+pnpm test -- ConversationHistoryDetailPage
+# 24 files passed, 169 tests passed
+
+cd apps/api
+../../.venv/bin/ruff check app/services/conversation app/schemas tests/test_conversation_intake.py tests/test_conversation_chat_runtime.py tests/test_conversation_api.py
+# All checks passed
+
+git diff --check
+# clean
+```
+
+未执行真实 LLM-backed smoke、Console live smoke、`verify-scenario` 或 autonomous run。
+因此真实 LLM-intake acceptance 仍为 pending。
+
+## 后续实现阶段测试记录
 
 ### Intake schema / parser
 

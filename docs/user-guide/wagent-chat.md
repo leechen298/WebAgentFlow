@@ -13,14 +13,19 @@
 当前版本已经支持产品级工作台登录页 smoke，但自然语言理解仍在从规则匹配升级中。
 如果一句话里没有提供页面地址或必要输入，系统可能无法像真正的对话 Agent 一样继续追问和续接。
 
-M11.3.4 计划新增 Conversation Intake Agent / 对话理解 Agent：它会把普通用户的话理解成
-结构化的操作意图、目标页面、输入槽位和缺失信息。这个计划能力不是让 LLM 控制浏览器，
+M11.3.4 已新增 Conversation Intake Agent / 对话理解 Agent：它会把普通用户的话理解成
+结构化的操作意图、目标页面、输入槽位和缺失信息。这个能力不是让 LLM 控制浏览器，
 而是让 LLM 理解用户说的话；真正学习和执行仍由 WebAgentFlow 的 Learning / Replay 服务完成。
+真实 LLM-backed smoke 尚未作为验收证据记录，所以如果你在本地没有配置 LLM provider，
+系统仍可能走 deterministic fallback。
 
-M11.3.4 同时计划增强聊天历史调试页：在
+M11.3.4 同时增强聊天历史调试页：在
 `http://localhost:5174/conversation/history/<session_id>` 中显示每条 WAgent 回复是代码生成，
 还是由某个 WebAgentFlow 内部 Agent / LLM 生成，并提供脱敏后的 LLM provider / model /
 raw trace。Codex CLI 只是外部测试或调试操作者，不会被当成 WebAgentFlow 内部回复者。
+
+已知限制：裸 URL 后再说“学习”这类多轮上下文恢复体验还在 M11.3.5 中处理。
+当前入门 smoke 仍建议一次说清楚页面地址和必要输入。
 
 当前入门指南只验产品级工作台登录页：
 
@@ -152,8 +157,8 @@ CLI。重新安装 CLI 后再检查：
 学习一下这个工作台登录页怎么进入，地址是 http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456
 ```
 
-当前版本建议尽量一次说清楚页面地址和必要输入。M11.3.4 实现后，系统会更自然地处理
-“学习这个登录页”、再下一句补充“用户名 demo，密码 123456”这类多轮说法。
+当前版本建议尽量一次说清楚页面地址和必要输入。M11.3.5 会继续处理裸 URL、
+短句“学习”、以及“学习这个登录页”后再下一句补充“用户名 demo，密码 123456”这类多轮说法。
 
 学习完成后继续输入：
 
@@ -183,14 +188,15 @@ http://localhost:5174/conversation/history/<session_id>
 
 当前 history 页面已经能查看消息、事件、已学操作、learning run、replay summary 和 raw JSON。
 
-M11.3.4 的 Conversation Intake Agent 实现完成后，这个页面还会展示：
+M11.3.4 的 Conversation Intake Agent 已实现后，这个页面会展示：
 
 - 这条 WAgent 回复是代码生成、Agent 生成、混合生成还是未知来源。
 - 如果是代码生成，会标注代码路径，例如 Conversation Orchestrator 或 Interactive Chat Runtime。
 - 如果是 Agent / LLM 生成，会标注内部 Agent role、provider、model、request id 和 schema。
 - 原始 LLM 记录会默认脱敏，不应展示密码、token 或访问口令明文。
 
-在 M11.3.4 对应实现完成前，不要把“能看到具体 Agent 和 LLM raw trace”作为当前入门指南的通过条件。
+真实 LLM-backed smoke 尚未记录前，不要把“真实 provider trace 一定存在”作为当前入门指南的通过条件。
+如果本地没有配置 LLM provider，history 可能显示代码生成或 fallback。
 
 ## 第一步：教它进入工作台
 

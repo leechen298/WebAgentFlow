@@ -147,6 +147,23 @@ LLM 理解用户说的话。
 代码决定 WebAgentFlow 是否以及如何行动。
 ```
 
+责任矩阵：
+
+| 事项 | 负责人 | LLM 可以做什么 | 代码必须做什么 |
+|---|---|---|---|
+| 自然语言入口 | Conversation Intake Agent / 对话理解 Agent | 抽取 intent、target、action goal、slots、missing fields 和澄清提示。 | 校验 schema，拒绝危险输出，决定是否可以进入下一步。 |
+| 会话记忆 | Conversation Orchestrator / 代码 | 基于代码提供的 session context 理解“这个页面”“刚才那个页面”等指代。 | 持久化和清理 `pending_intake`、后续 `pending_target`、recent message summary、no-path context。 |
+| 已学动作匹配 | Conversation Orchestrator / 代码 | 提供“登录”“进入工作台”等语义别名。 | 只在当前 session、正确 `target_url` / `site_origin` scope 内匹配 learned actions。 |
+| 是否允许学习 / 执行 | Conversation Orchestrator / 代码 | 提供用户意图 hint。 | 决定是否允许 learning 或 replay；强制执行 confirmation、scope 和安全规则。 |
+| 浏览器操作 | Learning / Replay services | 不参与逐步执行。 | 打开 Playwright、填写字段、点击按钮、replay LearnedPath，并收集执行证据。 |
+| 用户可见文案 | Conversation Orchestrator | 提供澄清或失败解释的文案 hint。 | 统一生成或过滤最终 `user_response`；不向最终用户暴露 schema、confidence、slot、JSON 或内部 trace 术语。 |
+| 证据和历史 | 代码 | 必要时总结用户意图。 | 持久化 events、response provenance、脱敏 LLM traces、learning runs、replay summaries 和敏感信息 redaction。 |
+
+M11.3.4 收口 intake / provenance 基础设施。裸 URL 后再说“学习”这类 chat
+recovery 行为转入 M11.3.5，因为它需要代码侧新增 conversation memory
+（`pending_target`、recent-message context、no-path recovery state），不只是
+改 LLM prompt。
+
 ### 2.4 Response Provenance and LLM Trace / 回复来源与 LLM 记录
 
 随着 `wagent chat` 从纯代码回复走向 LLM-backed intake 和后续 LLM-backed reporting，
@@ -513,11 +530,11 @@ Teaching Guide Agent / 教学引导器边界：
   `wagent conversation`、Conversation API、Conversation Orchestrator /
   Dispatcher service skeleton、public dispatch endpoint、explicit replay hook
   和 CLI dispatch integration 都已实现。
-- **M11.3.4 conversation intake / 对话理解入口**：proposed。`wagent chat`
-  已有产品入口和 product-test-site smoke 证据，但自然语言入口仍主要依赖
-  deterministic parser / regex。Conversation Intake Agent 计划把用户语言转成
-  schema 校验后的 intent、target、action、slots 和 missing fields，再交给
-  Orchestrator 校验。
+- **M11.3.4 conversation intake / 对话理解入口**：implementation complete，
+  scoped tests passed，真实 LLM-backed smoke pending。`wagent chat` 已接入
+  schema-constrained intake、deterministic fallback、pending-intake guardrails、
+  response provenance 和脱敏 LLM trace history。裸 URL -> “学习”这类 chat
+  context recovery 转入 M11.3.5。
 - **L3 task execution / 实际任务执行**：未开工。没有 Task Path Planner /
   任务路径规划器实现，没有 Task Result Reporter / 任务结果汇报器实现，没有
   task-to-path 执行闭环，没有结果验证闭环，也没有恢复对话或 teaching mode。
@@ -536,6 +553,7 @@ Teaching Guide Agent / 教学引导器边界：
 | M11.0 · Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排 | CLI MVP、session state、Conversation Orchestrator、user message routing，以及 confirmation / pause / abort / takeover basics。 | 默认不新增 Agent；随能力落地路由到 Task Path Planner、Task Result Reporter、Failure Recovery Agent、User Abort Handler 和 Teaching Guide Agent。 |
 | M11.1 · Task-to-Path Planning & Execution MVP / 任务到路径规划与执行 MVP | Task Path Planner / Task Result Reporter、LearnedPath retrieval / ranking、slot binding、task result verification MVP、basic artifact capture、risk / consent gate MVP。 | Task Path Planner / 任务路径规划器（legacy: Agent D）；Task Result Reporter / 任务结果汇报器（legacy: Agent E）。 |
 | M11.3.4 · Conversation Intake Agent / 对话理解 Agent | `wagent chat` 的 schema-constrained intake：理解用户语言、target、action、slots 和 missing information，再交给 Orchestrator 校验。 | Conversation Intake Agent / 对话理解 Agent（无 legacy alias）。 |
+| M11.3.5 · Chat Context Recovery UX / 聊天上下文恢复体验 | 代码侧 conversation memory 和用户引导：裸 URL、短句续接、no-path recovery、以及不误导用户的 loading / progress 状态。 | 不新增 Agent；扩展 Conversation Orchestrator 和 Conversation Intake context。 |
 | M12 · Recovery & Abort Dialogue / 恢复与中断对话 | Failure recovery、user interrupt handling，以及 continue / replan / rerun / takeover / abandon choices。 | Failure Recovery Agent / 失败恢复助手（legacy: Agent F）；User Abort Handler / 用户中断处理器（legacy: Agent G）。 |
 | M13 · User-Guided Learning, Teaching & Correction / 用户引导学习、教学与纠正 | Visible browser、user demonstration recording、Teaching Guide Agent guidance、highlight / shadow / indicator / tooltip、provenance=user write-back、correction UI。 | Teaching Guide Agent / 教学引导器（legacy: Agent H）；保留用户来源。 |
 | M14 · Learning Quality, Coverage & Negative Knowledge / 学习质量、覆盖与负面知识 | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent、popup controls、custom click-toggle、label extractor expansion、cross-page pattern mining、failure evidence / negative knowledge store。 | Page Understanding Agent / 页面理解器（legacy: Agent A）；Attempt Evaluation Agent / 尝试评估器（legacy: Agent B）；Learning Report Agent / 学习报告器（legacy: Agent C）。 |

@@ -178,6 +178,24 @@ The LLM understands what the user said.
 The code decides whether and how WebAgentFlow acts.
 ```
 
+Responsibility matrix:
+
+| Surface | Owner | What LLM may do | What code must do |
+|---|---|---|---|
+| Natural-language intake | Conversation Intake Agent | Extract intent, target, action goal, slots, missing fields, and clarification hints. | Validate the schema, reject unsafe output, and decide whether the result can move forward. |
+| Conversation memory | Conversation Orchestrator / code | Use the provided session context to resolve references such as "this page" or "the previous page". | Persist and clean `pending_intake`, future `pending_target`, recent message summaries, and no-path context. |
+| Learned action matching | Conversation Orchestrator / code | Suggest semantic aliases such as "log in" / "enter workspace". | Match only current-session learned actions within the correct `target_url` / `site_origin` scope. |
+| Learning / replay permission | Conversation Orchestrator / code | Provide a user-intent hint. | Decide whether learning or replay is allowed; enforce confirmation, scope, and safety rules. |
+| Browser operation | Learning / Replay services | Do not participate in step-by-step execution. | Open Playwright, fill fields, click buttons, replay LearnedPaths, and collect execution evidence. |
+| User-facing wording | Conversation Orchestrator | Provide wording hints for clarification or failure cases. | Generate or filter final `user_response`; never expose schema, confidence, slot, JSON, or internal trace jargon to end users. |
+| Evidence and history | Code | Summarize intent when useful. | Persist events, response provenance, redacted LLM traces, learning runs, replay summaries, and sensitive redaction. |
+
+M11.3.4 implements the intake/provenance foundation. Chat recovery behavior such
+as a bare URL followed by "learn" is intentionally tracked as M11.3.5 because it
+requires additional code-owned conversation memory (`pending_target`,
+recent-message context, and no-path recovery state), not only a smarter LLM
+prompt.
+
 ### 2.4 Response Provenance and LLM Trace
 
 As `wagent chat` moves from code-only replies to LLM-backed intake and future
@@ -594,12 +612,11 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
   Conversation API, Conversation Orchestrator / Dispatcher service skeleton,
   public dispatch endpoint, explicit replay hook, and CLI dispatch integration
   are implemented.
-- **M11.3.4 conversation intake**: proposed. `wagent chat` has a product
-  entrypoint and product-test-site smoke evidence, but the natural-language
-  intake layer is still mostly deterministic parser / regex. Conversation
-  Intake Agent is planned to convert user language into schema-validated
-  intent, target, action, slots, and missing fields before Orchestrator
-  validation.
+- **M11.3.4 conversation intake**: implementation complete, scoped tests passed,
+  real LLM-backed smoke pending. `wagent chat` now has schema-constrained intake,
+  deterministic fallback, pending-intake guardrails, response provenance, and
+  redacted LLM trace history. Chat context recovery for bare URL -> "learn" is
+  deferred to M11.3.5.
 - **L3 task execution**: not started. No Task Path Planner implementation,
   no Task Result Reporter implementation, no task-to-path execution loop, no
   result verification loop, no recovery dialogue, and no teaching mode.
@@ -619,6 +636,7 @@ task execution:
 | M11.0 · Runtime Conversation Shell & Agent Orchestration | CLI MVP, session state, Conversation Orchestrator, user message routing, and confirmation / pause / abort / takeover basics. | No new Agent by default; routes to Task Path Planner, Task Result Reporter, Failure Recovery Agent, User Abort Handler, and Teaching Guide Agent as those capabilities land. |
 | M11.1 · Task-to-Path Planning & Execution MVP | Task Path Planner / Task Result Reporter, LearnedPath retrieval / ranking, slot binding, task result verification MVP, basic artifact capture, and risk / consent gate MVP. | Task Path Planner (legacy: Agent D); Task Result Reporter (legacy: Agent E). |
 | M11.3.4 · Conversation Intake Agent | Schema-constrained intake for `wagent chat`: understand user language, target, action, slots, and missing information before Orchestrator validation. | Conversation Intake Agent (no legacy alias). |
+| M11.3.5 · Chat Context Recovery UX | Code-owned conversation memory and user guidance for bare URLs, short follow-up commands, no-path recovery, and non-misleading progress/loading states. | No new Agent; extends Conversation Orchestrator and Conversation Intake context. |
 | M12 · Recovery & Abort Dialogue | Failure recovery, user interrupt handling, and continue / replan / rerun / takeover / abandon choices. | Failure Recovery Agent (legacy: Agent F); User Abort Handler (legacy: Agent G). |
 | M13 · User-Guided Learning, Teaching & Correction | Visible browser, user demonstration recording, Teaching Guide Agent guidance, highlight / shadow / indicator / tooltip, provenance=user write-back, and correction UI. | Teaching Guide Agent (legacy: Agent H); preserve user provenance. |
 | M14 · Learning Quality, Coverage & Negative Knowledge | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent, popup controls, custom click-toggle, label extractor expansion, cross-page pattern mining, and failure evidence / negative knowledge store. | Page Understanding Agent (legacy: Agent A); Attempt Evaluation Agent (legacy: Agent B); Learning Report Agent (legacy: Agent C). |

@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：implementation complete（scoped tests passed, real LLM smoke pending）
 
 ## 目标
 

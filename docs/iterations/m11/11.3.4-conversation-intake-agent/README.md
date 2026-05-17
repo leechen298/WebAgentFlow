@@ -1,6 +1,6 @@
 # 11.3.4 · Conversation Intake Agent
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：implementation complete（scoped tests passed, real LLM smoke pending）
 里程碑：M11
 类型：code
 
@@ -48,11 +48,18 @@ product-test-site 和 validation-site 拆开，并通过 product-level CLI smoke
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
 - [x] `review.md` 已记录文档阶段边界和 acceptance blockers。
-- [ ] 实现阶段已完成。
+- [x] 实现阶段已完成。
 - [ ] LLM-backed intake smoke 已记录到 `review.md`。
 
 ## 当前状态
 
-文档包已生成并通过审核。实现阶段尚未开始。
+实现阶段已完成并提交：`a08d434 feat: add conversation intake provenance tracing`。
+本轮完成 Conversation Intake Agent 基础设施、schema-constrained intake、
+deterministic fallback、pending intake guardrails、sensitive redaction、
+response provenance、redacted LLM trace 和 Conversation History detail 展示。
 
-`docs/user-guide/wagent-chat.md` 只能把 M11.3.4 描述为计划能力，不得写成当前已可用。
+Scoped API / CLI / Console tests 已通过。真实 LLM-backed intake smoke 尚未执行，
+因此不能把 LLM-backed acceptance 标记为通过。
+
+当前人工测试暴露出的“小白用户裸 URL + 下一句学习”上下文恢复问题不作为
+M11.3.4 阻塞项，已转入 11.3.5 Chat Context Recovery UX。

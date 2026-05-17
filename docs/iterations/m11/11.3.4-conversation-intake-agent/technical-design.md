@@ -1,8 +1,19 @@
 # 技术设计（Technical Design）
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：implementation complete（scoped tests passed, real LLM smoke pending）
 
-## 当前状态
+## 实现收口状态
+
+M11.3.4 已完成基础设施实现并提交：`a08d434 feat: add conversation intake provenance tracing`。
+实现覆盖 ConversationIntakeService、ConversationIntakeResult schema、LLM-backed provider
+入口、deterministic fallback、pending intake guardrails、sensitive redaction、response
+provenance、redacted LLM trace 和 Conversation History detail 展示。
+
+真实 LLM-backed smoke 尚未执行，因此本设计的真实 LLM acceptance 仍然 pending。
+用户裸 URL 后再说“学习”的上下文恢复体验不属于本包收口范围，转入
+11.3.5 Chat Context Recovery UX。
+
+## 实现前状态记录
 
 当前 `wagent chat` 的 interactive chat runtime 主要通过 deterministic parser 和 regex 处理用户输入：
 

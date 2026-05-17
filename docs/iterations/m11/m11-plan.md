@@ -1410,11 +1410,11 @@ wagent chat
 
 ## 11.3.4 · Conversation Intake Agent
 
-状态：ready_for_implementation（docs review passed, implementation not started）。
+状态：implementation complete（scoped tests passed, real LLM smoke pending）。
 
 目标：补齐 `wagent chat` 的自然语言入口层。M11.3.3 已经让用户可以通过
 product-test-site 完成产品级学习和执行 smoke，但当前语言入口仍主要靠 deterministic
-parser / regex / alias 匹配。11.3.4 定义 Conversation Intake Agent / 对话理解 Agent，
+parser / regex / alias 匹配。11.3.4 定义并实现 Conversation Intake Agent / 对话理解 Agent，
 把用户自然语言转成 schema-constrained intent / target / action / slots / missing fields，
 再交给 Conversation Orchestrator 校验和执行。
 
@@ -1457,6 +1457,17 @@ parser / regex / alias 匹配。11.3.4 定义 Conversation Intake Agent / 对话
   LLM-intake acceptance passed。
 - 非 `interactive_chat` developer workflow 继续保持原 preview / confirmation 路径。
 
+实现收口：
+
+- Commit：`a08d434 feat: add conversation intake provenance tracing`。
+- 已实现 ConversationIntakeService、ConversationIntakeResult schema、LLM-backed provider entry、
+  deterministic fallback、pending intake guardrails、sensitive redaction、response provenance、
+  redacted LLM trace 和 Conversation History detail 展示。
+- Scoped tests passed：API 101 passed、CLI 13 passed、Console ConversationHistoryDetailPage
+  169 tests passed、scoped ruff passed、`git diff --check` clean。
+- 未执行真实 LLM-backed smoke，因此 LLM-intake acceptance 仍 pending。
+- 人工发现的裸 URL + “学习”上下文恢复问题转入 11.3.5。
+
 执行包目录：
 
 - `docs/iterations/m11/11.3.4-conversation-intake-agent/`
@@ -1469,6 +1480,45 @@ parser / regex / alias 匹配。11.3.4 定义 Conversation Intake Agent / 对话
 - 不做 M12 recovery / retry / abort。
 - 不做真实业务系统适配。
 - 不做完整风险 / consent policy。
+
+## 11.3.5 · Chat Context Recovery UX
+
+状态：proposed（docs generated, implementation not started）。
+
+目标：补齐小白用户的聊天上下文恢复体验。M11.3.4 解决了自然语言 intake 和
+provenance / trace 基础设施，但人工测试暴露出 `wagent chat` 对裸 URL 和短句续接仍像命令解析器。
+
+失败样例：
+
+```text
+You > http://localhost:5176/workspace-login
+WAgent > 我会打开浏览器执行：http://localhost:5176/workspace-login。
+WAgent > 还没学过这个站点或页面，需要先学习。
+You > 学习
+WAgent > 我会打开浏览器执行：学习。
+```
+
+关键契约：
+
+- 裸 URL 保存为 `pending_target`，不得直接 execute。
+- `pending_target` 是代码侧 session memory，不是 LLM 自己记忆。
+- “学习”“登录”“进入工作台”等短句可以引用 pending target。
+- no-path 结果应主动引导学习，而不是冷拒绝。
+- CLI 对模糊输入显示中性 loading，不提前猜测“执行”。
+- Intake context 增加 pending target、recent context summary、last mentioned URL 和 last no-path reason。
+- Conversation Orchestrator 负责合并和清理 pending state，LLM 只提供语义理解。
+- 非 `interactive_chat` developer workflow 不变。
+
+执行包目录：
+
+- `docs/iterations/m11/11.3.5-chat-context-recovery-ux/`
+
+非目标：
+
+- 不新增内部 Agent。
+- 不让 LLM 操作浏览器。
+- 不做 M12 recovery / retry / abort。
+- 不做全局 LearnedPath 自动召回。
 
 ## Later M11.x · Page Context Bridge Decision Point
 

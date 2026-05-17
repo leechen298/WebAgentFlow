@@ -249,11 +249,13 @@ M11.3 把 runtime conversation 底座收束成面向普通用户的 `wagent chat
   history / debug surface，以及 CLI resume / list / history 支持。
 - **11.3.3 Product-Level Chat Test Site Separation**：accepted；product-test-site
   与 validation-site 分离，产品级 chat learning 不再依赖 validation specs / assertions。
-- **11.3.4 Conversation Intake Agent / 对话理解 Agent**：proposed；新增
-  schema-constrained 自然语言入口角色，在 Conversation Orchestrator 校验前理解用户
-  intent、target、action、slots 和 missing information；同时要求 conversation history
-  detail 展示每条 WAgent 回复由代码还是内部 Agent 生成，并在涉及 LLM 时展示脱敏后的
-  provider / model / raw trace。
+- **11.3.4 Conversation Intake Agent / 对话理解 Agent**：implementation complete；
+  新增 schema-constrained 自然语言入口、deterministic fallback、guardrails、
+  response provenance 和脱敏 LLM trace history。Scoped tests passed；真实
+  LLM-backed smoke 仍 pending。
+- **11.3.5 Chat Context Recovery UX / 聊天上下文恢复体验**：proposed；把裸 URL、
+  短句续接、no-path 学习引导、loading / progress 行为归入代码侧 conversation memory
+  和 Orchestrator 用户引导。
 
 M11.3.4 不让 LLM 操作浏览器。LLM 只理解用户语言；代码校验 scope 和执行策略；
 Learning / Replay 服务负责真实浏览器工作。
