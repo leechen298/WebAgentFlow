@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：accepted（implementation review passed, product-level CLI smoke passed）
 
 ## 当前状态（Current State）
 

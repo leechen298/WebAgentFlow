@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：accepted（implementation review passed, product-level CLI smoke passed）
 
 ## 输入
 
@@ -11,7 +11,7 @@
 
 ## 文件 / 模块
 
-实现阶段预计修改：
+已修改：
 
 - `apps/product-test-site/` - 新增产品级 chat 验收站点。
 - root workspace / scripts - 接入 product-test-site dev / build。
@@ -20,13 +20,13 @@
 - tests - 覆盖 product-level learning 不传 `spec_id / scenario`。
 - `docs/user-guide/wagent-chat.md` - 实现后把 product-test-site 从“计划”更新为“可用”。
 
-文档阶段已创建 11.3.3 文档包并更新索引 / 用户指南。当前状态为待开发；
-后续工作应从“实现阶段”开始。
+文档阶段已创建 11.3.3 文档包并更新索引 / 用户指南。实现阶段已完成并通过
+product-level CLI smoke。
 
 ## 步骤
 
 1. 文档阶段：创建 11.3.3 七件套。
-   - 状态已切到 `ready_for_implementation`。
+   - 文档审核后进入实现阶段，当前已完成实现收口。
    - 写清 validation-site 与 product-test-site 边界。
    - 写清 11.3.2 编号已占用。
 
@@ -81,15 +81,15 @@
 
 ## 复核清单（Review Checklist）
 
-- [ ] 11.3.3 不覆盖 11.3.2。
-- [ ] 11.2.4.2 仍属于 M11.2 validation fixture 体系。
-- [ ] 用户指南没有回退到只写 `source .venv/bin/activate && wagent chat`。
-- [ ] product-test-site 不复用 validation specs / assertions。
-- [ ] product-test-site 已接入根目录 `pnpm run dev`。
-- [ ] product-level learning 不传 `spec_id / scenario`。
-- [ ] product-level learning 不再限制为 `/login`。
-- [ ] 学习和执行都以用户输入或当前 session 已学习的 target URL 为边界。
-- [ ] 未学习过的站点 / 页面返回用户级反馈，不跨站点命中历史 LearnedPath。
-- [ ] 修改或删除 `login.assertions.json` 不影响 product-test-site learning。
-- [ ] validation-site 原有 verify / smoke 能力不被破坏。
-- [ ] 实际验证证据记录到 `review.md`，未运行项写明原因。
+- [x] 11.3.3 不覆盖 11.3.2。
+- [x] 11.2.4.2 仍属于 M11.2 validation fixture 体系。
+- [x] 用户指南没有回退到只写 `source .venv/bin/activate && wagent chat`。
+- [x] product-test-site 不复用 validation specs / assertions。
+- [x] product-test-site 已接入根目录 `pnpm run dev`。
+- [x] product-level learning 不传 `spec_id / scenario`。
+- [x] product-level learning 不再限制为 `/login`。
+- [x] 学习和执行都以用户输入或当前 session 已学习的 target URL 为边界。
+- [x] 未学习过的站点 / 页面返回用户级反馈，不跨站点命中历史 LearnedPath。
+- [x] 修改或删除 `login.assertions.json` 不影响 product-test-site learning。
+- [x] validation-site 原有 verify / smoke 能力不被破坏。
+- [x] 实际验证证据记录到 `review.md`，未运行项写明原因。

@@ -1350,23 +1350,23 @@ wagent chat
 
 ## 11.3.3 · Product-Level Chat Test Site Separation
 
-状态：ready for implementation（docs review passed, implementation not started）。
+状态：accepted（implementation review passed, product-level CLI smoke passed）。
 
 目标：把 `validation-site` 工程验证靶场和 `wagent chat` 产品级人工验收靶场拆开。
 `validation-site` 继续保留 specs / assertions / pass_gate / scorecard /
-`verify-scenario` 等 deterministic regression 能力；后续新增 `product-test-site`
+`verify-scenario` 等 deterministic regression 能力；新增 `product-test-site`
 用于验证普通用户通过 `wagent chat` 提供 URL 和必要输入，系统观察页面、学习操作、
 沉淀 LearnedPath，并在同一聊天中执行已学操作。
 
-本包文档已通过审核并切到待开发状态。当前尚未实现 `apps/product-test-site`，
-也不修改 11.3.2 或迁移 `11.2.4.2-single-page-basic-business-pages`。
+本包已实现 `apps/product-test-site`，并通过 product-level CLI smoke。它不修改
+11.3.2，也不迁移 `11.2.4.2-single-page-basic-business-pages`。
 
 关键契约：
 
 - `validation-site` 继续作为工程验证靶场，不删除、不弱化、不重命名。
-- 后续产品级验收站点推荐新增 `apps/product-test-site`，package name 为
+- 产品级验收站点为 `apps/product-test-site`，package name 为
   `@web-agent-flow/product-test-site`，dev port 为 `5176`。
-- 根目录 `pnpm run dev` 必须同时启动 product-test-site；单独 filter dev 只能作为
+- 根目录 `pnpm run dev` 同时启动 product-test-site；单独 filter dev 只能作为
   开发调试入口，不能替代普通用户一键启动路径。
 - 当前端口边界保持：console `5174`、validation-site `5175`、product-test-site
   `5176`、API `8001`。
@@ -1385,6 +1385,14 @@ wagent chat
 - 修改或删除 `login.assertions.json` 不应影响 product-test-site 学习。
 - 如果实现阶段仍靠 `spec_id=login` / `scenario=valid_credentials` 完成产品级学习，
   或用户没有在聊天中提供输入却从 validation spec 自动拿到输入，不得标记 accepted。
+
+收口证据：
+
+- Product-level `wagent chat` smoke session：`20602dde-1a64-4e81-8784-9b7949a9d866`。
+- Learning run id：`c4564860-5140-4f13-a552-bca6697208df`。
+- LearnedPath id：`03fb1fa1-2589-45cf-8322-4ba3f2809077`。
+- Replay：`replay_status=succeeded`，`final_url=http://localhost:5176/workspace-home`。
+- 未学习 URL fallback：`还没学过这个站点或页面，需要先学习。`。
 
 执行包目录：
 

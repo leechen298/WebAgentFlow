@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：accepted（implementation review passed, product-level CLI smoke passed）
 
 ## 概念 / 边界契约
 
@@ -20,7 +20,7 @@
 
 ### product-test-site
 
-`apps/product-test-site` 是后续实现阶段新增的产品级聊天验收站。它用于验证普通用户通过
+`apps/product-test-site` 是产品级聊天验收站。它用于验证普通用户通过
 `wagent chat` 教 WebAgentFlow 操作网页，而不是验证工程 oracle。
 
 推荐包名和端口：
@@ -31,7 +31,7 @@ dev port: 5176
 base URL: http://localhost:5176
 ```
 
-实现阶段必须把 product-test-site 接入项目一键启动：
+product-test-site 必须接入项目一键启动：
 
 ```bash
 pnpm run dev
@@ -88,7 +88,7 @@ pnpm run dev
 
 本轮不新增 conversation status，不改变 replay status semantics。
 
-后续实现阶段的 acceptance 状态依赖以下红线：
+acceptance 状态依赖以下红线：
 
 - 如果产品级学习仍通过 `spec_id=login / scenario=valid_credentials` 完成，不得 accepted。
 - 如果用户没有在聊天中提供必要输入，而系统从 validation spec 自动拿到输入，不得 accepted。
@@ -101,7 +101,7 @@ pnpm run dev
 
 已完成的文档阶段不修改 schema / API。
 
-后续实现阶段允许：
+实现阶段允许：
 
 - 新增 product-test-site 前端 package。
 - 调整 `wagent chat` 产品级学习入口，使其支持从用户自然语言解析 target URL 和必要输入。
@@ -109,7 +109,7 @@ pnpm run dev
 - 调整 session `learned_actions` 匹配策略，使 learned action 至少按 alias + target URL / site scope
   区分。
 
-后续实现阶段不得：
+实现阶段不得：
 
 - 改变 API response envelope。
 - 为 product-test-site 引入 validation `spec_id / scenario` requirement。
@@ -173,4 +173,4 @@ validation evidence 继续来自：
 
 ## 未决问题
 
-- 无。默认决策：新站点命名为 `apps/product-test-site`，端口 `5176`，作为后续实现阶段输入。
+- 无。新站点命名为 `apps/product-test-site`，端口 `5176`。

@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：accepted（implementation review passed, product-level CLI smoke passed）
 
 ## 目标
 
