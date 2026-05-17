@@ -187,3 +187,74 @@ def test_chat_colon_q_exits_without_dispatch() -> None:
 
     assert rc == 0
     assert client.post.call_count == 1
+
+
+# ── 11.3.2 session id output + resume ─────────────────────────────────────────
+
+
+def test_chat_prints_session_id_after_create() -> None:
+    client = _mock_client()
+    with patch.object(chat_module.httpx, "Client", return_value=client), patch(
+        "builtins.input",
+        side_effect=["exit"],
+    ):
+        stdout = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(StringIO()):
+            rc = wagent_main.main(["chat"])
+
+    assert rc == 0
+    output = stdout.getvalue()
+    assert "WAgent > 本次会话 ID：sess-1。需要调试时可以在管理后台查看。" in output
+
+
+def test_chat_resume_valid_session() -> None:
+    client = MagicMock()
+    client.__enter__ = MagicMock(return_value=client)
+    client.__exit__ = MagicMock(return_value=False)
+    client.get.return_value = _mock_response(
+        {"id": "sess-resume", "status": "idle", "current_mode": "interactive_chat"}
+    )
+    client.post.return_value = _mock_response({"user_response": "ok"})
+
+    with patch.object(chat_module.httpx, "Client", return_value=client), patch(
+        "builtins.input",
+        side_effect=["hello", "exit"],
+    ):
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            rc = wagent_main.main(["chat", "--resume", "sess-resume"])
+
+    assert rc == 0
+    client.get.assert_called_once_with("/conversation/sessions/sess-resume")
+    # Should dispatch to existing session, not create
+    dispatch_calls = [c for c in client.post.call_args_list if "/dispatch" in c.args[0]]
+    assert len(dispatch_calls) == 1
+    assert dispatch_calls[0].args[0] == "/conversation/sessions/sess-resume/dispatch"
+
+
+def test_chat_resume_rejects_non_chat_session() -> None:
+    client = MagicMock()
+    client.__enter__ = MagicMock(return_value=client)
+    client.__exit__ = MagicMock(return_value=False)
+    client.get.return_value = _mock_response(
+        {"id": "sess-replay", "status": "idle", "current_mode": "replay"}
+    )
+
+    stderr = StringIO()
+    with patch.object(chat_module.httpx, "Client", return_value=client), patch(
+        "builtins.input",
+        side_effect=["exit"],
+    ):
+        with redirect_stdout(StringIO()), redirect_stderr(stderr):
+            rc = wagent_main.main(["chat", "--resume", "sess-replay"])
+
+    assert rc == 2
+    assert "not an interactive_chat session" in stderr.getvalue()
+
+
+def test_chat_resume_rejects_headless_combo() -> None:
+    stderr = StringIO()
+    with redirect_stdout(StringIO()), redirect_stderr(stderr):
+        rc = wagent_main.main(["chat", "--resume", "sess-1", "--headless"])
+
+    assert rc == 2
+    assert "--headless only applies when creating a new chat session" in stderr.getvalue()

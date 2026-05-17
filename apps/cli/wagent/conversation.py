@@ -107,6 +107,38 @@ def configure_parser(parser: argparse.ArgumentParser) -> None:
     )
     events_parser.set_defaults(func=_run_events)
 
+    list_parser = sub.add_parser(
+        "list",
+        parents=[shared],
+        help="List conversation sessions.",
+    )
+    list_parser.add_argument(
+        "--mode",
+        dest="current_mode",
+        default=None,
+        help="Filter by current_mode (e.g. interactive_chat).",
+    )
+    list_parser.add_argument(
+        "--status",
+        default=None,
+        help="Filter by status.",
+    )
+    list_parser.add_argument(
+        "--limit",
+        type=int,
+        default=50,
+        help="Max items (default 50).",
+    )
+    list_parser.set_defaults(func=_run_list)
+
+    history_parser = sub.add_parser(
+        "history",
+        parents=[shared],
+        help="Get aggregate history for a session.",
+    )
+    history_parser.add_argument("session_id", help="Session UUID.")
+    history_parser.set_defaults(func=_run_history)
+
 
 # ───────────────────────────────────────────────────────────────────
 # HTTP helpers
@@ -259,6 +291,36 @@ def _run_events(args: argparse.Namespace) -> int:
         f"/conversation/sessions/{args.session_id}/events",
         args,
         params={"limit": args.limit},
+    )
+    if data is None:
+        return 2
+    _output(data, args.pretty)
+    return 0
+
+
+def _run_list(args: argparse.Namespace) -> int:
+    params: dict[str, Any] = {"limit": args.limit}
+    if args.current_mode is not None:
+        params["current_mode"] = args.current_mode
+    if args.status is not None:
+        params["status"] = args.status
+    data = _api_request(
+        "get",
+        "/conversation/sessions",
+        args,
+        params=params,
+    )
+    if data is None:
+        return 2
+    _output(data, args.pretty)
+    return 0
+
+
+def _run_history(args: argparse.Namespace) -> int:
+    data = _api_request(
+        "get",
+        f"/conversation/sessions/{args.session_id}/history",
+        args,
     )
     if data is None:
         return 2

@@ -302,3 +302,73 @@ def test_verify_still_works_after_conversation_added() -> None:
     assert rc == 0
     parsed = json.loads(stdout.getvalue())
     assert parsed["run_id"] == "r1"
+
+
+# ── 11.3.2 conversation list / history ────────────────────────────────────────
+
+
+def test_list_calls_get_sessions_with_params() -> None:
+    client = _mock_client(
+        data={
+            "items": [
+                {
+                    "id": "s1",
+                    "status": "idle",
+                    "current_mode": "interactive_chat",
+                    "message_count": 2,
+                    "event_count": 1,
+                }
+            ]
+        }
+    )
+    with patch.object(conv_module.httpx, "Client", return_value=client):
+        stdout = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(StringIO()):
+            rc = _run(
+                ["list", "--mode", "interactive_chat", "--status", "idle", "--limit", "10"]
+            )
+
+    assert rc == 0
+    client.get.assert_called_once()
+    call = client.get.call_args
+    assert call.args[0] == "/conversation/sessions"
+    assert call.kwargs["params"] == {
+        "current_mode": "interactive_chat",
+        "status": "idle",
+        "limit": 10,
+    }
+    parsed = json.loads(stdout.getvalue())
+    assert parsed["items"][0]["id"] == "s1"
+
+
+def test_history_calls_get_history() -> None:
+    client = _mock_client(
+        data={
+            "session": {"id": "s1", "status": "idle"},
+            "messages": [],
+            "events": [],
+            "learned_actions": [],
+            "learning_runs": [],
+            "replay_summaries": [],
+            "raw": {},
+        }
+    )
+    with patch.object(conv_module.httpx, "Client", return_value=client):
+        stdout = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(StringIO()):
+            rc = _run(["history", "s1"])
+
+    assert rc == 0
+    client.get.assert_called_once_with("/conversation/sessions/s1/history")
+    parsed = json.loads(stdout.getvalue())
+    assert parsed["session"]["id"] == "s1"
+
+
+def test_list_api_error_returns_2() -> None:
+    client = _mock_client(status_code=500, data=None)
+    with patch.object(conv_module.httpx, "Client", return_value=client):
+        stderr = StringIO()
+        with redirect_stdout(StringIO()), redirect_stderr(stderr):
+            rc = _run(["list"])
+
+    assert rc == 2

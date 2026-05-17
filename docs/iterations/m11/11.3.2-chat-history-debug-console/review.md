@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：ready_for_implementation
+状态：implementation complete（implementation review passed, UI smoke pending）
 
 ## 2026-05-17 设计初始化（Design Draft）
 
@@ -13,6 +13,12 @@
 - Reviewer：User
 - Decision：passed_with_minor_changes
 - Notes：文档可作为 M11.3.2 的需求 / 设计输入进入实现阶段。需要把 Console manual route smoke 调整为最终验收必需，补充 `learning_runs` / `replay_summaries` normalized shape，并在 contract 明确 session list 默认 `updated_at desc` 及时间过滤边界。
+
+## 2026-05-17 实现评审（Implementation Review）
+
+- Reviewer：Codex external reviewer
+- Decision：passed_with_ui_smoke_pending
+- Notes：API / CLI / Console implementation matched the scoped contract after review fixes. Final acceptance is still blocked on MANUAL-1 Console route smoke.
 
 ## 用户反馈
 
@@ -41,7 +47,7 @@
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
-- None. 当前为文档生成阶段，尚未进入实现。
+- Console manual route smoke 尚未执行，因此当前状态只能是 implementation complete / UI smoke pending，不能写 accepted。
 
 ### WebAgentFlow Live Run 边界（Live Run Boundary）
 
@@ -51,25 +57,26 @@
 
 - E2E：not run。
 - UI smoke：not run。
-- CLI runtime：not run。
-- Codex 仅做本地文档生成和静态文档检查。
+- CLI runtime：CLI pytest passed; interactive product smoke not run。
+- Codex 做了代码 review、scoped pytest 复核和静态检查；未触发 live autonomous run。
 
 ### 验证证据（Validation Evidence）
 
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
 |---|---|---|---:|---|---|---|
 | `git diff --check` | no whitespace errors | no output | 0 | Pass | local command output | 文档生成后执行 |
+| `../../.venv/bin/pytest tests/test_conversation.py tests/test_chat.py -q` from `apps/cli` | CLI scoped tests pass | `30 passed in 0.08s` | 0 | Pass | local command output | M11.3.2 CLI surface |
+| `PYTHONPATH=. ../../.venv/bin/pytest tests/test_conversation_api.py tests/test_conversation_repo.py -q` from `apps/api` | M11.3.2 API / repo tests pass, known baseline failures documented | `4 failed, 88 passed in 0.60s` | 1 | Partial | local command output | 4 failures are existing dispatch replay tests, not introduced by history/debug surface |
 
 ### 未运行 / 未验证（Not Run / Unverified）
 
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
-| API tests | 只生成迭代文档，未实现 API | 实现阶段必须补 |
-| CLI tests | 只生成迭代文档，未实现 CLI | 实现阶段必须补 |
-| Console tests | 只生成迭代文档，未实现 Console | 实现阶段必须补 |
-| UI smoke | 文档阶段不打开 Console 页面 | 实现阶段可选执行并记录 |
+| API full green | scoped run still has 4 known dispatch replay baseline failures | Do not claim API pytest is fully green until baseline is fixed or excluded with rationale |
+| Console tests | Implementer reported Vitest / type-check clean; not rerun during final commit prep | Preserve report as implementation evidence; rerun if final acceptance needs fresh proof |
+| UI smoke | Console route smoke not run | Required before final acceptance |
 | live autonomous run | 本轮不需要也不允许默认触发 | 无；本轮是 history read/debug surface |
 
 ### 后续事项（Follow-ups）
 
-- 设计 review 通过后，按 `plan.md` 进入实现。
+- 执行 MANUAL-1：启动产品服务并真实打开 `/conversation/history` 和详情页，记录 route smoke evidence 后才可进入 accepted。

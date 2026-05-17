@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：ready_for_implementation
+状态：implementation complete（implementation review passed, UI smoke pending）
 
 ## 适用条件
 

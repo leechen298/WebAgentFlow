@@ -17,6 +17,8 @@ describe('router', () => {
       'exploration-autonomous-history',
       'exploration-autonomous-run-detail',
       'exploration-learned-paths',
+      'conversation-history',
+      'conversation-history-detail',
     ]));
   });
 

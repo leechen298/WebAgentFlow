@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.conversation import ConversationEvent, ConversationMessage, ConversationSession
@@ -42,6 +42,61 @@ class ConversationRepository:
 
     def get_session(self, session_id: str) -> ConversationSession | None:
         return self.session.get(ConversationSession, session_id)
+
+    def list_sessions(
+        self,
+        current_mode: str | None = None,
+        status: str | ConversationStatus | None = None,
+        updated_from: datetime | None = None,
+        updated_to: datetime | None = None,
+        limit: int = 50,
+    ) -> list[ConversationSession]:
+        stmt = (
+            select(ConversationSession)
+            .order_by(ConversationSession.updated_at.desc())
+            .limit(limit)
+        )
+        if current_mode is not None:
+            stmt = stmt.where(ConversationSession.current_mode == current_mode)
+        if status is not None:
+            status_value = _validate_enum_value("status", status, ConversationStatus)
+            stmt = stmt.where(ConversationSession.status == status_value)
+        if updated_from is not None:
+            stmt = stmt.where(ConversationSession.updated_at >= updated_from)
+        if updated_to is not None:
+            stmt = stmt.where(ConversationSession.updated_at <= updated_to)
+        return list(self.session.scalars(stmt).all())
+
+    def count_messages(self, session_id: str) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(ConversationMessage)
+            .where(ConversationMessage.session_id == session_id)
+        )
+        return self.session.scalar(stmt) or 0
+
+    def count_events(self, session_id: str) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(ConversationEvent)
+            .where(ConversationEvent.session_id == session_id)
+        )
+        return self.session.scalar(stmt) or 0
+
+    def get_last_message_by_role(
+        self, session_id: str, role: str | ConversationRole
+    ) -> ConversationMessage | None:
+        role_value = _validate_enum_value("role", role, ConversationRole)
+        stmt = (
+            select(ConversationMessage)
+            .where(
+                ConversationMessage.session_id == session_id,
+                ConversationMessage.role == role_value,
+            )
+            .order_by(ConversationMessage.created_at.desc())
+            .limit(1)
+        )
+        return self.session.scalar(stmt)
 
     def update_session_status(
         self,

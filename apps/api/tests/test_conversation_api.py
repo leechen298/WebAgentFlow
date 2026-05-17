@@ -991,3 +991,221 @@ def test_dispatch_execute_failed_replay_includes_task_result_reported(
     assert reported["payload"]["verification_outcome"] == "failed"
     assert reported["payload"]["needs_review"] is False
     assert reported["payload"]["no_recovery"] is True
+
+
+# ── 11.3.2 Chat History & Debug Console ───────────────────────────────────────
+
+
+def test_list_sessions_returns_items_sorted_by_updated_at_desc(
+    client: TestClient,
+) -> None:
+    # Create two sessions with different modes
+    s1 = client.post(
+        "/conversation/sessions",
+        json={"current_mode": "interactive_chat", "metadata": {"a": 1}},
+    ).json()["data"]
+    s2 = client.post(
+        "/conversation/sessions",
+        json={"current_mode": "interactive_chat", "metadata": {"b": 2}},
+    ).json()["data"]
+
+    resp = client.get("/conversation/sessions")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert "items" in data
+    ids = [item["id"] for item in data["items"]]
+    assert s2["id"] in ids
+    assert s1["id"] in ids
+    # Most recently updated first
+    assert ids.index(s2["id"]) < ids.index(s1["id"])
+
+
+def test_list_sessions_filters_by_current_mode(client: TestClient) -> None:
+    s_chat = client.post(
+        "/conversation/sessions",
+        json={"current_mode": "interactive_chat"},
+    ).json()["data"]
+    s_replay = client.post(
+        "/conversation/sessions",
+        json={"current_mode": "replay"},
+    ).json()["data"]
+
+    resp = client.get("/conversation/sessions?current_mode=interactive_chat")
+    assert resp.status_code == 200
+    ids = [item["id"] for item in resp.json()["data"]["items"]]
+    assert s_chat["id"] in ids
+    assert s_replay["id"] not in ids
+
+
+def test_list_sessions_filters_by_status(client: TestClient) -> None:
+    s = client.post("/conversation/sessions", json={}).json()["data"]
+    # Default status is idle
+    resp = client.get("/conversation/sessions?status=idle")
+    assert resp.status_code == 200
+    ids = [item["id"] for item in resp.json()["data"]["items"]]
+    assert s["id"] in ids
+
+    resp = client.get("/conversation/sessions?status=task_intake")
+    assert resp.status_code == 200
+    ids = [item["id"] for item in resp.json()["data"]["items"]]
+    assert s["id"] not in ids
+
+
+def test_list_sessions_respects_limit(client: TestClient) -> None:
+    for _ in range(3):
+        client.post("/conversation/sessions", json={})
+
+    resp = client.get("/conversation/sessions?limit=2")
+    assert resp.status_code == 200
+    assert len(resp.json()["data"]["items"]) == 2
+
+
+def test_list_sessions_limit_out_of_range_returns_422(client: TestClient) -> None:
+    resp = client.get("/conversation/sessions?limit=0")
+    assert resp.status_code == 422
+
+    resp = client.get("/conversation/sessions?limit=101")
+    assert resp.status_code == 422
+
+
+def test_list_sessions_summary_fields(client: TestClient) -> None:
+    session_id = _create_session(client, current_mode="interactive_chat")
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "user", "content": "hello"},
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "system", "content": "ack"},
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={"type": "state_changed", "payload": {}},
+    )
+
+    resp = client.get("/conversation/sessions?current_mode=interactive_chat")
+    assert resp.status_code == 200
+    item = resp.json()["data"]["items"][0]
+    assert item["id"] == session_id
+    assert item["message_count"] == 2
+    assert item["event_count"] == 1
+    assert item["last_user_message"] == "hello"
+    assert item["last_agent_message"] is None
+    assert item["learned_action_count"] == 0
+
+
+def test_list_sessions_with_learned_actions(client: TestClient) -> None:
+    session_id = client.post(
+        "/conversation/sessions",
+        json={
+            "current_mode": "interactive_chat",
+            "metadata": {
+                "learned_actions": [
+                    {
+                        "alias": "登录",
+                        "learned_path_id": "path-1",
+                        "target_url": "http://localhost:5175/login",
+                        "page_template": "/login",
+                        "scenario": "valid_credentials",
+                    }
+                ]
+            },
+        },
+    ).json()["data"]["id"]
+
+    resp = client.get("/conversation/sessions")
+    assert resp.status_code == 200
+    item = [i for i in resp.json()["data"]["items"] if i["id"] == session_id][0]
+    assert item["learned_action_count"] == 1
+    assert item["learned_actions"][0]["alias"] == "登录"
+
+
+def test_get_history_returns_aggregate_payload(client: TestClient) -> None:
+    session_id = _create_session(client, current_mode="interactive_chat")
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={"role": "user", "content": "msg1"},
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={"type": "state_changed", "payload": {"to": "task_intake"}},
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/history")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["session"]["id"] == session_id
+    assert len(data["messages"]) == 1
+    assert len(data["events"]) == 1
+    assert data["learned_actions"] == []
+    assert data["learning_runs"] == []
+    assert data["replay_summaries"] == []
+    assert "raw" in data
+    assert "session" in data["raw"]
+
+
+def test_get_history_extracts_learning_runs(client: TestClient) -> None:
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={
+            "type": "chat_learning_completed",
+            "payload": {
+                "run_id": "run-1",
+                "new_learned_path_id": "path-1",
+                "summary": "学会了登录",
+            },
+        },
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/history")
+    assert resp.status_code == 200
+    runs = resp.json()["data"]["learning_runs"]
+    assert len(runs) == 1
+    assert runs[0]["run_id"] == "run-1"
+    assert runs[0]["learned_path_id"] == "path-1"
+    assert runs[0]["status"] == "learned"
+    assert runs[0]["summary"] == "学会了登录"
+
+
+def test_get_history_extracts_replay_summaries_from_replay_payload(
+    client: TestClient,
+) -> None:
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={
+            "type": "chat_execution_completed",
+            "payload": {
+                "replay": {
+                    "learned_path_id": "path-1",
+                    "replay_status": "succeeded",
+                    "summary": "replay ok",
+                }
+            },
+        },
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/history")
+    assert resp.status_code == 200
+    summaries = resp.json()["data"]["replay_summaries"]
+    assert len(summaries) == 1
+    assert summaries[0]["learned_path_id"] == "path-1"
+    assert summaries[0]["status"] == "succeeded"
+
+
+def test_get_history_unknown_session_returns_404(client: TestClient) -> None:
+    resp = client.get("/conversation/sessions/not-a-real-id/history")
+    assert resp.status_code == 404
+
+
+def test_get_history_empty_session(client: TestClient) -> None:
+    session_id = _create_session(client)
+    resp = client.get(f"/conversation/sessions/{session_id}/history")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["messages"] == []
+    assert data["events"] == []
+    assert data["learned_actions"] == []
+    assert data["learning_runs"] == []
+    assert data["replay_summaries"] == []

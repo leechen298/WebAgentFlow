@@ -39,18 +39,49 @@ def configure_parser(parser: argparse.ArgumentParser) -> None:
         default=False,
         help="Run browser in headless mode (no visible window).",
     )
+    parser.add_argument(
+        "--resume",
+        dest="resume_session_id",
+        default=None,
+        help="Resume an existing interactive_chat session by ID.",
+    )
     parser.set_defaults(func=run)
 
 
 def run(args: argparse.Namespace) -> int:
     api_base = args.api_base.rstrip("/")
     headless = bool(args.headless)
+    resume_session_id = args.resume_session_id
+
+    if resume_session_id is not None and headless:
+        print(
+            "wagent chat: --headless only applies when creating a new chat session. "
+            "Use --resume without --headless.",
+            file=sys.stderr,
+        )
+        return 2
+
     try:
         with httpx.Client(base_url=api_base, timeout=float(args.timeout)) as client:
-            session = _create_session(client, headless=headless)
-            if session is None:
-                return 2
-            session_id = session["id"]
+            if resume_session_id is not None:
+                session = _get_session(client, resume_session_id)
+                if session is None:
+                    return 2
+                if session.get("current_mode") != "interactive_chat":
+                    print(
+                        f"wagent chat: session {resume_session_id} is not an "
+                        f"interactive_chat session (current_mode={session.get('current_mode')}).",
+                        file=sys.stderr,
+                    )
+                    return 2
+                session_id = session["id"]
+                headless = _session_headless(session)
+            else:
+                session = _create_session(client, headless=headless)
+                if session is None:
+                    return 2
+                session_id = session["id"]
+                _print_agent(f"本次会话 ID：{session_id}。需要调试时可以在管理后台查看。")
             _print_agent(_WELCOME)
             while True:
                 try:
@@ -104,6 +135,31 @@ def _create_session(
             },
         },
     )
+
+
+def _session_headless(session: dict[str, Any]) -> bool:
+    metadata = session.get("metadata") or {}
+    return metadata.get("browser_visibility") == "headless"
+
+
+def _get_session(client: httpx.Client, session_id: str) -> dict[str, Any] | None:
+    response = client.get(f"/conversation/sessions/{session_id}")
+    if response.status_code >= 400:
+        print(
+            f"wagent chat: API returned {response.status_code} - "
+            f"{response.text[:300]}",
+            file=sys.stderr,
+        )
+        return None
+    envelope = response.json()
+    if envelope.get("code") != 0:
+        print(
+            f"wagent chat: API error code={envelope.get('code')} "
+            f"msg={envelope.get('msg')!r}",
+            file=sys.stderr,
+        )
+        return None
+    return envelope.get("data")
 
 
 def _dispatch(

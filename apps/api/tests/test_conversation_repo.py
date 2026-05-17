@@ -358,3 +358,59 @@ def test_model_collected_in_metadata() -> None:
     event_tbl = Base.metadata.tables["conversation_events"]
     expected_event = {"id", "session_id", "type", "payload_json", "created_at"}
     assert expected_event.issubset(set(event_tbl.c.keys()))
+
+
+# ── 11.3.2 list_sessions ──────────────────────────────────────────────────────
+
+
+def test_list_sessions_default_sort_by_updated_at_desc(repo: ConversationRepository) -> None:
+    s1 = repo.create_session(current_mode="interactive_chat")
+    s2 = repo.create_session(current_mode="interactive_chat")
+    result = repo.list_sessions()
+    ids = [s.id for s in result]
+    assert ids.index(s2.id) < ids.index(s1.id)
+
+
+def test_list_sessions_filter_by_current_mode(repo: ConversationRepository) -> None:
+    s_chat = repo.create_session(current_mode="interactive_chat")
+    repo.create_session(current_mode="replay")
+    result = repo.list_sessions(current_mode="interactive_chat")
+    assert [s.id for s in result] == [s_chat.id]
+
+
+def test_list_sessions_filter_by_status(repo: ConversationRepository) -> None:
+    s_idle = repo.create_session(initial_status="idle")
+    repo.create_session(initial_status="task_intake")
+    result = repo.list_sessions(status="idle")
+    assert [s.id for s in result] == [s_idle.id]
+
+
+def test_list_sessions_limit(repo: ConversationRepository) -> None:
+    for _ in range(3):
+        repo.create_session()
+    result = repo.list_sessions(limit=2)
+    assert len(result) == 2
+
+
+def test_list_sessions_empty_result(repo: ConversationRepository) -> None:
+    result = repo.list_sessions(current_mode="nonexistent")
+    assert result == []
+
+
+def test_count_messages_and_events(repo: ConversationRepository) -> None:
+    s = repo.create_session()
+    repo.append_message(s.id, "user", "hello")
+    repo.append_message(s.id, "user", "world")
+    repo.append_event(s.id, "state_changed", {})
+    assert repo.count_messages(s.id) == 2
+    assert repo.count_events(s.id) == 1
+
+
+def test_get_last_message_by_role(repo: ConversationRepository) -> None:
+    s = repo.create_session()
+    repo.append_message(s.id, "user", "first")
+    repo.append_message(s.id, "user", "second")
+    last = repo.get_last_message_by_role(s.id, "user")
+    assert last is not None
+    assert last.content == "second"
+    assert repo.get_last_message_by_role(s.id, "agent") is None

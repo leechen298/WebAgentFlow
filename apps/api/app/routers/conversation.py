@@ -5,6 +5,7 @@ Store-level conversation facade plus the 11.0.6 dispatch endpoint.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -19,9 +20,11 @@ from app.schemas.conversation import (
     ConversationDispatchResponse,
     ConversationEventCreateRequest,
     ConversationEventResponse,
+    ConversationHistoryResponse,
     ConversationMessageCreateRequest,
     ConversationMessageResponse,
     ConversationSessionCreateRequest,
+    ConversationSessionListResponse,
     ConversationSessionResponse,
 )
 
@@ -93,6 +96,28 @@ def get_session(
     repo = ConversationRepository(db)
     session = _require_session(repo, session_id)
     return ApiResponse(data=_session_response(session))
+
+
+@router.get("/sessions")
+def list_sessions(
+    db: DbSession,
+    current_mode: str | None = None,
+    status: str | None = None,
+    updated_from: datetime | None = None,
+    updated_to: datetime | None = None,
+    limit: int = Query(default=50, ge=1, le=100),
+) -> ApiResponse[ConversationSessionListResponse]:
+    from app.services.conversation.history import ConversationHistoryService
+
+    svc = ConversationHistoryService(db)
+    result = svc.list_session_summaries(
+        current_mode=current_mode,
+        status=status,
+        updated_from=updated_from,
+        updated_to=updated_to,
+        limit=limit,
+    )
+    return ApiResponse(data=result)
 
 
 # ── Messages ─────────────────────────────────────────────────────────────────
@@ -167,6 +192,20 @@ def list_events(
     _require_session(repo, session_id)
     events = repo.list_events(session_id, limit=limit)
     return ApiResponse(data=[_event_response(e) for e in events])
+
+
+@router.get("/sessions/{session_id}/history")
+def get_history(
+    db: DbSession,
+    session_id: str,
+) -> ApiResponse[ConversationHistoryResponse]:
+    from app.services.conversation.history import ConversationHistoryService
+
+    svc = ConversationHistoryService(db)
+    history = svc.get_history(session_id)
+    if history is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    return ApiResponse(data=history)
 
 
 # ── Dispatch (11.0.6) ────────────────────────────────────────────────────────

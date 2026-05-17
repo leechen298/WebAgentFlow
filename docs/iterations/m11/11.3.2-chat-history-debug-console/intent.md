@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：ready_for_implementation
+状态：implementation complete（implementation review passed, UI smoke pending）
 
 ## 目标
 

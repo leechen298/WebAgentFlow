@@ -230,3 +230,56 @@ class ConversationDispatchResponse(BaseModel):
     allowed: bool
     error: str | None = None
     replay_result: ConversationReplaySummary | None = None
+
+
+# ---------------------------------------------------------------------------
+# 11.3.2 Chat History & Debug Console read-model schemas
+# ---------------------------------------------------------------------------
+
+
+class ConversationSessionSummaryResponse(BaseModel):
+    id: str
+    status: ConversationStatus
+    current_mode: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    message_count: int = 0
+    event_count: int = 0
+    last_user_message: str | None = None
+    last_agent_message: str | None = None
+    learned_action_count: int = 0
+    learned_actions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ConversationSessionListResponse(BaseModel):
+    items: list[ConversationSessionSummaryResponse] = Field(default_factory=list)
+
+
+class ConversationLearningRunSummary(BaseModel):
+    source_event_id: str
+    source_event_type: str
+    run_id: str | None = None
+    learned_path_id: str | None = None
+    status: str | None = None
+    summary: str | None = None
+    raw: dict[str, Any] = Field(default_factory=dict)
+
+
+class ConversationReplayHistorySummary(BaseModel):
+    source_event_id: str
+    source_event_type: str
+    learned_path_id: str | None = None
+    run_id: str | None = None
+    status: str | None = None
+    summary: str | None = None
+    raw: dict[str, Any] = Field(default_factory=dict)
+
+
+class ConversationHistoryResponse(BaseModel):
+    session: ConversationSessionResponse
+    messages: list[ConversationMessageResponse] = Field(default_factory=list)
+    events: list[ConversationEventResponse] = Field(default_factory=list)
+    learned_actions: list[dict[str, Any]] = Field(default_factory=list)
+    learning_runs: list[ConversationLearningRunSummary] = Field(default_factory=list)
+    replay_summaries: list[ConversationReplayHistorySummary] = Field(default_factory=list)
+    raw: dict[str, Any] = Field(default_factory=dict)

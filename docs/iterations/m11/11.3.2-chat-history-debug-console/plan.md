@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：ready_for_implementation
+状态：implementation complete（implementation review passed, UI smoke pending）
 
 ## 输入
 

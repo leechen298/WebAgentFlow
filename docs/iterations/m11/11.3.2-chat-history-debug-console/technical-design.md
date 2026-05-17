@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：ready_for_implementation
+状态：implementation complete（implementation review passed, UI smoke pending）
 
 ## 当前状态（Current State）
 

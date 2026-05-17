@@ -6,6 +6,8 @@ import AutonomousRunHistoryPage from '@/pages/AutonomousRunHistoryPage.vue';
 import AutonomousRunDetailPage from '@/pages/AutonomousRunDetailPage.vue';
 import AutonomousUseCasesPage from '@/pages/AutonomousUseCasesPage.vue';
 import LearnedPathCatalogPage from '@/pages/LearnedPathCatalogPage.vue';
+import ConversationHistoryPage from '@/pages/ConversationHistoryPage.vue';
+import ConversationHistoryDetailPage from '@/pages/ConversationHistoryDetailPage.vue';
 import i18n from '@/i18n';
 
 const router = createRouter({
@@ -65,6 +67,24 @@ const router = createRouter({
           meta: {
             titleKey: 'nav.learnedPaths',
             menuKey: '/exploration/learned-paths',
+          },
+        },
+        {
+          path: 'conversation/history',
+          name: 'conversation-history',
+          component: ConversationHistoryPage,
+          meta: {
+            titleKey: 'nav.conversationHistory',
+            menuKey: '/conversation/history',
+          },
+        },
+        {
+          path: 'conversation/history/:session_id',
+          name: 'conversation-history-detail',
+          component: ConversationHistoryDetailPage,
+          meta: {
+            titleKey: 'nav.conversationHistory',
+            menuKey: '/conversation/history',
           },
         },
       ],

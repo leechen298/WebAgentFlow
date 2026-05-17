@@ -1,6 +1,6 @@
 # 11.3.2 Chat History & Debug Console
 
-状态：ready_for_implementation（docs review passed with minor changes, implementation pending）
+状态：implementation complete（implementation review passed, UI smoke pending）
 里程碑：M11
 类型：code
 

@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：ready_for_implementation
+状态：implementation complete（implementation review passed, UI smoke pending）
 
 ## 概念 / 边界契约
 
