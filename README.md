@@ -204,6 +204,15 @@ CORS_ALLOWED_ORIGINS=http://<your-current-lan-ip>:5174,http://localhost:5174,htt
 
 The Python CLI is installed from `apps/cli` during local setup.
 
+- Ordinary-user chat entry:
+
+  ```bash
+  wagent chat
+  ```
+
+  See [docs/user-guide/wagent-chat.md](docs/user-guide/wagent-chat.md)
+  for the plain-language usage guide.
+
 - Development verification:
 
   ```bash
