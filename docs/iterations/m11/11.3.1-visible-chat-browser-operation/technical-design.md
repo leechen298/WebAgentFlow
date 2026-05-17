@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：proposed
+状态：approved_for_implementation
 
 ## 当前状态（Current State）
 

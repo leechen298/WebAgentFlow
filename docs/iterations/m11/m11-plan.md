@@ -1262,7 +1262,7 @@ wagent chat
 
 ## 11.3.1 · Visible Chat Browser Operation
 
-状态：proposed。
+状态：ready for implementation（docs review passed, code pending）。
 
 目标：让 `wagent chat` 的学习和执行网页操作默认以用户可见的项目内置 Playwright
 Chromium 运行。普通用户可以看到浏览器打开、页面加载、输入、点击和跳转；不希望看到

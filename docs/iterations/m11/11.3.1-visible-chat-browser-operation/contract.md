@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：proposed
+状态：approved_for_implementation
 
 ## 概念 / 边界契约
 

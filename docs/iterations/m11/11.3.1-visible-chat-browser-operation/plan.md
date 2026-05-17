@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：proposed
+状态：approved_for_implementation
 
 ## 输入
 

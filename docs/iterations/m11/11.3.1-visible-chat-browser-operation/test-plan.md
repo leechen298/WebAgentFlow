@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：proposed
+状态：approved_for_implementation
 
 ## 适用条件
 
