@@ -1344,6 +1344,53 @@ wagent chat
 - 不做 M12 recovery / retry / abort / takeover。
 - 不做 stable external M16 CLI / Skill / Tool interface。
 
+## 11.3.3 · Product-Level Chat Test Site Separation
+
+状态：proposed（docs package generated, implementation not started）。
+
+目标：把 `validation-site` 工程验证靶场和 `wagent chat` 产品级人工验收靶场拆开。
+`validation-site` 继续保留 specs / assertions / pass_gate / scorecard /
+`verify-scenario` 等 deterministic regression 能力；后续新增 `product-test-site`
+用于验证普通用户通过 `wagent chat` 提供 URL 和必要输入，系统观察页面、学习操作、
+沉淀 LearnedPath，并在同一聊天中执行已学操作。
+
+本包只生成文档，不实现 `apps/product-test-site`，也不修改 11.3.2 或迁移
+`11.2.4.2-single-page-basic-business-pages`。
+
+关键契约：
+
+- `validation-site` 继续作为工程验证靶场，不删除、不弱化、不重命名。
+- 后续产品级验收站点推荐新增 `apps/product-test-site`，package name 为
+  `@web-agent-flow/product-test-site`，dev port 为 `5176`。
+- 当前端口边界保持：console `5174`、validation-site `5175`、product-test-site
+  `5176`、API `8001`。
+- 第一阶段产品级页面规划为 `/workspace-login`，文案与 validation-site `/login`
+  明显不同：`工作台入口`、`操作员账号`、`访问口令`、`进入工作台`、
+  `工作台首页` / `已进入工作台`。
+- 产品级 `wagent chat` learning path 不应读取
+  `apps/validation-site/specs/*.assertions.json`。
+- 产品级 `wagent chat` learning path 不应传 `spec_id` / `scenario`，也不应从
+  assertions 取输入值。
+- 用户必须通过自然语言提供 URL 和必要输入，例如
+  `地址是 http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456`。
+- 修改或删除 `login.assertions.json` 不应影响 product-test-site 学习。
+- 如果实现阶段仍靠 `spec_id=login` / `scenario=valid_credentials` 完成产品级学习，
+  或用户没有在聊天中提供输入却从 validation spec 自动拿到输入，不得标记 accepted。
+
+执行包目录：
+
+- `docs/iterations/m11/11.3.3-product-chat-test-site-separation/`
+
+非目标：
+
+- 不实现真实业务系统接入。
+- 不实现复杂多页面 workflow、订单查询闭环或完整 slot binding。
+- 不实现用户接管、M12 recovery / retry / abort。
+- 不引入 LLM 复杂意图理解。
+- 不改造 Chat History / Debug Console。
+- 不实现 Visible Browser 本身。
+- 不重构 validation-site。
+
 ## Later M11.x · Page Context Bridge Decision Point
 
 状态：候选决策点，不是已确定执行包。

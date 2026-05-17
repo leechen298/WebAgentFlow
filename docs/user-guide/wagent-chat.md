@@ -18,6 +18,20 @@ http://localhost:5175/login
 
 `/users` 属于后续扩展测试，不作为这份入门指南的通过条件。
 
+## 测试站点边界
+
+当前可用的 `http://localhost:5175` 是 validation-site。它是工程验证靶场，用来做
+deterministic regression、spec / assertions、pass_gate、scorecard 和
+`verify-scenario` 等基础能力验证。
+
+M11.3.3 计划新增独立的 product-test-site，用于产品级 `wagent chat` 人工验收。
+它会和 validation-site 分开，目标是验证普通用户通过聊天提供页面地址和必要输入，
+系统再学习并执行网页操作。
+
+M11.3.3 实现前，product-test-site 还不可用。不要把
+`http://localhost:5176/workspace-login` 当成当前可用入口，也不要把“产品级测试站已可用”
+写入验收结论。
+
 ## 启动前准备
 
 如果这是第一次启动本项目，先按仓库 README 或
