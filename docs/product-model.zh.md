@@ -127,6 +127,26 @@ Planner / 任务路径规划器（legacy: Agent D）、Failure Recovery Agent /
 - `user_demonstration`
 - `reporting_result`
 
+### 2.3 Conversation Intake Agent / 对话理解 Agent
+
+`wagent chat` 在 Conversation Orchestrator 安全路由前，需要一个受控的自然语言
+入口层。这个角色是 **Conversation Intake Agent / 对话理解 Agent**。
+
+它不是浏览器操作器。它不点击、不填表、不调用 Playwright、不选择 LearnedPath，
+也不产出逐步浏览器动作。它只把用户自然语言转成受 schema 约束的结构：
+intent、目标 URL / site origin、action goal、slots、missing fields 和澄清提示。
+
+Conversation Orchestrator 仍然负责 session state、target scope 校验、learned action
+匹配、用户可见文案，以及是否允许 learning 或 replay。Intake 层给出的
+canonical goal 只是匹配辅助，不是执行授权。
+
+第一原则：
+
+```text
+LLM 理解用户说的话。
+代码决定 WebAgentFlow 是否以及如何行动。
+```
+
 ## 3. 页面的三个生命周期阶段
 
 每个页面在 WebAgentFlow 的生命周期里都要经历 3 个固定阶段。功能
@@ -398,6 +418,7 @@ Multi-page workflow composition 是后续能力。M11 MVP 不需要完整覆盖
 | Page Understanding Agent | 页面理解器 | Agent A | L1 | Simplified AST + 截图 | 页面用途描述 |
 | Attempt Evaluation Agent | 尝试评估器 | Agent B | L1 | 尝试日志 + 前后状态 | 单次尝试的 verdict + 异常 |
 | Learning Report Agent*（低优先、表现层）* | 学习报告器 | Agent C | L1 | 整个学习过程 | 给用户看的学习报告 |
+| Conversation Intake Agent | 对话理解 Agent | 无 legacy alias | 运行时对话入口 | 用户消息 + session 摘要 + pending intake + 当前 session learned actions | 结构化 intent / target / action / slots / missing fields |
 | Task Path Planner | 任务路径规划器 | Agent D | L3 | 用户任务 + 学习记录 | 选定的具体路线 |
 | Task Result Reporter | 任务结果汇报器 | Agent E | L3 | 执行结果 | 给用户看的结果 |
 | Failure Recovery Agent | 失败恢复助手 | Agent F | L3（错误） | 错误上下文 + 近期步骤 | 对话记录 + 下一步动作 |
@@ -472,6 +493,11 @@ Teaching Guide Agent / 教学引导器边界：
   `wagent conversation`、Conversation API、Conversation Orchestrator /
   Dispatcher service skeleton、public dispatch endpoint、explicit replay hook
   和 CLI dispatch integration 都已实现。
+- **M11.3.4 conversation intake / 对话理解入口**：proposed。`wagent chat`
+  已有产品入口和 product-test-site smoke 证据，但自然语言入口仍主要依赖
+  deterministic parser / regex。Conversation Intake Agent 计划把用户语言转成
+  schema 校验后的 intent、target、action、slots 和 missing fields，再交给
+  Orchestrator 校验。
 - **L3 task execution / 实际任务执行**：未开工。没有 Task Path Planner /
   任务路径规划器实现，没有 Task Result Reporter / 任务结果汇报器实现，没有
   task-to-path 执行闭环，没有结果验证闭环，也没有恢复对话或 teaching mode。
@@ -489,6 +515,7 @@ Teaching Guide Agent / 教学引导器边界：
 | M10 · Path Asset Foundation / 路径资产基础 | LearnedPath persistence、catalog、replay execution 和 drift detection。 | 不新增 Agent；提供执行底座。 |
 | M11.0 · Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排 | CLI MVP、session state、Conversation Orchestrator、user message routing，以及 confirmation / pause / abort / takeover basics。 | 默认不新增 Agent；随能力落地路由到 Task Path Planner、Task Result Reporter、Failure Recovery Agent、User Abort Handler 和 Teaching Guide Agent。 |
 | M11.1 · Task-to-Path Planning & Execution MVP / 任务到路径规划与执行 MVP | Task Path Planner / Task Result Reporter、LearnedPath retrieval / ranking、slot binding、task result verification MVP、basic artifact capture、risk / consent gate MVP。 | Task Path Planner / 任务路径规划器（legacy: Agent D）；Task Result Reporter / 任务结果汇报器（legacy: Agent E）。 |
+| M11.3.4 · Conversation Intake Agent / 对话理解 Agent | `wagent chat` 的 schema-constrained intake：理解用户语言、target、action、slots 和 missing information，再交给 Orchestrator 校验。 | Conversation Intake Agent / 对话理解 Agent（无 legacy alias）。 |
 | M12 · Recovery & Abort Dialogue / 恢复与中断对话 | Failure recovery、user interrupt handling，以及 continue / replan / rerun / takeover / abandon choices。 | Failure Recovery Agent / 失败恢复助手（legacy: Agent F）；User Abort Handler / 用户中断处理器（legacy: Agent G）。 |
 | M13 · User-Guided Learning, Teaching & Correction / 用户引导学习、教学与纠正 | Visible browser、user demonstration recording、Teaching Guide Agent guidance、highlight / shadow / indicator / tooltip、provenance=user write-back、correction UI。 | Teaching Guide Agent / 教学引导器（legacy: Agent H）；保留用户来源。 |
 | M14 · Learning Quality, Coverage & Negative Knowledge / 学习质量、覆盖与负面知识 | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent、popup controls、custom click-toggle、label extractor expansion、cross-page pattern mining、failure evidence / negative knowledge store。 | Page Understanding Agent / 页面理解器（legacy: Agent A）；Attempt Evaluation Agent / 尝试评估器（legacy: Agent B）；Learning Report Agent / 学习报告器（legacy: Agent C）。 |

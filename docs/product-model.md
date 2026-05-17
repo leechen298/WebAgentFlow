@@ -154,6 +154,30 @@ Example states:
 - `user_demonstration`
 - `reporting_result`
 
+### 2.3 Conversation Intake Agent
+
+`wagent chat` needs a controlled natural-language intake layer before the
+Conversation Orchestrator can route work safely. This role is the
+**Conversation Intake Agent**.
+
+It is not a browser operator. It does not click, fill, call Playwright,
+select a LearnedPath, or produce step-by-step browser actions. Its job is to
+turn a user's natural-language message into a schema-constrained structure:
+intent, target URL / site origin, action goal, slots, missing fields, and
+clarification hints.
+
+The Conversation Orchestrator remains responsible for session state, target
+scope validation, learned-action matching, user-facing wording, and whether
+learning or replay may run. A canonical goal from the intake layer is only a
+matching aid; it is not execution authorization.
+
+First principle:
+
+```text
+The LLM understands what the user said.
+The code decides whether and how WebAgentFlow acts.
+```
+
 ## 3. Three Lifecycle Stages of a Page
 
 Every page goes through three lifecycle stages in WebAgentFlow's
@@ -458,6 +482,7 @@ different inputs, different outputs, different models over time.
 | Page Understanding Agent | Agent A | L1 | Simplified AST + screenshot | Page purpose description |
 | Attempt Evaluation Agent | Agent B | L1 | Attempt log + before/after state | Per-attempt verdict + anomalies |
 | Learning Report Agent *(low priority, presentation)* | Agent C | L1 | Full learning session | User-facing learning report |
+| Conversation Intake Agent | no legacy alias | Runtime conversation intake | User message + session summary + pending intake + session learned actions | Structured intent / target / action / slots / missing fields |
 | Task Path Planner | Agent D | L3 | User task + learned record | Chosen concrete route |
 | Task Result Reporter | Agent E | L3 | Execution outcome | User-facing result |
 | Failure Recovery Agent | Agent F | L3 (error) | Error context + recent steps | Dialogue transcript + next action |
@@ -545,6 +570,12 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
   Conversation API, Conversation Orchestrator / Dispatcher service skeleton,
   public dispatch endpoint, explicit replay hook, and CLI dispatch integration
   are implemented.
+- **M11.3.4 conversation intake**: proposed. `wagent chat` has a product
+  entrypoint and product-test-site smoke evidence, but the natural-language
+  intake layer is still mostly deterministic parser / regex. Conversation
+  Intake Agent is planned to convert user language into schema-validated
+  intent, target, action, slots, and missing fields before Orchestrator
+  validation.
 - **L3 task execution**: not started. No Task Path Planner implementation,
   no Task Result Reporter implementation, no task-to-path execution loop, no
   result verification loop, no recovery dialogue, and no teaching mode.
@@ -563,6 +594,7 @@ task execution:
 | M10 · Path Asset Foundation | LearnedPath persistence, catalog, replay execution, and drift detection. | No new Agent; provides execution substrate. |
 | M11.0 · Runtime Conversation Shell & Agent Orchestration | CLI MVP, session state, Conversation Orchestrator, user message routing, and confirmation / pause / abort / takeover basics. | No new Agent by default; routes to Task Path Planner, Task Result Reporter, Failure Recovery Agent, User Abort Handler, and Teaching Guide Agent as those capabilities land. |
 | M11.1 · Task-to-Path Planning & Execution MVP | Task Path Planner / Task Result Reporter, LearnedPath retrieval / ranking, slot binding, task result verification MVP, basic artifact capture, and risk / consent gate MVP. | Task Path Planner (legacy: Agent D); Task Result Reporter (legacy: Agent E). |
+| M11.3.4 · Conversation Intake Agent | Schema-constrained intake for `wagent chat`: understand user language, target, action, slots, and missing information before Orchestrator validation. | Conversation Intake Agent (no legacy alias). |
 | M12 · Recovery & Abort Dialogue | Failure recovery, user interrupt handling, and continue / replan / rerun / takeover / abandon choices. | Failure Recovery Agent (legacy: Agent F); User Abort Handler (legacy: Agent G). |
 | M13 · User-Guided Learning, Teaching & Correction | Visible browser, user demonstration recording, Teaching Guide Agent guidance, highlight / shadow / indicator / tooltip, provenance=user write-back, and correction UI. | Teaching Guide Agent (legacy: Agent H); preserve user provenance. |
 | M14 · Learning Quality, Coverage & Negative Knowledge | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent, popup controls, custom click-toggle, label extractor expansion, cross-page pattern mining, and failure evidence / negative knowledge store. | Page Understanding Agent (legacy: Agent A); Attempt Evaluation Agent (legacy: Agent B); Learning Report Agent (legacy: Agent C). |

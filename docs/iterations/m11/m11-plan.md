@@ -1408,6 +1408,59 @@ wagent chat
 - 不实现 Visible Browser 本身。
 - 不重构 validation-site。
 
+## 11.3.4 · Conversation Intake Agent
+
+状态：proposed（docs review pending, implementation not started）。
+
+目标：补齐 `wagent chat` 的自然语言入口层。M11.3.3 已经让用户可以通过
+product-test-site 完成产品级学习和执行 smoke，但当前语言入口仍主要靠 deterministic
+parser / regex / alias 匹配。11.3.4 定义 Conversation Intake Agent / 对话理解 Agent，
+把用户自然语言转成 schema-constrained intent / target / action / slots / missing fields，
+再交给 Conversation Orchestrator 校验和执行。
+
+核心原则：
+
+```text
+不是让 LLM 控制浏览器。
+是让 LLM 理解用户说的话。
+```
+
+关键契约：
+
+- 第一阶段 intent 类型为 `learn_operation`、`execute_operation`、
+  `provide_missing_info`、`unknown`。
+- Intake 输出必须通过 JSON / Pydantic schema 校验。
+- `slots[]` 必须通用化，包含 `name`、`semantic_type`、`label_seen`、`value`、
+  `sensitive`、`source`，不只服务登录页。
+- 缺少信息时保存 `pending_intake`，用户下一轮补充信息后合并并继续同一个流程。
+- `pending_intake` 在 learning 成功、用户取消 / exit、新学习目标覆盖或 turns 用尽时清除；
+  schema 校验失败时保留，允许用户重说。
+- `provide_missing_info` 只能在当前 session 存在 `pending_intake` 时生效。
+- Intake Agent 只能提供 `ask_user_message_hint`；最终用户文案由 Conversation
+  Orchestrator 统一生成或过滤。
+- `canonical_goal` 只作为匹配辅助，不是执行授权。
+- Intake output 是 conversation intake evidence，不得写入 LearnedPath 作为页面观察事实、
+  replay result、Supervisor verdict 或 execution proof。
+- `password` / `token` / `access_secret` 等 sensitive slots 在 history / events /
+  debug console / prompt logs 中默认 redacted。
+- malformed JSON、schema 校验失败、低 confidence 或 provider unavailable 时不得触发
+  learning / replay；provider unavailable 可 fallback deterministic parser，但不得标记
+  LLM-intake acceptance passed。
+- 非 `interactive_chat` developer workflow 继续保持原 preview / confirmation 路径。
+
+执行包目录：
+
+- `docs/iterations/m11/11.3.4-conversation-intake-agent/`
+
+非目标：
+
+- 不让 LLM step-by-step 操作浏览器。
+- 不让 LLM 输出 selector / browser actions / learned_path_id 并执行。
+- 不做复杂多页面 workflow。
+- 不做 M12 recovery / retry / abort。
+- 不做真实业务系统适配。
+- 不做完整风险 / consent policy。
+
 ## Later M11.x · Page Context Bridge Decision Point
 
 状态：候选决策点，不是已确定执行包。

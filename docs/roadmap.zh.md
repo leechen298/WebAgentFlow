@@ -233,6 +233,29 @@ engine 执行，在能力范围内验证任务结果，然后汇报结果。
 M11.1 明确不做：隐藏式自主重学、不做逐步 LLM 浏览器控制、不做完整恢复
 对话；失败先返回清晰状态，并交给后续 M12 能力处理。
 
+## M11.3.x —— Interactive Chat Productization / 交互式聊天产品化
+
+M11.3 把 runtime conversation 底座收束成面向普通用户的 `wagent chat` 闭环。
+它仍然是 CLI-first，但用户不应该理解 session、LearnedPath、preview 或 replay
+内部概念，也能教系统操作页面并执行已学操作。
+
+已交付 / 当前包：
+
+- **11.3 Interactive Chat Closed Loop**：accepted；`wagent chat` 创建
+  `interactive_chat` session，学习页面操作，沉淀 LearnedPath，并在同一 session 中执行。
+- **11.3.1 Visible Chat Browser Operation**：implementation complete；chat 学习和执行
+  默认使用项目内置可见 Playwright Chromium，支持 `--headless` opt-out。
+- **11.3.2 Chat History & Debug Console**：implementation complete；补 conversation
+  history / debug surface，以及 CLI resume / list / history 支持。
+- **11.3.3 Product-Level Chat Test Site Separation**：accepted；product-test-site
+  与 validation-site 分离，产品级 chat learning 不再依赖 validation specs / assertions。
+- **11.3.4 Conversation Intake Agent / 对话理解 Agent**：proposed；新增
+  schema-constrained 自然语言入口角色，在 Conversation Orchestrator 校验前理解用户
+  intent、target、action、slots 和 missing information。
+
+M11.3.4 不让 LLM 操作浏览器。LLM 只理解用户语言；代码校验 scope 和执行策略；
+Learning / Replay 服务负责真实浏览器工作。
+
 ## M12 —— Recovery & Abort Dialogue / 恢复与中断对话
 
 M12 把失败和用户中断做成一等产品流程。它依赖 M11.0 conversation shell，

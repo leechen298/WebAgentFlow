@@ -290,6 +290,34 @@ partial refresh、SPA content change、server push、passive DOM mutation 等真
 M11.2 不定义 recovery、retry、abort、user interruption、takeover 或 teaching
 behavior。这些仍属于 v0.2 / M12 或更后续阶段。
 
+## M11.3.x — Interactive Chat Productization
+
+M11.3 turns the runtime conversation substrate into a product-facing
+`wagent chat` loop. It is still CLI-first, but the user should be able to
+teach and run page operations without understanding sessions, LearnedPath,
+preview, or replay internals.
+
+Delivered / current packages:
+
+- **11.3 Interactive Chat Closed Loop** — accepted; `wagent chat` creates an
+  `interactive_chat` session, learns a page operation, persists a LearnedPath,
+  and executes the learned action in the same session.
+- **11.3.1 Visible Chat Browser Operation** — implementation complete; chat
+  learning and replay default to the app-bundled visible Playwright Chromium,
+  with `--headless` opt-out.
+- **11.3.2 Chat History & Debug Console** — implementation complete; conversation
+  history/debug surfaces and CLI resume/list/history support.
+- **11.3.3 Product-Level Chat Test Site Separation** — accepted; product-test-site
+  is separate from validation-site, and product-level chat learning no longer
+  depends on validation specs / assertions.
+- **11.3.4 Conversation Intake Agent** — proposed; adds a schema-constrained
+  natural-language intake role that understands user intent, target, action,
+  slots, and missing information before Conversation Orchestrator validation.
+
+M11.3.4 does not let an LLM operate the browser. The LLM only understands user
+language; code validates scope and execution policy; Learning / Replay services
+perform the browser work.
+
 ## M12 — Recovery & Abort Dialogue
 
 M12 turns failures and user aborts into first-class product flows. It
