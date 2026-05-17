@@ -1,12 +1,12 @@
 # 契约（Contract）
 
-状态：implementation complete, review passed
+状态：implementation complete, review pending
 
 ## 概念 / 边界契约
 
 11.2.4.2 定义并实现 basic business page fixtures 的验收标准。此前 toy-like 实现 build 通过，
 但因业务密度不足被人工 review 否决；当前实现已按 production-like basic fixture contract 重做，
-并通过实现 review。该结论不代表 E2E / autonomous run evidence。
+并等待最终 review / evidence closure。
 
 Basic business page 的含义是：
 

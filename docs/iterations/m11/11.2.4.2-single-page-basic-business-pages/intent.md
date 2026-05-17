@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：implementation complete, review passed
+状态：implementation complete, review pending
 
 ## 目标
 

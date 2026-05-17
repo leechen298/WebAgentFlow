@@ -1,8 +1,16 @@
 # Review
 
-Status: implementation complete, review passed
+Status: implementation complete, review pending
 
 本文档记录 11.2.4.2 Single-page Basic Business Pages 的实现审查和验证证据。
+
+## Status Clarification
+
+11.2.4.2 的代码开发已经完成。当前状态保留为 `implementation complete, review pending`，
+意思是“实现完成，等待最终 review / evidence closure”，不是“待开发”。
+
+不要把本包重新切回 planned / pending implementation；后续开发应进入下一包
+`11.2.4.3 · Single-page Medium Business Pages`。
 
 ## Implementation Summary
 
@@ -46,24 +54,6 @@ Follow-up review fixes applied:
 - settings reset restores fixed initial values instead of last-saved values。
 - settings initial / reset state now uses a clean combination (`notifications=true`, `frequency=daily`,
   `quietHours=false`) so the warning surface is cleared after reset。
-
-## Commit Review Conclusion
-
-Review decision: PASS.
-
-| Commit | Scope | Conclusion |
-|---|---|---|
-| `12b40d9` | 11.2.4.2 review fixes: SMS submit phone validation, stable settings radio anchors, status/doc updates | PASS |
-| `9d1a5c4` | settings initial / reset state cleanup to avoid warning after reset | PASS |
-| `1af0969` | root `package.json` `dev:worker` script fix via `python -m watchfiles` | PASS, independent dev fix |
-
-Notes:
-
-- `12b40d9` and `9d1a5c4` are part of the 11.2.4.2 page implementation review closure.
-- `1af0969` is a valid independent dev script fix and must not be counted as 11.2.4.2
-  code/package status evidence.
-- 11.2.4.2 can remain scoped to frontend-local deterministic basic fixtures; no mock backend,
-  reporter, recovery, E2E, `verify-scenario`, or autonomous run is introduced.
 
 ## Validation Evidence
 

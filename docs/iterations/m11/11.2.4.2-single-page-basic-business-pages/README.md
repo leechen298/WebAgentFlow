@@ -1,6 +1,6 @@
 # 11.2.4.2 · Single-page Basic Business Pages
 
-状态：implementation complete, review passed
+状态：implementation complete, review pending
 里程碑：M11.2
 类型：code
 
@@ -13,7 +13,7 @@ UI-minimal toy fixtures，不符合 WebAgentFlow 自建真实网页验证场景�
 
 当前实现已按本包页面级设计文档重做为 production-like basic fixtures，保留
 `/runtime-observation/basic/*` route namespace 和 shell links。当前状态为代码实现完成，
-review passed，可作为后续 `11.2.4.3 · Single-page Medium Business Pages` 的输入。
+等待最终 review / evidence closure。
 
 ## Redesign Decision
 
@@ -22,8 +22,10 @@ review passed，可作为后续 `11.2.4.3 · Single-page Medium Business Pages` 
 - 7 个 basic routes 已按 production-like 页面标准重做。
 - implementation uses shared shell + per-fixture components。
 - validation-site build 已通过。
-- browser route smoke 已覆盖 7 个 basic routes。
+- 代码开发已完成；当前不是待开发状态。
+- 文档状态仍保留 `review pending`，表示尚未切到最终 `review passed` / accepted。
 - 当前仍不代表 E2E / autonomous run evidence。
+- 仍需 review 确认 browser route smoke 和文档证据是否足够。
 
 新的标准：
 

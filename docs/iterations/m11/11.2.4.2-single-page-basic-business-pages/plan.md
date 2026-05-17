@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：implementation complete, review passed
+状态：implementation complete, review pending
 
 ## Inputs
 
@@ -140,7 +140,7 @@ find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name
 Optional route smoke may be run only if explicitly requested. Do not run E2E / `verify-scenario` /
 autonomous run unless separately requested.
 
-Status: complete; final evidence recorded in `review.md`.
+Status: in progress; record final evidence in `review.md`.
 
 ## Review Checklist
 
