@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：proposed
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 目标
 
@@ -37,11 +37,13 @@
 - 不迁移 `11.2.4.2-single-page-basic-business-pages` 到 11.3；它继续属于 M11.2
   runtime observation fixture 体系。
 - 不覆盖、不重命名、不回收 `11.3.2-chat-history-debug-console`。
-- 本轮不实现 `apps/product-test-site`，只生成文档包。
-- 本轮不实现真实业务系统接入、复杂多页面工作流、M12 recovery、用户接管或
+- 文档生成阶段已完成；实现阶段目标包含新增 `apps/product-test-site`。
+- 本迭代不进入真实业务系统接入、复杂多页面工作流、M12 recovery、用户接管或
   LLM 复杂意图理解。
 
 ## 成功标准
+
+### 文档门禁
 
 - 存在完整 11.3.3 七件套文档包。
 - M11 README / m11-plan 记录 11.3.3，且不改变 11.3.2 编号。
@@ -51,3 +53,13 @@
   `validation-site/specs/*.assertions.json`，不传 `spec_id / scenario`，不从
   assertions 取输入。
 - 文档阶段 `git diff --check` 通过。
+
+### 实现门禁
+
+- 新增独立 product-test-site，并接入根目录 `pnpm run dev`。
+- product-level `wagent chat` learning 从用户自然语言读取 URL 和必要输入。
+- product-level learning 不读取 validation assertions，不传 `spec_id / scenario`。
+- 当前 session learned action 按 target URL / site scope 匹配，未学习过的站点或页面
+  返回用户级反馈。
+- product-test-site build、validation-site regression build 和 product-level chat smoke
+  均有可复查 evidence。

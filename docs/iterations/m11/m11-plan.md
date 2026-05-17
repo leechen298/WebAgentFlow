@@ -1350,7 +1350,7 @@ wagent chat
 
 ## 11.3.3 · Product-Level Chat Test Site Separation
 
-状态：proposed（docs package generated, implementation not started）。
+状态：ready for implementation（docs review passed, implementation not started）。
 
 目标：把 `validation-site` 工程验证靶场和 `wagent chat` 产品级人工验收靶场拆开。
 `validation-site` 继续保留 specs / assertions / pass_gate / scorecard /
@@ -1358,8 +1358,8 @@ wagent chat
 用于验证普通用户通过 `wagent chat` 提供 URL 和必要输入，系统观察页面、学习操作、
 沉淀 LearnedPath，并在同一聊天中执行已学操作。
 
-本包只生成文档，不实现 `apps/product-test-site`，也不修改 11.3.2 或迁移
-`11.2.4.2-single-page-basic-business-pages`。
+本包文档已通过审核并切到待开发状态。当前尚未实现 `apps/product-test-site`，
+也不修改 11.3.2 或迁移 `11.2.4.2-single-page-basic-business-pages`。
 
 关键契约：
 

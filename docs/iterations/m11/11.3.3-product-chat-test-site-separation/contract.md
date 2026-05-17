@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：proposed
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 概念 / 边界契约
 
@@ -99,7 +99,7 @@ pnpm run dev
 
 ## Schema / API 契约
 
-文档阶段不修改 schema / API。
+已完成的文档阶段不修改 schema / API。
 
 后续实现阶段允许：
 

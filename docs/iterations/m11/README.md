@@ -52,7 +52,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3-interactive-chat-closed-loop](./11.3-interactive-chat-closed-loop/) —— Interactive Chat Closed Loop：`wagent chat` 小白用户闭环，当前只覆盖 `/login` happy path。状态：accepted（implementation review passed, manual smoke passed）。
 - [11.3.1-visible-chat-browser-operation](./11.3.1-visible-chat-browser-operation/) —— Visible Chat Browser Operation：`wagent chat` 默认以用户可见的项目内置 Playwright Chromium 学习和执行网页操作，支持 `--headless` opt-out。状态：implementation complete（scoped tests passed, manual visible-browser smoke pending）。
 - [11.3.2-chat-history-debug-console](./11.3.2-chat-history-debug-console/) —— Chat History & Debug Console：补 Conversation session list、aggregate history、Console history 页面、CLI list/history/resume，服务人工测试和 Codex / Kimi Code 调试复用。状态：implementation complete（implementation review passed, UI smoke pending）。
-- [11.3.3-product-chat-test-site-separation](./11.3.3-product-chat-test-site-separation/) —— Product-Level Chat Test Site Separation：拆分 validation-site 工程验证靶场与 product-test-site 产品级 chat 人工验收靶场，避免 validation spec / assertion oracle 污染 `wagent chat` 产品路径。状态：proposed（docs package generated, implementation not started）。
+- [11.3.3-product-chat-test-site-separation](./11.3.3-product-chat-test-site-separation/) —— Product-Level Chat Test Site Separation：拆分 validation-site 工程验证靶场与 product-test-site 产品级 chat 人工验收靶场，避免 validation spec / assertion oracle 污染 `wagent chat` 产品路径。状态：ready for implementation（docs review passed, implementation not started）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护

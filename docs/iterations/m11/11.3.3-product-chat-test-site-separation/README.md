@@ -1,6 +1,6 @@
 # 11.3.3 · Product-Level Chat Test Site Separation
 
-状态：proposed
+状态：ready_for_implementation（docs review passed, implementation not started）
 里程碑：M11
 类型：code
 
@@ -18,7 +18,7 @@
 人工验收。它和 `apps/validation-site` 的工程验证靶场分离，避免
 chat 产品路径被 validation specs、fixed scenario 或 assertion oracle 污染。
 
-本轮只生成文档包，不实现代码。
+文档包已生成并通过审核；当前切到待开发状态。实现阶段尚未开始。
 
 ## 迭代文档
 
@@ -34,13 +34,17 @@ chat 产品路径被 validation specs、fixed scenario 或 assertion oracle 污�
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
 - [x] `review.md` 已记录文档阶段边界和 acceptance blockers。
 
 ## 当前状态
+
+11.3.3 现在是待开发代码型迭代：文档、contract、technical design、test plan
+和 implementation plan 已就绪；下一步可以进入 product-test-site 与 product-level
+learning 的代码实现。当前仍不得标记为 implementation complete 或 accepted。
 
 当前 `validation-site` 继续作为工程验证靶场，保留 specs / assertions /
 pass_gate / scorecard / `verify-scenario`。它不迁移到 11.3。

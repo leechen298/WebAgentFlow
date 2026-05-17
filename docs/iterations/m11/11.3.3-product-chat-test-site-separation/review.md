@@ -1,23 +1,35 @@
 # 复盘 / 评审（Review）
 
-状态：proposed
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 2026-05-17 需求确认
 
 - Reviewer：User / ChatGPT / Codex
-- Decision：approved_for_docs_generation
+- Decision：approved_for_docs_generation（superseded by `ready_for_implementation` below）
 - Notes：
   - 11.3.2 已被 `chat-history-debug-console` 占用，本轮使用 11.3.3。
   - validation-site 是工程验证靶场，不适合作为 product-level chat 验收站。
   - product-test-site 应独立于 validation-site specs / assertions。
   - 11.2.4.2 保持在 M11.2，不迁移。
-  - 本轮只写文档，不实现代码。
+  - 文档生成阶段只写文档，不实现代码；该阶段已完成。
+
+## 2026-05-17 文档审核收口
+
+- Reviewer：User / ChatGPT / Codex
+- Decision：ready_for_implementation
+- Notes：
+  - M11.3.3 文档包、技术设计、测试计划和验收红线已通过审核。
+  - 当前状态切到待开发；下一步可以进入 `apps/product-test-site` 和 product-level
+    `wagent chat` learning 实现。
+  - 代码实现、product-test-site build、`pnpm run dev` 一键启动验证、product-level chat
+    smoke 和 validation-site regression 均尚未执行。
 
 ## 代码评审（Code Review）
 
 - Reviewer：N/A
 - Decision：not_started
-- Notes：本轮为文档生成阶段，尚未实现 product-test-site 或 product-level learning。
+- Notes：文档已进入待开发状态；尚未实现 product-test-site 或 product-level learning。
+  这不是实现门禁，只记录代码评审将在实现完成后进行。
 
 ## 用户反馈
 
@@ -37,6 +49,7 @@
 - 新增 11.3.3 文档包。
 - 更新 M11 README / m11-plan 索引。
 - 更新 `docs/user-guide/wagent-chat.md`，说明 product-test-site 是计划新增能力。
+- 文档审核通过，迭代状态切到待开发。
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
@@ -81,5 +94,6 @@
 
 ### 后续事项（Follow-ups）
 
-- 审核 11.3.3 文档包。
-- 通过后进入 product-test-site 和 product-level learning code implementation。
+- 进入 product-test-site 和 product-level learning code implementation。
+- 实现完成后补 product-test-site build、`pnpm run dev` 一键启动、validation regression
+  和 product-level chat smoke evidence。

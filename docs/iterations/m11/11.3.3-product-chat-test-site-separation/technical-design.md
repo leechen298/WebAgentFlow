@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：proposed
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 当前状态（Current State）
 
@@ -29,7 +29,7 @@
 
 ### Product Test Site
 
-后续实现阶段新增：
+实现阶段新增：
 
 ```text
 apps/product-test-site/
@@ -76,7 +76,7 @@ success: 工作台首页 / 已进入工作台
 
 ### Monorepo Integration
 
-后续实现阶段应：
+实现阶段应：
 
 - 将 `@web-agent-flow/product-test-site` 加入 pnpm workspace。
 - 提供独立 `pnpm --filter @web-agent-flow/product-test-site dev`。
@@ -97,7 +97,7 @@ product      -> http://localhost:5176
 
 ### Chat Learning Mode
 
-后续实现阶段需要引入 product-level learning mode 或等价分支：
+实现阶段需要引入 product-level learning mode 或等价分支：
 
 ```text
 validation-backed learning:
@@ -129,7 +129,7 @@ product-level learning:
 
 ### Target URL / Site Scope Matching
 
-后续实现阶段需要让当前 session 的 `learned_actions` 具备明确 target scope。
+实现阶段需要让当前 session 的 `learned_actions` 具备明确 target scope。
 最小结构继续复用 metadata，但每条 action 必须包含：
 
 ```json
@@ -159,13 +159,13 @@ product-level learning:
 ## 影响面（Affected Surfaces）
 
 | Surface | Changed? | Description | Compatibility notes |
----|---|---|---|
-| API routes | Future | 可能调整 conversation learning handler 分支 | 文档阶段不改 |
+|---|---|---|---|
+| API routes | Implementation | 可能调整 conversation learning handler 分支 | 实现阶段按需调整 |
 | API response schema | No | 不改变 envelope | N/A |
 | Database schema / migration | No | 继续用 LearnedPath / conversation 现有表 | N/A |
-| CLI | Future | product-level utterance parsing / smoke / target URL feedback | 不回退 `.venv/bin/wagent` 入口 |
+| CLI | Implementation | product-level utterance parsing / smoke / target URL feedback | 不回退 `.venv/bin/wagent` 入口 |
 | Console UI | No | 本轮不做 history/debug console | 11.3.2 owns |
-| Conversation events | Future | 可记录 product-level learning mode | 不发明 Agent verdict |
+| Conversation events | Implementation | 可记录 product-level learning mode | 不发明 Agent verdict |
 | Replay execution | No | 已学 path 的 replay 继续复用现有能力 | N/A |
 | Reporter | No | 不接 Task Result Reporter | N/A |
 | Worker / async jobs | No | 同步 dev site | N/A |
@@ -176,12 +176,12 @@ product-level learning:
 
 文档阶段不新增 schema。
 
-后续实现阶段优先复用现有 LearnedPath / conversation metadata。若需要标记 learning source，
+实现阶段优先复用现有 LearnedPath / conversation metadata。若需要标记 learning source，
 优先使用 metadata，不新增 migration。
 
 ## 服务 / 模块设计（Service / Module Design）
 
-后续实现阶段建议把学习入口拆成两个清晰路径：
+实现阶段建议把学习入口拆成两个清晰路径：
 
 - validation-backed：继续服务 `verify-scenario`、validation smoke 和工程回归。
 - product-level：服务 `wagent chat` 普通用户路径，输入来自 utterance。
@@ -261,7 +261,7 @@ no path -> task_intake
 git diff --check
 ```
 
-后续实现阶段：
+实现阶段：
 
 ```bash
 pnpm --filter @web-agent-flow/product-test-site build
