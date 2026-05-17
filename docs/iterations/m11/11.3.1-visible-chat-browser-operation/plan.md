@@ -66,7 +66,7 @@
 
 | Command | Expected proof | Live autonomous verification excluded? | Notes |
 |---|---|---|---|
-| `test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'; .venv/bin/wagent --help` | 项目内 CLI 已安装且包含 `chat` | Yes | smoke 前置检查，不触发浏览器 |
+| CLI entry precheck below | 项目内 CLI 已安装且包含 `chat` | Yes | smoke 前置检查，不触发浏览器 |
 | `cd apps/cli && ../../.venv/bin/pytest tests/test_chat.py tests/test_conversation.py -q` | CLI default visible / headless opt-out / regression | Yes | 不启动真实浏览器 |
 | `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_chat_runtime.py tests/test_conversation_replay_hook.py tests/test_learned_path_replay.py -q` | chat runtime 和 replay headless 参数传递 | Yes | 通过 mock / unit 验证 |
 | `cd apps/api && ../../.venv/bin/ruff check app/services/conversation app/services/learning tests/test_conversation_chat_runtime.py tests/test_conversation_replay_hook.py tests/test_learned_path_replay.py` | API lint clean | Yes | scoped |
@@ -74,6 +74,13 @@
 | `git diff --check` | whitespace clean | Yes | 文档和代码都检查 |
 | `wagent chat` manual smoke | 用户真实看到浏览器打开并操作验收页面 | No | 实现后执行，记录 evidence |
 | `wagent chat --headless` optional smoke | opt-out 不显示浏览器且功能仍可用 | No | 可作为补充 |
+
+CLI entry precheck:
+
+```bash
+test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'
+.venv/bin/wagent --help
+```
 
 ## 复核清单（Review Checklist）
 

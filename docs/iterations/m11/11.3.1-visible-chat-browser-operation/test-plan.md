@@ -27,7 +27,7 @@
 
 | Layer | Scenario | Command / Surface | Expected | Required? | Notes |
 |---|---|---|---|---|---|
-| CLI | CLI-0 reliable local entry | `test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'` and `.venv/bin/wagent --help` | local CLI exists and help lists `chat` | Yes | Must pass before browser smoke |
+| CLI | CLI-0 reliable local entry | CLI entry precheck below | local CLI exists and help lists `chat` | Yes | Must pass before browser smoke |
 | CLI | CLI-1 default visible payload | `apps/cli/tests/test_chat.py` | create-session metadata includes `browser_visibility=visible` | Yes | 不启动真实 API |
 | CLI | CLI-2 headless opt-out payload | `apps/cli/tests/test_chat.py` | `wagent chat --headless` writes `browser_visibility=headless` | Yes | 覆盖 dispatch metadata 审计值 |
 | CLI | CLI-3 ordinary wording | `apps/cli/tests/test_chat.py` | 输出用户可懂的打开浏览器 / 学习 / 执行文案 | Yes | 不暴露 selector / id / LearnedPath |
@@ -40,6 +40,13 @@
 | Docs | DOC-1 doc hygiene | `git diff --check` | no whitespace errors | Yes | 文档阶段也跑 |
 | Manual smoke | MANUAL-1 visible browser operation | `wagent chat` | 用户能看到 Playwright Chromium 打开并执行验收页面操作 | Yes before acceptance | 需要用户或外部测试操作员记录真实观察 |
 | Manual smoke | MANUAL-2 headless opt-out | `wagent chat --headless` | 不显示浏览器，CLI 仍能完成同一验收路径 | Optional | 可作为 regression |
+
+CLI-0 command:
+
+```bash
+test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'
+.venv/bin/wagent --help
+```
 
 ## 人工验收样例（Manual Acceptance Sample）
 

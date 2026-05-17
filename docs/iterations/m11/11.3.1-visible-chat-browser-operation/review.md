@@ -21,6 +21,14 @@
   - Contract / technical design 描述通用 visible browser operation。
   - `test-plan.md` 单独记录当前人工验收页面样例。
 
+## 2026-05-17 文档审查补充
+
+- Reviewer：ChatGPT / Codex
+- Decision：changes_requested
+- Notes：
+  - 已确认远端 `refs/heads/v0.1` 指向 `0b1b276afc9771f112c3fa51f5747a1f5da7a303`。
+  - `test-plan.md` 和 `plan.md` 的 Markdown 表格中不能直接放 `||` 命令，应改为表格外代码块。
+
 ## 代码评审（Code Review）
 
 - Reviewer：N/A
@@ -65,6 +73,7 @@
 | `find docs/iterations/m11/11.3.1-visible-chat-browser-operation -maxdepth 1 -type f -print | sort` | 七件套文档完整 | 7 files present | 0 | pass | README / intent / contract / technical-design / test-plan / plan / review | 文档包完整性 |
 | `rg -n "localhost:5175/login" docs/iterations/m11/11.3.1-visible-chat-browser-operation/{README,intent,contract,technical-design,plan}.md` | 功能文档不包含具体验收 URL | no matches | 1 | pass | concrete URL kept out of capability docs | 具体 URL 留在 `test-plan.md` acceptance sample；`review.md` 只记录本检查 |
 | `git diff --check` | whitespace clean | clean | 0 | pass | no output | 文档阶段检查 |
+| `git ls-remote origin refs/heads/v0.1` | remote v0.1 points at docs entry fix | `0b1b276afc9771f112c3fa51f5747a1f5da7a303` | 0 | pass | remote ref output | 确认 0b1b276 已落到远端 v0.1 |
 
 ### 未运行 / 未验证（Not Run / Unverified）
 
