@@ -1297,6 +1297,53 @@ Chromium 运行。普通用户可以看到浏览器打开、页面加载、输�
 - 不改变 confirmation gate。
 - 不把具体页面写成功能边界。
 
+## 11.3.2 · Chat History & Debug Console
+
+状态：proposed（docs generated, implementation pending）。
+
+目标：为已有 Conversation 持久化补齐产品化 history / debug 入口。当前不是没有聊天记录存储，
+而是有底层 session / message / event store，没有能让用户、开发者、Codex 或 Kimi Code
+方便复查和复用历史会话的看板与 CLI 聚合入口。
+
+本包定位是可观察性和调试入口，不是新执行能力：
+
+```text
+wagent chat
+-> 创建 interactive_chat session
+-> 输出 session id
+-> 后续可在 Console Chat History 看到该 session
+-> 可查看 transcript / events / learned actions / replay evidence / raw JSON
+-> Codex / Kimi Code 可用 history payload 判断上下文
+-> 可通过 wagent conversation send 或 wagent chat --resume 继续调试
+```
+
+关键契约：
+
+- 新增 `GET /conversation/sessions`，支持 `current_mode`、`status`、更新时间范围和
+  `limit` 过滤。
+- 新增 `GET /conversation/sessions/{session_id}/history`，聚合返回 session、messages、
+  events、learned_actions、learning_runs、replay_summaries 和 raw JSON。
+- Console 新增 `/conversation/history` 和 `/conversation/history/:session_id`。
+- 详情页至少包含 Transcript、Events、Learned Actions、Replay / Learning Evidence、
+  Raw JSON。
+- CLI 新增 `wagent conversation list` 和 `wagent conversation history`。
+- `wagent chat` 创建新 session 后输出 session id。
+- `wagent chat --resume <session_id>` 只能 resume 既有 `interactive_chat` session。
+- History / Debug surface 必须忠实展示已持久化数据，不发明 internal Agent verdict。
+- 本包不触发 `verify-scenario`、autonomous run 或 product-driven browser execution。
+
+执行包目录：
+
+- `docs/iterations/m11/11.3.2-chat-history-debug-console/`
+
+非目标：
+
+- 不做复杂搜索、全文检索、长期归档或批量导出。
+- 不做账号体系、多用户权限、云端用户数据或脱敏策略。
+- 不做 LLM 总结历史、任务评分系统或失败恢复。
+- 不做 M12 recovery / retry / abort / takeover。
+- 不做 stable external M16 CLI / Skill / Tool interface。
+
 ## Later M11.x · Page Context Bridge Decision Point
 
 状态：候选决策点，不是已确定执行包。
