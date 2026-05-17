@@ -1,6 +1,6 @@
 # 实施计划（Plan）
 
-状态：proposed（docs review pending, implementation not started）
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 本轮文档生成
 

@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：proposed（docs review pending, implementation not started）
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 文档阶段
 

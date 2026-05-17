@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：proposed（docs review pending, implementation not started）
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 2026-05-17 需求确认
 
@@ -22,6 +22,16 @@
 - “Intake output 不能污染 LearnedPath。” -> accepted；只作为 conversation intake evidence。
 - “敏感信息和 prompt payload 也要处理。” -> accepted；history / events / debug console / prompt logs 均纳入 redaction 边界。
 - “provider unavailable / malformed JSON / low confidence 要有负例。” -> accepted；写入 test-plan。
+
+## 2026-05-17 文档审核收口
+
+- Reviewer：User / ChatGPT / Codex
+- Decision：docs_review_passed
+- Notes：
+  - M11.3.4 文档包、产品模型更新、技术设计和测试计划通过审核。
+  - 角色定位通过：Conversation Intake Agent 是受控自然语言入口层，不是浏览器操作 Agent。
+  - 边界通过：LLM 负责听懂用户语言，代码负责裁决，Learning / Replay 负责行动。
+  - 可进入实现阶段；实现前状态更新为 `ready_for_implementation`。
 
 ## 文档阶段验证
 

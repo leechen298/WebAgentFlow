@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：proposed（docs review pending, implementation not started）
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 角色契约
 

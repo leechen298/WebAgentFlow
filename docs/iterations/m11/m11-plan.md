@@ -1410,7 +1410,7 @@ wagent chat
 
 ## 11.3.4 · Conversation Intake Agent
 
-状态：proposed（docs review pending, implementation not started）。
+状态：ready_for_implementation（docs review passed, implementation not started）。
 
 目标：补齐 `wagent chat` 的自然语言入口层。M11.3.3 已经让用户可以通过
 product-test-site 完成产品级学习和执行 smoke，但当前语言入口仍主要靠 deterministic

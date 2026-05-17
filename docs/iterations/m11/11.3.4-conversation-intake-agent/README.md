@@ -1,6 +1,6 @@
 # 11.3.4 · Conversation Intake Agent
 
-状态：proposed（docs review pending, implementation not started）
+状态：ready_for_implementation（docs review passed, implementation not started）
 里程碑：M11
 类型：code
 
@@ -43,7 +43,7 @@ product-test-site 和 validation-site 拆开，并通过 product-level CLI smoke
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
@@ -53,12 +53,6 @@ product-test-site 和 validation-site 拆开，并通过 product-level CLI smoke
 
 ## 当前状态
 
-本轮只生成文档包。实现阶段尚未开始。
-
-后续实现前必须先完成 docs review，并把状态更新为：
-
-```text
-ready_for_implementation（docs review passed, implementation not started）
-```
+文档包已生成并通过审核。实现阶段尚未开始。
 
 `docs/user-guide/wagent-chat.md` 只能把 M11.3.4 描述为计划能力，不得写成当前已可用。
