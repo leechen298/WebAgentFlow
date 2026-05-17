@@ -29,6 +29,7 @@ M11.3 已实现 `wagent chat`：
 |---|---|---|---|
 | `wagent chat` 默认 visible | CLI create-session metadata 写 `browser_visibility=visible`；chat runtime 转换为 `headless=False` | CLI tests + chat runtime tests | 只影响 interactive chat |
 | `wagent chat --headless` opt-out | CLI 新增 `--headless`，metadata 写 `browser_visibility=headless` | CLI parser / request payload tests | 不改变 `--timeout` |
+| CLI entry reliable before smoke | 用户指南和 smoke 前置检查使用 `.venv/bin/wagent`；`command not found` 排障安装 `apps/cli` | docs check + CLI smoke precheck | 不只提示重新 source |
 | Session metadata 是权限来源 | Chat runtime 从 `session.metadata_json.browser_visibility` 读取；dispatch metadata 只审计 | chat runtime tests | 防止普通 dispatch 伪造 chat policy |
 | 学习链路可见 | learning handler 接收 `headless` 并传给 `LearningRunRequest` | learning handler / service tests | Learning service 已有 headless 字段 |
 | 执行链路可见 | replay hook / `run_replay` 支持 headless override | replay tests + chat runtime tests | 默认保持 existing headless |
@@ -51,6 +52,11 @@ M11.3 已实现 `wagent chat`：
   - 执行：`我会打开浏览器执行这个操作。`
   - 保留具体动作说明，例如“输入账号密码，并点击‘登录’按钮完成登录”。
 - `--timeout` 行为不变。
+- 用户指南和人工 smoke 前置步骤使用 `.venv/bin/wagent chat`，不依赖 shell activation。
+- `zsh: command not found: wagent` 的排障必须指向 CLI 安装 / PATH 问题：
+  - `test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'`
+  - `.venv/bin/wagent --help`
+  - `.venv/bin/wagent chat`
 
 ### Conversation Runtime
 
@@ -110,7 +116,7 @@ M11.3 已实现 `wagent chat`：
 | Reporter | No | 不接 Task Result Reporter | N/A |
 | Worker / async jobs | No | 同步 CLI / API 路径 | N/A |
 | Tests / fixtures | Yes | CLI / API unit tests 补覆盖 | 不改 fixture 页面 |
-| Docs | Yes | 更新 M11.3.1 docs 和用户指南 | 页面样例放 test-plan |
+| Docs | Yes | 更新 M11.3.1 docs 和用户指南 | 页面样例放 test-plan；入口排障必须可靠 |
 
 ## 数据模型 / Schema 变更（Data Model / Schema Changes）
 
@@ -237,6 +243,7 @@ wagent chat --headless
 | Test area | Coverage goal | Detailed plan |
 |---|---|---|
 | CLI unit | 默认 visible、`--headless` opt-out、payload 正确 | `test-plan.md` CLI-1 / CLI-2 |
+| CLI entry docs | `.venv/bin/wagent` 检查、安装和 `--help` 前置验证 | `test-plan.md` CLI-0 |
 | Chat runtime unit | session metadata 驱动 learning / replay headless option | `test-plan.md` API-1 / API-2 |
 | Replay integration | replay hook / run_replay 默认兼容并支持 override | `test-plan.md` API-3 |
 | Regression | 非 chat confirmation / conversation send 不变 | `test-plan.md` REG-1 |

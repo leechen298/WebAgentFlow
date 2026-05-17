@@ -33,6 +33,7 @@
 - “学习的时候也可以默认以用户可见的方式学习。当然用户可以选择不可见。” -> accepted，定义默认 visible 和 `--headless` opt-out。
 - “功能不应该关心具体页面” -> accepted，contract / design 不绑定页面。
 - “/login 那个应该是测试计划了” -> accepted，页面样例只放在 `test-plan.md`。
+- “`wagent: command not found` 不能只提示重新 source，必须补 CLI 安装 / 检查步骤” -> accepted，补入 user guide、technical design、test plan 和 plan。
 
 ## 最终差异（Final Delta）
 

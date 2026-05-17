@@ -27,6 +27,7 @@
 
 | Layer | Scenario | Command / Surface | Expected | Required? | Notes |
 |---|---|---|---|---|---|
+| CLI | CLI-0 reliable local entry | `test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'` and `.venv/bin/wagent --help` | local CLI exists and help lists `chat` | Yes | Must pass before browser smoke |
 | CLI | CLI-1 default visible payload | `apps/cli/tests/test_chat.py` | create-session metadata includes `browser_visibility=visible` | Yes | 不启动真实 API |
 | CLI | CLI-2 headless opt-out payload | `apps/cli/tests/test_chat.py` | `wagent chat --headless` writes `browser_visibility=headless` | Yes | 覆盖 dispatch metadata 审计值 |
 | CLI | CLI-3 ordinary wording | `apps/cli/tests/test_chat.py` | 输出用户可懂的打开浏览器 / 学习 / 执行文案 | Yes | 不暴露 selector / id / LearnedPath |
@@ -53,9 +54,12 @@ pnpm run dev
 进入聊天：
 
 ```bash
-source .venv/bin/activate
-wagent chat
+test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'
+.venv/bin/wagent chat
 ```
+
+可选写法是先 `source .venv/bin/activate` 再运行 `wagent chat`，但人工验收的主入口使用
+`.venv/bin/wagent chat`，避免 PATH 指到错误虚拟环境。
 
 输入：
 
@@ -92,7 +96,7 @@ WAgent > 登录完成。
 后台运行 opt-out：
 
 ```bash
-wagent chat --headless
+.venv/bin/wagent chat --headless
 ```
 
 期望：

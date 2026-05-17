@@ -10,13 +10,31 @@
 - 学习某个网页怎么操作。
 - 执行已经学会的网页操作。
 
-当前版本先支持登录页：
+当前入门指南只验登录页：
 
 ```text
 http://localhost:5175/login
 ```
 
+`/users` 属于后续扩展测试，不作为这份入门指南的通过条件。
+
 ## 启动前准备
+
+如果这是第一次启动本项目，先按仓库 README 或
+[开发环境文档](../dev-setup.md) 完成安装。最少需要完成：
+
+```bash
+cd /Users/leechen/projects/WebAgentFlow/v0.1
+pnpm install
+python3.11 -m venv .venv
+.venv/bin/pip install -e './apps/api[dev]' -e './apps/worker[dev]' -e './apps/cli'
+.venv/bin/python -m playwright install chromium
+docker compose -f infra/docker/docker-compose.yml up -d
+pnpm run db:migrate:api
+```
+
+只执行 `source .venv/bin/activate` 不会安装 `wagent`。`wagent` 是 CLI 包安装后生成在
+`.venv/bin/wagent` 里的命令。
 
 先在一个终端启动 WebAgentFlow：
 
@@ -41,8 +59,12 @@ api: http://0.0.0.0:8001
 
 ```bash
 cd /Users/leechen/projects/WebAgentFlow/v0.1
-source .venv/bin/activate
-wagent chat
+
+# 如果 wagent 还没有安装到虚拟环境，先安装 CLI
+test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'
+
+# 使用项目内 CLI 启动，不依赖当前 shell 是否已经激活 venv
+.venv/bin/wagent chat
 ```
 
 你应该看到：
@@ -52,10 +74,50 @@ WAgent > 你好，我可以学习页面操作，也可以执行已经学会的�
 You >
 ```
 
-如果提示 `wagent: command not found`，说明当前终端还没有进入项目环境，重新执行：
+也可以使用激活虚拟环境的写法：
 
 ```bash
 source .venv/bin/activate
+wagent chat
+```
+
+但入门测试优先使用 `.venv/bin/wagent chat`，这样可以避免 shell `PATH` 没指向当前项目
+虚拟环境的问题。
+
+## 入口排障
+
+如果看到：
+
+```text
+zsh: command not found: wagent
+```
+
+说明当前 shell 找不到 `wagent` 命令。不要只重复 `source .venv/bin/activate`，先执行：
+
+```bash
+cd /Users/leechen/projects/WebAgentFlow/v0.1
+test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'
+.venv/bin/wagent chat
+```
+
+如果 `.venv/bin/wagent` 存在，但 `wagent chat` 这个子命令不存在，通常说明当前虚拟环境里安装的是旧版
+CLI。重新安装 CLI 后再检查：
+
+```bash
+.venv/bin/pip install -e './apps/cli'
+.venv/bin/wagent --help
+```
+
+`--help` 里应该能看到 `chat` 命令。
+
+当前 M11.3 版本可能在后台浏览器中运行。M11.3.1 计划改为默认打开项目内置 Playwright
+Chromium，让用户能看到页面加载、输入、点击和跳转。M11.3.1 实现前，不要把“看到浏览器窗口”
+作为这份入门指南的通过条件。
+
+M11.3.1 实现后，后台运行会使用：
+
+```bash
+.venv/bin/wagent chat --headless
 ```
 
 ## 第一步：教它怎么登录

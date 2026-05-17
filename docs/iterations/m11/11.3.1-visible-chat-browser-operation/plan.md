@@ -46,6 +46,9 @@
    - 最后补 replay hook / run_replay compatibility tests。
 
 5. 更新普通用户文档。
+   - 主入口使用 `.venv/bin/wagent chat`，不依赖 shell activation。
+   - 加入 `test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'` 检查。
+   - 区分 `zsh: command not found: wagent` 和旧 CLI 缺少 `chat` 子命令。
    - 说明 `wagent chat` 默认会打开浏览器。
    - 说明 `wagent chat --headless` 是后台运行。
    - 不把具体页面写成功能边界；页面只作为测试示例。
@@ -63,6 +66,7 @@
 
 | Command | Expected proof | Live autonomous verification excluded? | Notes |
 |---|---|---|---|
+| `test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'; .venv/bin/wagent --help` | 项目内 CLI 已安装且包含 `chat` | Yes | smoke 前置检查，不触发浏览器 |
 | `cd apps/cli && ../../.venv/bin/pytest tests/test_chat.py tests/test_conversation.py -q` | CLI default visible / headless opt-out / regression | Yes | 不启动真实浏览器 |
 | `cd apps/api && ../../.venv/bin/pytest tests/test_conversation_chat_runtime.py tests/test_conversation_replay_hook.py tests/test_learned_path_replay.py -q` | chat runtime 和 replay headless 参数传递 | Yes | 通过 mock / unit 验证 |
 | `cd apps/api && ../../.venv/bin/ruff check app/services/conversation app/services/learning tests/test_conversation_chat_runtime.py tests/test_conversation_replay_hook.py tests/test_learned_path_replay.py` | API lint clean | Yes | scoped |
@@ -74,6 +78,8 @@
 ## 复核清单（Review Checklist）
 
 - [ ] 实现仍然匹配 `contract.md`。
+- [ ] 用户指南不再把 `command not found` 只归因于未 source。
+- [ ] smoke 主入口使用 `.venv/bin/wagent chat`。
 - [ ] 默认 visible 只作用于 `interactive_chat`。
 - [ ] `--headless` opt-out 可用。
 - [ ] 非 chat mode confirmation gate 不变。
