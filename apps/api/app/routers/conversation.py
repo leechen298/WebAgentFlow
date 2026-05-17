@@ -251,15 +251,21 @@ def dispatch_input(
     def replay_handler(learned_path_id: str, url: str, *, headless: bool = True):
         return run_explicit_replay(db, learned_path_id, url, headless=headless)
 
-    def learning_handler(url: str, raw_input: str, *, headless: bool = True):
+    def learning_handler(
+        url: str,
+        raw_input: str,
+        *,
+        headless: bool = True,
+        fill_values: dict[str, str] | None = None,
+    ):
         return LearningRunService(db).run(
             LearningRunRequest(
                 url=url,
-                spec_id="login",
-                scenario="valid_credentials",
                 goal=raw_input,
+                fill_values=fill_values,
                 language="zh",
                 headless=headless,
+                product_level=True,
             )
         )
 

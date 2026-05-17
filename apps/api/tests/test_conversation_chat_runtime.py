@@ -84,6 +84,58 @@ def _ingest_login_path(db_session: Session, *, source_run_id: str | None = None)
     return str(path.id)
 
 
+def _ingest_workspace_path(
+    db_session: Session,
+    *,
+    source_run_id: str | None = None,
+    page_template: str = "/workspace-login",
+) -> str:
+    if source_run_id is not None and db_session.get(ExplorationRun, source_run_id) is None:
+        ExplorationRunRepository(db_session).create(
+            ExplorationRun(
+                id=source_run_id,
+                page_signature=page_template,
+                status="completed",
+                summary="workspace login test run",
+                result_snapshot_json={},
+            )
+        )
+
+    fingerprint = hashlib.sha256(
+        (source_run_id or page_template).encode()
+    ).hexdigest()
+    path, _created = LearnedPathRepository(db_session).ingest_run(
+        page_template=page_template,
+        query_signature={},
+        dom_fingerprint=fingerprint,
+        scenario="product_level",
+        actions=[
+            {
+                "step": 1,
+                "action_type": "fill",
+                "target_selector": "#operator-id",
+                "target_description": "操作员账号",
+                "value": "demo",
+            },
+            {
+                "step": 2,
+                "action_type": "fill",
+                "target_selector": "#access-code",
+                "target_description": "访问口令",
+                "value": "123456",
+            },
+            {
+                "step": 3,
+                "action_type": "click",
+                "target_selector": "button[type=submit]",
+                "target_description": "进入工作台",
+            },
+        ],
+        source_run_id=source_run_id,
+    )
+    return str(path.id)
+
+
 def test_parse_chat_intent_learn_page_extracts_url() -> None:
     intent = parse_chat_intent(
         "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login"
@@ -132,7 +184,7 @@ def test_interactive_chat_learns_login_and_writes_session_action(
     assert result.previous_status == "idle"
     assert result.next_status == "task_intake"
     assert "开始学习页面操作。" in result.user_response
-    assert "学习完成：我学会了登录页的登录操作" in result.user_response
+    assert "学习完成：我学会了登录操作" in result.user_response
 
     session = repo.get_session(session_id)
     assert session is not None
@@ -154,6 +206,63 @@ def test_interactive_chat_learns_login_and_writes_session_action(
     assert len(completed) == 1
     assert completed[0].payload_json["old_learned_path_id"] is None
     assert completed[0].payload_json["new_learned_path_id"] == actions[0]["learned_path_id"]
+
+
+def test_product_learning_uses_user_url_and_utterance_inputs(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        calls.append((url, raw_input, kwargs))
+        learned_path_id = _ingest_workspace_path(
+            db_session,
+            source_run_id="run-workspace",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-workspace",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/workspace-login",
+            scenario=None,
+            action_label="进入工作台",
+            suggested_utterances=["帮我进入工作台", "进入工作台一下"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        (
+            "学习一下这个工作台登录页怎么进入，地址是 "
+            "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+        ),
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert "学习完成：我学会了进入工作台操作" in result.user_response
+    assert calls == [
+        (
+            "http://localhost:5176/workspace-login",
+            (
+                "学习一下这个工作台登录页怎么进入，地址是 "
+                "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+            ),
+            {"headless": False, "fill_values": {"username": "demo", "password": "123456"}},
+        )
+    ]
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    actions = session.metadata_json["learned_actions"]
+    assert len(actions) == 1
+    assert actions[0]["alias"] == "进入工作台"
+    assert actions[0]["target_url"] == "http://localhost:5176/workspace-login"
+    assert actions[0]["site_origin"] == "http://localhost:5176"
+    assert actions[0]["page_template"] == "/workspace-login"
 
 
 def test_learning_does_not_claim_success_when_path_is_not_queryable(
@@ -241,6 +350,60 @@ def test_same_alias_learning_overwrites_session_action(
     assert completed.payload_json["new_learned_path_id"] == actions[0]["learned_path_id"]
 
 
+def test_same_alias_learning_keeps_different_target_urls(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    run_count = 0
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        nonlocal run_count
+        run_count += 1
+        source_run_id = f"run-workspace-{run_count}"
+        learned_path_id = _ingest_workspace_path(
+            db_session,
+            source_run_id=source_run_id,
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id=source_run_id,
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/workspace-login",
+            scenario=None,
+            action_label="进入工作台",
+            suggested_utterances=["帮我进入工作台"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    orch.dispatch_user_input(
+        session_id,
+        (
+            "学习一下这个工作台登录页怎么进入，地址是 "
+            "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+        ),
+        metadata={"client": "wagent_chat"},
+    )
+    orch.dispatch_user_input(
+        session_id,
+        (
+            "学习一下这个工作台登录页怎么进入，地址是 "
+            "http://localhost:5177/workspace-login，操作员账号是 demo，访问口令是 123456"
+        ),
+        metadata={"client": "wagent_chat"},
+    )
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    actions = session.metadata_json["learned_actions"]
+    assert len(actions) == 2
+    assert {action["target_url"] for action in actions} == {
+        "http://localhost:5176/workspace-login",
+        "http://localhost:5177/workspace-login",
+    }
+
+
 def test_interactive_chat_executes_current_session_action_without_confirmation(
     db_session: Session,
     repo: ConversationRepository,
@@ -300,6 +463,104 @@ def test_interactive_chat_executes_current_session_action_without_confirmation(
     agent_messages = [m.content for m in repo.list_messages(session_id) if m.role == "agent"]
     assert "执行中。" in agent_messages
     assert "登录完成。" in agent_messages
+
+
+def test_interactive_chat_rejects_unlearned_target_url(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_workspace_path(db_session)
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/workspace-login",
+                    "scenario": None,
+                }
+            ]
+        },
+    )
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我在 http://localhost:5176/orders 进入工作台",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.user_response == "还没学过这个站点或页面，需要先学习。"
+    assert replay_called is False
+
+
+def test_interactive_chat_requires_url_for_same_alias_multiple_targets(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_a = _ingest_workspace_path(db_session, source_run_id="run-a")
+    path_b = _ingest_workspace_path(db_session, source_run_id="run-b")
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_a,
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/workspace-login",
+                    "scenario": None,
+                },
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_b,
+                    "target_url": "http://localhost:5177/workspace-login",
+                    "site_origin": "http://localhost:5177",
+                    "page_template": "/workspace-login",
+                    "scenario": None,
+                },
+            ]
+        },
+    )
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我进入工作台",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.user_response == "这个操作在多个站点学过，请带上要操作的页面地址。"
+    assert replay_called is False
 
 
 def test_interactive_chat_missing_session_action_does_not_use_global_paths(

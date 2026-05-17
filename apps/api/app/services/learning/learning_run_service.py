@@ -7,6 +7,7 @@ persisted run id and the LearnedPath id that was actually written.
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -39,13 +40,14 @@ LearningStatus = Literal["learned", "failed"]
 @dataclass(frozen=True)
 class LearningRunRequest:
     url: str
-    spec_id: str
-    scenario: str
+    spec_id: str | None = None
+    scenario: str | None = None
     goal: str = ""
     fill_values: dict[str, str] | None = None
     toggle_values: dict[str, str] | None = None
     headless: bool = True
     language: str | None = None
+    product_level: bool = False
 
 
 @dataclass(frozen=True)
@@ -83,10 +85,11 @@ class LearningRunService:
         """Run a learning request and return run + LearnedPath ids."""
         try:
             result, final_data = self._run_pipeline(request)
+            verdict = final_data.get("verdict")
             run_id, learned_path_id = self._persist_finished_run(
                 request=request,
                 final_data=final_data,
-                verdict=final_data.get("verdict"),
+                verdict=verdict,
                 status=ExplorationRunStatus.COMPLETED,
             )
             if learned_path_id is None:
@@ -125,14 +128,6 @@ class LearningRunService:
     def _run_pipeline(
         self, request: LearningRunRequest
     ) -> tuple[AutonomousExplorationResult, dict[str, Any]]:
-        spec, _spec_path = self._load_spec(request.spec_id)
-        scenario = spec.scenarios.get(request.scenario)
-        if scenario is None:
-            raise ValueError(f"scenario not found: {request.scenario}")
-
-        fill_values = request.fill_values or dict(scenario.inputs or {})
-        scenario_description = scenario.description or None
-
         from app.services.execution.execution_runtime import RuntimeConfig
 
         runtime_factory = self._get_runtime_factory()
@@ -141,6 +136,42 @@ class LearningRunService:
             headless=request.headless,
             screenshot_dir=str(_SCREENSHOT_DIR),
         )
+
+        if request.spec_id and request.scenario:
+            # validation-backed learning
+            spec, _spec_path = self._load_spec(request.spec_id)
+            scenario = spec.scenarios.get(request.scenario)
+            if scenario is None:
+                raise ValueError(f"scenario not found: {request.scenario}")
+
+            fill_values = request.fill_values or dict(scenario.inputs or {})
+            scenario_description = scenario.description or None
+
+            with runtime_factory(config=runtime_config) as runtime:
+                result = explorer(
+                    url=request.url,
+                    runtime=runtime,
+                    goal=request.goal,
+                    fill_values=fill_values,
+                    toggle_values=request.toggle_values,
+                    scenario_name=request.scenario,
+                    scenario_description=scenario_description,
+                    language=request.language,
+                )
+
+            scorecard = self._verify(result, spec, request.scenario)
+            final_data = result.model_dump()
+            final_data["verification"] = {
+                "spec_source": str(_spec_path),
+                "spec_id": spec.page_id,
+                "scenario": request.scenario,
+                "scorecard": scorecard.model_dump(),
+            }
+            _apply_scenario_relative_verdicts(final_data)
+            return result, final_data
+
+        # product-level learning (no spec / scenario)
+        fill_values = request.fill_values or {}
         with runtime_factory(config=runtime_config) as runtime:
             result = explorer(
                 url=request.url,
@@ -148,20 +179,11 @@ class LearningRunService:
                 goal=request.goal,
                 fill_values=fill_values,
                 toggle_values=request.toggle_values,
-                scenario_name=request.scenario,
-                scenario_description=scenario_description,
                 language=request.language,
             )
 
-        scorecard = self._verify(result, spec, request.scenario)
         final_data = result.model_dump()
-        final_data["verification"] = {
-            "spec_source": str(_spec_path),
-            "spec_id": spec.page_id,
-            "scenario": request.scenario,
-            "scorecard": scorecard.model_dump(),
-        }
-        _apply_scenario_relative_verdicts(final_data)
+        final_data["verification"] = None
         return result, final_data
 
     def _persist_finished_run(
@@ -189,6 +211,7 @@ class LearningRunService:
                 "toggle_values": request.toggle_values or {},
                 "verdict": verdict,
                 "scenario_matched": scenario_matched,
+                "product_level": request.product_level,
             },
             summary=final_data.get("summary"),
             result_snapshot_json=final_data,
@@ -203,8 +226,13 @@ class LearningRunService:
         request: LearningRunRequest,
         final_data: dict[str, Any],
     ) -> str | None:
-        if _pass_gate_from_final_data(final_data) != "pass":
-            return None
+        if request.product_level:
+            # product-level: no spec oracle; accept if explorer reports success
+            if not final_data.get("success"):
+                return None
+        else:
+            if _pass_gate_from_final_data(final_data) != "pass":
+                return None
         page_analysis_dict = final_data.get("page_analysis")
         if not isinstance(page_analysis_dict, dict):
             return None
@@ -215,7 +243,7 @@ class LearningRunService:
             page_template=path_template(url),
             query_signature=query_signature(url),
             dom_fingerprint=dom_fingerprint(analysis),
-            scenario=request.scenario,
+            scenario=request.scenario or "product_level",
             actions=actions,
             source_run_id=str(run.id),
         )
@@ -322,10 +350,41 @@ def _apply_scenario_relative_verdicts(final_data: dict[str, Any]) -> None:
 def _action_label_for(request: LearningRunRequest) -> str:
     if request.spec_id == "login":
         return "登录"
-    return request.scenario
+    if request.product_level:
+        return _product_action_label_for(request)
+    return request.scenario or "执行操作"
 
 
 def _utterances_for(request: LearningRunRequest) -> list[str]:
     if request.spec_id == "login":
         return ["帮我登录", "登录一下"]
-    return [f"帮我{_action_label_for(request)}"]
+    label = _action_label_for(request)
+    return [f"帮我{label}", f"{label}一下"]
+
+
+def _product_action_label_for(request: LearningRunRequest) -> str:
+    if path_template(request.url).rstrip("/") == "/workspace-login":
+        return "进入工作台"
+
+    goal = _strip_product_learning_noise(request.goal or "")
+    if "进入工作台" in goal:
+        return "进入工作台"
+    if "登录" in goal and "工作台" in goal:
+        return "进入工作台"
+    if "登录" in goal:
+        return "登录"
+
+    for prefix in ("帮我", "请帮我", "你帮我", "我要", "我想"):
+        if goal.startswith(prefix):
+            goal = goal[len(prefix):].strip(" ，,。.!！?？")
+            break
+    return (goal or "执行操作").strip(" ，,。.!！?？")[:20]
+
+
+def _strip_product_learning_noise(text: str) -> str:
+    cleaned = re.sub(r"https?://[^\s，。]+", "", text)
+    cleaned = re.sub(r"操作员账号[是为]?\s*[:：]?[^\s，。,.；;!！?？]+", "", cleaned)
+    cleaned = re.sub(r"访问口令[是为]?\s*[:：]?[^\s，。,.；;!！?？]+", "", cleaned)
+    for phrase in ("学习一下", "学一下", "学习", "这个", "页面", "地址是"):
+        cleaned = cleaned.replace(phrase, "")
+    return cleaned.strip()

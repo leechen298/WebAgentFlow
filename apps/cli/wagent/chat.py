@@ -239,6 +239,8 @@ def _learning_target_label(url: str) -> str:
     path = urlparse(url).path.rstrip("/")
     if path == "/login":
         return "在登录页输入账号密码，并点击“登录”按钮"
+    if "/workspace-login" in path:
+        return "在工作台登录页输入操作员账号和访问口令，并点击“进入工作台”按钮"
     return "这个页面上的主要操作"
 
 
@@ -269,6 +271,8 @@ def _task_label(text: str) -> str:
     task = task.strip(" ，,。.!！?？")
     if task == "登录" or task.endswith("登录"):
         return "输入账号密码，并点击“登录”按钮完成登录"
+    if "进入工作台" in task:
+        return "输入操作员账号和访问口令，并点击“进入工作台”按钮"
     return task or text.strip()
 
 

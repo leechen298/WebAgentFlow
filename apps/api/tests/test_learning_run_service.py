@@ -21,17 +21,23 @@ class _DummyRuntimeFactory:
         return False
 
 
-def _exploration_result() -> AutonomousExplorationResult:
+def _exploration_result(
+    *,
+    url: str = "http://localhost:5175/login",
+    title: str = "Sign in",
+    final_url: str = "http://localhost:5175/dashboard",
+    final_title: str = "Dashboard",
+) -> AutonomousExplorationResult:
     return AutonomousExplorationResult(
-        page_analysis=PageAnalysis(url="http://localhost:5175/login", title="Sign in"),
+        page_analysis=PageAnalysis(url=url, title=title),
         steps=[
             {"step": 1, "action_type": "fill", "target_selector": "#username", "value": "admin"},
             {"step": 2, "action_type": "fill", "target_selector": "#password", "value": "123456"},
             {"step": 3, "action_type": "click", "target_selector": "button[type=submit]"},
         ],
         total_steps=3,
-        final_url="http://localhost:5175/dashboard",
-        final_title="Dashboard",
+        final_url=final_url,
+        final_title=final_title,
         verdict="success",
         success=True,
         summary="login ok",
@@ -82,3 +88,49 @@ def test_learning_service_returns_run_id_and_queryable_learned_path_id(
     assert result.learned_path_id is not None
     assert result.action_label == "登录"
     assert result.suggested_utterances == ["帮我登录", "登录一下"]
+
+
+def test_product_learning_does_not_load_validation_spec_and_labels_workspace_action(
+    db_session: Session,
+) -> None:
+    explorer_calls = []
+
+    def explorer(**kwargs):
+        explorer_calls.append(kwargs)
+        return _exploration_result(
+            url="http://localhost:5176/workspace-login",
+            title="工作台入口",
+            final_url="http://localhost:5176/workspace-home",
+            final_title="工作台首页",
+        )
+
+    def spec_loader(spec_id: str):
+        raise AssertionError(f"product learning must not load spec: {spec_id}")
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=_DummyRuntimeFactory(),
+        explorer=explorer,
+        spec_loader=spec_loader,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url="http://localhost:5176/workspace-login",
+            goal=(
+                "学习一下这个工作台登录页怎么进入，地址是 "
+                "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+            ),
+            fill_values={"username": "demo", "password": "123456"},
+            product_level=True,
+        )
+    )
+
+    assert result.status == "learned"
+    assert result.run_id is not None
+    assert result.learned_path_id is not None
+    assert result.scenario is None
+    assert result.action_label == "进入工作台"
+    assert result.suggested_utterances == ["帮我进入工作台", "进入工作台一下"]
+    assert "scenario_name" not in explorer_calls[0]
+    assert explorer_calls[0]["fill_values"] == {"username": "demo", "password": "123456"}

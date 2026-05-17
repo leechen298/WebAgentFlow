@@ -96,6 +96,34 @@ def test_chat_explains_unknown_task_before_no_path_fallback() -> None:
     assert "WAgent > 还没学过这个操作，需要先学习。" in output
 
 
+def test_chat_product_workspace_progress_labels() -> None:
+    client = _mock_client()
+    client.post.side_effect = [
+        _mock_response({"id": "sess-1", "status": "idle"}),
+        _mock_response({"user_response": "学习完成：我学会了进入工作台操作。之后你可以说“帮我进入工作台”。"}),
+        _mock_response({"user_response": "进入工作台完成。"}),
+    ]
+    with patch.object(chat_module.httpx, "Client", return_value=client), patch(
+        "builtins.input",
+        side_effect=[
+            (
+                "学习一下这个工作台登录页怎么进入，地址是 "
+                "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+            ),
+            "帮我进入工作台",
+            "exit",
+        ],
+    ):
+        stdout = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(StringIO()):
+            rc = wagent_main.main(["chat"])
+
+    assert rc == 0
+    output = stdout.getvalue()
+    assert "WAgent > 我会打开浏览器学习：在工作台登录页输入操作员账号和访问口令，并点击“进入工作台”按钮。" in output
+    assert "WAgent > 我会打开浏览器执行：输入操作员账号和访问口令，并点击“进入工作台”按钮。" in output
+
+
 def test_chat_default_timeout_is_180_seconds() -> None:
     client = _mock_client()
     with patch.object(chat_module.httpx, "Client", return_value=client) as client_cls, patch(

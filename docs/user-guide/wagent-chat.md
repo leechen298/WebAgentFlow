@@ -10,34 +10,26 @@
 - 学习某个网页怎么操作。
 - 执行已经学会的网页操作。
 
-当前入门指南只验登录页：
+当前入门指南只验产品级工作台登录页：
 
 ```text
-http://localhost:5175/login
+http://localhost:5176/workspace-login
 ```
 
 `/users` 属于后续扩展测试，不作为这份入门指南的通过条件。
 
 ## 测试站点边界
 
-当前可用的 `http://localhost:5175` 是 validation-site。它是工程验证靶场，用来做
-deterministic regression、spec / assertions、pass_gate、scorecard 和
-`verify-scenario` 等基础能力验证。
+`http://localhost:5175` 是 validation-site。它是工程验证靶场，用来做 deterministic
+regression、spec / assertions、pass_gate、scorecard 和 `verify-scenario` 等基础能力验证。
 
-M11.3.3 计划新增独立的 product-test-site，用于产品级 `wagent chat` 人工验收。
-它会和 validation-site 分开，目标是验证普通用户通过聊天提供页面地址和必要输入，
-系统再学习并执行网页操作。
+`http://localhost:5176` 是 product-test-site。它和 validation-site 分开，用于产品级
+`wagent chat` 人工验收：普通用户通过聊天提供页面地址和必要输入，系统再学习并执行网页操作。
 
-M11.3.3 实现后，项目的一键启动 `pnpm run dev` 应同时启动 product-test-site。
-在实现前，`pnpm run dev` 仍按当前项目实际进程为准。
+项目的一键启动 `pnpm run dev` 应同时启动 product-test-site。
 
-M11.3.3 还会调整产品级聊天路径：系统只学习用户输入的页面地址，只执行当前聊天里已经
-学过的站点或页面。如果你要求它操作一个还没学过的站点，它应该清楚告诉你需要先学习，
-而不是拿别的测试站点路径去执行。
-
-M11.3.3 实现前，product-test-site 还不可用。不要把
-`http://localhost:5176/workspace-login` 当成当前可用入口，也不要把“产品级测试站已可用”
-写入验收结论。
+产品级聊天路径只学习用户输入的页面地址，只执行当前聊天里已经学过的站点或页面。如果你要求它操作
+一个还没学过的站点，它应该清楚告诉你需要先学习，而不是拿别的测试站点路径去执行。
 
 ## 启动前准备
 
@@ -69,6 +61,7 @@ pnpm run dev
 ```text
 console: http://localhost:5174
 validation-site: http://127.0.0.1:5175
+product-test-site: http://127.0.0.1:5176
 api: http://0.0.0.0:8001
 ```
 
@@ -137,6 +130,32 @@ CLI。重新安装 CLI 后再检查：
 
 ```bash
 .venv/bin/wagent chat --headless
+```
+
+## 入门测试样例
+
+在 `wagent chat` 中输入：
+
+```text
+学习一下这个工作台登录页怎么进入，地址是 http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456
+```
+
+学习完成后继续输入：
+
+```text
+帮我进入工作台
+```
+
+如果你指定一个还没学过的页面，例如：
+
+```text
+帮我在 http://localhost:5176/orders 导出订单
+```
+
+系统应提示：
+
+```text
+还没学过这个站点或页面，需要先学习。
 ```
 
 ## 第一步：教它怎么登录

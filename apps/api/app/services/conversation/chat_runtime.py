@@ -23,6 +23,9 @@ ChatIntentKind = Literal["learn_page", "execute_task", "unknown"]
 _URL_RE = re.compile(r"https?://[^\s，。]+")
 _LEARN_KEYWORDS = ("学习", "学一下", "learn", "teach")
 _NO_PATH_RESPONSE = "还没学过这个操作，需要先学习。"
+_UNLEARNED_TARGET_RESPONSE = "还没学过这个站点或页面，需要先学习。"
+_AMBIGUOUS_TARGET_RESPONSE = "这个操作在多个站点学过，请带上要操作的页面地址。"
+_VALUE_PATTERN = r"([^\s，。,.；;!！?？]+)"
 
 
 @dataclass(frozen=True)
@@ -120,25 +123,6 @@ class InteractiveChatRuntime:
             command_kind="learn_page",
             metadata=metadata,
         )
-        if not _is_login_url(intent.url or ""):
-            response = "当前只支持学习登录页：http://localhost:5175/login"
-            self._append_agent_message(session_id, response)
-            self._append_event(
-                session_id,
-                ConversationEventType.CHAT_LEARNING_FAILED,
-                {"reason": "unsupported_url", "url": intent.url},
-                events,
-            )
-            return self._result(
-                session_id=session_id,
-                command_kind="learn_page",
-                user_response=response,
-                events=events,
-                message_id=message_id,
-                previous_status=previous_status,
-                allowed=False,
-                error="Only /login learning is supported in M11.3.",
-            )
 
         self._append_agent_message(session_id, "开始学习页面操作。")
         self._append_event(
@@ -158,10 +142,12 @@ class InteractiveChatRuntime:
             )
 
         try:
+            fill_values = _parse_product_inputs(intent.raw_text) if intent.url else None
             learning_result: LearningRunResult = self._learning_handler(
                 intent.url,
                 intent.raw_text,
                 headless=headless,
+                fill_values=fill_values,
             )
         except Exception as exc:
             return self._learning_failed(
@@ -191,9 +177,8 @@ class InteractiveChatRuntime:
 
         action = _action_from_learning_result(learning_result)
         old_action = self._upsert_learned_action(session_id, action)
-        complete_message = (
-            "学习完成：我学会了登录页的登录操作。之后你可以说“帮我登录”。"
-        )
+        alias = action["alias"]
+        complete_message = f"学习完成：我学会了{alias}操作。之后你可以说“帮我{alias}”。"
         self._append_agent_message(session_id, complete_message)
         self._append_event(
             session_id,
@@ -237,6 +222,25 @@ class InteractiveChatRuntime:
         )
         action = self._match_session_action(session_id, intent.raw_text)
         if action is None:
+            user_url = _extract_url(intent.raw_text)
+            if user_url and not self._has_learned_target(session_id, user_url):
+                return self._handle_unlearned_target(
+                    session_id=session_id,
+                    command_kind="execute_task",
+                    message_id=message_id,
+                    metadata=metadata,
+                    existing_events=events,
+                    previous_status=previous_status,
+                )
+            if self._has_ambiguous_action_match(session_id, intent.raw_text):
+                return self._handle_ambiguous_target(
+                    session_id=session_id,
+                    command_kind="execute_task",
+                    message_id=message_id,
+                    metadata=metadata,
+                    existing_events=events,
+                    previous_status=previous_status,
+                )
             return self._handle_no_path(
                 session_id=session_id,
                 command_kind="execute_task",
@@ -245,6 +249,7 @@ class InteractiveChatRuntime:
                 existing_events=events,
                 previous_status=previous_status,
             )
+
         if self._replay_handler is None:
             response = "执行失败：replay handler 未配置。"
             self._append_agent_message(session_id, response)
@@ -285,8 +290,9 @@ class InteractiveChatRuntime:
             action["target_url"],
             headless=headless,
         )
+        alias = action.get("alias", "")
         if replay_summary.replay_status in ("succeeded", "observed"):
-            final_message = "登录完成。"
+            final_message = f"{alias}完成。" if alias else "执行完成。"
             event_type = ConversationEventType.CHAT_EXECUTION_COMPLETED
             error = None
             allowed = True
@@ -318,6 +324,70 @@ class InteractiveChatRuntime:
             allowed=allowed,
             error=error,
             replay_result=replay_summary,
+        )
+
+    def _handle_unlearned_target(
+        self,
+        *,
+        session_id: str,
+        command_kind: str,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        existing_events: list[str] | None = None,
+        previous_status: str = ConversationStatus.TASK_INTAKE.value,
+    ) -> DispatchResult:
+        events = existing_events or self._append_chat_command_event(
+            session_id=session_id,
+            raw_input="",
+            command_kind=command_kind,
+            metadata=metadata,
+        )
+        self._append_agent_message(session_id, _UNLEARNED_TARGET_RESPONSE)
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_NO_PATH,
+            {"reason": "unlearned_target_url"},
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind=command_kind,
+            user_response=_UNLEARNED_TARGET_RESPONSE,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
+
+    def _handle_ambiguous_target(
+        self,
+        *,
+        session_id: str,
+        command_kind: str,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        existing_events: list[str] | None = None,
+        previous_status: str = ConversationStatus.TASK_INTAKE.value,
+    ) -> DispatchResult:
+        events = existing_events or self._append_chat_command_event(
+            session_id=session_id,
+            raw_input="",
+            command_kind=command_kind,
+            metadata=metadata,
+        )
+        self._append_agent_message(session_id, _AMBIGUOUS_TARGET_RESPONSE)
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_NO_PATH,
+            {"reason": "ambiguous_target_scope"},
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind=command_kind,
+            user_response=_AMBIGUOUS_TARGET_RESPONSE,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
         )
 
     def _handle_no_path(
@@ -436,12 +506,13 @@ class InteractiveChatRuntime:
             raise ValueError(f"session not found: {session_id}")
         metadata = dict(session.metadata_json or {})
         existing = list(metadata.get("learned_actions") or [])
+        action_key = _action_scope_key(action)
         old_action = next(
-            (item for item in existing if item.get("alias") == action["alias"]),
+            (item for item in existing if _action_scope_key(item) == action_key),
             None,
         )
         merged = [
-            item for item in existing if item.get("alias") != action["alias"]
+            item for item in existing if _action_scope_key(item) != action_key
         ]
         merged.append(action)
         self._repo.update_session_status(
@@ -461,12 +532,43 @@ class InteractiveChatRuntime:
             raise ValueError(f"session not found: {session_id}")
         actions = list((session.metadata_json or {}).get("learned_actions") or [])
         normalized = raw_input.strip()
-        for action in actions:
-            utterances = action.get("utterances") or []
-            alias = action.get("alias") or ""
-            if normalized in utterances or (alias and alias in normalized):
-                return action
+        user_url = _extract_url(normalized)
+        candidates = _matching_actions(actions, normalized)
+
+        if not candidates:
+            return None
+
+        if user_url:
+            normalized_url = _normalize_url(user_url)
+            for action in candidates:
+                if _normalize_url(action.get("target_url")) == normalized_url:
+                    return action
+            return None
+
+        if len(candidates) == 1:
+            return candidates[0]
+
         return None
+
+    def _has_learned_target(self, session_id: str, url: str) -> bool:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        normalized_url = _normalize_url(url)
+        actions = list((session.metadata_json or {}).get("learned_actions") or [])
+        return any(
+            _normalize_url(action.get("target_url")) == normalized_url
+            for action in actions
+        )
+
+    def _has_ambiguous_action_match(self, session_id: str, raw_input: str) -> bool:
+        if _extract_url(raw_input):
+            return False
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        actions = list((session.metadata_json or {}).get("learned_actions") or [])
+        return len(_matching_actions(actions, raw_input.strip())) > 1
 
     def _result(
         self,
@@ -504,16 +606,59 @@ def _extract_url(text: str) -> str | None:
     return match.group(0) if match else None
 
 
-def _is_login_url(url: str) -> bool:
-    return urlparse(url).path.rstrip("/") == "/login"
+def _parse_product_inputs(text: str) -> dict[str, str] | None:
+    """Extract credential-like inputs from user utterance for product-level learning."""
+    values: dict[str, str] = {}
+    for label in ("操作员账号", "用户名", "账号"):
+        m = re.search(rf"{label}[是为]?\s*[:：]?\s*{_VALUE_PATTERN}", text)
+        if m:
+            values["username"] = m.group(1)
+            break
+    for label in ("访问口令", "登录口令", "密码"):
+        m = re.search(rf"{label}[是为]?\s*[:：]?\s*{_VALUE_PATTERN}", text)
+        if m:
+            values["password"] = m.group(1)
+            break
+    return values if values else None
 
 
 def _action_from_learning_result(result: LearningRunResult) -> dict[str, Any]:
+    parsed = urlparse(result.target_url or "")
     return {
         "alias": result.action_label,
         "utterances": result.suggested_utterances,
         "learned_path_id": result.learned_path_id,
         "target_url": result.target_url,
+        "site_origin": f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme else parsed.netloc,
         "page_template": result.page_template,
         "scenario": result.scenario,
     }
+
+
+def _normalize_url(url: str | None) -> str:
+    if not url:
+        return ""
+    value = url.strip()
+    parsed = urlparse(value)
+    if not parsed.scheme or not parsed.netloc:
+        return value.rstrip("/")
+    path = parsed.path.rstrip("/") or "/"
+    normalized = parsed._replace(path=path, fragment="")
+    return normalized.geturl()
+
+
+def _action_scope_key(action: dict[str, Any]) -> tuple[str, str]:
+    return (str(action.get("alias") or ""), _normalize_url(action.get("target_url")))
+
+
+def _matching_actions(
+    actions: list[dict[str, Any]],
+    normalized_input: str,
+) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for action in actions:
+        utterances = action.get("utterances") or []
+        alias = action.get("alias") or ""
+        if normalized_input in utterances or (alias and alias in normalized_input):
+            candidates.append(action)
+    return candidates
