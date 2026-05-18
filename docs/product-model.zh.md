@@ -551,6 +551,29 @@ Teaching Guide Agent / 教学引导器边界：
 加新能力时先问：**这属于哪个内部角色？** 如果答案是"新的一个"，那
 是产品级决策，**先更新本文档**再写代码。
 
+### 7.1 应用技能总表（单一权威）
+
+应用技能是通过 Orchestrator / Skill Runtime 暴露给内部 Agent 的受控产品能力，
+不是 Agent。Customer-Facing Agent Router 可以推荐某个技能，但代码负责校验、
+前置条件、调用、trace 和最终用户文案。
+
+具体实现状态归属到对应 milestone 文档。这里是运行时技能词汇的产品级总表。
+
+| Skill | 用途 | 谁可以请求 | 真正执行方 | 浏览器 | 沉淀 LearnedPath | 边界 |
+|---|---|---|---|---|---|---|
+| `collect_conversation_context` | 收集最近消息、pending 状态、已学动作、最后目标和 no-path 上下文。 | Orchestrator | 代码 | 否 | 否 | 进入 LLM 前必须形成脱敏 context bundle。 |
+| `inspect_target_page` | 检查目标 URL，收集 URL、title、可见文本、控件、AST 和页面分析上下文。 | Router 建议 / 工作 Agent 请求 | Runtime + 代码 | 可以 | 否 | 检查不改变目标页面。 |
+| `understand_page` | 把页面上下文转成页面摘要、可见控件、可支持目标、必需 slots、confidence 和 reason summary。 | Router 建议 / Learning Agent 请求 | Page Understanding Agent | 否 | 否 | 不输出 selector、DOM path、浏览器步骤或页面类型契约。 |
+| `lookup_learned_actions` | 在当前 session 和目标 URL / site-origin scope 内查询已学动作。 | Router / Web Operation Agent | 代码 / Repository | 否 | 否 | 不得跨 target scope 命中。 |
+| `ask_user_for_missing_info` | 追问缺少的目标、输入、参数或确认。 | Router 建议 | Orchestrator / Result Reporter | 否 | 否 | 最终文案保持统一的 WAgent 口径。 |
+| `start_learning` | 通过 LearningRunService / autonomous exploration 启动产品级学习。 | Learning Agent | Learning Service | 是 | 是 | LearnedPath 证据必须来自真实浏览器执行。 |
+| `start_replay` | 通过 replay 执行已有 LearnedPath。 | Web Operation Agent | Replay Service | 是 | 否 | 使用 replay observation / wait 信号作为结果证据。 |
+| `learn_then_execute` | 对范围内且信息完整的任务，先学习再 replay。 | Web Operation Agent / Learning Agent | Skill Runtime | 是 | 是 | 对不支持或触及 MVP 高影响边界的任务禁用。 |
+| `record_progress_event` | 记录正在理解、检查、学习、执行等用户可见进度。 | Orchestrator / Skill Runtime | 代码 | 否 | 否 | 支撑 CLI / Console loading 与状态展示。 |
+| `record_agent_trace` | 记录脱敏后的 Intake / Router / Page Understanding / 工作 Agent trace。 | Agent Runtime | 代码 | 否 | 否 | 只作为 conversation evidence，不污染 LearnedPath proof。 |
+
+新增或重命名应用技能时，需要同步更新这张总表和当前 milestone contract。
+
 ---
 
 ## 8. 跨生命周期阶段不变量

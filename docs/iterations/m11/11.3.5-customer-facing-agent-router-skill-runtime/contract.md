@@ -81,6 +81,9 @@ Router 输出必须是 schema-constrained JSON。第一版字段：
 ## Application Skill Registry
 
 Application Skill Registry 是应用能力目录。它不是 Agent 列表。
+产品级单一权威表位于 `docs/product-model.md` / `docs/product-model.zh.md`
+的 Application Skills / 应用技能总表。本节是 M11.3.5 的实现期 registry，
+用于定义本轮技能请求方、执行方和执行边界。
 
 | Skill | 中文说明 | 主要用途 | 请求方 | 真正执行方 | 浏览器 | 改变页面 | 沉淀 LearnedPath |
 |---|---|---|---|---|---|---|---|

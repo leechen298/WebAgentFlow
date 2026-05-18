@@ -633,6 +633,32 @@ When adding a new Agent-facing skill or capability, first ask: **which role
 does this belong to?** If the answer is "a new one", that's a product-level
 decision — update this document before adding it.
 
+### 7.1 Application Skills (single reference table)
+
+Application skills are bounded product abilities exposed to internal Agents
+through the Orchestrator / Skill Runtime. They are not Agents. The
+Customer-Facing Agent Router may recommend a skill, but code owns validation,
+preconditions, invocation, trace, and final user-facing wording.
+
+Implementation status belongs to the milestone documents. This table is the
+product-level reference for the runtime skill vocabulary.
+
+| Skill | Purpose | Who may request | Executor | Browser | Writes LearnedPath | Boundary |
+|---|---|---|---|---|---|---|
+| `collect_conversation_context` | Build recent-message, pending-state, learned-action, last-target, and no-path context. | Orchestrator | Code | No | No | Produces a redacted context bundle before LLM use. |
+| `inspect_target_page` | Inspect a target URL and collect URL, title, visible text, controls, AST, and page-analysis context. | Router recommendation / worker Agent request | Runtime + code | May open browser | No | Inspection does not mutate the target page. |
+| `understand_page` | Convert page context into page summary, visible controls, supported goals, required slots, confidence, and reason summary. | Router recommendation / Learning Agent request | Page Understanding Agent | No | No | Does not output selectors, DOM paths, browser steps, or page-type contracts. |
+| `lookup_learned_actions` | Find learned actions in the current session and target URL / site-origin scope. | Router / Web Operation Agent | Code / repository | No | No | Must not cross target scope. |
+| `ask_user_for_missing_info` | Ask for missing target, goal, input, or confirmation. | Router recommendation | Orchestrator / Result Reporter | No | No | Final wording stays in the unified WAgent voice. |
+| `start_learning` | Start product-level learning through LearningRunService / autonomous exploration. | Learning Agent | Learning Service | Yes | Yes | LearnedPath evidence must come from real browser execution. |
+| `start_replay` | Execute an existing LearnedPath through replay. | Web Operation Agent | Replay Service | Yes | No | Uses replay observation / wait signals as result evidence. |
+| `learn_then_execute` | For in-scope complete tasks, learn first and then replay. | Web Operation Agent / Learning Agent | Skill Runtime | Yes | Yes | Disabled for unsupported or high-impact MVP-boundary cases. |
+| `record_progress_event` | Emit user-visible progress for understanding, inspecting, learning, and executing. | Orchestrator / Skill Runtime | Code | No | No | Powers CLI / Console loading and status. |
+| `record_agent_trace` | Persist redacted Intake / Router / Page Understanding / worker-Agent trace. | Agent Runtime | Code | No | No | Conversation evidence only; must not pollute LearnedPath proof. |
+
+When adding or renaming an application skill, update this table and the current
+milestone contract together.
+
 ---
 
 ## 8. Cross-Cutting Invariants
