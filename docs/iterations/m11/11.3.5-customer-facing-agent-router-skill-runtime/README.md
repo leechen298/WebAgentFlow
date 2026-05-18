@@ -53,8 +53,13 @@ scope、MVP 边界、授权、事件和真正调用能力；Learning / Replay / 
 - shared action execution：`apps/api/app/services/execution/action_executor.py`
 - Playwright runtime：`apps/api/app/services/execution/execution_runtime.py`
 - product-level learning：`apps/api/app/services/learning/learning_run_service.py`
+- LearnedPath data model：`apps/api/app/models/learned_path.py`
 - LearnedPath persistence / retrieval：`apps/api/app/repos/learned_paths_repo.py`
 - replay / observation evidence：`apps/api/app/services/learning/learned_path_replay.py`
+- wait / observation signals：`apps/api/app/services/learning/wait_for_change.py`、
+  `apps/api/app/services/learning/replay_observation.py`
+- Result Reporter inputs：`replay_observation.py` 产生的 observation evidence 可用于
+  用户可见结果反馈，不只是 replay 内部证据。
 - task planning domain schemas：`apps/api/app/schemas/task_planning.py`
 - response provenance / LLM trace：`apps/api/app/services/conversation/provenance.py`
 

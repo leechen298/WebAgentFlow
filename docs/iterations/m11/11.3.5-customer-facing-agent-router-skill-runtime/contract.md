@@ -22,7 +22,7 @@
 | Conversation Intake Agent | 对话理解 Agent | 语言理解层 | intent、target、slots、missing_fields | 否 | 不操作浏览器，不选择路径 |
 | Customer-Facing Agent Router | 面客 Agent Router | 路由建议者 | route_decision、next_agent、recommended_skill | 否 | 只建议，不执行 |
 | Conversation Orchestrator | 会话编排器 / 调度器 | 代码控制层 | 调用、追问、拒绝、记录、用户回复 | 是 | 最终裁决者 |
-| Page Understanding Agent | 页面理解 Agent | 页面语义理解 | observed_page_summary、supported_goals、required_slots、optional page_type_hint | 否 | 不输出 selector 或步骤 |
+| Page Understanding Agent | 页面理解 Agent | 页面语义理解 | observed_page_summary、visible_controls、supported_goals、required_slots | 否 | 不输出 selector 或步骤 |
 | Learning Agent | 学习 Agent | 学习流程组织者 | learning request / learning result summary | 通过 Orchestrator 请求 | 不把猜测写成路径证据 |
 | Web Operation Agent | 网页操作 Agent | 操作执行组织者 | replay / learn_then_execute request | 通过 Orchestrator 请求 | 不跨站点，不发明步骤 |
 | Task Result Reporter | 结果反馈 Agent | 结果解释层 | 用户可读结果 | 否 | 不创造事实 |
@@ -129,7 +129,6 @@ Page Understanding Agent 只读取 page context bundle，输出页面语义。�
 - `supported_goals[].canonical_goal`
 - `supported_goals[].aliases[]`
 - `supported_goals[].required_slots[]`
-- `optional_page_type_hint`
 - `confidence`
 - `reason_summary`
 

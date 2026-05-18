@@ -26,7 +26,7 @@ git diff --check
 | PROMPT-2 | Prompt metadata | prompt registry / metadata 包含 id、version、schema、hash、runtime policy |
 | PROMPT-3 | Prompt trace | LLM trace 记录 prompt id / version / hash / schema / redaction 状态 |
 | PAGE-1 | Page context | 组合 HTML AST、Simplified AST、PageAnalysis、page signature |
-| PAGE-2 | Page Understanding | 输出 observed_page_summary、supported_goals、required_slots、optional_page_type_hint，不输出 selector / steps |
+| PAGE-2 | Page Understanding | 输出 observed_page_summary、visible_controls、supported_goals、required_slots，不输出 selector / steps |
 | TARGET-1 | Target resolution | URL > pending_target > recent URL > unique learned target > ask user |
 | UX-1 | Bare URL | 裸 URL 保存 pending_target，不 execute |
 | UX-2 | Short learn | “学习”能引用 pending_target 并追问目标/slots |

@@ -1510,13 +1510,15 @@ Skill Runtime 是执行者。
   `collect_conversation_context`、`inspect_target_page`、`understand_page`、
   `lookup_learned_actions`、`ask_user_for_missing_info`、`start_learning`、
   `start_replay`、`learn_then_execute`、`record_progress_event`、`record_agent_trace`。
-- Page Understanding Agent 可读取 page-context bundle，输出页面摘要、支持目标、必需 slots
-  和可选页面类型 hint；不得输出 selector、browser steps 或 learned_path_id。
+- Page Understanding Agent 可读取 page-context bundle，输出页面摘要、可见控件、支持目标
+  和必需 slots；不得输出 selector、browser steps、page classification contract 或
+  learned_path_id。
 - Learning Agent 组织学习流程，Web Operation Agent 组织网页操作执行；二者只能通过
   Orchestrator / Skill Runtime 请求能力。
 - 本轮明确复用现有 HTML -> Full AST、Full AST -> Simplified AST、PageAnalysis、
   form label extraction、action planning、execution runtime、ExplorationRun steps、
-  LearnedPath actions、replay observation、task planning schemas 和 response provenance。
+  LearnedPath model / actions、wait-for-change signals、replay observation、
+  task planning schemas 和 response provenance。
 - target resolution 优先级：用户消息显式 URL > `pending_target` > 最近提到 URL /
   no-path context > 当前 session 唯一 learned target > 未来 active tab > 追问。
 - M11.3.5 不实现 active browser tab，不得假设该能力存在。

@@ -275,8 +275,8 @@ The first registry includes:
 Worker Agents may request skills through the Orchestrator / Skill Runtime:
 
 - **Page Understanding Agent** reads a page-context bundle and returns page
-  summary, supported goals, required slots, and an optional page type hint. It
-  must not output selectors or browser steps.
+  summary, visible controls, supported goals, and required slots. It must not
+  output selectors, browser steps, or page-classification contracts.
 - **Learning Agent** organizes the learning flow and requests `start_learning`.
   It is distinct from the autonomous exploration Supervisor, which only
   evaluates run outcomes.
@@ -287,9 +287,9 @@ Worker Agents may request skills through the Orchestrator / Skill Runtime:
 The existing product infrastructure is part of this design rather than a
 parallel implementation track: HTML-to-Full-AST, Full-AST-to-Simplified-AST,
 PageAnalysis, form-label extraction, action planning, Playwright execution,
-ExplorationRun step history, LearnedPath actions, replay observation, task
-planning schemas, and response provenance all feed the Router / Skill Runtime
-boundary.
+ExplorationRun step history, LearnedPath model / actions, wait-for-change
+signals, replay observation, task planning schemas, and response provenance all
+feed the Router / Skill Runtime boundary.
 
 LLM-backed Agent prompts are managed as versioned prompt assets, not long
 strings embedded in service functions. Prompt files live under the API prompt

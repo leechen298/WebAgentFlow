@@ -134,8 +134,7 @@ apps/api/app/schemas/page_understanding.py
 职责：
 
 - 读取 page context bundle。
-- 输出 observed page summary、supported goals、required slots、optional page type hint、
-  confidence。
+- 输出 observed page summary、visible controls、supported goals、required slots 和 confidence。
 - 不输出 selector、DOM path、browser steps、learned_path_id。
 
 实现可先使用 fake / deterministic provider，真实 LLM smoke 后才能声称 Page Understanding
@@ -246,6 +245,9 @@ apps/api/app/prompts/
 | `apps/api/app/services/execution/execution_runtime.py` | Playwright 生命周期、页面读取、截图 |
 | `apps/api/app/services/learning/learning_run_service.py` | `start_learning` 能力 |
 | `apps/api/app/services/learning/learned_path_replay.py` | `start_replay` 能力 |
+| `apps/api/app/services/learning/wait_for_change.py` | 学习 / replay 后等待页面变化和稳定状态 |
+| `apps/api/app/services/learning/replay_observation.py` | replay 后 observation evidence；也是 Result Reporter / 用户可见结果反馈的输入 |
+| `apps/api/app/models/learned_path.py` | LearnedPath actions / metadata 的数据模型边界 |
 | `apps/api/app/repos/learned_paths_repo.py` | `lookup_learned_actions` / path candidate retrieval |
 | `apps/api/app/services/learning/page_signature.py` | target scope 和 dedup signal |
 | `apps/api/app/services/task_planning/*` | 复用 route / candidate / reporter / artifact 词汇 |

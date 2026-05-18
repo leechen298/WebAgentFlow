@@ -232,7 +232,7 @@ skill 调用、progress events、history、provenance 和最终用户可见文�
 工作 Agent 可以通过 Orchestrator / Skill Runtime 请求 skill：
 
 - **Page Understanding Agent / 页面理解 Agent** 读取 page-context bundle，返回页面摘要、
-  可支持目标、必需输入和可选页面类型 hint。不得输出 selector 或浏览器步骤。
+  可见控件、可支持目标和必需输入。不得输出 selector、浏览器步骤或页面分类契约。
 - **Learning Agent / 学习 Agent** 组织学习流程并请求 `start_learning`。它不同于
   autonomous exploration 的 Supervisor；Supervisor 只评价 run 结果。
 - **Web Operation Agent / 网页操作 Agent** 组织执行请求，可请求
@@ -241,9 +241,9 @@ skill 调用、progress events、history、provenance 和最终用户可见文�
 
 现有产品基础设施属于这套设计的一部分，不是平行重做：HTML-to-Full-AST、
 Full-AST-to-Simplified-AST、PageAnalysis、form-label extraction、action planning、
-Playwright execution、ExplorationRun step history、LearnedPath actions、replay
-observation、task planning schemas 和 response provenance 都应进入 Router /
-Skill Runtime 边界。
+Playwright execution、ExplorationRun step history、LearnedPath model / actions、
+wait-for-change signals、replay observation、task planning schemas 和 response provenance
+都应进入 Router / Skill Runtime 边界。
 
 LLM-backed Agent prompt 作为可版本化 prompt asset 管理，不作为 service 函数里的长字符串。
 Prompt 文件放在 API prompt asset 目录下；每个 Agent 拥有独立 prompt 文件和 metadata；
