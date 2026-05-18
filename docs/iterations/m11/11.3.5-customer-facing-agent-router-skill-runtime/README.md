@@ -1,6 +1,6 @@
 # 11.3.5 · Customer-Facing Agent Router & Skill Runtime
 
-状态：proposed（docs generated, implementation not started）
+状态：ready_for_implementation（docs review passed, implementation not started）
 里程碑：M11
 类型：code
 

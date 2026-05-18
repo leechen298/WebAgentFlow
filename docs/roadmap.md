@@ -314,7 +314,8 @@ Delivered / current packages:
   schema-constrained natural-language intake role, deterministic fallback,
   guardrails, response provenance, and redacted LLM trace history. Scoped tests
   passed; real LLM-backed smoke remains pending.
-- **11.3.5 Customer-Facing Agent Router & Skill Runtime** — proposed;
+- **11.3.5 Customer-Facing Agent Router & Skill Runtime** — ready for implementation;
+  docs review passed, implementation not started. It
   expands the chat recovery problem into the product-facing Agent routing
   layer. It defines Customer-Facing Agent Router != Conversation Orchestrator,
   the Application Skill Registry, Page Understanding / Learning / Web Operation

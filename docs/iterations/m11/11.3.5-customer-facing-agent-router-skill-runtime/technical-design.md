@@ -1,6 +1,6 @@
 # Technical Design
 
-状态：proposed（docs generated, implementation not started）
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 目标架构
 

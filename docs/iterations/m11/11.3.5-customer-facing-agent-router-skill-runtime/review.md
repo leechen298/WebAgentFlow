@@ -1,7 +1,7 @@
 # Review
 
-状态：proposed
-docs_review：pending
+状态：ready_for_implementation
+docs_review：passed
 implementation：not_started
 
 ## 当前发现
@@ -31,6 +31,26 @@ implementation：not_started
 - 接受：M11.3.5 不实现正式 Risk Policy；明显高影响 / 不可逆动作只作为本轮
   `learn_then_execute` 的不支持边界。
 - 接受：Thinking policy 必须写死，Router / Page Understanding 默认低延迟结构化输出。
+
+## 文档审核收口（2026-05-19）
+
+结论：docs review passed，可以进入实现阶段。
+
+收口内容：
+
+- 确认 11.3.5 不再是单点 chat recovery bugfix，而是面客 Agent Router
+  与应用技能运行时的产品骨架。
+- 确认 Router / Orchestrator / Worker Agent / Skill Runtime 边界清楚。
+- 确认 Application Skill Registry 已进入 product model 单一权威表，并在本包
+  contract 中作为实现期 registry 展开。
+- 确认 HTML AST、Simplified AST、PageAnalysis、form label extraction、
+  action planning、execution runtime、LearningRunService、LearnedPath model /
+  repository、wait-for-change、replay observation、conversation provenance / trace
+  和 prompt asset 基础设施均已纳入复用地图。
+- 确认 `page_type` / `optional_page_type_hint` 不作为 Page Understanding 契约字段，
+  避免把页面理解做成固定场景分类器。
+- 确认本轮不实现 active browser tab，不实现正式 Risk Policy / consent gate，
+  不重新引入已移除的旧用户操作录制 / Chrome extension 栈。
 
 ## 现有基础设施评估
 
@@ -63,4 +83,4 @@ Skill Runtime。
 
 ## 当前状态
 
-本提交只生成 / 更新文档。实现、测试和 manual smoke 均未开始。
+文档审核已通过，可进入实现。实现、测试和 manual smoke 均未开始。

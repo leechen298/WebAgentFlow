@@ -1484,7 +1484,7 @@ parser / regex / alias 匹配。11.3.4 定义并实现 Conversation Intake Agent
 
 ## 11.3.5 · Customer-Facing Agent Router & Skill Runtime
 
-状态：proposed（docs generated, implementation not started）。
+状态：ready_for_implementation（docs review passed, implementation not started）。
 
 目标：把 `wagent chat` 从“代码初筛 + Intake intent + 直接 learn / execute”升级为
 “上下文收集 + 面客 Agent 路由 + 代码裁决 + 应用技能运行时”的产品入口。裸 URL、

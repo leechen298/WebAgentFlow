@@ -1,6 +1,6 @@
 # Contract
 
-状态：proposed（docs generated, implementation not started）
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 核心不变量
 

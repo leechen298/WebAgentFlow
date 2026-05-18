@@ -1,6 +1,6 @@
 # Plan
 
-状态：proposed（docs generated, implementation not started）
+状态：ready_for_implementation（docs review passed, implementation not started）
 
 ## 阶段 0：文档收口
 

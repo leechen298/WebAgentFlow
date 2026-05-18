@@ -254,7 +254,8 @@ M11.3 把 runtime conversation 底座收束成面向普通用户的 `wagent chat
   response provenance 和脱敏 LLM trace history。Scoped tests passed；真实
   LLM-backed smoke 仍 pending。
 - **11.3.5 Customer-Facing Agent Router & Skill Runtime / 面客 Agent 路由与应用技能运行时**：
-  proposed；把 chat recovery 问题扩展为面客 Agent 路由层。它定义
+  ready for implementation；docs review passed，implementation not started。它把
+  chat recovery 问题扩展为面客 Agent 路由层，并定义
   Customer-Facing Agent Router != Conversation Orchestrator、Application Skill Registry、
   Page Understanding / Learning / Web Operation 工作 Agent 边界、target resolution、
   MVP 高影响动作边界、no-thinking routing、progress / loading 行为，以及 route decision /
