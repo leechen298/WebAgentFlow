@@ -153,16 +153,16 @@ LLM 理解用户说的话。
 |---|---|---|---|
 | 自然语言入口 | Conversation Intake Agent / 对话理解 Agent | 抽取 intent、target、action goal、slots、missing fields 和澄清提示。 | 校验 schema，拒绝危险输出，决定是否可以进入下一步。 |
 | 会话记忆 | Conversation Orchestrator / 代码 | 基于代码提供的 session context 理解“这个页面”“刚才那个页面”等指代。 | 持久化和清理 `pending_intake`、后续 `pending_target`、recent message summary、no-path context。 |
-| 已学动作匹配 | Conversation Orchestrator / 代码 | 提供“登录”“进入工作台”等语义别名。 | 只在当前 session、正确 `target_url` / `site_origin` scope 内匹配 learned actions。 |
+| 已学动作匹配 | Conversation Orchestrator / 代码 | 提供用户 action goal 的语义别名。 | 只在当前 session、正确 `target_url` / `site_origin` scope 内匹配 learned actions。 |
 | 是否允许学习 / 执行 | Conversation Orchestrator / 代码 | 提供用户意图 hint。 | 决定是否允许 learning 或 replay；强制执行 confirmation、scope 和安全规则。 |
 | 浏览器操作 | Learning / Replay services | 不参与逐步执行。 | 打开 Playwright、填写字段、点击按钮、replay LearnedPath，并收集执行证据。 |
 | 用户可见文案 | Conversation Orchestrator | 提供澄清或失败解释的文案 hint。 | 统一生成或过滤最终 `user_response`；不向最终用户暴露 schema、confidence、slot、JSON 或内部 trace 术语。 |
 | 证据和历史 | 代码 | 必要时总结用户意图。 | 持久化 events、response provenance、脱敏 LLM traces、learning runs、replay summaries 和敏感信息 redaction。 |
 
-M11.3.4 收口 intake / provenance 基础设施。裸 URL 后再说“学习”这类 chat
-recovery 行为转入 M11.3.5，因为它需要代码侧新增 conversation memory
-（`pending_target`、recent-message context、no-path recovery state），不只是
-改 LLM prompt。
+M11.3.4 收口 intake / provenance 基础设施。下一步 M11.3.5 是
+Customer-Facing Agent Router & Capability Runtime / 面客 Agent 路由与能力运行时。
+它不是只修裸 URL 续接，而是定义 WebAgentFlow 如何收集对话 / 页面上下文，请
+Router 给出下一步建议，再由代码侧裁决并只执行注册过的应用能力。
 
 ### 2.4 Response Provenance and LLM Trace / 回复来源与 LLM 记录
 
@@ -183,6 +183,82 @@ Codex CLI 可以在用户要求时操作 CLI / Console 并读取 history 辅助�
 Response provenance 不得污染 LearnedPath、replay result、page observation、Supervisor verdict
 或 pass-gate evidence。LLM trace 只能作为 conversation evidence 保存；raw record 在 history
 展示或从 debug JSON 复制前必须脱敏。
+
+### 2.5 Customer-Facing Agent Router and Capability Runtime / 面客 Agent 路由与能力运行时
+
+M11.3.5 引入一个必须固定的产品级区分。即使第一版实现暂时放在同一个 Python
+runtime 模块里，产品角色上也必须分开：
+
+```text
+Customer-Facing Agent Router != Conversation Orchestrator
+```
+
+**Customer-Facing Agent Router / 面客 Agent Router** 是内部 Agent 角色。它读取当前
+用户消息、Conversation Intake 结果、代码收集的会话上下文、可选页面理解结果、
+已学操作摘要和已注册 capability 菜单。它只回答一个问题：
+
+```text
+WebAgentFlow 下一步建议尝试什么？交给哪个工作 Agent 或能力？
+```
+
+Router 不调用工具、不打开浏览器、不把 LearnedPath 当作授权选择，也不执行技能。
+它只输出受 schema 约束的 route recommendation。
+
+**Conversation Orchestrator / 会话编排器** 仍然是代码侧控制层。它回答另一个问题：
+
+```text
+这个建议能不能执行？由谁真正执行？
+```
+
+Orchestrator 负责 session state、target resolution、`pending_target`、
+`pending_intake`、learned-action scope 校验、risk 校验、confirmation policy、
+capability 调用、progress events、history、provenance 和最终用户可见文案。
+
+**Capability Registry**（部分文档也会写作 Skill Registry）是应用能力菜单，不是
+Agent 列表。Capability 是一个受控、可审计的应用操作。第一版目录包括：
+
+- 收集会话上下文
+- 检查目标页面
+- 理解页面
+- 查询已学操作
+- 追问用户缺失信息
+- 启动学习
+- 执行已学路径
+- 先学再执行
+- 记录进度
+- 记录 Agent trace
+
+工作 Agent 可以通过 Orchestrator / Capability Runtime 请求 capability：
+
+- **Page Understanding Agent / 页面理解 Agent** 读取 page-context bundle，返回页面类型、
+  可支持目标、必需输入和风险提示。不得输出 selector 或浏览器步骤。
+- **Learning Agent / 学习 Agent** 组织学习流程并请求 `start_learning`。它不同于
+  autonomous exploration 的 Supervisor；Supervisor 只评价 run 结果。
+- **Web Operation Agent / 网页操作 Agent** 组织执行请求，可请求
+  `lookup_learned_actions`、`start_replay` 或受控的 `learn_then_execute`。
+  它不得发明浏览器步骤，也不得跨 target scope。
+
+现有产品基础设施属于这套设计的一部分，不是平行重做：HTML-to-Full-AST、
+Full-AST-to-Simplified-AST、PageAnalysis、form-label extraction、action planning、
+Playwright execution、ExplorationRun step history、LearnedPath actions、replay
+observation、task planning schemas 和 response provenance 都应进入 Router /
+capability runtime 边界。
+
+LLM-backed Agent prompt 作为可版本化 prompt asset 管理，不作为 service 函数里的长字符串。
+Prompt 文件放在 API prompt asset 目录下；每个 Agent 拥有独立 prompt 文件和 metadata；
+shared fragments 只存通用的 WebAgentFlow 边界、证据、脱敏和结构化输出规则；LLM trace
+记录 prompt id、version、content hash、schema、provider、model 和 redaction 状态。
+
+责任摘要：
+
+| 事项 | Router 可以做 | Orchestrator / 代码必须做 |
+|---|---|---|
+| 下一步选择 | 建议 ask / inspect / understand / learn / replay / learn-then-execute。 | 校验 schema、target、risk、confidence 和 capability preconditions。 |
+| 页面理解 | 请求或使用页面语义摘要。 | 基于 AST、PageAnalysis、URL、title、learned actions 等真实运行证据构建 page context。 |
+| 已学操作匹配 | 提供语义目标别名。 | 只在当前 session、正确 target URL / site origin scope 内匹配 learned actions。 |
+| 能力使用 | 推荐已注册 capability。 | 调用 capability 并记录 progress / trace。 |
+| 浏览器操作 | 永远不做。 | 只委托 Learning / Replay / execution services。 |
+| 用户回复 | 提供简短 reason hint。 | 生成最终 WAgent 回复；除 debug history 外，不向用户暴露内部 Agent 名称。 |
 
 ## 3. 页面的三个生命周期阶段
 
@@ -533,8 +609,8 @@ Teaching Guide Agent / 教学引导器边界：
 - **M11.3.4 conversation intake / 对话理解入口**：implementation complete，
   scoped tests passed，真实 LLM-backed smoke pending。`wagent chat` 已接入
   schema-constrained intake、deterministic fallback、pending-intake guardrails、
-  response provenance 和脱敏 LLM trace history。裸 URL -> “学习”这类 chat
-  context recovery 转入 M11.3.5。
+  response provenance 和脱敏 LLM trace history。裸 URL -> “学习”以及更完整的
+  面客路由问题转入 M11.3.5。
 - **L3 task execution / 实际任务执行**：未开工。没有 Task Path Planner /
   任务路径规划器实现，没有 Task Result Reporter / 任务结果汇报器实现，没有
   task-to-path 执行闭环，没有结果验证闭环，也没有恢复对话或 teaching mode。
@@ -553,7 +629,7 @@ Teaching Guide Agent / 教学引导器边界：
 | M11.0 · Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排 | CLI MVP、session state、Conversation Orchestrator、user message routing，以及 confirmation / pause / abort / takeover basics。 | 默认不新增 Agent；随能力落地路由到 Task Path Planner、Task Result Reporter、Failure Recovery Agent、User Abort Handler 和 Teaching Guide Agent。 |
 | M11.1 · Task-to-Path Planning & Execution MVP / 任务到路径规划与执行 MVP | Task Path Planner / Task Result Reporter、LearnedPath retrieval / ranking、slot binding、task result verification MVP、basic artifact capture、risk / consent gate MVP。 | Task Path Planner / 任务路径规划器（legacy: Agent D）；Task Result Reporter / 任务结果汇报器（legacy: Agent E）。 |
 | M11.3.4 · Conversation Intake Agent / 对话理解 Agent | `wagent chat` 的 schema-constrained intake：理解用户语言、target、action、slots 和 missing information，再交给 Orchestrator 校验。 | Conversation Intake Agent / 对话理解 Agent（无 legacy alias）。 |
-| M11.3.5 · Chat Context Recovery UX / 聊天上下文恢复体验 | 代码侧 conversation memory 和用户引导：裸 URL、短句续接、no-path recovery、以及不误导用户的 loading / progress 状态。 | 不新增 Agent；扩展 Conversation Orchestrator 和 Conversation Intake context。 |
+| M11.3.5 · Customer-Facing Agent Router & Capability Runtime / 面客 Agent 路由与能力运行时 | `wagent chat` 的面客路由层：上下文收集、Agent Router 建议、Orchestrator 裁决、Capability Registry、Page Understanding / Learning / Web Operation 工作边界、risk policy、progress / trace UX。 | Customer-Facing Agent Router；Page Understanding Agent 作为页面语义解释器提前使用；Learning Agent 和 Web Operation Agent 作为受 Orchestrator 控制的工作角色。 |
 | M12 · Recovery & Abort Dialogue / 恢复与中断对话 | Failure recovery、user interrupt handling，以及 continue / replan / rerun / takeover / abandon choices。 | Failure Recovery Agent / 失败恢复助手（legacy: Agent F）；User Abort Handler / 用户中断处理器（legacy: Agent G）。 |
 | M13 · User-Guided Learning, Teaching & Correction / 用户引导学习、教学与纠正 | Visible browser、user demonstration recording、Teaching Guide Agent guidance、highlight / shadow / indicator / tooltip、provenance=user write-back、correction UI。 | Teaching Guide Agent / 教学引导器（legacy: Agent H）；保留用户来源。 |
 | M14 · Learning Quality, Coverage & Negative Knowledge / 学习质量、覆盖与负面知识 | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent、popup controls、custom click-toggle、label extractor expansion、cross-page pattern mining、failure evidence / negative knowledge store。 | Page Understanding Agent / 页面理解器（legacy: Agent A）；Attempt Evaluation Agent / 尝试评估器（legacy: Agent B）；Learning Report Agent / 学习报告器（legacy: Agent C）。 |

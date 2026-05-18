@@ -314,13 +314,18 @@ Delivered / current packages:
   schema-constrained natural-language intake role, deterministic fallback,
   guardrails, response provenance, and redacted LLM trace history. Scoped tests
   passed; real LLM-backed smoke remains pending.
-- **11.3.5 Chat Context Recovery UX** — proposed; moves bare URL, short
-  follow-up commands, no-path learning guidance, and loading/progress behavior
-  into code-owned conversation memory and Orchestrator-led user guidance.
+- **11.3.5 Customer-Facing Agent Router & Capability Runtime** — proposed;
+  expands the chat recovery problem into the product-facing Agent routing
+  layer. It defines Customer-Facing Agent Router != Conversation Orchestrator,
+  the Capability Registry, Page Understanding / Learning / Web Operation
+  worker-Agent boundaries, target resolution, risk policy, no-thinking routing,
+  progress/loading behavior, and history traces for route decisions and
+  capability calls.
 
-M11.3.4 does not let an LLM operate the browser. The LLM only understands user
-language; code validates scope and execution policy; Learning / Replay services
-perform the browser work.
+M11.3.4 and M11.3.5 do not let an LLM operate the browser. The LLM understands
+user language, page semantics, and next-step routing; code validates scope,
+risk, state, and execution policy; registered capabilities call Learning /
+Replay / execution services for the browser work.
 
 Codex CLI can read history for debugging as an external development Agent, but
 it is not a product runtime Reply Producer.

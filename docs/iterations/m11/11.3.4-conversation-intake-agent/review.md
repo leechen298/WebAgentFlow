@@ -112,7 +112,7 @@ WAgent > 我会打开浏览器执行：学习。
   - 下一句“学习”应能引用上一轮 URL。
   - no-path 应主动引导学习，而不是冷拒绝。
   - CLI 应提供不误导用户的 loading / progress 状态。
-  - 这些属于 Chat Context Recovery UX，不继续压在 M11.3.4 基础设施收口里。
+  - 这些属于 11.3.5 Customer-Facing Agent Router & Capability Runtime，不继续压在 M11.3.4 基础设施收口里。
 
 ## 代码评审
 
@@ -140,4 +140,4 @@ WAgent > 我会打开浏览器执行：学习。
 
 - 真实 LLM-backed provider smoke 尚未执行。
 - fake / stub provider 可以用于实现测试，但真实 LLM smoke 才能标记 LLM-intake acceptance passed。
-- Chat Context Recovery UX 尚未实现，已转入 11.3.5。
+- Customer-Facing Agent Router & Capability Runtime 尚未实现，已转入 11.3.5。

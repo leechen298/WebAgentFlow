@@ -54,7 +54,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.2-chat-history-debug-console](./11.3.2-chat-history-debug-console/) —— Chat History & Debug Console：补 Conversation session list、aggregate history、Console history 页面、CLI list/history/resume，服务人工测试和 Codex CLI 调试复用。状态：implementation complete（implementation review passed, UI smoke pending）。
 - [11.3.3-product-chat-test-site-separation](./11.3.3-product-chat-test-site-separation/) —— Product-Level Chat Test Site Separation：拆分 validation-site 工程验证靶场与 product-test-site 产品级 chat 人工验收靶场，避免 validation spec / assertion oracle 污染 `wagent chat` 产品路径。状态：accepted（implementation review passed, product-level CLI smoke passed）。
 - [11.3.4-conversation-intake-agent](./11.3.4-conversation-intake-agent/) —— Conversation Intake Agent：为 `wagent chat` 定义并实现 schema-constrained 自然语言入口层，让 LLM 理解用户话语并输出结构化 intent / target / action / slots / missing fields，代码继续负责校验和执行；同时 Conversation History detail 展示 WAgent 回复来源和脱敏 LLM trace。状态：implementation complete（scoped tests passed, real LLM smoke pending）。
-- [11.3.5-chat-context-recovery-ux](./11.3.5-chat-context-recovery-ux/) —— Chat Context Recovery UX：补齐小白用户的裸 URL、短句续接、no-path 学习引导和 loading / progress 体验；代码负责 conversation memory，LLM 只做语义理解。状态：proposed（docs generated, implementation not started）。
+- [11.3.5-customer-facing-agent-router-capability-runtime](./11.3.5-customer-facing-agent-router-capability-runtime/) —— Customer-Facing Agent Router & Capability Runtime：把 chat recovery 问题扩展为面客 Agent 路由与能力运行时，定义 Router / Orchestrator / Worker Agent / Capability Registry 边界，复用 AST、PageAnalysis、LearnedPath 和 replay evidence。状态：proposed（docs generated, implementation not started）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -105,6 +105,13 @@ response provenance 和 redacted LLM trace history；
 / LLM trace 要求：`/conversation/history/:session_id` 应能显示每条 WAgent 回复的生成来源，
 包括代码路径、内部 Agent role、LLM provider / model / trace，以及脱敏后的 raw record。
 Codex CLI 是外部开发 / 测试 Agent，不是产品内部 Reply Producer。
+`11.3.5-customer-facing-agent-router-capability-runtime/` 是 11.3 interactive chat 的面客
+Agent 路由与能力运行时设计包。它把裸 URL、短句续接和 no-path 学习引导上升到
+Router / Orchestrator / Capability Runtime 责任边界：Customer-Facing Agent Router 只建议
+下一步交给谁，Conversation Orchestrator 代码侧裁决能否执行，Capability Runtime 调用
+已注册应用能力。该包明确复用 HTML AST、Simplified AST、PageAnalysis、ExplorationRun steps、
+LearnedPath actions、replay observation、task planning schemas 和 response provenance；
+不实现 active browser tab，不让 LLM 直接操作浏览器，不让 Router 直接调用 capability。
 
 11.2 后续 backlog：
 

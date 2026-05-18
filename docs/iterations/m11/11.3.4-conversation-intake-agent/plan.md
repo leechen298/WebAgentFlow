@@ -24,7 +24,7 @@
 - CLI loading / progress 体验细化。
 - History 列表本地时区格式。
 
-这些进入后续 11.3.5 Chat Context Recovery UX。
+这些进入后续 11.3.5 Customer-Facing Agent Router & Capability Runtime。
 
 ## 已实现阶段拆解
 

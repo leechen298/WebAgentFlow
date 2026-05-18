@@ -1466,7 +1466,8 @@ parser / regex / alias 匹配。11.3.4 定义并实现 Conversation Intake Agent
 - Scoped tests passed：API 101 passed、CLI 13 passed、Console ConversationHistoryDetailPage
   169 tests passed、scoped ruff passed、`git diff --check` clean。
 - 未执行真实 LLM-backed smoke，因此 LLM-intake acceptance 仍 pending。
-- 人工发现的裸 URL + “学习”上下文恢复问题转入 11.3.5。
+- 人工发现的裸 URL + “学习”上下文恢复问题转入 11.3.5，并扩大为面客 Agent
+  路由与能力运行时设计。
 
 执行包目录：
 
@@ -1481,44 +1482,70 @@ parser / regex / alias 匹配。11.3.4 定义并实现 Conversation Intake Agent
 - 不做真实业务系统适配。
 - 不做完整风险 / consent policy。
 
-## 11.3.5 · Chat Context Recovery UX
+## 11.3.5 · Customer-Facing Agent Router & Capability Runtime
 
 状态：proposed（docs generated, implementation not started）。
 
-目标：补齐小白用户的聊天上下文恢复体验。M11.3.4 解决了自然语言 intake 和
-provenance / trace 基础设施，但人工测试暴露出 `wagent chat` 对裸 URL 和短句续接仍像命令解析器。
+目标：把 `wagent chat` 从“代码初筛 + Intake intent + 直接 learn / execute”升级为
+“上下文收集 + 面客 Agent 路由 + 代码裁决 + 能力运行时”的产品入口。裸 URL、
+短句续接和 no-path 学习引导仍是本轮必须解决的用户体验，但它们不再作为孤立 bug
+处理，而是落在 Router / Orchestrator / Worker Agent / Capability Runtime 的责任边界里。
 
-失败样例：
+核心原则：
 
 ```text
-You > http://localhost:5176/workspace-login
-WAgent > 我会打开浏览器执行：http://localhost:5176/workspace-login。
-WAgent > 还没学过这个站点或页面，需要先学习。
-You > 学习
-WAgent > 我会打开浏览器执行：学习。
+Customer-Facing Agent Router != Conversation Orchestrator
+Router 是建议者。
+Orchestrator 是代码侧裁决者。
+Capability Runtime 是执行者。
 ```
 
 关键契约：
 
-- 裸 URL 保存为 `pending_target`，不得直接 execute。
-- `pending_target` 是代码侧 session memory，不是 LLM 自己记忆。
-- “学习”“登录”“进入工作台”等短句可以引用 pending target。
-- no-path 结果应主动引导学习，而不是冷拒绝。
+- Customer-Facing Agent Router 读取 Intake result、conversation context、page understanding、
+  learned action summary 和 capability registry，只输出 route recommendation。
+- Conversation Orchestrator 负责 session state、target resolution、pending state、scope、
+  risk、confirmation、capability invocation、progress events 和最终用户文案。
+- Capability Registry 是应用能力目录，不是 Agent 列表。第一版能力包括
+  `collect_conversation_context`、`inspect_target_page`、`understand_page`、
+  `lookup_learned_actions`、`ask_user_for_missing_info`、`start_learning`、
+  `start_replay`、`learn_then_execute`、`record_progress_event`、`record_agent_trace`。
+- Page Understanding Agent 可读取 page-context bundle，输出页面类型、支持目标、必需 slots
+  和 risk hints；不得输出 selector、browser steps 或 learned_path_id。
+- Learning Agent 组织学习流程，Web Operation Agent 组织网页操作执行；二者只能通过
+  Orchestrator / Capability Runtime 请求能力。
+- 本轮明确复用现有 HTML -> Full AST、Full AST -> Simplified AST、PageAnalysis、
+  form label extraction、action planning、execution runtime、ExplorationRun steps、
+  LearnedPath actions、replay observation、task planning schemas 和 response provenance。
+- target resolution 优先级：用户消息显式 URL > `pending_target` > 最近提到 URL /
+  no-path context > 当前 session 唯一 learned target > 未来 active tab > 追问。
+- M11.3.5 不实现 active browser tab，不得假设该能力存在。
+- risk policy 只做轻量分类：low risk 可 learn-then-execute，medium risk 复用现有确认策略，
+  high risk 不自动执行。
+- Router / Page Understanding 默认 no-thinking / low-latency structured JSON，不保存
+  chain-of-thought。
+- Agent prompt 作为版本化 prompt asset 存放在 `apps/api/app/prompts/`，service 代码
+  只引用 prompt id / version / loader，不内嵌大段 system prompt；LLM trace 记录
+  prompt id、version、hash、schema 和 redaction 状态。
+- 裸 URL 不直接 execute；保存 pending target 并追问用户想学习或执行什么。
 - CLI 对模糊输入显示中性 loading，不提前猜测“执行”。
-- Intake context 增加 pending target、recent context summary、last mentioned URL 和 last no-path reason。
-- Conversation Orchestrator 负责合并和清理 pending state，LLM 只提供语义理解。
+- History detail 展示 Intake / Router / Orchestrator / Worker Agent / capability / final
+  response provenance，并保持 sensitive redaction。
 - 非 `interactive_chat` developer workflow 不变。
 
 执行包目录：
 
-- `docs/iterations/m11/11.3.5-chat-context-recovery-ux/`
+- `docs/iterations/m11/11.3.5-customer-facing-agent-router-capability-runtime/`
 
 非目标：
 
-- 不新增内部 Agent。
 - 不让 LLM 操作浏览器。
+- 不让 Router 直接调用 capability。
+- 不输出 selector / browser actions / learned_path_id 作为执行授权。
 - 不做 M12 recovery / retry / abort。
-- 不做全局 LearnedPath 自动召回。
+- 不做复杂多页面 workflow。
+- 不做真实业务系统适配。
+- 不重新引入已移除的旧用户操作录制 / Chrome extension 栈。
 
 ## Later M11.x · Page Context Bridge Decision Point
 
