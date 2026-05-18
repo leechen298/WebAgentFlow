@@ -11,7 +11,7 @@ provenance、redacted LLM trace 和 Conversation History detail 展示。
 
 真实 LLM-backed smoke 尚未执行，因此本设计的真实 LLM acceptance 仍然 pending。
 用户裸 URL 后再说“学习”的上下文恢复体验不属于本包收口范围，已转入
-11.3.5 Customer-Facing Agent Router & Capability Runtime。
+11.3.5 Customer-Facing Agent Router & Skill Runtime。
 
 ## 实现前状态记录
 

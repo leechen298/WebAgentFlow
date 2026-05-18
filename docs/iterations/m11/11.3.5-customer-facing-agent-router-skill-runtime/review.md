@@ -14,21 +14,22 @@ implementation：not_started
 ```
 
 初始 11.3.5 只把问题定义成 Chat Context Recovery UX。后续讨论确认这个范围太窄：
-真正的问题是面客 Agent 路由、Orchestrator 裁决、Worker Agent 和 Capability Runtime
+真正的问题是面客 Agent 路由、Orchestrator 裁决、Worker Agent 和 Skill Runtime
 边界没有完整建模。
 
 ## 设计决策
 
 - 接受：`Customer-Facing Agent Router != Conversation Orchestrator`。
-- 接受：Router 只输出路由建议，不直接调用 capability。
-- 接受：Orchestrator 是代码侧裁决者，负责 scope、risk、state、事件和真正调用。
-- 接受：Capability Registry 是应用能力目录，不是 Agent 列表。
+- 接受：Router 只输出路由建议，不直接调用 skill。
+- 接受：Orchestrator 是代码侧裁决者，负责 scope、state、MVP 边界、事件和真正调用。
+- 接受：Application Skill Registry 是应用能力目录，不是 Agent 列表。
 - 接受：Learning Agent 和 Web Operation Agent 是工作 Agent，可以通过 Orchestrator /
-  Capability Runtime 请求 capability。
+  Skill Runtime 请求 skill。
 - 接受：Page Understanding Agent 可以提前作为页面语义理解层使用，但不得输出 selector
   或 browser steps。
 - 接受：M11.3.5 不实现 active browser tab。
-- 接受：Risk policy 必须进入本轮，但只做轻量分类和 high-risk 自动执行阻断。
+- 接受：M11.3.5 不实现正式 Risk Policy；明显高影响 / 不可逆动作只作为本轮
+  `learn_then_execute` 的不支持边界。
 - 接受：Thinking policy 必须写死，Router / Page Understanding 默认低延迟结构化输出。
 
 ## 现有基础设施评估
@@ -43,7 +44,7 @@ implementation：not_started
 - Conversation intake / provenance / redacted LLM trace。
 
 因此本轮不应重造“Agent 直接看网页乱点”的系统，而应把这些能力整理为受控
-Capability Runtime。
+Skill Runtime。
 
 ## Acceptance blockers
 
@@ -51,9 +52,9 @@ Capability Runtime。
 
 - Router 直接调用 start_learning / start_replay。
 - LLM 输出 selector / Playwright step / learned_path_id 并被当作执行授权。
-- Orchestrator 跳过 target scope / risk 校验。
+- Orchestrator 跳过 target scope / MVP 边界校验。
 - 未学过页面跨站点命中历史 LearnedPath。
-- 高风险动作自动执行。
+- 明显高影响或不可逆动作进入自动 learn_then_execute。
 - Page Understanding output 写入 LearnedPath proof。
 - History 或 trace 明文展示 password / token / access_secret。
 - 文档或代码假设 active browser tab 已可用。

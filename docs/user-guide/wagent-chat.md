@@ -28,9 +28,9 @@ raw trace。Codex CLI 只是外部测试或调试操作者，不会被当成 Web
 “学习”、未学过页面时主动引导学习、以及“我该先检查页面、学习还是执行”的面客
 Agent 路由体验，已进入 M11.3.5 规划。
 
-M11.3.5 计划新增 Customer-Facing Agent Router & Capability Runtime / 面客 Agent 路由与能力运行时。
+M11.3.5 计划新增 Customer-Facing Agent Router & Skill Runtime / 面客 Agent 路由与应用技能运行时。
 它不是让 LLM 直接操作浏览器，而是让 Router 基于聊天上下文、页面理解、已学操作和
-应用能力菜单建议下一步；代码侧 Orchestrator 再判断能不能执行，并通过注册 capability
+应用技能菜单建议下一步；代码侧 Orchestrator 再判断能不能执行，并通过注册 skill
 调用 Learning / Replay 服务。M11.3.5 实现前，不要把“只发 URL 后系统能自动续接学习”
 作为当前版本通过条件。
 
@@ -169,7 +169,7 @@ CLI。重新安装 CLI 后再检查：
 
 M11.3.5 也会把底层能力整理成应用能力菜单，包括检查目标页面、基于 HTML AST /
 Simplified AST / PageAnalysis 理解页面、查询当前会话已学操作、启动学习、执行已学路径、
-以及在低风险且信息完整时先学再执行。第一版仍以聊天里提供的 URL 和上下文为主，不依赖
+以及在 MVP 支持范围内、信息完整时先学再执行。第一版仍以聊天里提供的 URL 和上下文为主，不依赖
 用户当前浏览器的 active tab。
 
 学习完成后继续输入：

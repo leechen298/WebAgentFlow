@@ -5,11 +5,11 @@
 ## 核心不变量
 
 1. Customer-Facing Agent Router 不是 Conversation Orchestrator。
-2. Router 只输出结构化路由建议，不直接调用 capability。
-3. Orchestrator 是代码侧裁决者，负责状态、scope、risk、授权、调用和事件。
-4. Capability Runtime 是执行者，只执行已注册、可审计的应用能力。
+2. Router 只输出结构化路由建议，不直接调用 skill。
+3. Orchestrator 是代码侧裁决者，负责状态、scope、MVP 边界、授权、调用和事件。
+4. Skill Runtime 是执行者，只执行已注册、可审计的应用能力。
 5. Learning Agent / Web Operation Agent / Page Understanding Agent 可以组织工作，
-   但必须通过 Orchestrator / Capability Runtime 请求能力。
+   但必须通过 Orchestrator / Skill Runtime 请求能力。
 6. LLM 不得直接控制浏览器，不得输出 selector、Playwright step 或 learned_path_id
    作为执行授权。
 7. LearnedPath / replay / Supervisor evidence 只能来自真实浏览器执行和代码侧证据，
@@ -17,12 +17,12 @@
 
 ## 角色契约
 
-| Role | 中文名 | 本质 | 输出 | 能否直接调用 capability | 边界 |
+| Role | 中文名 | 本质 | 输出 | 能否直接调用 skill | 边界 |
 |---|---|---|---|---|---|
 | Conversation Intake Agent | 对话理解 Agent | 语言理解层 | intent、target、slots、missing_fields | 否 | 不操作浏览器，不选择路径 |
-| Customer-Facing Agent Router | 面客 Agent Router | 路由建议者 | route_decision、next_agent、recommended_capability | 否 | 只建议，不执行 |
+| Customer-Facing Agent Router | 面客 Agent Router | 路由建议者 | route_decision、next_agent、recommended_skill | 否 | 只建议，不执行 |
 | Conversation Orchestrator | 会话编排器 / 调度器 | 代码控制层 | 调用、追问、拒绝、记录、用户回复 | 是 | 最终裁决者 |
-| Page Understanding Agent | 页面理解 Agent | 页面语义理解 | page_type、supported_goals、required_slots、risk_hints | 否 | 不输出 selector 或步骤 |
+| Page Understanding Agent | 页面理解 Agent | 页面语义理解 | observed_page_summary、supported_goals、required_slots、optional page_type_hint | 否 | 不输出 selector 或步骤 |
 | Learning Agent | 学习 Agent | 学习流程组织者 | learning request / learning result summary | 通过 Orchestrator 请求 | 不把猜测写成路径证据 |
 | Web Operation Agent | 网页操作 Agent | 操作执行组织者 | replay / learn_then_execute request | 通过 Orchestrator 请求 | 不跨站点，不发明步骤 |
 | Task Result Reporter | 结果反馈 Agent | 结果解释层 | 用户可读结果 | 否 | 不创造事实 |
@@ -33,7 +33,7 @@ Router 输出必须是 schema-constrained JSON。第一版字段：
 
 - `route_decision`
 - `next_agent`
-- `recommended_capability`
+- `recommended_skill`
 - `target.url`
 - `target.site_origin`
 - `target.source`
@@ -42,7 +42,6 @@ Router 输出必须是 schema-constrained JSON。第一版字段：
 - `known_context.has_required_user_inputs`
 - `known_context.page_context_available`
 - `missing_fields[]`
-- `risk_level`
 - `confidence`
 - `reason_summary`
 
@@ -66,7 +65,7 @@ Router 输出必须是 schema-constrained JSON。第一版字段：
 - `web_operation_agent`
 - `task_result_reporter`
 
-允许的第一版 `recommended_capability`：
+允许的第一版 `recommended_skill`：
 
 - `collect_conversation_context`
 - `inspect_target_page`
@@ -79,20 +78,20 @@ Router 输出必须是 schema-constrained JSON。第一版字段：
 - `record_progress_event`
 - `record_agent_trace`
 
-## Capability Registry
+## Application Skill Registry
 
-Capability Registry 是应用能力目录。它不是 Agent 列表。
+Application Skill Registry 是应用能力目录。它不是 Agent 列表。
 
-| Capability | 中文说明 | 主要用途 | 请求方 | 真正执行方 | 浏览器 | 改变页面 | 沉淀 LearnedPath |
+| Skill | 中文说明 | 主要用途 | 请求方 | 真正执行方 | 浏览器 | 改变页面 | 沉淀 LearnedPath |
 |---|---|---|---|---|---|---|---|
 | `collect_conversation_context` | 收集会话上下文 | 最近消息、pending 状态、已学 actions、最后目标、no-path 原因 | Orchestrator | 代码 | 否 | 否 | 否 |
 | `inspect_target_page` | 检查目标页面 | 给定 URL，获取 title、URL、可见文本、控件摘要、Full/Simplified AST、PageAnalysis | Router 建议 / Worker 请求 | Runtime + 代码 | 可以 | 否 | 否 |
-| `understand_page` | 理解页面语义 | 判断页面类型、主要目标、必需输入、风险 | Router 建议 / Learning Agent 请求 | Page Understanding Agent | 否 | 否 | 否 |
+| `understand_page` | 理解页面语义 | 总结页面上下文、可能目标和必需输入 | Router 建议 / Learning Agent 请求 | Page Understanding Agent | 否 | 否 | 否 |
 | `lookup_learned_actions` | 查询已学操作 | 查询 current session / target scope 下已学操作 | Router / Web Operation Agent | 代码 / Repository | 否 | 否 | 否 |
 | `ask_user_for_missing_info` | 追问缺失信息 | 询问缺少的目标、URL、参数、输入或确认 | Router 建议 | Orchestrator / Reporter | 否 | 否 | 否 |
 | `start_learning` | 启动学习 | 调用 LearningRunService / autonomous exploration 学习操作 | Learning Agent | Learning Service | 是 | 可能 | 是 |
 | `start_replay` | 执行已学路径 | 调用 replay 执行 LearnedPath | Web Operation Agent | Replay Service | 是 | 可能 | 否 |
-| `learn_then_execute` | 先学再执行 | 对未学过但信息完整、风险允许的任务，先学习再 replay | Web Operation Agent / Learning Agent | Capability Runtime 编排 | 是 | 可能 | 是 |
+| `learn_then_execute` | 先学再执行 | 对未学过但信息完整、处于 M11.3.5 MVP 支持范围内的任务，先学习再 replay | Web Operation Agent / Learning Agent | Skill Runtime 编排 | 是 | 可能 | 是 |
 | `record_progress_event` | 记录进度 | 让 CLI / Console 知道正在理解、检查、学习、执行 | Orchestrator / Runtime | 代码 | 否 | 否 | 否 |
 | `record_agent_trace` | 记录 Agent 轨迹 | 记录 Intake、Router、Page Understanding 等结构化输出 | Agent Runtime | 代码 | 否 | 否 | 否 |
 
@@ -123,13 +122,14 @@ Capability Registry 是应用能力目录。它不是 Agent 列表。
 
 Page Understanding Agent 只读取 page context bundle，输出页面语义。第一版字段：
 
-- `page_type`
+- `observed_page_summary`
+- `visible_controls[]` / `page_context_summary`
 - `supported_goals[]`
 - `supported_goals[].goal`
 - `supported_goals[].canonical_goal`
 - `supported_goals[].aliases[]`
 - `supported_goals[].required_slots[]`
-- `supported_goals[].risk_level`
+- `optional_page_type_hint`
 - `confidence`
 - `reason_summary`
 
@@ -138,17 +138,14 @@ Page Understanding Agent 只读取 page context bundle，输出页面语义。�
 
 它不得输出 selector、DOM path、Playwright step 或 LearnedPath action。
 
-## Risk Policy
+## High-Impact Boundary
 
-M11.3.5 只定义轻量风险策略，不引入完整权限系统。
+M11.3.5 不实现正式 Risk Policy、consent gate 或权限策略。它只定义一个 MVP 边界：
+明显不可逆、外部可见、涉及资产/权限/大范围数据变更或其他高影响提交的操作，不进入
+`learn_then_execute` 自动路径。
 
-| Risk | 判定口径 | 策略 |
-|---|---|---|
-| `low` | 只读或可安全重复、不会修改目标系统关键状态的操作 | 信息完整时可 `learn_then_execute` |
-| `medium` | 会改变页面状态但通常可恢复、可重新执行或影响范围有限的操作 | 可学习；执行时复用现有 confirmation / chat policy |
-| `high` | 不可逆、外部可见、涉及资产/权限/大范围数据变更或高影响提交的操作 | M11.3.5 不自动执行，必须追问 / 拒绝 / 交给后续 consent 设计 |
-
-本轮不新增复杂用户同意 UI。高风险自动执行是 acceptance blocker。
+遇到这类任务时，Orchestrator 应返回“不在本轮范围内”或要求后续迭代处理。正式
+risk / consent policy 留给 M12 或后续专门迭代。
 
 ## Thinking Policy
 
@@ -226,7 +223,8 @@ pending target 进入学习路线判断。如果缺少 action goal 或 slots，O
 ### 未学过但信息完整
 
 用户要求执行一个当前 session 未学过的目标，但 URL、目标和必要输入都完整时，是否进入
-`learn_then_execute` 取决于 risk policy 和 Orchestrator 校验。
+`learn_then_execute` 取决于 Orchestrator 对 target、goal、slots、current-session scope
+和 M11.3.5 MVP 边界的校验。
 
 ### 缺信息
 

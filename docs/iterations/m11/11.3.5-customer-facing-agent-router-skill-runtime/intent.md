@@ -29,7 +29,7 @@ Context Collector
 -> Customer-Facing Agent Router
 -> Conversation Orchestrator
 -> Worker Agent
--> Capability Runtime
+-> Skill Runtime
 -> Result Reporter
 ```
 
@@ -46,7 +46,7 @@ decision。
 下一步建议交给谁？
 ```
 
-它不调用 capability，不执行浏览器动作，不做最终授权。
+它不调用 skill，不执行浏览器动作，不做最终授权。
 
 ### Conversation Orchestrator
 
@@ -58,14 +58,14 @@ Agent，而是代码侧裁决者。它回答：
 这个建议能不能执行？由谁执行？如何记录？
 ```
 
-### Capability Registry
+### Application Skill Registry
 
-Capability Registry（也可称 Skill Registry）是应用能力目录。它列出系统能做的
+Application Skill Registry（也可称 Skill Registry）是应用能力目录。它列出系统能做的
 受控能力，包括收集上下文、检查页面、理解页面、查询已学操作、追问用户、启动学习、
 执行已学路径、先学再执行、记录进度事件和记录 Agent trace。
 
-Capability 是“应用能力”，不是 Agent。Agent 可以建议或请求使用 capability；
-真正调用由 Orchestrator / Capability Runtime 执行。
+Skill 是“应用能力”，不是 Agent。Agent 可以建议或请求使用 skill；
+真正调用由 Orchestrator / Skill Runtime 执行。
 
 ### Worker Agents
 
@@ -75,8 +75,8 @@ Capability 是“应用能力”，不是 Agent。Agent 可以建议或请求使
 - Learning Agent：组织学习流程。
 - Web Operation Agent：组织执行用户要求的网页操作。
 
-它们可以通过 Orchestrator / Capability Runtime 请求 capability，但不能绕过代码侧
-scope / risk / state 校验。
+它们可以通过 Orchestrator / Skill Runtime 请求 skill，但不能绕过代码侧
+scope / state / MVP 边界校验。
 
 ## 现有基础设施意图
 
@@ -86,7 +86,7 @@ scope / risk / state 校验。
 - PageAnalysis / form label extraction 为字段、按钮、控件语义提供输入。
 - ExplorationRun steps 和 LearnedPath actions 记录真实操作路径，辅助 Router 判断
   系统是否学过类似操作。
-- Task planning schemas 已经提供 route、risk、postcondition、artifact 等结构化概念，
+- Task planning schemas 已经提供 route、postcondition、artifact 等结构化概念，
   11.3.5 应尽量复用这些词汇。
 
 ## 成功标准
@@ -96,7 +96,8 @@ scope / risk / state 校验。
 - 裸 URL 不再被当作执行请求。
 - 系统能保存 pending target 并追问用户想学习或执行什么。
 - 短句、指代和自然表达可以结合上下文解释。
-- 未学过但信息完整的低风险任务可以进入 learn-then-execute 策略。
+- 未学过但信息完整、且处于 M11.3.5 MVP 支持范围内的任务可以进入
+  learn-then-execute 策略。
 - 缺信息时追问，不猜测执行。
-- Router、Orchestrator、Worker Agent、Capability Runtime 的责任可审计。
-- History detail 能解释 Agent 路由、代码裁决、capability 调用和最终回复来源。
+- Router、Orchestrator、Worker Agent、Skill Runtime 的责任可审计。
+- History detail 能解释 Agent 路由、代码裁决、skill 调用和最终回复来源。

@@ -191,11 +191,11 @@ Responsibility matrix:
 | Evidence and history | Code | Summarize intent when useful. | Persist events, response provenance, redacted LLM traces, learning runs, replay summaries, and sensitive redaction. |
 
 M11.3.4 implements the intake/provenance foundation. The next step is M11.3.5:
-Customer-Facing Agent Router & Capability Runtime. It does not merely patch
+Customer-Facing Agent Router & Skill Runtime. It does not merely patch
 bare-URL recovery. It defines how WebAgentFlow gathers conversation/page
 context, asks an Agent Router for a next-step recommendation, lets code
 adjudicate that recommendation, and executes only registered application
-capabilities.
+skills.
 
 ### 2.4 Response Provenance and LLM Trace
 
@@ -221,7 +221,7 @@ observation, Supervisor verdict, or pass-gate evidence. LLM traces may be kept
 as conversation evidence only, and raw records must be redacted before they are
 shown in history or copied from debug JSON.
 
-### 2.5 Customer-Facing Agent Router and Capability Runtime
+### 2.5 Customer-Facing Agent Router and Skill Runtime
 
 M11.3.5 introduces a product-level distinction that must hold even if the first
 implementation keeps several pieces in the same Python module:
@@ -233,10 +233,10 @@ Customer-Facing Agent Router != Conversation Orchestrator
 The **Customer-Facing Agent Router** is an internal Agent role. It receives the
 current user message, the Conversation Intake result, code-collected
 conversation context, optional page understanding, learned-action summaries, and
-the registered capability menu. It answers one question:
+the registered application skill menu. It answers one question:
 
 ```text
-What should WebAgentFlow try next, and which worker Agent or capability should
+What should WebAgentFlow try next, and which worker Agent or application skill should
 handle it?
 ```
 
@@ -252,13 +252,14 @@ Is this recommendation allowed to run, and who actually runs it?
 ```
 
 The Orchestrator owns session state, target resolution, `pending_target`,
-`pending_intake`, learned-action scope checks, risk checks, confirmation policy,
-capability invocation, progress events, history, provenance, and final
+`pending_intake`, learned-action scope checks, MVP boundary checks, confirmation policy,
+skill invocation, progress events, history, provenance, and final
 user-facing wording.
 
-The **Capability Registry** (also called Skill Registry in some docs) is the
-application capability menu, not an Agent list. A capability is a bounded,
-auditable application operation. The first registry includes:
+The **Application Skill Registry** is the application ability menu, not an
+Agent list. A skill is a bounded, auditable application operation. Earlier
+drafts used "capability"; new M11.3.5 docs should use "skill" consistently.
+The first registry includes:
 
 - collect conversation context
 - inspect a target page
@@ -271,12 +272,11 @@ auditable application operation. The first registry includes:
 - record progress
 - record Agent trace
 
-Worker Agents may request capabilities through the Orchestrator / Capability
-Runtime:
+Worker Agents may request skills through the Orchestrator / Skill Runtime:
 
 - **Page Understanding Agent** reads a page-context bundle and returns page
-  type, supported goals, required slots, and risk hints. It must not output
-  selectors or browser steps.
+  summary, supported goals, required slots, and an optional page type hint. It
+  must not output selectors or browser steps.
 - **Learning Agent** organizes the learning flow and requests `start_learning`.
   It is distinct from the autonomous exploration Supervisor, which only
   evaluates run outcomes.
@@ -288,8 +288,8 @@ The existing product infrastructure is part of this design rather than a
 parallel implementation track: HTML-to-Full-AST, Full-AST-to-Simplified-AST,
 PageAnalysis, form-label extraction, action planning, Playwright execution,
 ExplorationRun step history, LearnedPath actions, replay observation, task
-planning schemas, and response provenance all feed the Router / capability
-runtime boundary.
+planning schemas, and response provenance all feed the Router / Skill Runtime
+boundary.
 
 LLM-backed Agent prompts are managed as versioned prompt assets, not long
 strings embedded in service functions. Prompt files live under the API prompt
@@ -302,10 +302,10 @@ Responsibility summary:
 
 | Surface | Router may do | Orchestrator / code must do |
 |---|---|---|
-| Next-step choice | Recommend ask / inspect / understand / learn / replay / learn-then-execute. | Validate schema, target, risk, confidence, and capability preconditions. |
+| Next-step choice | Recommend ask / inspect / understand / learn / replay / learn-then-execute. | Validate schema, target, confidence, skill preconditions, and the M11.3.5 MVP boundary. |
 | Page understanding | Request or use semantic page summaries. | Build page context from real runtime evidence such as AST, PageAnalysis, URL, title, and learned actions. |
 | Learned action matching | Suggest semantic goal aliases. | Match only current-session learned actions within the correct target URL / site origin scope. |
-| Capability use | Recommend a registered capability. | Invoke the capability and record progress / trace. |
+| Skill use | Recommend a registered application skill. | Invoke the skill and record progress / trace. |
 | Browser operation | Never. | Delegate to Learning / Replay / execution services only. |
 | User-facing response | Provide a short reason hint. | Generate the final WAgent response and hide internal Agent names unless the user is viewing debug history. |
 
@@ -614,6 +614,9 @@ different inputs, different outputs, different models over time.
 | Attempt Evaluation Agent | Agent B | L1 | Attempt log + before/after state | Per-attempt verdict + anomalies |
 | Learning Report Agent *(low priority, presentation)* | Agent C | L1 | Full learning session | User-facing learning report |
 | Conversation Intake Agent | no legacy alias | Runtime conversation intake | User message + session summary + pending intake + session learned actions | Structured intent / target / action / slots / missing fields |
+| Customer-Facing Agent Router | no legacy alias | Runtime conversation routing | Intake result + conversation context + optional page understanding + learned-action summary + Application Skill Registry | Route decision / next Agent / recommended skill |
+| Learning Agent | no legacy alias | Runtime learning workflow | Target + user goal + slots + page understanding + session context | Learning request / learning result summary |
+| Web Operation Agent | no legacy alias | Runtime web operation | User goal + target + learned-action summary + session context | Replay request / learn-then-execute request / operation result summary |
 | Task Path Planner | Agent D | L3 | User task + learned record | Chosen concrete route |
 | Task Result Reporter | Agent E | L3 | Execution outcome | User-facing result |
 | Failure Recovery Agent | Agent F | L3 (error) | Error context + recent steps | Dialogue transcript + next action |
@@ -626,8 +629,8 @@ Teaching Guide Agent boundaries:
 - It does not fabricate user actions.
 - Its guidance is separate from recorded `provenance = user` actions.
 
-When adding a new capability, first ask: **which role does this
-belong to?** If the answer is "a new one", that's a product-level
+When adding a new Agent-facing skill or capability, first ask: **which role
+does this belong to?** If the answer is "a new one", that's a product-level
 decision — update this document before adding it.
 
 ---
@@ -725,7 +728,7 @@ task execution:
 | M11.0 · Runtime Conversation Shell & Agent Orchestration | CLI MVP, session state, Conversation Orchestrator, user message routing, and confirmation / pause / abort / takeover basics. | No new Agent by default; routes to Task Path Planner, Task Result Reporter, Failure Recovery Agent, User Abort Handler, and Teaching Guide Agent as those capabilities land. |
 | M11.1 · Task-to-Path Planning & Execution MVP | Task Path Planner / Task Result Reporter, LearnedPath retrieval / ranking, slot binding, task result verification MVP, basic artifact capture, and risk / consent gate MVP. | Task Path Planner (legacy: Agent D); Task Result Reporter (legacy: Agent E). |
 | M11.3.4 · Conversation Intake Agent | Schema-constrained intake for `wagent chat`: understand user language, target, action, slots, and missing information before Orchestrator validation. | Conversation Intake Agent (no legacy alias). |
-| M11.3.5 · Customer-Facing Agent Router & Capability Runtime | Product-facing routing layer for `wagent chat`: context collection, Agent Router recommendation, Orchestrator adjudication, Capability Registry, Page Understanding / Learning / Web Operation worker boundaries, risk policy, and progress / trace UX. | Customer-Facing Agent Router; Page Understanding Agent used as semantic page interpreter; Learning Agent and Web Operation Agent as worker roles under Orchestrator control. |
+| M11.3.5 · Customer-Facing Agent Router & Skill Runtime | Product-facing routing layer for `wagent chat`: context collection, Agent Router recommendation, Orchestrator adjudication, Application Skill Registry, Page Understanding / Learning / Web Operation worker boundaries, MVP high-impact boundary, and progress / trace UX. | Customer-Facing Agent Router; Page Understanding Agent used as semantic page interpreter; Learning Agent and Web Operation Agent as worker roles under Orchestrator control. |
 | M12 · Recovery & Abort Dialogue | Failure recovery, user interrupt handling, and continue / replan / rerun / takeover / abandon choices. | Failure Recovery Agent (legacy: Agent F); User Abort Handler (legacy: Agent G). |
 | M13 · User-Guided Learning, Teaching & Correction | Visible browser, user demonstration recording, Teaching Guide Agent guidance, highlight / shadow / indicator / tooltip, provenance=user write-back, and correction UI. | Teaching Guide Agent (legacy: Agent H); preserve user provenance. |
 | M14 · Learning Quality, Coverage & Negative Knowledge | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent, popup controls, custom click-toggle, label extractor expansion, cross-page pattern mining, and failure evidence / negative knowledge store. | Page Understanding Agent (legacy: Agent A); Attempt Evaluation Agent (legacy: Agent B); Learning Report Agent (legacy: Agent C). |

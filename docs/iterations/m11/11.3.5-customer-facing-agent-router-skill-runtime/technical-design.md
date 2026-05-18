@@ -23,7 +23,7 @@ flowchart TD
     O -->|需要学习| L["Learning Agent<br/>组织学习流程"]
     O -->|需要执行| W["Web Operation Agent<br/>组织网页操作执行"]
 
-    L --> CR["Capability Runtime<br/>执行应用能力"]
+    L --> CR["Skill Runtime<br/>执行应用技能"]
     W --> CR
 
     CR --> SL["start_learning<br/>启动学习"]
@@ -85,24 +85,24 @@ apps/api/app/schemas/conversation_router.py
 - provider 未配置时可 deterministic fallback。
 - malformed JSON / schema invalid / low confidence 时不得触发 learning / replay。
 
-Router 不直接调用 capability。Router 只返回建议给 Orchestrator。
+Router 不直接调用 skill。Router 只返回建议给 Orchestrator。
 
-### CapabilityRegistry / CapabilityRuntime
+### ApplicationSkillRegistry / SkillRuntime
 
 建议位置：
 
 ```text
-apps/api/app/services/conversation/capabilities.py
+apps/api/app/services/conversation/skills.py
 ```
 
 职责：
 
-- 定义 capability 名称、输入 schema、输出 schema、preconditions、risk hints。
+- 定义 skill 名称、输入 schema、输出 schema、preconditions 和 executor owner。
 - 由 Orchestrator 调用。
 - 封装现有 service：LearningRunService、Replay hook、LearnedPathRepository、
   page inspection / AST / PageAnalysis 组合。
 
-第一版 capability 可以是轻量函数注册表，不需要引入复杂工具框架。
+第一版 skill 可以是轻量函数注册表，不需要引入复杂工具框架。
 
 ### PageContextBuilder
 
@@ -134,7 +134,8 @@ apps/api/app/schemas/page_understanding.py
 职责：
 
 - 读取 page context bundle。
-- 输出页面类型、supported goals、required slots、risk hints、confidence。
+- 输出 observed page summary、supported goals、required slots、optional page type hint、
+  confidence。
 - 不输出 selector、DOM path、browser steps、learned_path_id。
 
 实现可先使用 fake / deterministic provider，真实 LLM smoke 后才能声称 Page Understanding
@@ -150,8 +151,8 @@ apps/api/app/services/conversation/learning_agent.py
 
 职责：
 
-- 组织学习请求：target、goal、slots、page understanding、risk hint。
-- 请求 Orchestrator / CapabilityRuntime 调用 `start_learning`。
+- 组织学习请求：target、goal、slots、page understanding 和 session context。
+- 请求 Orchestrator / SkillRuntime 调用 `start_learning`。
 - 解释 learning result 给 Result Reporter。
 
 它不是当前 autonomous explorer 的 Supervisor。Supervisor 只评价学习 run 的结果；Learning
@@ -247,7 +248,7 @@ apps/api/app/prompts/
 | `apps/api/app/services/learning/learned_path_replay.py` | `start_replay` 能力 |
 | `apps/api/app/repos/learned_paths_repo.py` | `lookup_learned_actions` / path candidate retrieval |
 | `apps/api/app/services/learning/page_signature.py` | target scope 和 dedup signal |
-| `apps/api/app/services/task_planning/*` | 复用 route / candidate / reporter / risk 词汇 |
+| `apps/api/app/services/task_planning/*` | 复用 route / candidate / reporter / artifact 词汇 |
 | `apps/api/app/services/conversation/intake.py` | Conversation Intake Agent 输入 |
 | `apps/api/app/services/conversation/provenance.py` | response provenance / trace |
 | `apps/api/app/services/conversation/history.py` | history read model 和 redaction |
@@ -264,7 +265,7 @@ dispatch FREE_TEXT
 -> intake_service.interpret
 -> router_agent.route
 -> orchestrator.validate_route_decision
--> capability runtime / worker agent
+-> skill runtime / worker agent
 -> result reporter
 -> persist messages, events, provenance, traces
 ```
@@ -328,8 +329,8 @@ History detail 应展示：
 - Router decision。
 - Orchestrator decision。
 - Worker Agent request。
-- Capability call。
-- Capability result。
+- Skill call。
+- Skill result。
 - Final response provenance。
 
 所有 sensitive values 必须 redacted。History list 时间应使用当前系统时区展示，格式：
@@ -340,11 +341,11 @@ YYYY-MM-DD HH:mm:ss
 
 ## Acceptance blockers
 
-- Router 直接调用 capability。
+- Router 直接调用 skill。
 - Router / Page Understanding 输出 selector、browser steps 或 learned_path_id 授权。
-- Orchestrator 未做 target scope / risk 校验就执行。
+- Orchestrator 未做 target scope / MVP 边界校验就执行。
 - 未学过 target 时跨站点命中历史 LearnedPath。
 - 把 LLM page understanding 写入 LearnedPath proof。
-- 自动执行高风险操作。
+- 明显高影响或不可逆动作进入自动 learn_then_execute。
 - 假设 active browser tab 已存在。
 - 重新引入旧用户操作录制 / Chrome extension 栈作为当前能力。

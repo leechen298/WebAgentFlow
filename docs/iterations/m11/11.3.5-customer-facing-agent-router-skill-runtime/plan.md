@@ -5,7 +5,7 @@
 ## 阶段 0：文档收口
 
 - 重命名 11.3.5：从 Chat Context Recovery UX 扩展为 Customer-Facing Agent Router
-  & Capability Runtime。
+  & Skill Runtime。
 - 更新 M11 index / m11-plan。
 - 更新 product-model 中英文镜像。
 - 更新 roadmap 中英文镜像。
@@ -21,13 +21,12 @@ git diff --check
 
 - 新增 Router decision schema。
 - 新增 Page Understanding result schema。
-- 新增 Capability Registry 定义。
-- 为每个 capability 定义：
+- 新增 Application Skill Registry 定义。
+- 为每个 skill 定义：
   - name
   - input contract
   - output contract
   - preconditions
-  - risk hints
   - executor owner
 
 ## 阶段 1.5：Prompt Asset Registry
@@ -63,7 +62,7 @@ git diff --check
 - 新增 PageUnderstandingService。
 - 第一版可用 fake / deterministic provider；真实 LLM smoke 单独记录。
 
-## 阶段 5：Capability Runtime
+## 阶段 5：Skill Runtime
 
 - 实现 registry lookup 和 precondition check。
 - 接入：
@@ -93,7 +92,7 @@ Agent framework。
 - FREE_TEXT 先 collect context。
 - Intake result + context 进入 Router。
 - Orchestrator 校验 route decision。
-- 通过 Capability Runtime 调用能力。
+- 通过 Skill Runtime 调用能力。
 - 记录 progress、trace、provenance。
 - 非 `interactive_chat` 保持原 workflow。
 
@@ -101,7 +100,7 @@ Agent framework。
 
 - CLI 增加中性 loading。
 - 明确 learning / execution 后才输出具体“打开浏览器学习 / 执行”。
-- History detail 展示 Router / Worker / capability trace。
+- History detail 展示 Router / Worker / skill trace。
 - History list 时间显示当前系统时区 `YYYY-MM-DD HH:mm:ss`。
 
 ## 阶段 9：验证
@@ -111,8 +110,8 @@ Agent framework。
 ```bash
 cd apps/api
 ../../.venv/bin/python -m pytest tests/test_conversation_intake.py tests/test_conversation_chat_runtime.py -q
-../../.venv/bin/python -m pytest tests/test_conversation_router_agent.py tests/test_conversation_capabilities.py -q
-../../.venv/bin/python -m ruff check app/services/conversation app/schemas tests/test_conversation_router_agent.py tests/test_conversation_capabilities.py
+../../.venv/bin/python -m pytest tests/test_conversation_router_agent.py tests/test_conversation_skills.py -q
+../../.venv/bin/python -m ruff check app/services/conversation app/schemas tests/test_conversation_router_agent.py tests/test_conversation_skills.py
 
 cd ../cli
 ../../.venv/bin/python -m pytest tests/test_chat.py -q

@@ -62,4 +62,4 @@ Scoped API / CLI / Console tests 已通过。真实 LLM-backed intake smoke 尚�
 因此不能把 LLM-backed acceptance 标记为通过。
 
 当前人工测试暴露出的“小白用户裸 URL + 下一句学习”问题不作为 M11.3.4
-阻塞项，已转入 11.3.5 Customer-Facing Agent Router & Capability Runtime。
+阻塞项，已转入 11.3.5 Customer-Facing Agent Router & Skill Runtime。

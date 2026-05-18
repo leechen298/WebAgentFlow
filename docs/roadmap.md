@@ -314,17 +314,17 @@ Delivered / current packages:
   schema-constrained natural-language intake role, deterministic fallback,
   guardrails, response provenance, and redacted LLM trace history. Scoped tests
   passed; real LLM-backed smoke remains pending.
-- **11.3.5 Customer-Facing Agent Router & Capability Runtime** — proposed;
+- **11.3.5 Customer-Facing Agent Router & Skill Runtime** — proposed;
   expands the chat recovery problem into the product-facing Agent routing
   layer. It defines Customer-Facing Agent Router != Conversation Orchestrator,
-  the Capability Registry, Page Understanding / Learning / Web Operation
-  worker-Agent boundaries, target resolution, risk policy, no-thinking routing,
+  the Application Skill Registry, Page Understanding / Learning / Web Operation
+  worker-Agent boundaries, target resolution, MVP high-impact boundary, no-thinking routing,
   progress/loading behavior, and history traces for route decisions and
-  capability calls.
+  skill calls.
 
 M11.3.4 and M11.3.5 do not let an LLM operate the browser. The LLM understands
 user language, page semantics, and next-step routing; code validates scope,
-risk, state, and execution policy; registered capabilities call Learning /
+state, M11.3.5 MVP boundary, and execution policy; registered skills call Learning /
 Replay / execution services for the browser work.
 
 Codex CLI can read history for debugging as an external development Agent, but

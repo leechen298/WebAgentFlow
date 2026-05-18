@@ -20,20 +20,19 @@ git diff --check
 | CTX-2 | Redaction | context bundle 不持久化 sensitive slot 明文 |
 | ROUTER-1 | Router schema | route decision JSON 通过 Pydantic / JSON schema 校验 |
 | ROUTER-2 | Router guardrail | malformed JSON / low confidence 不触发 learning / replay |
-| ROUTER-3 | Router boundary | Router 不直接调用 capability |
-| CAP-1 | Capability Registry | 每个 capability 有 preconditions / risk / executor |
+| ROUTER-3 | Router boundary | Router 不直接调用 skill |
+| SKILL-1 | Application Skill Registry | 每个 skill 有 preconditions / executor / trace contract |
 | PROMPT-1 | Prompt assets | Agent prompt 文件存在于固定目录，service 不内嵌长 prompt |
 | PROMPT-2 | Prompt metadata | prompt registry / metadata 包含 id、version、schema、hash、runtime policy |
 | PROMPT-3 | Prompt trace | LLM trace 记录 prompt id / version / hash / schema / redaction 状态 |
 | PAGE-1 | Page context | 组合 HTML AST、Simplified AST、PageAnalysis、page signature |
-| PAGE-2 | Page Understanding | 输出 page_type、supported_goals、required_slots、risk_hints，不输出 selector / steps |
+| PAGE-2 | Page Understanding | 输出 observed_page_summary、supported_goals、required_slots、optional_page_type_hint，不输出 selector / steps |
 | TARGET-1 | Target resolution | URL > pending_target > recent URL > unique learned target > ask user |
 | UX-1 | Bare URL | 裸 URL 保存 pending_target，不 execute |
 | UX-2 | Short learn | “学习”能引用 pending_target 并追问目标/slots |
 | UX-3 | No-path | 未学过 target 转学习引导，不冷拒绝 |
 | UX-4 | Loading | CLI 先显示中性 loading，不提前说“执行：学习” |
-| RISK-1 | Risk policy | high risk 不自动执行 |
-| TRACE-1 | History | 记录 Intake / Router / Orchestrator / capability / final provenance |
+| TRACE-1 | History | 记录 Intake / Router / Orchestrator / skill / final provenance |
 | REG-1 | Non chat | 非 `interactive_chat` 保持 preview / confirmation / developer workflow |
 
 ## 必测用户行为类别
@@ -84,7 +83,8 @@ git diff --check
 期望：
 
 - lookup learned actions 发现未学过。
-- risk policy 允许后，进入 learn-then-execute 或清晰询问用户是否先学习。
+- 通过 Orchestrator 的 target、goal、slots、current-session scope 和 MVP 边界校验后，
+  进入 learn-then-execute 或清晰询问用户是否先学习。
 - 不从 validation-site specs / assertions 取输入。
 
 ### 6. 组合目标
@@ -95,7 +95,7 @@ git diff --check
 
 - Router 输出组合目标。
 - Page Understanding 识别页面可支持的相关能力。
-- 如果未学过且信息完整，低风险策略允许 learn-then-execute。
+- 如果未学过且信息完整，并且处于 M11.3.5 MVP 支持范围内，可以进入 learn-then-execute。
 - 执行结果预留 artifact 字段。
 
 ## 负例
@@ -109,7 +109,8 @@ git diff --check
 - Router 输出 selector / Playwright step：拒绝并记录 guardrail event。
 - Router 输出 learned_path_id 作为授权：拒绝。
 - Page Understanding 输出页面事实但无浏览器 evidence：不得写入 LearnedPath proof。
-- 高风险任务如删除、支付、外发：不得自动执行。
+- 明显高影响或不可逆任务不得进入 learn_then_execute；本轮应返回不支持或交给后续
+  risk / consent 设计处理。
 - active browser tab 未实现时，不得用它作为目标来源。
 
 ## Manual smoke（实现后）
@@ -122,7 +123,7 @@ pnpm run dev
 ```
 
 执行时应选择一个非 validation oracle 的产品级测试页面或人工指定页面。测试记录只写目标类别、
-route decision、capability 调用和脱敏证据，不把某个固定页面或固定输入写成通用验收契约。
+route decision、skill 调用和脱敏证据，不把某个固定页面或固定输入写成通用验收契约。
 
 验收：
 
@@ -131,6 +132,6 @@ route decision、capability 调用和脱敏证据，不把某个固定页面或�
 - 第三轮补齐必要信息后学习成功并沉淀 LearnedPath。
 - 第四轮执行同 target 已学 action。
 - 浏览器可见进度符合 M11.3.1。
-- History detail 显示 Intake / Router / Orchestrator / capability trace，敏感信息脱敏。
+- History detail 显示 Intake / Router / Orchestrator / skill trace，敏感信息脱敏。
 
 未真实跑 manual smoke 前，review 必须写 `manual smoke not run`。

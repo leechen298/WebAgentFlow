@@ -253,15 +253,15 @@ M11.3 把 runtime conversation 底座收束成面向普通用户的 `wagent chat
   新增 schema-constrained 自然语言入口、deterministic fallback、guardrails、
   response provenance 和脱敏 LLM trace history。Scoped tests passed；真实
   LLM-backed smoke 仍 pending。
-- **11.3.5 Customer-Facing Agent Router & Capability Runtime / 面客 Agent 路由与能力运行时**：
+- **11.3.5 Customer-Facing Agent Router & Skill Runtime / 面客 Agent 路由与应用技能运行时**：
   proposed；把 chat recovery 问题扩展为面客 Agent 路由层。它定义
-  Customer-Facing Agent Router != Conversation Orchestrator、Capability Registry、
+  Customer-Facing Agent Router != Conversation Orchestrator、Application Skill Registry、
   Page Understanding / Learning / Web Operation 工作 Agent 边界、target resolution、
-  risk policy、no-thinking routing、progress / loading 行为，以及 route decision /
-  capability call 在 history 中的 trace。
+  MVP 高影响动作边界、no-thinking routing、progress / loading 行为，以及 route decision /
+  skill call 在 history 中的 trace。
 
 M11.3.4 和 M11.3.5 都不让 LLM 操作浏览器。LLM 理解用户语言、页面语义和下一步路由；
-代码校验 scope、risk、state 和执行策略；注册 capability 调用 Learning / Replay /
+代码校验 scope、state、M11.3.5 MVP 边界和执行策略；注册 skill 调用 Learning / Replay /
 execution services 完成真实浏览器工作。
 
 Codex CLI 可以作为外部开发 Agent 读取 history 辅助调试，但它不是产品运行时的
