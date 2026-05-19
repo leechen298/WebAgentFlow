@@ -51,6 +51,7 @@ class ConversationOrchestrator:
         execution_handler: Any | None = None,
         learning_handler: Any | None = None,
         intake_service: Any | None = None,
+        entry_gate_service: Any | None = None,
         router_service: Any | None = None,
         page_context_provider: Any | None = None,
         page_understanding_service: Any | None = None,
@@ -61,6 +62,7 @@ class ConversationOrchestrator:
         self._execution_handler = execution_handler
         self._learning_handler = learning_handler
         self._intake_service = intake_service
+        self._entry_gate_service = entry_gate_service
         self._router_service = router_service
         self._page_context_provider = page_context_provider
         self._page_understanding_service = page_understanding_service
@@ -121,6 +123,7 @@ class ConversationOrchestrator:
                 learning_handler=self._learning_handler,
                 replay_handler=self._replay_handler,
                 intake_service=self._intake_service,
+                entry_gate_service=self._entry_gate_service,
                 router_service=self._router_service,
                 page_context_provider=self._page_context_provider,
                 page_understanding_service=self._page_understanding_service,

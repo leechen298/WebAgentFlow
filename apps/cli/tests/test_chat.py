@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
+import time
 from unittest.mock import MagicMock, patch
 
 from wagent import chat as chat_module
@@ -63,7 +64,8 @@ def test_chat_is_top_level_command_and_creates_interactive_session() -> None:
     }
     output = stdout.getvalue()
     assert "WAgent > 你好，我可以学习页面操作，也可以执行已经学会的操作。" in output
-    assert output.count("WAgent > 正在理解你的需求。") == 2
+    assert output.count("WAgent · 正在理解你的需求 ...") == 2
+    assert "WAgent > 正在理解你的需求" not in output
     assert "WAgent > 我会打开浏览器学习" not in output
     assert "WAgent > 我会打开浏览器执行" not in output
     assert "WAgent > 开始学习页面操作。" in output
@@ -93,9 +95,43 @@ def test_chat_explains_unknown_task_before_no_path_fallback() -> None:
 
     assert rc == 0
     output = stdout.getvalue()
-    assert "WAgent > 正在理解你的需求。" in output
+    assert "WAgent · 正在理解你的需求 ..." in output
+    assert "WAgent > 正在理解你的需求" not in output
     assert "WAgent > 我会打开浏览器执行" not in output
     assert "WAgent > 还没学过这个操作，需要先学习。" in output
+
+
+def test_chat_tty_waiting_indicator_is_transient() -> None:
+    class TtyBuffer(StringIO):
+        def isatty(self) -> bool:
+            return True
+
+    client = MagicMock()
+    client.__enter__ = MagicMock(return_value=client)
+    client.__exit__ = MagicMock(return_value=False)
+
+    def post(path, **kwargs):
+        if path.endswith("/dispatch"):
+            time.sleep(0.18)
+            return _mock_response({"user_response": "处理完成。"})
+        return _mock_response({"id": "sess-1", "status": "idle"})
+
+    client.post.side_effect = post
+
+    with patch.object(chat_module.httpx, "Client", return_value=client), patch(
+        "builtins.input",
+        side_effect=["你好", "exit"],
+    ):
+        stdout = TtyBuffer()
+        with redirect_stdout(stdout), redirect_stderr(StringIO()):
+            rc = wagent_main.main(["chat"])
+
+    assert rc == 0
+    output = stdout.getvalue()
+    assert "\rWAgent " in output
+    assert "正在理解你的需求" in output
+    assert "WAgent > 正在理解你的需求" not in output
+    assert "WAgent > 处理完成。" in output
 
 
 def test_chat_product_workspace_progress_labels() -> None:
@@ -122,7 +158,8 @@ def test_chat_product_workspace_progress_labels() -> None:
 
     assert rc == 0
     output = stdout.getvalue()
-    assert output.count("WAgent > 正在理解你的需求。") == 2
+    assert output.count("WAgent · 正在理解你的需求 ...") == 2
+    assert "WAgent > 正在理解你的需求" not in output
     assert "WAgent > 我会打开浏览器学习" not in output
     assert "WAgent > 我会打开浏览器执行" not in output
 
@@ -203,7 +240,8 @@ def test_chat_headless_shows_backend_wording() -> None:
 
     assert rc == 0
     output = stdout.getvalue()
-    assert "WAgent > 正在理解你的需求。" in output
+    assert "WAgent · 正在理解你的需求 ..." in output
+    assert "WAgent > 正在理解你的需求" not in output
     assert "WAgent > 我会在后台执行" not in output
     assert "WAgent > 我会打开浏览器执行" not in output
 

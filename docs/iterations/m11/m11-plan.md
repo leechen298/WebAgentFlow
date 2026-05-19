@@ -1549,6 +1549,54 @@ Skill Runtime 是执行者。
 - 不做真实业务系统适配。
 - 不重新引入已移除的旧用户操作录制 / Chrome extension 栈。
 
+## 11.3.5.1 · Conversation Entry Gate & Chat Latency UX
+
+状态：ready_for_implementation（docs review passed, implementation in progress）。
+
+目标：作为 11.3.5 的 patch-level 优化，在 Conversation Intake Agent / Customer-Facing
+Agent Router 之前增加轻量入口门禁，并把 `wagent chat` 的等待体验从一次性进度文案升级为
+持续 working 状态。当前一次性 `正在理解你的需求。` 只能说明客户端没有提前猜“学习/执行”，
+不能视为类似 Codex CLI / Claude Code CLI 的 loading / working UX。
+
+核心原则：
+
+```text
+Conversation Entry Gate 不是 Router。
+Conversation Entry Gate 不是新的工作 Agent。
+Conversation Entry Gate 不调用 skill。
+Conversation Entry Gate 不触发 learning / replay。
+Conversation Entry Gate 只判断是否需要进入网页任务 runtime。
+```
+
+关键契约：
+
+- Entry Gate 位于 Intake / Router 之前，只作用于 `interactive_chat`。
+- Entry Gate 使用低延迟、非 thinking、schema-constrained 输出，只做网页任务相关性判断。
+- 非网页任务、普通问候、能力询问和闲聊应快速得到统一 WAgent 口径的友好回复，
+  并引导用户回到 WebAgentFlow 的网页学习、执行和调试能力。
+- URL、学习、执行、页面操作等网页任务候选继续进入 11.3.5 runtime。
+- provider timeout、malformed JSON、schema 校验失败或 low confidence 时不得触发
+  learning / replay。
+- Entry Gate trace 是 conversation evidence，不是 LearnedPath、replay、Supervisor 或
+  pass_gate evidence。
+- CLI 必须在等待 `/dispatch` 返回期间显示持续 working indicator；该体验参考 Codex CLI /
+  Claude Code CLI 的 agentic CLI 沟通原则，但不复制具体视觉样式。progress / working
+  状态不是正式 WAgent 回复。
+- History detail 应展示 entry gate category、latency、provider / model、是否跳过
+  Intake / Router 以及最终回复 provenance。
+
+执行包目录：
+
+- `docs/iterations/m11/11.3.5.1-conversation-entry-gate-latency-ux/`
+
+非目标：
+
+- 不做完整闲聊系统。
+- 不新增产品 Agent 角色。
+- 不让 Entry Gate 替代 Intake、Router 或 Orchestrator。
+- 不让 Entry Gate 调用 skill、打开浏览器、选择 LearnedPath 或输出 selector / browser steps。
+- 不实现 active browser tab、M12 recovery / retry / abort 或正式 risk / consent policy。
+
 ## Later M11.x · Page Context Bridge Decision Point
 
 状态：候选决策点，不是已确定执行包。

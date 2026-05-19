@@ -22,6 +22,18 @@ shared_fragments = [
   "shared/structured_output_rules.md",
 ]
 
+[prompts.conversation_entry_gate]
+version = "v1"
+path = "agents/conversation_entry_gate/prompt.md"
+metadata = "agents/conversation_entry_gate/metadata.toml"
+prompt_sha256 = "423f2458f76372cf1e59f0b28dddf2286210713c4c63579d0992ffafcc9f6e31"
+shared_fragments = [
+  "shared/webagentflow_boundaries.md",
+  "shared/evidence_and_scope.md",
+  "shared/redaction_rules.md",
+  "shared/structured_output_rules.md",
+]
+
 [prompts.page_understanding_agent]
 version = "v1"
 path = "agents/page_understanding_agent/prompt.md"

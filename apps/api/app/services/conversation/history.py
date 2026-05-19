@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.models.conversation import ConversationSession
 from app.repos.conversation_repo import ConversationRepository
 from app.schemas.conversation import (
+    ConversationEntryGateTrace,
     ConversationEventResponse,
     ConversationHistoryResponse,
     ConversationLearningRunSummary,
@@ -25,6 +26,7 @@ from app.schemas.conversation import (
 )
 from app.services.conversation.intake import redact_sensitive_payload
 from app.services.conversation.provenance import normalize_response_provenance
+from app.services.conversation.trace_sanitizer import sanitize_provider_thinking
 
 
 class ConversationHistoryService:
@@ -57,18 +59,19 @@ class ConversationHistoryService:
         messages = self.repo.list_messages(session_id, limit=10_000)
         events = self.repo.list_events(session_id, limit=10_000)
 
-        session_metadata = redact_sensitive_payload(session.metadata_json)
+        session_metadata = _history_safe_payload(session.metadata_json)
         learned_actions = session_metadata.get("learned_actions") or []
         learning_runs = self._extract_learning_runs(events)
         replay_summaries = self._extract_replay_summaries(events)
         llm_traces = self._extract_llm_traces(events)
+        entry_gate_traces = self._extract_entry_gate_traces(events)
         message_payloads = [self._message_response(m) for m in messages]
         event_payloads = [
             ConversationEventResponse(
                 id=e.id,
                 session_id=e.session_id,
                 type=e.type,
-                payload=redact_sensitive_payload(e.payload_json),
+                payload=_history_safe_payload(e.payload_json),
                 created_at=e.created_at,
             )
             for e in events
@@ -90,6 +93,7 @@ class ConversationHistoryService:
             learning_runs=learning_runs,
             replay_summaries=replay_summaries,
             llm_traces=llm_traces,
+            entry_gate_traces=entry_gate_traces,
             raw={
                 "session": {
                     "id": session.id,
@@ -110,7 +114,7 @@ class ConversationHistoryService:
                         "id": e.id,
                         "session_id": e.session_id,
                         "type": e.type,
-                        "payload": redact_sensitive_payload(e.payload_json),
+                        "payload": _history_safe_payload(e.payload_json),
                         "created_at": (
                             e.created_at.isoformat() if e.created_at else None
                         ),
@@ -121,16 +125,19 @@ class ConversationHistoryService:
                 "learning_runs": [run.model_dump() for run in learning_runs],
                 "replay_summaries": [s.model_dump() for s in replay_summaries],
                 "llm_traces": [trace.model_dump(mode="json") for trace in llm_traces],
+                "entry_gate_traces": [
+                    trace.model_dump(mode="json") for trace in entry_gate_traces
+                ],
             },
         )
 
     def _message_response(self, message: Any) -> ConversationMessageResponse:
-        metadata = redact_sensitive_payload(message.metadata_json)
+        metadata = _history_safe_payload(message.metadata_json)
         return ConversationMessageResponse(
             id=message.id,
             session_id=message.session_id,
             role=message.role,
-            content=redact_sensitive_payload(message.content),
+            content=_history_safe_payload(message.content),
             metadata=metadata,
             response_provenance=normalize_response_provenance(
                 metadata,
@@ -140,13 +147,13 @@ class ConversationHistoryService:
         )
 
     def _raw_message(self, message: Any) -> dict[str, Any]:
-        metadata = redact_sensitive_payload(message.metadata_json)
+        metadata = _history_safe_payload(message.metadata_json)
         provenance = normalize_response_provenance(metadata, message.role)
         payload: dict[str, Any] = {
             "id": message.id,
             "session_id": message.session_id,
             "role": message.role,
-            "content": redact_sensitive_payload(message.content),
+            "content": _history_safe_payload(message.content),
             "metadata": metadata,
             "created_at": (
                 message.created_at.isoformat() if message.created_at else None
@@ -163,7 +170,7 @@ class ConversationHistoryService:
         event_count = self.repo.count_events(session.id)
         last_user = self.repo.get_last_message_by_role(session.id, "user")
         last_agent = self.repo.get_last_message_by_role(session.id, "agent")
-        learned_actions = redact_sensitive_payload(
+        learned_actions = _history_safe_payload(
             session.metadata_json.get("learned_actions") or []
         )
         return ConversationSessionSummaryResponse(
@@ -175,10 +182,10 @@ class ConversationHistoryService:
             message_count=message_count,
             event_count=event_count,
             last_user_message=(
-                redact_sensitive_payload(last_user.content) if last_user else None
+                _history_safe_payload(last_user.content) if last_user else None
             ),
             last_agent_message=(
-                redact_sensitive_payload(last_agent.content) if last_agent else None
+                _history_safe_payload(last_agent.content) if last_agent else None
             ),
             learned_action_count=len(learned_actions),
             learned_actions=learned_actions,
@@ -263,7 +270,7 @@ class ConversationHistoryService:
         for event in events:
             if event.type != "llm_trace_recorded":
                 continue
-            payload = redact_sensitive_payload(event.payload_json or {})
+            payload = _history_safe_payload(event.payload_json or {})
             trace_id = str(payload.get("trace_id") or event.id)
             results.append(
                 ConversationLlmTraceResponse(
@@ -293,6 +300,50 @@ class ConversationHistoryService:
             )
         return results
 
+    def _extract_entry_gate_traces(
+        self,
+        events: list[Any],
+    ) -> list[ConversationEntryGateTrace]:
+        results: list[ConversationEntryGateTrace] = []
+        for event in events:
+            if event.type != "entry_gate_recorded":
+                continue
+            payload = _history_safe_payload(event.payload_json or {})
+            entry_gate = payload.get("entry_gate")
+            if not isinstance(entry_gate, dict):
+                entry_gate = {}
+            raw = _dict_or_empty(payload.get("raw"))
+            results.append(
+                ConversationEntryGateTrace(
+                    source_event_id=event.id,
+                    category=entry_gate.get("category") or "needs_clarification",
+                    requires_agent_runtime=bool(
+                        entry_gate.get("requires_agent_runtime")
+                    ),
+                    skipped_intake_router=bool(
+                        payload.get("skipped_intake_router")
+                    ),
+                    confidence=float(entry_gate.get("confidence") or 0.0),
+                    latency_ms=payload.get("latency_ms")
+                    or entry_gate.get("latency_ms"),
+                    timeout_ms=payload.get("timeout_ms")
+                    or entry_gate.get("timeout_ms"),
+                    provider=payload.get("provider") or entry_gate.get("provider"),
+                    model=payload.get("model") or entry_gate.get("model"),
+                    fallback=bool(payload.get("fallback") or entry_gate.get("fallback")),
+                    error_kind=payload.get("error_kind")
+                    or entry_gate.get("error_kind"),
+                    prompt_template_id=payload.get("prompt_template_id"),
+                    prompt_hash=payload.get("prompt_hash"),
+                    raw=payload if not raw else raw,
+                )
+            )
+        return results
+
 
 def _dict_or_empty(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _history_safe_payload(value: Any) -> Any:
+    return sanitize_provider_thinking(redact_sensitive_payload(value))

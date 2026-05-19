@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import threading
+import time
 from typing import Any
 
 import httpx
@@ -90,9 +92,17 @@ def run(args: argparse.Namespace) -> int:
                 if not user_input.strip():
                     continue
                 progress_message = _progress_message(user_input, headless=headless)
-                if progress_message:
-                    _print_agent(progress_message)
-                response = _dispatch(client, session_id, user_input, headless=headless)
+                try:
+                    response = _dispatch_with_working_indicator(
+                        client,
+                        session_id,
+                        user_input,
+                        headless=headless,
+                        progress_message=progress_message,
+                    )
+                except KeyboardInterrupt:
+                    print()
+                    return 0
                 if response is None:
                     return 2
                 visible_response = _dedupe_response(
@@ -179,6 +189,35 @@ def _dispatch(
     )
 
 
+def _dispatch_with_working_indicator(
+    client: httpx.Client,
+    session_id: str,
+    user_input: str,
+    *,
+    headless: bool = False,
+    progress_message: str,
+) -> dict[str, Any] | None:
+    box: dict[str, Any] = {}
+
+    def run_request() -> None:
+        try:
+            box["response"] = _dispatch(
+                client,
+                session_id,
+                user_input,
+                headless=headless,
+            )
+        except BaseException as exc:  # noqa: BLE001 - hand back to main thread
+            box["error"] = exc
+
+    worker = threading.Thread(target=run_request, daemon=True)
+    worker.start()
+    _show_working_indicator(worker, progress_message)
+    if "error" in box:
+        raise box["error"]
+    return box.get("response")
+
+
 def _api_post(
     client: httpx.Client,
     path: str,
@@ -205,7 +244,30 @@ def _api_post(
 
 def _progress_message(user_input: str, *, headless: bool = False) -> str:
     _ = (user_input, headless)
-    return "正在理解你的需求。"
+    return "正在理解你的需求"
+
+
+def _show_working_indicator(worker: threading.Thread, label: str) -> None:
+    if not label:
+        worker.join()
+        return
+    if not sys.stdout.isatty():
+        print(f"WAgent · {label} ...")
+        worker.join()
+        return
+
+    frames = ("|", "/", "-", "\\")
+    index = 0
+    try:
+        while worker.is_alive():
+            frame = frames[index % len(frames)]
+            sys.stdout.write(f"\rWAgent {frame} {label} ...")
+            sys.stdout.flush()
+            index += 1
+            worker.join(0.1)
+    finally:
+        sys.stdout.write("\r" + " " * (len(label) + 16) + "\r")
+        sys.stdout.flush()
 
 
 def _dedupe_response(message: str, *, progress_message: str) -> str:

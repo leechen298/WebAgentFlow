@@ -53,7 +53,11 @@ def reset_client() -> None:
 def _resolve(request: LlmRequest) -> dict[str, Any]:
     """Build the kwargs dict for chat.completions.create()."""
     model = request.model or settings.llm_default_model
-    temperature = request.temperature if request.temperature is not None else settings.llm_temperature
+    temperature = (
+        request.temperature
+        if request.temperature is not None
+        else settings.llm_temperature
+    )
     max_tokens = request.max_tokens if request.max_tokens is not None else settings.llm_max_tokens
 
     messages: list[dict[str, str]] = []
@@ -68,6 +72,8 @@ def _resolve(request: LlmRequest) -> dict[str, Any]:
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
+    if request.timeout is not None:
+        kwargs["timeout"] = float(request.timeout)
 
     if request.response_schema is not None:
         # Use json_object mode (broad provider compatibility) + schema in prompt.

@@ -1,0 +1,22 @@
+prompt_id = "conversation_entry_gate"
+version = "v1"
+agent_role = "conversation_entry_gate"
+schema_name = "ConversationEntryGateResult"
+runtime_policy = "low_latency_relevance_gate"
+
+allowed_inputs = [
+  "current user message",
+  "minimal conversation context",
+]
+
+forbidden_outputs = [
+  "chain-of-thought",
+  "selector",
+  "DOM path",
+  "Playwright step",
+  "browser action list",
+  "skill call",
+  "learned_path_id authorization",
+]
+
+sensitive_context_policy = "Use redacted input only; never repeat secrets or credentials."

@@ -16,6 +16,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.conversation_entry_gate import ConversationEntryGateTrace
+
 
 class ConversationStatus(StrEnum):
     IDLE = "idle"
@@ -80,6 +82,7 @@ class ConversationEventType(StrEnum):
     AGENT_TRACE_RECORDED = "agent_trace_recorded"
     SKILL_CALL_RECORDED = "skill_call_recorded"
     LLM_TRACE_RECORDED = "llm_trace_recorded"
+    ENTRY_GATE_RECORDED = "entry_gate_recorded"
     SESSION_COMPLETED = "session_completed"
     SESSION_FAILED = "session_failed"
 
@@ -339,4 +342,5 @@ class ConversationHistoryResponse(BaseModel):
     learning_runs: list[ConversationLearningRunSummary] = Field(default_factory=list)
     replay_summaries: list[ConversationReplayHistorySummary] = Field(default_factory=list)
     llm_traces: list[ConversationLlmTraceResponse] = Field(default_factory=list)
+    entry_gate_traces: list[ConversationEntryGateTrace] = Field(default_factory=list)
     raw: dict[str, Any] = Field(default_factory=dict)

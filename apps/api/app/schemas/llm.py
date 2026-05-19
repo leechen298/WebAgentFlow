@@ -27,6 +27,10 @@ class LlmRequest(BaseModel):
     model: str | None = None  # None → use config default
     temperature: float | None = None
     max_tokens: int | None = None
+    timeout: float | None = Field(
+        default=None,
+        description="Optional per-request provider timeout in seconds.",
+    )
     response_schema: dict[str, Any] | None = Field(
         default=None,
         description="JSON Schema for structured output. When set, the provider "

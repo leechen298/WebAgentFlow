@@ -21,7 +21,6 @@ from app.services.llm_provider import (
     reset_client,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -85,6 +84,21 @@ class TestGenerateText:
         assert call_kwargs["messages"][1] == {"role": "user", "content": "hi"}
         # response_format should NOT be present for text calls
         assert "response_format" not in call_kwargs
+
+    @patch("app.services.llm_provider._get_client")
+    def test_per_request_timeout_is_forwarded(self, mock_get_client: MagicMock):
+        client = MagicMock()
+        client.chat.completions.create.return_value = _make_completion("ok")
+        mock_get_client.return_value = client
+
+        req = LlmRequest(
+            messages=[LlmMessage(role="user", content="hi")],
+            timeout=1.5,
+        )
+        generate_text(req)
+
+        call_kwargs = client.chat.completions.create.call_args[1]
+        assert call_kwargs["timeout"] == 1.5
 
     @patch("app.services.llm_provider._get_client")
     def test_timeout_error(self, mock_get_client: MagicMock):

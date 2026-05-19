@@ -15,6 +15,10 @@ from app.schemas.conversation import (
     ConversationReplaySummary,
     ConversationStatus,
 )
+from app.schemas.conversation_entry_gate import (
+    ConversationEntryGateCategory,
+    ConversationEntryGateResult,
+)
 from app.schemas.conversation_intake import (
     ConversationIntakeResult,
     ConversationIntakeSlot,
@@ -29,6 +33,7 @@ from app.services.conversation.context import (
     PendingTarget,
     make_pending_target,
 )
+from app.services.conversation.entry_gate import ConversationEntryGateService
 from app.services.conversation.intake import (
     ConversationIntakeService,
     redact_sensitive_payload,
@@ -44,6 +49,7 @@ from app.services.conversation.provenance import (
 )
 from app.services.conversation.router_agent import CustomerFacingAgentRouterService
 from app.services.conversation.skills import ApplicationSkillRegistry
+from app.services.conversation.trace_sanitizer import sanitize_provider_thinking
 from app.services.learning.learning_run_service import LearningRunResult
 
 ChatIntentKind = Literal["learn_page", "execute_task", "unknown"]
@@ -109,6 +115,28 @@ def parse_chat_intent(raw_input: str) -> ChatIntent:
     return ChatIntent(kind="execute_task", raw_text=raw_input)
 
 
+def _entry_gate_user_response(category: ConversationEntryGateCategory) -> str:
+    if category == ConversationEntryGateCategory.CAPABILITY_QUESTION:
+        return (
+            "我主要可以帮你学习网页操作、执行已经学会的网页操作，并查看会话历史。"
+            "你可以发一个目标页面 URL，并说明想学习或执行什么。"
+        )
+    if category == ConversationEntryGateCategory.UNSUPPORTED:
+        return (
+            "这个请求不属于当前网页操作范围。你可以提供目标网页 URL，"
+            "并说明要学习或执行的页面操作。"
+        )
+    if category == ConversationEntryGateCategory.NEEDS_CLARIFICATION:
+        return (
+            "我还需要确认这是不是网页操作任务。请提供目标页面 URL，"
+            "或说明要学习/执行的网页操作。"
+        )
+    return (
+        "你好，我主要处理网页操作任务。你可以发给我目标页面 URL，"
+        "并说明要学习哪个操作，或让我执行已经学会的操作。"
+    )
+
+
 class InteractiveChatRuntime:
     def __init__(
         self,
@@ -117,6 +145,7 @@ class InteractiveChatRuntime:
         learning_handler: Any | None = None,
         replay_handler: Any | None = None,
         intake_service: Any | None = None,
+        entry_gate_service: Any | None = None,
         router_service: Any | None = None,
         skill_registry: ApplicationSkillRegistry | None = None,
         page_context_provider: Any | None = None,
@@ -125,6 +154,7 @@ class InteractiveChatRuntime:
         self._repo = repo
         self._learning_handler = learning_handler
         self._replay_handler = replay_handler
+        self._entry_gate_service = entry_gate_service or ConversationEntryGateService()
         self._intake_service = intake_service or ConversationIntakeService()
         self._router_service = router_service or CustomerFacingAgentRouterService()
         self._skill_registry = skill_registry or ApplicationSkillRegistry()
@@ -150,6 +180,26 @@ class InteractiveChatRuntime:
 
         previous_status = str(session.status or ConversationStatus.IDLE.value)
         headless = _chat_headless(session)
+        entry_gate = self._entry_gate_service.evaluate(
+            raw_input,
+            session_metadata=session.metadata_json or {},
+            session_mode=session.current_mode,
+        )
+        entry_gate_context = self._record_entry_gate_trace(
+            session_id,
+            entry_gate=entry_gate,
+            skipped_intake_router=not entry_gate.requires_agent_runtime,
+        )
+        if not entry_gate.requires_agent_runtime:
+            return self._handle_entry_gate_reply(
+                session_id=session_id,
+                raw_input=raw_input,
+                entry_gate=entry_gate,
+                entry_gate_context=entry_gate_context,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+            )
         intake = self._intake_service.analyze(
             raw_input,
             session_metadata=session.metadata_json or {},
@@ -284,6 +334,53 @@ class InteractiveChatRuntime:
 
     def _intake_confidence_threshold(self) -> float:
         return float(getattr(self._intake_service, "confidence_threshold", 0.6))
+
+    def _handle_entry_gate_reply(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        entry_gate: ConversationEntryGateResult,
+        entry_gate_context: IntakeTraceContext,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        previous_status: str,
+    ) -> DispatchResult:
+        command_kind = entry_gate.category.value
+        events = self._trace_event_types(entry_gate_context) + self._append_chat_command_event(
+            session_id=session_id,
+            raw_input=raw_input,
+            command_kind=command_kind,
+            metadata=metadata,
+        )
+        response = _entry_gate_user_response(entry_gate.category)
+        self._append_agent_message(
+            session_id,
+            response,
+            provenance=code_response_provenance(
+                CODE_PRODUCER_INTERACTIVE_CHAT,
+                generated_from_event_ids=entry_gate_context.event_ids,
+                fallback=entry_gate.fallback,
+            ),
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_NO_PATH,
+            {
+                "reason": "entry_gate_skipped_runtime",
+                "category": entry_gate.category.value,
+                "error_kind": entry_gate.error_kind,
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind=command_kind,
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
 
     def _handle_low_confidence_intake(
         self,
@@ -1316,9 +1413,49 @@ class InteractiveChatRuntime:
         event = self._repo.append_event(
             session_id=session_id,
             type=ConversationEventType.LLM_TRACE_RECORDED,
-            payload=redact_sensitive_payload(payload),
+            payload=sanitize_provider_thinking(redact_sensitive_payload(payload)),
         )
         return IntakeTraceContext([trace_id], [event.id], fallback=fallback)
+
+    def _record_entry_gate_trace(
+        self,
+        session_id: str,
+        *,
+        entry_gate: ConversationEntryGateResult,
+        skipped_intake_router: bool,
+    ) -> IntakeTraceContext:
+        consume_trace = getattr(self._entry_gate_service, "consume_last_trace_payload", None)
+        raw_trace = consume_trace() if callable(consume_trace) else None
+        if not isinstance(raw_trace, dict):
+            raw_trace = {}
+        payload = sanitize_provider_thinking(
+            redact_sensitive_payload(
+                {
+                    "entry_gate": entry_gate.model_dump(mode="json"),
+                    "skipped_intake_router": skipped_intake_router,
+                    "provider": entry_gate.provider or raw_trace.get("provider"),
+                    "model": entry_gate.model or raw_trace.get("model"),
+                    "prompt_template_id": raw_trace.get("prompt_template_id"),
+                    "prompt_hash": raw_trace.get("prompt_hash"),
+                    "latency_ms": entry_gate.latency_ms,
+                    "timeout_ms": entry_gate.timeout_ms,
+                    "fallback": entry_gate.fallback,
+                    "error_kind": entry_gate.error_kind,
+                    "raw": raw_trace,
+                }
+            )
+        )
+        event = self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.ENTRY_GATE_RECORDED,
+            payload=payload,
+        )
+        return IntakeTraceContext(
+            [],
+            [event.id],
+            fallback=entry_gate.fallback,
+            event_types=[ConversationEventType.ENTRY_GATE_RECORDED.value],
+        )
 
     def _record_router_trace(
         self,
@@ -1368,7 +1505,7 @@ class InteractiveChatRuntime:
         event = self._repo.append_event(
             session_id=session_id,
             type=ConversationEventType.LLM_TRACE_RECORDED,
-            payload=redact_sensitive_payload(payload),
+            payload=sanitize_provider_thinking(redact_sensitive_payload(payload)),
         )
         return IntakeTraceContext([trace_id], [event.id])
 

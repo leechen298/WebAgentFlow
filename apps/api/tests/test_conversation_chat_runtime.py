@@ -13,6 +13,10 @@ from app.repos.conversation_repo import ConversationRepository
 from app.repos.exploration_run_repo import ExplorationRunRepository
 from app.repos.learned_paths_repo import LearnedPathRepository
 from app.schemas.conversation import ConversationReplaySummary
+from app.schemas.conversation_entry_gate import (
+    ConversationEntryGateCategory,
+    ConversationEntryGateResult,
+)
 from app.schemas.conversation_intake import (
     ConversationIntakeAction,
     ConversationIntakeResult,
@@ -282,6 +286,142 @@ def test_interactive_chat_code_reply_writes_response_provenance(
     assert provenance["llm_trace_ids"] == []
     assert provenance["generated_from_event_ids"] == []
     assert provenance["fallback"] is False
+
+
+def test_interactive_chat_entry_gate_skips_intake_and_router_for_non_web(
+    repo: ConversationRepository,
+) -> None:
+    class CountingIntake:
+        confidence_threshold = 0.6
+
+        def __init__(self) -> None:
+            self.called = False
+
+        def analyze(self, *args, **kwargs):
+            self.called = True
+            raise AssertionError("non-web chat must not call intake")
+
+    class CountingRouter:
+        def __init__(self) -> None:
+            self.called = False
+
+        def route(self, *args, **kwargs):
+            self.called = True
+            raise AssertionError("non-web chat must not call router")
+
+    intake = CountingIntake()
+    router = CountingRouter()
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(
+        repo,
+        intake_service=intake,
+        router_service=router,
+    )
+
+    result = orch.dispatch_user_input(
+        session_id,
+        "你好",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.command_kind == "non_web_chat"
+    assert "网页操作" in result.user_response
+    assert intake.called is False
+    assert router.called is False
+    events = repo.list_events(session_id)
+    entry_gate_event = next(e for e in events if e.type == "entry_gate_recorded")
+    assert entry_gate_event.payload_json["entry_gate"]["category"] == "non_web_chat"
+    assert entry_gate_event.payload_json["skipped_intake_router"] is True
+    assert not any(e.type == "llm_trace_recorded" for e in events)
+    assert not any(e.type == "chat_learning_started" for e in events)
+    assert not any(e.type == "chat_execution_started" for e in events)
+
+
+def test_interactive_chat_entry_gate_allows_web_task_to_reach_runtime(
+    repo: ConversationRepository,
+) -> None:
+    class WebGate:
+        def evaluate(self, raw_message, **kwargs):
+            return ConversationEntryGateResult(
+                category=ConversationEntryGateCategory.WEB_TASK_CANDIDATE,
+                requires_agent_runtime=True,
+                confidence=0.9,
+                reason_summary="web task",
+                latency_ms=3,
+                timeout_ms=1500,
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    class Intake:
+        confidence_threshold = 0.6
+
+        def __init__(self) -> None:
+            self.called = False
+
+        def analyze(self, raw_message, *, session_metadata=None):
+            self.called = True
+            return ConversationIntakeResult(
+                intent="execute_operation",
+                target=ConversationIntakeTarget(url="http://localhost:5176/login"),
+                action=ConversationIntakeAction(goal="登录"),
+                confidence=0.82,
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    class Router:
+        def __init__(self) -> None:
+            self.called = False
+
+        def route(self, *, raw_message, intake, context, page_understanding=None):
+            self.called = True
+            return RouteDecision(
+                route_decision=RouteDecisionKind.ASK_USER,
+                next_agent=RouterAgentRole.CONVERSATION_ORCHESTRATOR,
+                recommended_skill=ApplicationSkillName.ASK_USER_FOR_MISSING_INFO,
+                target={"url": "http://localhost:5176/login"},
+                missing_fields=[
+                    {
+                        "semantic_type": "operation_goal",
+                        "display_name": "要学习或执行的操作",
+                    }
+                ],
+                confidence=0.8,
+                reason_summary="needs goal",
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    intake = Intake()
+    router = Router()
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(
+        repo,
+        entry_gate_service=WebGate(),
+        intake_service=intake,
+        router_service=router,
+    )
+
+    result = orch.dispatch_user_input(
+        session_id,
+        "http://localhost:5176/login",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.command_kind == "ask_user"
+    assert intake.called is True
+    assert router.called is True
+    events = repo.list_events(session_id)
+    event_types = [event.type for event in events]
+    assert event_types.index("entry_gate_recorded") < event_types.index(
+        "agent_trace_recorded"
+    )
+    entry_gate_event = next(e for e in events if e.type == "entry_gate_recorded")
+    assert entry_gate_event.payload_json["skipped_intake_router"] is False
 
 
 def test_interactive_chat_llm_intake_question_writes_agent_provenance_and_trace(

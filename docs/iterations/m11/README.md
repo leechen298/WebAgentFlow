@@ -55,6 +55,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.3-product-chat-test-site-separation](./11.3.3-product-chat-test-site-separation/) —— Product-Level Chat Test Site Separation：拆分 validation-site 工程验证靶场与 product-test-site 产品级 chat 人工验收靶场，避免 validation spec / assertion oracle 污染 `wagent chat` 产品路径。状态：accepted（implementation review passed, product-level CLI smoke passed）。
 - [11.3.4-conversation-intake-agent](./11.3.4-conversation-intake-agent/) —— Conversation Intake Agent：为 `wagent chat` 定义并实现 schema-constrained 自然语言入口层，让 LLM 理解用户话语并输出结构化 intent / target / action / slots / missing fields，代码继续负责校验和执行；同时 Conversation History detail 展示 WAgent 回复来源和脱敏 LLM trace。状态：implementation complete（scoped tests passed, real LLM smoke pending）。
 - [11.3.5-customer-facing-agent-router-skill-runtime](./11.3.5-customer-facing-agent-router-skill-runtime/) —— Customer-Facing Agent Router & Skill Runtime：把 chat recovery 问题扩展为面客 Agent 路由与应用技能运行时，定义 Router / Orchestrator / Worker Agent / Application Skill Registry 边界，复用 AST、PageAnalysis、LearnedPath 和 replay evidence。状态：ready_for_implementation（docs review passed, implementation not started）。
+- [11.3.5.1-conversation-entry-gate-latency-ux](./11.3.5.1-conversation-entry-gate-latency-ux/) —— Conversation Entry Gate & Chat Latency UX：作为 11.3.5 的 patch-level 优化，在 Intake / Router 前加入轻量入口门禁，避免非网页消息进入重型 Agent runtime，并把 `wagent chat` 等待体验从一次性文案升级为持续 working 状态。状态：ready_for_implementation（docs review passed, implementation in progress）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -112,6 +113,11 @@ Router / Orchestrator / Skill Runtime 责任边界：Customer-Facing Agent Route
 已注册应用能力。该包明确复用 HTML AST、Simplified AST、PageAnalysis、ExplorationRun steps、
 LearnedPath actions、replay observation、task planning schemas 和 response provenance；
 不实现 active browser tab，不让 LLM 直接操作浏览器，不让 Router 直接调用 skill。
+`11.3.5.1-conversation-entry-gate-latency-ux/` 是 11.3.5 的 patch-level 入口体验优化。
+它不新增 Agent 角色，不改 Skill Runtime 主架构；只在 Intake / Router 前增加轻量
+Conversation Entry Gate，并要求 CLI 在等待 API 返回期间显示持续 working 状态。
+非网页消息应快速友好回复并引导用户回到 WebAgentFlow 的网页操作能力；网页任务候选
+继续进入 11.3.5 runtime。
 
 11.2 后续 backlog：
 

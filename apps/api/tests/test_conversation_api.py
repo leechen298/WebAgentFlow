@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 
 from fastapi.testclient import TestClient
 
@@ -507,6 +508,8 @@ def test_dispatch_interactive_chat_uses_runtime_router_service(
     client: TestClient,
     monkeypatch,
 ) -> None:
+    from app.services.conversation.entry_gate import ConversationEntryGateService
+
     calls: list[str] = []
 
     class FakeRouterService:
@@ -534,6 +537,10 @@ def test_dispatch_interactive_chat_uses_runtime_router_service(
     monkeypatch.setattr(
         "app.services.conversation.router_agent.build_runtime_router_service",
         lambda: FakeRouterService(),
+    )
+    monkeypatch.setattr(
+        "app.services.conversation.entry_gate.build_runtime_entry_gate_service",
+        lambda: ConversationEntryGateService(),
     )
     session_id = _create_session(client, current_mode="interactive_chat")
 
@@ -986,6 +993,8 @@ def test_dispatch_interactive_chat_uses_runtime_intake_service(
     client: TestClient,
     monkeypatch,
 ) -> None:
+    from app.services.conversation.entry_gate import ConversationEntryGateService
+
     class ProviderBackedIntake:
         confidence_threshold = 0.6
 
@@ -1003,6 +1012,10 @@ def test_dispatch_interactive_chat_uses_runtime_intake_service(
     monkeypatch.setattr(
         "app.services.conversation.intake.build_runtime_intake_service",
         lambda: ProviderBackedIntake(),
+    )
+    monkeypatch.setattr(
+        "app.services.conversation.entry_gate.build_runtime_entry_gate_service",
+        lambda: ConversationEntryGateService(),
     )
 
     def fake_replay(
@@ -1385,6 +1398,90 @@ def test_get_history_extracts_redacted_llm_traces(
     assert payload["llm_traces"][0]["redaction"]["applied"] is True
     assert payload["raw"]["llm_traces"][0]["trace_id"] == "trace-1"
     assert "[REDACTED]" in str(payload["raw"]["llm_traces"][0])
+
+
+def test_get_history_extracts_entry_gate_trace(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    from app.services.conversation.entry_gate import ConversationEntryGateService
+
+    monkeypatch.setattr(
+        "app.services.conversation.entry_gate.build_runtime_entry_gate_service",
+        lambda: ConversationEntryGateService(),
+    )
+    session_id = _create_session(client, current_mode="interactive_chat")
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "你好", "metadata": {"client": "api-test"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["data"]["command_kind"] == "non_web_chat"
+
+    history_resp = client.get(f"/conversation/sessions/{session_id}/history")
+    assert history_resp.status_code == 200
+    data = history_resp.json()["data"]
+    assert len(data["entry_gate_traces"]) == 1
+    trace = data["entry_gate_traces"][0]
+    assert trace["category"] == "non_web_chat"
+    assert trace["requires_agent_runtime"] is False
+    assert trace["skipped_intake_router"] is True
+    assert trace["latency_ms"] is not None
+    assert data["raw"]["entry_gate_traces"][0]["category"] == "non_web_chat"
+
+
+def test_get_history_removes_provider_thinking_from_raw_trace(
+    client: TestClient,
+) -> None:
+    session_id = _create_session(client, current_mode="interactive_chat")
+    trace_payload = {
+        "trace_id": "trace-thinking",
+        "purpose": "conversation_intake",
+        "agent_role": "conversation_intake_agent",
+        "provider": "openai_compatible",
+        "model": "m-thinking",
+        "schema_name": "ConversationIntakeResult",
+        "schema_version": "m11.3.4",
+        "latency_ms": 17,
+        "raw_response": {
+            "text": "<think>hidden chain</think>{\"intent\":\"unknown\"}",
+            "thinking": "hidden field",
+            "raw": {
+                "choices": [
+                    {
+                        "message": {
+                            "content": "<think>nested hidden</think>{}",
+                            "reasoning_content": "nested field",
+                        }
+                    }
+                ]
+            },
+        },
+        "parsed_output": {
+            "intent": "unknown",
+            "chain_of_thought": "parsed hidden",
+        },
+        "redaction": {"applied": True},
+    }
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={"type": "llm_trace_recorded", "payload": trace_payload},
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/history")
+
+    assert resp.status_code == 200
+    dumped = json.dumps(resp.json()["data"], ensure_ascii=False)
+    assert "<think>" not in dumped
+    assert "hidden chain" not in dumped
+    assert "hidden field" not in dumped
+    assert "nested hidden" not in dumped
+    assert "nested field" not in dumped
+    assert "parsed hidden" not in dumped
+    assert '"thinking":' not in dumped
+    assert '"reasoning_content":' not in dumped
+    assert '"chain_of_thought":' not in dumped
 
 
 def test_get_history_redacts_sensitive_intake_values(client: TestClient) -> None:
