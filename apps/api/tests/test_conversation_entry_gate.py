@@ -59,7 +59,7 @@ def test_entry_gate_rejects_non_web_with_runtime_flag() -> None:
         )
 
 
-def test_entry_gate_provider_schema_error_fails_closed() -> None:
+def test_entry_gate_provider_schema_error_falls_back_without_runtime() -> None:
     def provider(payload: dict[str, Any]) -> dict[str, Any]:
         assert payload["raw_message"] == "hello"
         return {
@@ -74,14 +74,15 @@ def test_entry_gate_provider_schema_error_fails_closed() -> None:
     result = service.evaluate("hello")
 
     assert result.requires_agent_runtime is False
-    assert result.category == ConversationEntryGateCategory.NEEDS_CLARIFICATION
+    assert result.category == ConversationEntryGateCategory.NON_WEB_CHAT
+    assert result.fallback is True
     assert result.error_kind == "schema_error"
     trace = service.consume_last_trace_payload()
     assert trace is not None
     assert trace["parsed_output"]["error_kind"] == "schema_error"
 
 
-def test_entry_gate_low_confidence_fails_closed() -> None:
+def test_entry_gate_low_confidence_falls_back_without_runtime() -> None:
     def provider(payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "category": "web_task_candidate",
@@ -92,11 +93,60 @@ def test_entry_gate_low_confidence_fails_closed() -> None:
 
     service = ConversationEntryGateService(provider=provider, timeout_ms=100)
 
-    result = service.evaluate("http://localhost:5176/login")
+    result = service.evaluate("hello")
+
+    assert result.requires_agent_runtime is False
+    assert result.category == ConversationEntryGateCategory.NON_WEB_CHAT
+    assert result.fallback is True
+    assert result.error_kind == "low_confidence"
+
+
+def test_entry_gate_preflight_allows_explicit_url_without_provider_call() -> None:
+    def provider(payload: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError("explicit web-task signals must not wait on provider")
+
+    service = ConversationEntryGateService(provider=provider, timeout_ms=100)
+
+    result = service.evaluate("http://localhost:5176/workspace-login 帮我登录")
+
+    assert result.requires_agent_runtime is True
+    assert result.category == ConversationEntryGateCategory.WEB_TASK_CANDIDATE
+    assert result.error_kind is None
+    assert service.consume_last_trace_payload() is None
+
+
+def test_entry_gate_empty_message_preflight_skips_provider() -> None:
+    def provider(payload: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError("empty input can clarify without provider")
+
+    service = ConversationEntryGateService(provider=provider, timeout_ms=100)
+
+    result = service.evaluate("   ")
 
     assert result.requires_agent_runtime is False
     assert result.category == ConversationEntryGateCategory.NEEDS_CLARIFICATION
-    assert result.error_kind == "low_confidence"
+    assert result.reason_summary == "empty message"
+    assert result.error_kind is None
+    assert service.consume_last_trace_payload() is None
+
+
+def test_entry_gate_provider_clarification_falls_back_to_non_web_greeting() -> None:
+    def provider(payload: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "category": "needs_clarification",
+            "requires_agent_runtime": False,
+            "confidence": 0.9,
+            "reason_summary": "provider is unsure",
+        }
+
+    service = ConversationEntryGateService(provider=provider, timeout_ms=100)
+
+    result = service.evaluate("你好")
+
+    assert result.requires_agent_runtime is False
+    assert result.category == ConversationEntryGateCategory.NON_WEB_CHAT
+    assert result.fallback is True
+    assert result.error_kind is None
 
 
 def test_entry_gate_provider_timeout_does_not_wait_for_slow_provider() -> None:
@@ -111,11 +161,13 @@ def test_entry_gate_provider_timeout_does_not_wait_for_slow_provider() -> None:
     service = ConversationEntryGateService(provider=provider, timeout_ms=25)
     started = time.perf_counter()
 
-    result = service.evaluate("学习 http://localhost:5176/login")
+    result = service.evaluate("你好")
     elapsed = time.perf_counter() - started
 
     assert elapsed < 0.25
     assert result.requires_agent_runtime is False
+    assert result.category == ConversationEntryGateCategory.NON_WEB_CHAT
+    assert result.fallback is True
     assert result.error_kind == "timeout"
     assert result.timeout_ms == 25
 

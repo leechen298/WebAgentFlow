@@ -32,6 +32,7 @@ from app.services.conversation.chat_runtime import (
     _PENDING_SENSITIVE_VALUES,
     parse_chat_intent,
 )
+from app.services.conversation.entry_gate import ConversationEntryGateService
 from app.services.conversation.orchestrator import ConversationOrchestrator
 from app.services.conversation.page_context import PageContextBuilder
 from app.services.learning.learning_run_service import LearningRunResult
@@ -421,6 +422,82 @@ def test_interactive_chat_entry_gate_allows_web_task_to_reach_runtime(
         "agent_trace_recorded"
     )
     entry_gate_event = next(e for e in events if e.type == "entry_gate_recorded")
+    assert entry_gate_event.payload_json["skipped_intake_router"] is False
+
+
+def test_interactive_chat_entry_gate_preflight_preserves_explicit_url_task(
+    repo: ConversationRepository,
+) -> None:
+    def provider(payload: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError("explicit URL should be classified before provider")
+
+    class Intake:
+        confidence_threshold = 0.6
+
+        def __init__(self) -> None:
+            self.called = False
+
+        def analyze(self, raw_message, *, session_metadata=None):
+            self.called = True
+            return ConversationIntakeResult(
+                intent="execute_operation",
+                target=ConversationIntakeTarget(
+                    url="http://localhost:5176/workspace-login"
+                ),
+                action=ConversationIntakeAction(goal="登录"),
+                confidence=0.82,
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    class Router:
+        def __init__(self) -> None:
+            self.called = False
+
+        def route(self, *, raw_message, intake, context, page_understanding=None):
+            self.called = True
+            return RouteDecision(
+                route_decision=RouteDecisionKind.ASK_USER,
+                next_agent=RouterAgentRole.CONVERSATION_ORCHESTRATOR,
+                recommended_skill=ApplicationSkillName.ASK_USER_FOR_MISSING_INFO,
+                target={"url": "http://localhost:5176/workspace-login"},
+                missing_fields=[],
+                confidence=0.8,
+                reason_summary="runtime reached",
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    intake = Intake()
+    router = Router()
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(
+        repo,
+        entry_gate_service=ConversationEntryGateService(
+            provider=provider,
+            timeout_ms=100,
+        ),
+        intake_service=intake,
+        router_service=router,
+    )
+
+    result = orch.dispatch_user_input(
+        session_id,
+        "http://localhost:5176/workspace-login 帮我登录",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.command_kind == "execute_task"
+    assert intake.called is True
+    assert router.called is True
+    events = repo.list_events(session_id)
+    entry_gate_event = next(e for e in events if e.type == "entry_gate_recorded")
+    assert (
+        entry_gate_event.payload_json["entry_gate"]["category"]
+        == "web_task_candidate"
+    )
     assert entry_gate_event.payload_json["skipped_intake_router"] is False
 
 

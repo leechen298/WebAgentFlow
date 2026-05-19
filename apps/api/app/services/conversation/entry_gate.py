@@ -123,20 +123,37 @@ class ConversationEntryGateService:
             "raw_message": raw_message,
             "context": context,
         }
+        deterministic = deterministic_entry_gate(
+            raw_message,
+            context=context,
+            fallback=False,
+        )
+        if _should_use_deterministic_preflight(deterministic):
+            return _with_runtime_timing(
+                deterministic,
+                started=started,
+                timeout_ms=self.timeout_ms,
+            )
         if self._provider is not None:
             provided = self._call_provider_with_timeout(payload, started=started)
             if provided is not None:
+                fallback = _deterministic_fallback_after_provider(
+                    provided,
+                    deterministic=deterministic,
+                    timeout_ms=self.timeout_ms,
+                )
+                if fallback is not None:
+                    self._replace_last_trace_result(
+                        fallback,
+                        error_kind=provided.error_kind,
+                    )
+                    return fallback
                 return provided
-        result = deterministic_entry_gate(
-            raw_message,
-            context=context,
-            fallback=self.provider_fallback,
-        )
-        return result.model_copy(
-            update={
-                "latency_ms": int((time.perf_counter() - started) * 1000),
-                "timeout_ms": self.timeout_ms,
-            }
+        result = deterministic.model_copy(update={"fallback": self.provider_fallback})
+        return _with_runtime_timing(
+            result,
+            started=started,
+            timeout_ms=self.timeout_ms,
         )
 
     def consume_last_trace_payload(self) -> dict[str, Any] | None:
@@ -279,9 +296,88 @@ class ConversationEntryGateService:
             )
             return result
 
+    def _replace_last_trace_result(
+        self,
+        result: ConversationEntryGateResult,
+        *,
+        error_kind: str | None,
+    ) -> None:
+        if not isinstance(self._last_trace_payload, dict):
+            return
+        payload = dict(self._last_trace_payload)
+        payload["parsed_output"] = result.model_dump(mode="json")
+        payload["latency_ms"] = result.latency_ms or payload.get("latency_ms")
+        payload["schema_validation"] = {
+            **_dict_or_empty(payload.get("schema_validation")),
+            "ok": error_kind is None,
+            "fallback_override": True,
+            "error_kind": error_kind,
+        }
+        self._last_trace_payload = sanitize_provider_thinking(
+            redact_sensitive_payload(payload)
+        )
+
 
 def build_runtime_entry_gate_service() -> ConversationEntryGateService:
     return ConversationEntryGateService(provider=_llm_entry_gate_provider)
+
+
+def _with_runtime_timing(
+    result: ConversationEntryGateResult,
+    *,
+    started: float,
+    timeout_ms: int,
+) -> ConversationEntryGateResult:
+    return result.model_copy(
+        update={
+            "latency_ms": int((time.perf_counter() - started) * 1000),
+            "timeout_ms": timeout_ms,
+        }
+    )
+
+
+def _should_use_deterministic_preflight(
+    result: ConversationEntryGateResult,
+) -> bool:
+    if (
+        result.category == ConversationEntryGateCategory.NEEDS_CLARIFICATION
+        and result.reason_summary == "empty message"
+    ):
+        return True
+    return result.category in {
+        ConversationEntryGateCategory.WEB_TASK_CANDIDATE,
+        ConversationEntryGateCategory.CAPABILITY_QUESTION,
+        ConversationEntryGateCategory.UNSUPPORTED,
+    }
+
+
+def _deterministic_fallback_after_provider(
+    provided: ConversationEntryGateResult,
+    *,
+    deterministic: ConversationEntryGateResult,
+    timeout_ms: int,
+) -> ConversationEntryGateResult | None:
+    if deterministic.category == ConversationEntryGateCategory.NEEDS_CLARIFICATION:
+        return None
+    should_override = bool(provided.error_kind or provided.fallback)
+    if (
+        deterministic.category == ConversationEntryGateCategory.NON_WEB_CHAT
+        and provided.category == ConversationEntryGateCategory.NEEDS_CLARIFICATION
+    ):
+        should_override = True
+    if not should_override:
+        return None
+    return deterministic.model_copy(
+        update={
+            "latency_ms": provided.latency_ms,
+            "timeout_ms": provided.timeout_ms or timeout_ms,
+            "provider": provided.provider,
+            "model": provided.model,
+            "fallback": True,
+            "error_kind": provided.error_kind,
+            "source": "deterministic_fallback",
+        }
+    )
 
 
 def deterministic_entry_gate(
