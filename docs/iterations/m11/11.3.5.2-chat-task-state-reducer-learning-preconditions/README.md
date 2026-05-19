@@ -31,8 +31,8 @@
 ```text
 当前用户输入
 + session metadata
-+ active_task
-+ pending_target / pending_intake
++ active_task（canonical task state）
++ pending_target / pending_intake / last_no_path_reason（legacy compatibility input）
 + current-session learned actions
 + Entry Gate / Intake / Router result
 + 最近失败原因 / no-path reason
@@ -54,13 +54,18 @@
 ## 新增概念：active_task
 
 建议在 session metadata 中增加 `active_task`，用于保存当前面客任务的可恢复状态。
+11.3.5.2 实现后，`active_task` 是交互式网页任务的 canonical task state。
+既有 `pending_target`、`pending_intake`、`last_no_path_reason` 只能作为兼容读取 /
+迁移输入，不能再成为独立推进任务的第二套状态源。
 
 示例结构：
 
 ```json
 {
   "active_task": {
+    "task_id": "<uuid-or-message-derived-id>",
     "target_url": "<target-url>",
+    "site_origin": "<origin>",
     "target_source": "user_message_url",
     "goal": null,
     "canonical_goal": null,
@@ -68,6 +73,8 @@
     "stage": "target_collected",
     "proposed_next_action": "ask_operation_goal",
     "last_failure_reason": null,
+    "created_from_message_id": "<message-id>",
+    "updated_from_message_id": "<message-id>",
     "turns_remaining": 3
   }
 }
@@ -79,6 +86,11 @@
 - LLM 可以帮助理解用户输入，但不能直接决定状态转移是否生效。
 - Orchestrator / reducer 负责合并用户输入、校验 scope、更新 stage、调用 skill。
 - `active_task` 只能记录 conversation / task state，不得写成 LearnedPath evidence。
+- reducer 每轮输出后必须只写回一个 canonical `active_task`。如果实现阶段仍需要维护
+  `pending_target` / `pending_intake` / `last_no_path_reason` 给旧代码读取，它们必须由
+  `active_task` 派生或同步清理，不能反向覆盖 reducer 判断。
+- 新 URL、显式取消、turns 用尽、学习成功、执行完成都必须定义清理 / 替换规则，避免
+  旧 pending state 影响下一轮任务。
 
 ## 建议状态
 
@@ -93,24 +105,50 @@
 | `awaiting_learning_confirmation` | 当前 session 没有可用路径，需要用户确认是否学习 | 用户确认后进入 learning，取消则清理 |
 | `learning` | 正在学习 | 记录 progress，等待 learning result |
 | `learning_failed` | 学习失败但可继续 | 面客化说明原因，允许补充后重试 |
-| `learned_ready` | 已学会，可执行 | 执行或提示后续说法 |
+| `learned_ready` | 已学会，可执行 | 询问用户是否执行，或提示后续说法 |
+| `awaiting_execution_confirmation` | 已学会，等待用户确认执行 | 用户确认后进入 executing，取消则清理 |
 | `executing` | 正在执行已学路径 | 记录 progress，等待 replay result |
 | `done` | 本轮任务完成 | 保留摘要或清理 active task |
 | `blocked` | 当前不支持或信息不足无法继续 | 给出下一步建议 |
 
 状态命名可以在技术设计阶段微调，但必须保留“每轮 reducer 推进”的语义。
 
+状态推进原则：
+
+- 任何确认类短句（例如“是”“可以”“学习”“执行”）只能作用于当前
+  `active_task.stage` 明确等待确认的任务。
+- 如果当前输入包含新的 URL、明确新的目标或明显改变任务，reducer 必须先判断是否替换
+  当前 `active_task`，不能把确认绑定到旧任务。
+- 如果没有 `active_task`，确认类短句不得触发 learning / replay；应追问用户提供页面和
+  操作目标。
+- 取消类输入在任何非 `idle` stage 都应清理 `active_task` 及其派生 pending state，并
+  返回明确取消文案。
+
 ## 学习前置条件
 
 `start_learning` 前必须满足：
 
 1. `target_url` 明确。
-2. `goal` / `canonical_goal` 明确。
-3. 必要输入齐全，或页面 / 操作被确认不需要输入。
+2. `goal` / `canonical_goal` 明确，或 Page Understanding / 当前页面上下文能给出一个
+   代码侧认可的 primary goal。
+3. 必要输入齐全，或页面 / 操作被代码侧明确判定不需要输入。
 4. 当前任务处于可学习 stage。
 5. 不依赖 validation spec / assertions oracle 补输入。
 
 如果缺任何一项，不得启动 learning，不得打开浏览器执行学习动作。
+
+必要输入的第一版判定来源只能是：
+
+- 用户消息 / pending intake 中已结构化提取的 slots。
+- Page Understanding 输出的 `supported_goals[].required_slots[]`，但只能作为
+  Orchestrator 追问和校验的输入，不能直接当作执行证据。
+- 代码侧已知的低风险、无输入操作白名单；如果没有白名单，默认按“未知是否需要输入”处理。
+- 用户在当前 `active_task` 上的明确补充或确认。
+
+如果系统无法判断某个目标是否需要输入，默认进入 `need_required_inputs` 或
+`target_collected` / `goal_collected` 后的追问，不得默认“无需输入”并启动 learning。
+但对于 URL-only 输入，如果页面理解能识别主要操作，系统可以用该 primary goal 启动学习；
+学习过程中发现缺用户信息时再进入可恢复追问。
 
 应该进入追问，例如：
 
@@ -136,9 +174,14 @@
 如果没有可用 LearnedPath：
 
 - 不应直接返回冷冰冰的 no-path。
-- 应生成 `awaiting_learning_confirmation`。
+- 对 URL-only 或明确学习类输入，系统可以自动进入 learning，但必须先记录
+  `active_task` 并输出用户可理解的学习阶段反馈。
+- 对明确执行类输入，可以生成 `awaiting_learning_confirmation`，也可以按产品策略先学习；
+  但不得直接 replay。
 - 用户可通过确认类回复继续，例如“是”“可以”“学习”。
 - 用户可通过取消类回复终止，例如“取消”“不用了”。
+- 确认必须绑定当前 `active_task.task_id` / `target_url` / `canonical_goal`。如果用户在确认前
+  提供了新 URL 或新目标，旧确认态必须失效，reducer 应先更新或替换 `active_task`。
 
 建议用户反馈：
 
@@ -151,8 +194,11 @@
 如果用户原始目标是执行，并且系统为了执行而学习：
 
 - learning 成功后可以进入 `learned_ready`。
-- 是否自动执行由 reducer / Orchestrator 根据当前任务上下文决定。
-- 第一版可以采用保守策略：学习完成后询问是否执行；如果文档审核确认低影响 happy path 可自动执行，再在技术设计中写明条件。
+- 11.3.5.2 第一版采用保守策略：学习完成后进入 `awaiting_execution_confirmation`，
+  明确询问用户是否执行。
+- 用户确认执行后，reducer 才能进入 `executing` 并调用 replay。
+- 第一版不做“学习成功后自动执行”。低影响 happy path 自动执行留给后续 risk /
+  consent policy 更清楚以后再设计。
 
 ## 学习失败面客化
 
@@ -179,6 +225,27 @@ Learning run did not produce a LearnedPath.
 
 11.3.5.1 的 CLI spinner 只能说明“请求仍在处理”。11.3.5.2 需要让后端阶段反馈更贴近真实动作。
 
+本轮需要把 `wagent` 的一次消息结果重新定义为：
+
+```text
+用户输入
+=> progress timeline（阶段性反馈，可实时显示，也可随结果回放）
+=> final user_response（正式 WAgent 回复）
+=> evidence references（events / metadata / learning / replay evidence）
+```
+
+也就是说，`wagent conversation send` 或后续测试入口不能只看最终 `user_response`。如果用户发
+URL 后系统会打开页面学习，结果必须包含“正在查询已学记录 / 正在打开页面 / 正在理解页面 /
+正在学习操作 / 需要用户协助 / 学习完成”等阶段性反馈。
+
+参考 Codex CLI / Claude Code CLI 的原则不是复制视觉样式，而是采用同类 agentic CLI 沟通方式：
+
+- 用户提交后立即看到系统在工作。
+- 多阶段任务有可感知的进度，而不是一行“正在理解”后静默。
+- 阶段状态和最终回复分离。
+- 对复杂任务保留可回看的任务 / 事件 / evidence 轨迹。
+- 中断或失败时说明当前卡在哪一步，以及用户能怎么继续。
+
 建议事件：
 
 - `task_state_transition`
@@ -193,7 +260,36 @@ Learning run did not produce a LearnedPath.
 - `execution_started`
 - `execution_completed`
 
-如果暂时不做 streaming，最终 response 至少应携带面客化阶段摘要，避免浏览器已打开但用户仍只看到“正在理解”。
+建议第一版 progress timeline 至少覆盖：
+
+| Stage | User-facing progress | Trigger |
+|---|---|---|
+| `message_received` | `收到你的请求。` | CLI / API 收到用户消息 |
+| `classifying_intent` | `正在判断这是不是网页任务。` | Entry Gate / Intake 开始 |
+| `collecting_context` | `正在读取当前会话上下文。` | Context Collector 开始 |
+| `lookup_learned_actions` | `正在查询是否已经学过这个页面。` | LearnedPath lookup 开始 |
+| `opening_page` | `正在打开页面。` | 浏览器 / page context 开始 |
+| `understanding_page` | `正在理解页面内容和可操作目标。` | Page Understanding 开始 |
+| `learning_operation` | `正在学习这个页面的操作。` | Learning Service 开始 |
+| `waiting_for_user_input` | `学习需要你补充必要信息。` | 发现账号 / 密码 / 验证码 / 用户判断缺失 |
+| `learning_completed` | `学习完成，正在整理我学会了什么。` | LearnedPath 已生成 |
+| `learning_failed_recoverable` | `这次还没学成，我正在整理需要你补充的信息。` | 未生成 LearnedPath 但可继续 |
+| `executing_learned_path` | `正在执行已学操作。` | Replay 开始 |
+| `final_response_ready` | `正在生成回复。` | Result Reporter 开始 |
+
+如果暂时不做 streaming，dispatch response 至少应携带 `progress_timeline` 或等价 events
+摘要，CLI 可以回放这些阶段；避免浏览器已打开但用户仍只看到“正在理解”。
+
+最低可验收形态：
+
+- dispatch response 必须包含非空 `user_response`，且 `user_response` 与 reducer 输出的
+  next action 一致。
+- dispatch result 或 history detail 必须能复原本轮 progress timeline。
+- history detail 必须能看到 redacted `task_state_transition`、当前 / 下一 stage、blocked
+  reason 或 learning failure raw reason。
+- CLI 可以继续先打印最终 response，不要求本轮完成 streaming；但不得只停留在
+  `正在理解你的需求` 这类与真实阶段不一致的文案。
+- 内部 raw reason 可以进入 history / debug raw；普通用户回复必须使用面客化文案。
 
 ## 用户体验目标
 
@@ -215,12 +311,26 @@ Learning run did not produce a LearnedPath.
 我还没学过这个页面上的这个操作。要我现在学习吗？回复“是”开始学习，回复“取消”停止。
 ```
 
-### 输入学习 + URL，但缺操作目标
+### 输入单独 URL
 
-不启动 learning，先追问：
+系统应先查询当前 session / target scope 下是否已有相关 LearnedPath / learned action。
+
+如果已学过，应询问用户要执行、复习还是重新学习什么：
 
 ```text
-我看到了这个页面地址。你想让我学习这个页面上的什么操作？请补充要学习的操作和需要填写的信息。
+我找到这个页面相关的已学操作。你想让我执行哪个操作，还是重新学习这个页面？
+```
+
+如果没学过，可以自动开始学习，并在学习完成后根据页面理解和操作记录报告学会了什么：
+
+```text
+我还没学过这个页面。我会先尝试学习它的主要操作。
+```
+
+如果学习中发现需要账号、密码、验证码或用户判断，应请求用户协助，而不是报告“无法学习”：
+
+```text
+我已经打开这个页面，但继续学习需要你提供账号和密码。你可以补充这些信息，或回复“取消”停止这次学习。
 ```
 
 ### 输入取消
@@ -230,6 +340,31 @@ Learning run did not produce a LearnedPath.
 ```text
 好的，已取消这次操作。
 ```
+
+## 自动化评测规划
+
+本轮先不直接编写 Python 测试文件。已新增
+[`test-plan.md`](./test-plan.md)，用文档定义一组“用户发送消息 -> 预期回复方向 /
+状态副作用”的评测用例。
+
+评测重点：
+
+- 从用户第一次调用 `wagent chat` 开始测。
+- 同时覆盖已有会话上的 `wagent conversation send <session_id> --content <message>`。
+- 第一批先做一轮对话、多条 case，不做长对话自动化。
+- 单条消息评测先校验最终 `user_response`，再校验同一轮消息产生的过程日志 / events /
+  metadata。
+- 工作过程中的反馈通过结构化日志 / conversation events / progress timeline 最终校验，且必须
+  能用 `session_id`、`message_id`、`event_id` 或 `run_id` 关联到本轮输入。
+- `http://localhost:5176/workspace-login` 这类 URL 输入需要先查询当前应用是否已有相关
+  LearnedPath / learned action。
+- 如果已有记录，应询问用户要执行、复习还是重新学习什么。
+- 如果没有记录，可以自动开始学习，并在学习完成后根据网页理解和操作记录报告学会了什么。
+- 如果学习需要账号、密码、验证码或用户判断，应请求用户协助；这不是“应用无法学习”。
+- 后续由评测 Agent 基于真实 `user_response`、events、metadata 和 learning / replay
+  evidence 判定结果是否符合预期。
+- 最终 `wagent chat` 终端阶段性反馈由用户人工验收；本轮文档只定义验收点，不要求 Codex
+  执行人工 smoke。
 
 ## 实现目标
 
@@ -244,7 +379,8 @@ Learning run did not produce a LearnedPath.
 7. learning failure 转成面客文案。
 8. history 记录状态转移、precondition blocked、learning failure raw reason。
 9. CLI / dispatch response 展示与真实阶段一致的用户反馈。
-10. 保持非 `interactive_chat` developer workflow 不变。
+10. 先在文档中维护一轮对话评测用例矩阵，后续再把它落成自动化测试 / 评测 Agent。
+11. 保持非 `interactive_chat` developer workflow 不变。
 
 ## 非目标
 
@@ -259,14 +395,17 @@ Learning run did not produce a LearnedPath.
 
 ## 待确认问题
 
-1. 学习成功后是否自动执行：
-   - 保守方案：先询问用户是否执行。
-   - 激进方案：如果原始目标是执行、信息完整、低影响，则学习后自动执行。
-2. 页面理解是否作为第一版必需前置：
+1. 页面理解是否作为第一版必需前置：
    - 保守方案：只在缺目标 / 缺输入时辅助生成追问。
    - 激进方案：学习前必须 inspect / understand page。
-3. `active_task` 的过期策略：
+2. `active_task` 的过期策略：
    - 建议按 turns_remaining 限制，例如 3 轮。
+
+已收束决策：
+
+- 学习成功后第一版不自动执行；必须先进入 `awaiting_execution_confirmation`。
+- `active_task` 是 canonical task state，旧 pending state 只能作为兼容输入或派生状态。
+- 第一版先用 `test-plan.md` 梳理一轮对话评测用例，后续再落成自动化测试 / 评测 Agent。
 
 ## 后续文档扩展
 
@@ -275,8 +414,7 @@ Learning run did not produce a LearnedPath.
 - `intent.md`
 - `contract.md`
 - `technical-design.md`
-- `test-plan.md`
 - `plan.md`
 - `review.md`
 
-当前文件只用于确认需求、边界和实现目标。
+当前 `README.md` 和 `test-plan.md` 只用于确认需求、边界、评测预期和实现目标。
