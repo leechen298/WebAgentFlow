@@ -344,8 +344,8 @@ URL 后系统会打开页面学习，结果必须包含“正在查询已学记�
 ## 自动化评测规划
 
 本轮先不直接编写 Python 测试文件。已新增
-[`test-plan.md`](./test-plan.md)，用文档定义一组“用户发送消息 -> 预期回复方向 /
-状态副作用”的评测用例。
+[`test-plan.md`](./test-plan.md) 作为本迭代测试入口；完整长期测试方案放在
+[`docs/testing/features/wagent-chat-progress-evaluation.md`](../../../../testing/features/wagent-chat-progress-evaluation.md)。
 
 评测重点：
 
@@ -361,8 +361,8 @@ URL 后系统会打开页面学习，结果必须包含“正在查询已学记�
 - 如果已有记录，应询问用户要执行、复习还是重新学习什么。
 - 如果没有记录，可以自动开始学习，并在学习完成后根据网页理解和操作记录报告学会了什么。
 - 如果学习需要账号、密码、验证码或用户判断，应请求用户协助；这不是“应用无法学习”。
-- 后续由评测 Agent 基于真实 `user_response`、events、metadata 和 learning / replay
-  evidence 判定结果是否符合预期。
+- 后续新开 Codex 聊天执行用例、保存完整日志，并基于真实 `user_response`、events、
+  metadata 和 learning / replay evidence 做两次复核：先判最终回复，再判过程日志。
 - 最终 `wagent chat` 终端阶段性反馈由用户人工验收；本轮文档只定义验收点，不要求 Codex
   执行人工 smoke。
 
@@ -379,7 +379,7 @@ URL 后系统会打开页面学习，结果必须包含“正在查询已学记�
 7. learning failure 转成面客文案。
 8. history 记录状态转移、precondition blocked、learning failure raw reason。
 9. CLI / dispatch response 展示与真实阶段一致的用户反馈。
-10. 先在文档中维护一轮对话评测用例矩阵，后续再把它落成自动化测试 / 评测 Agent。
+10. 先在文档中维护一轮对话评测用例矩阵，后续实跑时保存结果与完整日志供 Codex 复核。
 11. 保持非 `interactive_chat` developer workflow 不变。
 
 ## 非目标
@@ -405,7 +405,7 @@ URL 后系统会打开页面学习，结果必须包含“正在查询已学记�
 
 - 学习成功后第一版不自动执行；必须先进入 `awaiting_execution_confirmation`。
 - `active_task` 是 canonical task state，旧 pending state 只能作为兼容输入或派生状态。
-- 第一版先用 `test-plan.md` 梳理一轮对话评测用例，后续再落成自动化测试 / 评测 Agent。
+- 第一版先用 `test-plan.md` 梳理一轮对话评测用例，后续实跑时保存结果与完整日志供 Codex 复核。
 
 ## 后续文档扩展
 

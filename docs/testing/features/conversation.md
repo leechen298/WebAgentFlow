@@ -32,6 +32,11 @@ Conversation 测试域覆盖：
 - 11.0.6 explicit replay command hook。
 - conversation runtime smoke / E2E。
 
+M11.3.x `wagent chat` 面客产品化体验已经拆出独立长期测试文档：
+
+- [wagent-chat-progress-evaluation.md](./wagent-chat-progress-evaluation.md)：
+  覆盖单条消息最终回复、过程日志 / events、`active_task` 状态和阶段性反馈一致性。
+
 Conversation 测试域不覆盖：
 
 - Task Path Planner / 任务路径规划器、Task Result Reporter / 任务结果汇报器、Failure Recovery Agent / 失败恢复助手、User Abort Handler / 用户中断处理器、Teaching Guide Agent / 教学引导器（legacy: Agents D-H） 具体实现。
@@ -87,6 +92,8 @@ Conversation 测试域不覆盖：
 
 - headed visual exploratory：只有需要观察 console 呈现时再做，不能冒充 headless E2E。
 - CLI human-readable output 或 interactive REPL：只有在产品需求进入对应包后再补。
+- `wagent chat` 面客进度反馈：见
+  [wagent-chat-progress-evaluation.md](./wagent-chat-progress-evaluation.md)。
 - M11.1 task-to-path tests：等 M11.1 intent / plan 创建后再展开。
 
 ## 证据规则

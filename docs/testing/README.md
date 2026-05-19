@@ -27,6 +27,8 @@ task-execution、recovery、teaching、multi-page-workflow。不是每个小功�
 - `conversation`：已有 domain / repo / API / CLI 覆盖，用于保护 M11 runtime
   conversation 基础；11.0.5 Orchestrator Dispatcher、11.0.6 Explicit Replay
   Command Hook 和 11.0.7 conversation runtime E2E 已有证据。
+- `wagent-chat-progress-evaluation`：面向 M11.3.x `wagent chat` 产品化体验，验证
+  单条消息的最终回复、过程日志 / events、`active_task` 状态和阶段性反馈是否一致。
 
 Agent-operated UI exploratory 也按能力域执行，不做一次性全项目自动测试。新增探索式
 用例必须先明确所属能力域、证据类型、执行工具、是否 CI-safe，以及是否依赖当前里程碑。
@@ -86,6 +88,8 @@ Agent-operated UI Exploratory 规程；
 查看 [e2e/runbook.md](./e2e/runbook.md) 了解确定性 E2E 运行说明；
 查看 [features/replay.md](./features/replay.md) 了解 M10.2 replay 测试域；
 查看 [features/conversation.md](./features/conversation.md) 了解 M11 conversation 测试域；
+查看 [features/wagent-chat-progress-evaluation.md](./features/wagent-chat-progress-evaluation.md)
+了解 M11.3.x `wagent chat` 面客回复与过程日志评测方案；
 查看 [exploratory/README.md](./exploratory/README.md) 了解 replay 探索式验证提示词和用例矩阵；
 查看 [results/2026-05-08-replay-e2e-first-run.md](./results/2026-05-08-replay-e2e-first-run.md)
 了解 M10.2 replay E2E 首次实跑结果；
