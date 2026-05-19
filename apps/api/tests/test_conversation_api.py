@@ -14,6 +14,12 @@ from app.schemas.conversation_intake import (
     ConversationIntakeAction,
     ConversationIntakeResult,
 )
+from app.schemas.conversation_router import (
+    ApplicationSkillName,
+    RouteDecision,
+    RouteDecisionKind,
+    RouterAgentRole,
+)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -495,6 +501,50 @@ def test_dispatch_response_does_not_expose_engine_command(
 
     data = resp.json()["data"]
     assert "engine_command" not in data
+
+
+def test_dispatch_interactive_chat_uses_runtime_router_service(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    calls: list[str] = []
+
+    class FakeRouterService:
+        def route(self, *, raw_message, intake, context, page_understanding=None):
+            calls.append(raw_message)
+            return RouteDecision(
+                route_decision=RouteDecisionKind.ASK_USER,
+                next_agent=RouterAgentRole.CONVERSATION_ORCHESTRATOR,
+                recommended_skill=ApplicationSkillName.ASK_USER_FOR_MISSING_INFO,
+                target={"url": "http://localhost:5176/workspace-login"},
+                missing_fields=[
+                    {
+                        "semantic_type": "operation_goal",
+                        "display_name": "要学习或执行的操作",
+                    }
+                ],
+                confidence=0.8,
+                reason_summary="test runtime router",
+                source="llm",
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    monkeypatch.setattr(
+        "app.services.conversation.router_agent.build_runtime_router_service",
+        lambda: FakeRouterService(),
+    )
+    session_id = _create_session(client, current_mode="interactive_chat")
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "http://localhost:5176/workspace-login"},
+    )
+
+    assert resp.status_code == 200
+    assert calls == ["http://localhost:5176/workspace-login"]
+    assert resp.json()["data"]["command_kind"] == "ask_user"
 
 
 def test_dispatch_does_not_expose_identity_or_tenant_fields(

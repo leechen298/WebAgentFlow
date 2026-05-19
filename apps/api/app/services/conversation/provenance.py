@@ -9,6 +9,7 @@ from app.schemas.conversation import ConversationResponseProvenance
 CODE_PRODUCER_INTERACTIVE_CHAT = "interactive_chat_runtime_code"
 CODE_PRODUCER_ORCHESTRATOR = "conversation_orchestrator_code"
 AGENT_PRODUCER_CONVERSATION_INTAKE = "conversation_intake_agent"
+AGENT_PRODUCER_CUSTOMER_FACING_ROUTER = "customer_facing_agent_router"
 
 
 def code_response_provenance(
@@ -107,4 +108,6 @@ def _display_name_for_code(producer_id: str) -> str:
 def _display_name_for_agent(agent_role: str) -> str:
     if agent_role == AGENT_PRODUCER_CONVERSATION_INTAKE:
         return "Conversation Intake Agent"
+    if agent_role == AGENT_PRODUCER_CUSTOMER_FACING_ROUTER:
+        return "Customer-Facing Agent Router"
     return agent_role

@@ -63,10 +63,11 @@ def test_chat_is_top_level_command_and_creates_interactive_session() -> None:
     }
     output = stdout.getvalue()
     assert "WAgent > 你好，我可以学习页面操作，也可以执行已经学会的操作。" in output
-    assert "WAgent > 我会打开浏览器学习：在登录页输入账号密码，并点击“登录”按钮。" in output
-    assert "WAgent > 我会打开浏览器执行：输入账号密码，并点击“登录”按钮完成登录。" in output
-    assert "WAgent > 开始学习页面操作。" not in output
-    assert "WAgent > 执行中。" not in output
+    assert output.count("WAgent > 正在理解你的需求。") == 2
+    assert "WAgent > 我会打开浏览器学习" not in output
+    assert "WAgent > 我会打开浏览器执行" not in output
+    assert "WAgent > 开始学习页面操作。" in output
+    assert "WAgent > 执行中。" in output
     assert "LearnedPath" not in output
     assert "learned_path" not in output
     assert "run_id" not in output
@@ -92,7 +93,8 @@ def test_chat_explains_unknown_task_before_no_path_fallback() -> None:
 
     assert rc == 0
     output = stdout.getvalue()
-    assert "WAgent > 我会打开浏览器执行：导出报表。" in output
+    assert "WAgent > 正在理解你的需求。" in output
+    assert "WAgent > 我会打开浏览器执行" not in output
     assert "WAgent > 还没学过这个操作，需要先学习。" in output
 
 
@@ -120,8 +122,9 @@ def test_chat_product_workspace_progress_labels() -> None:
 
     assert rc == 0
     output = stdout.getvalue()
-    assert "WAgent > 我会打开浏览器学习：在工作台登录页输入操作员账号和访问口令，并点击“进入工作台”按钮。" in output
-    assert "WAgent > 我会打开浏览器执行：输入操作员账号和访问口令，并点击“进入工作台”按钮。" in output
+    assert output.count("WAgent > 正在理解你的需求。") == 2
+    assert "WAgent > 我会打开浏览器学习" not in output
+    assert "WAgent > 我会打开浏览器执行" not in output
 
 
 def test_chat_default_timeout_is_180_seconds() -> None:
@@ -200,7 +203,8 @@ def test_chat_headless_shows_backend_wording() -> None:
 
     assert rc == 0
     output = stdout.getvalue()
-    assert "WAgent > 我会在后台执行：输入账号密码，并点击“登录”按钮完成登录。" in output
+    assert "WAgent > 正在理解你的需求。" in output
+    assert "WAgent > 我会在后台执行" not in output
     assert "WAgent > 我会打开浏览器执行" not in output
 
 

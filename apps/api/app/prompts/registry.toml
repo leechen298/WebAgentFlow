@@ -1,0 +1,71 @@
+[prompts.conversation_intake_agent]
+version = "v1"
+path = "agents/conversation_intake_agent/prompt.md"
+metadata = "agents/conversation_intake_agent/metadata.toml"
+prompt_sha256 = "ad16d884c83a723355324c8a5c71f67cab6866ba195a401681a66f1b99080926"
+shared_fragments = [
+  "shared/webagentflow_boundaries.md",
+  "shared/evidence_and_scope.md",
+  "shared/redaction_rules.md",
+  "shared/structured_output_rules.md",
+]
+
+[prompts.customer_facing_agent_router]
+version = "v1"
+path = "agents/customer_facing_agent_router/prompt.md"
+metadata = "agents/customer_facing_agent_router/metadata.toml"
+prompt_sha256 = "22261b3ef223b2c07878d8651ffccc5a58163a0a459d195254f2910c7cf44583"
+shared_fragments = [
+  "shared/webagentflow_boundaries.md",
+  "shared/evidence_and_scope.md",
+  "shared/redaction_rules.md",
+  "shared/structured_output_rules.md",
+]
+
+[prompts.page_understanding_agent]
+version = "v1"
+path = "agents/page_understanding_agent/prompt.md"
+metadata = "agents/page_understanding_agent/metadata.toml"
+prompt_sha256 = "0869651113702538a7e225da40ee88ce60d4b76134679dc738af7c908ca2d636"
+shared_fragments = [
+  "shared/webagentflow_boundaries.md",
+  "shared/evidence_and_scope.md",
+  "shared/redaction_rules.md",
+  "shared/structured_output_rules.md",
+]
+
+[prompts.learning_agent]
+version = "v1"
+path = "agents/learning_agent/prompt.md"
+metadata = "agents/learning_agent/metadata.toml"
+prompt_sha256 = "480bbefd357f0e3fac06c7f66d5165f84b7f187767adbfe6bb31e43c3f69d6ff"
+shared_fragments = [
+  "shared/webagentflow_boundaries.md",
+  "shared/evidence_and_scope.md",
+  "shared/redaction_rules.md",
+  "shared/structured_output_rules.md",
+]
+
+[prompts.web_operation_agent]
+version = "v1"
+path = "agents/web_operation_agent/prompt.md"
+metadata = "agents/web_operation_agent/metadata.toml"
+prompt_sha256 = "d52a2e55d114f2e99ed6597c7173b044184aaced4212e22e1c1ed058aacfe68c"
+shared_fragments = [
+  "shared/webagentflow_boundaries.md",
+  "shared/evidence_and_scope.md",
+  "shared/redaction_rules.md",
+  "shared/structured_output_rules.md",
+]
+
+[prompts.task_result_reporter]
+version = "v1"
+path = "agents/task_result_reporter/prompt.md"
+metadata = "agents/task_result_reporter/metadata.toml"
+prompt_sha256 = "e604432edde110c500006d38b049227020baf06159b01b2cfdb25343cf831c16"
+shared_fragments = [
+  "shared/webagentflow_boundaries.md",
+  "shared/evidence_and_scope.md",
+  "shared/redaction_rules.md",
+  "shared/structured_output_rules.md",
+]

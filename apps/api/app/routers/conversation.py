@@ -240,7 +240,9 @@ def dispatch_input(
     from app.repos.learned_paths_repo import LearnedPathRepository
     from app.services.conversation.intake import build_runtime_intake_service
     from app.services.conversation.orchestrator import ConversationOrchestrator
+    from app.services.conversation.page_context import build_runtime_page_context_provider
     from app.services.conversation.replay_hook import run_explicit_replay
+    from app.services.conversation.router_agent import build_runtime_router_service
     from app.services.learning.learning_run_service import (
         LearningRunRequest,
         LearningRunService,
@@ -287,6 +289,8 @@ def dispatch_input(
         execution_handler=replay_handler,
         learning_handler=learning_handler,
         intake_service=build_runtime_intake_service(),
+        router_service=build_runtime_router_service(),
+        page_context_provider=build_runtime_page_context_provider(),
     )
     result = orchestrator.dispatch_user_input(
         session_id,

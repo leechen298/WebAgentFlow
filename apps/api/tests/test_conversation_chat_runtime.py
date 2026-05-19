@@ -18,11 +18,18 @@ from app.schemas.conversation_intake import (
     ConversationIntakeResult,
     ConversationIntakeTarget,
 )
+from app.schemas.conversation_router import (
+    ApplicationSkillName,
+    RouteDecision,
+    RouteDecisionKind,
+    RouterAgentRole,
+)
 from app.services.conversation.chat_runtime import (
     _PENDING_SENSITIVE_VALUES,
     parse_chat_intent,
 )
 from app.services.conversation.orchestrator import ConversationOrchestrator
+from app.services.conversation.page_context import PageContextBuilder
 from app.services.learning.learning_run_service import LearningRunResult
 
 
@@ -494,6 +501,189 @@ def test_interactive_chat_missing_learning_info_saves_pending_intake(
 
     events = repo.list_events(session_id)
     assert not any(e.type == "chat_learning_started" for e in events)
+
+
+def test_interactive_chat_bare_url_saves_pending_target_without_browser_action(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    learning_called = False
+    replay_called = False
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        nonlocal learning_called
+        learning_called = True
+        raise AssertionError("bare URL must not start learning")
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("bare URL must not start replay")
+
+    orch = ConversationOrchestrator(
+        repo,
+        learning_handler=learning_handler,
+        replay_handler=replay_handler,
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "http://localhost:5176/workspace-login",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert learning_called is False
+    assert replay_called is False
+    assert result.command_kind == "ask_user"
+    assert result.user_response == "我已经记住这个页面地址。你想让我学习或执行哪个操作？"
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json["pending_target"]["url"] == (
+        "http://localhost:5176/workspace-login"
+    )
+    assert "pending_intake" not in session.metadata_json
+
+    events = repo.list_events(session_id)
+    assert any(e.type == "agent_trace_recorded" for e in events)
+    assert any(
+        e.type == "skill_call_recorded"
+        and e.payload_json["skill"] == "ask_user_for_missing_info"
+        for e in events
+    )
+    assert not any(e.type == "chat_learning_started" for e in events)
+    assert not any(e.type == "chat_execution_started" for e in events)
+
+
+def test_interactive_chat_inspect_route_uses_page_understanding_runtime(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+
+    class InspectRouter:
+        def route(self, *, raw_message, intake, context, page_understanding=None):
+            return RouteDecision(
+                route_decision=RouteDecisionKind.UNDERSTAND_PAGE,
+                next_agent=RouterAgentRole.PAGE_UNDERSTANDING_AGENT,
+                recommended_skill=ApplicationSkillName.INSPECT_TARGET_PAGE,
+                target={"url": "http://localhost:5176/workspace-login"},
+                user_goal="登录",
+                confidence=0.91,
+                reason_summary="needs page context",
+                source="llm",
+            )
+
+        def consume_last_trace_payload(self):
+            return {
+                "trace_id": "router-trace-page-1",
+                "purpose": "customer_facing_agent_router",
+                "agent_role": "customer_facing_agent_router",
+                "provider": "openai_compatible",
+                "model": "m-test",
+                "request_id": "req-router-page-1",
+                "prompt_template_id": "customer_facing_agent_router.v1",
+                "prompt_hash": "abc",
+                "schema_name": "RouteDecision",
+                "schema_version": "m11.3.5",
+                "schema_validation": {"ok": True},
+                "latency_ms": 1,
+                "token_usage": {},
+                "raw_request": {},
+                "raw_response": {},
+                "parsed_output": {},
+                "redaction": {"applied": True},
+            }
+
+    def page_context_provider(*, route_decision, intake, headless):
+        return PageContextBuilder().build_from_html(
+            url=route_decision.target.url,
+            title="Workspace Login",
+            html="""
+            <main>
+              <h1>Workspace Login</h1>
+              <label>用户名<input name="username" /></label>
+              <label>密码<input name="password" type="password" /></label>
+              <button>登录</button>
+            </main>
+            """,
+            learned_actions=[],
+        )
+
+    orch = ConversationOrchestrator(
+        repo,
+        router_service=InspectRouter(),
+        page_context_provider=page_context_provider,
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "看一下 http://localhost:5176/workspace-login 能做什么",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.command_kind == "understand_page"
+    assert result.allowed is True
+    assert "我已查看页面" in result.user_response
+
+    events = repo.list_events(session_id)
+    assert any(
+        e.type == "skill_call_recorded"
+        and e.payload_json["skill"] == "inspect_target_page"
+        and e.payload_json["status"] == "completed"
+        for e in events
+    )
+    assert any(
+        e.type == "skill_call_recorded"
+        and e.payload_json["skill"] == "understand_page"
+        and e.payload_json["status"] == "completed"
+        for e in events
+    )
+    assert any(
+        e.type == "llm_trace_recorded"
+        and e.payload_json["trace_id"] == "router-trace-page-1"
+        for e in events
+    )
+    assert any(
+        e.type == "agent_trace_recorded"
+        and e.payload_json.get("trace_kind") == "page_understanding"
+        for e in events
+    )
+    from app.services.conversation.history import ConversationHistoryService
+
+    history = ConversationHistoryService(repo.session).get_history(session_id)
+    assert history is not None
+    assert any(
+        trace.trace_id == "router-trace-page-1"
+        and trace.schema_name == "RouteDecision"
+        for trace in history.llm_traces
+    )
+    assert not any(e.type == "chat_learning_started" for e in events)
+    assert not any(e.type == "chat_execution_started" for e in events)
+
+
+def test_interactive_chat_short_learn_uses_pending_target_and_asks_slots(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(repo)
+
+    orch.dispatch_user_input(
+        session_id,
+        "http://localhost:5176/workspace-login",
+        metadata={"client": "wagent_chat"},
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "学习",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.command_kind == "learn_page"
+    assert "用户名" in result.user_response
+    assert "密码" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    pending = session.metadata_json["pending_intake"]
+    assert pending["target"]["url"] == "http://localhost:5176/workspace-login"
+    assert pending["missing_fields"] == ["username", "password"]
 
 
 def test_interactive_chat_merges_pending_intake_and_starts_learning(

@@ -51,6 +51,9 @@ class ConversationOrchestrator:
         execution_handler: Any | None = None,
         learning_handler: Any | None = None,
         intake_service: Any | None = None,
+        router_service: Any | None = None,
+        page_context_provider: Any | None = None,
+        page_understanding_service: Any | None = None,
     ) -> None:
         self._repo = repo
         self._replay_handler = replay_handler
@@ -58,6 +61,9 @@ class ConversationOrchestrator:
         self._execution_handler = execution_handler
         self._learning_handler = learning_handler
         self._intake_service = intake_service
+        self._router_service = router_service
+        self._page_context_provider = page_context_provider
+        self._page_understanding_service = page_understanding_service
 
     def dispatch_user_input(
         self,
@@ -115,6 +121,9 @@ class ConversationOrchestrator:
                 learning_handler=self._learning_handler,
                 replay_handler=self._replay_handler,
                 intake_service=self._intake_service,
+                router_service=self._router_service,
+                page_context_provider=self._page_context_provider,
+                page_understanding_service=self._page_understanding_service,
             ).try_handle(
                 session=session,
                 session_id=session_id,
@@ -923,14 +932,13 @@ class ConversationOrchestrator:
         if session is None:
             raise ValueError(f"session not found: {session_id}")
         metadata = dict(session.metadata_json or {})
-        if "pending_intake" not in metadata:
+        if not any(
+            key in metadata
+            for key in ("pending_intake", "pending_target", "last_no_path_reason")
+        ):
             return
-        metadata.pop("pending_intake", None)
         from app.services.conversation.chat_runtime import (
-            clear_pending_sensitive_values,
+            clear_pending_runtime_context,
         )
 
-        clear_pending_sensitive_values(session_id)
-        session.metadata_json = metadata
-        self._repo.session.commit()
-        self._repo.session.refresh(session)
+        clear_pending_runtime_context(self._repo, session_id)

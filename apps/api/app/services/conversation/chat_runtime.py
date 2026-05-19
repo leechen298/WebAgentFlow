@@ -19,17 +19,31 @@ from app.schemas.conversation_intake import (
     ConversationIntakeResult,
     ConversationIntakeSlot,
 )
+from app.schemas.conversation_router import (
+    ApplicationSkillName,
+    RouteDecision,
+    RouteDecisionKind,
+)
+from app.services.conversation.context import (
+    ConversationContextCollector,
+    PendingTarget,
+    make_pending_target,
+)
 from app.services.conversation.intake import (
     ConversationIntakeService,
     redact_sensitive_payload,
 )
 from app.services.conversation.orchestrator import DispatchResult
+from app.services.conversation.page_understanding import PageUnderstandingService
 from app.services.conversation.provenance import (
     AGENT_PRODUCER_CONVERSATION_INTAKE,
+    AGENT_PRODUCER_CUSTOMER_FACING_ROUTER,
     CODE_PRODUCER_INTERACTIVE_CHAT,
     agent_response_provenance,
     code_response_provenance,
 )
+from app.services.conversation.router_agent import CustomerFacingAgentRouterService
+from app.services.conversation.skills import ApplicationSkillRegistry
 from app.services.learning.learning_run_service import LearningRunResult
 
 ChatIntentKind = Literal["learn_page", "execute_task", "unknown"]
@@ -47,6 +61,23 @@ def clear_pending_sensitive_values(session_id: str) -> None:
     _PENDING_SENSITIVE_VALUES.pop(session_id, None)
 
 
+def clear_pending_runtime_context(repo: ConversationRepository, session_id: str) -> None:
+    session = repo.get_session(session_id)
+    if session is None:
+        raise ValueError(f"session not found: {session_id}")
+    metadata = dict(session.metadata_json or {})
+    changed = False
+    for key in ("pending_intake", "pending_target", "last_no_path_reason"):
+        if key in metadata:
+            metadata.pop(key, None)
+            changed = True
+    clear_pending_sensitive_values(session_id)
+    if changed:
+        session.metadata_json = metadata
+        repo.session.commit()
+        repo.session.refresh(session)
+
+
 @dataclass(frozen=True)
 class ChatIntent:
     kind: ChatIntentKind
@@ -59,6 +90,7 @@ class IntakeTraceContext:
     trace_ids: list[str]
     event_ids: list[str]
     fallback: bool = False
+    event_types: list[str] | None = None
 
 
 def _chat_headless(session: Any) -> bool:
@@ -85,11 +117,21 @@ class InteractiveChatRuntime:
         learning_handler: Any | None = None,
         replay_handler: Any | None = None,
         intake_service: Any | None = None,
+        router_service: Any | None = None,
+        skill_registry: ApplicationSkillRegistry | None = None,
+        page_context_provider: Any | None = None,
+        page_understanding_service: Any | None = None,
     ) -> None:
         self._repo = repo
         self._learning_handler = learning_handler
         self._replay_handler = replay_handler
         self._intake_service = intake_service or ConversationIntakeService()
+        self._router_service = router_service or CustomerFacingAgentRouterService()
+        self._skill_registry = skill_registry or ApplicationSkillRegistry()
+        self._page_context_provider = page_context_provider
+        self._page_understanding_service = (
+            page_understanding_service or PageUnderstandingService()
+        )
 
     def try_handle(
         self,
@@ -116,6 +158,70 @@ class InteractiveChatRuntime:
             session_id,
             fallback=bool(getattr(self._intake_service, "provider_fallback", False)),
         )
+        context = ConversationContextCollector(self._repo).collect(
+            session_id,
+            current_message=raw_input,
+        )
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.COLLECT_CONVERSATION_CONTEXT,
+            status="completed",
+            input_summary={"current_message_url": context.current_message_url},
+            output_summary={
+                "pending_target": (
+                    context.pending_target.model_dump(mode="json")
+                    if context.pending_target
+                    else None
+                ),
+                "learned_action_count": len(context.learned_actions),
+            },
+        )
+        route_decision = self._router_service.route(
+            raw_message=raw_input,
+            intake=intake,
+            context=context,
+        )
+        router_llm_trace_context = self._record_router_llm_trace(session_id)
+        router_trace_context = self._record_router_trace(
+            session_id,
+            route_decision=route_decision,
+            llm_trace_context=router_llm_trace_context,
+        )
+        if route_decision.route_decision in {
+            RouteDecisionKind.INSPECT_PAGE,
+            RouteDecisionKind.UNDERSTAND_PAGE,
+        }:
+            return self._handle_page_understanding_request(
+                session_id=session_id,
+                raw_input=raw_input,
+                intake=intake,
+                route_decision=route_decision,
+                trace_context=trace_context,
+                router_trace_context=router_trace_context,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+                headless=headless,
+            )
+        if (
+            route_decision.route_decision == RouteDecisionKind.ASK_USER
+            and route_decision.target.url
+            and any(
+                field.semantic_type == "operation_goal"
+                for field in route_decision.missing_fields
+            )
+        ):
+            return self._handle_pending_target_question(
+                session_id=session_id,
+                raw_input=raw_input,
+                intake=intake,
+                route_decision=route_decision,
+                trace_context=trace_context,
+                router_trace_context=router_trace_context,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+            )
         if intake.confidence < self._intake_confidence_threshold():
             return self._handle_low_confidence_intake(
                 session_id=session_id,
@@ -143,6 +249,7 @@ class InteractiveChatRuntime:
                 metadata=metadata,
                 previous_status=previous_status,
                 headless=headless,
+                route_decision=route_decision,
             )
         if intake.intent == "provide_missing_info":
             return self._handle_provide_missing_info(
@@ -154,6 +261,7 @@ class InteractiveChatRuntime:
                 metadata=metadata,
                 previous_status=previous_status,
                 headless=headless,
+                route_decision=route_decision,
             )
         if intake.intent == "execute_operation":
             return self._handle_execute_task(
@@ -164,6 +272,7 @@ class InteractiveChatRuntime:
                 metadata=metadata,
                 previous_status=previous_status,
                 headless=headless,
+                route_decision=route_decision,
             )
         return self._handle_no_path(
             session_id=session_id,
@@ -266,6 +375,237 @@ class InteractiveChatRuntime:
             previous_status=previous_status,
         )
 
+    def _handle_pending_target_question(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        intake: ConversationIntakeResult,
+        route_decision: RouteDecision,
+        trace_context: IntakeTraceContext,
+        router_trace_context: IntakeTraceContext,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        previous_status: str,
+    ) -> DispatchResult:
+        events = (
+            self._trace_event_types(trace_context)
+            + self._trace_event_types(router_trace_context)
+            + self._append_chat_command_event(
+                session_id=session_id,
+                raw_input=raw_input,
+                command_kind="ask_user",
+                metadata=metadata,
+                intake=intake,
+            )
+        )
+        target = make_pending_target(route_decision.target.url or raw_input)
+        self._save_pending_target(session_id, target)
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.ASK_USER_FOR_MISSING_INFO,
+            status="completed",
+            input_summary={"missing_fields": ["operation_goal"]},
+            output_summary={"target_url": target.url},
+        )
+        response = "我已经记住这个页面地址。你想让我学习或执行哪个操作？"
+        self._append_agent_message(
+            session_id,
+            response,
+            provenance=code_response_provenance(
+                CODE_PRODUCER_INTERACTIVE_CHAT,
+                llm_trace_ids=router_trace_context.trace_ids,
+                generated_from_event_ids=router_trace_context.event_ids,
+            ),
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_NO_PATH,
+            {
+                "reason": "pending_target_missing_goal",
+                "target": target.model_dump(mode="json"),
+                "route_decision": route_decision.model_dump(mode="json"),
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind="ask_user",
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
+
+    def _handle_page_understanding_request(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        intake: ConversationIntakeResult,
+        route_decision: RouteDecision,
+        trace_context: IntakeTraceContext,
+        router_trace_context: IntakeTraceContext,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        previous_status: str,
+        headless: bool,
+    ) -> DispatchResult:
+        events = (
+            self._trace_event_types(trace_context)
+            + self._trace_event_types(router_trace_context)
+            + self._append_chat_command_event(
+                session_id=session_id,
+                raw_input=raw_input,
+                command_kind=route_decision.route_decision.value,
+                metadata=metadata,
+                intake=intake,
+            )
+        )
+        target_url = route_decision.target.url or intake.target.url
+        provider = self._page_context_provider
+        if not target_url or not callable(provider):
+            self._record_skill_call(
+                session_id,
+                ApplicationSkillName.INSPECT_TARGET_PAGE,
+                status="blocked",
+                input_summary=route_decision.model_dump(mode="json"),
+                output_summary={"reason": "page_context_unavailable"},
+            )
+            response = "我还不能确认这个页面的实时结构。请补充你想学习或执行的操作。"
+            self._append_agent_message(
+                session_id,
+                response,
+                provenance=code_response_provenance(
+                    CODE_PRODUCER_INTERACTIVE_CHAT,
+                    llm_trace_ids=router_trace_context.trace_ids,
+                    generated_from_event_ids=router_trace_context.event_ids,
+                ),
+            )
+            self._append_event(
+                session_id,
+                ConversationEventType.CHAT_NO_PATH,
+                {
+                    "reason": "page_context_unavailable",
+                    "route_decision": route_decision.model_dump(mode="json"),
+                },
+                events,
+            )
+            return self._result(
+                session_id=session_id,
+                command_kind=route_decision.route_decision.value,
+                user_response=response,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+            )
+
+        try:
+            page_context = provider(
+                route_decision=route_decision,
+                intake=intake,
+                headless=headless,
+            )
+        except Exception:
+            page_context = None
+        if page_context is None:
+            self._record_skill_call(
+                session_id,
+                ApplicationSkillName.INSPECT_TARGET_PAGE,
+                status="blocked",
+                input_summary={"target_url": target_url, "headless": headless},
+                output_summary={"reason": "page_context_provider_failed"},
+            )
+            response = "我还不能确认这个页面的实时结构。请补充你想学习或执行的操作。"
+            self._append_agent_message(
+                session_id,
+                response,
+                provenance=code_response_provenance(
+                    CODE_PRODUCER_INTERACTIVE_CHAT,
+                    llm_trace_ids=router_trace_context.trace_ids,
+                    generated_from_event_ids=router_trace_context.event_ids,
+                ),
+            )
+            self._append_event(
+                session_id,
+                ConversationEventType.CHAT_NO_PATH,
+                {"reason": "page_context_provider_failed"},
+                events,
+            )
+            return self._result(
+                session_id=session_id,
+                command_kind=route_decision.route_decision.value,
+                user_response=response,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+            )
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.INSPECT_TARGET_PAGE,
+            status="completed",
+            input_summary={"target_url": target_url, "headless": headless},
+            output_summary={
+                "url": page_context.url,
+                "title": page_context.title,
+                "interactive_element_count": len(page_context.interactive_elements),
+            },
+        )
+        page_understanding = self._page_understanding_service.understand(page_context)
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.UNDERSTAND_PAGE,
+            status="completed",
+            input_summary={"url": page_context.url},
+            output_summary=page_understanding.model_dump(mode="json"),
+        )
+        page_trace_context = self._record_page_understanding_trace(
+            session_id,
+            page_understanding=page_understanding.model_dump(mode="json"),
+            router_trace_context=router_trace_context,
+        )
+        events += self._trace_event_types(page_trace_context)
+        response = (
+            f"我已查看页面：{page_understanding.observed_page_summary}"
+            " 你想让我学习或执行哪个操作？"
+        )
+        self._append_agent_message(
+            session_id,
+            response,
+            provenance=code_response_provenance(
+                CODE_PRODUCER_INTERACTIVE_CHAT,
+                llm_trace_ids=router_trace_context.trace_ids,
+                generated_from_event_ids=[
+                    *router_trace_context.event_ids,
+                    *page_trace_context.event_ids,
+                ],
+            ),
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "page_understanding_recorded",
+                "route_decision": route_decision.model_dump(mode="json"),
+                "page_context": {
+                    "url": page_context.url,
+                    "title": page_context.title,
+                    "interactive_element_count": len(page_context.interactive_elements),
+                    "page_signature": page_context.page_signature,
+                },
+                "page_understanding": page_understanding.model_dump(mode="json"),
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind=route_decision.route_decision.value,
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
+
     def _handle_provide_missing_info(
         self,
         *,
@@ -277,6 +617,7 @@ class InteractiveChatRuntime:
         metadata: dict[str, Any] | None,
         previous_status: str,
         headless: bool,
+        route_decision: RouteDecision | None = None,
     ) -> DispatchResult:
         pending = self._pending_intake(session_id)
         if pending is None:
@@ -328,6 +669,7 @@ class InteractiveChatRuntime:
             metadata=metadata,
             previous_status=previous_status,
             headless=headless,
+            route_decision=route_decision,
         )
 
     def _handle_missing_info_without_pending(
@@ -440,6 +782,7 @@ class InteractiveChatRuntime:
         metadata: dict[str, Any] | None,
         previous_status: str,
         headless: bool = True,
+        route_decision: RouteDecision | None = None,
     ) -> DispatchResult:
         events = self._append_chat_command_event(
             session_id=session_id,
@@ -450,6 +793,18 @@ class InteractiveChatRuntime:
         )
 
         self._append_agent_message(session_id, "开始学习页面操作。")
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.START_LEARNING,
+            status="started",
+            input_summary={
+                "target_url": intent.url,
+                "user_goal": intake.action.goal if intake else None,
+                "route_decision": (
+                    route_decision.route_decision.value if route_decision else None
+                ),
+            },
+        )
         self._append_event(
             session_id,
             ConversationEventType.CHAT_LEARNING_STARTED,
@@ -504,6 +859,16 @@ class InteractiveChatRuntime:
 
         action = _action_from_learning_result(learning_result)
         old_action = self._upsert_learned_action(session_id, action)
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.START_LEARNING,
+            status="completed",
+            output_summary={
+                "run_id": learning_result.run_id,
+                "learned_path_id": learning_result.learned_path_id,
+                "target_url": action["target_url"],
+            },
+        )
         alias = action["alias"]
         complete_message = f"学习完成：我学会了{alias}操作。之后你可以说“帮我{alias}”。"
         self._append_agent_message(session_id, complete_message)
@@ -541,6 +906,7 @@ class InteractiveChatRuntime:
         metadata: dict[str, Any] | None,
         previous_status: str,
         headless: bool = True,
+        route_decision: RouteDecision | None = None,
     ) -> DispatchResult:
         events = self._append_chat_command_event(
             session_id=session_id,
@@ -552,6 +918,51 @@ class InteractiveChatRuntime:
         action = self._match_session_action(session_id, intent.raw_text, intake=intake)
         if action is None:
             user_url = _extract_url(intent.raw_text)
+            if (
+                route_decision is not None
+                and route_decision.recommended_skill
+                == ApplicationSkillName.LEARN_THEN_EXECUTE
+            ):
+                # M11.3.5 keeps learn-then-execute in guided mode: the Router may
+                # recommend it, but runtime requires explicit learning first.
+                self._save_last_no_path_reason(
+                    session_id,
+                    target_url=route_decision.target.url,
+                    user_goal=route_decision.user_goal,
+                    reason="learn_then_execute_requires_learning_first",
+                    message_id=message_id,
+                )
+                self._save_pending_target(
+                    session_id,
+                    make_pending_target(route_decision.target.url)
+                    if route_decision.target.url
+                    else None,
+                )
+                self._record_skill_call(
+                    session_id,
+                    ApplicationSkillName.LEARN_THEN_EXECUTE,
+                    status="blocked",
+                    input_summary=route_decision.model_dump(mode="json"),
+                    output_summary={
+                        "reason": "learning_confirmation_required_before_execution"
+                    },
+                )
+                response = "我还没学过这个操作。你可以先让我学习这个页面上的操作。"
+                self._append_agent_message(session_id, response)
+                self._append_event(
+                    session_id,
+                    ConversationEventType.CHAT_NO_PATH,
+                    {"reason": "learn_then_execute_requires_learning_first"},
+                    events,
+                )
+                return self._result(
+                    session_id=session_id,
+                    command_kind="execute_task",
+                    user_response=response,
+                    events=events,
+                    message_id=message_id,
+                    previous_status=previous_status,
+                )
             if user_url and not self._has_learned_target(session_id, user_url):
                 return self._handle_unlearned_target(
                     session_id=session_id,
@@ -560,6 +971,8 @@ class InteractiveChatRuntime:
                     metadata=metadata,
                     existing_events=events,
                     previous_status=previous_status,
+                    target_url=user_url,
+                    user_goal=intake.action.goal if intake else None,
                 )
             if self._has_ambiguous_action_match(session_id, intent.raw_text):
                 return self._handle_ambiguous_target(
@@ -603,6 +1016,16 @@ class InteractiveChatRuntime:
             )
 
         self._append_agent_message(session_id, "执行中。")
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.START_REPLAY,
+            status="started",
+            input_summary={
+                "learned_path_id": action["learned_path_id"],
+                "target_url": action["target_url"],
+                "alias": action["alias"],
+            },
+        )
         self._append_event(
             session_id,
             ConversationEventType.CHAT_EXECUTION_STARTED,
@@ -630,6 +1053,17 @@ class InteractiveChatRuntime:
             event_type = ConversationEventType.CHAT_EXECUTION_FAILED
             error = replay_summary.error or replay_summary.replay_status
             allowed = False
+
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.START_REPLAY,
+            status="completed" if allowed else "failed",
+            output_summary={
+                "learned_path_id": action["learned_path_id"],
+                "replay_status": replay_summary.replay_status,
+                "drift_status": replay_summary.drift_status,
+            },
+        )
 
         self._append_agent_message(session_id, final_message)
         self._append_event(
@@ -664,6 +1098,8 @@ class InteractiveChatRuntime:
         metadata: dict[str, Any] | None,
         existing_events: list[str] | None = None,
         previous_status: str = ConversationStatus.TASK_INTAKE.value,
+        target_url: str | None = None,
+        user_goal: str | None = None,
     ) -> DispatchResult:
         events = existing_events or self._append_chat_command_event(
             session_id=session_id,
@@ -671,11 +1107,24 @@ class InteractiveChatRuntime:
             command_kind=command_kind,
             metadata=metadata,
         )
+        self._save_last_no_path_reason(
+            session_id,
+            target_url=target_url,
+            user_goal=user_goal,
+            reason="unlearned_target_url",
+            message_id=message_id,
+        )
+        if target_url:
+            self._save_pending_target(session_id, make_pending_target(target_url))
         self._append_agent_message(session_id, _UNLEARNED_TARGET_RESPONSE)
         self._append_event(
             session_id,
             ConversationEventType.CHAT_NO_PATH,
-            {"reason": "unlearned_target_url"},
+            {
+                "reason": "unlearned_target_url",
+                "target_url": target_url,
+                "user_goal": user_goal,
+            },
             events,
         )
         return self._result(
@@ -702,6 +1151,13 @@ class InteractiveChatRuntime:
             raw_input="",
             command_kind=command_kind,
             metadata=metadata,
+        )
+        self._save_last_no_path_reason(
+            session_id,
+            target_url=None,
+            user_goal=None,
+            reason="ambiguous_target_scope",
+            message_id=message_id,
         )
         self._append_agent_message(session_id, _AMBIGUOUS_TARGET_RESPONSE)
         self._append_event(
@@ -735,6 +1191,13 @@ class InteractiveChatRuntime:
             command_kind=command_kind,
             metadata=metadata,
         )
+        self._save_last_no_path_reason(
+            session_id,
+            target_url=None,
+            user_goal=None,
+            reason="no_session_learned_action",
+            message_id=message_id,
+        )
         self._append_agent_message(session_id, _NO_PATH_RESPONSE)
         self._append_event(
             session_id,
@@ -760,6 +1223,12 @@ class InteractiveChatRuntime:
         previous_status: str,
     ) -> DispatchResult:
         response = f"学习失败：{error}"
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.START_LEARNING,
+            status="failed",
+            output_summary={"error": error},
+        )
         self._append_agent_message(session_id, response)
         self._append_event(
             session_id,
@@ -851,10 +1320,123 @@ class InteractiveChatRuntime:
         )
         return IntakeTraceContext([trace_id], [event.id], fallback=fallback)
 
+    def _record_router_trace(
+        self,
+        session_id: str,
+        *,
+        route_decision: RouteDecision,
+        llm_trace_context: IntakeTraceContext,
+    ) -> IntakeTraceContext:
+        event = self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.AGENT_TRACE_RECORDED,
+            payload=redact_sensitive_payload(
+                {
+                    "agent_role": AGENT_PRODUCER_CUSTOMER_FACING_ROUTER,
+                    "trace_kind": "route_decision",
+                    "route_decision": route_decision.model_dump(mode="json"),
+                    "llm_trace_ids": llm_trace_context.trace_ids,
+                    "generated_from_event_ids": llm_trace_context.event_ids,
+                }
+            ),
+        )
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.RECORD_AGENT_TRACE,
+            status="completed",
+            input_summary={"agent_role": AGENT_PRODUCER_CUSTOMER_FACING_ROUTER},
+            output_summary={"source_event_id": event.id},
+        )
+        return IntakeTraceContext(
+            llm_trace_context.trace_ids,
+            [*llm_trace_context.event_ids, event.id],
+            event_types=[
+                *self._trace_event_types(llm_trace_context),
+                ConversationEventType.AGENT_TRACE_RECORDED.value,
+            ],
+        )
+
+    def _record_router_llm_trace(self, session_id: str) -> IntakeTraceContext:
+        consume_trace = getattr(self._router_service, "consume_last_trace_payload", None)
+        if not callable(consume_trace):
+            return IntakeTraceContext([], [])
+        payload = consume_trace()
+        if not isinstance(payload, dict):
+            return IntakeTraceContext([], [])
+        trace_id = str(payload.get("trace_id") or f"router-trace-{session_id}")
+        payload = {**payload, "trace_id": trace_id}
+        event = self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.LLM_TRACE_RECORDED,
+            payload=redact_sensitive_payload(payload),
+        )
+        return IntakeTraceContext([trace_id], [event.id])
+
+    def _record_page_understanding_trace(
+        self,
+        session_id: str,
+        *,
+        page_understanding: dict[str, Any],
+        router_trace_context: IntakeTraceContext,
+    ) -> IntakeTraceContext:
+        event = self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.AGENT_TRACE_RECORDED,
+            payload=redact_sensitive_payload(
+                {
+                    "agent_role": "page_understanding_agent",
+                    "trace_kind": "page_understanding",
+                    "page_understanding": page_understanding,
+                    "generated_from_event_ids": router_trace_context.event_ids,
+                }
+            ),
+        )
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.RECORD_AGENT_TRACE,
+            status="completed",
+            input_summary={"agent_role": "page_understanding_agent"},
+            output_summary={"source_event_id": event.id},
+        )
+        return IntakeTraceContext(
+            [],
+            [event.id],
+            event_types=[ConversationEventType.AGENT_TRACE_RECORDED.value],
+        )
+
     def _trace_event_types(self, trace_context: IntakeTraceContext) -> list[str]:
         if not trace_context.event_ids:
             return []
+        if trace_context.event_types is not None:
+            return trace_context.event_types
         return [ConversationEventType.LLM_TRACE_RECORDED.value]
+
+    def _record_skill_call(
+        self,
+        session_id: str,
+        skill_name: ApplicationSkillName,
+        *,
+        status: str,
+        input_summary: dict[str, Any] | None = None,
+        output_summary: dict[str, Any] | None = None,
+    ) -> None:
+        skill = self._skill_registry.get(skill_name)
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.SKILL_CALL_RECORDED,
+            payload=redact_sensitive_payload(
+                {
+                    "skill": skill.name.value,
+                    "status": status,
+                    "executor_owner": skill.executor_owner,
+                    "browser_access": skill.browser_access,
+                    "changes_page": skill.changes_page,
+                    "writes_learned_path": skill.writes_learned_path,
+                    "input_summary": input_summary or {},
+                    "output_summary": output_summary or {},
+                }
+            ),
+        )
 
     def _intake_reply_provenance(
         self,
@@ -915,6 +1497,8 @@ class InteractiveChatRuntime:
         merged.append(action)
         metadata["learned_actions"] = merged
         metadata.pop("pending_intake", None)
+        metadata.pop("pending_target", None)
+        metadata.pop("last_no_path_reason", None)
         clear_pending_sensitive_values(session_id)
         self._replace_session_metadata(session_id, metadata)
         return old_action
@@ -962,6 +1546,10 @@ class InteractiveChatRuntime:
             stored.update(sensitive_values)
             _PENDING_SENSITIVE_VALUES[session_id] = stored
         metadata["pending_intake"] = redact_sensitive_payload(pending)
+        if intake.target.url:
+            metadata["pending_target"] = redact_sensitive_payload(
+                make_pending_target(intake.target.url).model_dump(mode="json")
+            )
         self._replace_session_metadata(session_id, metadata)
 
     def _clear_pending_intake(self, session_id: str) -> None:
@@ -970,7 +1558,48 @@ class InteractiveChatRuntime:
             raise ValueError(f"session not found: {session_id}")
         metadata = dict(session.metadata_json or {})
         metadata.pop("pending_intake", None)
+        metadata.pop("pending_target", None)
+        metadata.pop("last_no_path_reason", None)
         clear_pending_sensitive_values(session_id)
+        self._replace_session_metadata(session_id, metadata)
+
+    def _save_pending_target(
+        self,
+        session_id: str,
+        target: PendingTarget | None,
+    ) -> None:
+        if target is None:
+            return
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = dict(session.metadata_json or {})
+        metadata["pending_target"] = redact_sensitive_payload(
+            target.model_dump(mode="json")
+        )
+        self._replace_session_metadata(session_id, metadata)
+
+    def _save_last_no_path_reason(
+        self,
+        session_id: str,
+        *,
+        target_url: str | None,
+        user_goal: str | None,
+        reason: str,
+        message_id: str | None,
+    ) -> None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = dict(session.metadata_json or {})
+        metadata["last_no_path_reason"] = redact_sensitive_payload(
+            {
+                "target_url": target_url,
+                "user_goal": user_goal,
+                "reason": reason,
+                "created_from_message_id": message_id,
+            }
+        )
         self._replace_session_metadata(session_id, metadata)
 
     def _replace_session_metadata(

@@ -23,6 +23,7 @@ from app.schemas.conversation_intake import (
 )
 from app.schemas.llm import LlmMessage, LlmRequest
 from app.services import llm_provider
+from app.services.conversation.prompt_assets import PromptAssetError, load_prompt_asset
 
 IntakeProvider = Callable[
     [str, dict[str, Any]], ConversationIntakeResult | dict[str, Any] | None
@@ -76,6 +77,10 @@ class ConversationIntakeService:
         self.provider_fallback = False
         context = {
             "pending_intake": (session_metadata or {}).get("pending_intake"),
+            "pending_target": (session_metadata or {}).get("pending_target"),
+            "last_no_path_reason": (session_metadata or {}).get(
+                "last_no_path_reason"
+            ),
             "learned_actions": redact_sensitive_payload(
                 (session_metadata or {}).get("learned_actions") or []
             ),
@@ -216,15 +221,13 @@ def _llm_intake_provider(
 ) -> dict[str, Any] | ConversationIntakeResult | None:
     if not settings.llm_api_key:
         return None
+    try:
+        prompt_asset = load_prompt_asset("conversation_intake_agent", version="v1")
+    except PromptAssetError:
+        return None
 
     request = LlmRequest(
-        system=(
-            "You are WebAgentFlow's Conversation Intake layer. Extract only "
-            "the user's intent, target URL/site, action goal, slots, missing "
-            "fields, confidence, and clarification hint. Do not output "
-            "selectors, browser actions, learned_path_id, or execution "
-            "authorization. Output JSON only."
-        ),
+        system=prompt_asset.assembled_prompt,
         messages=[
             LlmMessage(
                 role="user",
@@ -244,7 +247,13 @@ def _llm_intake_provider(
     started = time.perf_counter()
     response = llm_provider.generate_structured(request)
     latency_ms = int((time.perf_counter() - started) * 1000)
-    trace_payload = _llm_trace_payload(request, response, latency_ms)
+    trace_payload = _llm_trace_payload(
+        request,
+        response,
+        latency_ms,
+        prompt_template_id=f"{prompt_asset.prompt_id}.{prompt_asset.version}",
+        prompt_hash=prompt_asset.prompt_sha256,
+    )
     if response.ok and response.parsed is not None:
         return {"intake": response.parsed, "llm_trace": trace_payload}
     if response.error and response.error.kind == "parse_error":
@@ -287,6 +296,9 @@ def _llm_trace_payload(
     request: LlmRequest,
     response: Any,
     latency_ms: int,
+    *,
+    prompt_template_id: str = "conversation_intake_agent.v1",
+    prompt_hash: str | None = None,
 ) -> dict[str, Any]:
     request_payload = request.model_dump(mode="json")
     raw_response = (
@@ -308,8 +320,8 @@ def _llm_trace_payload(
         "provider": "openai_compatible",
         "model": response.model or request.model or settings.llm_default_model,
         "request_id": request_id,
-        "prompt_template_id": "conversation_intake_agent.v1",
-        "prompt_hash": hashlib.sha256(prompt_material.encode()).hexdigest(),
+        "prompt_template_id": prompt_template_id,
+        "prompt_hash": prompt_hash or hashlib.sha256(prompt_material.encode()).hexdigest(),
         "schema_name": "ConversationIntakeResult",
         "schema_version": "m11.3.4",
         "schema_validation": {},
@@ -358,11 +370,40 @@ def _deterministic_intake(
 
     url = _extract_url(text)
     pending = context.get("pending_intake")
+    pending_target = context.get("pending_target")
     slots = _extract_slots(text, url=url)
     lowered = text.lower()
     has_learn_keyword = any(keyword in lowered or keyword in text for keyword in _LEARN_KEYWORDS)
     action = _infer_action(text, url=url)
     target = _target_from_url(url, text)
+
+    if (
+        has_learn_keyword
+        and not url
+        and isinstance(pending_target, dict)
+        and pending_target.get("url")
+    ):
+        pending_url = str(pending_target["url"])
+        target = _target_from_url(pending_url, text)
+        action = _infer_action(text, url=pending_url)
+        missing = _missing_login_fields(slots, text, pending_url)
+        if not action.goal or action.goal == text:
+            missing.append(
+                ConversationMissingField(
+                    semantic_type="operation_goal",
+                    display_name="要学习的操作",
+                )
+            )
+        return ConversationIntakeResult(
+            intent="learn_operation",
+            target=target,
+            action=action,
+            slots=slots,
+            missing_fields=missing,
+            confidence=0.82,
+            should_ask_user=bool(missing),
+            ask_user_message_hint=None,
+        )
 
     if pending and slots and not has_learn_keyword:
         return ConversationIntakeResult(

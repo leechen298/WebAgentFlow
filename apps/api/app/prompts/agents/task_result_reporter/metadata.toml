@@ -1,0 +1,8 @@
+prompt_id = "task_result_reporter"
+version = "v1"
+agent_role = "task_result_reporter"
+schema_name = "TaskResultReport"
+runtime_policy = "report_from_evidence_only"
+allowed_inputs = ["learning_result", "replay_result", "observation_evidence", "code_decision"]
+forbidden_outputs = ["selector", "playwright_step", "browser_action", "invented_verdict"]
+sensitive_context_policy = "redacted_only"

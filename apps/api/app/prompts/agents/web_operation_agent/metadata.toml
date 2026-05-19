@@ -1,0 +1,8 @@
+prompt_id = "web_operation_agent"
+version = "v1"
+agent_role = "web_operation_agent"
+schema_name = "WebOperationAgentRequest"
+runtime_policy = "request_skill_only"
+allowed_inputs = ["validated_target", "goal", "slots", "learned_action_summary"]
+forbidden_outputs = ["selector", "playwright_step", "browser_action", "learned_path_id"]
+sensitive_context_policy = "redacted_only"

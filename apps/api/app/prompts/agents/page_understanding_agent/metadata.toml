@@ -1,0 +1,8 @@
+prompt_id = "page_understanding_agent"
+version = "v1"
+agent_role = "page_understanding_agent"
+schema_name = "PageUnderstandingResult"
+runtime_policy = "no_browser_operation_low_latency"
+allowed_inputs = ["page_context_bundle"]
+forbidden_outputs = ["selector", "dom_path", "playwright_step", "browser_action", "learned_path_id"]
+sensitive_context_policy = "redacted_only"

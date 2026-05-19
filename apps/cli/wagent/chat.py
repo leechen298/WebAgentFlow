@@ -4,18 +4,14 @@ from __future__ import annotations
 
 import argparse
 import os
-import re
 import sys
 from typing import Any
-from urllib.parse import urlparse
 
 import httpx
 
 _DEFAULT_TIMEOUT_SEC = 180.0
 _EXIT_COMMANDS = {"exit", "quit", ":q"}
 _WELCOME = "你好，我可以学习页面操作，也可以执行已经学会的操作。"
-_URL_RE = re.compile(r"https?://[^\s，。]+")
-_LEARN_KEYWORDS = ("学习", "学一下", "learn", "teach")
 
 
 def configure_parser(parser: argparse.ArgumentParser) -> None:
@@ -208,12 +204,8 @@ def _api_post(
 
 
 def _progress_message(user_input: str, *, headless: bool = False) -> str:
-    text = user_input.strip()
-    url = _extract_url(text)
-    prefix = "我会在后台" if headless else "我会打开浏览器"
-    if url and _is_learn_input(text):
-        return f"{prefix}学习：{_learning_target_label(url)}。"
-    return f"{prefix}执行：{_task_label(text)}。"
+    _ = (user_input, headless)
+    return "正在理解你的需求。"
 
 
 def _dedupe_response(message: str, *, progress_message: str) -> str:
@@ -223,57 +215,6 @@ def _dedupe_response(message: str, *, progress_message: str) -> str:
     if "执行" in progress_message and progress_message.startswith("我会"):
         lines = [line for line in lines if line.strip() != "执行中。"]
     return "\n".join(lines)
-
-
-def _extract_url(text: str) -> str | None:
-    match = _URL_RE.search(text)
-    return match.group(0) if match else None
-
-
-def _is_learn_input(text: str) -> bool:
-    lowered = text.lower()
-    return any(keyword in lowered or keyword in text for keyword in _LEARN_KEYWORDS)
-
-
-def _learning_target_label(url: str) -> str:
-    path = urlparse(url).path.rstrip("/")
-    if path == "/login":
-        return "在登录页输入账号密码，并点击“登录”按钮"
-    if "/workspace-login" in path:
-        return "在工作台登录页输入操作员账号和访问口令，并点击“进入工作台”按钮"
-    return "这个页面上的主要操作"
-
-
-def _task_label(text: str) -> str:
-    task = text.strip()
-    prefixes = (
-        "麻烦你帮我",
-        "麻烦帮我",
-        "请帮我",
-        "你帮我",
-        "帮我",
-        "麻烦你",
-        "麻烦",
-        "请",
-        "我要",
-        "我想要",
-        "我想",
-    )
-    for prefix in prefixes:
-        if task.startswith(prefix):
-            task = task.removeprefix(prefix).strip()
-            break
-    task = task.strip(" ，,。.!！?？")
-    for suffix in ("一下吧", "一下", "吧"):
-        if task.endswith(suffix):
-            task = task.removesuffix(suffix).strip()
-            break
-    task = task.strip(" ，,。.!！?？")
-    if task == "登录" or task.endswith("登录"):
-        return "输入账号密码，并点击“登录”按钮完成登录"
-    if "进入工作台" in task:
-        return "输入操作员账号和访问口令，并点击“进入工作台”按钮"
-    return task or text.strip()
 
 
 def _print_agent(message: str) -> None:
