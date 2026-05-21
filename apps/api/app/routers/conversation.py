@@ -257,8 +257,20 @@ def dispatch_input(
     repo = ConversationRepository(db)
     _require_session(repo, session_id)
 
-    def replay_handler(learned_path_id: str, url: str, *, headless: bool = True):
-        return run_explicit_replay(db, learned_path_id, url, headless=headless)
+    def replay_handler(
+        learned_path_id: str,
+        url: str,
+        *,
+        headless: bool = True,
+        slot_overrides: dict[str, str] | None = None,
+    ):
+        return run_explicit_replay(
+            db,
+            learned_path_id,
+            url,
+            headless=headless,
+            slot_overrides=slot_overrides,
+        )
 
     def learning_handler(
         url: str,

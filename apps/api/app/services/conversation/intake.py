@@ -35,6 +35,7 @@ _URL_RE = re.compile(r"https?://[^\s，。]+")
 _VALUE_PATTERN = r"([^\s，。,.；;!！?？/]+)"
 _USERNAME_LABELS = ("操作员账号", "用户名", "用户账号", "账号", "账户")
 _PASSWORD_LABELS = ("访问口令", "登录口令", "口令", "密码", "access_secret", "password")
+_ITEM_NAME_LABELS = ("项目名称", "项目名", "名称", "name")
 _LEARN_KEYWORDS = ("学习", "学一下", "learn", "teach")
 _SENSITIVE_KEY_RE = re.compile(r"(password|passwd|pwd|secret|token|access[_-]?secret)", re.I)
 _JSON_SENSITIVE_TEXT_RE = re.compile(
@@ -372,6 +373,7 @@ def _deterministic_intake(
     pending = context.get("pending_intake")
     pending_target = context.get("pending_target")
     slots = _extract_slots(text, url=url)
+    has_item_name_slot = any(slot.semantic_type == "item_name" for slot in slots)
     lowered = text.lower()
     has_learn_keyword = any(keyword in lowered or keyword in text for keyword in _LEARN_KEYWORDS)
     action = _infer_action(text, url=url)
@@ -405,6 +407,16 @@ def _deterministic_intake(
             ask_user_message_hint=None,
         )
 
+    if has_learn_keyword and has_item_name_slot and not url:
+        return ConversationIntakeResult(
+            intent="learn_operation",
+            target=target,
+            action=action,
+            slots=slots,
+            confidence=0.84,
+            should_ask_user=False,
+        )
+
     if pending and slots and not has_learn_keyword:
         return ConversationIntakeResult(
             intent="provide_missing_info",
@@ -412,6 +424,19 @@ def _deterministic_intake(
             action=action,
             slots=slots,
             confidence=0.82,
+        )
+
+    if (
+        has_item_name_slot
+        and not has_learn_keyword
+        and action.canonical_goal == "新增项目"
+    ):
+        return ConversationIntakeResult(
+            intent="execute_operation",
+            target=target,
+            action=action,
+            slots=slots,
+            confidence=0.78,
         )
 
     if slots and not url and not has_learn_keyword:
@@ -458,6 +483,8 @@ def _target_from_url(url: str | None, text: str) -> ConversationIntakeTarget:
     parsed = urlparse(url)
     origin = f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else None
     page_hint = "工作台登录页" if "工作台" in text or "workspace" in url else None
+    if not page_hint and parsed.path.rstrip("/") == "/items":
+        page_hint = "项目列表页"
     return ConversationIntakeTarget(url=url, site_origin=origin, page_hint=page_hint)
 
 
@@ -465,6 +492,7 @@ def _extract_slots(text: str, *, url: str | None) -> list[ConversationIntakeSlot
     slots: list[ConversationIntakeSlot] = []
     username = _extract_label_value(text, _USERNAME_LABELS)
     password = _extract_label_value(text, _PASSWORD_LABELS)
+    item_name = _extract_item_name(text, url=url)
 
     if (username is None or password is None) and url:
         pair = _extract_positional_credential_pair(text, url)
@@ -492,15 +520,66 @@ def _extract_slots(text: str, *, url: str | None) -> list[ConversationIntakeSlot
                 sensitive=True,
             )
         )
+    if item_name is not None:
+        slots.append(
+            ConversationIntakeSlot(
+                name="item_name",
+                semantic_type="item_name",
+                label_seen=_label_seen(text, _ITEM_NAME_LABELS),
+                value=item_name,
+                sensitive=False,
+            )
+        )
     return slots
 
 
 def _extract_label_value(text: str, labels: tuple[str, ...]) -> str | None:
     for label in labels:
-        match = re.search(rf"{re.escape(label)}[是为]?\s*[:：]?\s*{_VALUE_PATTERN}", text)
+        match = re.search(
+            rf"{re.escape(label)}[是为]?\s*[:：]?\s*{_VALUE_PATTERN}",
+            text,
+            re.I,
+        )
         if match:
             return match.group(1)
     return None
+
+
+def _extract_item_name(text: str, *, url: str | None) -> str | None:
+    item_context = _is_item_name_context(text, url=url)
+    for label in _ITEM_NAME_LABELS:
+        if label == "name":
+            label_pattern = r"(?<![A-Za-z0-9_])name(?![A-Za-z0-9_])"
+        else:
+            label_pattern = re.escape(label)
+        match = re.search(
+            rf"{label_pattern}\s*(?:叫|是|为|=|:|：)?\s*{_VALUE_PATTERN}",
+            text,
+            re.I,
+        )
+        if not match:
+            continue
+        value = match.group(1)
+        if label in ("项目名称", "项目名") or item_context or "项目" in value:
+            return value
+
+    if "名称" in text or "项目名" in text or "name" in text.lower():
+        return None
+    match = re.search(
+        rf"(?:新增|创建|添加)\s*(?!项目(?:$|[\s，。,.；;!！?？])){_VALUE_PATTERN}",
+        text,
+        re.I,
+    )
+    if match:
+        return match.group(1)
+    return None
+
+
+def _is_item_name_context(text: str, *, url: str | None) -> bool:
+    if _canonical_goal(text, url=url) == "新增项目":
+        return True
+    path = urlparse(url or "").path.rstrip("/") if url else ""
+    return path == "/items"
 
 
 def _label_seen(text: str, labels: tuple[str, ...]) -> str | None:
@@ -568,6 +647,13 @@ def _infer_action(text: str, *, url: str | None) -> ConversationIntakeAction:
 
 def _canonical_goal(text: str, *, url: str | None) -> str | None:
     url_value = url or ""
+    lowered = text.lower()
+    path = urlparse(url_value).path.rstrip("/") if url_value else ""
+    if (
+        any(token in text for token in ("新增", "添加", "创建"))
+        and ("项目" in text or "item" in lowered)
+    ) or (path == "/items" and any(token in text for token in ("新增", "添加", "创建"))):
+        return "新增项目"
     if "工作台" in text or "workspace" in url_value:
         return "进入工作台"
     if "登录" in text or "login" in url_value:
@@ -585,6 +671,8 @@ def _goal_text(text: str, canonical: str | None) -> str | None:
 
 
 def _aliases_for(canonical: str | None) -> list[str]:
+    if canonical == "新增项目":
+        return ["新增项目", "帮我新增项目", "创建项目", "添加项目"]
     if canonical == "进入工作台":
         return ["进入工作台", "登录", "打开工作台", "帮我进入工作台", "进一下工作台"]
     if canonical == "登录":

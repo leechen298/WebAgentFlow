@@ -30,6 +30,8 @@ from app.schemas.conversation_router import (
 )
 from app.services.conversation.chat_runtime import (
     _PENDING_SENSITIVE_VALUES,
+    _fill_values_from_intake,
+    _parse_product_inputs,
     parse_chat_intent,
 )
 from app.services.conversation.entry_gate import ConversationEntryGateService
@@ -156,6 +158,54 @@ def _ingest_workspace_path(
     return str(path.id)
 
 
+def _ingest_items_path(
+    db_session: Session,
+    *,
+    source_run_id: str | None = None,
+    value_slot: str | None = None,
+) -> str:
+    if source_run_id is not None and db_session.get(ExplorationRun, source_run_id) is None:
+        ExplorationRunRepository(db_session).create(
+            ExplorationRun(
+                id=source_run_id,
+                page_signature="/items",
+                status="completed",
+                summary="items test run",
+                result_snapshot_json={},
+            )
+        )
+
+    fingerprint = hashlib.sha256(
+        (source_run_id or f"items-{value_slot or 'fixed'}").encode()
+    ).hexdigest()
+    fill_action: dict[str, Any] = {
+        "step": 1,
+        "action_type": "fill",
+        "target_selector": "[data-testid='item-name-input']",
+        "target_description": "项目名称",
+        "value": "测试项目A",
+    }
+    if value_slot:
+        fill_action["value_slot"] = value_slot
+    path, _created = LearnedPathRepository(db_session).ingest_run(
+        page_template="/items",
+        query_signature={},
+        dom_fingerprint=fingerprint,
+        scenario="product_level",
+        actions=[
+            fill_action,
+            {
+                "step": 2,
+                "action_type": "click",
+                "target_selector": "[data-testid='item-create-submit']",
+                "target_description": "新增项目",
+            },
+        ],
+        source_run_id=source_run_id,
+    )
+    return str(path.id)
+
+
 def test_parse_chat_intent_learn_page_extracts_url() -> None:
     intent = parse_chat_intent(
         "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login"
@@ -170,6 +220,42 @@ def test_parse_chat_intent_execute_task_for_regular_text() -> None:
 
     assert intent.kind == "execute_task"
     assert intent.url is None
+
+
+def test_fill_values_from_intake_includes_item_name_and_credentials() -> None:
+    intake = ConversationIntakeResult(
+        intent="learn_operation",
+        slots=[
+            {
+                "name": "operator_account",
+                "semantic_type": "username",
+                "value": "demo",
+            },
+            {
+                "name": "access_secret",
+                "semantic_type": "password",
+                "value": "123456",
+                "sensitive": True,
+            },
+            {
+                "name": "item_name",
+                "semantic_type": "item_name",
+                "value": "测试项目A",
+            },
+        ],
+    )
+
+    assert _fill_values_from_intake(intake) == {
+        "username": "demo",
+        "password": "123456",
+        "item_name": "测试项目A",
+    }
+
+
+def test_parse_product_inputs_does_not_extract_item_name_from_username() -> None:
+    assert _parse_product_inputs(
+        "学习新增项目：http://localhost:5176/items，username 是 demo"
+    ) is None
 
 
 def _fake_llm_trace_payload(trace_id: str = "trace-intake-1") -> dict[str, Any]:
@@ -1488,6 +1574,110 @@ def test_interactive_chat_executes_current_session_action_without_confirmation(
     agent_messages = [m.content for m in repo.list_messages(session_id) if m.role == "agent"]
     assert "执行中。" in agent_messages
     assert "登录完成。" in agent_messages
+
+
+def test_interactive_chat_execute_passes_item_name_slot_overrides(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-items-param",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                    "scenario": None,
+                }
+            ]
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我新增项目，名称叫测试项目B",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert result.user_response == "执行中。\n新增项目完成。"
+    assert calls == [
+        (
+            learned_path_id,
+            "http://localhost:5176/items",
+            {"headless": False, "slot_overrides": {"item_name": "测试项目B"}},
+        )
+    ]
+    events = repo.list_events(session_id)
+    started = next(e for e in events if e.type == "chat_execution_started")
+    assert started.payload_json["slot_overrides"] == {"item_name": "测试项目B"}
+
+
+def test_interactive_chat_blocks_item_name_replay_without_value_slot(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_items_path(db_session, source_run_id="run-items-fixed")
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                    "scenario": None,
+                }
+            ]
+        },
+    )
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("non-parameterized item path must not replay")
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我新增项目，名称叫测试项目B",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert result.allowed is False
+    assert "还不是可参数化路径" in result.user_response
+    events = repo.list_events(session_id)
+    assert any(
+        e.type == "chat_execution_failed"
+        and e.payload_json["reason"] == "missing_item_name_value_slot"
+        for e in events
+    )
+    assert not any(e.type == "chat_execution_started" for e in events)
 
 
 def test_interactive_chat_rejects_unlearned_target_url(

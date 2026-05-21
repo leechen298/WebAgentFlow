@@ -6,6 +6,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 from app.models.learned_path import LearnedPath, TrustStatus
+from app.schemas.learned_path_replay import ReplayRequest, WaitResult
 from app.schemas.page_analysis import PageAnalysis
 from app.services.learning.learned_path_replay import (
     SUPPORTED_ACTION_TYPES,
@@ -83,6 +84,37 @@ def test_build_replay_actions_preserves_provided_step() -> None:
     assert len(actions) == 1
     assert actions[0].step == 5
     assert actions[0].value == "Enter"
+
+
+def test_replay_request_slot_overrides_defaults_to_empty_dict() -> None:
+    request = ReplayRequest(url="http://127.0.0.1:5175/users")
+
+    assert request.slot_overrides == {}
+
+
+def test_replay_request_accepts_slot_overrides() -> None:
+    request = ReplayRequest(
+        url="http://127.0.0.1:5176/items",
+        slot_overrides={"item_name": "测试项目B"},
+    )
+
+    assert request.slot_overrides == {"item_name": "测试项目B"}
+
+
+def test_build_replay_actions_reads_value_slot() -> None:
+    raw = [
+        {
+            "step": 1,
+            "action_type": "fill",
+            "target_selector": "#name",
+            "value": "测试项目A",
+            "value_slot": "item_name",
+        }
+    ]
+
+    actions = _build_replay_actions(raw)
+
+    assert actions[0].value_slot == "item_name"
 
 
 # ── page_mismatch ────────────────────────────────────────────────────────────
@@ -373,6 +405,196 @@ def test_run_replay_success_with_structured_result() -> None:
     assert result.final_url == "http://127.0.0.1:5175/users"
     assert result.final_title == "Users"
     mock_runtime.stop.assert_called_once()
+
+
+def test_run_replay_applies_slot_override_to_execute_and_wait() -> None:
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(_make_page_analysis(url="http://127.0.0.1:5176/items")),
+        page_template="/items",
+        actions=[
+            {
+                "step": 0,
+                "action_type": "fill",
+                "target_selector": "#name",
+                "value": "测试项目A",
+                "value_slot": "item_name",
+            }
+        ],
+    )
+
+    mock_locator = MagicMock()
+    mock_locator.count.return_value = 1
+
+    mock_page = MagicMock()
+    mock_page.locator.return_value = mock_locator
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop = MagicMock()
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5176/items"
+    mock_runtime.current_title.return_value = "项目列表"
+
+    executed_values: list[str | None] = []
+    waited_values: list[str | None] = []
+
+    def fake_execute(action, runtime):
+        executed_values.append(action.value)
+        return {
+            "step_index": action.step,
+            "action_type": action.action_type,
+            "target_selector": action.target_selector,
+            "value": action.value,
+            "ok": True,
+        }
+
+    def fake_wait(*, page, action, step_log):
+        waited_values.append(action.value)
+        return WaitResult(status="skipped")
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=_make_page_analysis(url="http://127.0.0.1:5176/items"),
+        ):
+            with patch(
+                "app.services.execution.action_executor.execute_action",
+                side_effect=fake_execute,
+            ):
+                with patch(
+                    "app.services.learning.learned_path_replay.wait_for_change_after_action",
+                    side_effect=fake_wait,
+                ):
+                    result = run_replay(
+                        path,
+                        "http://127.0.0.1:5176/items",
+                        slot_overrides={"item_name": "测试项目B"},
+                    )
+
+    assert result.status == "succeeded"
+    assert executed_values == ["测试项目B"]
+    assert waited_values == ["测试项目B"]
+    step = result.steps[0]
+    assert step.value_slot == "item_name"
+    assert step.override_applied is True
+    assert step.effective_value == "测试项目B"
+
+
+def test_run_replay_fails_without_required_slot_override() -> None:
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(_make_page_analysis()),
+        actions=[
+            {
+                "step": 0,
+                "action_type": "fill",
+                "target_selector": "#q",
+                "value": "测试项目A",
+                "value_slot": "item_name",
+            }
+        ],
+    )
+
+    mock_locator = MagicMock()
+    mock_locator.count.return_value = 1
+
+    mock_page = MagicMock()
+    mock_page.locator.return_value = mock_locator
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop = MagicMock()
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_title.return_value = "Users"
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=_make_page_analysis(),
+        ):
+            with patch(
+                "app.services.execution.action_executor.execute_action"
+            ) as mock_execute:
+                result = run_replay(path, "http://127.0.0.1:5175/users")
+
+    assert result.status == "failed"
+    assert "Missing slot override" in result.drift_reasons[0]
+    assert result.steps == []
+    mock_execute.assert_not_called()
+
+
+def test_run_replay_leaves_unbound_action_value_unchanged() -> None:
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(_make_page_analysis()),
+        actions=[
+            {
+                "step": 0,
+                "action_type": "fill",
+                "target_selector": "#q",
+                "value": "测试项目A",
+            }
+        ],
+    )
+
+    mock_locator = MagicMock()
+    mock_locator.count.return_value = 1
+
+    mock_page = MagicMock()
+    mock_page.locator.return_value = mock_locator
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop = MagicMock()
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_title.return_value = "Users"
+
+    executed_values: list[str | None] = []
+
+    def fake_execute(action, runtime):
+        executed_values.append(action.value)
+        return {
+            "step_index": action.step,
+            "action_type": action.action_type,
+            "target_selector": action.target_selector,
+            "value": action.value,
+            "ok": True,
+        }
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=_make_page_analysis(),
+        ):
+            with patch(
+                "app.services.execution.action_executor.execute_action",
+                side_effect=fake_execute,
+            ):
+                result = run_replay(
+                    path,
+                    "http://127.0.0.1:5175/users",
+                    slot_overrides={"item_name": "测试项目B"},
+                )
+
+    assert result.status == "succeeded"
+    assert executed_values == ["测试项目A"]
+    assert result.steps[0].override_applied is False
+    assert result.steps[0].effective_value is None
 
 
 def test_run_replay_observational_path() -> None:

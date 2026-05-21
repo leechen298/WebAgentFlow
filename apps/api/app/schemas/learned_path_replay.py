@@ -20,6 +20,7 @@ class ReplayRequest(BaseModel):
     """POST /exploration/learned-paths/{path_id}/replay body."""
 
     url: str
+    slot_overrides: dict[str, str] = Field(default_factory=dict)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -40,6 +41,7 @@ class ReplayAction(BaseModel):
     target_selector: str | None = None
     target_description: str | None = None
     value: str | None = None
+    value_slot: str | None = None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -201,6 +203,9 @@ class ReplayStepLog(BaseModel):
     title_after: str | None = None
     screenshot_ref: str | None = None
     wait_result: WaitResult | None = None
+    value_slot: str | None = None
+    override_applied: bool = False
+    effective_value: str | None = None
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -239,7 +239,17 @@ class LearningRunService:
         analysis = PageAnalysis.model_validate(page_analysis_dict)
         url = analysis.url or request.url
         actions = _trim_actions_for_learned_path(final_data.get("steps") or [])
-        path, _created = LearnedPathRepository(self._db).ingest_run(
+        fill_values = request.fill_values or {}
+        if not _supports_item_name_parameterization(request, url):
+            fill_values = {
+                key: value for key, value in fill_values.items() if key != "item_name"
+            }
+        actions, _parameterization_report = parameterize_learned_path_actions(
+            actions,
+            fill_values,
+        )
+        repo = LearnedPathRepository(self._db)
+        path, created = repo.ingest_run(
             page_template=path_template(url),
             query_signature=query_signature(url),
             dom_fingerprint=dom_fingerprint(analysis),
@@ -247,6 +257,15 @@ class LearningRunService:
             actions=actions,
             source_run_id=str(run.id),
         )
+        if not created:
+            merged_actions, changed = _merge_parameterized_action_metadata(
+                path.actions or [],
+                actions,
+            )
+            if changed:
+                path.actions = merged_actions
+                self._db.commit()
+                self._db.refresh(path)
         return str(path.id)
 
     def _load_spec(self, spec_id: str) -> tuple[Any, Any]:
@@ -292,6 +311,7 @@ def _trim_actions_for_learned_path(steps: list[dict[str, Any]]) -> list[dict[str
         "target_selector",
         "target_description",
         "value",
+        "value_slot",
     )
     trimmed: list[dict[str, Any]] = []
     for step in steps:
@@ -299,6 +319,73 @@ def _trim_actions_for_learned_path(steps: list[dict[str, Any]]) -> list[dict[str
         if kept:
             trimmed.append(kept)
     return trimmed
+
+
+def parameterize_learned_path_actions(
+    actions: list[dict[str, Any]],
+    fill_values: dict[str, str],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    item_name = fill_values.get("item_name")
+    if not item_name:
+        return actions, {"status": "skipped", "slots": [], "warnings": []}
+
+    bound_count = 0
+    warnings: list[str] = []
+    parameterized: list[dict[str, Any]] = []
+    for action in actions:
+        updated = dict(action)
+        if (
+            str(updated.get("action_type") or "").lower() == "fill"
+            and updated.get("value") == item_name
+        ):
+            if updated.get("value_slot") not in (None, "item_name"):
+                warnings.append(
+                    f"fill action at step {updated.get('step')} already has value_slot"
+                )
+            else:
+                if updated.get("value_slot") != "item_name":
+                    updated["value_slot"] = "item_name"
+                bound_count += 1
+        parameterized.append(updated)
+
+    if bound_count == 0:
+        return parameterized, {
+            "status": "not_bound",
+            "slots": [],
+            "warnings": warnings,
+            "reason": "No fill action matched item_name learning value",
+        }
+    if bound_count > 1:
+        warnings.append("multiple fill actions matched item_name")
+    return parameterized, {
+        "status": "bound",
+        "slots": ["item_name"],
+        "warnings": warnings,
+    }
+
+
+def _merge_parameterized_action_metadata(
+    existing_actions: list[dict[str, Any]],
+    incoming_actions: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], bool]:
+    merged = [dict(action) for action in existing_actions]
+    changed = False
+    for incoming in incoming_actions:
+        value_slot = incoming.get("value_slot")
+        if not value_slot:
+            continue
+        for existing in merged:
+            if (
+                str(existing.get("action_type") or "").lower()
+                == str(incoming.get("action_type") or "").lower()
+                and existing.get("target_selector") == incoming.get("target_selector")
+                and existing.get("value") == incoming.get("value")
+                and not existing.get("value_slot")
+            ):
+                existing["value_slot"] = value_slot
+                changed = True
+                break
+    return merged, changed
 
 
 def _pass_gate_from_final_data(final_data: dict[str, Any]) -> str | None:
@@ -367,6 +454,8 @@ def _product_action_label_for(request: LearningRunRequest) -> str:
         return "进入工作台"
 
     goal = _strip_product_learning_noise(request.goal or "")
+    if _looks_like_add_item_goal(goal):
+        return "新增项目"
     if "进入工作台" in goal:
         return "进入工作台"
     if "登录" in goal and "工作台" in goal:
@@ -379,6 +468,22 @@ def _product_action_label_for(request: LearningRunRequest) -> str:
             goal = goal[len(prefix):].strip(" ，,。.!！?？")
             break
     return (goal or "执行操作").strip(" ，,。.!！?？")[:20]
+
+
+def _looks_like_add_item_goal(text: str) -> bool:
+    lowered = text.lower()
+    return any(token in text for token in ("新增", "创建", "添加")) and (
+        "项目" in text or "item" in lowered
+    )
+
+
+def _supports_item_name_parameterization(
+    request: LearningRunRequest,
+    url: str,
+) -> bool:
+    if path_template(url).rstrip("/") != "/items":
+        return False
+    return _product_action_label_for(request) == "新增项目"
 
 
 def _strip_product_learning_noise(text: str) -> str:

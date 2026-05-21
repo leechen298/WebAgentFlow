@@ -482,3 +482,53 @@ def test_run_explicit_replay_default_headless_remains_true(
         )
 
     assert mock_run_replay.call_args.kwargs.get("headless") is False
+
+
+def test_run_explicit_replay_passes_slot_overrides(
+    db_session: Session,
+) -> None:
+    from unittest.mock import MagicMock, patch
+
+    row, _ = LearnedPathRepository(db_session).ingest_run(
+        page_template="/items",
+        query_signature={},
+        dom_fingerprint="b" * 64,
+        scenario="product_level",
+        actions=[
+            {
+                "step": 1,
+                "action_type": "fill",
+                "target_selector": "#name",
+                "value": "测试项目A",
+                "value_slot": "item_name",
+            }
+        ],
+        source_run_id=None,
+    )
+    LearnedPathRepository(db_session).set_trust(
+        row.id, TrustStatus.CONFIRMED, reason="test"
+    )
+
+    with patch(
+        "app.services.conversation.replay_hook.run_replay"
+    ) as mock_run_replay:
+        mock_run_replay.return_value = MagicMock(
+            learned_path_id=str(row.id),
+            status="succeeded",
+            drift_status="none",
+            drift_reasons=[],
+            warnings=[],
+            final_url="http://127.0.0.1:5176/items",
+            final_title="Items",
+            steps=[],
+        )
+        run_explicit_replay(
+            db_session,
+            str(row.id),
+            "http://127.0.0.1:5176/items",
+            slot_overrides={"item_name": "测试项目B"},
+        )
+
+    assert mock_run_replay.call_args.kwargs["slot_overrides"] == {
+        "item_name": "测试项目B"
+    }

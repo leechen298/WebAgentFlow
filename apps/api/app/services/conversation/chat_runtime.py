@@ -1112,6 +1112,23 @@ class InteractiveChatRuntime:
                 error="Replay handler is not configured.",
             )
 
+        fill_values = _fill_values_from_intake(intake) or {}
+        slot_overrides = _slot_overrides_from_fill_values(fill_values)
+        if slot_overrides.get("item_name"):
+            path = LearnedPathRepository(self._repo.session).get(
+                action["learned_path_id"]
+            )
+            supports_item_name = _learned_path_supports_value_slot(path, "item_name")
+            if supports_item_name is False:
+                return self._handle_missing_parameterized_path(
+                    session_id=session_id,
+                    action=action,
+                    slot_overrides=slot_overrides,
+                    events=events,
+                    message_id=message_id,
+                    previous_status=previous_status,
+                )
+
         self._append_agent_message(session_id, "执行中。")
         self._record_skill_call(
             session_id,
@@ -1121,23 +1138,30 @@ class InteractiveChatRuntime:
                 "learned_path_id": action["learned_path_id"],
                 "target_url": action["target_url"],
                 "alias": action["alias"],
+                "slot_overrides": slot_overrides,
             },
         )
+        execution_payload = {
+            "learned_path_id": action["learned_path_id"],
+            "target_url": action["target_url"],
+            "alias": action["alias"],
+            "browser_visibility": "headless" if headless else "visible",
+        }
+        if slot_overrides:
+            execution_payload["slot_overrides"] = slot_overrides
         self._append_event(
             session_id,
             ConversationEventType.CHAT_EXECUTION_STARTED,
-            {
-                "learned_path_id": action["learned_path_id"],
-                "target_url": action["target_url"],
-                "alias": action["alias"],
-                "browser_visibility": "headless" if headless else "visible",
-            },
+            execution_payload,
             events,
         )
+        replay_kwargs: dict[str, Any] = {"headless": headless}
+        if slot_overrides:
+            replay_kwargs["slot_overrides"] = slot_overrides
         replay_summary = self._replay_handler(
             action["learned_path_id"],
             action["target_url"],
-            headless=headless,
+            **replay_kwargs,
         )
         alias = action.get("alias", "")
         if replay_summary.replay_status in ("succeeded", "observed"):
@@ -1184,6 +1208,57 @@ class InteractiveChatRuntime:
             allowed=allowed,
             error=error,
             replay_result=replay_summary,
+        )
+
+    def _handle_missing_parameterized_path(
+        self,
+        *,
+        session_id: str,
+        action: dict[str, Any],
+        slot_overrides: dict[str, str],
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+    ) -> DispatchResult:
+        item_name = slot_overrides.get("item_name", "")
+        response = (
+            "我找到了已学习的“新增项目”路径，但它还不是可参数化路径，"
+            f"不能安全地把项目名替换成“{item_name}”。请重新学习一次新增项目操作。"
+        )
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.START_REPLAY,
+            status="blocked",
+            input_summary={
+                "learned_path_id": action["learned_path_id"],
+                "target_url": action["target_url"],
+                "alias": action["alias"],
+                "slot_overrides": slot_overrides,
+            },
+            output_summary={"reason": "missing_item_name_value_slot"},
+        )
+        self._append_agent_message(session_id, response)
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_EXECUTION_FAILED,
+            {
+                "reason": "missing_item_name_value_slot",
+                "learned_path_id": action["learned_path_id"],
+                "target_url": action["target_url"],
+                "alias": action["alias"],
+                "slot_overrides": slot_overrides,
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind="execute_task",
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+            allowed=False,
+            error="missing_item_name_value_slot",
         )
 
     def _handle_unlearned_target(
@@ -1874,9 +1949,27 @@ def _fill_values_from_intake(
         return None
     values: dict[str, str] = {}
     for slot in intake.slots:
-        if slot.value and slot.semantic_type in {"username", "password"}:
+        if slot.value and slot.semantic_type in {"username", "password", "item_name"}:
             values[slot.semantic_type] = slot.value
     return values or None
+
+
+def _slot_overrides_from_fill_values(fill_values: dict[str, str]) -> dict[str, str]:
+    item_name = fill_values.get("item_name")
+    return {"item_name": item_name} if item_name else {}
+
+
+def _learned_path_supports_value_slot(path: Any | None, slot_name: str) -> bool | None:
+    if path is None:
+        return None
+    for raw_action in path.actions or []:
+        if (
+            isinstance(raw_action, dict)
+            and str(raw_action.get("action_type") or "").lower() == "fill"
+            and raw_action.get("value_slot") == slot_name
+        ):
+            return True
+    return False
 
 
 def _parse_product_inputs(text: str) -> dict[str, str] | None:
@@ -1892,7 +1985,36 @@ def _parse_product_inputs(text: str) -> dict[str, str] | None:
         if m:
             values["password"] = m.group(1)
             break
+    item_name = _parse_item_name_input(text)
+    if item_name:
+        values["item_name"] = item_name
     return values if values else None
+
+
+def _parse_item_name_input(text: str) -> str | None:
+    for label in ("项目名称", "项目名", "名称", "name"):
+        if label == "name":
+            label_pattern = r"(?<![A-Za-z0-9_])name(?![A-Za-z0-9_])"
+        else:
+            label_pattern = re.escape(label)
+        match = re.search(
+            rf"{label_pattern}\s*(?:叫|是|为|=|:|：)?\s*{_VALUE_PATTERN}",
+            text,
+            re.I,
+        )
+        if not match:
+            continue
+        value = match.group(1)
+        if label in ("项目名称", "项目名") or "项目" in value:
+            return value
+    if "名称" in text or "项目名" in text or "name" in text.lower():
+        return None
+    match = re.search(
+        rf"(?:新增|创建|添加)\s*(?!项目(?:$|[\s，。,.；;!！?？])){_VALUE_PATTERN}",
+        text,
+        re.I,
+    )
+    return match.group(1) if match else None
 
 
 def _question_for_missing_fields(intake: ConversationIntakeResult) -> str:

@@ -1277,7 +1277,7 @@ def replay_learned_path(
     if not body.url:
         raise HTTPException(status_code=422, detail="url is required")
 
-    result = run_replay(row, body.url)
+    result = run_replay(row, body.url, slot_overrides=body.slot_overrides)
 
     # Flaky paths are allowed but must carry a trust warning
     if row.trust == TrustStatus.FLAKY:

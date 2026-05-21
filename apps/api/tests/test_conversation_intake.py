@@ -58,6 +58,52 @@ def test_deterministic_intake_marks_missing_login_fields() -> None:
     }
 
 
+def test_deterministic_intake_extracts_item_name_learning_slot() -> None:
+    result = ConversationIntakeService().analyze("学习新增项目，名称叫测试项目A")
+
+    assert result.intent == "learn_operation"
+    assert result.action.canonical_goal == "新增项目"
+    slots = {slot.semantic_type: slot for slot in result.slots}
+    assert slots["item_name"].value == "测试项目A"
+    assert slots["item_name"].sensitive is False
+
+
+def test_deterministic_intake_extracts_item_name_execute_slot() -> None:
+    result = ConversationIntakeService().analyze("帮我新增项目，名称叫测试项目B")
+
+    assert result.intent == "execute_operation"
+    assert result.action.canonical_goal == "新增项目"
+    slots = {slot.semantic_type: slot.value for slot in result.slots}
+    assert slots["item_name"] == "测试项目B"
+
+
+def test_deterministic_intake_does_not_extract_item_name_from_username() -> None:
+    result = ConversationIntakeService().analyze(
+        "学习这个登录页：http://localhost:5176/workspace-login，username 是 demo，密码 123456"
+    )
+
+    slots = {slot.semantic_type: slot.value for slot in result.slots}
+    assert "item_name" not in slots
+
+
+@pytest.mark.parametrize(
+    ("utterance", "expected"),
+    [
+        ("项目名是测试项目A", "测试项目A"),
+        ("name 是测试项目A", "测试项目A"),
+        ("新增测试项目A", "测试项目A"),
+    ],
+)
+def test_deterministic_intake_normalizes_item_name_aliases(
+    utterance: str,
+    expected: str,
+) -> None:
+    result = ConversationIntakeService().analyze(utterance)
+
+    slots = {slot.semantic_type: slot.value for slot in result.slots}
+    assert slots["item_name"] == expected
+
+
 def test_provider_unavailable_falls_back_to_deterministic_intake() -> None:
     def provider_down(raw_message: str, context: dict[str, object]) -> dict[str, object]:
         raise RuntimeError("provider down")

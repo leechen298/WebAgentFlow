@@ -20,7 +20,12 @@ class ReplayHandler(Protocol):
     """Callable that runs an explicit replay and returns a summary."""
 
     def __call__(
-        self, learned_path_id: str, url: str, *, headless: bool = True
+        self,
+        learned_path_id: str,
+        url: str,
+        *,
+        headless: bool = True,
+        slot_overrides: dict[str, str] | None = None,
     ) -> ConversationReplaySummary:
         ...
 
@@ -31,6 +36,7 @@ def run_explicit_replay(
     url: str,
     *,
     headless: bool = True,
+    slot_overrides: dict[str, str] | None = None,
 ) -> ConversationReplaySummary:
     """Look up a LearnedPath and run M10 replay against *url*.
 
@@ -57,7 +63,12 @@ def run_explicit_replay(
             error="LearnedPath is deprecated",
         )
 
-    result = run_replay(learned_path, url, headless=headless)
+    result = run_replay(
+        learned_path,
+        url,
+        headless=headless,
+        slot_overrides=slot_overrides,
+    )
 
     return ConversationReplaySummary(
         learned_path_id=result.learned_path_id,

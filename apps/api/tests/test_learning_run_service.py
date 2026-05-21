@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 from sqlalchemy.orm import Session
 
+from app.models.learned_path import LearnedPath
 from app.schemas.page_analysis import AutonomousExplorationResult, PageAnalysis
 from app.services.learning.learning_run_service import LearningRunRequest, LearningRunService
 
@@ -27,15 +28,17 @@ def _exploration_result(
     title: str = "Sign in",
     final_url: str = "http://localhost:5175/dashboard",
     final_title: str = "Dashboard",
+    steps: list[dict[str, object]] | None = None,
 ) -> AutonomousExplorationResult:
     return AutonomousExplorationResult(
         page_analysis=PageAnalysis(url=url, title=title),
-        steps=[
+        steps=steps
+        or [
             {"step": 1, "action_type": "fill", "target_selector": "#username", "value": "admin"},
             {"step": 2, "action_type": "fill", "target_selector": "#password", "value": "123456"},
             {"step": 3, "action_type": "click", "target_selector": "button[type=submit]"},
         ],
-        total_steps=3,
+        total_steps=len(steps or [1, 2, 3]),
         final_url=final_url,
         final_title=final_title,
         verdict="success",
@@ -134,3 +137,151 @@ def test_product_learning_does_not_load_validation_spec_and_labels_workspace_act
     assert result.suggested_utterances == ["帮我进入工作台", "进入工作台一下"]
     assert "scenario_name" not in explorer_calls[0]
     assert explorer_calls[0]["fill_values"] == {"username": "demo", "password": "123456"}
+
+
+def test_product_learning_parameterizes_item_name_fill_action(
+    db_session: Session,
+) -> None:
+    def explorer(**kwargs):
+        return _exploration_result(
+            url="http://localhost:5176/items",
+            title="项目列表",
+            final_url="http://localhost:5176/items",
+            final_title="项目列表",
+            steps=[
+                {
+                    "step": 1,
+                    "action_type": "fill",
+                    "target_selector": "[data-testid='item-name-input']",
+                    "target_description": "项目名称",
+                    "value": "测试项目A",
+                },
+                {
+                    "step": 2,
+                    "action_type": "click",
+                    "target_selector": "[data-testid='item-create-submit']",
+                },
+            ],
+        )
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=_DummyRuntimeFactory(),
+        explorer=explorer,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url="http://localhost:5176/items",
+            goal="学习新增项目，名称叫测试项目A",
+            fill_values={"item_name": "测试项目A"},
+            product_level=True,
+        )
+    )
+
+    assert result.status == "learned"
+    assert result.learned_path_id is not None
+    path = db_session.get(LearnedPath, result.learned_path_id)
+    assert path is not None
+    assert path.actions[0]["value_slot"] == "item_name"
+    assert path.actions[0]["value"] == "测试项目A"
+
+
+def test_product_learning_does_not_parameterize_item_name_outside_items_goal(
+    db_session: Session,
+) -> None:
+    def explorer(**kwargs):
+        return _exploration_result(
+            url="http://localhost:5176/workspace-login",
+            title="工作台入口",
+            final_url="http://localhost:5176/workspace-home",
+            final_title="工作台首页",
+            steps=[
+                {
+                    "step": 1,
+                    "action_type": "fill",
+                    "target_selector": "#username",
+                    "target_description": "Username",
+                    "value": "demo",
+                },
+                {
+                    "step": 2,
+                    "action_type": "fill",
+                    "target_selector": "#password",
+                    "target_description": "Password",
+                    "value": "123456",
+                },
+            ],
+        )
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=_DummyRuntimeFactory(),
+        explorer=explorer,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url="http://localhost:5176/workspace-login",
+            goal="学习登录",
+            fill_values={"item_name": "demo", "password": "123456"},
+            product_level=True,
+        )
+    )
+
+    assert result.status == "learned"
+    assert result.learned_path_id is not None
+    path = db_session.get(LearnedPath, result.learned_path_id)
+    assert path is not None
+    assert "value_slot" not in path.actions[0]
+
+
+def test_product_learning_dedup_metadata_merge_adds_missing_value_slot(
+    db_session: Session,
+) -> None:
+    def explorer(**kwargs):
+        return _exploration_result(
+            url="http://localhost:5176/items",
+            title="项目列表",
+            final_url="http://localhost:5176/items",
+            final_title="项目列表",
+            steps=[
+                {
+                    "step": 1,
+                    "action_type": "fill",
+                    "target_selector": "[data-testid='item-name-input']",
+                    "target_description": "项目名称",
+                    "value": "测试项目A",
+                }
+            ],
+        )
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=_DummyRuntimeFactory(),
+        explorer=explorer,
+    )
+
+    first = service.run(
+        LearningRunRequest(
+            url="http://localhost:5176/items",
+            goal="学习新增项目，名称叫测试项目A",
+            fill_values={},
+            product_level=True,
+        )
+    )
+    second = service.run(
+        LearningRunRequest(
+            url="http://localhost:5176/items",
+            goal="学习新增项目，名称叫测试项目A",
+            fill_values={"item_name": "测试项目A"},
+            product_level=True,
+        )
+    )
+
+    assert first.learned_path_id == second.learned_path_id
+    assert second.learned_path_id is not None
+    path = db_session.get(LearnedPath, second.learned_path_id)
+    assert path is not None
+    assert path.hit_count == 2
+    assert path.actions[0]["value_slot"] == "item_name"

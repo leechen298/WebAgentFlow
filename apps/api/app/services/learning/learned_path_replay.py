@@ -61,6 +61,22 @@ class DriftPrecheckResult:
     actions: list[ReplayAction] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class OverrideReport:
+    applied: bool = False
+    value_slot: str | None = None
+    effective_value: str | None = None
+
+
+class MissingSlotOverrideError(ValueError):
+    def __init__(self, value_slot: str, *, step: int) -> None:
+        super().__init__(
+            f"Missing slot override for value_slot {value_slot!r} at step {step}"
+        )
+        self.value_slot = value_slot
+        self.step = step
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -82,6 +98,7 @@ def _build_replay_actions(raw_actions: list[dict[str, Any]]) -> list[ReplayActio
                 target_selector=raw.get("target_selector"),
                 target_description=raw.get("target_description"),
                 value=raw.get("value"),
+                value_slot=raw.get("value_slot"),
             )
         )
     return result
@@ -95,6 +112,38 @@ def _count_selector_matches(page: Page, selector: str | None) -> int:
         return page.locator(selector).count()
     except Exception:
         return 0
+
+
+def apply_replay_slot_overrides(
+    action: ReplayAction,
+    slot_overrides: dict[str, str],
+) -> tuple[ReplayAction, OverrideReport]:
+    if action.action_type != "fill":
+        return action, OverrideReport()
+    if not action.value_slot:
+        return action, OverrideReport()
+    if action.value_slot not in slot_overrides:
+        raise MissingSlotOverrideError(action.value_slot, step=action.step)
+    effective_value = slot_overrides[action.value_slot]
+    return (
+        action.model_copy(update={"value": effective_value}),
+        OverrideReport(
+            applied=True,
+            value_slot=action.value_slot,
+            effective_value=_safe_effective_value(action.value_slot, effective_value),
+        ),
+    )
+
+
+def _safe_effective_value(value_slot: str | None, value: str | None) -> str | None:
+    if value is None:
+        return None
+    if value_slot and any(
+        token in value_slot.lower()
+        for token in ("password", "passwd", "pwd", "secret", "token")
+    ):
+        return "<redacted>"
+    return value
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +278,9 @@ def _step_log_to_replay_step(log: dict[str, Any]) -> ReplayStepLog:
         title_after=log.get("title_after"),
         screenshot_ref=log.get("screenshot_ref"),
         wait_result=log.get("wait_result"),
+        value_slot=log.get("value_slot"),
+        override_applied=bool(log.get("override_applied", False)),
+        effective_value=log.get("effective_value"),
     )
 
 
@@ -242,6 +294,7 @@ def run_replay(
     url: str,
     *,
     headless: bool = True,
+    slot_overrides: dict[str, str] | None = None,
 ) -> ReplayResult:
     """Run a full LearnedPath replay against *url*.
 
@@ -251,6 +304,8 @@ def run_replay(
     leaked on unexpected exceptions.
     """
     from app.services.execution.action_executor import execute_action
+
+    slot_overrides = slot_overrides or {}
 
     # ── Start runtime ──
     runtime = None
@@ -354,11 +409,43 @@ def run_replay(
         failed = False
         try:
             for action in precheck.actions:
-                log = execute_action(action, runtime)
+                try:
+                    effective_action, override_report = apply_replay_slot_overrides(
+                        action,
+                        slot_overrides,
+                    )
+                except MissingSlotOverrideError as exc:
+                    replay_steps = [
+                        _step_log_to_replay_step(sl) for sl in step_logs
+                    ]
+                    obs_summary = build_replay_observation_summary(
+                        learned_path_id=str(learned_path.id),
+                        steps=replay_steps,
+                    )
+                    return ReplayResult(
+                        learned_path_id=str(learned_path.id),
+                        source_run_id=learned_path.source_run_id,
+                        trust=str(learned_path.trust),
+                        status="failed",
+                        drift_status=precheck.drift_status,
+                        drift_reasons=[str(exc)],
+                        warnings=precheck.warnings,
+                        stored_signature=stored_sig,
+                        current_signature=current_sig,
+                        steps=replay_steps,
+                        final_url=runtime.current_url() if runtime.page else current_url,
+                        final_title=runtime.current_title() if runtime.page else "",
+                        observation_summary=obs_summary,
+                    )
+                log = execute_action(effective_action, runtime)
+                if override_report.value_slot:
+                    log["value_slot"] = override_report.value_slot
+                    log["override_applied"] = override_report.applied
+                    log["effective_value"] = override_report.effective_value
                 try:
                     wait_result = wait_for_change_after_action(
                         page=runtime.page if runtime else None,
-                        action=action,
+                        action=effective_action,
                         step_log=log,
                     )
                 except Exception as wait_exc:
