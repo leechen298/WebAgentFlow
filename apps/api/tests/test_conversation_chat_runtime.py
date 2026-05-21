@@ -940,6 +940,11 @@ def test_interactive_chat_inspect_route_uses_page_understanding_runtime(
     assert result.command_kind == "understand_page"
     assert result.allowed is True
     assert "我已查看页面" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json["pending_target"]["url"] == (
+        "http://localhost:5176/workspace-login"
+    )
 
     events = repo.list_events(session_id)
     assert any(

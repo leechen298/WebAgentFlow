@@ -24,8 +24,9 @@
 
 - Executor：Codex
 - Date：2026-05-21
-- Commit / working tree：base commit `0ff305f` plus uncommitted 11.3.5.6
-  fixes in `learning_run_service.py`, `chat_runtime.py`, and their focused tests
+- Commit provenance：live run executed on base commit `0ff305f` with the
+  11.3.5.6 fixes still uncommitted; those fixes were later committed as
+  `18dcec1` (`fix: complete items chat closed-loop evaluation`)
 - API base：`http://127.0.0.1:8001`
 - Product URL：`http://127.0.0.1:5176/items`
 - Session ID：`503a09ef-e609-4941-a82b-8f6e6be6061d`
@@ -111,7 +112,7 @@
 
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
 |---|---|---|---|---|---|---|
-| `git status --short --branch` | record baseline | branch `v0.1`; uncommitted 11.3.5.6 code/tests/result docs | 0 | Pass | terminal output | base commit `0ff305f` |
+| `git status --short --branch` | record baseline | branch `v0.1`; 11.3.5.6 code/tests/result docs were uncommitted during the run and later committed as `18dcec1` | 0 | Pass | terminal output | base commit `0ff305f` |
 | product-test-site build | build passed | Vite build passed, 34 modules transformed | 0 | Pass | terminal output | `/items` target build |
 | targeted API tests | passed | `143 passed` | 0 | Pass | pytest output | includes chat runtime, replay hook, reporter, learned replay, learning service |
 | learned-path replay API slice | passed | `6 passed, 36 deselected` | 0 | Pass | pytest output | `tests/test_exploration_learned_paths_api.py -k replay` |
@@ -132,7 +133,39 @@
 
 ### 后续事项（Follow-ups）
 
-- 提交后将结果文件的 `Commit / working tree` 更新为最终 commit hash。
 - `.venv/bin/alembic` shebang 指向旧路径
   `/Users/leechen/projects/WebAgentFlow/.venv/bin/python3.11`；本轮迁移使用
   `.venv/bin/python -m alembic`。
+
+## 2026-05-21 空库重跑记录（Empty DB Rerun）
+
+- Executor：Codex
+- Data reset：
+  - PostgreSQL `conversation_events`, `conversation_messages`,
+    `conversation_sessions`, `learned_paths`, `exploration_runs` truncated with
+    `RESTART IDENTITY CASCADE`.
+  - Redis `FLUSHDB`.
+- First empty-DB attempt：`unverified`，session
+  `a0cb1c74-99f4-41b4-8cdc-3dcb1cb273ec`.
+  - Finding：URL-only page inspection did not persist `pending_target`.
+  - Symptom：following learning / execution turns produced
+    `chat_no_path.reason=low_confidence_intake`.
+- Follow-up fix：
+  - `apps/api/app/services/conversation/chat_runtime.py` now saves
+    `pending_target` after the inspect-page / understand-page path.
+  - `apps/api/tests/test_conversation_chat_runtime.py` asserts the inspect route
+    preserves the pending target URL.
+- Final empty-DB rerun：`pass`.
+  - Session ID：`3e2306d3-8414-4cb6-ba83-b2e19378815e`.
+  - Learn item：`测试项目A-20260521232328`.
+  - Execute item：`测试项目B-20260521232328`.
+  - Learning run ID：`444378d9-e26f-4d6e-a40d-a09631cb5981`.
+  - LearnedPath ID：`c4c86c45-3999-4850-ad46-02735f993f80`.
+  - LearnedPath action：fill value `测试项目A-20260521232328`,
+    `value_slot=item_name`.
+  - Replay：`slot_overrides.item_name=测试项目B-20260521232328`,
+    `replay_status=succeeded`, `drift_status=none`.
+  - Evidence：`dom_text_present`, target
+    `测试项目B-20260521232328`, `status=verified`, confidence `0.95`.
+  - Reporter：`verification_outcome=verified`, `task_verified=true`.
+  - Final response：`执行完成。我在列表中看到了“测试项目B-20260521232328”，所以可以确认新增项目成功。`

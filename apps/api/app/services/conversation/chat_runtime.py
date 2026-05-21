@@ -746,6 +746,10 @@ class InteractiveChatRuntime:
             router_trace_context=router_trace_context,
         )
         events += self._trace_event_types(page_trace_context)
+        self._save_pending_target(
+            session_id,
+            make_pending_target(page_context.url or target_url),
+        )
         response = (
             f"我已查看页面：{page_understanding.observed_page_summary}"
             " 你想让我学习或执行哪个操作？"
