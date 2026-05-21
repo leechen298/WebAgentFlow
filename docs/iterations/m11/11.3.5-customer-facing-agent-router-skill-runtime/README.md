@@ -128,7 +128,7 @@ Application Skill Registry，并把工作 Agent 的职责边界写清楚。
 | [11.3.5.3](../11.3.5.3-product-test-site-items-fixture/) | `apps/product-test-site` 新增 `/items` 列表测试页 | 是 |
 | [11.3.5.4](../11.3.5.4-parameterized-learning-replay-slots/) | `item_name` slot + `value_slot` / `slot_overrides` 参数化 learning / replay | ready_for_implementation（design review passed） |
 | [11.3.5.5](../11.3.5.5-execution-evidence-result-reporter-adapter/) | ExecutionEvidence + TaskResultReporter adapter，runtime stop 前采集 DOM evidence | ready_for_implementation（design review passed） |
-| [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | `wagent chat` `/items` 学习 / 执行闭环测试方案与结果记录 | draft_docs（待评审） |
+| [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | `wagent chat` `/items` 学习 / 执行闭环测试方案与结果记录 | ready_for_implementation（design review passed） |
 | 11.3.5.7 | `pending_choice` + 最小 `active_task` ledger | 后续 |
 | 11.3.5.8 | 基础失败恢复 | 后续 |
 | 11.3.5.9 | TaskPathPlanner 多候选 chat 接入 | 后续 |

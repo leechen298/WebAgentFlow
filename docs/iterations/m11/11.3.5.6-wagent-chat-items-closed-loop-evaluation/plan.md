@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：draft_docs（待评审，未开始执行）
+状态：ready_for_implementation（design review passed，未开始执行）
 
 ## 输入
 
@@ -16,7 +16,8 @@
 默认只新增或更新文档结果：
 
 - `docs/iterations/m11/11.3.5.6-wagent-chat-items-closed-loop-evaluation/review.md` - 记录设计评审、执行结果和未运行项。
-- `docs/testing/results/<YYYY-MM-DD>-11-3-5-6-items-closed-loop.md` - 记录完整闭环证据。
+- `docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md` -
+  记录完整闭环证据。
 
 如发现阻断性小缺口，允许最小代码修复，但必须：
 
@@ -29,9 +30,9 @@
 
 ### Step 0 · 设计评审
 
-- 评审本包七件套。
-- 确认 11.3.5.6 是 evaluation / evidence 包，不是新功能包。
-- 评审通过后，把状态改成 `ready_for_implementation`。
+- 本包七件套已通过设计评审。
+- 11.3.5.6 已确认是 evaluation / evidence 包，不是新功能包。
+- 当前状态已收口为 `ready_for_implementation`。
 
 ### Step 1 · 前置能力检查
 
@@ -84,6 +85,9 @@ pnpm run db:migrate:api
 pnpm run dev:api
 pnpm run dev:product
 ```
+
+`pnpm run dev:api` 和 `pnpm run dev:product` 是前台常驻进程。执行时需要分终端、
+后台进程、任务管理器或复用已有服务；不要在同一个顺序 shell 中期待它们自动返回。
 
 记录实际：
 
@@ -151,7 +155,7 @@ curl -s "http://127.0.0.1:8001/exploration/learned-paths/${LEARNED_PATH_ID}"
 新增：
 
 ```text
-docs/testing/results/<YYYY-MM-DD>-11-3-5-6-items-closed-loop.md
+docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md
 ```
 
 必须包含：

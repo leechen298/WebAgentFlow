@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：draft_docs（待评审，未开始执行）
+状态：ready_for_implementation（design review passed，未开始执行）
 
 ## 适用条件
 
@@ -67,6 +67,9 @@ pnpm run db:migrate:api
 pnpm run dev:api
 pnpm run dev:product
 ```
+
+`pnpm run dev:api` 和 `pnpm run dev:product` 是前台常驻 dev server。执行时需要分终端、
+后台进程、任务管理器或复用已有服务；不要把它们当成会自动结束的顺序命令。
 
 也可以使用已有服务，但必须记录实际 API base 和 product URL。
 
@@ -150,7 +153,7 @@ Codex / AI 可以操作 `wagent chat`，但只能记录真实输出：
 执行完成后创建：
 
 ```text
-docs/testing/results/<YYYY-MM-DD>-11-3-5-6-items-closed-loop.md
+docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md
 ```
 
 最低内容：

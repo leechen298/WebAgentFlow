@@ -1,12 +1,12 @@
 # 复盘 / 评审（Review）
 
-状态：draft_docs（待评审，未开始执行）
+状态：ready_for_implementation（design review passed，未开始执行）
 
 ## 2026-05-21 设计文档生成
 
 - Author：Codex
 - Scope：生成 11.3.5.6 七件套，定义 `/items` `wagent chat` closed-loop evaluation。
-- Decision：pending review
+- Decision：docs_created
 - Notes：
   - 本包只定义测试方案和结果记录规则。
   - 未执行 `wagent chat`。
@@ -15,9 +15,10 @@
 
 ## 设计评审（Design Review）
 
-- Reviewer：
-- Decision：pending
-- Notes：
+- Reviewer：ChatGPT
+- Decision：pass
+- Notes：Scope, contract, test matrix, evidence gates, and no-go boundaries are
+  aligned. Ready for closed-loop execution.
 
 ## 闭环执行记录（Closed-loop Execution）
 
@@ -90,7 +91,7 @@
 
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
-| `wagent chat` closed loop | 文档生成阶段，不执行 | 设计评审通过后执行 |
+| `wagent chat` closed loop | 设计评审阶段不执行 | 下一步执行本包闭环 |
 | `verify-scenario` | 本包明确禁止 | 无 |
 | autonomous run | 本包明确禁止 | 无 |
 | Console UI smoke | 本包不依赖 Console | 无 |
@@ -99,6 +100,6 @@
 
 ### 后续事项（Follow-ups）
 
-- 设计评审通过后，把状态改为 `ready_for_implementation`。
-- 执行闭环后，新增 `docs/testing/results/<YYYY-MM-DD>-11-3-5-6-items-closed-loop.md`。
+- 执行闭环后，新增
+  `docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md`。
 - 执行闭环后，回填本文件 Required Gates 和 Validation Evidence。

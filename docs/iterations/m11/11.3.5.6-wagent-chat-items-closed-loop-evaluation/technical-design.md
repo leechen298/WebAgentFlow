@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：draft_docs（待评审，未开始执行）
+状态：ready_for_implementation（design review passed，未开始执行）
 
 ## 当前状态（Current State）
 
@@ -33,7 +33,7 @@
 
 ```text
 docs/iterations/m11/11.3.5.6-wagent-chat-items-closed-loop-evaluation/review.md
-docs/testing/results/<YYYY-MM-DD>-11-3-5-6-items-closed-loop.md
+docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md
 ```
 
 如果闭环执行失败：
@@ -83,6 +83,8 @@ No schema changes。
 | Infrastructure | `docker compose -f infra/docker/docker-compose.yml up -d` | PostgreSQL / Redis / MinIO |
 
 如果本地已经有服务运行，应记录实际端口和健康检查结果，不强制重启。
+`pnpm run dev:api` 和 `pnpm run dev:product` 是前台常驻进程，执行时必须分终端、
+后台进程或复用已有服务，不要在同一个顺序 shell 中期待它们自动返回。
 
 ### Chat execution path
 
@@ -151,7 +153,7 @@ events / history / learned-path details
   +--> reporter evidence: outcome=verified
   |
   v
-docs/testing/results/<date>-11-3-5-6-items-closed-loop.md
+docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md
   |
   v
 review.md summary

@@ -1,6 +1,6 @@
 # 11.3.5.6 · WAgent Chat `/items` Closed-loop Evaluation
 
-状态：draft_docs（待评审，未开始执行）
+状态：ready_for_implementation（design review passed，未开始执行）
 里程碑：M11
 类型：mixed
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -71,18 +71,19 @@
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在执行前已经审核。
+- [x] 技术设计在执行前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
 - [ ] `review.md` 在收尾前记录验证证据。
-- [ ] `docs/testing/results/<date>-11-3-5-6-items-closed-loop.md` 已记录可复查结果。
+- [ ] `docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md`
+  已记录可复查结果。
 - [ ] 实际闭环已执行，或明确记录 blocked / unverified 原因。
 
 ## 当前状态
 
-文档包已生成，等待设计评审。执行本包前必须确认当前工作区已经包含 11.3.5.3 -
-11.3.5.5 的实现结果：
+文档包已通过设计评审，可以进入闭环执行阶段。执行本包前必须确认当前工作区已经包含
+11.3.5.3 - 11.3.5.5 的实现结果：
 
 - `apps/product-test-site` `/items` 可打开并能新增项目。
 - `ReplayAction.value_slot` 和 `ReplayRequest.slot_overrides` 已实现。

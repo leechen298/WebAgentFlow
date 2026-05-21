@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：draft_docs（待评审，未开始执行）
+状态：ready_for_implementation（design review passed，未开始执行）
 
 ## 目标
 
@@ -51,5 +51,6 @@ evidence、Reporter outcome 和最终回复必须在同一条会话里可追溯�
   - `selector=[data-testid='item-list']` 对应区域内能看到 B
 - TaskResultReporter outcome 是 `verified`。
 - 用户可见回复说明在列表中看到了 B，并确认新增成功。
-- `review.md` 和 `docs/testing/results/<date>-11-3-5-6-items-closed-loop.md`
+- `review.md` 和
+  `docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md`
   记录命令、session id、关键日志、事件摘要、验证结果和未运行项。
