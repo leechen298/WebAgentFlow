@@ -10,6 +10,30 @@
 
 把 `wagent chat` 从“每轮按单句意图直接 learn / execute”升级为“每轮根据当前输入和会话状态推导下一步”的任务状态推进入口；在学习前守住必要前置条件，并把学习失败转成用户能理解、能继续操作的反馈。
 
+## 与 11.3.5.x Working Runtime 的关系
+
+本目录继续作为 11.3.5.x working runtime 的当前规划锚点，不为了改名迁移目录。
+它负责沉淀文档同步、任务状态推进、learning preconditions 和测试入口；后续实现拆成
+独立小包推进：
+
+完整 working runtime 施工稿放在父包：
+
+- [`../11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-construction.md`](../11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-construction.md)
+
+| Package | 目标 |
+|---|---|
+| 11.3.5.3 | `apps/product-test-site` 新增 `/items` 列表测试页 |
+| 11.3.5.4 | `item_name` slot + `value_slot` / `slot_overrides` 参数化 learning / replay |
+| 11.3.5.5 | ExecutionEvidence + TaskResultReporter adapter，runtime stop 前采集 DOM evidence |
+| 11.3.5.6 | `wagent chat` `/items` 学习 / 执行闭环测试方案与结果记录 |
+| 11.3.5.7 | `pending_choice` + 最小 `active_task` ledger |
+| 11.3.5.8 | 基础失败恢复 |
+| 11.3.5.9 | TaskPathPlanner 多候选 chat 接入 |
+
+第一条 P0 闭环是 `/items` 新增项目：学习新增项目、按新输入参数化执行新增项目、
+采集页面证据，并由 TaskResultReporter 保守回复。该闭环必须证明 replay 实际填入
+执行阶段用户提供的 `测试项目B`，不能复用学习阶段录制值 `测试项目A`。
+
 ## 背景问题
 
 11.3.5.1 解决的是入口门禁和 CLI waiting 体验：哪些输入要进入网页任务 runtime，哪些输入快速友好回复。

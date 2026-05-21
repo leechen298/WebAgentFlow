@@ -44,3 +44,17 @@ takeover 或复杂 LLM 意图理解。
 当前代码实现和 scoped regression 已通过审查；M11.3 已通过真实
 `wagent chat` 人工闭环 smoke。该 smoke 使用当前工作区 API 临时端口 `8002`
 执行，因为当时本机 `8001` 被旧 API 进程占用。
+
+## 后续归属
+
+后续 “working runtime” 收口不另开 11.4，统一挂在 11.3.5.x：
+
+- `product-test-site /items` 测试页。
+- 参数化 learning / replay，覆盖 `item_name`、`value_slot` 和 `slot_overrides`。
+- ExecutionEvidence 与 TaskResultReporter adapter，要求 runtime stop 前采集页面证据。
+- `wagent chat` `/items` 闭环测试结果记录。
+- `pending_choice`、最小 `active_task`、基础失败恢复和 TaskPathPlanner 多候选 chat 接入。
+
+这些能力属于 11.3 Interactive Chat 的产品化后续，但具体施工、设计和验收锚点放在
+11.3.5 Customer-Facing Agent Router & Skill Runtime 下。完整施工稿见
+[`../11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-construction.md`](../11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-construction.md)。

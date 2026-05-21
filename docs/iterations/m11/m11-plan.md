@@ -1484,7 +1484,8 @@ parser / regex / alias 匹配。11.3.4 定义并实现 Conversation Intake Agent
 
 ## 11.3.5 · Customer-Facing Agent Router & Skill Runtime
 
-状态：ready_for_implementation（docs review passed, implementation not started）。
+状态：docs review passed；本地代码已有 runtime pieces，后续按 11.3.5.x working
+runtime 拆包继续同步和收口。
 
 目标：把 `wagent chat` 从“代码初筛 + Intake intent + 直接 learn / execute”升级为
 “上下文收集 + 面客 Agent 路由 + 代码裁决 + 应用技能运行时”的产品入口。裸 URL、
@@ -1596,6 +1597,55 @@ Conversation Entry Gate 只判断是否需要进入网页任务 runtime。
 - 不让 Entry Gate 替代 Intake、Router 或 Orchestrator。
 - 不让 Entry Gate 调用 skill、打开浏览器、选择 LearnedPath 或输出 selector / browser steps。
 - 不实现 active browser tab、M12 recovery / retry / abort 或正式 risk / consent policy。
+
+## 11.3.5.x · Working Runtime Follow-up Packages
+
+状态：规划锚定完成，具体执行包按需生成完整七件套。
+
+这组包继续挂在 11.3.5 下，而不是升格成 11.4。原因是它们都属于
+Customer-Facing Agent Router & Skill Runtime 的 working runtime 收口：让 `wagent chat`
+从“能进入 Agent runtime”推进到“能在 product-test-site 上完成可验证网页操作”。
+
+完整施工稿：
+
+- [`11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-construction.md`](./11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-construction.md)
+
+施工原则：
+
+- 旧 M11 切分可以调整，但每个执行包必须可验收、可回滚、可解释。
+- 11.3.5.2 目录已经存在，继续作为 Chat Task State Reducer、learning preconditions、
+  working runtime 总设计和测试入口的锚点；暂不为了改名迁移目录。
+- `/items`、参数化 replay、ExecutionEvidence、Reporter 接入、`pending_choice`、
+  `active_task`、基础恢复和 TaskPathPlanner chat 接入不得塞进一个大迭代。
+- `ExecutionEvidence` 是新增 / 扩展 contract。现有 TaskResultReporter 需要 adapter 才能
+  消费 replay result + 页面证据。
+- “学习新增 A -> 执行新增 B”依赖参数化 learning / replay slot override；不能只靠固定
+  LearnedPath action value 重放。
+- P0 验收必须证明 replay 实际填入执行阶段的新值 B，而不是学习阶段录制的 A。
+- TaskPathPlanner 已实现，但不进入 `/items` 单路径 P0 happy path；只用于多候选、
+  模糊目标、planning preview / confirmed execution path。
+
+| Package | 目标 | 状态 / 顺序 |
+|---|---|---|
+| 11.3.5.2 · Chat Task State Reducer & Learning Preconditions | 文档同步、working runtime 总设计、turn-based reducer、learning preconditions 和测试入口 | 当前锚点 |
+| 11.3.5.3 · Product Test Site `/items` Fixture | 新增 `apps/product-test-site` `/items` 列表测试页；只提供学习 / 执行新增项目的稳定页面基座 | 先做 |
+| 11.3.5.4 · Parameterized Learning / Replay Slots | 补 `item_name` 等业务 slot 抽取、学习填值、`value_slot` 参数绑定和 replay `slot_overrides`，支持学习 A 后按用户新输入执行 B | 先做 |
+| 11.3.5.5 · ExecutionEvidence & TaskResultReporter Adapter | 新增 / 扩展执行证据 contract，runtime stop 前采集 DOM evidence，并把 replay result + page evidence 适配成保守结果回复 | 先做 |
+| 11.3.5.6 · WAgent Chat `/items` Closed-loop Evaluation | 沉淀 `/items` 学习 / 执行闭环测试方案、实跑结果、完整日志和 Codex 复核记录 | 先做 |
+| 11.3.5.7 · `pending_choice` & Minimal `active_task` Ledger | 多候选澄清、choice 私有映射、最小 active task 状态账本、pending 清理 / 过期 | 后续 |
+| 11.3.5.8 · Basic Failure Recovery | 基础失败恢复：重试、重新学习、取消；不做复杂自治恢复 | 后续 |
+| 11.3.5.9 · TaskPathPlanner Multi-candidate Chat Integration | 多 learned actions、模糊目标、planning path 下接入 TaskPathPlanner 和 choice mode | 后续 |
+
+第一条可验收窄闭环：
+
+```text
+apps/product-test-site /items
+-> 学习新增项目
+-> 参数化执行新增项目，填入执行阶段的新 item_name
+-> runtime stop 前采集页面证据
+-> TaskResultReporter 保守回复
+-> docs/testing/results 记录结果和日志复核
+```
 
 ## Later M11.x · Page Context Bridge Decision Point
 

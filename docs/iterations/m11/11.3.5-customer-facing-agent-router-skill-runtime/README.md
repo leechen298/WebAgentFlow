@@ -1,6 +1,6 @@
 # 11.3.5 · Customer-Facing Agent Router & Skill Runtime
 
-状态：ready_for_implementation（docs review passed, implementation not started）
+状态：planning_refined（working runtime v6 施工稿已落库，后续执行包尚未展开）
 里程碑：M11
 类型：code
 
@@ -95,8 +95,46 @@ Application Skill Registry，并把工作 Agent 的职责边界写清楚。
 - 不做真实业务系统适配。
 - 不重新引入已移除的旧用户操作录制 / Chrome extension 栈。
 
+## Working Runtime 后续拆包
+
+11.3.5 是 `wagent chat` 面客 Agent 路由与应用技能运行时的父包。当前后续工作不另起
+11.4，也不只挂在 11.3 总纲里；统一按 11.3.5.x 拆成可验收、可回滚的小包。
+
+完整施工稿见：
+
+- [`working-runtime-construction.md`](./working-runtime-construction.md)
+
+注意：
+
+- 11.3.5.2 目录已经存在，继续作为 Chat Task State Reducer、learning preconditions、
+  working runtime 总设计和测试入口的锚点，暂不为了改名而迁移目录。
+- `product-test-site /items`、参数化 replay、ExecutionEvidence、Reporter 接入、
+  `pending_choice`、`active_task`、基础恢复和 TaskPathPlanner chat 接入不得塞进一个
+  大迭代。
+- 第一条 P0 闭环必须证明“学习新增项目 A -> 执行新增项目 B”真的填入 B，而不是复用
+  学习时录制的固定值 A。
+- `TaskPathPlanner` 和 `TaskResultReporter` 已有 deterministic service 实现，但不代表
+  它们应该进入所有 `wagent chat` 分支。单路径 happy path 先直接 replay；多候选 /
+  planning path 再接 TaskPathPlanner。
+- `ExecutionEvidence` 是新增 / 扩展 contract。现有 Reporter 需要 adapter 才能消费
+  replay result + 页面证据。
+- “学习新增 A -> 执行新增 B”依赖参数化学习 / replay slot override；不能只靠固定
+  LearnedPath action value 重放。
+
+| Package | 目标 | 先做 |
+|---|---|---|
+| 11.3.5.2 | 文档同步 + working runtime 总设计 + task state reducer / learning preconditions | 是 |
+| 11.3.5.3 | `apps/product-test-site` 新增 `/items` 列表测试页 | 是 |
+| 11.3.5.4 | `item_name` slot + `value_slot` / `slot_overrides` 参数化 learning / replay | 是 |
+| 11.3.5.5 | ExecutionEvidence + TaskResultReporter adapter，runtime stop 前采集 DOM evidence | 是 |
+| 11.3.5.6 | `wagent chat` `/items` 学习 / 执行闭环测试方案与结果记录 | 是 |
+| 11.3.5.7 | `pending_choice` + 最小 `active_task` ledger | 后续 |
+| 11.3.5.8 | 基础失败恢复 | 后续 |
+| 11.3.5.9 | TaskPathPlanner 多候选 chat 接入 | 后续 |
+
 ## 文档
 
+- `working-runtime-construction.md`
 - `intent.md`
 - `contract.md`
 - `technical-design.md`
