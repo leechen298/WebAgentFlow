@@ -360,32 +360,37 @@ Response
 
 ## 6. Agent / 组件表
 
-| 名称 | 类型 | 当前状态 | 当前定位 | 可用技能 / 能力 | 不能做什么 | 所属施工包 |
-|---|---|---:|---|---|---|---|
-| Conversation Orchestrator / Dispatcher | 代码控制器 | 已有 | 外层总入口、会话状态、命令处理、事件落库、最终结果统一出口 | 调 Interactive Chat Runtime、处理 cancel / abort / command | 不做自由 LLM 判断，不直接模拟网页操作 | 已有，包 0 文档同步 |
-| Interactive Chat Runtime | 代码编排核心 | 已有 | `wagent chat` 主链调度台 | Entry Gate、Intake、Context、Router、Learning、Execution | 不把最终控制权交给 Worker Agent | 已有，包 1 扩展 |
-| Conversation Entry Gate | 入口组件 | 已有 | 判断是否进入 heavy runtime | greeting、capability、unsupported、web task candidate | 不查 learned path，不执行浏览器 | 已有 |
-| Conversation Intake Agent | LLM + deterministic fallback | 已有 | 用户语义理解 | URL 提取、slot 提取、补充信息识别 | 不决定最终 next_agent，不调用 skill | 已有，包 1 扩展 `item_name` |
-| Conversation Context Collector | 代码能力 | 已有 | 收集事实账本 | `collect_conversation_context` | 不生成业务决策 | 已有 |
-| Customer-Facing Agent Router | LLM + fallback | 已有 | 推荐下一步角色和 skill | 推荐 ask / inspect / learning / web operation | 不直接执行，不输出 selector、browser action、learned_path_id | 已有 |
-| Runtime Adjudicator | 代码逻辑 | 已有 | 最终裁决与技能调用守门员 | 调 application skills | 不把状态写入权交给 LLM | 已有，包 1 扩展参数化 |
-| Page Understanding Service / Boundary | runtime service | 已有 pieces | 页面观察和理解 | `inspect_target_page`、`understand_page` | 不启动学习，不执行 replay，不追问用户 | 已有 |
-| Learning Agent Boundary | 角色边界 + prompt | 已有 | 组织学习请求 | `start_learning` | 不直接转交 Web Operation Agent | 已有，包 1 跑通新增项目 |
-| LearnedPath Parameterizer | 代码适配器 | 新增 | 给学习后的 actions 绑定参数槽 | 写 `value_slot` | 不调用浏览器，不改变业务意图 | 包 1 |
-| Web Operation Agent Boundary | 角色边界 + replay 服务 | 已有 | 组织执行请求 | `start_replay` | 无 matched action 不执行，不自动学习 | 已有，包 1 扩展 slot override |
-| Replay Slot Override Adapter | 代码适配器 | 新增 | 执行前把 runtime slot 替换进 action value | `value_slot -> value` 替换 | 不替换无绑定 action | 包 1 |
-| Execution Evidence Capture | 代码适配器 | 新增 | replay 后、runtime stop 前采集页面证据 | DOM text check、unknown fallback | 不调用 LLM，不在 runtime 关闭后读取页面 | 包 1 |
-| Task Result Reporter | deterministic service | 已有 | 基于执行证据生成保守结果报告 | outcome 推导、保守用户回复 | 不执行、不重试、不调用 LLM、不读 raw HTML | 包 1 接入 adapter |
-| Reporter Adapter | 代码适配器 | 新增 | 把 replay result + ExecutionEvidence 转成 reporter 可消费输入 | 状态映射、证据摘要 | 不改变 reporter 原生 outcome 语义 | 包 1 |
-| Unified WAgent Response Writer | code-owned 回复层 | 已有分散实现 | 统一用户可见回复 | 统一话术、保守解释 | 不改变业务状态 | 包 1 可整理 |
-| TaskPathPlanner | deterministic L3 service | 已有 | 多候选 / 复杂路径规划 | planning preview、candidate ranking | 不进入 P0 单路径 happy path | 包 4 |
-| Pending Choice Handler | 代码状态处理器 | 新增 | 多候选选择 | A/B/C、choice_id mapping | 不暴露 learned_path_id 给 LLM | 包 2 |
-| Active Task / Runtime Ledger | 状态 contract | 新增 | 统一 active task 与 pending 状态 | 状态保存、过期、清理 | 不做 LLM 判断 | 包 2/3 |
-| Basic Failure Recovery Handler | 代码 + 可选 LLM 文案 | 新增 | 基础失败恢复 | 基础恢复菜单 | 不做复杂自治探索 | 包 3 |
-| Teaching Guide Agent | 未来 Agent | 未实现 | 引导式教学 | future guided teaching | 当前不施工 | P3 |
-| Supervisor Agent | 内部验证 Agent | 已有或已有概念 | L1 autonomous exploration 内部验证 | 内部验证 | 不参与 `wagent chat` 路由 | 非 chat 主链 |
+| 名称 | 类型 | 当前状态 | 当前定位 | 输入 | 输出 | 可用技能 / 能力 | 不能做什么 | 所属施工包 |
+|---|---|---:|---|---|---|---|---|---|
+| Conversation Orchestrator / Dispatcher | 代码控制器 | 已有 | 外层总入口、会话状态、命令处理、事件落库、最终结果统一出口 | raw user input、session、command、metadata | DispatchResult、conversation events、最终回复 | 调 Interactive Chat Runtime、处理 cancel / abort / command | 不做自由 LLM 判断，不直接模拟网页操作 | 已有，包 0 文档同步 |
+| Interactive Chat Runtime | 代码编排核心 | 已有 | `wagent chat` 主链调度台 | session、message、metadata、runtime context | handler result、skill call、state update、response | Entry Gate、Intake、Context、Router、Learning、Execution | 不把最终控制权交给 Worker Agent | 已有，包 1 扩展 |
+| Conversation Entry Gate | 入口组件 | 已有 | 判断是否进入 heavy runtime | raw message、session metadata、pending 状态 | enter runtime / direct response | greeting、capability、unsupported、web task candidate | 不查 learned path，不执行浏览器 | 已有 |
+| Conversation Intake Agent | LLM + deterministic fallback | 已有 | 用户语义理解 | raw message、pending context、recent context | intent、target、action、slots、missing_fields、confidence | URL 提取、slot 提取、补充信息识别 | 不决定最终 next_agent，不调用 skill | 已有，包 1 扩展 `item_name` |
+| Conversation Context Collector | 代码能力 | 已有 | 收集事实账本 | session、current message、metadata | recent messages、pending、learned_actions、last_no_path_reason | `collect_conversation_context` | 不生成业务决策 | 已有 |
+| Customer-Facing Agent Router | LLM + fallback | 已有 | 推荐下一步角色和 skill | raw message、intake、context、skill menu | route decision、next_agent、recommended_skill、reason、confidence | 推荐 ask / inspect / learning / web operation | 不直接执行，不输出 selector、browser action、learned_path_id | 已有 |
+| Runtime Adjudicator | 代码逻辑 | 已有 | 最终裁决与技能调用守门员 | intake、context、route decision、page context、learned actions | handler selection、skill call、state update、blocking reason | 调 registered application skills 和 internal adapters | 不把状态写入权交给 LLM | 已有，包 1 扩展参数化 |
+| Page Understanding Service / Boundary | runtime service | 已有 pieces | 页面观察和理解 | target URL、page context | page summary、visible controls、supported goals、required slots | `inspect_target_page`、`understand_page` | 不启动学习，不执行 replay，不追问用户 | 已有 |
+| Learning Agent Boundary | 角色边界 + prompt | 已有 | 组织学习请求 | target、goal、slots、fill_values、context | learning request、learning result、missing info suggestion | `start_learning` | 不直接转交 Web Operation Agent | 已有，包 1 跑通新增项目 |
+| LearnedPath Parameterizer | 代码适配器 | 新增 | 给学习后的 actions 绑定参数槽 | learned_path.actions、fill_values、slot binding rules | parameterized actions、binding report | 写 `value_slot` | 不调用浏览器，不改变业务意图 | 包 1 |
+| Web Operation Agent Boundary | 角色边界 + replay 服务 | 已有 | 组织执行请求 | matched learned action、target、goal、slot_overrides | replay request、execution result | `start_replay` | 无 matched action 不执行，不自动学习 | 已有，包 1 扩展 slot override |
+| Replay Slot Override Adapter | 代码适配器 | 新增 | 执行前把 runtime slot 替换进 action value | ReplayAction、slot_overrides | effective ReplayAction | `value_slot -> value` 替换 | 不替换无绑定 action | 包 1 |
+| Execution Evidence Capture | 代码适配器 | 新增 | replay 后、runtime stop 前采集页面证据 | Playwright page、evidence_targets、slot_overrides | ExecutionEvidence[] | DOM text check、unknown fallback | 不调用 LLM，不在 runtime 关闭后读取页面 | 包 1 |
+| Task Result Reporter | deterministic service | 已有 | 基于执行证据生成保守结果报告 | execution_status、execution_payload、replay_summary、confirmed_plan_context | TaskResultReport | outcome 推导、保守用户回复 | 不执行、不重试、不调用 LLM、不读 raw HTML | 包 1 接入 adapter |
+| Reporter Adapter | 代码适配器 | 新增 | 把 replay result + ExecutionEvidence 转成 reporter 可消费输入 | ReplayResult、ExecutionEvidence[]、user_goal、learned_action_alias | reporter input / confirmed_plan_context / execution_payload | 状态映射、证据摘要、postcondition evidence 写入 | 不改变 reporter 原生 outcome 语义 | 包 1 |
+| Unified WAgent Response Writer | code-owned 回复层 | 已有分散实现 | 统一用户可见回复 | runtime result、reporter result、missing fields、errors | final response | 统一话术、保守解释 | 不改变业务状态 | 包 1 可整理 |
+| TaskPathPlanner | deterministic L3 service | 已有 | 多候选 / 复杂路径规划 | user goal、candidate learned paths、context | route plan、候选路径 | planning preview、candidate ranking | 不进入 P0 单路径 happy path | 包 4 |
+| Pending Choice Handler | 代码状态处理器 | 新增 | 多候选选择 | choices、choice_id、private mapping | selected action / clarification | A/B/C、choice_id mapping | 不暴露 learned_path_id 给 LLM | 包 2 |
+| Active Task / Runtime Ledger | 状态 contract | 新增 | 统一 active task 与 pending 状态 | runtime events、worker result | active_task、pending 状态 | 状态保存、过期、清理 | 不做 LLM 判断 | 包 2/3 |
+| Basic Failure Recovery Handler | 代码 + 可选 LLM 文案 | 新增 | 基础失败恢复 | replay failure、evidence missing、URL mismatch | retry / relearn / cancel choices | 基础恢复菜单 | 不做复杂自治探索 | 包 3 |
+| Teaching Guide Agent | 未来 Agent | 未实现 | 引导式教学 | 用户教学步骤、页面状态 | teaching instructions | future guided teaching | 当前不施工 | P3 |
+| Supervisor Agent | 内部验证 Agent | 已有或已有概念 | L1 autonomous exploration 内部验证 | learning / verify evidence | supervisor verdict | 内部验证 | 不参与 `wagent chat` 路由 | 非 chat 主链 |
 
-## 7. Application Skills 表
+## 7. Application Skills 与 Internal Runtime Adapters
+
+### 7.1 Registered Application Skills
+
+Registered Application Skills 是 Router 可见的业务级能力菜单。Router 只能推荐这些
+skill，不能直接调用，也不能输出 skill 的内部执行 payload。
 
 | Skill | 当前含义 | Owner / Executor | 可由谁请求 | 是否碰浏览器 | 是否写 LearnedPath | 当前策略 | 包 1 是否使用 |
 |---|---|---|---|---:|---:|---|---:|
@@ -399,10 +404,19 @@ Response
 | `learn_then_execute` | 学习后执行组合能力 | skill_runtime | learning / web operation | 是 | 是 | 当前保守阻断 | 否 |
 | `record_progress_event` | 记录阶段性进度事件 | code | orchestrator / skill_runtime | 否 | 否 | UI loading、阶段进展 | 可选 |
 | `record_agent_trace` | 记录脱敏 Agent / routing / page trace | code | agent_runtime | 否 | 否 | debug、审计、回放 | 是 |
-| `parameterize_learned_path_actions` | 给 LearnedPath actions 绑定 slot | code adapter | runtime | 否 | 更新 actions JSON | 新增能力 | 是 |
-| `apply_replay_slot_overrides` | replay 前替换 action value | code adapter | replay service | 否 | 否 | 新增能力 | 是 |
-| `capture_execution_evidence` | replay 后采集 DOM 证据 | replay runtime | replay service / runtime | 是 | 否 | 新增能力 | 是 |
-| `build_task_result_report` | 生成保守执行结果报告 | TaskResultReporter | runtime | 否 | 否 | 已有 service，需 adapter | 是 |
+
+### 7.2 Internal Runtime Adapters
+
+Internal Runtime Adapters 不是 Application Skills。它们不得出现在 Router skill menu，
+也不得由 LLM agents 直接请求。只能由 code-owned Runtime / Orchestrator / replay service
+在已通过业务级 skill 校验后内部调用。
+
+| Adapter | 当前含义 | Owner / Executor | 输入 | 输出 | 包 1 是否使用 |
+|---|---|---|---|---|---:|
+| `parameterize_learned_path_actions` | 给 LearnedPath actions 绑定 slot | runtime code adapter | learned_path.actions、fill_values、slot binding rules | parameterized actions、binding report | 是 |
+| `apply_replay_slot_overrides` | replay 前替换 action value | replay code adapter | ReplayAction、slot_overrides | effective ReplayAction | 是 |
+| `capture_execution_evidence` | replay 后、runtime stop 前采集 DOM 证据 | replay runtime adapter | Playwright page、evidence_targets、slot_overrides | ExecutionEvidence[] | 是 |
+| `build_replay_reporter_input` | 把 replay result + evidence 转成 reporter 可消费输入 | reporter adapter | ReplayResult、ExecutionEvidence[]、user_goal、learned_action_alias | execution_payload、replay_summary、confirmed_plan_context | 是 |
 
 ## 8. `/items` 列表测试页
 
@@ -479,6 +493,7 @@ P0 第一证据：
 {
   "kind": "dom_text_present",
   "target": "测试项目B",
+  "selector": "[data-testid='item-list']",
   "status": "verified",
   "confidence": 0.95,
   "summary": "列表中出现了名称为“测试项目B”的项目行。"
@@ -689,11 +704,15 @@ P0 请求示例：
     {
       "kind": "dom_text_present",
       "text": "测试项目B",
-      "source_slot": "item_name"
+      "source_slot": "item_name",
+      "selector": "[data-testid='item-list']"
     }
   ]
 }
 ```
+
+`5176` 只是 product-test-site 本地示例端口。contract 中必须使用 runtime target URL，
+不能在代码里硬编码端口。
 
 ### 11.2 `ReplayAction` 扩展
 
@@ -733,7 +752,25 @@ def run_replay(
 也可以把 `slot_overrides` 和 `evidence_targets` 放到 `ReplayRequest` 层，再在 service
 内展开。关键是执行前必须能拿到 runtime slot overrides。
 
-### 11.4 应用 override
+### 11.4 Slot Override Propagation Path
+
+P0 必须打通完整传播链，不能只改 schema 或只改 `run_replay()`：
+
+1. Intake Agent 提取 `slots.item_name`。
+2. Runtime `_fill_values_from_intake()` 生成 `fill_values.item_name`。
+3. execute branch 从 `fill_values` 构造 `slot_overrides.item_name`。
+4. `start_replay` skill request 携带 `slot_overrides`。
+5. `ReplayRequest` 接收 `slot_overrides`。
+6. replay endpoint / service 把 `slot_overrides` 传给 `run_replay()`。
+7. `run_replay()` 调 `_build_replay_actions()` 读取 `value_slot`。
+8. `run_replay()` 在 `execute_action()` 前应用 `apply_slot_override()`。
+9. `execute_action()` 实际收到 `value=测试项目B`。
+10. step log / debug trace 能证明使用的是 B，不是 A。
+
+P0 验收必须检查 replay step log 中 fill action 的 effective value 是
+`测试项目B`，不是学习阶段录制的 `测试项目A`。
+
+### 11.5 应用 override
 
 ```python
 def apply_slot_override(
@@ -759,9 +796,29 @@ def apply_slot_override(
 ```python
 effective_action = apply_slot_override(action, slot_overrides)
 log = execute_action(effective_action, runtime)
+
+wait_result = wait_for_change_after_action(
+    page=runtime.page if runtime else None,
+    action=effective_action,
+    step_log=log,
+)
 ```
 
-### 11.5 安全规则
+`wait_for_change_after_action()` 必须使用 `effective_action`，不能继续使用原始
+action。否则等待策略、日志和诊断仍可能引用学习阶段的旧值。
+
+step log / debug trace 应记录：
+
+```text
+value_slot=item_name
+override_applied=true
+effective_value=测试项目B
+```
+
+后续涉及密码、token 等敏感字段时，`effective_value` 必须脱敏；P0 `/items` 的
+`item_name` 是非敏感测试字段，可以在 debug 证据中保留明文。
+
+### 11.6 安全规则
 
 | 场景 | P0 处理 |
 |---|---|
@@ -771,7 +828,7 @@ log = execute_action(effective_action, runtime)
 | 用户要求新增 B，但 path 没有参数绑定 | 阻断，不能执行固定值 replay |
 | 多个 fill action 匹配同一 slot | P0 可全部替换，但记录 warning |
 
-### 11.6 无参数绑定时回复
+### 11.7 无参数绑定时回复
 
 ```text
 我找到了已学习的“新增项目”路径，但它还不是可参数化路径，不能安全地把项目名替换成“测试项目B”。请重新学习一次新增项目操作。
@@ -803,6 +860,27 @@ class ExecutionEvidenceTarget(BaseModel):
     source_slot: str | None = None
     selector: str | None = None
 ```
+
+P0 的 `/items` evidence target 应优先限定在列表容器内：
+
+```json
+{
+  "kind": "dom_text_present",
+  "text": "测试项目B",
+  "source_slot": "item_name",
+  "selector": "[data-testid='item-list']"
+}
+```
+
+查找规则：
+
+```text
+优先在 selector 指定区域内查找文本。
+selector 缺失时才退化为全页面查找。
+```
+
+P0 测试数据的 `item_name` 必须唯一，例如 `测试项目B-${timestamp}`，避免页面其他区域
+或历史状态里已有同名文本导致假阳性。
 
 ### 12.4 P0 evidence
 
@@ -922,7 +1000,34 @@ class ReplayReporterAdapterInput(BaseModel):
 | evidence missing target text | `needs_review` |
 | runtime error | `failed` |
 
-### 13.4 回复示例
+### 13.4 Reporter verified path 必须打通
+
+P0 不能只把 `ExecutionEvidence` 塞进 event payload。Reporter Adapter 必须让
+`TaskResultReporter._check_postconditions()` 能读取到 structured postcondition
+evidence，否则当前 Reporter 仍会保守输出 `uncertain`。
+
+P0 实现必须二选一：
+
+1. 把 verified `ExecutionEvidence` 转成 `confirmed_plan_context.postconditions`。
+2. 或扩展 `TaskResultReporter._check_postconditions()`，让它读取
+   `execution_payload` / `confirmed_plan_context` 中的 structured postcondition evidence。
+
+P0 `verified` 条件：
+
+```text
+replay_summary.replay_status in ("succeeded", "observed")
+replay_summary.drift_status == "none"
+replay_summary.error is empty
+execution_evidence 中存在：
+  kind = "dom_text_present"
+  status = "verified"
+  target = slot_overrides.item_name
+```
+
+不满足这些条件时，Reporter 不得输出 `verified`。例如 replay succeeded 但缺少
+postcondition evidence，必须继续输出 `uncertain` 或 `needs_review`。
+
+### 13.5 回复示例
 
 `verified`：
 
@@ -995,7 +1100,7 @@ TaskPathPlanner 已实现，是 L3 deterministic service。
 | 条件 | 示例 |
 |---|---|
 | 多个 learned actions 同时匹配 | “帮我处理一下这个页面” |
-| 用户只给 URL | `http://localhost:5176/items` |
+| 用户只给 URL | `http://localhost:<product-test-site-port>/items` |
 | 低置信 intent | “搞一下” |
 | 用户目标冲突 | “学习一下然后删掉” |
 | 高风险操作 | 删除、提交、状态修改 |
@@ -1160,7 +1265,7 @@ type ActiveTask = {
 | 4 | Context Collector | 找到唯一匹配的“新增项目” learned action |
 | 5 | Runtime Adjudicator | 检查 LearnedPath 有 `value_slot=item_name` |
 | 6 | Runtime | 构造 `slot_overrides.item_name=测试项目B` |
-| 7 | Runtime | 构造 `evidence_targets.dom_text_present=测试项目B` |
+| 7 | Runtime | 构造 `evidence_targets.dom_text_present=测试项目B`，并限定 `selector=[data-testid='item-list']` |
 | 8 | Web Operation Agent Boundary | 组织 replay request |
 | 9 | run_replay | 对 fill action 应用 slot override |
 | 10 | run_replay | 实际填入 `测试项目B` |
@@ -1299,7 +1404,7 @@ D. 学习一个新操作
 | EX-1 | 用户说“帮我新增项目，名称叫测试项目B” | Intake 识别 `execute_operation` |
 | EX-2 | Runtime slot | 有 `item_name=测试项目B` |
 | EX-3 | ReplayRequest | 有 `slot_overrides.item_name=测试项目B` |
-| EX-4 | Replay 执行 | fill action 实际使用 B，不是 A |
+| EX-4 | Replay 执行 | fill action 实际使用 B，不是 A；step log / debug trace 可证明 effective value |
 | EX-5 | 页面结果 | 列表出现 `测试项目B` |
 | EX-6 | 反向保护 | 不新增录制值 `测试项目A` |
 | EX-7 | 无参数绑定 | Runtime 阻断，不执行固定值 replay |
@@ -1309,7 +1414,7 @@ D. 学习一个新操作
 | 编号 | 测试 | 期望 |
 |---|---|---|
 | EV-1 | replay 完成后 | runtime stop 前采集 evidence |
-| EV-2 | 目标文本存在 | `ExecutionEvidence.status=verified` |
+| EV-2 | 目标文本存在 | 优先在 `[data-testid='item-list']` 内查找，命中后 `ExecutionEvidence.status=verified` |
 | EV-3 | 目标文本不存在 | `status=missing` 或 `unknown` |
 | EV-4 | 无法检查 DOM | `kind=unknown` |
 | EV-5 | Reporter 输入 | 包含 replay status + execution evidence |
@@ -1394,26 +1499,30 @@ D. 学习一个新操作
 10. run_replay 必须接受 slot_overrides，并在执行 fill action 前应用 override。
 11. 如果用户提供 item_name 但 LearnedPath 没有 item_name 参数绑定，Runtime 必须阻断，不能用固定录制值执行。
 12. ExecutionEvidence 是新增 / 扩展 contract，不要假设当前 TaskResultReporter 已经直接消费该结构。
-13. Evidence 必须在 Playwright runtime.stop() 前采集。
-14. P0 evidence 至少支持 dom_text_present 和 unknown。
-15. TaskResultReporter 原生 outcome 使用 verified / failed / uncertain / needs_review / blocked。
-16. 如果 UI 需要 success / partial_success，只能做 wrapper mapping，不要改写 reporter 原生语义。
-17. TaskPathPlanner 已实现，但不进入 P0 单路径 happy path。
-18. TaskPathPlanner 只用于多候选 / planning preview / 复杂目标。
-19. pending_choice 是新增能力，放到第二施工包。
-20. pending_choice 可见层只暴露 choice_id，不暴露 learned_path_id。
-21. active_task / RuntimeLedger 是新增最小 contract，放到第二或第三施工包，不在第一包大重构。
-22. learn_then_execute 当前继续保守阻断，除非新增显式用户确认链路。
-23. Router 只能建议，不能输出 selector、playwright、browser_action、learned_path_id 或直接调用 skill。
-24. 所有 skill 调用必须经过 code-owned Runtime / Orchestrator。
-25. Learning Agent 只能组织 start_learning 请求，不能直接调用 Web Operation Agent。
-26. Web Operation Agent 只能在 matched learned action 存在时组织 start_replay。
-27. Page Understanding Service 只负责 inspect / understand，不拥有 start_learning。
-28. ask_user_for_missing_info 必须写 pending，不允许只回复一句话就丢上下文。
-29. 敏感字段不得进入 agent trace、router trace、progress event。
-30. P0 验收必须证明 replay 实际填入的是“测试项目B”，不是学习时录制的“测试项目A”。
-31. 执行结果必须基于 evidence 保守报告。
-32. 文档状态要同步本地代码状态，避免 roadmap 与代码漂移。
+13. Internal Runtime Adapters 不是 Application Skills，不得出现在 Router skill menu，也不得由 LLM agents 直接请求。
+14. Evidence 必须在 Playwright runtime.stop() 前采集。
+15. P0 evidence 至少支持 dom_text_present 和 unknown；dom_text_present 优先限定在 [data-testid='item-list']。
+16. P0 测试 item_name 必须唯一，例如 测试项目B-${timestamp}。
+17. TaskResultReporter 原生 outcome 使用 verified / failed / uncertain / needs_review / blocked。
+18. Reporter Adapter 必须让 TaskResultReporter._check_postconditions() 读到 structured postcondition evidence，否则 verified path 不算打通。
+19. 如果 UI 需要 success / partial_success，只能做 wrapper mapping，不要改写 reporter 原生语义。
+20. TaskPathPlanner 已实现，但不进入 P0 单路径 happy path。
+21. TaskPathPlanner 只用于多候选 / planning preview / 复杂目标。
+22. pending_choice 是新增能力，放到第二施工包。
+23. pending_choice 可见层只暴露 choice_id，不暴露 learned_path_id。
+24. active_task / RuntimeLedger 是新增最小 contract，放到第二或第三施工包，不在第一包大重构。
+25. learn_then_execute 当前继续保守阻断，除非新增显式用户确认链路。
+26. Router 只能建议，不能输出 selector、playwright、browser_action、learned_path_id 或直接调用 skill。
+27. 所有 skill 调用必须经过 code-owned Runtime / Orchestrator。
+28. Learning Agent 只能组织 start_learning 请求，不能直接调用 Web Operation Agent。
+29. Web Operation Agent 只能在 matched learned action 存在时组织 start_replay。
+30. Page Understanding Service 只负责 inspect / understand，不拥有 start_learning。
+31. ask_user_for_missing_info 必须写 pending，不允许只回复一句话就丢上下文。
+32. 敏感字段不得进入 agent trace、router trace、progress event。
+33. P0 验收必须证明 replay 实际填入的是“测试项目B”，不是学习时录制的“测试项目A”；step log / debug trace 必须能证明 effective value。
+34. 5176 只是示例端口，contract 使用 runtime target URL，不硬编码本地端口。
+35. 执行结果必须基于 evidence 保守报告。
+36. 文档状态要同步本地代码状态，避免 roadmap 与代码漂移。
 ```
 
 ## 21. 推荐执行顺序
