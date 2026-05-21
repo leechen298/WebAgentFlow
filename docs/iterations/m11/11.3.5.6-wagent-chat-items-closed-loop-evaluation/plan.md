@@ -32,7 +32,8 @@
 
 - 本包七件套已通过设计评审。
 - 11.3.5.6 已确认是 evaluation / evidence 包，不是新功能包。
-- 当前状态已收口为 `ready_for_implementation`。
+- 当前状态已收口为
+  `implementation complete（closed-loop pass，external review passed）`。
 
 ### Step 1 · 前置能力检查
 
