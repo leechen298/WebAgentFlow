@@ -815,8 +815,9 @@ override_applied=true
 effective_value=测试项目B
 ```
 
-后续涉及密码、token 等敏感字段时，`effective_value` 必须脱敏；P0 `/items` 的
-`item_name` 是非敏感测试字段，可以在 debug 证据中保留明文。
+`effective_value` 明文日志只允许用于 P0 `/items` 的非敏感测试字段。任何
+credential / token / secret slot 必须记录为 `<redacted>`；后续涉及密码、token
+等敏感字段时，`effective_value` 必须脱敏。
 
 ### 11.6 安全规则
 
@@ -877,6 +878,9 @@ P0 的 `/items` evidence target 应优先限定在列表容器内：
 ```text
 优先在 selector 指定区域内查找文本。
 selector 缺失时才退化为全页面查找。
+采集 dom_text_present evidence 时，ExecutionEvidence.target 必须使用
+ExecutionEvidenceTarget.text，确保 Reporter verified 条件可以稳定匹配
+slot_overrides.item_name。
 ```
 
 P0 测试数据的 `item_name` 必须唯一，例如 `测试项目B-${timestamp}`，避免页面其他区域
