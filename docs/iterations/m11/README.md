@@ -61,7 +61,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.5.4-parameterized-learning-replay-slots](./11.3.5.4-parameterized-learning-replay-slots/) —— Parameterized Learning / Replay Slots：补 `item_name` 等业务 slot 抽取、学习填值、`value_slot` 参数绑定和 `slot_overrides`；解决“学习 A 后执行 B”的参数化执行缺口。状态：ready_for_implementation（design review passed）。
 - [11.3.5.5-execution-evidence-result-reporter-adapter](./11.3.5.5-execution-evidence-result-reporter-adapter/) —— ExecutionEvidence & TaskResultReporter Adapter：新增 / 扩展执行证据 contract，在 runtime stop 前采集 DOM evidence，并把 replay result + page evidence 适配到保守结果回复。状态：ready_for_implementation（design review passed）。
 - [11.3.5.6-wagent-chat-items-closed-loop-evaluation](./11.3.5.6-wagent-chat-items-closed-loop-evaluation/) —— WAgent Chat `/items` Closed-loop Evaluation：沉淀 `/items` 学习 / 执行闭环测试方案、实跑结果和日志复核记录。状态：implementation complete（closed-loop pass，result recorded）。
-- [11.3.5.7-pending-choice-active-task-ledger](./11.3.5.7-pending-choice-active-task-ledger/) —— Pending Choice & Minimal Active Task Ledger：补多候选澄清、choice 私有映射、最小 active task 状态账本、pending 清理 / 过期和 cancel cleanup。状态：draft_docs（待评审，未开始实现）。
+- [11.3.5.7-pending-choice-active-task-ledger](./11.3.5.7-pending-choice-active-task-ledger/) —— Pending Choice & Minimal Active Task Ledger：补多候选澄清、choice 私有映射、最小 active task 状态账本、pending 清理 / 过期和 cancel cleanup。状态：ready_for_implementation（design review passed）。
 - 11.3.5.8 · Basic Failure Recovery：补基础失败恢复菜单：重试、重新学习、取消；不做复杂自治恢复。状态：planned。
 - 11.3.5.9 · TaskPathPlanner Multi-candidate Chat Integration：只在多候选、模糊目标、planning path 中接入 TaskPathPlanner，不进入单路径 happy path。状态：planned。
 

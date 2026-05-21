@@ -1,6 +1,6 @@
 # 11.3.5.7 · Pending Choice & Minimal Active Task Ledger
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -79,7 +79,7 @@ Runtime 必须写入 `pending_choice`，下一轮由代码解析 choice，并保
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
@@ -87,8 +87,7 @@ Runtime 必须写入 `pending_choice`，下一轮由代码解析 choice，并保
 
 ## 当前状态
 
-文档包已生成，尚未开始代码实现。下一步应先评审本包 contract / technical design，
-通过后再按 `plan.md` 实现。
+设计评审已通过，尚未开始代码实现。下一步可以按 `plan.md` 进入实现阶段。
 
 实现时优先阅读：
 

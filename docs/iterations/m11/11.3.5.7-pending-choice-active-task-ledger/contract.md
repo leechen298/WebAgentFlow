@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 概念 / 边界契约
 

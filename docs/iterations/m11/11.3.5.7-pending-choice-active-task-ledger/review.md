@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 2026-05-21 文档生成
 
@@ -16,9 +16,12 @@
 
 ## 设计评审（Design Review）
 
-- Reviewer：
-- Decision：pending
+- Reviewer：ChatGPT
+- Decision：pass
 - Notes：
+  - Scope, `pending_choice` contract, private map boundary, minimal
+    `active_task` ledger, cancel cleanup, and no-go boundaries are aligned.
+  - Ready for implementation.
 
 ## 代码评审（Code Review）
 
@@ -75,5 +78,5 @@
 
 ### 后续事项（Follow-ups）
 
-- 设计评审通过后，将 README / 子文档状态从 `draft_docs` 收口为
-  `ready_for_implementation（design review passed，未开始实现）`。
+- 进入实现阶段时，必须继续守住 private map 不外泄、单候选 happy path 不受影响、
+  不接 TaskPathPlanner、不做 failure recovery 的边界。

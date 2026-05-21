@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 输入
 
