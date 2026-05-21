@@ -1629,7 +1629,7 @@ Customer-Facing Agent Router & Skill Runtime 的 working runtime 收口：让 `w
 | Package | 目标 | 状态 / 顺序 |
 |---|---|---|
 | 11.3.5.2 · Chat Task State Reducer & Learning Preconditions | 文档同步、working runtime 总设计、turn-based reducer、learning preconditions 和测试入口 | 当前锚点 |
-| 11.3.5.3 · Product Test Site `/items` Fixture | 新增 `apps/product-test-site` `/items` 列表测试页；只提供学习 / 执行新增项目的稳定页面基座 | 先做 |
+| [11.3.5.3 · Product Test Site `/items` Fixture](./11.3.5.3-product-test-site-items-fixture/) | 新增 `apps/product-test-site` `/items` 列表测试页；只提供学习 / 执行新增项目的稳定页面基座 | draft_docs |
 | 11.3.5.4 · Parameterized Learning / Replay Slots | 补 `item_name` 等业务 slot 抽取、学习填值、`value_slot` 参数绑定和 replay `slot_overrides`，支持学习 A 后按用户新输入执行 B | 先做 |
 | 11.3.5.5 · ExecutionEvidence & TaskResultReporter Adapter | 新增 / 扩展执行证据 contract，runtime stop 前采集 DOM evidence，并把 replay result + page evidence 适配成保守结果回复 | 先做 |
 | 11.3.5.6 · WAgent Chat `/items` Closed-loop Evaluation | 沉淀 `/items` 学习 / 执行闭环测试方案、实跑结果、完整日志和 Codex 复核记录 | 先做 |
