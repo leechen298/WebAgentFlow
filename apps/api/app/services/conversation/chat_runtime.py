@@ -2075,8 +2075,9 @@ def _fill_values_from_intake(
         return None
     values: dict[str, str] = {}
     for slot in intake.slots:
-        if slot.value and slot.semantic_type in {"username", "password", "item_name"}:
-            values[slot.semantic_type] = slot.value
+        semantic_type = "item_name" if slot.semantic_type == "project_name" else slot.semantic_type
+        if slot.value and semantic_type in {"username", "password", "item_name"}:
+            values[semantic_type] = slot.value
     return values or None
 
 

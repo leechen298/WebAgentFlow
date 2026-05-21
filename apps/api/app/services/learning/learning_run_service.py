@@ -228,7 +228,10 @@ class LearningRunService:
     ) -> str | None:
         if request.product_level:
             # product-level: no spec oracle; accept if explorer reports success
-            if not final_data.get("success"):
+            # or the LLM supervisor explicitly says this path should be saved.
+            # Static-page flows such as /items can mutate DOM state without a
+            # URL/title change, so the rule-side success flag is too narrow.
+            if not _product_learning_should_save_path(final_data):
                 return None
         else:
             if _pass_gate_from_final_data(final_data) != "pass":
@@ -392,6 +395,21 @@ def _pass_gate_from_final_data(final_data: dict[str, Any]) -> str | None:
     scorecard = (final_data.get("verification") or {}).get("scorecard") or {}
     gate = scorecard.get("pass_gate") or {}
     return gate.get("status")
+
+
+def _product_learning_should_save_path(final_data: dict[str, Any]) -> bool:
+    if final_data.get("success"):
+        return True
+
+    supervisor = final_data.get("supervisor")
+    if not isinstance(supervisor, dict):
+        return False
+    return (
+        supervisor.get("should_save_path") is True
+        and supervisor.get("verdict") == "success"
+        and supervisor.get("_supervisor_source") == "llm"
+        and not supervisor.get("_supervisor_partial_parse", False)
+    )
 
 
 def _scenario_matched_from(final_data: dict[str, Any]) -> bool | None:

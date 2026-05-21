@@ -28,6 +28,9 @@ def _exploration_result(
     title: str = "Sign in",
     final_url: str = "http://localhost:5175/dashboard",
     final_title: str = "Dashboard",
+    verdict: str = "success",
+    success: bool = True,
+    supervisor: dict[str, object] | None = None,
     steps: list[dict[str, object]] | None = None,
 ) -> AutonomousExplorationResult:
     return AutonomousExplorationResult(
@@ -41,9 +44,10 @@ def _exploration_result(
         total_steps=len(steps or [1, 2, 3]),
         final_url=final_url,
         final_title=final_title,
-        verdict="success",
-        success=True,
+        verdict=verdict,
+        success=success,
         summary="login ok",
+        supervisor=supervisor,
     )
 
 
@@ -185,6 +189,61 @@ def test_product_learning_parameterizes_item_name_fill_action(
     assert path is not None
     assert path.actions[0]["value_slot"] == "item_name"
     assert path.actions[0]["value"] == "测试项目A"
+
+
+def test_product_learning_accepts_llm_supervisor_save_path_when_url_is_static(
+    db_session: Session,
+) -> None:
+    def explorer(**kwargs):
+        return _exploration_result(
+            url="http://localhost:5176/items",
+            title="项目列表",
+            final_url="http://localhost:5176/items",
+            final_title="项目列表",
+            verdict="failure",
+            success=False,
+            supervisor={
+                "verdict": "success",
+                "should_save_path": True,
+                "_supervisor_source": "llm",
+                "_supervisor_partial_parse": False,
+            },
+            steps=[
+                {
+                    "step": 1,
+                    "action_type": "fill",
+                    "target_selector": "[data-testid='item-name-input']",
+                    "target_description": "项目名称",
+                    "value": "测试项目A",
+                },
+                {
+                    "step": 2,
+                    "action_type": "click",
+                    "target_selector": "[data-testid='item-create-submit']",
+                },
+            ],
+        )
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=_DummyRuntimeFactory(),
+        explorer=explorer,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url="http://localhost:5176/items",
+            goal="学习新增项目，名称叫测试项目A",
+            fill_values={"item_name": "测试项目A"},
+            product_level=True,
+        )
+    )
+
+    assert result.status == "learned"
+    assert result.learned_path_id is not None
+    path = db_session.get(LearnedPath, result.learned_path_id)
+    assert path is not None
+    assert path.actions[0]["value_slot"] == "item_name"
 
 
 def test_product_learning_does_not_parameterize_item_name_outside_items_goal(

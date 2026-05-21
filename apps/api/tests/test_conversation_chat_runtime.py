@@ -252,6 +252,21 @@ def test_fill_values_from_intake_includes_item_name_and_credentials() -> None:
     }
 
 
+def test_fill_values_from_intake_maps_project_name_to_item_name() -> None:
+    intake = ConversationIntakeResult(
+        intent="execute_operation",
+        slots=[
+            {
+                "name": "project_name",
+                "semantic_type": "project_name",
+                "value": "测试项目B",
+            }
+        ],
+    )
+
+    assert _fill_values_from_intake(intake) == {"item_name": "测试项目B"}
+
+
 def test_parse_product_inputs_does_not_extract_item_name_from_username() -> None:
     assert _parse_product_inputs(
         "学习新增项目：http://localhost:5176/items，username 是 demo"

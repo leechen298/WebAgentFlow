@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：ready_for_implementation（design review passed，未开始执行）
+状态：implementation complete（closed-loop pass，result recorded）
 
 ## 目标
 

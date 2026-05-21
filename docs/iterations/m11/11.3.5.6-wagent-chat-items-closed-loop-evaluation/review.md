@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：ready_for_implementation（design review passed，未开始执行）
+状态：implementation complete（closed-loop pass，result recorded）
 
 ## 2026-05-21 设计文档生成
 
@@ -22,27 +22,50 @@
 
 ## 闭环执行记录（Closed-loop Execution）
 
-- Executor：
-- Date：
-- Commit：
-- API base：
-- Product URL：
+- Executor：Codex
+- Date：2026-05-21
+- Commit / working tree：base commit `0ff305f` plus uncommitted 11.3.5.6
+  fixes in `learning_run_service.py`, `chat_runtime.py`, and their focused tests
+- API base：`http://127.0.0.1:8001`
+- Product URL：`http://127.0.0.1:5176/items`
+- Session ID：`503a09ef-e609-4941-a82b-8f6e6be6061d`
+- LearnedPath ID：`8c1ea100-9093-4138-9212-b74ce8e4e90b`
 - Result file：
-- evaluation_status：not_run
+  [`docs/testing/results/m11-11.3.5.6-items-closed-loop-2026-05-21.md`](../../../testing/results/m11-11.3.5.6-items-closed-loop-2026-05-21.md)
+- evaluation_status：`pass`
 
 ## 用户反馈
 
-- None yet。
+- Review feedback after first execution report:
+  - `review.md` still showed pre-execution `not_run` state.
+  - Result artifact commit provenance needed to mention uncommitted fixes.
+  - Effective-value evidence needed raw event excerpts.
+- Resolution：updated this review, M11 indexes, and the result artifact.
 
 ## 最终差异（Final Delta）
 
 ### 实际交付
 
-- 待执行后填写。
+- `wagent chat` `/items` closed loop executed from the product chat entry.
+- Product-level static-page learning was fixed to accept LLM Supervisor
+  `should_save_path=true` when the rule-side self verdict misses DOM-only
+  success.
+- Intake `project_name` was mapped to runtime `item_name` so replay receives
+  `slot_overrides.item_name`.
+- Result artifact recorded transcript, session, LearnedPath, replay, Reporter,
+  not-run boundaries, and raw evidence excerpts.
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
-- 待执行后填写。
+- Planned default output was evidence-only. During live execution, two blocking
+  P0 wiring gaps were found and fixed narrowly:
+  - `/items` learning did not persist a LearnedPath because the rule-side
+    verdict required URL/title change even though the LLM Supervisor derived
+    success from DOM state.
+  - replay did not receive `slot_overrides.item_name` when intake emitted
+    `semantic_type=project_name`.
+- No schema, API, DB migration, CLI command, Console UI, recovery, TaskPathPlanner,
+  `pending_choice`, or `active_task` scope was added.
 
 ### WebAgentFlow Live Run 边界（Live Run Boundary）
 
@@ -54,44 +77,53 @@
 
 ### E2E / Codex 外部测试操作员证据（E2E / Codex Evidence）
 
-待执行后填写：
-
-- 实际 `wagent chat` command。
-- stdout / stderr。
-- session id。
-- user input sequence。
-- WAgent response。
-- event / history / LearnedPath read-only evidence。
+- 实际 `wagent chat` command：see result file `Commands`.
+- stdout / stderr：captured in result file `Transcript`.
+- session id：`503a09ef-e609-4941-a82b-8f6e6be6061d`.
+- user input sequence：
+  - `http://127.0.0.1:5176/items`
+  - `学习新增项目，名称叫测试项目A-20260521223327`
+  - `帮我新增项目，名称叫测试项目B-20260521223327`
+- WAgent response：
+  - `学习完成：我学会了新增项目操作。之后你可以说“帮我新增项目”。`
+  - `执行完成。我在列表中看到了“测试项目B-20260521223327”，所以可以确认新增项目成功。`
+- read-only evidence：
+  - `chat_execution_started.slot_overrides.item_name=测试项目B-20260521223327`
+  - `chat_execution_completed.replay.replay_status=succeeded`
+  - `chat_execution_completed.replay.execution_evidence[0].status=verified`
+  - `task_result_reported.verification_outcome=verified`
+  - LearnedPath action includes `value_slot=item_name`
 
 ### Required Gates
 
 | Gate | Expected | Actual | Status | Source |
 |---|---|---|---|---|
-| Chat session | session id exists | not run | not_run | N/A |
-| Learn A | LearnedPath generated | not run | not_run | N/A |
-| Parameter binding | `value_slot=item_name` | not run | not_run | N/A |
-| Execute B | replay invoked with B | not run | not_run | N/A |
-| Effective value | fill value is B, not A | not run | not_run | N/A |
-| DOM evidence | `dom_text_present verified target=B` | not run | not_run | N/A |
-| Reporter | outcome `verified` | not run | not_run | N/A |
-| Final response | evidence-based success response | not run | not_run | N/A |
+| Chat session | session id exists | `503a09ef-e609-4941-a82b-8f6e6be6061d` | pass | CLI stdout / history |
+| Learn A | LearnedPath generated | `chat_learning_completed`, LearnedPath `8c1ea100-9093-4138-9212-b74ce8e4e90b` | pass | conversation events |
+| Parameter binding | `value_slot=item_name` | LearnedPath fill action has `value_slot=item_name` | pass | LearnedPath detail |
+| Execute B | replay invoked with B | `slot_overrides.item_name=测试项目B-20260521223327` | pass | `chat_execution_started` |
+| Effective value | fill value is B, not A | replay used B slot override and verified B in item list | pass | event raw excerpts in result file |
+| DOM evidence | `dom_text_present verified target=B` | target `测试项目B-20260521223327`, status `verified`, confidence `0.95` | pass | `chat_execution_completed` |
+| Reporter | outcome `verified` | `verification_outcome=verified`, `task_verified=true` | pass | `task_result_reported` |
+| Final response | evidence-based success response | WAgent said it saw `测试项目B-20260521223327` in the list | pass | history messages |
 
 ### 验证证据（Validation Evidence）
 
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
 |---|---|---|---|---|---|---|
-| `git status --short --branch` | record baseline | not run | N/A | Skip | N/A | 文档生成阶段未执行 |
-| product-test-site build | build passed | not run | N/A | Skip | N/A | 待执行 |
-| targeted API tests | passed | not run | N/A | Skip | N/A | 待执行 |
-| `wagent chat` closed loop | pass / fail / blocked / unverified | not run | N/A | Skip | N/A | 待执行 |
-| read-only events / history queries | evidence captured | not run | N/A | Skip | N/A | 待执行 |
-| `git diff --check` | clean | not run | N/A | Skip | N/A | 待执行 |
+| `git status --short --branch` | record baseline | branch `v0.1`; uncommitted 11.3.5.6 code/tests/result docs | 0 | Pass | terminal output | base commit `0ff305f` |
+| product-test-site build | build passed | Vite build passed, 34 modules transformed | 0 | Pass | terminal output | `/items` target build |
+| targeted API tests | passed | `143 passed` | 0 | Pass | pytest output | includes chat runtime, replay hook, reporter, learned replay, learning service |
+| learned-path replay API slice | passed | `6 passed, 36 deselected` | 0 | Pass | pytest output | `tests/test_exploration_learned_paths_api.py -k replay` |
+| scoped Ruff | clean | `All checks passed!` | 0 | Pass | terminal output | changed Python files |
+| `wagent chat` closed loop | pass / fail / blocked / unverified | `pass` | 0 for resumed run | Pass | session `503a09ef-e609-4941-a82b-8f6e6be6061d` | first process timed out on first LLM turn; same session resumed with `--timeout 300` |
+| read-only events / history queries | evidence captured | events, history, LearnedPath detail captured | 0 | Pass | result file raw excerpts | no direct replay substitution |
+| `git diff --check` | clean | clean | 0 | Pass | terminal output | no whitespace errors |
 
 ### 未运行 / 未验证（Not Run / Unverified）
 
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
-| `wagent chat` closed loop | 设计评审阶段不执行 | 下一步执行本包闭环 |
 | `verify-scenario` | 本包明确禁止 | 无 |
 | autonomous run | 本包明确禁止 | 无 |
 | Console UI smoke | 本包不依赖 Console | 无 |
@@ -100,6 +132,7 @@
 
 ### 后续事项（Follow-ups）
 
-- 执行闭环后，新增
-  `docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md`。
-- 执行闭环后，回填本文件 Required Gates 和 Validation Evidence。
+- 提交后将结果文件的 `Commit / working tree` 更新为最终 commit hash。
+- `.venv/bin/alembic` shebang 指向旧路径
+  `/Users/leechen/projects/WebAgentFlow/.venv/bin/python3.11`；本轮迁移使用
+  `.venv/bin/python -m alembic`。

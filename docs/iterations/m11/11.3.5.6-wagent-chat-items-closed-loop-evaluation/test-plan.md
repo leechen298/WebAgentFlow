@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：ready_for_implementation（design review passed，未开始执行）
+状态：implementation complete（closed-loop pass，result recorded）
 
 ## 适用条件
 

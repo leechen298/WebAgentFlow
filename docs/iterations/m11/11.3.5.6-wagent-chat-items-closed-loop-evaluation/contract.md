@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：ready_for_implementation（design review passed，未开始执行）
+状态：implementation complete（closed-loop pass，result recorded）
 
 ## 概念 / 边界契约
 
