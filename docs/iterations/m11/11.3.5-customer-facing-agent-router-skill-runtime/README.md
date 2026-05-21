@@ -103,6 +103,7 @@ Application Skill Registry，并把工作 Agent 的职责边界写清楚。
 完整施工稿见：
 
 - [`working-runtime-construction.md`](./working-runtime-construction.md)
+- [`working-runtime-iteration-plan.md`](./working-runtime-iteration-plan.md)
 
 注意：
 
@@ -135,6 +136,7 @@ Application Skill Registry，并把工作 Agent 的职责边界写清楚。
 ## 文档
 
 - `working-runtime-construction.md`
+- `working-runtime-iteration-plan.md`
 - `intent.md`
 - `contract.md`
 - `technical-design.md`
