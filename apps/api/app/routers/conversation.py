@@ -27,6 +27,7 @@ from app.schemas.conversation import (
     ConversationSessionListResponse,
     ConversationSessionResponse,
 )
+from app.services.conversation.history import session_public_payload
 from app.services.conversation.provenance import normalize_response_provenance
 
 router = APIRouter(prefix="/conversation", tags=["conversation"])
@@ -39,7 +40,7 @@ def _session_response(orm: ConversationSessionOrm) -> ConversationSessionRespons
         status=orm.status,
         current_mode=orm.current_mode,
         previous_status=orm.previous_status,
-        metadata=orm.metadata_json,
+        metadata=session_public_payload(orm.metadata_json),
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )

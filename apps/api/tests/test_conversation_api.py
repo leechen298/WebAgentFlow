@@ -84,6 +84,55 @@ def test_get_session_reads_session(client: TestClient) -> None:
     assert body["data"]["status"] == "idle"
 
 
+def test_get_session_hides_pending_choice_private_map(client: TestClient) -> None:
+    session_id = client.post(
+        "/conversation/sessions",
+        json={
+            "current_mode": "interactive_chat",
+            "metadata": {
+                "pending_choice": {
+                    "type": "pending_choice",
+                    "choice_group_id": "choice-group-test",
+                    "question": "你想让我执行哪一个？",
+                    "choices": [
+                        {
+                            "choice_id": "A",
+                            "label": "新增项目",
+                            "intent": "execute_operation",
+                        }
+                    ],
+                    "turns_remaining": 2,
+                    "created_at": "2026-05-21T00:00:00+00:00",
+                },
+                "pending_choice_private_map": {
+                    "A": {
+                        "kind": "learned_action",
+                        "learned_path_id": "lp-private",
+                    }
+                },
+                "learned_actions": [
+                    {
+                        "alias": "新增项目",
+                        "learned_path_id": "lp-learned-action",
+                        "target_url": "http://localhost:5176/items",
+                    }
+                ],
+            },
+        },
+    ).json()["data"]["id"]
+
+    resp = client.get(f"/conversation/sessions/{session_id}")
+
+    assert resp.status_code == 200
+    metadata = resp.json()["data"]["metadata"]
+    payload_text = json.dumps(metadata, ensure_ascii=False)
+    assert "pending_choice" in metadata
+    assert "pending_choice_private_map" not in metadata
+    assert "learned_path_id" not in payload_text
+    assert "lp-private" not in payload_text
+    assert "lp-learned-action" not in payload_text
+
+
 def test_get_session_unknown_returns_404(client: TestClient) -> None:
     resp = client.get("/conversation/sessions/not-a-real-id")
 
@@ -425,6 +474,8 @@ def test_dispatch_replay_success_returns_replay_summary(
         url: str,
         *,
         headless: bool = True,
+        slot_overrides: dict[str, str] | None = None,
+        evidence_targets: list[object] | None = None,
     ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
@@ -465,6 +516,8 @@ def test_dispatch_replay_drift_returns_failed_summary(
         url: str,
         *,
         headless: bool = True,
+        slot_overrides: dict[str, str] | None = None,
+        evidence_targets: list[object] | None = None,
     ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
@@ -887,6 +940,8 @@ def test_dispatch_execute_after_confirmed_plan_with_target_url(
         url: str,
         *,
         headless: bool = True,
+        slot_overrides: dict[str, str] | None = None,
+        evidence_targets: list[object] | None = None,
     ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
@@ -965,6 +1020,8 @@ def test_dispatch_explicit_replay_compatible_outside_awaiting_confirmation(
         url: str,
         *,
         headless: bool = True,
+        slot_overrides: dict[str, str] | None = None,
+        evidence_targets: list[object] | None = None,
     ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
@@ -1024,6 +1081,8 @@ def test_dispatch_interactive_chat_uses_runtime_intake_service(
         url: str,
         *,
         headless: bool = True,
+        slot_overrides: dict[str, str] | None = None,
+        evidence_targets: list[object] | None = None,
     ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
@@ -1101,6 +1160,8 @@ def test_dispatch_execute_failed_replay_includes_task_result_reported(
         url: str,
         *,
         headless: bool = True,
+        slot_overrides: dict[str, str] | None = None,
+        evidence_targets: list[object] | None = None,
     ) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id=learned_path_id,
@@ -1285,6 +1346,7 @@ def test_list_sessions_with_learned_actions(client: TestClient) -> None:
     item = [i for i in resp.json()["data"]["items"] if i["id"] == session_id][0]
     assert item["learned_action_count"] == 1
     assert item["learned_actions"][0]["alias"] == "登录"
+    assert "learned_path_id" not in item["learned_actions"][0]
 
 
 def test_get_history_returns_aggregate_payload(client: TestClient) -> None:

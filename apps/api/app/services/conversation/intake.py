@@ -79,11 +79,14 @@ class ConversationIntakeService:
         context = {
             "pending_intake": (session_metadata or {}).get("pending_intake"),
             "pending_target": (session_metadata or {}).get("pending_target"),
+            "pending_choice": (session_metadata or {}).get("pending_choice"),
             "last_no_path_reason": (session_metadata or {}).get(
                 "last_no_path_reason"
             ),
             "learned_actions": redact_sensitive_payload(
-                (session_metadata or {}).get("learned_actions") or []
+                _strip_private_runtime_payload(
+                    (session_metadata or {}).get("learned_actions") or []
+                )
             ),
         }
         if self._provider is not None:
@@ -191,6 +194,18 @@ def redact_sensitive_payload(value: Any) -> Any:
         return redacted
     if isinstance(value, str):
         return redact_sensitive_text(value)
+    return value
+
+
+def _strip_private_runtime_payload(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_strip_private_runtime_payload(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _strip_private_runtime_payload(item)
+            for key, item in value.items()
+            if key not in {"learned_path_id", "pending_choice_private_map"}
+        }
     return value
 
 

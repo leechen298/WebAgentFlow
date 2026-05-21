@@ -170,7 +170,7 @@ class ConversationHistoryService:
         event_count = self.repo.count_events(session.id)
         last_user = self.repo.get_last_message_by_role(session.id, "user")
         last_agent = self.repo.get_last_message_by_role(session.id, "agent")
-        learned_actions = _history_safe_payload(
+        learned_actions = session_public_payload(
             session.metadata_json.get("learned_actions") or []
         )
         return ConversationSessionSummaryResponse(
@@ -345,5 +345,37 @@ def _dict_or_empty(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def session_public_payload(value: Any) -> Any:
+    return sanitize_provider_thinking(
+        redact_sensitive_payload(_strip_session_private_payload(value))
+    )
+
+
 def _history_safe_payload(value: Any) -> Any:
-    return sanitize_provider_thinking(redact_sensitive_payload(value))
+    return sanitize_provider_thinking(
+        redact_sensitive_payload(_strip_history_private_payload(value))
+    )
+
+
+def _strip_session_private_payload(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_strip_session_private_payload(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _strip_session_private_payload(item)
+            for key, item in value.items()
+            if key not in {"pending_choice_private_map", "learned_path_id"}
+        }
+    return value
+
+
+def _strip_history_private_payload(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_strip_history_private_payload(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _strip_history_private_payload(item)
+            for key, item in value.items()
+            if key != "pending_choice_private_map"
+        }
+    return value

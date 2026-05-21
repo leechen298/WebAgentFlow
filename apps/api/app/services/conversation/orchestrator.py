@@ -937,7 +937,14 @@ class ConversationOrchestrator:
         metadata = dict(session.metadata_json or {})
         if not any(
             key in metadata
-            for key in ("pending_intake", "pending_target", "last_no_path_reason")
+            for key in (
+                "pending_intake",
+                "pending_target",
+                "pending_choice",
+                "pending_choice_private_map",
+                "last_no_path_reason",
+                "active_task",
+            )
         ):
             return
         from app.services.conversation.chat_runtime import (

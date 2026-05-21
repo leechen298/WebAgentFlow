@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from datetime import datetime
+from typing import Any, Literal
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -33,6 +34,64 @@ class LastNoPathReason(BaseModel):
     created_from_message_id: str | None = None
 
 
+class PendingChoiceOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    choice_id: str
+    label: str
+    description: str | None = None
+    intent: Literal[
+        "execute_operation",
+        "learn_operation",
+        "understand_page",
+        "cancel",
+        "other",
+    ]
+
+
+class PendingChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["pending_choice"] = "pending_choice"
+    choice_group_id: str
+    question: str
+    choices: list[PendingChoiceOption] = Field(default_factory=list)
+    turns_remaining: int = 2
+    created_at: datetime
+
+
+class ActiveTask(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: str
+    kind: Literal[
+        "learn_operation",
+        "execute_operation",
+        "understand_page",
+        "clarify",
+    ]
+    target_url: str | None = None
+    goal: str | None = None
+    owner: Literal[
+        "runtime",
+        "learning_agent",
+        "web_operation_agent",
+        "page_understanding",
+    ]
+    status: Literal[
+        "collecting_requirements",
+        "waiting_for_user_input",
+        "learning",
+        "executing",
+        "reporting",
+        "completed",
+        "failed",
+        "cancelled",
+    ]
+    created_at: datetime
+    updated_at: datetime
+
+
 class LearnedActionSummary(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -51,6 +110,8 @@ class ConversationContextBundle(BaseModel):
     recent_messages: list[dict[str, Any]] = Field(default_factory=list)
     pending_intake: dict[str, Any] | None = None
     pending_target: PendingTarget | None = None
+    pending_choice: PendingChoice | None = None
+    active_task: ActiveTask | None = None
     last_no_path_reason: LastNoPathReason | None = None
     learned_actions: list[LearnedActionSummary] = Field(default_factory=list)
     learned_actions_by_scope: dict[str, list[LearnedActionSummary]] = Field(
@@ -98,6 +159,8 @@ class ConversationContextCollector:
         current_url = _extract_url(current_message)
         recent_url = current_url or _last_url_from_messages(recent_messages)
         pending_target = _parse_pending_target(metadata.get("pending_target"))
+        pending_choice = _parse_pending_choice(metadata.get("pending_choice"))
+        active_task = _parse_active_task(metadata.get("active_task"))
         last_no_path_reason = _parse_last_no_path_reason(
             metadata.get("last_no_path_reason")
         )
@@ -105,6 +168,8 @@ class ConversationContextCollector:
             recent_messages=recent_messages,
             pending_intake=_dict_or_none(metadata.get("pending_intake")),
             pending_target=pending_target,
+            pending_choice=pending_choice,
+            active_task=active_task,
             last_no_path_reason=last_no_path_reason,
             learned_actions=learned_actions,
             learned_actions_by_scope=learned_by_scope,
@@ -165,6 +230,24 @@ def _parse_last_no_path_reason(value: Any) -> LastNoPathReason | None:
         return None
     try:
         return LastNoPathReason.model_validate(value)
+    except ValueError:
+        return None
+
+
+def _parse_pending_choice(value: Any) -> PendingChoice | None:
+    if not isinstance(value, dict):
+        return None
+    try:
+        return PendingChoice.model_validate(value)
+    except ValueError:
+        return None
+
+
+def _parse_active_task(value: Any) -> ActiveTask | None:
+    if not isinstance(value, dict):
+        return None
+    try:
+        return ActiveTask.model_validate(value)
     except ValueError:
         return None
 

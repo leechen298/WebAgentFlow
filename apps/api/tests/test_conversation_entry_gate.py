@@ -34,6 +34,20 @@ def test_entry_gate_classifies_web_task_candidate() -> None:
     assert result.requires_agent_runtime is True
 
 
+def test_entry_gate_pending_choice_forces_runtime_for_short_reply() -> None:
+    result = deterministic_entry_gate("A", context={"pending_choice_exists": True})
+
+    assert result.category == ConversationEntryGateCategory.WEB_TASK_CANDIDATE
+    assert result.requires_agent_runtime is True
+
+
+def test_entry_gate_active_task_forces_runtime_for_cancel_text() -> None:
+    result = deterministic_entry_gate("算了", context={"active_task_exists": True})
+
+    assert result.category == ConversationEntryGateCategory.WEB_TASK_CANDIDATE
+    assert result.requires_agent_runtime is True
+
+
 def test_entry_gate_classifies_capability_question() -> None:
     result = deterministic_entry_gate("你能做什么？")
 

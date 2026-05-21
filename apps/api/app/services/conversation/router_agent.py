@@ -58,10 +58,11 @@ class CustomerFacingAgentRouterService:
     ) -> RouteDecision:
         self._last_trace_payload = None
         self.provider_fallback = False
+        prompt_context = _router_prompt_context(context)
         payload = {
             "raw_message": raw_message,
             "intake": intake.model_dump(mode="json"),
-            "context": context.model_dump(mode="json"),
+            "context": prompt_context,
             "page_understanding": page_understanding or {},
             "skill_menu": self._skill_registry.menu_for_prompt(),
         }
@@ -339,6 +340,22 @@ def _safe_provider_error_decision(reason_summary: str) -> RouteDecision:
         reason_summary=reason_summary,
         source="provider_error",
     )
+
+
+def _router_prompt_context(context: ConversationContextBundle) -> dict[str, Any]:
+    return _strip_private_runtime_payload(context.model_dump(mode="json"))
+
+
+def _strip_private_runtime_payload(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_strip_private_runtime_payload(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _strip_private_runtime_payload(item)
+            for key, item in value.items()
+            if key not in {"learned_path_id", "pending_choice_private_map"}
+        }
+    return value
 
 
 def _llm_trace_payload(

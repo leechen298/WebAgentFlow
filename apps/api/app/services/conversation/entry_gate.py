@@ -408,7 +408,12 @@ def deterministic_entry_gate(
             reason_summary="empty message",
             fallback=fallback,
         )
-    if context.get("pending_intake_exists") or context.get("pending_target_exists"):
+    if (
+        context.get("pending_intake_exists")
+        or context.get("pending_target_exists")
+        or context.get("pending_choice_exists")
+        or context.get("active_task_exists")
+    ):
         return ConversationEntryGateResult(
             category=ConversationEntryGateCategory.WEB_TASK_CANDIDATE,
             requires_agent_runtime=True,
@@ -508,6 +513,8 @@ def _minimal_context(
         "session_mode": session_mode,
         "pending_target_exists": bool(metadata.get("pending_target")),
         "pending_intake_exists": bool(metadata.get("pending_intake")),
+        "pending_choice_exists": bool(metadata.get("pending_choice")),
+        "active_task_exists": bool(metadata.get("active_task")),
         "last_no_path_reason_exists": bool(metadata.get("last_no_path_reason")),
     }
 

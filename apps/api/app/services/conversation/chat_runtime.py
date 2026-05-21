@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import re
+import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Literal
 from urllib.parse import urlparse
 
@@ -62,6 +64,7 @@ _UNLEARNED_TARGET_RESPONSE = "还没学过这个站点或页面，需要先学�
 _AMBIGUOUS_TARGET_RESPONSE = "这个操作在多个站点学过，请带上要操作的页面地址。"
 _VALUE_PATTERN = r"([^\s，。,.；;!！?？]+)"
 _PENDING_SENSITIVE_VALUES: dict[str, dict[str, str]] = {}
+_CHOICE_IDS = ("A", "B", "C", "D")
 
 
 def clear_pending_sensitive_values(session_id: str) -> None:
@@ -74,7 +77,14 @@ def clear_pending_runtime_context(repo: ConversationRepository, session_id: str)
         raise ValueError(f"session not found: {session_id}")
     metadata = dict(session.metadata_json or {})
     changed = False
-    for key in ("pending_intake", "pending_target", "last_no_path_reason"):
+    for key in (
+        "pending_intake",
+        "pending_target",
+        "pending_choice",
+        "pending_choice_private_map",
+        "last_no_path_reason",
+        "active_task",
+    ):
         if key in metadata:
             metadata.pop(key, None)
             changed = True
@@ -284,6 +294,24 @@ class InteractiveChatRuntime:
                 metadata=metadata,
                 previous_status=previous_status,
             )
+        pending_choice_result = self._maybe_handle_pending_choice(
+            session_id=session_id,
+            raw_input=raw_input,
+            message_id=message_id,
+            metadata=metadata,
+            previous_status=previous_status,
+            headless=headless,
+        )
+        if pending_choice_result is not None:
+            return pending_choice_result
+        if _is_cancel_text(raw_input) and self._has_pending_runtime_context(session_id):
+            return self._handle_runtime_cancel(
+                session_id=session_id,
+                raw_input=raw_input,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+            )
         intake = self._intake_service.analyze(
             raw_input,
             session_metadata=session.metadata_json or {},
@@ -305,6 +333,16 @@ class InteractiveChatRuntime:
                 "pending_target": (
                     context.pending_target.model_dump(mode="json")
                     if context.pending_target
+                    else None
+                ),
+                "pending_choice": (
+                    context.pending_choice.model_dump(mode="json")
+                    if context.pending_choice
+                    else None
+                ),
+                "active_task": (
+                    context.active_task.model_dump(mode="json")
+                    if context.active_task
                     else None
                 ),
                 "learned_action_count": len(context.learned_actions),
@@ -418,6 +456,245 @@ class InteractiveChatRuntime:
 
     def _intake_confidence_threshold(self) -> float:
         return float(getattr(self._intake_service, "confidence_threshold", 0.6))
+
+    def _maybe_handle_pending_choice(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        previous_status: str,
+        headless: bool,
+    ) -> DispatchResult | None:
+        pending = self._pending_choice(session_id)
+        if pending is None:
+            return None
+        if _is_cancel_text(raw_input):
+            return self._handle_runtime_cancel(
+                session_id=session_id,
+                raw_input=raw_input,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+            )
+        choice_id = _parse_choice_reply(raw_input, pending)
+        if choice_id:
+            return self._handle_pending_choice_selection(
+                session_id=session_id,
+                raw_input=raw_input,
+                choice_id=choice_id,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+                headless=headless,
+            )
+        if _looks_like_choice_revision(raw_input):
+            self._clear_pending_choice(session_id)
+            self._clear_active_task(session_id)
+            return None
+        return self._handle_pending_choice_miss(
+            session_id=session_id,
+            raw_input=raw_input,
+            pending=pending,
+            message_id=message_id,
+            metadata=metadata,
+            previous_status=previous_status,
+        )
+
+    def _handle_pending_choice_selection(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        choice_id: str,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        previous_status: str,
+        headless: bool,
+    ) -> DispatchResult:
+        events = self._append_chat_command_event(
+            session_id=session_id,
+            raw_input=raw_input,
+            command_kind="pending_choice_select",
+            metadata=metadata,
+        )
+        private_map = self._pending_choice_private_map(session_id)
+        selected = private_map.get(choice_id)
+        self._clear_pending_choice(session_id)
+        if not isinstance(selected, dict):
+            return self._handle_choice_unavailable(
+                session_id=session_id,
+                reason="pending_choice_private_map_missing",
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+            )
+        if selected.get("kind") == "cancel":
+            return self._handle_runtime_cancel(
+                session_id=session_id,
+                raw_input=raw_input,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+                existing_events=events,
+            )
+        if selected.get("kind") != "learned_action":
+            return self._handle_choice_unavailable(
+                session_id=session_id,
+                reason="pending_choice_kind_unsupported",
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+            )
+        action = self._learned_action_by_path_id(
+            session_id,
+            str(selected.get("learned_path_id") or ""),
+        )
+        if action is None:
+            return self._handle_choice_unavailable(
+                session_id=session_id,
+                reason="pending_choice_learned_action_unavailable",
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+            )
+        return self._execute_matched_action(
+            session_id=session_id,
+            action=action,
+            intake=None,
+            slot_overrides_override=_slot_overrides_from_choice_selection(selected),
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+            headless=headless,
+            command_kind="execute_task",
+        )
+
+    def _handle_pending_choice_miss(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        pending: dict[str, Any],
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        previous_status: str,
+    ) -> DispatchResult:
+        events = self._append_chat_command_event(
+            session_id=session_id,
+            raw_input=raw_input,
+            command_kind="pending_choice_clarify",
+            metadata=metadata,
+        )
+        remaining = int(pending.get("turns_remaining") or 0) - 1
+        if remaining <= 0:
+            self._clear_pending_choice(session_id)
+            self._clear_active_task(session_id)
+            response = "选择已过期，请重新说明你想让我执行哪个网页操作。"
+            self._append_agent_message(session_id, response)
+            self._append_event(
+                session_id,
+                ConversationEventType.CHAT_NO_PATH,
+                {"reason": "pending_choice_expired"},
+                events,
+            )
+            return self._result(
+                session_id=session_id,
+                command_kind="pending_choice_clarify",
+                user_response=response,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+            )
+        pending = {**pending, "turns_remaining": remaining}
+        self._save_pending_choice_payload(session_id, pending)
+        self._update_active_task(session_id, status="waiting_for_user_input")
+        response = _pending_choice_response(pending, prefix="我没有识别出你的选择。")
+        self._append_agent_message(session_id, response)
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "pending_choice_retry",
+                "pending_choice": pending,
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind="pending_choice_clarify",
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
+
+    def _handle_choice_unavailable(
+        self,
+        *,
+        session_id: str,
+        reason: str,
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+    ) -> DispatchResult:
+        self._clear_active_task(session_id)
+        response = "这个选择已经不可用，请重新说明你想让我执行哪个操作。"
+        self._append_agent_message(session_id, response)
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_NO_PATH,
+            {"reason": reason},
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind="pending_choice_select",
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
+
+    def _handle_runtime_cancel(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        previous_status: str,
+        existing_events: list[str] | None = None,
+    ) -> DispatchResult:
+        events = existing_events or self._append_chat_command_event(
+            session_id=session_id,
+            raw_input=raw_input,
+            command_kind="cancel",
+            metadata=metadata,
+        )
+        self._mark_active_task_cancelled(session_id)
+        clear_pending_runtime_context(self._repo, session_id)
+        response = "已取消当前任务。"
+        self._append_agent_message(
+            session_id,
+            response,
+            provenance=code_response_provenance(CODE_PRODUCER_INTERACTIVE_CHAT),
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {"progress_kind": "runtime_context_cancelled"},
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind="cancel",
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
 
     def _handle_entry_gate_reply(
         self,
@@ -535,6 +812,14 @@ class InteractiveChatRuntime:
             message_id,
             turns_remaining=turns_remaining,
         )
+        self._set_active_task(
+            session_id,
+            kind="clarify",
+            owner="runtime",
+            status="waiting_for_user_input",
+            target_url=intake.target.url,
+            goal=intake.action.goal,
+        )
         response = _question_for_missing_fields(intake)
         self._append_agent_message(
             session_id,
@@ -582,6 +867,14 @@ class InteractiveChatRuntime:
         )
         target = make_pending_target(route_decision.target.url or raw_input)
         self._save_pending_target(session_id, target)
+        self._set_active_task(
+            session_id,
+            kind="clarify",
+            owner="runtime",
+            status="waiting_for_user_input",
+            target_url=target.url,
+            goal=route_decision.user_goal,
+        )
         self._record_skill_call(
             session_id,
             ApplicationSkillName.ASK_USER_FOR_MISSING_INFO,
@@ -749,6 +1042,14 @@ class InteractiveChatRuntime:
         self._save_pending_target(
             session_id,
             make_pending_target(page_context.url or target_url),
+        )
+        self._set_active_task(
+            session_id,
+            kind="clarify",
+            owner="page_understanding",
+            status="waiting_for_user_input",
+            target_url=page_context.url or target_url,
+            goal=route_decision.user_goal,
         )
         response = (
             f"我已查看页面：{page_understanding.observed_page_summary}"
@@ -976,6 +1277,14 @@ class InteractiveChatRuntime:
             metadata=metadata,
             intake=intake,
         )
+        self._set_active_task(
+            session_id,
+            kind="learn_operation",
+            owner="learning_agent",
+            status="learning",
+            target_url=intent.url,
+            goal=intake.action.goal if intake else intent.raw_text,
+        )
 
         self._append_agent_message(session_id, "开始学习页面操作。")
         self._record_skill_call(
@@ -1071,6 +1380,7 @@ class InteractiveChatRuntime:
             },
             events,
         )
+        self._clear_active_task(session_id)
         user_response = "开始学习页面操作。\n" + complete_message
         return self._result(
             session_id=session_id,
@@ -1103,6 +1413,25 @@ class InteractiveChatRuntime:
         action = self._match_session_action(session_id, intent.raw_text, intake=intake)
         if action is None:
             user_url = _extract_url(intent.raw_text)
+            candidates = self._matching_session_actions(
+                session_id,
+                intent.raw_text,
+                intake=intake,
+            )
+            if len(candidates) > 1 and not user_url:
+                return self._handle_pending_choice_question(
+                    session_id=session_id,
+                    raw_input=intent.raw_text,
+                    candidates=candidates,
+                    slot_overrides=_slot_overrides_from_fill_values(
+                        _fill_values_from_intake(intake) or {}
+                    ),
+                    events=events,
+                    message_id=message_id,
+                    previous_status=previous_status,
+                    target_url=intent.url,
+                    goal=intake.action.goal if intake else intent.raw_text,
+                )
             if (
                 route_decision is not None
                 and route_decision.recommended_skill
@@ -1159,15 +1488,6 @@ class InteractiveChatRuntime:
                     target_url=user_url,
                     user_goal=intake.action.goal if intake else None,
                 )
-            if self._has_ambiguous_action_match(session_id, intent.raw_text):
-                return self._handle_ambiguous_target(
-                    session_id=session_id,
-                    command_kind="execute_task",
-                    message_id=message_id,
-                    metadata=metadata,
-                    existing_events=events,
-                    previous_status=previous_status,
-                )
             return self._handle_no_path(
                 session_id=session_id,
                 command_kind="execute_task",
@@ -1177,8 +1497,33 @@ class InteractiveChatRuntime:
                 previous_status=previous_status,
             )
 
+        return self._execute_matched_action(
+            session_id=session_id,
+            action=action,
+            intake=intake,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+            headless=headless,
+            command_kind="execute_task",
+        )
+
+    def _execute_matched_action(
+        self,
+        *,
+        session_id: str,
+        action: dict[str, Any],
+        intake: ConversationIntakeResult | None,
+        slot_overrides_override: dict[str, str] | None = None,
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+        headless: bool,
+        command_kind: str,
+    ) -> DispatchResult:
         if self._replay_handler is None:
             response = "执行失败：replay handler 未配置。"
+            self._update_active_task(session_id, status="failed")
             self._append_agent_message(session_id, response)
             self._append_event(
                 session_id,
@@ -1191,7 +1536,7 @@ class InteractiveChatRuntime:
             )
             return self._result(
                 session_id=session_id,
-                command_kind="execute_task",
+                command_kind=command_kind,
                 user_response=response,
                 events=events,
                 message_id=message_id,
@@ -1201,22 +1546,40 @@ class InteractiveChatRuntime:
             )
 
         fill_values = _fill_values_from_intake(intake) or {}
-        slot_overrides = _slot_overrides_from_fill_values(fill_values)
-        if slot_overrides.get("item_name"):
-            path = LearnedPathRepository(self._repo.session).get(
-                action["learned_path_id"]
+        slot_overrides = (
+            dict(slot_overrides_override)
+            if slot_overrides_override is not None
+            else _slot_overrides_from_fill_values(fill_values)
+        )
+        path = LearnedPathRepository(self._repo.session).get(action["learned_path_id"])
+        supports_item_name = _learned_path_supports_value_slot(path, "item_name")
+        if slot_overrides.get("item_name") and supports_item_name is False:
+            return self._handle_missing_parameterized_path(
+                session_id=session_id,
+                action=action,
+                slot_overrides=slot_overrides,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
             )
-            supports_item_name = _learned_path_supports_value_slot(path, "item_name")
-            if supports_item_name is False:
-                return self._handle_missing_parameterized_path(
-                    session_id=session_id,
-                    action=action,
-                    slot_overrides=slot_overrides,
-                    events=events,
-                    message_id=message_id,
-                    previous_status=previous_status,
-                )
+        if supports_item_name is True and not slot_overrides.get("item_name"):
+            return self._handle_missing_runtime_slot(
+                session_id=session_id,
+                action=action,
+                slot_name="item_name",
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+            )
 
+        self._set_active_task(
+            session_id,
+            kind="execute_operation",
+            owner="web_operation_agent",
+            status="executing",
+            target_url=action.get("target_url"),
+            goal=action.get("alias"),
+        )
         self._append_agent_message(session_id, "执行中。")
         self._record_skill_call(
             session_id,
@@ -1288,6 +1651,7 @@ class InteractiveChatRuntime:
             event_type = ConversationEventType.CHAT_EXECUTION_COMPLETED
             error = None
             allowed = True
+            self._clear_active_task(session_id)
         else:
             if report is not None:
                 final_message = _chat_report_user_response(report, slot_overrides)
@@ -1296,6 +1660,7 @@ class InteractiveChatRuntime:
             event_type = ConversationEventType.CHAT_EXECUTION_FAILED
             error = replay_summary.error or replay_summary.replay_status
             allowed = False
+            self._update_active_task(session_id, status="failed")
 
         self._record_skill_call(
             session_id,
@@ -1330,7 +1695,7 @@ class InteractiveChatRuntime:
             )
         return self._result(
             session_id=session_id,
-            command_kind="execute_task",
+            command_kind=command_kind,
             user_response="执行中。\n" + final_message,
             events=events,
             message_id=message_id,
@@ -1350,6 +1715,7 @@ class InteractiveChatRuntime:
         message_id: str | None,
         previous_status: str,
     ) -> DispatchResult:
+        self._update_active_task(session_id, status="failed")
         item_name = slot_overrides.get("item_name", "")
         response = (
             "我找到了已学习的“新增项目”路径，但它还不是可参数化路径，"
@@ -1389,6 +1755,109 @@ class InteractiveChatRuntime:
             previous_status=previous_status,
             allowed=False,
             error="missing_item_name_value_slot",
+        )
+
+    def _handle_missing_runtime_slot(
+        self,
+        *,
+        session_id: str,
+        action: dict[str, Any],
+        slot_name: str,
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+    ) -> DispatchResult:
+        self._set_active_task(
+            session_id,
+            kind="clarify",
+            owner="runtime",
+            status="waiting_for_user_input",
+            target_url=action.get("target_url"),
+            goal=action.get("alias"),
+        )
+        display_name = "项目名称" if slot_name == "item_name" else slot_name
+        alias = action.get("alias", "网页操作")
+        response = f"我找到了已学习的“{alias}”路径，但还需要{display_name}。"
+        self._record_skill_call(
+            session_id,
+            ApplicationSkillName.ASK_USER_FOR_MISSING_INFO,
+            status="completed",
+            input_summary={"missing_fields": [slot_name]},
+            output_summary={"target_url": action.get("target_url")},
+        )
+        self._append_agent_message(session_id, response)
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_NO_PATH,
+            {
+                "reason": "missing_runtime_slot",
+                "slot": slot_name,
+                "alias": action.get("alias"),
+                "target_url": action.get("target_url"),
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind="execute_task",
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
+
+    def _handle_pending_choice_question(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        candidates: list[dict[str, Any]],
+        slot_overrides: dict[str, str],
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+        target_url: str | None,
+        goal: str | None,
+    ) -> DispatchResult:
+        pending_choice, private_map = _build_pending_choice(
+            candidates,
+            slot_overrides=slot_overrides,
+        )
+        self._save_pending_choice(
+            session_id,
+            pending_choice=pending_choice,
+            private_map=private_map,
+        )
+        self._set_active_task(
+            session_id,
+            kind="clarify",
+            owner="runtime",
+            status="waiting_for_user_input",
+            target_url=target_url,
+            goal=goal or raw_input,
+        )
+        response = _pending_choice_response(pending_choice)
+        self._append_agent_message(
+            session_id,
+            response,
+            provenance=code_response_provenance(CODE_PRODUCER_INTERACTIVE_CHAT),
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "pending_choice_created",
+                "pending_choice": pending_choice,
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind="pending_choice",
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
         )
 
     def _handle_unlearned_target(
@@ -1525,6 +1994,10 @@ class InteractiveChatRuntime:
         previous_status: str,
     ) -> DispatchResult:
         response = f"学习失败：{error}"
+        self._update_active_task(
+            session_id,
+            status="failed",
+        )
         self._record_skill_call(
             session_id,
             ApplicationSkillName.START_LEARNING,
@@ -1840,6 +2313,8 @@ class InteractiveChatRuntime:
         metadata["learned_actions"] = merged
         metadata.pop("pending_intake", None)
         metadata.pop("pending_target", None)
+        metadata.pop("pending_choice", None)
+        metadata.pop("pending_choice_private_map", None)
         metadata.pop("last_no_path_reason", None)
         clear_pending_sensitive_values(session_id)
         self._replace_session_metadata(session_id, metadata)
@@ -1901,7 +2376,10 @@ class InteractiveChatRuntime:
         metadata = dict(session.metadata_json or {})
         metadata.pop("pending_intake", None)
         metadata.pop("pending_target", None)
+        metadata.pop("pending_choice", None)
+        metadata.pop("pending_choice_private_map", None)
         metadata.pop("last_no_path_reason", None)
+        metadata.pop("active_task", None)
         clear_pending_sensitive_values(session_id)
         self._replace_session_metadata(session_id, metadata)
 
@@ -1944,6 +2422,148 @@ class InteractiveChatRuntime:
         )
         self._replace_session_metadata(session_id, metadata)
 
+    def _pending_choice(self, session_id: str) -> dict[str, Any] | None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        pending = (session.metadata_json or {}).get("pending_choice")
+        if not _valid_pending_choice_payload(pending):
+            if pending is not None:
+                self._clear_pending_choice(session_id)
+            return None
+        return dict(pending)
+
+    def _pending_choice_private_map(self, session_id: str) -> dict[str, dict[str, Any]]:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        private_map = (session.metadata_json or {}).get("pending_choice_private_map")
+        if not isinstance(private_map, dict):
+            return {}
+        return {
+            str(choice_id): dict(value)
+            for choice_id, value in private_map.items()
+            if isinstance(value, dict)
+        }
+
+    def _save_pending_choice(
+        self,
+        session_id: str,
+        *,
+        pending_choice: dict[str, Any],
+        private_map: dict[str, dict[str, Any]],
+    ) -> None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = dict(session.metadata_json or {})
+        metadata["pending_choice"] = redact_sensitive_payload(pending_choice)
+        metadata["pending_choice_private_map"] = redact_sensitive_payload(private_map)
+        metadata.pop("last_no_path_reason", None)
+        self._replace_session_metadata(session_id, metadata)
+
+    def _save_pending_choice_payload(
+        self,
+        session_id: str,
+        pending_choice: dict[str, Any],
+    ) -> None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = dict(session.metadata_json or {})
+        metadata["pending_choice"] = redact_sensitive_payload(pending_choice)
+        self._replace_session_metadata(session_id, metadata)
+
+    def _clear_pending_choice(self, session_id: str) -> None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = dict(session.metadata_json or {})
+        metadata.pop("pending_choice", None)
+        metadata.pop("pending_choice_private_map", None)
+        self._replace_session_metadata(session_id, metadata)
+
+    def _set_active_task(
+        self,
+        session_id: str,
+        *,
+        kind: str,
+        owner: str,
+        status: str,
+        target_url: str | None = None,
+        goal: str | None = None,
+    ) -> None:
+        now = _utc_now_iso()
+        task = {
+            "task_id": f"task-{uuid.uuid4()}",
+            "kind": kind,
+            "target_url": target_url,
+            "goal": goal,
+            "owner": owner,
+            "status": status,
+            "created_at": now,
+            "updated_at": now,
+        }
+        task = {key: value for key, value in task.items() if value is not None}
+        self._replace_active_task(session_id, task)
+        self._record_active_task_progress(session_id, task)
+
+    def _update_active_task(
+        self,
+        session_id: str,
+        *,
+        status: str,
+    ) -> None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        task = (session.metadata_json or {}).get("active_task")
+        if not isinstance(task, dict):
+            return
+        updated = {**task, "status": status, "updated_at": _utc_now_iso()}
+        self._replace_active_task(session_id, updated)
+        self._record_active_task_progress(session_id, updated)
+
+    def _mark_active_task_cancelled(self, session_id: str) -> None:
+        self._update_active_task(session_id, status="cancelled")
+
+    def _clear_active_task(self, session_id: str) -> None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = dict(session.metadata_json or {})
+        if "active_task" not in metadata:
+            return
+        metadata.pop("active_task", None)
+        self._replace_session_metadata(session_id, metadata)
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.CHAT_PROGRESS_RECORDED,
+            payload={"progress_kind": "active_task_cleared"},
+        )
+
+    def _replace_active_task(self, session_id: str, active_task: dict[str, Any]) -> None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = dict(session.metadata_json or {})
+        metadata["active_task"] = redact_sensitive_payload(active_task)
+        self._replace_session_metadata(session_id, metadata)
+
+    def _record_active_task_progress(
+        self,
+        session_id: str,
+        active_task: dict[str, Any],
+    ) -> None:
+        self._repo.append_event(
+            session_id=session_id,
+            type=ConversationEventType.CHAT_PROGRESS_RECORDED,
+            payload={
+                "progress_kind": "active_task_updated",
+                "active_task": redact_sensitive_payload(active_task),
+            },
+        )
+
     def _replace_session_metadata(
         self,
         session_id: str,
@@ -1964,13 +2584,13 @@ class InteractiveChatRuntime:
         *,
         intake: ConversationIntakeResult | None = None,
     ) -> dict[str, Any] | None:
-        session = self._repo.get_session(session_id)
-        if session is None:
-            raise ValueError(f"session not found: {session_id}")
-        actions = list((session.metadata_json or {}).get("learned_actions") or [])
         normalized = raw_input.strip()
         user_url = _extract_url(normalized)
-        candidates = _matching_actions(actions, normalized, intake=intake)
+        candidates = self._matching_session_actions(
+            session_id,
+            normalized,
+            intake=intake,
+        )
 
         if not candidates:
             return None
@@ -1986,6 +2606,68 @@ class InteractiveChatRuntime:
             return candidates[0]
 
         return None
+
+    def _matching_session_actions(
+        self,
+        session_id: str,
+        raw_input: str,
+        *,
+        intake: ConversationIntakeResult | None = None,
+    ) -> list[dict[str, Any]]:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        actions = [
+            action
+            for action in list((session.metadata_json or {}).get("learned_actions") or [])
+            if isinstance(action, dict)
+        ]
+        normalized = raw_input.strip()
+        user_url = _extract_url(normalized)
+        candidates = _matching_actions(actions, normalized, intake=intake)
+        if not candidates and _looks_like_vague_operation_request(normalized):
+            candidates = _scope_actions_for_vague_request(actions, intake=intake)
+        if user_url:
+            normalized_url = _normalize_url(user_url)
+            candidates = [
+                action
+                for action in candidates
+                if _normalize_url(action.get("target_url")) == normalized_url
+            ]
+        return candidates
+
+    def _learned_action_by_path_id(
+        self,
+        session_id: str,
+        learned_path_id: str,
+    ) -> dict[str, Any] | None:
+        if not learned_path_id:
+            return None
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        for action in (session.metadata_json or {}).get("learned_actions") or []:
+            if (
+                isinstance(action, dict)
+                and str(action.get("learned_path_id") or "") == learned_path_id
+            ):
+                return action
+        return None
+
+    def _has_pending_runtime_context(self, session_id: str) -> bool:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = session.metadata_json or {}
+        return any(
+            key in metadata
+            for key in (
+                "pending_intake",
+                "pending_target",
+                "pending_choice",
+                "active_task",
+            )
+        )
 
     def _has_learned_target(self, session_id: str, url: str) -> bool:
         session = self._repo.get_session(session_id)
@@ -2040,6 +2722,198 @@ class InteractiveChatRuntime:
             error=error,
             replay_result=replay_result,
         )
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).isoformat()
+
+
+def _valid_pending_choice_payload(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+    if value.get("type") != "pending_choice":
+        return False
+    choices = value.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return False
+    return all(
+        isinstance(choice, dict)
+        and isinstance(choice.get("choice_id"), str)
+        and isinstance(choice.get("label"), str)
+        for choice in choices
+    )
+
+
+def _build_pending_choice(
+    candidates: list[dict[str, Any]],
+    *,
+    slot_overrides: dict[str, str] | None = None,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    choices: list[dict[str, Any]] = []
+    private_map: dict[str, dict[str, Any]] = {}
+    for index, action in enumerate(candidates[: len(_CHOICE_IDS)]):
+        choice_id = _CHOICE_IDS[index]
+        choices.append(
+            {
+                "choice_id": choice_id,
+                "label": _choice_label(action),
+                "description": _choice_description(action),
+                "intent": "execute_operation",
+            }
+        )
+        private_map[choice_id] = {
+            "kind": "learned_action",
+            "learned_path_id": action.get("learned_path_id"),
+            "action_alias": action.get("alias"),
+            "target_url": action.get("target_url"),
+            "page_template": action.get("page_template"),
+        }
+        if slot_overrides:
+            private_map[choice_id]["slot_overrides"] = dict(slot_overrides)
+    pending_choice = {
+        "type": "pending_choice",
+        "choice_group_id": f"choice-group-{uuid.uuid4()}",
+        "question": "我找到了多个可能的操作，你想让我执行哪一个？",
+        "choices": choices,
+        "turns_remaining": 2,
+        "created_at": _utc_now_iso(),
+    }
+    return pending_choice, private_map
+
+
+def _slot_overrides_from_choice_selection(selected: dict[str, Any]) -> dict[str, str]:
+    slot_overrides = selected.get("slot_overrides")
+    if not isinstance(slot_overrides, dict):
+        return {}
+    return {
+        str(key): str(value)
+        for key, value in slot_overrides.items()
+        if key and value is not None
+    }
+
+
+def _choice_label(action: dict[str, Any]) -> str:
+    return str(action.get("alias") or action.get("page_template") or "网页操作")
+
+
+def _choice_description(action: dict[str, Any]) -> str | None:
+    target_url = action.get("target_url")
+    page_template = action.get("page_template")
+    if target_url and page_template:
+        return f"{page_template} · {target_url}"
+    if target_url:
+        return str(target_url)
+    return str(page_template) if page_template else None
+
+
+def _pending_choice_response(
+    pending_choice: dict[str, Any],
+    *,
+    prefix: str | None = None,
+) -> str:
+    lines: list[str] = []
+    if prefix:
+        lines.append(prefix)
+    lines.append(str(pending_choice.get("question") or "你想让我执行哪一个？"))
+    for choice in pending_choice.get("choices") or []:
+        if not isinstance(choice, dict):
+            continue
+        label = str(choice.get("label") or "")
+        description = choice.get("description")
+        suffix = f" - {description}" if description else ""
+        lines.append(f"{choice.get('choice_id')}. {label}{suffix}")
+    lines.append("请回复 A、1 或选项名称。")
+    return "\n".join(lines)
+
+
+def _parse_choice_reply(raw_input: str, pending_choice: dict[str, Any]) -> str | None:
+    text = raw_input.strip()
+    if not text:
+        return None
+    choices = [
+        choice
+        for choice in pending_choice.get("choices") or []
+        if isinstance(choice, dict) and choice.get("choice_id")
+    ]
+    by_id = {str(choice["choice_id"]).upper(): str(choice["choice_id"]) for choice in choices}
+    upper = text.upper()
+    if upper in by_id:
+        return by_id[upper]
+    if text.isdigit():
+        index = int(text) - 1
+        if 0 <= index < len(choices):
+            return str(choices[index]["choice_id"])
+    ordinal = _chinese_ordinal_index(text)
+    if ordinal is not None and 0 <= ordinal < len(choices):
+        return str(choices[ordinal]["choice_id"])
+    for choice in choices:
+        if text == str(choice.get("choice_id")):
+            return str(choice["choice_id"])
+    normalized_text = _normalize_choice_text(text)
+    for choice in choices:
+        label = str(choice.get("label") or "")
+        if normalized_text and normalized_text == _normalize_choice_text(label):
+            return str(choice["choice_id"])
+    return None
+
+
+def _chinese_ordinal_index(text: str) -> int | None:
+    mapping = {
+        "第一个": 0,
+        "第一项": 0,
+        "第1个": 0,
+        "第1项": 0,
+        "第二个": 1,
+        "第二项": 1,
+        "第2个": 1,
+        "第2项": 1,
+        "第三个": 2,
+        "第三项": 2,
+        "第3个": 2,
+        "第3项": 2,
+        "第四个": 3,
+        "第四项": 3,
+        "第4个": 3,
+        "第4项": 3,
+    }
+    return mapping.get(text.strip())
+
+
+def _normalize_choice_text(text: str) -> str:
+    return re.sub(r"[\s，。,.；;:：!！?？、\-_/]+", "", text).lower()
+
+
+def _looks_like_choice_revision(text: str) -> bool:
+    stripped = text.strip()
+    if _extract_url(stripped):
+        return True
+    return any(
+        token in stripped
+        for token in (
+            "不是",
+            "不对",
+            "我要",
+            "我想",
+            "换成",
+            "改成",
+            "重新",
+        )
+    )
+
+
+def _is_cancel_text(text: str) -> bool:
+    stripped = text.strip().lower()
+    return stripped in {
+        "/cancel",
+        "cancel",
+        "stop",
+        "算了",
+        "取消",
+        "不用了",
+        "不要了",
+        "先取消",
+        "停止",
+    }
 
 
 def _extract_url(text: str) -> str | None:
@@ -2276,6 +3150,41 @@ def _matching_actions(
         ):
             candidates.append(action)
     return candidates
+
+
+def _looks_like_vague_operation_request(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped:
+        return False
+    return any(
+        token in stripped
+        for token in (
+            "处理",
+            "搞一下",
+            "弄一下",
+            "继续",
+            "这个页面",
+            "当前页面",
+            "this page",
+        )
+    )
+
+
+def _scope_actions_for_vague_request(
+    actions: list[dict[str, Any]],
+    *,
+    intake: ConversationIntakeResult | None = None,
+) -> list[dict[str, Any]]:
+    target_url = intake.target.url if intake else None
+    if target_url:
+        scoped = [
+            action
+            for action in actions
+            if _normalize_url(action.get("target_url")) == _normalize_url(target_url)
+        ]
+        if scoped:
+            return scoped
+    return actions
 
 
 def _intake_match_terms(intake: ConversationIntakeResult | None) -> set[str]:

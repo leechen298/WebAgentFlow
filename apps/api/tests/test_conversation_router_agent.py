@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 
 import pytest
 from pydantic import ValidationError
@@ -131,6 +132,55 @@ def test_router_short_learn_uses_pending_target() -> None:
         "username",
         "password",
     }
+
+
+def test_router_provider_payload_does_not_include_private_choice_map_or_path_ids() -> None:
+    captured: dict[str, object] = {}
+
+    def provider(payload):
+        captured.update(payload)
+        return None
+
+    router = CustomerFacingAgentRouterService(provider=provider)
+    intake = ConversationIntakeResult(
+        intent="execute_operation",
+        action={"goal": "新增项目", "canonical_goal": "新增项目"},
+        confidence=0.8,
+    )
+
+    router.route(
+        raw_message="帮我新增项目",
+        intake=intake,
+        context=ConversationContextBundle(
+            pending_choice={
+                "type": "pending_choice",
+                "choice_group_id": "choice-group-test",
+                "question": "你想让我做哪个操作？",
+                "choices": [
+                    {
+                        "choice_id": "A",
+                        "label": "新增项目",
+                        "intent": "execute_operation",
+                    }
+                ],
+                "turns_remaining": 2,
+                "created_at": "2026-05-21T00:00:00+00:00",
+            },
+            learned_actions=[
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": "lp-secret",
+                    "target_url": "http://localhost:5176/items",
+                }
+            ],
+        ),
+    )
+
+    payload_text = json.dumps(captured, ensure_ascii=False)
+    assert "lp-secret" not in payload_text
+    assert "learned_path_id" not in payload_text
+    assert "pending_choice_private_map" not in payload_text
 
 
 def test_router_provider_invalid_json_safe_fails_to_ask_user() -> None:
