@@ -1,12 +1,13 @@
 # Review
 
-状态：draft_docs（设计草案，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 文档阶段记录
 
 | 时间 | Reviewer | Decision | Notes |
 |---|---|---|---|
-| 2026-05-21 | Codex | draft_docs_created | 新增 11.3.5.5 七件套文档，范围限定为 ExecutionEvidence + TaskResultReporter adapter；未写实现代码。 |
+| 2026-05-21 | Codex | docs_created | 新增 11.3.5.5 七件套文档，范围限定为 ExecutionEvidence + TaskResultReporter adapter；未写实现代码。 |
+| 2026-05-21 | ChatGPT | pass | Scope、contract、evidence capture timing、Reporter verified path 和 no-go boundaries aligned。可进入实现阶段；实现前必须确认 11.3.5.4 参数化 replay 代码已存在。 |
 
 ## Implementation Review
 

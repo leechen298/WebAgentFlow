@@ -1,6 +1,6 @@
 # 11.3.5.5 · ExecutionEvidence & TaskResultReporter Adapter
 
-状态：draft_docs（设计草案，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -63,7 +63,7 @@ ReplayRequest.evidence_targets
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
@@ -73,8 +73,14 @@ ReplayRequest.evidence_targets
 
 ## 当前状态
 
-文档包已生成，等待设计评审。实现必须先确认：
+文档包已通过设计评审，当前可以进入实现阶段。实现必须先确认 11.3.5.4
+参数化 replay 已经在当前代码树中存在：
 
+- `ReplayRequest.slot_overrides`。
+- `ReplayAction.value_slot`。
+- `run_replay(..., slot_overrides=...)`。
+- `effective_action`。
+- step log 中的 `value_slot` / `override_applied` / `effective_value`。
 - P0 evidence 只要求 `dom_text_present` 和 `unknown`。
 - `/items` 新增项目的 evidence target 必须优先限定在 `[data-testid='item-list']`。
 - `ExecutionEvidence.target` 必须来自 `ExecutionEvidenceTarget.text`。

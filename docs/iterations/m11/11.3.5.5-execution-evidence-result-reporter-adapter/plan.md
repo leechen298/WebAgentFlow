@@ -1,6 +1,6 @@
 # Plan
 
-状态：draft_docs（设计草案，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 阶段 0：实现前检查
 
