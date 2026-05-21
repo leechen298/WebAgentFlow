@@ -17,6 +17,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.conversation_entry_gate import ConversationEntryGateTrace
+from app.schemas.learned_path_replay import ExecutionEvidence
 
 
 class ConversationStatus(StrEnum):
@@ -269,6 +270,7 @@ class ConversationReplaySummary(BaseModel):
     final_title: str | None = None
     step_count: int = 0
     error: str | None = None
+    execution_evidence: list[ExecutionEvidence] = Field(default_factory=list)
 
 
 class ConversationDispatchRequest(BaseModel):

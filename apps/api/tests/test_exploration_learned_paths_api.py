@@ -890,3 +890,53 @@ def test_replay_valid_path_returns_result(
     assert data["drift_status"] == "none"
     assert len(data["steps"]) == 1
     assert data["steps"][0]["action_type"] == "fill"
+
+
+def test_replay_request_passes_evidence_targets(
+    client: TestClient, db_session: Session
+) -> None:
+    from unittest.mock import patch
+
+    from app.schemas.learned_path_replay import ReplayResult
+
+    path_id = _ingest_sample(db_session)
+    mock_result = ReplayResult(
+        learned_path_id=path_id,
+        source_run_id=None,
+        trust="provisional",
+        status="succeeded",
+        drift_status="none",
+        drift_reasons=[],
+        warnings=[],
+        stored_signature={"page_template": "/items"},
+        current_signature={"page_template": "/items"},
+        steps=[],
+        final_url="http://127.0.0.1:5176/items",
+        final_title="Items",
+    )
+
+    with patch(
+        "app.services.learning.learned_path_replay.run_replay",
+        return_value=mock_result,
+    ) as mock_run_replay:
+        resp = client.post(
+            f"/exploration/learned-paths/{path_id}/replay",
+            json={
+                "url": "http://127.0.0.1:5176/items",
+                "evidence_targets": [
+                    {
+                        "kind": "dom_text_present",
+                        "text": "测试项目B-001",
+                        "source_slot": "item_name",
+                        "selector": "[data-testid='item-list']",
+                    }
+                ],
+            },
+        )
+
+    assert resp.status_code == 200
+    target = mock_run_replay.call_args.kwargs["evidence_targets"][0]
+    assert target.kind == "dom_text_present"
+    assert target.text == "测试项目B-001"
+    assert target.source_slot == "item_name"
+    assert target.selector == "[data-testid='item-list']"

@@ -5,12 +5,21 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+from pydantic import ValidationError
+
 from app.models.learned_path import LearnedPath, TrustStatus
-from app.schemas.learned_path_replay import ReplayRequest, WaitResult
+from app.schemas.learned_path_replay import (
+    ExecutionEvidence,
+    ExecutionEvidenceTarget,
+    ReplayRequest,
+    WaitResult,
+)
 from app.schemas.page_analysis import PageAnalysis
 from app.services.learning.learned_path_replay import (
     SUPPORTED_ACTION_TYPES,
     _build_replay_actions,
+    capture_execution_evidence,
     run_drift_precheck,
     run_replay,
 )
@@ -62,6 +71,23 @@ def _make_page(selector_counts: dict[str, int] | None = None) -> MagicMock:
     return page
 
 
+def _make_text_page(selector_text: dict[str, str | Exception]) -> MagicMock:
+    def _locator(selector: str):
+        locator_mock = MagicMock()
+        value = selector_text.get(selector, "")
+        if isinstance(value, Exception):
+            locator_mock.inner_text.side_effect = value
+        else:
+            locator_mock.inner_text.return_value = value
+        locator_mock.count.return_value = 1
+        return locator_mock
+
+    page = MagicMock()
+    page.is_closed.return_value = False
+    page.locator.side_effect = _locator
+    return page
+
+
 # ── _build_replay_actions ────────────────────────────────────────────────────
 
 
@@ -90,6 +116,7 @@ def test_replay_request_slot_overrides_defaults_to_empty_dict() -> None:
     request = ReplayRequest(url="http://127.0.0.1:5175/users")
 
     assert request.slot_overrides == {}
+    assert request.evidence_targets == []
 
 
 def test_replay_request_accepts_slot_overrides() -> None:
@@ -99,6 +126,121 @@ def test_replay_request_accepts_slot_overrides() -> None:
     )
 
     assert request.slot_overrides == {"item_name": "测试项目B"}
+
+
+def test_replay_request_accepts_evidence_targets() -> None:
+    request = ReplayRequest(
+        url="http://127.0.0.1:5176/items",
+        evidence_targets=[
+            {
+                "kind": "dom_text_present",
+                "text": "测试项目B-001",
+                "source_slot": "item_name",
+                "selector": "[data-testid='item-list']",
+            }
+        ],
+    )
+
+    target = request.evidence_targets[0]
+    assert target.kind == "dom_text_present"
+    assert target.text == "测试项目B-001"
+    assert target.source_slot == "item_name"
+    assert target.selector == "[data-testid='item-list']"
+
+
+def test_replay_request_rejects_blank_evidence_target_text() -> None:
+    with pytest.raises(ValidationError):
+        ReplayRequest(
+            url="http://127.0.0.1:5176/items",
+            evidence_targets=[
+                {
+                    "kind": "dom_text_present",
+                    "text": "   ",
+                    "source_slot": "item_name",
+                    "selector": "[data-testid='item-list']",
+                }
+            ],
+        )
+
+
+def test_execution_evidence_rejects_invalid_confidence() -> None:
+    with pytest.raises(ValidationError):
+        ExecutionEvidence(
+            kind="dom_text_present",
+            target="测试项目B-001",
+            status="verified",
+            confidence=1.1,
+            summary="invalid",
+        )
+
+
+def test_capture_execution_evidence_finds_text_inside_selector() -> None:
+    target = ExecutionEvidenceTarget(
+        kind="dom_text_present",
+        text="测试项目B-001",
+        source_slot="item_name",
+        selector="[data-testid='item-list']",
+    )
+    page = _make_text_page(
+        {"[data-testid='item-list']": "测试项目A\n测试项目B-001"}
+    )
+
+    evidence = capture_execution_evidence(page, [target])
+
+    assert evidence[0].kind == "dom_text_present"
+    assert evidence[0].target == "测试项目B-001"
+    assert evidence[0].status == "verified"
+    assert evidence[0].confidence == 0.95
+
+
+def test_capture_execution_evidence_missing_text_inside_selector() -> None:
+    target = ExecutionEvidenceTarget(
+        kind="dom_text_present",
+        text="测试项目B-001",
+        source_slot="item_name",
+        selector="[data-testid='item-list']",
+    )
+    page = _make_text_page({"[data-testid='item-list']": "测试项目A"})
+
+    evidence = capture_execution_evidence(page, [target])
+
+    assert evidence[0].kind == "dom_text_present"
+    assert evidence[0].target == "测试项目B-001"
+    assert evidence[0].status == "missing"
+    assert evidence[0].confidence == 0.7
+
+
+def test_capture_execution_evidence_unknown_when_page_unavailable() -> None:
+    target = ExecutionEvidenceTarget(
+        kind="dom_text_present",
+        text="测试项目B-001",
+        source_slot="item_name",
+        selector="[data-testid='item-list']",
+    )
+
+    evidence = capture_execution_evidence(None, [target])
+
+    assert evidence[0].kind == "unknown"
+    assert evidence[0].target == "测试项目B-001"
+    assert evidence[0].status == "unknown"
+    assert evidence[0].confidence == 0.0
+
+
+def test_capture_execution_evidence_does_not_verify_blank_target_text() -> None:
+    target = ExecutionEvidenceTarget.model_construct(
+        kind="dom_text_present",
+        text="",
+        source_slot="item_name",
+        selector="body",
+    )
+    page = _make_text_page({"body": "any page text"})
+
+    evidence = capture_execution_evidence(page, [target])
+
+    assert evidence[0].kind == "unknown"
+    assert evidence[0].target == ""
+    assert evidence[0].status == "unknown"
+    assert evidence[0].confidence == 0.0
 
 
 def test_build_replay_actions_reads_value_slot() -> None:
@@ -483,6 +625,84 @@ def test_run_replay_applies_slot_override_to_execute_and_wait() -> None:
     assert step.value_slot == "item_name"
     assert step.override_applied is True
     assert step.effective_value == "测试项目B"
+
+
+def test_run_replay_captures_evidence_before_runtime_stop() -> None:
+    path = _make_learned_path(
+        dom_fingerprint=dom_fingerprint(
+            _make_page_analysis(url="http://127.0.0.1:5176/items")
+        ),
+        page_template="/items",
+        actions=[
+            {
+                "step": 0,
+                "action_type": "fill",
+                "target_selector": "#name",
+                "value": "测试项目A",
+            }
+        ],
+    )
+    call_order: list[str] = []
+
+    mock_locator = MagicMock()
+    mock_locator.count.return_value = 1
+
+    def inner_text(*, timeout: int) -> str:
+        call_order.append("capture")
+        assert timeout == 1000
+        return "测试项目A\n测试项目B"
+
+    mock_locator.inner_text.side_effect = inner_text
+
+    mock_page = MagicMock()
+    mock_page.locator.return_value = mock_locator
+    mock_page.is_closed.return_value = False
+
+    mock_runtime = MagicMock()
+    mock_runtime.page = mock_page
+    mock_runtime.start = MagicMock()
+    mock_runtime.navigate = MagicMock()
+    mock_runtime.stop.side_effect = lambda: call_order.append("stop")
+    mock_runtime.current_url.return_value = "http://127.0.0.1:5176/items"
+    mock_runtime.current_title.return_value = "项目列表"
+
+    def fake_execute(action, runtime):
+        return {
+            "step_index": action.step,
+            "action_type": action.action_type,
+            "target_selector": action.target_selector,
+            "ok": True,
+        }
+
+    with patch(
+        "app.services.learning.learned_path_replay.create_execution_runtime",
+        return_value=mock_runtime,
+    ):
+        with patch(
+            "app.services.learning.learned_path_replay.analyze_page",
+            return_value=_make_page_analysis(url="http://127.0.0.1:5176/items"),
+        ):
+            with patch(
+                "app.services.execution.action_executor.execute_action",
+                side_effect=fake_execute,
+            ):
+                result = run_replay(
+                    path,
+                    "http://127.0.0.1:5176/items",
+                    evidence_targets=[
+                        ExecutionEvidenceTarget(
+                            kind="dom_text_present",
+                            text="测试项目B",
+                            source_slot="item_name",
+                            selector="[data-testid='item-list']",
+                        )
+                    ],
+                )
+
+    assert result.status == "succeeded"
+    assert result.execution_evidence[0].target == "测试项目B"
+    assert result.execution_evidence[0].status == "verified"
+    assert call_order == ["capture", "stop"]
 
 
 def test_run_replay_fails_without_required_slot_override() -> None:

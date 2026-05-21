@@ -13,6 +13,8 @@ from playwright.sync_api import Page
 
 from app.models.learned_path import LearnedPath
 from app.schemas.learned_path_replay import (
+    ExecutionEvidence,
+    ExecutionEvidenceTarget,
     ReplayAction,
     ReplayDriftStatus,
     ReplayResult,
@@ -144,6 +146,79 @@ def _safe_effective_value(value_slot: str | None, value: str | None) -> str | No
     ):
         return "<redacted>"
     return value
+
+
+def capture_execution_evidence(
+    page: Page | None,
+    evidence_targets: list[ExecutionEvidenceTarget],
+) -> list[ExecutionEvidence]:
+    """Capture configured postcondition evidence from the current page.
+
+    Evidence collection is best effort: capture errors become ``unknown``
+    evidence and must not override the replay status.
+    """
+    return [
+        _capture_dom_text_present(page, target)
+        if target.kind == "dom_text_present"
+        else ExecutionEvidence(
+            kind="unknown",
+            target=target.text,
+            status="unknown",
+            confidence=0.0,
+            summary="操作执行后未能采集页面证据。",
+        )
+        for target in evidence_targets
+    ]
+
+
+def _capture_dom_text_present(
+    page: Page | None,
+    target: ExecutionEvidenceTarget,
+) -> ExecutionEvidence:
+    if not target.text.strip():
+        return ExecutionEvidence(
+            kind="unknown",
+            target=target.text,
+            status="unknown",
+            confidence=0.0,
+            summary="证据目标文本为空，未执行页面文本匹配。",
+        )
+    if page is None:
+        return _unknown_execution_evidence(target)
+    try:
+        if page.is_closed():
+            return _unknown_execution_evidence(target)
+        scope = page.locator(target.selector) if target.selector else page.locator("body")
+        text = scope.inner_text(timeout=1000)
+    except Exception:
+        return _unknown_execution_evidence(target)
+
+    if target.text in text:
+        return ExecutionEvidence(
+            kind="dom_text_present",
+            target=target.text,
+            status="verified",
+            confidence=0.95,
+            summary=f"列表中出现了名称为“{target.text}”的项目行。",
+        )
+
+    return ExecutionEvidence(
+        kind="dom_text_present",
+        target=target.text,
+        status="missing",
+        confidence=0.7,
+        summary=f"操作执行后，列表中没有确认看到“{target.text}”。",
+    )
+
+
+def _unknown_execution_evidence(target: ExecutionEvidenceTarget) -> ExecutionEvidence:
+    return ExecutionEvidence(
+        kind="unknown",
+        target=target.text,
+        status="unknown",
+        confidence=0.0,
+        summary="操作执行后未能采集页面证据。",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -295,6 +370,7 @@ def run_replay(
     *,
     headless: bool = True,
     slot_overrides: dict[str, str] | None = None,
+    evidence_targets: list[ExecutionEvidenceTarget] | None = None,
 ) -> ReplayResult:
     """Run a full LearnedPath replay against *url*.
 
@@ -306,6 +382,7 @@ def run_replay(
     from app.services.execution.action_executor import execute_action
 
     slot_overrides = slot_overrides or {}
+    evidence_targets = evidence_targets or []
 
     # ── Start runtime ──
     runtime = None
@@ -389,6 +466,10 @@ def run_replay(
                 learned_path_id=str(learned_path.id),
                 steps=[],
             )
+            execution_evidence = capture_execution_evidence(
+                runtime.page if runtime else None,
+                evidence_targets,
+            )
             return ReplayResult(
                 learned_path_id=str(learned_path.id),
                 source_run_id=learned_path.source_run_id,
@@ -402,6 +483,7 @@ def run_replay(
                 final_url=current_url,
                 final_title=analysis.title if analysis else None,
                 observation_summary=obs_summary,
+                execution_evidence=execution_evidence,
             )
 
         # ── Execute actions ──
@@ -491,6 +573,10 @@ def run_replay(
             learned_path_id=str(learned_path.id),
             steps=replay_steps,
         )
+        execution_evidence = capture_execution_evidence(
+            runtime.page if runtime else None,
+            evidence_targets,
+        )
 
         return ReplayResult(
             learned_path_id=str(learned_path.id),
@@ -505,6 +591,7 @@ def run_replay(
             final_url=final_url,
             final_title=final_title,
             observation_summary=obs_summary,
+            execution_evidence=execution_evidence,
         )
 
     finally:

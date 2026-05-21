@@ -51,7 +51,10 @@ class TaskResultReporter:
     ) -> TaskResultReport:
         """Derive verification outcome and build report."""
         outcome, needs_review = self._derive_outcome(
-            execution_status, replay_summary, confirmed_plan_context
+            execution_status,
+            execution_payload,
+            replay_summary,
+            confirmed_plan_context,
         )
         evidence_summary = self._build_evidence_summary(
             execution_status, execution_payload, replay_summary, confirmed_plan_context
@@ -70,7 +73,6 @@ class TaskResultReporter:
             learned_path_id = execution_payload.get("learned_path_id")
 
         # Structured replay / execution evidence for UI / downstream parsing.
-        # These fields are *not* used to change verification_outcome rules.
         replay_status: str | None = None
         drift_status: str | None = None
         final_url: str | None = None
@@ -84,6 +86,11 @@ class TaskResultReporter:
             error_summary = replay_summary.error or None
         if error_summary is None and execution_payload is not None:
             error_summary = execution_payload.get("error_summary") or None
+        execution_evidence = self._collect_postcondition_evidence(
+            execution_payload,
+            confirmed_plan_context,
+            replay_summary,
+        )
 
         event_payload: dict[str, Any] = {
             "learned_path_id": learned_path_id,
@@ -102,6 +109,7 @@ class TaskResultReporter:
             "error_summary": error_summary,
             "final_url": final_url,
             "final_title": final_title,
+            "execution_evidence": execution_evidence,
         }
 
         return TaskResultReport(
@@ -117,6 +125,7 @@ class TaskResultReporter:
     def _derive_outcome(
         self,
         execution_status: str,
+        execution_payload: dict[str, Any],
         replay_summary: ConversationReplaySummary | None,
         confirmed_plan_context: dict[str, Any] | None,
     ) -> tuple[str, bool]:
@@ -143,11 +152,13 @@ class TaskResultReporter:
             return "failed", False
 
         # Replay completed cleanly. Check for explicit postcondition evidence.
-        postcondition_met = self._check_postconditions(
-            replay_summary, confirmed_plan_context
+        postcondition_status = self._check_postconditions(
+            replay_summary, execution_payload, confirmed_plan_context
         )
-        if postcondition_met:
+        if postcondition_status == "verified":
             return "verified", False
+        if postcondition_status == "missing":
+            return "needs_review", True
 
         # Default: uncertain + needs_review
         return "uncertain", True
@@ -155,18 +166,125 @@ class TaskResultReporter:
     def _check_postconditions(
         self,
         replay_summary: ConversationReplaySummary,
+        execution_payload: dict[str, Any],
         confirmed_plan_context: dict[str, Any] | None,
-    ) -> bool:
+    ) -> str | None:
         """Check whether explicit postcondition evidence supports success.
 
         First version is conservative. It only checks structured signals
         already present in the execution payload or confirmed plan context.
         It does NOT read raw HTML, call LLM, or open the browser.
         """
-        # First version: no external postcondition source.
-        # If a future code path provides explicit postcondition signals,
-        # they can be evaluated here.
-        return False
+        evidence_items = self._collect_postcondition_evidence(
+            execution_payload,
+            confirmed_plan_context,
+            replay_summary,
+        )
+        expected_target = self._expected_item_target(
+            execution_payload,
+            confirmed_plan_context,
+        )
+        saw_matching_missing = False
+
+        for raw in evidence_items:
+            evidence = self._normalize_evidence(raw)
+            if evidence is None:
+                continue
+            if evidence.get("kind") != "dom_text_present":
+                continue
+            if expected_target is not None and evidence.get("target") != expected_target:
+                continue
+            status = evidence.get("status")
+            if status == "verified":
+                return "verified"
+            if status == "missing":
+                saw_matching_missing = True
+
+        if saw_matching_missing:
+            return "missing"
+        return None
+
+    def _collect_postcondition_evidence(
+        self,
+        execution_payload: dict[str, Any] | None,
+        confirmed_plan_context: dict[str, Any] | None,
+        replay_summary: ConversationReplaySummary | None,
+    ) -> list[dict[str, Any]]:
+        evidence_items: list[Any] = []
+        if confirmed_plan_context:
+            evidence_items.extend(
+                confirmed_plan_context.get("postcondition_evidence") or []
+            )
+            evidence_items.extend(
+                confirmed_plan_context.get("execution_evidence") or []
+            )
+        if execution_payload:
+            evidence_items.extend(execution_payload.get("execution_evidence") or [])
+            evidence_items.extend(
+                execution_payload.get("postcondition_evidence") or []
+            )
+        if replay_summary is not None:
+            evidence_items.extend(replay_summary.execution_evidence)
+
+        normalized: list[dict[str, Any]] = []
+        seen: set[tuple[Any, ...]] = set()
+        for raw in evidence_items:
+            evidence = self._normalize_evidence(raw)
+            if evidence is not None:
+                key = (
+                    evidence.get("kind"),
+                    evidence.get("target"),
+                    evidence.get("status"),
+                    evidence.get("summary"),
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                normalized.append(evidence)
+        return normalized
+
+    def _normalize_evidence(self, raw: Any) -> dict[str, Any] | None:
+        if raw is None:
+            return None
+        if hasattr(raw, "model_dump"):
+            raw = raw.model_dump(mode="json")
+        if not isinstance(raw, dict):
+            return None
+        kind = raw.get("kind")
+        status = raw.get("status")
+        confidence = raw.get("confidence", 0.0)
+        if kind not in {"dom_text_present", "unknown"}:
+            return None
+        if status not in {"verified", "missing", "unknown"}:
+            return None
+        try:
+            confidence_value = float(confidence)
+        except (TypeError, ValueError):
+            return None
+        if confidence_value < 0.0 or confidence_value > 1.0:
+            return None
+        return {
+            "kind": kind,
+            "target": raw.get("target"),
+            "status": status,
+            "confidence": confidence_value,
+            "summary": str(raw.get("summary") or ""),
+        }
+
+    def _expected_item_target(
+        self,
+        execution_payload: dict[str, Any] | None,
+        confirmed_plan_context: dict[str, Any] | None,
+    ) -> str | None:
+        for payload in (confirmed_plan_context, execution_payload):
+            if not payload:
+                continue
+            slot_overrides = payload.get("slot_overrides") or {}
+            if isinstance(slot_overrides, dict):
+                item_name = slot_overrides.get("item_name")
+                if isinstance(item_name, str) and item_name:
+                    return item_name
+        return None
 
     def _build_evidence_summary(
         self,
@@ -217,6 +335,12 @@ class TaskResultReporter:
         """Summarize what evidence was missing."""
         if outcome == "verified":
             return ""
+
+        if outcome == "needs_review":
+            return (
+                "Postcondition evidence was collected, but the expected "
+                "target text was missing."
+            )
 
         if execution_status == "blocked":
             return "Execution did not run; no verification evidence could be collected."

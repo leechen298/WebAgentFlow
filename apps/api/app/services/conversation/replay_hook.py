@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.models.learned_path import TrustStatus
 from app.repos.learned_paths_repo import LearnedPathRepository
 from app.schemas.conversation import ConversationReplaySummary
+from app.schemas.learned_path_replay import ExecutionEvidenceTarget
 from app.services.learning.learned_path_replay import run_replay
 
 
@@ -26,6 +27,7 @@ class ReplayHandler(Protocol):
         *,
         headless: bool = True,
         slot_overrides: dict[str, str] | None = None,
+        evidence_targets: list[ExecutionEvidenceTarget] | None = None,
     ) -> ConversationReplaySummary:
         ...
 
@@ -37,6 +39,7 @@ def run_explicit_replay(
     *,
     headless: bool = True,
     slot_overrides: dict[str, str] | None = None,
+    evidence_targets: list[ExecutionEvidenceTarget] | None = None,
 ) -> ConversationReplaySummary:
     """Look up a LearnedPath and run M10 replay against *url*.
 
@@ -68,6 +71,7 @@ def run_explicit_replay(
         url,
         headless=headless,
         slot_overrides=slot_overrides,
+        evidence_targets=evidence_targets,
     )
 
     return ConversationReplaySummary(
@@ -81,4 +85,5 @@ def run_explicit_replay(
         final_title=result.final_title,
         step_count=len(result.steps),
         error=None,
+        execution_evidence=result.execution_evidence,
     )

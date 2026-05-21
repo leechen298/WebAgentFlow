@@ -9,7 +9,40 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Execution evidence (M11.3.5.5)
+# ──────────────────────────────────────────────────────────────────────────────
+
+ExecutionEvidenceKind = Literal["dom_text_present", "unknown"]
+ExecutionEvidenceStatus = Literal["verified", "missing", "unknown"]
+
+
+class ExecutionEvidenceTarget(BaseModel):
+    """Replay-time postcondition evidence target."""
+
+    kind: Literal["dom_text_present"]
+    text: str = Field(min_length=1)
+    source_slot: str | None = None
+    selector: str | None = None
+
+    @field_validator("text")
+    @classmethod
+    def text_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("text must not be blank")
+        return value
+
+
+class ExecutionEvidence(BaseModel):
+    """Structured page evidence captured after replay actions finish."""
+
+    kind: ExecutionEvidenceKind
+    target: str | None = None
+    status: ExecutionEvidenceStatus
+    confidence: float = Field(ge=0.0, le=1.0)
+    summary: str
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Request
@@ -21,6 +54,7 @@ class ReplayRequest(BaseModel):
 
     url: str
     slot_overrides: dict[str, str] = Field(default_factory=dict)
+    evidence_targets: list[ExecutionEvidenceTarget] = Field(default_factory=list)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -229,3 +263,4 @@ class ReplayResult(BaseModel):
     final_url: str | None = None
     final_title: str | None = None
     observation_summary: ReplayObservationSummary | None = None
+    execution_evidence: list[ExecutionEvidence] = Field(default_factory=list)

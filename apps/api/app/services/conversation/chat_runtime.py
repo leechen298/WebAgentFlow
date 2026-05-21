@@ -28,6 +28,7 @@ from app.schemas.conversation_router import (
     RouteDecision,
     RouteDecisionKind,
 )
+from app.schemas.learned_path_replay import ExecutionEvidenceTarget
 from app.services.conversation.context import (
     ConversationContextCollector,
     PendingTarget,
@@ -102,6 +103,89 @@ class IntakeTraceContext:
 def _chat_headless(session: Any) -> bool:
     metadata = session.metadata_json or {}
     return metadata.get("browser_visibility") == "headless"
+
+
+def _is_items_target(action: dict[str, Any]) -> bool:
+    if action.get("page_template") == "/items":
+        return True
+    target_url = action.get("target_url") or ""
+    return urlparse(target_url).path.rstrip("/") == "/items"
+
+
+def _build_execution_evidence_targets(
+    action: dict[str, Any],
+    slot_overrides: dict[str, str],
+) -> list[ExecutionEvidenceTarget]:
+    item_name = slot_overrides.get("item_name")
+    if not item_name or not _is_items_target(action):
+        return []
+    return [
+        ExecutionEvidenceTarget(
+            kind="dom_text_present",
+            text=item_name,
+            source_slot="item_name",
+            selector="[data-testid='item-list']",
+        )
+    ]
+
+
+def _execution_evidence_dicts(
+    replay_summary: ConversationReplaySummary,
+) -> list[dict[str, Any]]:
+    return [
+        item.model_dump(mode="json")
+        if hasattr(item, "model_dump")
+        else dict(item)
+        for item in replay_summary.execution_evidence
+        if item is not None
+    ]
+
+
+def _build_replay_reporter_context(
+    *,
+    action: dict[str, Any],
+    slot_overrides: dict[str, str],
+    replay_summary: ConversationReplaySummary,
+) -> tuple[str, dict[str, Any], dict[str, Any]]:
+    evidence = _execution_evidence_dicts(replay_summary)
+    execution_payload = {
+        "learned_path_id": replay_summary.learned_path_id,
+        "target_url": action["target_url"],
+        "alias": action.get("alias", ""),
+        "slot_overrides": slot_overrides,
+        "execution_evidence": evidence,
+    }
+    confirmed_plan_context = {
+        "learned_path_id": replay_summary.learned_path_id,
+        "target_url": action["target_url"],
+        "slot_overrides": slot_overrides,
+        "postcondition_evidence": evidence,
+    }
+    return "completed", execution_payload, confirmed_plan_context
+
+
+def _chat_report_user_response(report: Any, slot_overrides: dict[str, str]) -> str:
+    item_name = slot_overrides.get("item_name", "")
+    if report.outcome == "verified" and item_name:
+        return f"执行完成。我在列表中看到了“{item_name}”，所以可以确认新增项目成功。"
+    if report.outcome == "uncertain" and item_name:
+        return (
+            "操作已经执行，但我还没有拿到足够页面证据确认结果。"
+            f"建议你查看列表是否出现了“{item_name}”。"
+        )
+    if report.outcome == "needs_review" and item_name:
+        return (
+            f"操作执行后，我没有在列表中确认看到“{item_name}”。"
+            "可能页面更新较慢，也可能操作没有成功。"
+        )
+    if report.outcome == "blocked":
+        return (
+            "我找到了已学习路径，但当前页面和学习时的页面不匹配，"
+            "所以没有继续执行。请确认是否打开了正确的页面。"
+        )
+    if report.outcome == "failed":
+        return "执行过程中遇到问题，这次没有完成新增项目。"
+    return report.user_response
 
 
 def parse_chat_intent(raw_input: str) -> ChatIntent:
@@ -1158,19 +1242,53 @@ class InteractiveChatRuntime:
         replay_kwargs: dict[str, Any] = {"headless": headless}
         if slot_overrides:
             replay_kwargs["slot_overrides"] = slot_overrides
+        evidence_targets = _build_execution_evidence_targets(action, slot_overrides)
+        if evidence_targets:
+            replay_kwargs["evidence_targets"] = evidence_targets
         replay_summary = self._replay_handler(
             action["learned_path_id"],
             action["target_url"],
             **replay_kwargs,
         )
         alias = action.get("alias", "")
-        if replay_summary.replay_status in ("succeeded", "observed"):
-            final_message = f"{alias}完成。" if alias else "执行完成。"
+        report = None
+        if evidence_targets:
+            from app.services.task_planning.result_reporter import TaskResultReporter
+
+            (
+                report_execution_status,
+                report_execution_payload,
+                report_confirmed_context,
+            ) = _build_replay_reporter_context(
+                action=action,
+                slot_overrides=slot_overrides,
+                replay_summary=replay_summary,
+            )
+            report = TaskResultReporter().build_report(
+                execution_status=report_execution_status,
+                execution_payload=report_execution_payload,
+                replay_summary=replay_summary,
+                confirmed_plan_context=report_confirmed_context,
+            )
+        report_blocks_completion = (
+            report is not None and report.outcome in {"failed", "blocked"}
+        )
+        if (
+            replay_summary.replay_status in ("succeeded", "observed")
+            and not report_blocks_completion
+        ):
+            if report is not None:
+                final_message = _chat_report_user_response(report, slot_overrides)
+            else:
+                final_message = f"{alias}完成。" if alias else "执行完成。"
             event_type = ConversationEventType.CHAT_EXECUTION_COMPLETED
             error = None
             allowed = True
         else:
-            final_message = "执行失败。"
+            if report is not None:
+                final_message = _chat_report_user_response(report, slot_overrides)
+            else:
+                final_message = "执行失败。"
             event_type = ConversationEventType.CHAT_EXECUTION_FAILED
             error = replay_summary.error or replay_summary.replay_status
             allowed = False
@@ -1183,6 +1301,7 @@ class InteractiveChatRuntime:
                 "learned_path_id": action["learned_path_id"],
                 "replay_status": replay_summary.replay_status,
                 "drift_status": replay_summary.drift_status,
+                "verification_outcome": report.outcome if report else None,
             },
         )
 
@@ -1198,6 +1317,13 @@ class InteractiveChatRuntime:
             },
             events,
         )
+        if report is not None:
+            self._append_event(
+                session_id,
+                ConversationEventType.TASK_RESULT_REPORTED,
+                report.event_payload,
+                events,
+            )
         return self._result(
             session_id=session_id,
             command_kind="execute_task",

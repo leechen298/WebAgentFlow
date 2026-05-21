@@ -6,7 +6,7 @@ Store-level conversation facade plus the 11.0.6 dispatch endpoint.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -263,6 +263,7 @@ def dispatch_input(
         *,
         headless: bool = True,
         slot_overrides: dict[str, str] | None = None,
+        evidence_targets: list[Any] | None = None,
     ):
         return run_explicit_replay(
             db,
@@ -270,6 +271,7 @@ def dispatch_input(
             url,
             headless=headless,
             slot_overrides=slot_overrides,
+            evidence_targets=evidence_targets,
         )
 
     def learning_handler(

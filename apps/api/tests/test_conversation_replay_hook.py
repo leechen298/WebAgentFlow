@@ -16,6 +16,7 @@ from app.schemas.conversation import (
     ConversationEventType,
     ConversationReplaySummary,
 )
+from app.schemas.learned_path_replay import ExecutionEvidence, ExecutionEvidenceTarget
 from app.services.conversation.orchestrator import ConversationOrchestrator
 from app.services.conversation.replay_hook import run_explicit_replay
 
@@ -532,3 +533,99 @@ def test_run_explicit_replay_passes_slot_overrides(
     assert mock_run_replay.call_args.kwargs["slot_overrides"] == {
         "item_name": "测试项目B"
     }
+
+
+def test_run_explicit_replay_passes_evidence_targets(
+    db_session: Session,
+) -> None:
+    from unittest.mock import MagicMock, patch
+
+    row, _ = LearnedPathRepository(db_session).ingest_run(
+        page_template="/items",
+        query_signature={},
+        dom_fingerprint="c" * 64,
+        scenario="product_level",
+        actions=[],
+        source_run_id=None,
+    )
+    LearnedPathRepository(db_session).set_trust(
+        row.id, TrustStatus.CONFIRMED, reason="test"
+    )
+    target = ExecutionEvidenceTarget(
+        kind="dom_text_present",
+        text="测试项目B-001",
+        source_slot="item_name",
+        selector="[data-testid='item-list']",
+    )
+
+    with patch(
+        "app.services.conversation.replay_hook.run_replay"
+    ) as mock_run_replay:
+        mock_run_replay.return_value = MagicMock(
+            learned_path_id=str(row.id),
+            status="succeeded",
+            drift_status="none",
+            drift_reasons=[],
+            warnings=[],
+            final_url="http://127.0.0.1:5176/items",
+            final_title="Items",
+            steps=[],
+            execution_evidence=[],
+        )
+        run_explicit_replay(
+            db_session,
+            str(row.id),
+            "http://127.0.0.1:5176/items",
+            evidence_targets=[target],
+        )
+
+    assert mock_run_replay.call_args.kwargs["evidence_targets"] == [target]
+
+
+def test_run_explicit_replay_summary_contains_execution_evidence(
+    db_session: Session,
+) -> None:
+    from unittest.mock import MagicMock, patch
+
+    row, _ = LearnedPathRepository(db_session).ingest_run(
+        page_template="/items",
+        query_signature={},
+        dom_fingerprint="d" * 64,
+        scenario="product_level",
+        actions=[],
+        source_run_id=None,
+    )
+    LearnedPathRepository(db_session).set_trust(
+        row.id, TrustStatus.CONFIRMED, reason="test"
+    )
+    evidence = [
+        ExecutionEvidence(
+            kind="dom_text_present",
+            target="测试项目B-001",
+            status="verified",
+            confidence=0.95,
+            summary="列表中出现了名称为“测试项目B-001”的项目行。",
+        )
+    ]
+
+    with patch(
+        "app.services.conversation.replay_hook.run_replay"
+    ) as mock_run_replay:
+        mock_run_replay.return_value = MagicMock(
+            learned_path_id=str(row.id),
+            status="succeeded",
+            drift_status="none",
+            drift_reasons=[],
+            warnings=[],
+            final_url="http://127.0.0.1:5176/items",
+            final_title="Items",
+            steps=[],
+            execution_evidence=evidence,
+        )
+        summary = run_explicit_replay(
+            db_session,
+            str(row.id),
+            "http://127.0.0.1:5176/items",
+        )
+
+    assert summary.execution_evidence == evidence
