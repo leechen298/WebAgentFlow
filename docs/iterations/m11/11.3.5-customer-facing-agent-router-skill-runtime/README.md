@@ -126,7 +126,7 @@ Application Skill Registry，并把工作 Agent 的职责边界写清楚。
 |---|---|---|
 | 11.3.5.2 | 文档同步 + working runtime 总设计 + task state reducer / learning preconditions | 是 |
 | [11.3.5.3](../11.3.5.3-product-test-site-items-fixture/) | `apps/product-test-site` 新增 `/items` 列表测试页 | 是 |
-| 11.3.5.4 | `item_name` slot + `value_slot` / `slot_overrides` 参数化 learning / replay | 是 |
+| [11.3.5.4](../11.3.5.4-parameterized-learning-replay-slots/) | `item_name` slot + `value_slot` / `slot_overrides` 参数化 learning / replay | draft_docs |
 | 11.3.5.5 | ExecutionEvidence + TaskResultReporter adapter，runtime stop 前采集 DOM evidence | 是 |
 | 11.3.5.6 | `wagent chat` `/items` 学习 / 执行闭环测试方案与结果记录 | 是 |
 | 11.3.5.7 | `pending_choice` + 最小 `active_task` ledger | 后续 |
