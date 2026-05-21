@@ -1,6 +1,6 @@
 # 实施计划（Plan）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 前置检查
 
@@ -129,4 +129,3 @@ uv run ruff check apps/api/app apps/api/tests
 - 不接 TaskPathPlanner。
 - 不做 `pending_choice` / `active_task`。
 - 不做 failure recovery 菜单。
-

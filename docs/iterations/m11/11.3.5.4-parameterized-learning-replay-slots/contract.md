@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 概念 / 边界契约
 
@@ -221,4 +221,3 @@ P0 必须打通完整传播链：
 ## 未决问题
 
 - `value_slot` 写回 existing dedup LearnedPath 的具体方式由实现阶段按现有 repository 边界确定；原则是只做 metadata-only merge，不覆盖用户已有 path 行为。
-

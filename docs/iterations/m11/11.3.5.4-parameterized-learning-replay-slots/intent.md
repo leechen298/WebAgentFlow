@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 背景
 
@@ -86,4 +86,3 @@
 
 本包完成时，只能声称参数化 replay 机制通过。不能声称 `/items` 闭环已经完成，因为
 ExecutionEvidence、Reporter adapter 和完整闭环记录属于 11.3.5.5 / 11.3.5.6。
-

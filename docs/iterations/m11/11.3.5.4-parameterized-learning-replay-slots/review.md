@@ -1,19 +1,20 @@
 # 复盘 / 评审（Review）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 2026-05-21 设计文档生成
 
 - Reviewer：N/A（待用户 / 后续 Codex 审核）
-- Decision：pending
+- Decision：completed
 - Notes：本轮仅新增 11.3.5.4 七件套文档和索引链接，未写实现代码。
 
-## 设计评审（Design Review）
+## 2026-05-21 设计评审（Design Review）
 
-- Reviewer：pending
-- Decision：pending
-- Notes：实现前必须确认 `item_name`、`value_slot`、`slot_overrides`、effective action
-  和 replay propagation contract。
+- Reviewer：ChatGPT
+- Decision：approved
+- Notes：11.3.5.4 scope、contract、slot override propagation path、effective action
+  要求和 targeted test plan 对齐。可以进入实现阶段。实现时必须证明 replay 实际填入
+  `测试项目B`，不能只证明 schema 或 runtime 知道 B。
 
 ## 代码评审（Code Review）
 
@@ -70,7 +71,7 @@ execution。
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
 |---|---|---|---|---|---|---|
 | `find docs/iterations/m11/11.3.5.4-parameterized-learning-replay-slots -maxdepth 1 -type f \| sort` | 七件套存在 | `README.md`、`intent.md`、`contract.md`、`technical-design.md`、`test-plan.md`、`plan.md`、`review.md` 均存在 | 0 | Pass | command output | 文档生成阶段检查 |
-| `rg -n "11\\.3\\.5\\.4\|parameterized-learning-replay-slots\|draft_docs" ...` | M11 索引和父包计划指向新目录 | `docs/iterations/m11/README.md`、`m11-plan.md`、父包 README 和 iteration plan 均已链接新目录 | 0 | Pass | command output | 文档生成阶段检查 |
+| `rg -n "11\\.3\\.5\\.4\|parameterized-learning-replay-slots\|ready_for_implementation" ...` | M11 索引和父包计划指向新目录，状态已切到可开发 | `docs/iterations/m11/README.md`、`m11-plan.md`、父包 README 和 11.3.5.4 文档均显示 `ready_for_implementation` | 0 | Pass | command output | 设计评审通过后状态收口检查 |
 | `rg -n "TBD\|TODO\|fill in\|implement later" docs/iterations/m11/11.3.5.4-parameterized-learning-replay-slots --glob '!review.md'` | 无模板残留 | 无匹配 | 1 | Pass | command output | `rg` exit 1 表示无匹配 |
 | `git diff --check` | no whitespace errors | clean | 0 | Pass | command output | 文档生成阶段检查 |
 
@@ -86,5 +87,4 @@ execution。
 
 ### 后续事项（Follow-ups）
 
-- 用户 / reviewer 审核通过后，把本包状态切为 `ready_for_implementation`。
 - 实现阶段按 `plan.md` 施工，并把真实验证证据写入本文件。

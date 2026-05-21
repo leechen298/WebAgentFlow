@@ -1,6 +1,6 @@
 # 11.3.5.4 · Parameterized Learning / Replay Slots
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -50,7 +50,7 @@ Intake item_name
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
@@ -60,7 +60,7 @@ Intake item_name
 
 ## 当前状态
 
-文档包已新增，当前等待评审。实现前必须先确认：
+文档包已通过设计评审，当前可以进入实现阶段。实现必须先确认：
 
 - `item_name` 是本包唯一 P0 canonical business slot。
 - `value_slot` 写入 LearnedPath actions JSON，不新增 DB column。
@@ -81,4 +81,3 @@ plan.md
 ```
 
 实现完成后，把实际变更、命令输出、pass / fail 结果和未运行项写入 `review.md`。
-

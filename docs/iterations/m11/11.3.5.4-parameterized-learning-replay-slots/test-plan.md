@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 测试边界
 
@@ -162,4 +162,3 @@ uv run ruff check apps/api/app apps/api/tests
 - path 无 `value_slot=item_name` 时仍执行固定值 replay。
 - 把 internal adapter 暴露成 Router 可推荐 skill。
 - 把 DOM evidence / Reporter 结果误写成本包通过证据。
-

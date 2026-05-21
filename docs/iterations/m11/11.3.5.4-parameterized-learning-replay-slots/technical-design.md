@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 现状
 
@@ -318,4 +318,3 @@ class ReplayHandler(Protocol):
 | 把 internal adapter 暴露给 Router | 文档明确 adapter 不是 Application Skill |
 | 旧 LearnedPath 被误改 | 只允许 metadata-only merge，不覆盖原 action 行为 |
 | 敏感值进日志 | P0 只允许非敏感 `item_name` 明文，future credential slot 必须 redacted |
-
