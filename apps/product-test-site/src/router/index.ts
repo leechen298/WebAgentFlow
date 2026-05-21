@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import WorkspaceLoginPage from '../pages/WorkspaceLoginPage.vue';
 import WorkspaceHomePage from '../pages/WorkspaceHomePage.vue';
+import ItemsPage from '../pages/ItemsPage.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,6 +19,11 @@ const router = createRouter({
       path: '/workspace-home',
       name: 'workspace-home',
       component: WorkspaceHomePage,
+    },
+    {
+      path: '/items',
+      name: 'items',
+      component: ItemsPage,
     },
   ],
 });

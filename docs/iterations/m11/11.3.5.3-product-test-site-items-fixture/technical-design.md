@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：draft_docs
+状态：implementation complete
 
 ## 现状
 

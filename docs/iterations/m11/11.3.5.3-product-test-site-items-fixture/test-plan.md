@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：draft_docs
+状态：implementation complete
 
 ## 适用条件
 

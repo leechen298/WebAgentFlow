@@ -1,6 +1,6 @@
 # 11.3.5.3 · Product Test Site `/items` Fixture
 
-状态：draft_docs（待评审，未开始实现）
+状态：implementation complete（product-test-site build passed，`/items` smoke passed）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -38,24 +38,40 @@
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
 - [x] `review.md` 已记录文档阶段边界和实现前检查项。
-- [ ] 实现阶段已完成。
-- [ ] `/items` 页面 build / smoke evidence 已记录到 `review.md`。
+- [x] 实现阶段已完成。
+- [x] `/items` 页面 build / smoke evidence 已记录到 `review.md`。
 
 ## 当前状态
 
-文档包已生成，等待评审后进入实现。实现时只允许触及 product-test-site 页面基座：
+文档包已通过开发前评审，`/items` 页面基座已完成实现。实现阶段只触及
+product-test-site 页面基座：
 
 ```text
 apps/product-test-site/src/pages/ItemsPage.vue
 apps/product-test-site/src/router/index.ts
 ```
 
-如确实需要补少量 product-test-site 专属测试文件，也必须保持在本包范围内。
+本包未新增 product-test-site 专属测试文件；验证证据见 `review.md`。
 
 本包验收完成后，11.3.5.4 才能基于 `/items` 场景实现 `item_name` slot、
 `value_slot` 和 `slot_overrides`。
+
+## 开发入口
+
+实现前先读：
+
+```text
+intent.md
+contract.md
+technical-design.md
+test-plan.md
+plan.md
+```
+
+实现证据已写入 `review.md`，包括 build、`/items` smoke、旧 route regression
+和未运行项。

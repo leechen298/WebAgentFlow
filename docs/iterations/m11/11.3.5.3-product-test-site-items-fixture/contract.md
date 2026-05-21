@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：draft_docs
+状态：implementation complete
 
 ## 范围
 
