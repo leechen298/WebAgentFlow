@@ -22,8 +22,10 @@ from app.schemas.conversation_entry_gate import (
     ConversationEntryGateResult,
 )
 from app.schemas.conversation_intake import (
+    ConversationIntakeAction,
     ConversationIntakeResult,
     ConversationIntakeSlot,
+    ConversationIntakeTarget,
 )
 from app.schemas.conversation_router import (
     ApplicationSkillName,
@@ -65,6 +67,7 @@ _AMBIGUOUS_TARGET_RESPONSE = "这个操作在多个站点学过，请带上要�
 _VALUE_PATTERN = r"([^\s，。,.；;!！?？]+)"
 _PENDING_SENSITIVE_VALUES: dict[str, dict[str, str]] = {}
 _CHOICE_IDS = ("A", "B", "C", "D")
+_RECOVERY_SIDE_EFFECT_CLASSES = {"evidence_missing", "needs_review", "uncertain"}
 
 
 def clear_pending_sensitive_values(session_id: str) -> None:
@@ -196,6 +199,60 @@ def _chat_report_user_response(report: Any, slot_overrides: dict[str, str]) -> s
     if report.outcome == "failed":
         return "执行过程中遇到问题，这次没有完成新增项目。"
     return report.user_response
+
+
+def _basic_failure_class(
+    replay_summary: ConversationReplaySummary,
+    report: Any | None,
+) -> str | None:
+    drift_status = replay_summary.drift_status or "none"
+    if drift_status != "none":
+        return "blocked"
+    if replay_summary.replay_status not in {"succeeded", "observed"}:
+        return "replay_failed"
+    if report is None:
+        return None
+    if report.outcome == "verified":
+        return None
+    if report.outcome == "blocked":
+        return "blocked"
+    if report.outcome == "failed":
+        return "replay_failed"
+    if report.outcome == "needs_review":
+        return "needs_review"
+    if report.outcome == "uncertain":
+        return (
+            "evidence_missing"
+            if not _execution_evidence_dicts(replay_summary)
+            else "uncertain"
+        )
+    return "uncertain"
+
+
+def _recovery_failure_message(
+    *,
+    failure_class: str,
+    report: Any | None,
+    slot_overrides: dict[str, str],
+) -> str:
+    item_name = slot_overrides.get("item_name", "")
+    if failure_class == "replay_failed":
+        return "执行失败：这次操作没有完成。"
+    if failure_class == "blocked":
+        return (
+            "我找到了已学习路径，但当前页面和学习时的页面不匹配，"
+            "所以没有继续确认执行结果。"
+        )
+    if failure_class == "evidence_missing":
+        if item_name:
+            return (
+                "操作已经执行，但我还没有拿到足够页面证据确认结果。"
+                f"我没有在列表中确认看到“{item_name}”。"
+            )
+        return "操作已经执行，但我还没有拿到足够页面证据确认结果。"
+    if report is not None:
+        return _chat_report_user_response(report, slot_overrides)
+    return "操作结果不确定，我还不能确认目标是否完成。"
 
 
 def parse_chat_intent(raw_input: str) -> ChatIntent:
@@ -531,6 +588,27 @@ class InteractiveChatRuntime:
                 previous_status=previous_status,
             )
         if selected.get("kind") == "cancel":
+            self._append_event(
+                session_id,
+                ConversationEventType.CHAT_PROGRESS_RECORDED,
+                {
+                    "progress_kind": "failure_recovery_selected",
+                    "selected_choice_id": choice_id,
+                    "recovery_kind": "cancel",
+                    "failure_class": selected.get("failure_reason"),
+                },
+                events,
+            )
+            self._append_event(
+                session_id,
+                ConversationEventType.CHAT_PROGRESS_RECORDED,
+                {
+                    "progress_kind": "failure_recovery_cancelled",
+                    "recovery_kind": "cancel",
+                    "failure_class": selected.get("failure_reason"),
+                },
+                events,
+            )
             return self._handle_runtime_cancel(
                 session_id=session_id,
                 raw_input=raw_input,
@@ -538,6 +616,25 @@ class InteractiveChatRuntime:
                 metadata=metadata,
                 previous_status=previous_status,
                 existing_events=events,
+            )
+        if selected.get("kind") == "retry_replay":
+            return self._handle_recovery_retry_selection(
+                session_id=session_id,
+                selected=selected,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+                headless=headless,
+            )
+        if selected.get("kind") == "relearn_operation":
+            return self._handle_recovery_relearn_selection(
+                session_id=session_id,
+                selected=selected,
+                events=events,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+                headless=headless,
             )
         if selected.get("kind") != "learned_action":
             return self._handle_choice_unavailable(
@@ -569,6 +666,165 @@ class InteractiveChatRuntime:
             previous_status=previous_status,
             headless=headless,
             command_kind="execute_task",
+        )
+
+    def _handle_recovery_relearn_selection(
+        self,
+        *,
+        session_id: str,
+        selected: dict[str, Any],
+        events: list[str],
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        previous_status: str,
+        headless: bool,
+    ) -> DispatchResult:
+        target_url = str(selected.get("target_url") or "").strip()
+        action_alias = str(selected.get("action_alias") or "").strip()
+        failure_class = selected.get("failure_reason")
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "failure_recovery_selected",
+                "selected_choice_id": "B",
+                "recovery_kind": "relearn_operation",
+                "failure_class": failure_class,
+                "action_alias": action_alias or None,
+            },
+            events,
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "failure_recovery_relearn_started",
+                "recovery_kind": "relearn_operation",
+                "failure_class": failure_class,
+                "action_alias": action_alias or None,
+            },
+            events,
+        )
+        if not target_url or not action_alias:
+            if target_url:
+                self._save_pending_target(session_id, make_pending_target(target_url))
+            self._set_active_task(
+                session_id,
+                kind="clarify",
+                owner="runtime",
+                status="waiting_for_user_input",
+                target_url=target_url or None,
+                goal=action_alias or None,
+            )
+            response = "我还需要确认要重新学习的页面和操作。"
+            self._append_agent_message(session_id, response)
+            self._append_event(
+                session_id,
+                ConversationEventType.CHAT_NO_PATH,
+                {"reason": "failure_recovery_relearn_missing_info"},
+                events,
+            )
+            return self._result(
+                session_id=session_id,
+                command_kind="learn_page",
+                user_response=response,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+            )
+
+        fill_values = _fill_values_from_recovery_choice(selected)
+        intake = ConversationIntakeResult(
+            intent="learn_operation",
+            target=ConversationIntakeTarget(url=target_url),
+            action=ConversationIntakeAction(
+                goal=action_alias,
+                canonical_goal=action_alias,
+                aliases=[action_alias],
+            ),
+            slots=[
+                ConversationIntakeSlot(
+                    name=key,
+                    semantic_type=key,
+                    value=value,
+                )
+                for key, value in fill_values.items()
+            ],
+            confidence=1.0,
+        )
+        return self._handle_learn_page(
+            session_id=session_id,
+            intent=ChatIntent(
+                kind="learn_page",
+                raw_text=f"重新学习{action_alias}",
+                url=target_url,
+            ),
+            intake=intake,
+            message_id=message_id,
+            metadata=metadata,
+            previous_status=previous_status,
+            headless=headless,
+        )
+
+    def _handle_recovery_retry_selection(
+        self,
+        *,
+        session_id: str,
+        selected: dict[str, Any],
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+        headless: bool,
+    ) -> DispatchResult:
+        action = self._learned_action_by_path_id(
+            session_id,
+            str(selected.get("learned_path_id") or ""),
+        )
+        if action is None:
+            return self._handle_choice_unavailable(
+                session_id=session_id,
+                reason="failure_recovery_retry_unavailable",
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+            )
+        retry_count = int(selected.get("retry_count") or 0) + 1
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "failure_recovery_selected",
+                "selected_choice_id": "A",
+                "recovery_kind": "retry_replay",
+                "failure_class": selected.get("failure_reason"),
+                "retry_count": retry_count,
+                "action_alias": action.get("alias"),
+            },
+            events,
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "failure_recovery_retry_started",
+                "recovery_kind": "retry_replay",
+                "failure_class": selected.get("failure_reason"),
+                "retry_count": retry_count,
+                "action_alias": action.get("alias"),
+            },
+            events,
+        )
+        return self._execute_matched_action(
+            session_id=session_id,
+            action=action,
+            intake=None,
+            slot_overrides_override=_slot_overrides_from_choice_selection(selected),
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+            headless=headless,
+            command_kind="execute_task",
+            retry_count_override=retry_count,
         )
 
     def _handle_pending_choice_miss(
@@ -1520,6 +1776,7 @@ class InteractiveChatRuntime:
         previous_status: str,
         headless: bool,
         command_kind: str,
+        retry_count_override: int | None = None,
     ) -> DispatchResult:
         if self._replay_handler is None:
             response = "执行失败：replay handler 未配置。"
@@ -1637,13 +1894,8 @@ class InteractiveChatRuntime:
                 replay_summary=replay_summary,
                 confirmed_plan_context=report_confirmed_context,
             )
-        report_blocks_completion = (
-            report is not None and report.outcome in {"failed", "blocked"}
-        )
-        if (
-            replay_summary.replay_status in ("succeeded", "observed")
-            and not report_blocks_completion
-        ):
+        failure_class = _basic_failure_class(replay_summary, report)
+        if failure_class is None:
             if report is not None:
                 final_message = _chat_report_user_response(report, slot_overrides)
             else:
@@ -1652,16 +1904,51 @@ class InteractiveChatRuntime:
             error = None
             allowed = True
             self._clear_active_task(session_id)
-        else:
-            if report is not None:
-                final_message = _chat_report_user_response(report, slot_overrides)
-            else:
-                final_message = "执行失败。"
-            event_type = ConversationEventType.CHAT_EXECUTION_FAILED
-            error = replay_summary.error or replay_summary.replay_status
-            allowed = False
-            self._update_active_task(session_id, status="failed")
+            self._record_skill_call(
+                session_id,
+                ApplicationSkillName.START_REPLAY,
+                status="completed",
+                output_summary={
+                    "learned_path_id": action["learned_path_id"],
+                    "replay_status": replay_summary.replay_status,
+                    "drift_status": replay_summary.drift_status,
+                    "verification_outcome": report.outcome if report else None,
+                },
+            )
 
+            self._append_agent_message(session_id, final_message)
+            self._append_event(
+                session_id,
+                event_type,
+                {
+                    "learned_path_id": action["learned_path_id"],
+                    "target_url": action["target_url"],
+                    "alias": action["alias"],
+                    "replay": replay_summary.model_dump(mode="json"),
+                },
+                events,
+            )
+            if report is not None:
+                self._append_event(
+                    session_id,
+                    ConversationEventType.TASK_RESULT_REPORTED,
+                    report.event_payload,
+                    events,
+                )
+            return self._result(
+                session_id=session_id,
+                command_kind=command_kind,
+                user_response="执行中。\n" + final_message,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+                allowed=allowed,
+                error=error,
+                replay_result=replay_summary,
+            )
+
+        error = replay_summary.error or failure_class or replay_summary.replay_status
+        allowed = failure_class in _RECOVERY_SIDE_EFFECT_CLASSES
         self._record_skill_call(
             session_id,
             ApplicationSkillName.START_REPLAY,
@@ -1671,17 +1958,17 @@ class InteractiveChatRuntime:
                 "replay_status": replay_summary.replay_status,
                 "drift_status": replay_summary.drift_status,
                 "verification_outcome": report.outcome if report else None,
+                "failure_class": failure_class,
             },
         )
-
-        self._append_agent_message(session_id, final_message)
         self._append_event(
             session_id,
-            event_type,
+            ConversationEventType.CHAT_EXECUTION_FAILED,
             {
                 "learned_path_id": action["learned_path_id"],
                 "target_url": action["target_url"],
                 "alias": action["alias"],
+                "failure_class": failure_class,
                 "replay": replay_summary.model_dump(mode="json"),
             },
             events,
@@ -1693,16 +1980,21 @@ class InteractiveChatRuntime:
                 report.event_payload,
                 events,
             )
-        return self._result(
+        return self._offer_basic_failure_recovery(
             session_id=session_id,
-            command_kind=command_kind,
-            user_response="执行中。\n" + final_message,
+            action=action,
+            slot_overrides=slot_overrides,
+            evidence_targets=evidence_targets,
+            replay_summary=replay_summary,
+            report=report,
+            failure_class=failure_class,
+            retry_count_override=retry_count_override,
             events=events,
             message_id=message_id,
             previous_status=previous_status,
+            command_kind=command_kind,
             allowed=allowed,
             error=error,
-            replay_result=replay_summary,
         )
 
     def _handle_missing_parameterized_path(
@@ -1858,6 +2150,85 @@ class InteractiveChatRuntime:
             events=events,
             message_id=message_id,
             previous_status=previous_status,
+        )
+
+    def _offer_basic_failure_recovery(
+        self,
+        *,
+        session_id: str,
+        action: dict[str, Any],
+        slot_overrides: dict[str, str],
+        evidence_targets: list[ExecutionEvidenceTarget],
+        replay_summary: ConversationReplaySummary,
+        report: Any | None,
+        failure_class: str,
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+        command_kind: str,
+        allowed: bool,
+        error: str | None,
+        retry_count_override: int | None = None,
+    ) -> DispatchResult:
+        retry_count = (
+            retry_count_override
+            if retry_count_override is not None
+            else _retry_count_from_replay_summary(replay_summary)
+        )
+        pending_choice, private_map = _build_recovery_pending_choice(
+            action=action,
+            slot_overrides=slot_overrides,
+            evidence_targets=evidence_targets,
+            failure_class=failure_class,
+            retry_count=retry_count,
+        )
+        self._save_pending_choice(
+            session_id,
+            pending_choice=pending_choice,
+            private_map=private_map,
+        )
+        self._set_active_task(
+            session_id,
+            kind="execute_operation",
+            owner="runtime",
+            status="waiting_for_user_input",
+            target_url=action.get("target_url"),
+            goal=action.get("alias"),
+        )
+        failure_message = _recovery_failure_message(
+            failure_class=failure_class,
+            report=report,
+            slot_overrides=slot_overrides,
+        )
+        response = _pending_choice_response(pending_choice, prefix=failure_message)
+        self._append_agent_message(
+            session_id,
+            response,
+            provenance=code_response_provenance(CODE_PRODUCER_INTERACTIVE_CHAT),
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "failure_recovery_offered",
+                "failure_class": failure_class,
+                "choice_group_id": pending_choice["choice_group_id"],
+                "retry_count": retry_count,
+                "choices": pending_choice["choices"],
+                "action_alias": action.get("alias"),
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind=command_kind,
+            user_response="执行中。\n" + response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+            allowed=allowed,
+            error=error,
+            replay_result=replay_summary,
         )
 
     def _handle_unlearned_target(
@@ -2781,6 +3152,82 @@ def _build_pending_choice(
     return pending_choice, private_map
 
 
+def _build_recovery_pending_choice(
+    *,
+    action: dict[str, Any],
+    slot_overrides: dict[str, str],
+    evidence_targets: list[ExecutionEvidenceTarget],
+    failure_class: str,
+    retry_count: int,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    retry_description = (
+        "重试会再次执行该操作，可能重复新增 / 提交。"
+        if failure_class in _RECOVERY_SIDE_EFFECT_CLASSES
+        else None
+    )
+    choices = [
+        {
+            "choice_id": "A",
+            "label": "重试执行该操作",
+            "description": retry_description,
+            "intent": "execute_operation",
+        },
+        {
+            "choice_id": "B",
+            "label": "重新学习",
+            "intent": "learn_operation",
+        },
+        {"choice_id": "C", "label": "取消", "intent": "cancel"},
+    ]
+    choices = [
+        {key: value for key, value in choice.items() if value is not None}
+        for choice in choices
+    ]
+    fill_values = {
+        key: value
+        for key, value in slot_overrides.items()
+        if key and value is not None
+    }
+    private_map: dict[str, dict[str, Any]] = {
+        "A": {
+            "kind": "retry_replay",
+            "learned_path_id": action.get("learned_path_id"),
+            "target_url": action.get("target_url"),
+            "action_alias": action.get("alias"),
+            "slot_overrides": dict(slot_overrides),
+            "evidence_targets": [
+                target.model_dump(mode="json") for target in evidence_targets
+            ],
+            "retry_count": retry_count,
+            "failure_reason": failure_class,
+        },
+        "B": {
+            "kind": "relearn_operation",
+            "target_url": action.get("target_url"),
+            "action_alias": action.get("alias"),
+            "fill_values": fill_values,
+            "failure_reason": failure_class,
+        },
+        "C": {"kind": "cancel", "failure_reason": failure_class},
+    }
+    pending_choice = {
+        "type": "pending_choice",
+        "choice_group_id": f"choice-group-{uuid.uuid4()}",
+        "question": "你可以选择：",
+        "choices": choices,
+        "turns_remaining": 2,
+        "created_at": _utc_now_iso(),
+    }
+    return pending_choice, private_map
+
+
+def _retry_count_from_replay_summary(replay_summary: ConversationReplaySummary) -> int:
+    retry_count = getattr(replay_summary, "retry_count", None)
+    if isinstance(retry_count, int):
+        return max(retry_count, 0)
+    return 0
+
+
 def _slot_overrides_from_choice_selection(selected: dict[str, Any]) -> dict[str, str]:
     slot_overrides = selected.get("slot_overrides")
     if not isinstance(slot_overrides, dict):
@@ -2788,6 +3235,17 @@ def _slot_overrides_from_choice_selection(selected: dict[str, Any]) -> dict[str,
     return {
         str(key): str(value)
         for key, value in slot_overrides.items()
+        if key and value is not None
+    }
+
+
+def _fill_values_from_recovery_choice(selected: dict[str, Any]) -> dict[str, str]:
+    fill_values = selected.get("fill_values")
+    if not isinstance(fill_values, dict):
+        return {}
+    return {
+        str(key): str(value)
+        for key, value in fill_values.items()
         if key and value is not None
     }
 

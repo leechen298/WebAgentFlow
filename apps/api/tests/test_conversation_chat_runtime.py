@@ -1815,6 +1815,451 @@ def test_interactive_chat_execute_does_not_claim_success_without_evidence(
     assert "还没有拿到足够页面证据确认结果" in result.user_response
 
 
+def test_interactive_chat_replay_failed_offers_basic_recovery(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-items-replay-failed",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ]
+        },
+    )
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="failed",
+            drift_status="none",
+            error="button not found",
+        )
+
+    result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
+        session_id,
+        "帮我新增项目，名称叫测试项目B",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is False
+    assert "执行失败" in result.user_response
+    assert "A. 重试执行该操作" in result.user_response
+    assert "B. 重新学习" in result.user_response
+    assert "C. 取消" in result.user_response
+    assert learned_path_id not in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    pending_choice = session.metadata_json["pending_choice"]
+    assert "learned_path_id" not in json.dumps(pending_choice, ensure_ascii=False)
+    private_map = session.metadata_json["pending_choice_private_map"]
+    assert private_map["A"]["kind"] == "retry_replay"
+    assert private_map["A"]["learned_path_id"] == learned_path_id
+    assert private_map["A"]["slot_overrides"] == {"item_name": "测试项目B"}
+    assert private_map["B"]["kind"] == "relearn_operation"
+    assert private_map["C"]["kind"] == "cancel"
+    active_task = session.metadata_json["active_task"]
+    assert active_task["kind"] == "execute_operation"
+    assert active_task["owner"] == "runtime"
+    assert active_task["status"] == "waiting_for_user_input"
+    events = repo.list_events(session_id)
+    offered = [
+        e
+        for e in events
+        if e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "failure_recovery_offered"
+    ][-1]
+    offered_text = json.dumps(offered.payload_json, ensure_ascii=False)
+    assert "learned_path_id" not in offered_text
+    assert "slot_overrides" not in offered_text
+    assert "evidence_targets" not in offered_text
+
+
+def test_interactive_chat_blocked_drift_offers_basic_recovery(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-items-recovery-drift",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ]
+        },
+    )
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="page_mismatch",
+        )
+
+    result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
+        session_id,
+        "帮我新增项目，名称叫测试项目B",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is False
+    assert "当前页面和学习时的页面不匹配" in result.user_response
+    assert "A. 重试执行该操作" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert (
+        session.metadata_json["pending_choice_private_map"]["A"]["failure_reason"]
+        == "blocked"
+    )
+
+
+def test_interactive_chat_recovery_retry_replays_once_with_original_payload(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-items-recovery-retry",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ]
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        if len(calls) == 1:
+            return ConversationReplaySummary(
+                learned_path_id=lid,
+                url=url,
+                replay_status="succeeded",
+                drift_status="none",
+            )
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            execution_evidence=[
+                {
+                    "kind": "dom_text_present",
+                    "target": "测试项目B",
+                    "status": "verified",
+                    "confidence": 0.95,
+                    "summary": "列表中出现了名称为“测试项目B”的项目行。",
+                }
+            ],
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    first = orch.dispatch_user_input(
+        session_id,
+        "帮我新增项目，名称叫测试项目B",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert "重试会再次执行该操作" in first.user_response
+
+    retry = orch.dispatch_user_input(
+        session_id,
+        "A",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert "我在列表中看到了“测试项目B”" in retry.user_response
+    assert len(calls) == 2
+    assert calls[1][0] == learned_path_id
+    assert calls[1][1] == "http://localhost:5176/items"
+    assert calls[1][2]["slot_overrides"] == {"item_name": "测试项目B"}
+    assert calls[1][2]["evidence_targets"][0].text == "测试项目B"
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_choice" not in session.metadata_json
+    assert "pending_choice_private_map" not in session.metadata_json
+    events = repo.list_events(session_id)
+    selected = [
+        e
+        for e in events
+        if e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "failure_recovery_selected"
+    ][-1]
+    started = [
+        e
+        for e in events
+        if e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "failure_recovery_retry_started"
+    ][-1]
+    for event in (selected, started):
+        event_text = json.dumps(event.payload_json, ensure_ascii=False)
+        assert "learned_path_id" not in event_text
+        assert "slot_overrides" not in event_text
+        assert "evidence_targets" not in event_text
+
+
+def test_interactive_chat_recovery_retry_failure_does_not_auto_loop(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-items-recovery-retry-fails",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ]
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="failed",
+            drift_status="none",
+            error="button not found",
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    orch.dispatch_user_input(
+        session_id,
+        "帮我新增项目，名称叫测试项目B",
+        metadata={"client": "wagent_chat"},
+    )
+    retry = orch.dispatch_user_input(
+        session_id,
+        "A",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert len(calls) == 2
+    assert retry.allowed is False
+    assert "A. 重试执行该操作" in retry.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json["pending_choice_private_map"]["A"]["retry_count"] == 1
+
+
+def test_interactive_chat_recovery_relearn_starts_learning_without_replay(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-items-recovery-relearn-old",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ]
+        },
+    )
+    replay_calls: list[tuple[str, str, dict[str, Any]]] = []
+    learning_calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        replay_calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        learning_calls.append((url, raw_input, kwargs))
+        new_path_id = _ingest_items_path(
+            db_session,
+            source_run_id="run-items-recovery-relearn-new",
+            value_slot="item_name",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-items-recovery-relearn-new",
+            learned_path_id=new_path_id,
+            target_url=url,
+            page_template="/items",
+            scenario="product_level",
+            action_label="新增项目",
+            suggested_utterances=["帮我新增项目"],
+        )
+
+    orch = ConversationOrchestrator(
+        repo,
+        replay_handler=replay_handler,
+        learning_handler=learning_handler,
+    )
+    orch.dispatch_user_input(
+        session_id,
+        "帮我新增项目，名称叫测试项目B",
+        metadata={"client": "wagent_chat"},
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "B",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert "学习完成" in result.user_response
+    assert len(replay_calls) == 1
+    assert len(learning_calls) == 1
+    assert learning_calls[0][0] == "http://localhost:5176/items"
+    assert learning_calls[0][2]["fill_values"] == {"item_name": "测试项目B"}
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_choice" not in session.metadata_json
+    assert "pending_choice_private_map" not in session.metadata_json
+    events = repo.list_events(session_id)
+    started = [
+        e
+        for e in events
+        if e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "failure_recovery_relearn_started"
+    ][-1]
+    started_text = json.dumps(started.payload_json, ensure_ascii=False)
+    assert "learned_path_id" not in started_text
+    assert "slot_overrides" not in started_text
+
+
+def test_interactive_chat_recovery_cancel_clears_state_and_records_event(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-items-recovery-cancel",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ],
+        },
+    )
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="failed",
+            drift_status="none",
+            error="button not found",
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    orch.dispatch_user_input(
+        session_id,
+        "帮我新增项目，名称叫测试项目B",
+        metadata={"client": "wagent_chat"},
+    )
+    repo.update_session_status(
+        session_id,
+        "task_intake",
+        metadata_patch={
+            "pending_intake": {"intent": "execute_operation"},
+            "pending_target": {"url": "http://localhost:5176/items"},
+            "last_no_path_reason": {"reason": "test"},
+        },
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "C",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.user_response == "已取消当前任务。"
+    session = repo.get_session(session_id)
+    assert session is not None
+    for key in (
+        "pending_intake",
+        "pending_target",
+        "pending_choice",
+        "pending_choice_private_map",
+        "last_no_path_reason",
+        "active_task",
+    ):
+        assert key not in session.metadata_json
+    events = repo.list_events(session_id)
+    cancelled = [
+        e
+        for e in events
+        if e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "failure_recovery_cancelled"
+    ][-1]
+    cancelled_text = json.dumps(cancelled.payload_json, ensure_ascii=False)
+    assert "learned_path_id" not in cancelled_text
+    assert "slot_overrides" not in cancelled_text
+
+
 def test_interactive_chat_blocks_item_name_replay_without_value_slot(
     db_session: Session,
     repo: ConversationRepository,
