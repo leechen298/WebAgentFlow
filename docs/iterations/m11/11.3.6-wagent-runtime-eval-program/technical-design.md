@@ -37,6 +37,8 @@ rules live in the 11.3.6.1 documents, not in this program-level package.
 ### 11.3.6.2 Failure Recovery Eval
 
 Adds stable failure path coverage after a fault injection / eval-only hook design is approved.
+The child package now lives at
+[`../11.3.6.2-failure-recovery-eval/`](../11.3.6.2-failure-recovery-eval/).
 
 ### 11.3.6.3 Pending Choice Multi-candidate Eval
 

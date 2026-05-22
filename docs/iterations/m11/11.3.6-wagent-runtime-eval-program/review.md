@@ -48,3 +48,12 @@
 
 - 用户确认拆分后，可以从 11.3.6.1 开始实现 runner core。
 - 11.3.6.2 之前需要先设计 failure recovery 的稳定 fault injection / eval-only hook。
+
+## 2026-05-22 子包开包记录
+
+- Author：Codex
+- Decision：docs_created
+- Notes：
+  - 已创建 `11.3.6.2-failure-recovery-eval` 作为下一个 child package 设计稿。
+  - 11.3.6 program 仍保持 docs-only，不在 program 包内实现 runner 代码。
+  - 11.3.6.2 当前状态为 `draft_for_review`，review 通过后再进入实现。
