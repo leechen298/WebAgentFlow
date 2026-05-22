@@ -27,7 +27,7 @@
 | 11.3.5.5 | ExecutionEvidence + TaskResultReporter adapter，runtime stop 前采集 DOM evidence |
 | 11.3.5.6 | `wagent chat` `/items` 学习 / 执行闭环测试方案与结果记录 |
 | 11.3.5.7 | `pending_choice` + 最小 `active_task` ledger |
-| 11.3.5.8 | 基础失败恢复 |
+| [11.3.5.8](../11.3.5.8-basic-failure-recovery/) | 基础失败恢复 |
 | 11.3.5.9 | TaskPathPlanner 多候选 chat 接入 |
 
 第一条 P0 闭环是 `/items` 新增项目：学习新增项目、按新输入参数化执行新增项目、
