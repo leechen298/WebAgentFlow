@@ -1648,6 +1648,48 @@ apps/product-test-site /items
 -> docs/testing/results 记录结果和日志复核
 ```
 
+## 11.3.6 · WAgent Runtime Eval Runner
+
+状态：draft_for_review（文档已生成，未实现代码）。
+
+11.3.6 不继续增加 Customer-Facing Agent Router / Skill Runtime 的产品能力，而是把
+11.3.5 working runtime 的关键验收路径沉淀成本地可重复运行的 eval harness。
+
+定位：
+
+```text
+developer / Codex runs one command
+-> runner drives Conversation API
+-> runner collects events / history / LearnedPath evidence
+-> runner evaluates hard gates per case
+-> runner writes JSON artifact + Markdown result
+-> exit code reflects required gate result
+```
+
+第一版范围：
+
+| Case | 目标 | 状态 |
+|---|---|---|
+| `items_closed_loop` | `/items` 学习新增 A、执行新增 B，校验 LearnedPath parameterization、slot override、DOM evidence、Reporter outcome 和 final response | planned |
+| `single_path_direct_replay_regression` | 基于已学新增项目 path 执行 C，校验单路径明确目标直接 replay，不进入 pending choice / planner choice | planned |
+
+关键边界：
+
+- 直接调用 Conversation API，不依赖交互式 `wagent chat` 作为主 harness。
+- 不调用 `verify-scenario`。
+- 不调用 autonomous-run endpoints。
+- 不使用登录页。
+- 不启用 `learn_then_execute`。
+- 不把 direct replay API 结果冒充 WAgent runtime 闭环。
+- 不让 Codex 的自然语言判断替代 hard gates。
+- 不在第一版实现 failure recovery fault injection。
+- 输出 `artifacts/wagent-eval/wagent-runtime-eval-<timestamp>.json` 和
+  `docs/testing/results/m11-11.3.6-wagent-runtime-eval-<date>.md`。
+
+迭代文档：
+
+- [`11.3.6-wagent-runtime-eval-runner/`](./11.3.6-wagent-runtime-eval-runner/)
+
 ## Later M11.x · Page Context Bridge Decision Point
 
 状态：候选决策点，不是已确定执行包。
