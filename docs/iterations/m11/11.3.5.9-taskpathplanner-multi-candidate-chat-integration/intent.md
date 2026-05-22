@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：draft_docs（revise_before_ready，待二次评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 目标
 

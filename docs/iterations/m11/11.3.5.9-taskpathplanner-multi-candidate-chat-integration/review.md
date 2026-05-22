@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：draft_docs（revise_before_ready，待二次评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 2026-05-22 文档生成
 
@@ -44,6 +44,19 @@
   - 补充 11.3.5.8 implementation preflight dependency。
   - 补充 planner fallback sanitized event 和 event slot value 禁止项。
   - 尚未实现代码，需二次设计评审。
+
+## 2026-05-22 二次设计评审通过
+
+- Reviewer：ChatGPT
+- Decision：pass
+- Notes：
+  - TaskPathPlanner 语义已修正为 top route plan / warning / risk / uncertainty provider。
+  - A/B/C 候选由 Runtime 基于 ranked session candidates 生成。
+  - Planner trigger 已改为 `cannot_confidently_select_single_action`，不再依赖 `not user_url`。
+  - “继续”优先尊重 pending / active / recovery context。
+  - 11.3.5.8 preflight dependency 已补齐。
+  - Planner fallback event 和 event slot value 禁止项已补齐。
+  - 可以进入实现阶段。
 
 ## 代码评审（Code Review）
 
@@ -100,6 +113,6 @@
 
 ### 后续事项（Follow-ups）
 
-- 设计评审通过后，把状态改为 `ready_for_implementation`。
 - 实现阶段必须守住 TaskPathPlanner 不进入单路径 happy path 的边界。
 - 实现阶段不得把 `PlanningPreviewService` raw response 直接展示给用户。
+- 实现前必须先跑 11.3.5.7 / 11.3.5.8 preflight targeted tests。
