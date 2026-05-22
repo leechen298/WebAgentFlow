@@ -1,6 +1,6 @@
 # 11.3.5.8 · Basic Failure Recovery
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -82,7 +82,7 @@ C. 取消
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
@@ -90,4 +90,5 @@ C. 取消
 
 ## 当前状态
 
-文档已生成，等待设计评审。评审通过后才能进入代码实现阶段。
+设计评审已通过，当前可进入实现阶段。实现前必须先按 `plan.md` 完成
+11.3.5.7 `pending_choice` / private map / `active_task` preflight。

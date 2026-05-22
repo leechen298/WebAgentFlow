@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 输入
 
@@ -32,7 +32,8 @@ Planned implementation files:
 
 - Review `contract.md` and `technical-design.md`。
 - 确认复用 `pending_choice`，不新增 `pending_recovery` public contract。
-- 确认 retry 最大次数和 relearn 是否自动执行。默认：最多自动 retry 一次，relearn 不自动执行。
+- 确认 retry 最大次数和 relearn 是否自动执行。默认：每次用户选择 A 只触发一次 retry
+  replay，系统不得自动再次选择 retry；relearn 不自动执行。
 
 ### Step 1 · Current-state preflight
 

@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：draft_docs（待评审，未开始实现）
+状态：ready_for_implementation（design review passed，未开始实现）
 
 ## 2026-05-22 文档生成
 
@@ -18,14 +18,18 @@
 
 ## 设计评审（Design Review）
 
-- Reviewer：
-- Decision：pending
+- Reviewer：ChatGPT
+- Decision：pass
 - Notes：
+  - 11.3.5.7 preflight dependency 已写清楚。
+  - retry 副作用风险已写入 contract / wording / test plan。
+  - recovery event private payload 禁止清单已补齐。
+  - scope 保持 basic failure recovery，不做复杂自治恢复。
 
 ## 2026-05-22 设计反馈修订
 
 - Reviewer：ChatGPT
-- Decision：revise_before_ready
+- Decision：revisions_applied
 - Notes：
   - 明确 11.3.5.7 `pending_choice` / private map / `active_task` 是实现前置，
     11.3.5.8 实现前必须 preflight 确认。
@@ -33,6 +37,17 @@
     下可能重复副作用，用户可见文案必须提示。
   - 明确 recovery events 不得记录 private retry / relearn payload、`slot_overrides`、
     `learned_path_id`、`evidence_targets`、selector 或 ReplayAction。
+
+## 2026-05-22 设计评审通过
+
+- Reviewer：ChatGPT
+- Decision：pass
+- Notes：
+  - 11.3.5.7 `pending_choice` / private map / `active_task` preflight dependency
+    已写清楚。
+  - retry 是再次执行、可能重复副作用的风险已写入 contract / wording / test plan。
+  - recovery event private payload 禁止清单已补齐。
+  - scope 保持 basic failure recovery，不做复杂自治恢复。
 
 ## 代码评审（Code Review）
 
@@ -89,5 +104,6 @@
 
 ### 后续事项（Follow-ups）
 
-- 设计评审通过后，把状态改为 `ready_for_implementation`。
+- 实现阶段必须先完成 11.3.5.7 `pending_choice` / private map / `active_task`
+  preflight。
 - 实现阶段必须守住 retry / relearn / cancel 三选项边界，不做复杂自治恢复。
