@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：draft_for_review（文档已生成，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 当前状态（Current State）
 
@@ -19,6 +19,15 @@
 
 当前缺口是：没有一个稳定脚本把上述能力一次性跑完、采集证据、按 hard gate 判定并输出可审计
 artifact。
+
+设计评审确认的可观测性边界：
+
+- `ExecutionEvidenceTarget` 包含 `selector`。
+- `ExecutionEvidence` 不包含 `selector`。
+- `ReplayResult.execution_evidence` 只保存 `ExecutionEvidence[]`。
+- 因此 `evidence_target_item_list` 不能从 `execution_evidence` 反推 selector，必须读取
+  `evidence_targets` 的请求侧或 history 侧只读暴露；如果不可读，只能记 warning /
+  not observable。
 
 ## 合约对齐 / 不变量（Contract Alignment / Invariants）
 
@@ -235,6 +244,19 @@ This case should run after `items_closed_loop` in the same session by default. I
 session later only if runner has an explicit way to seed or reference the learned path without bypassing
 Conversation API.
 
+Single-path 判定必须使用当前 eval session 的 evidence：
+
+```text
+session learned_actions
+chat_learning_completed.new_learned_path_id from this run
+chat_execution_started.learned_path_id for C
+absence of pending_choice / planner_choice events after C turn
+```
+
+不要用全局 catalog 的 `/items` row count 判定 single path。全局 catalog 可以用来读取
+已知 `learned_path_id` 的 detail，但不能决定 case 是否有唯一候选。这样 runner 可以在
+有历史 `/items` LearnedPath 的开发数据库上反复运行。
+
 ### 6. Gate extraction details
 
 Recommended event extraction:
@@ -244,6 +266,7 @@ Recommended event extraction:
 | new learned path id | `chat_learning_completed.payload.new_learned_path_id` |
 | execution start | `chat_execution_started` |
 | slot override | `chat_execution_started.payload.slot_overrides.item_name` |
+| evidence target selector | request-side / history-side `evidence_targets`; not `ExecutionEvidence` |
 | execution evidence | `chat_execution_completed.payload.execution_evidence` or history replay summary |
 | reporter outcome | `task_result_reported.payload.verification_outcome` |
 | final response | latest assistant message after dispatch |
@@ -252,6 +275,15 @@ Recommended event extraction:
 
 If event type names differ in current code, implementation may adapt, but `contract.md` gate semantics
 must remain stable.
+
+For `evidence_target_item_list`, implementation must check observable sources in this order:
+
+1. `chat_execution_started.payload.evidence_targets` if present.
+2. history replay summary / request summary `evidence_targets` if present.
+3. runner raw request record for the Conversation-driven replay hook, if recorded.
+4. otherwise gate status `not_observable` / `warning`.
+
+Do not inspect `ExecutionEvidence` for a selector field; current schema does not define one.
 
 ### 7. Step log observability
 
@@ -350,6 +382,8 @@ Implementation tests should verify:
 - gate evaluator passes with synthetic valid evidence.
 - gate evaluator fails when required evidence is missing.
 - `effective_value` missing becomes warning / not_observable, not guessed pass.
+- `evidence_targets` missing becomes warning / not_observable, not guessed from `ExecutionEvidence`.
+- global old `/items` LearnedPaths do not break session-scoped single-path regression.
 - redaction removes sensitive keys from artifacts.
 - exit reducer maps statuses to codes.
 - Markdown report and JSON artifact derive from same result object.

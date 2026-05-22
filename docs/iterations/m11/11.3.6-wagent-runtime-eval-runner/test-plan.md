@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：draft_for_review（文档已生成，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 适用条件
 
@@ -29,10 +29,12 @@ learning / replay、TaskResultReporter evidence、artifact 输出和 exit code�
 | Unit | UT-4 gate pass from valid evidence | GateEvaluator | required gates pass | Yes | synthetic events |
 | Unit | UT-5 missing required evidence fails | GateEvaluator | gate fail, case fail | Yes | hard gate |
 | Unit | UT-6 effective value unavailable warning | GateEvaluator | not_observable / warning | Yes | no guessing |
-| Unit | UT-7 single path no planner | GateEvaluator | no pending/planner choice pass | Yes | synthetic C turn |
-| Unit | UT-8 redaction | ArtifactWriter | sensitive keys redacted | Yes | artifact safety |
-| Unit | UT-9 exit reducer | status reducer | pass=0, fail=1, blocked=2, timeout=3 | Yes | deterministic |
-| Unit | UT-10 markdown from normalized result | writer | report matches gate statuses | Yes | no reparsing |
+| Unit | UT-7 evidence target selector unavailable warning | GateEvaluator | selector gate not_observable / warning, not guessed | Yes | `ExecutionEvidence` has no selector |
+| Unit | UT-8 single path no planner | GateEvaluator | no pending/planner choice pass | Yes | synthetic C turn |
+| Unit | UT-9 old global `/items` paths ignored | GateEvaluator | session-scoped single path passes despite global rows | Yes | contamination guard |
+| Unit | UT-10 redaction | ArtifactWriter | sensitive keys redacted | Yes | artifact safety |
+| Unit | UT-11 exit reducer | status reducer | pass=0, fail=1, blocked=2, timeout=3 | Yes | deterministic |
+| Unit | UT-12 markdown from normalized result | writer | report matches gate statuses | Yes | no reparsing |
 | Integration | IN-1 API health | `GET /health` | reachable | Yes for live run | preflight |
 | Integration | IN-2 product `/items` reachable | `GET /items` | reachable | Yes for live run | preflight |
 | Integration | IN-3 create session | Conversation API | session id exists | Yes for live run | no CLI chat |
@@ -129,6 +131,7 @@ For a live pass, `review.md` must record at least:
 | session id | yes |
 | `items_closed_loop` gate summary | yes |
 | `single_path_direct_replay_regression` gate summary | yes |
+| session-scoped learned path id used for single-path regression | yes |
 | warnings / not_observable | yes, if any |
 | not-run / boundary statement | yes |
 
@@ -154,6 +157,8 @@ runner can dispatch URL / learn A / execute B
 runner can collect evidence through read-only APIs
 runner can hard-check required gates
 runner can detect direct replay regression for C
+runner does not use global /items catalog row count to decide single path
+runner does not infer evidence target selector from ExecutionEvidence
 runner can write JSON + Markdown artifacts
 runner exit code matches gate outcome
 runner does not call autonomous-run endpoints

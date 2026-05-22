@@ -1650,7 +1650,7 @@ apps/product-test-site /items
 
 ## 11.3.6 · WAgent Runtime Eval Runner
 
-状态：draft_for_review（文档已生成，未实现代码）。
+状态：ready_for_implementation（design review passed，未实现代码）。
 
 11.3.6 不继续增加 Customer-Facing Agent Router / Skill Runtime 的产品能力，而是把
 11.3.5 working runtime 的关键验收路径沉淀成本地可重复运行的 eval harness。
@@ -1670,8 +1670,8 @@ developer / Codex runs one command
 
 | Case | 目标 | 状态 |
 |---|---|---|
-| `items_closed_loop` | `/items` 学习新增 A、执行新增 B，校验 LearnedPath parameterization、slot override、DOM evidence、Reporter outcome 和 final response | planned |
-| `single_path_direct_replay_regression` | 基于已学新增项目 path 执行 C，校验单路径明确目标直接 replay，不进入 pending choice / planner choice | planned |
+| `items_closed_loop` | `/items` 学习新增 A、执行新增 B，校验 LearnedPath parameterization、slot override、DOM evidence、Reporter outcome 和 final response；selector gate 只从可观察的 `evidence_targets` 判断 | planned |
+| `single_path_direct_replay_regression` | 基于当前 eval session 已学新增项目 path 执行 C，校验单路径明确目标直接 replay，不进入 pending choice / planner choice；不得受全局旧 `/items` LearnedPath rows 污染 | planned |
 
 关键边界：
 

@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：draft_for_review（文档已生成，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 输入
 
@@ -61,6 +61,9 @@ through existing read-only surfaces. In that case, update `contract.md` and `tec
 - Confirm `failure_recovery_menu_safety` is deferred.
 - Confirm direct Conversation API is allowed and autonomous endpoints remain prohibited.
 - Confirm no product runtime capability will be added.
+- Confirm `evidence_target_item_list` is conditional unless `evidence_targets` are observable.
+- Confirm `single_path_direct_replay_regression` is session-scoped and ignores old global
+  `/items` LearnedPaths.
 
 ### Step 1 · Current-state preflight
 
@@ -69,6 +72,7 @@ Run read-only discovery:
 ```bash
 rg -n "conversation.*dispatch|/dispatch|history|events" apps/api/app/routers apps/api/app/services apps/cli/wagent
 rg -n "chat_learning_completed|chat_execution_started|chat_execution_completed|task_result_reported" apps/api/app apps/api/tests docs/testing docs/iterations/m11
+rg -n "ExecutionEvidenceTarget|class ExecutionEvidence|evidence_targets|execution_evidence" apps/api/app/schemas apps/api/app/services apps/api/tests
 rg -n "eval:wagent|dev:product|product-test-site|5176" package.json apps/product-test-site/package.json docs
 ```
 
@@ -76,6 +80,7 @@ Expected:
 
 - Conversation session / dispatch / events / history endpoints exist.
 - Runtime emits or persists learning / execution / reporter events.
+- Selector observability is confirmed from `evidence_targets`, not `ExecutionEvidence`.
 - Product-test-site `/items` is available under port 5176 by default.
 
 ### Step 2 · Add runner skeleton
@@ -151,6 +156,9 @@ Required gates come from `contract.md`.
 
 If step log effective value is not exposed, record warning / not_observable but do not infer from final text.
 
+If evidence target selector is not exposed through `evidence_targets`, record warning / not_observable but
+do not infer selector from `ExecutionEvidence`.
+
 ### Step 7 · Implement `single_path_direct_replay_regression`
 
 Run after Case 1 by default:
@@ -164,6 +172,9 @@ verify DOM evidence and reporter outcome
 ```
 
 Do not seed data through direct replay or DB writes.
+
+Do not use global `/exploration/learned-paths?page_template=/items` row count to decide whether this is
+single path. Use this eval session's learned path id, session learned actions and execution events.
 
 ### Step 8 · Implement artifact writers
 

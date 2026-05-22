@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：draft_for_review（文档已生成，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 2026-05-22 文档生成
 
@@ -24,10 +24,42 @@
 
 ## 设计评审（Design Review）
 
-- Reviewer：pending
-- Decision：pending
+- Reviewer：ChatGPT
+- Decision：revise_before_ready
 - Notes：
-  - 等待用户 / review 确认后再进入实现。
+  - 方向通过，可以作为 11.3.6 WAgent Runtime Eval Runner 的设计底稿。
+  - `evidence_target_item_list` 的 source 需要修订：当前 `ExecutionEvidenceTarget`
+    有 selector，但 `ExecutionEvidence` 没有 selector，runner 不得从
+    `execution_evidence` 猜 selector。
+  - `single_path_direct_replay_regression` 需要明确以当前 eval session 的 learned path /
+    learned actions / runtime events 为准，不能用全局 `/items` LearnedPath catalog 数量判断。
+
+## 2026-05-22 文档修订
+
+- Author：Codex
+- Decision：revisions_applied
+- Notes：
+  - 将 `evidence_target_item_list` 改为 conditional gate。
+  - 明确 selector 只能来自 request-side / history-side `evidence_targets`，不能来自
+    `ExecutionEvidence`。
+  - 若 `evidence_targets` 当前 public read surface 不可读，该 gate 只能记为
+    `not_observable` / `warning`，并要求补最小只读暴露。
+  - 明确 `single_path_direct_replay_regression` 以当前 eval session 的
+    `new_learned_path_id`、session `learned_actions`、runtime route events 和
+    `chat_execution_started` 为准。
+  - 明确全局旧 `/items` LearnedPath rows 不得污染 single-path 判定。
+  - `README.md`、`intent.md`、`contract.md`、`technical-design.md`、`test-plan.md`、
+    `plan.md`、M11 README 和 `m11-plan.md` 状态切到
+    `ready_for_implementation（design review passed，未实现代码）`。
+
+## 2026-05-22 设计状态
+
+- Reviewer：Codex
+- Decision：ready_for_implementation
+- Notes：
+  - 两个 required contract revisions 已应用。
+  - 尚未实现代码，后续实现必须先按 `plan.md` Step 1 复核当前 API / event / history
+    可观测性。
 
 ## 代码评审（Code Review）
 

@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：draft_for_review（文档已生成，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 概念 / 边界契约
 
@@ -56,11 +56,16 @@ GET /conversation/sessions/{session_id}/history
 GET /exploration/learned-paths/{learned_path_id}
 ```
 
-允许为了 discover LearnedPath 调用只读 catalog endpoint，例如：
+允许为了读取已知 LearnedPath detail 或在已有 `learned_path_id` 后补充 metadata，调用只读
+catalog endpoint，例如：
 
 ```http
 GET /exploration/learned-paths?page_template=/items&limit=10
 ```
+
+Runner 不得仅用全局 catalog 的 `/items` 数量判断当前 case 是否 single path。全局 catalog
+只可作为 detail lookup / supplementary evidence；case 判定必须优先基于当前 eval session
+产生的 learned path id、session learned actions、runtime events 和 execution events。
 
 禁止调用：
 
@@ -174,10 +179,31 @@ Required gates：
 | `execution_started` | yes | `chat_execution_started` | execution event exists |
 | `slot_override_B` | yes | execution event | `slot_overrides.item_name == B` |
 | `effective_value_B` | conditional | replay step log / history | fill effective value is B, not A |
-| `evidence_target_item_list` | yes | execution evidence / LearnedPath | evidence target selector is `[data-testid='item-list']` |
+| `evidence_target_item_list` | conditional | execution request / history / started event | evidence target selector is `[data-testid='item-list']` when target request is observable |
 | `dom_evidence_verified_B` | yes | execution evidence | `dom_text_present` verifies B |
 | `reporter_verified` | yes | `task_result_reported` / history | `verification_outcome=verified` |
 | `final_response_verified` | yes | final WAgent message | reply gives evidence-based success and references B |
+
+`evidence_target_item_list` 的 selector source 必须明确。当前 replay schema 中：
+
+```text
+ExecutionEvidenceTarget has selector
+ExecutionEvidence does not have selector
+ReplayResult.execution_evidence stores ExecutionEvidence[]
+```
+
+因此 runner 不得从 `ExecutionEvidence.selector` 判断 selector。允许的 source 优先级：
+
+1. `chat_execution_started.payload.evidence_targets`，如果实现或后续只读暴露包含该字段；
+2. replay request / history replay summary 中的 `evidence_targets`；
+3. runner 可审计 raw request record 中传给 Conversation runtime / replay hook 的
+   `evidence_targets`，前提是这是产品 runtime 调用链产生的 request，不是 direct replay
+   substitution；
+4. 如果当前 public read surface 无法读取 `evidence_targets`，该 gate 记为
+   `not_observable` / `warning`，并在 Markdown result 中要求补最小只读暴露。
+
+即使 `evidence_target_item_list` 暂时 not observable，`dom_evidence_verified_B` 和
+`reporter_verified` 仍然必须通过；runner 不得猜测 selector。
 
 ### Case 2: `single_path_direct_replay_regression`
 
@@ -194,13 +220,24 @@ Required gates：
 
 | Gate | Required | Source | Rule |
 |---|---|---|---|
-| `single_candidate_detected` | yes | events / history | one clear matched learned action |
+| `single_candidate_detected` | yes | current session learned actions / events / history | one clear matched learned action in the current eval session |
 | `no_pending_choice` | yes | events / session metadata | no A/B/C pending choice created |
 | `no_planner_choice` | yes | events / history | no planner-backed choice path entered |
 | `slot_override_C` | yes | execution event | `slot_overrides.item_name == C` |
 | `dom_evidence_verified_C` | yes | execution evidence | `dom_text_present` verifies C |
 | `reporter_verified` | yes | result event / history | `verification_outcome=verified` |
 | `final_response_verified` | yes | final WAgent message | reply gives evidence-based success and references C |
+
+`single_path_direct_replay_regression` 必须以当前 eval session 的 evidence 判定 single path：
+
+- use the learned path id produced by `items_closed_loop`;
+- use current session `learned_actions` / runtime route events / `chat_execution_started`;
+- tolerate old global `/items` LearnedPath rows in the database;
+- do not fail only because `GET /exploration/learned-paths?page_template=/items` returns multiple rows;
+- do not select candidates from global catalog unless they are explicitly linked to the current session.
+
+如果当前 session 中出现多个 matching learned actions，则该 case 应 fail 或 blocked，并说明是
+session-local contamination；不能把全局旧数据当成 single-path regression 的判定依据。
 
 ### Deferred Case: `failure_recovery_menu_safety`
 

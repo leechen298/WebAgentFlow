@@ -1,6 +1,6 @@
 # 11.3.6 · WAgent Runtime Eval Runner
 
-状态：draft_for_review（文档已生成，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -94,7 +94,7 @@ one command
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计一致。
 - [x] `plan.md` 与 contract / technical design 一致。
@@ -102,5 +102,5 @@ one command
 
 ## 当前状态
 
-文档包已生成，等待用户 / review 确认后再进入实现。当前未写 runner 代码，未修改
-`package.json`，未运行 eval。
+文档包已完成设计评审修订，可以进入实现。当前未写 runner 代码，未修改 `package.json`，
+未运行 eval。
