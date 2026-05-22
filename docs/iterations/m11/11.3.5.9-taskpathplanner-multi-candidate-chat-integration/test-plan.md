@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：draft_docs（待评审，未开始实现）
+状态：draft_docs（revise_before_ready，待二次评审，未开始实现）
 
 ## 适用条件
 
@@ -9,7 +9,8 @@ private map、安全 payload 和单路径回归，必须维护 `test-plan.md`。
 
 ## 测试范围（Test Scope）
 
-- Unit：TaskIntent adapter、candidate adapter、planner output -> pending choice mapping。
+- Unit：TaskIntent adapter、candidate adapter、Runtime ranked candidates -> pending choice mapping、
+  planner top-candidate signal mapping。
 - Integration：InteractiveChatRuntime + mocked replay handler + session learned actions。
 - API：如 public session payload 或 event payload sanitizer 被触及，补 conversation API 回归。
 - Console UI：N/A。
@@ -23,9 +24,10 @@ private map、安全 payload 和单路径回归，必须维护 `test-plan.md`。
 | Unit | AD-1 build TaskIntent from intake | helper | raw_text / normalized_goal / hints set | Yes | no LLM |
 | Unit | AD-2 candidates limited to session actions | helper | no candidate outside session learned_actions | Yes | security |
 | Unit | AD-3 deprecated path excluded | helper | deprecated candidate not executable | Yes | planner also filters |
-| Unit | MAP-1 planner output to visible choice | helper | A/B/C labels, no path id | Yes | sanitized |
-| Unit | MAP-2 planner output to private map | helper | private map has learned_path_id / slot_overrides | Yes | runtime only |
+| Unit | MAP-1 runtime candidates to visible choice | helper | A/B/C labels, no path id | Yes | sanitized |
+| Unit | MAP-2 runtime candidate + planner signal to private map | helper | private map has learned_path_id / slot_overrides | Yes | runtime only |
 | Unit | MAP-3 planner unable | helper | no executable private map | Yes | no replay |
+| Unit | MAP-4 planner does not supply alternatives | helper | choices come from ranked session candidates | Yes | planner output is top route only |
 | Integration | PL-1 multi-candidate invokes planner | chat runtime | planner called once, pending_choice created | Yes | mocked planner |
 | Integration | PL-2 vague request invokes planner | chat runtime | “处理一下这个页面” enters planner choice | Yes | no direct guess |
 | Integration | PL-3 single candidate skips planner | chat runtime | direct replay, planner not called | Yes | `/items` regression |
@@ -33,9 +35,13 @@ private map、安全 payload 和单路径回归，必须维护 `test-plan.md`。
 | Integration | PL-5 selection preserves slot_overrides | chat runtime | `item_name` retained through private map | Yes | 11.3.5.4 regression |
 | Integration | PL-6 planner unable asks clarification | chat runtime | no replay, no executable private map | Yes | conservative |
 | Integration | PL-7 flaky / provisional warning shown safely | chat runtime | description has warning, no id | Yes | risk display |
+| Integration | PL-8 URL plus vague action invokes planner | chat runtime | URL is target hint, not skip condition | Yes | no `not user_url` gate |
+| Integration | PL-9 "继续" respects live context | chat runtime | pending / active / recovery handled before planner | Yes | priority |
 | Security | SEC-1 WAgent reply no path id | output text | no `learned_path_id` / selected path | Yes | user visible |
 | Security | SEC-2 pending_choice public no path id | session metadata | public choice has no private id | Yes | 11.3.5.7 invariant |
-| Security | SEC-3 progress events no private payload | events | no path id / slot overrides / route raw steps | Yes | event safety |
+| Security | SEC-3 progress events no private payload | events | no path id / slot overrides / route raw steps / slot values | Yes | event safety |
+| Security | SEC-4 planner fallback event sanitized | events | fallback records no private payload | Yes | reviewability |
+| Preflight | PF-1 11.3.5.7 / 11.3.5.8 tests pass | targeted tests | choice / recovery base is available | Yes | dependency gate |
 | Regression | REG-1 `/items` single path happy path | chat runtime | no planner, replay succeeds | Yes | P0 protection |
 | Regression | REG-2 failure recovery choice unaffected | chat runtime | recovery A/B/C still works | Yes | 11.3.5.8 protection |
 | Regression | REG-3 pending choice parser unaffected | chat runtime | A / 1 / 第一个 still match | Yes | 11.3.5.7 protection |
@@ -100,7 +106,9 @@ git diff --check
 multi-candidate chat branch
 -> TaskPathPlanner called
 -> sanitized pending_choice created
+-> choices are Runtime-ranked session candidates, not Planner alternatives
 -> private map preserves selected learned_path_id and slot overrides
 -> user choice executes selected path
 -> single-path happy path bypasses Planner
+-> live pending / active / recovery context has priority over Planner
 ```

@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：draft_docs（待评审，未开始实现）
+状态：draft_docs（revise_before_ready，待二次评审，未开始实现）
 
 ## 概念 / 边界契约
 
@@ -14,7 +14,8 @@ Planner Chat Integration 是 `wagent chat` 中的多候选 planning path。它�
 | 场景 | 说明 |
 |---|---|
 | 多个 learned actions 匹配 | 同一用户目标命中多个候选 |
-| 用户目标模糊 | “帮我处理一下这个页面”、“搞一下”、“继续” |
+| 用户目标模糊 | “帮我处理一下这个页面”、“搞一下” |
+| 用户给了 URL 但 action 仍模糊 | `http://localhost:<port>/items 帮我处理一下` |
 | planning preview / confirmed execution path | 需要先展示候选再等用户选择 |
 | candidate trust / drift warning 需要展示 | Planner 生成 warning / risk hint |
 
@@ -27,6 +28,33 @@ Planner Chat Integration 是 `wagent chat` 中的多候选 planning path。它�
 | 无 learned action | 走 no-path / learning guidance，不让 Planner 编造 |
 | Failure Recovery A/B/C | 归 11.3.5.8，不走 Planner |
 | learn_then_execute | 继续保守阻断 |
+
+触发规则：
+
+```text
+if len(candidates) > 1 and cannot_confidently_select_single_action:
+    enter planner choice path
+```
+
+`user_url` 只能作为 `target_page_hint`，不得作为跳过 Planner / choice 的条件。用户给了
+URL 但 action 仍然模糊时，仍应进入 Planner + pending_choice。
+
+### Runtime Priority Before Planner
+
+Planner path 只能在现有 live context 都不能处理当前输入之后触发。优先级：
+
+```text
+pending_choice / recovery choice
+active_task
+pending_intake
+pending_target
+deterministic single-action match
+planner multi-candidate / vague-goal path
+```
+
+“继续”不是默认 Planner 模糊目标。只有在没有 `pending_choice`、recovery choice、
+`active_task`、`pending_intake`、`pending_target` 等 live context 可继续时，才可以作为
+普通模糊输入进入 Planner clarification / choice。
 
 ### Candidate Source
 
@@ -123,15 +151,28 @@ type PlannerPrivateChoice = {
 
 ### Planner Output Mapping
 
-TaskPathPlanner output 到 pending choice 的映射规则：
+当前 `TaskPathPlanner.plan(task_intent, candidates)` 不返回多个候选列表。它消费 Runtime
+传入的 ranked candidates，选择 top valid candidate 生成单一 `route_plan`，并通过
+`confirmation_requirements`、`risk_hints`、`uncertainty`、`warnings` 表达风险或模糊性。
+
+因此：
+
+```text
+TaskPathPlanner 不负责生成 A/B/C 候选列表。
+Runtime 基于 ranked session candidates 生成 A/B/C。
+Planner output 只给 top candidate 提供 route_plan / warning / risk / uncertainty 信号。
+```
+
+TaskPathPlanner output 到 Runtime choice 的映射规则：
 
 | Planner output | Runtime 行为 |
 |---|---|
 | `route_plan is None` | 不执行；给 no-plan / learning guidance |
 | `route_plan.steps` 为空 | 不执行；给 no-plan / learning guidance |
-| 单个候选但 trust / risk 需要确认 | 展示 choice，不直接执行 |
-| 多个候选 | 展示 choice，按 planner ranking 排序 |
-| warnings / risk_hints / uncertainty | 只以 sanitized description 展示 |
+| 单个候选但 trust / risk 需要确认 | 展示 confirmation choice，不直接执行 |
+| 多个候选 | Runtime 按 ranked session candidates 展示 choice |
+| Planner top candidate matches choice A | choice A 可带 sanitized planner description / warning / confirmation hint |
+| warnings / risk_hints / uncertainty | 只以 sanitized description / hint 展示 |
 
 注意：现有 `PlanningPreviewService.preview()` 的 user_response 会包含 `Selected path:
 <learned_path_id>`。11.3.5.9 不得把该 raw response 直接作为 `wagent chat` 用户回复。
@@ -145,6 +186,7 @@ planner_candidates_generated
 planner_choice_created
 planner_choice_selected
 planner_unable_to_plan
+planner_fallback_used
 ```
 
 event payload 可以包含：
@@ -170,6 +212,9 @@ slot_overrides
 ReplayAction
 selector
 route_plan raw private steps
+runtime slot values
+item_name raw value
+credential / token / secret
 ```
 
 ### Compatibility Contract
@@ -177,6 +222,7 @@ route_plan raw private steps
 - 11.3.5.6 `/items` verified happy path 不能变慢或进入 Planner。
 - 11.3.5.7 choice parser / private map / cancel cleanup 继续复用。
 - 11.3.5.8 recovery choice 不受 Planner 影响。
+- 进入实现前必须 preflight 确认 11.3.5.7 / 11.3.5.8 targeted tests 通过。
 - Router 仍然只能推荐，不执行 skill，不输出 path id。
 - TaskPathPlanner 仍然是 deterministic service，不调用 LLM / browser / autonomous run。
 

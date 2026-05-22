@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：draft_docs（待评审，未开始实现）
+状态：draft_docs（revise_before_ready，待二次评审，未开始实现）
 
 ## 2026-05-22 文档生成
 
@@ -12,16 +12,38 @@
   - 本包属于 P2 planning integration。
   - 本包不改变 11.3.5.6 `/items` 单路径 happy path。
   - 本包复用 11.3.5.7 `pending_choice` / private map。
-  - 本包依赖 11.3.5.8 已完成的 failure recovery，但不扩展 recovery。
+  - 本包依赖 11.3.5.8 failure recovery 的实现能力，但不扩展 recovery。
+  - 进入实现前必须 preflight 确认 11.3.5.8 closeout 状态和 targeted tests。
   - 未实现代码。
   - 未运行 pytest / ruff / build。
   - 未运行 `verify-scenario` 或 autonomous run。
 
 ## 设计评审（Design Review）
 
-- Reviewer：
-- Decision：pending
+- Reviewer：ChatGPT
+- Decision：revise_before_ready
 - Notes：
+  - 方向通过，但不能直接标 `ready_for_implementation`。
+  - 现有 `TaskPathPlanner.plan()` 只输出单一 top `route_plan` 和
+    confirmation / risk / uncertainty，不输出多候选列表；文档必须改为 Runtime 生成 A/B/C。
+  - Planner 触发条件不得使用 `len(candidates) > 1 and not user_url`；URL 只是 target hint。
+  - “继续”必须先尊重 pending choice / recovery choice / active task / pending intake /
+    pending target，不能默认进入 Planner。
+  - 11.3.5.8 必须作为实现完成前置检查；实现前要确认 recovery choice、retry / relearn /
+    cancel、private payload safety 和 targeted tests 通过。
+
+## 2026-05-22 文档修订
+
+- Author：Codex
+- Decision：revisions_applied
+- Notes：
+  - 将 Planner 语义修正为 top route plan / warning / risk / uncertainty provider。
+  - 明确 A/B/C 候选列表由 Runtime 基于 ranked session candidates 生成。
+  - 修改 planner trigger 为 `len(candidates) > 1 and cannot_confidently_select_single_action`。
+  - 补充 live context 优先级，避免“继续”绕过 pending / active / recovery。
+  - 补充 11.3.5.8 implementation preflight dependency。
+  - 补充 planner fallback sanitized event 和 event slot value 禁止项。
+  - 尚未实现代码，需二次设计评审。
 
 ## 代码评审（Code Review）
 

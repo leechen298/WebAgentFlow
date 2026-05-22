@@ -1,12 +1,14 @@
 # 意图（Intent）
 
-状态：draft_docs（待评审，未开始实现）
+状态：draft_docs（revise_before_ready，待二次评审，未开始实现）
 
 ## 目标
 
 为 `wagent chat` 接入 TaskPathPlanner 的多候选 planning path：当用户目标模糊或当前
 session 中有多个 learned actions 可能匹配时，Runtime 应使用 deterministic
-`TaskPathPlanner` 生成候选解释，再通过 `pending_choice` 让用户选择。
+`TaskPathPlanner` 评估 top candidate 的 route plan、risk、warning 和 ambiguity 信号；
+A/B/C 候选列表仍由 Runtime 基于 ranked session candidates 生成，再通过 `pending_choice`
+让用户选择。
 
 成功状态：
 
@@ -17,10 +19,13 @@ session 中有多个 learned actions 可能匹配时，Runtime 应使用 determi
 Runtime 识别多个候选 learned actions
   |
   v
-TaskPathPlanner 生成候选 / 风险 / 不确定性
+Runtime 生成 ranked session candidates
   |
   v
-Runtime 写 pending_choice（只暴露 A/B/C）
+TaskPathPlanner 评估 top candidate / 风险 / 不确定性
+  |
+  v
+Runtime 合并 ranked candidates + planner signals，写 pending_choice（只暴露 A/B/C）
   |
   v
 用户选择 A
@@ -39,7 +44,10 @@ actions 转成 A/B/C。这样能安全阻断乱猜，但还没有利用已经实
 `TaskPathPlanner`：
 
 - Planner 能消费 ranked `LearnedPathCandidate`。
-- Planner 能生成 `RoutePlan`、confirmation requirement、risk hint 和 uncertainty。
+- Planner 能为 top candidate 生成单一 `RoutePlan`、confirmation requirement、
+  risk hint 和 uncertainty。
+- Planner 不返回 `ranked_candidates` 或 `alternative_routes`；多候选列表由 Runtime
+  基于 session learned actions 生成。
 - Planner 已有 task-planning tests 和 preview service，但还没有接入 `wagent chat`
   的 customer-facing choice mode。
 
@@ -58,7 +66,8 @@ actions 转成 A/B/C。这样能安全阻断乱猜，但还没有利用已经实
 ## 为什么现在做
 
 P0 working loop 已经证明系统可以学习一个操作、按新参数执行、采集 evidence 并保守报告。
-11.3.5.7 / 11.3.5.8 又补了 choice 和基础失败恢复。现在接 Planner 有真实地基：
+11.3.5.7 / 11.3.5.8 又补了 choice 和基础失败恢复。实现前必须确认这些前置能力
+在当前代码中可用，并且相关 targeted tests 通过。确认后，接 Planner 有真实地基：
 
 - choice mode 可以安全展示候选。
 - private map 可以隐藏真实 path id。
@@ -77,8 +86,10 @@ P0 working loop 已经证明系统可以学习一个操作、按新参数执行�
 
 ## 成功标准
 
-- 多个 learned actions 匹配时，Runtime 调用 TaskPathPlanner。
-- Planner output 被转换成 sanitized `pending_choice`。
+- 多个 learned actions 且无法确定唯一执行动作时，Runtime 调用 TaskPathPlanner。
+- Runtime 基于 ranked session candidates 生成 sanitized `pending_choice`。
+- Planner output 只作为 top candidate 的 route plan / warning / uncertainty 信号，
+  不被当作多候选列表来源。
 - visible payload / WAgent reply / progress event 不含 `learned_path_id`。
 - private map 内部保存真实 path id 和 slot overrides。
 - 用户选择 A / 1 / 第一个后，Runtime 执行对应 path。

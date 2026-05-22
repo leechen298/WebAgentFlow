@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：draft_docs（待评审，未开始实现）
+状态：draft_docs（revise_before_ready，待二次评审，未开始实现）
 
 ## 输入
 
@@ -21,7 +21,8 @@ Planned implementation files:
   - build `TaskIntent`
   - build planner candidates from session learned actions
   - call `TaskPathPlanner`
-  - map planner output to `pending_choice`
+  - build `pending_choice` from ranked session candidates
+  - merge planner top-candidate signals into sanitized choice descriptions
   - support `planner_route_choice` selection
 - `apps/api/tests/test_conversation_chat_runtime.py`
   - multi-candidate planner integration
@@ -47,6 +48,8 @@ Do not modify by default:
 - Review `contract.md` and `technical-design.md`。
 - 确认本包只接 multi-candidate / vague-goal path。
 - 确认不使用 `PlanningPreviewService.preview().user_response` 作为 chat reply。
+- 确认 `TaskPathPlanner` 只输出 top route plan / warning / risk / uncertainty，
+  不输出多候选列表。
 - 确认 single-path `/items` happy path 不经过 Planner。
 
 ### Step 1 · Current-state preflight
@@ -63,8 +66,10 @@ rg -n "pending_choice|pending_choice_private_map|_build_pending_choice|_handle_p
 Expected:
 
 - `TaskPathPlanner` exists and has `plan(task_intent, candidates)`。
+- `TaskPathPlanner.plan()` returns one `route_plan` rather than ranked alternatives。
 - `pending_choice` private map exists。
-- 11.3.5.7 and 11.3.5.8 targeted tests are available.
+- 11.3.5.7 and 11.3.5.8 targeted tests are available and pass.
+- 11.3.5.8 recovery choice、retry / relearn / cancel、private payload safety 可用。
 
 ### Step 2 · Write adapter tests first
 
@@ -74,6 +79,8 @@ Add tests in `apps/api/tests/test_conversation_chat_runtime.py`:
 - visible pending choice does not include `learned_path_id`.
 - private map includes selected internal path id.
 - single candidate does not call planner.
+- URL present but action vague still enters planner choice when multiple candidates exist.
+- "继续" first respects pending / active / recovery context and does not default to Planner.
 
 Expected first run:
 
@@ -93,12 +100,14 @@ Add minimal helpers in `chat_runtime.py`:
 ```text
 _build_task_intent_for_planner(...)
 _planner_candidates_from_session_actions(...)
-_planner_output_to_pending_choice(...)
+_planner_signals_for_top_choice(...)
 ```
 
 Rules:
 
 - current session learned actions only;
+- Runtime builds A/B/C from ranked session candidates, not from Planner output;
+- Planner output only annotates the mapped top candidate;
 - repo metadata only enriches existing candidates;
 - no external catalog expansion;
 - no LLM / browser / raw HTML.
@@ -108,12 +117,16 @@ Rules:
 Modify `_handle_execute_task()` multi-candidate branch:
 
 ```text
-len(candidates) > 1 and not user_url
+len(candidates) > 1 and cannot_confidently_select_single_action
   -> _handle_planner_pending_choice_question(...)
 ```
 
+Do not use `not user_url` as a gate. `user_url` is a target hint only; URL + vague action
+still requires Planner + pending_choice.
+
 Keep existing direct `_handle_pending_choice_question()` as fallback only if planner is unavailable or
-adapter returns no planner candidates.
+adapter returns no planner candidates. When fallback is used, record sanitized
+`planner_fallback_used` / `planner_unavailable` event.
 
 ### Step 5 · Add planner private choice selection
 
@@ -136,9 +149,11 @@ planner_candidates_generated
 planner_choice_created
 planner_choice_selected
 planner_unable_to_plan
+planner_fallback_used
 ```
 
-Payloads may include counts and choice ids, not private ids or slot values.
+Payloads may include counts and choice ids, not private ids, slot values, raw route steps,
+or private retry / planner payload.
 
 ### Step 7 · Run targeted tests
 

@@ -1,6 +1,6 @@
 # 11.3.5.9 · TaskPathPlanner Multi-candidate Chat Integration
 
-状态：draft_docs（待评审，未开始实现）
+状态：draft_docs（revise_before_ready，待二次评审，未开始实现）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -22,9 +22,14 @@ deterministic `TaskPathPlanner` 接入 `wagent chat` 的多候选 / 模糊目标
 
 ## 迭代定位
 
-11.3.5.3 - 11.3.5.6 已跑通 `/items` P0 working loop。11.3.5.7 已补
-`pending_choice` / `active_task`，11.3.5.8 已补基础失败恢复。11.3.5.9 只处理
-“有多个可能执行路径或用户目标模糊时，如何让 Planner 给候选并让 Runtime 安全展示选择”。
+11.3.5.3 - 11.3.5.6 已跑通 `/items` P0 working loop。11.3.5.7 提供
+`pending_choice` / `active_task`，11.3.5.8 提供基础失败恢复。11.3.5.9 只处理
+“有多个可能执行路径或用户目标模糊时，如何让 Runtime 基于 ranked session candidates
+展示选择，并利用 Planner 对 top candidate 给出 route plan / warning / uncertainty 信号”。
+
+实现前必须 preflight 确认 11.3.5.7 和 11.3.5.8 的实现能力与 targeted tests 仍然通过；
+如果 pending choice、private map、active task、recovery choice、retry / relearn / cancel
+或 private payload safety 不可用，本包不得进入实现。
 
 关键边界：
 
@@ -34,8 +39,9 @@ deterministic `TaskPathPlanner` 接入 `wagent chat` 的多候选 / 模糊目标
   -> 直接 replay
 
 多个 learned actions 或目标模糊
-  -> 构造 TaskIntent + candidate list
-  -> TaskPathPlanner 生成 planning output
+  -> Runtime 生成 ranked session candidates
+  -> TaskPathPlanner 评估 top candidate / ambiguity / risk
+  -> Runtime 合并 ranked candidates + planner signals
   -> Runtime 写 pending_choice + private map
   -> 用户选择 A/B/C
   -> Runtime 内部解析 learned_path_id 并执行
@@ -46,7 +52,9 @@ deterministic `TaskPathPlanner` 接入 `wagent chat` 的多候选 / 模糊目标
 - 在 `wagent chat` 多候选 / 模糊目标路径中调用 `TaskPathPlanner`。
 - 把当前 session 的 learned actions 转成 planner 可消费的 `LearnedPathCandidate`。
 - 把 Intake / raw input / target hint 转成 `TaskIntent`。
-- 把 planner output 转成用户可见 `pending_choice`。
+- Runtime 基于 ranked session candidates 生成用户可见 A/B/C choice。
+- 把 Planner 对 top candidate 的 `route_plan`、warnings、risk hints、uncertainty
+  作为 sanitized description / confirmation hint 融入 choice。
 - 把真实 `learned_path_id`、slot overrides 和 route-plan metadata 放进 private map。
 - 用户选择 choice 后，继续复用 11.3.5.7 的选择解析和 `_execute_matched_action()`。
 - 记录 sanitized planning progress event，便于 review，但不泄露 private path id。
