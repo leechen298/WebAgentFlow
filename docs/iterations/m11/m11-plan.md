@@ -1648,47 +1648,48 @@ apps/product-test-site /items
 -> docs/testing/results 记录结果和日志复核
 ```
 
-## 11.3.6 · WAgent Runtime Eval Runner
+## 11.3.6 · WAgent Runtime Eval Program
 
-状态：ready_for_implementation（design review passed，未实现代码）。
+状态：draft_for_review（总体测试规划已生成，未实现代码）。
 
-11.3.6 不继续增加 Customer-Facing Agent Router / Skill Runtime 的产品能力，而是把
-11.3.5 working runtime 的关键验收路径沉淀成本地可重复运行的 eval harness。
+11.3.6 不直接实现 runner，也不继续增加 Customer-Facing Agent Router / Skill Runtime
+的产品能力。它是 WAgent runtime eval 的总体测试规划包：定义 hard gates、artifact、
+exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 
 定位：
 
 ```text
-developer / Codex runs one command
--> runner drives Conversation API
--> runner collects events / history / LearnedPath evidence
--> runner evaluates hard gates per case
--> runner writes JSON artifact + Markdown result
--> exit code reflects required gate result
+11.3.6 program
+-> 11.3.6.1 runner core + /items closed loop
+-> 11.3.6.2 failure recovery eval
+-> 11.3.6.3 pending choice multi-candidate eval
+-> 11.3.6.4 planner-backed choice eval
 ```
 
-第一版范围：
+子包路线：
 
-| Case | 目标 | 状态 |
+| Package | 目标 | 状态 |
 |---|---|---|
-| `items_closed_loop` | `/items` 学习新增 A、执行新增 B，校验 LearnedPath parameterization、slot override、DOM evidence、Reporter outcome 和 final response；selector gate 只从可观察的 `evidence_targets` 判断 | planned |
-| `single_path_direct_replay_regression` | 基于当前 eval session 已学新增项目 path 执行 C，校验单路径明确目标直接 replay，不进入 pending choice / planner choice；不得受全局旧 `/items` LearnedPath rows 污染 | planned |
+| [11.3.6.1 · WAgent Runtime Eval Runner Core](./11.3.6.1-wagent-runtime-eval-runner-core/) | 实现 runner v1，覆盖 `items_closed_loop` 和 `single_path_direct_replay_regression` | ready_for_implementation（design review passed，未实现代码） |
+| 11.3.6.2 · Failure Recovery Eval | recovery menu safety、retry / relearn / cancel、private payload safety | planned |
+| 11.3.6.3 · Pending Choice Multi-candidate Eval | A/B/C public choice、private map、用户选择后执行正确 path | planned |
+| 11.3.6.4 · Planner-backed Choice Eval | vague goal、planner choice path、single-path bypass Planner 回归 | planned |
 
 关键边界：
 
-- 直接调用 Conversation API，不依赖交互式 `wagent chat` 作为主 harness。
-- 不调用 `verify-scenario`。
+- 11.3.6 program 本身 docs-only，不写 runner 代码。
+- 11.3.6.1 承接已通过评审的 runner core 设计。
+- 11.3.6.2 之前必须先设计稳定 fault injection / eval-only hook。
+- 11.3.6.x runner 通过 Conversation API 驱动，不把 direct replay API 冒充 WAgent
+  runtime 闭环。
+- Codex 复核 artifact，不替 runner 判定 pass / fail。
 - 不调用 autonomous-run endpoints。
-- 不使用登录页。
-- 不启用 `learn_then_execute`。
-- 不把 direct replay API 结果冒充 WAgent runtime 闭环。
-- 不让 Codex 的自然语言判断替代 hard gates。
-- 不在第一版实现 failure recovery fault injection。
-- 输出 `artifacts/wagent-eval/wagent-runtime-eval-<timestamp>.json` 和
-  `docs/testing/results/m11-11.3.6-wagent-runtime-eval-<date>.md`。
+- 不默认调用 `verify-scenario`。
 
 迭代文档：
 
-- [`11.3.6-wagent-runtime-eval-runner/`](./11.3.6-wagent-runtime-eval-runner/)
+- [`11.3.6-wagent-runtime-eval-program/`](./11.3.6-wagent-runtime-eval-program/)
+- [`11.3.6.1-wagent-runtime-eval-runner-core/`](./11.3.6.1-wagent-runtime-eval-runner-core/)
 
 ## Later M11.x · Page Context Bridge Decision Point
 

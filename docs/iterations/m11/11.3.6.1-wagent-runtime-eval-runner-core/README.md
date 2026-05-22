@@ -1,11 +1,12 @@
-# 11.3.6 · WAgent Runtime Eval Runner
+# 11.3.6.1 · WAgent Runtime Eval Runner Core
 
 状态：ready_for_implementation（design review passed，未实现代码）
 里程碑：M11
 类型：code
-父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
+父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
 前置迭代：
 
+- [`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
 - [`11.3.5.6-wagent-chat-items-closed-loop-evaluation`](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/)
 - [`11.3.5.7-pending-choice-active-task-ledger`](../11.3.5.7-pending-choice-active-task-ledger/)
 - [`11.3.5.8-basic-failure-recovery`](../11.3.5.8-basic-failure-recovery/)
@@ -19,7 +20,7 @@
 
 本包把 11.3.5 working runtime 的人工闭环验收沉淀成可重复运行的
 WAgent Runtime Eval Runner。它不是新的产品 Agent 能力，也不是 M15 全量 automated
-evaluation 平台；它是 M11 working runtime 的本地端到端验收脚手架。
+evaluation 平台；它是 11.3.6 eval program 的第一条可执行 runner 包。
 
 ## 迭代定位
 
@@ -37,9 +38,9 @@ evaluation 平台；它是 M11 working runtime 的本地端到端验收脚手架
 -> WAgent evidence-based final response
 ```
 
-11.3.5.7 / 11.3.5.8 / 11.3.5.9 又分别补齐 pending choice、基础失败恢复和
-TaskPathPlanner multi-candidate chat integration。11.3.6 的目标是把这些关键路径变成
-一个可由开发者或 Codex 外部测试操作员反复执行的 eval runner：
+11.3.6 总体规划把 runtime eval 拆成可逐步扩展的 11.3.6.x 子包。11.3.6.1 只负责
+先把 `/items` 闭环和单路径 direct replay regression 变成可由开发者或 Codex 外部测试
+操作员反复执行的 eval runner：
 
 ```text
 one command
@@ -98,7 +99,7 @@ one command
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计一致。
 - [x] `plan.md` 与 contract / technical design 一致。
-- [x] `review.md` 已初始化，等待设计评审和后续实现证据。
+- [x] `review.md` 已记录设计评审结论，等待后续实现证据。
 
 ## 当前状态
 

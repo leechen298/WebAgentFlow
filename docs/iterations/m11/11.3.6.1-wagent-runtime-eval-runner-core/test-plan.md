@@ -42,7 +42,7 @@ learning / replay、TaskResultReporter evidence、artifact 输出和 exit code�
 | Integration | IN-5 collect events/history/path | read-only APIs | evidence collected | Yes for live run | no direct replay |
 | Case | CASE-1 `items_closed_loop` | runner | required gates pass or explicit fail | Yes | first case |
 | Case | CASE-2 `single_path_direct_replay_regression` | runner | direct replay verified, no choice/planner | Yes | second case |
-| Artifact | ART-1 JSON written | filesystem | file exists, schema_version 11.3.6 | Yes | if run starts |
+| Artifact | ART-1 JSON written | filesystem | file exists, schema_version 11.3.6.1 | Yes | if run starts |
 | Artifact | ART-2 Markdown written | filesystem | result path exists | Yes | unless `--no-markdown` |
 | Safety | SAF-1 no autonomous request | code / logs | no autonomous-run endpoint call | Yes | grep / review |
 | Safety | SAF-2 no private payload leak | JSON / Markdown | sensitive fields redacted | Yes | review artifact |

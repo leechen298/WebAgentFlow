@@ -88,7 +88,7 @@ Runner 创建 session 时必须使用 runtime conversation 语义：
     "browser_visibility": "headless",
     "eval_runner": {
       "name": "wagent_runtime_eval",
-      "schema_version": "11.3.6"
+      "schema_version": "11.3.6.1"
     }
   }
 }
@@ -262,7 +262,7 @@ artifacts/wagent-eval/wagent-runtime-eval-${timestamp}.json
 
 ```json
 {
-  "schema_version": "11.3.6",
+  "schema_version": "11.3.6.1",
   "environment": {},
   "services": {},
   "config": {},
@@ -281,7 +281,7 @@ artifacts/wagent-eval/wagent-runtime-eval-${timestamp}.json
 Markdown result：
 
 ```text
-docs/testing/results/m11-11.3.6-wagent-runtime-eval-${date}.md
+docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-${date}.md
 ```
 
 必须包含：
@@ -338,7 +338,7 @@ evidence, such as `[data-testid='item-list']`.
 
 ### Product / Milestone Contract
 
-11.3.6 does not change:
+11.3.6.1 does not change:
 
 - product lifecycle stages L1 / L2 / L3;
 - internal Agent role table;
@@ -349,4 +349,5 @@ evidence, such as `[data-testid='item-list']`.
 - Conversation API response envelope;
 - autonomous-run verification order.
 
-11.3.6 adds only a local evaluation harness and its documentation.
+11.3.6.1 adds only the first executable local evaluation harness and its documentation. The overall
+eval program roadmap remains in `11.3.6-wagent-runtime-eval-program`.

@@ -259,7 +259,7 @@ Do not claim live eval pass unless the runner actually executed and generated ar
 ## Commit suggestion
 
 ```bash
-git add docs/iterations/m11/11.3.6-wagent-runtime-eval-runner \
+git add docs/iterations/m11/11.3.6.1-wagent-runtime-eval-runner-core \
   docs/iterations/m11/README.md \
   docs/iterations/m11/m11-plan.md \
   scripts/evals/wagent_runtime_eval.py \

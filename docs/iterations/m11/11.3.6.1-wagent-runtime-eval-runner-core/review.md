@@ -2,11 +2,12 @@
 
 状态：ready_for_implementation（design review passed，未实现代码）
 
-## 2026-05-22 文档生成
+## 2026-05-22 原 11.3.6 文档生成（拆分前）
 
 - Author：Codex
-- Scope：生成 11.3.6 七件套，定义 WAgent Runtime Eval Runner、API driver、
-  evidence collector、hard gates、artifact、exit code 和安全边界。
+- Scope：生成原 11.3.6 runner 七件套，定义 WAgent Runtime Eval Runner、API driver、
+  evidence collector、hard gates、artifact、exit code 和安全边界；该设计现已下沉为
+  11.3.6.1 runner core。
 - Decision：docs_created
 - Notes：
   - 本包定位为 M11 working runtime 的本地 eval harness。
@@ -22,7 +23,7 @@
   - 未修改 `package.json`。
   - 未运行 pytest / ruff / build / eval。
 
-## 设计评审（Design Review）
+## 初始设计评审（Initial Design Review）
 
 - Reviewer：ChatGPT
 - Decision：revise_before_ready
@@ -56,10 +57,23 @@
 
 - Reviewer：Codex
 - Decision：ready_for_implementation
+- Final Decision：ready_for_implementation
 - Notes：
   - 两个 required contract revisions 已应用。
   - 尚未实现代码，后续实现必须先按 `plan.md` Step 1 复核当前 API / event / history
     可观测性。
+
+## 2026-05-22 迭代拆分
+
+- Author：Codex
+- Decision：moved_to_child_iteration
+- Notes：
+  - 用户确认 11.3.6 更适合作为 WAgent Runtime Eval Program 总体测试规划。
+  - 原 11.3.6 runner 实现设计整体下沉为
+    `11.3.6.1-wagent-runtime-eval-runner-core`。
+  - 本包继续承接已通过评审的 runner core 实现范围：`items_closed_loop` 和
+    `single_path_direct_replay_regression`。
+  - `11.3.6-wagent-runtime-eval-program` 只作为总体规划和后续 11.3.6.x 路线图。
 
 ## 代码评审（Code Review）
 
@@ -126,7 +140,7 @@ session id、artifact path、gate summary 和 exit code。
 
 ### 后续事项（Follow-ups）
 
-- 用户确认 11.3.6 文档后，进入实现阶段。
+- 用户确认 11.3.6.1 文档后，进入实现阶段。
 - 实现前先核对当前 Conversation API request / response schema。
 - 如果 step log `effective_value` 当前不可读，只允许 warning / not_observable，并记录只读
   可观测性 follow-up。

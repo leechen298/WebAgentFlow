@@ -64,7 +64,8 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.5.7-pending-choice-active-task-ledger](./11.3.5.7-pending-choice-active-task-ledger/) —— Pending Choice & Minimal Active Task Ledger：补多候选澄清、choice 私有映射、最小 active task 状态账本、pending 清理 / 过期和 cancel cleanup。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.5.8-basic-failure-recovery](./11.3.5.8-basic-failure-recovery/) —— Basic Failure Recovery：补基础失败恢复菜单：重试、重新学习、取消；不做复杂自治恢复。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.5.9-taskpathplanner-multi-candidate-chat-integration](./11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) —— TaskPathPlanner Multi-candidate Chat Integration：只在多候选、模糊目标、planning path 中接入 TaskPathPlanner，不进入单路径 happy path。状态：implementation complete（code review passed，targeted tests passed）。
-- [11.3.6-wagent-runtime-eval-runner](./11.3.6-wagent-runtime-eval-runner/) —— WAgent Runtime Eval Runner：把 11.3.5 working runtime 的 `/items` 闭环和单路径 direct replay 回归沉淀成可重复运行的本地 eval harness，输出 hard gates、JSON artifact、Markdown result 和 exit code。状态：ready_for_implementation（design review passed，未实现代码）。
+- [11.3.6-wagent-runtime-eval-program](./11.3.6-wagent-runtime-eval-program/) —— WAgent Runtime Eval Program：runtime eval 总体测试规划，定义 11.3.6.x 子包、artifact、exit code、hard gates 和 Codex 审计边界。状态：draft_for_review（总体测试规划已生成，未实现代码）。
+- [11.3.6.1-wagent-runtime-eval-runner-core](./11.3.6.1-wagent-runtime-eval-runner-core/) —— WAgent Runtime Eval Runner Core：实现 runner v1，覆盖 `/items` closed loop 和 single-path direct replay regression。状态：ready_for_implementation（design review passed，未实现代码）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -127,11 +128,15 @@ LearnedPath actions、replay observation、task planning schemas 和 response pr
 Conversation Entry Gate，并要求 CLI 在等待 API 返回期间显示持续 working 状态。
 非网页消息应快速友好回复并引导用户回到 WebAgentFlow 的网页操作能力；网页任务候选
 继续进入 11.3.5 runtime。
-`11.3.6-wagent-runtime-eval-runner/` 是 11.3 working runtime 的本地验收脚手架。
-它不新增产品 runtime 能力，不运行 autonomous exploration，不调用 `verify-scenario`；
-它通过 Conversation API 一次性运行 `/items` closed loop 和 single-path direct replay
-regression，按 hard gates 写出 JSON / Markdown 证据，并用 exit code 表示验收结果。
-Codex 在该流程中只做报告审计员，不作为 pass / fail 裁判。
+`11.3.6-wagent-runtime-eval-program/` 是 11.3 working runtime 的本地验收体系总纲。
+它不实现 runner，而是定义 11.3.6.x 子包路线：11.3.6.1 做 runner core 和 `/items`
+两条核心回归，11.3.6.2 / 11.3.6.3 / 11.3.6.4 后续分别扩展 failure recovery、
+pending choice 和 planner-backed choice eval。Codex 在该体系中只做 artifact 审计员，
+不作为 pass / fail 裁判。
+`11.3.6.1-wagent-runtime-eval-runner-core/` 承接原 11.3.6 runner 设计，负责第一版
+可执行 runner。它通过 Conversation API 一次性运行 `/items` closed loop 和 single-path
+direct replay regression，按 hard gates 写出 JSON / Markdown 证据，并用 exit code 表示
+验收结果。
 
 11.2 后续 backlog：
 
