@@ -22,6 +22,18 @@
 - Decision：pending
 - Notes：
 
+## 2026-05-22 设计反馈修订
+
+- Reviewer：ChatGPT
+- Decision：revise_before_ready
+- Notes：
+  - 明确 11.3.5.7 `pending_choice` / private map / `active_task` 是实现前置，
+    11.3.5.8 实现前必须 preflight 确认。
+  - 明确 retry 是再次执行，不是重新检查；在 evidence missing / uncertain / needs_review
+    下可能重复副作用，用户可见文案必须提示。
+  - 明确 recovery events 不得记录 private retry / relearn payload、`slot_overrides`、
+    `learned_path_id`、`evidence_targets`、selector 或 ReplayAction。
+
 ## 代码评审（Code Review）
 
 - Reviewer：
@@ -79,4 +91,3 @@
 
 - 设计评审通过后，把状态改为 `ready_for_implementation`。
 - 实现阶段必须守住 retry / relearn / cancel 三选项边界，不做复杂自治恢复。
-

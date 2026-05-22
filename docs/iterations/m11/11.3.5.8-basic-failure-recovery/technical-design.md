@@ -12,8 +12,9 @@
 | parameterized replay | 已有 `value_slot` / `slot_overrides` |
 | execution evidence | 已有 `ExecutionEvidence` |
 | TaskResultReporter adapter | 已有 verified / needs_review / uncertain 路径 |
-| `pending_choice` | 11.3.5.7 设计为已实现或前置能力 |
-| `active_task` | 11.3.5.7 设计为已实现或前置能力 |
+| `pending_choice` | 依赖 11.3.5.7 实现；实现前必须 preflight 确认 |
+| `pending_choice_private_map` | 依赖 11.3.5.7 实现；实现前必须确认 public session / history safety |
+| `active_task` | 依赖 11.3.5.7 实现；实现前必须 preflight 确认 |
 
 当前缺口是：失败 / 不确定后，用户缺少一个稳定恢复入口。
 
@@ -78,7 +79,7 @@ visible choices：
 
 ```json
 [
-  {"choice_id": "A", "label": "重试", "intent": "execute_operation"},
+  {"choice_id": "A", "label": "重试执行该操作", "intent": "execute_operation"},
   {"choice_id": "B", "label": "重新学习", "intent": "learn_operation"},
   {"choice_id": "C", "label": "取消", "intent": "cancel"}
 ]
@@ -91,14 +92,14 @@ private map：
   "A": {
     "kind": "retry_replay",
     "learned_path_id": "internal",
-    "target_url": "http://localhost:5176/items",
+    "target_url": "<runtime target URL>",
     "slot_overrides": {"item_name": "测试项目B"},
     "failure_reason": "evidence_missing",
     "retry_count": 0
   },
   "B": {
     "kind": "relearn_operation",
-    "target_url": "http://localhost:5176/items",
+    "target_url": "<runtime target URL>",
     "action_alias": "新增项目",
     "fill_values": {"item_name": "测试项目B"},
     "failure_reason": "evidence_missing"
@@ -106,6 +107,9 @@ private map：
   "C": {"kind": "cancel", "failure_reason": "evidence_missing"}
 }
 ```
+
+`<runtime target URL>` 必须来自当前 runtime / learned action 的目标 URL。`localhost:5176`
+只能作为本地示例端口，不能在实现中硬编码。
 
 ### 4. Choice selection integration
 
@@ -134,7 +138,8 @@ def _retry_replay_from_recovery_choice(...):
 - 使用 private map 中的 `learned_path_id` / `target_url` / `slot_overrides`。
 - 重新构造 evidence targets。
 - 记录 retry started event。
-- 如果 retry 再次失败，允许再次 offer recovery，但必须递增 `retry_count`，避免自动循环。
+- 每次用户选择 A 只触发一次 replay retry。
+- 如果 retry 再次失败，允许再次 offer recovery，但必须递增 `retry_count`，系统不得自动再次 retry。
 
 ### 6. Relearn helper
 
@@ -157,10 +162,10 @@ def _start_relearn_from_recovery_choice(...):
 示例：
 
 ```text
-这次执行没有确认成功。我没有在列表中看到“测试项目B”。
+这次操作已经执行过，但我没有拿到足够证据确认结果。我没有在列表中看到“测试项目B”。
 
 你可以选择：
-A. 重试
+A. 重试执行该操作（可能会重复新增 / 提交）
 B. 重新学习
 C. 取消
 ```
@@ -171,7 +176,7 @@ blocked 示例：
 我找到了已学习路径，但当前页面和学习时的页面不匹配，所以没有继续确认执行结果。
 
 你可以选择：
-A. 重试
+A. 重试执行该操作
 B. 重新学习
 C. 取消
 ```
@@ -182,6 +187,21 @@ C. 取消
 - progress event 可以记录 failure class，但不能包含 private map。
 - session public API 继续通过 `session_public_payload()` 过滤 private map。
 - 如果 future slot 包含 credential / token / secret，不得明文记录在 visible payload 或 LLM trace。
+
+Recovery events 不得包含：
+
+```text
+pending_choice_private_map
+learned_path_id
+slot_overrides
+evidence_targets
+ReplayAction
+selector
+private retry / relearn payload
+```
+
+Recovery events 只允许记录 public diagnostics，例如 `failure_class`、`choice_group_id`、
+`selected_choice_id`、`recovery_kind`、`retry_count`、public action alias。
 
 ## 预期触及文件
 
@@ -198,4 +218,3 @@ C. 取消
 - 不改 TaskResultReporter outcome enum。
 - 不新增 DB migration。
 - 不新增 public endpoint。
-

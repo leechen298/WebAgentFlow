@@ -20,7 +20,7 @@
 happy path 能力，而是在 replay 失败、页面不匹配、证据不足时给用户一个安全出口：
 
 ```text
-A. 重试
+A. 重试执行该操作
 B. 重新学习
 C. 取消
 ```
@@ -36,9 +36,11 @@ C. 取消
 -> TaskResultReporter verified
 ```
 
-11.3.5.7 已为多候选和继续状态补 `pending_choice` 与最小 `active_task`。
-11.3.5.8 在这个状态底座上补基础失败恢复：失败时不编造成果，不让 LLM 自己探索修复，
-而是由 Runtime 根据 replay / reporter / evidence 状态给出可选择的恢复动作。
+11.3.5.8 依赖 11.3.5.7 的 `pending_choice`、private map、最小 `active_task`
+和 cancel cleanup 实现能力。实现前必须先确认这些能力已在当前代码中可用，并且
+相关 targeted tests 通过。11.3.5.8 在这个状态底座上补基础失败恢复：失败时不编造成果，
+不让 LLM 自己探索修复，而是由 Runtime 根据 replay / reporter / evidence 状态给出
+可选择的恢复动作。
 
 ## 本包做什么
 
@@ -47,7 +49,9 @@ C. 取消
 - URL mismatch / drift / blocked 时，阻断继续执行并展示恢复选项。
 - 复用 11.3.5.7 的 `pending_choice` 机制展示 A/B/C。
 - private map 内部保存 retry / relearn / cancel 所需的最小安全 payload。
-- 用户选择 A 时，Runtime 按原 learned action、target URL、slot overrides 重试一次。
+- 用户选择 A 时，Runtime 按原 learned action、target URL、slot overrides 再次执行一次。
+- evidence missing / uncertain / needs_review 下的重试可能重复已经发生过的副作用，
+  用户可见文案必须提示“重试会再次执行该操作”。
 - 用户选择 B 时，Runtime 进入重新学习分支，不自动 learn_then_execute。
 - 用户选择 C 或说“算了”时，清理 pending recovery / pending choice / active task。
 - 记录可审计 recovery events，例如 offered / selected / retry started / relearn started。
@@ -87,4 +91,3 @@ C. 取消
 ## 当前状态
 
 文档已生成，等待设计评审。评审通过后才能进入代码实现阶段。
-

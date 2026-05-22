@@ -28,7 +28,7 @@
 | Integration | FR-1 replay failed offers recovery | chat runtime | response has failure explanation + A/B/C | Yes | mocked replay failed |
 | Integration | FR-2 evidence missing offers recovery | chat runtime | response does not say success, offers A/B/C | Yes | Reporter `needs_review` / `uncertain` |
 | Integration | FR-3 blocked offers recovery | chat runtime | blocked wording + A/B/C | Yes | drift / URL mismatch |
-| Integration | RT-1 choose A retry | chat runtime | replay called again with same learned path / slot overrides | Yes | no Planner |
+| Integration | RT-1 choose A retry | chat runtime | replay called again with same learned path / slot overrides | Yes | no Planner；文案提示会再次执行 |
 | Integration | RT-2 retry preserves evidence target | chat runtime | `item_name` evidence target rebuilt | Yes | `/items` regression |
 | Integration | RT-3 retry failure does not loop | chat runtime | no automatic retry loop | Yes | may offer recovery again |
 | Integration | RL-1 choose B relearn | chat runtime | learning branch starts, no immediate replay | Yes | `learn_then_execute` remains blocked |
@@ -37,6 +37,7 @@
 | Integration | CAN-2 Chinese cancel | chat runtime | clears recovery state | Yes | “算了” |
 | Security | SEC-1 WAgent reply no id | output text | no `learned_path_id` / private map | Yes | visible only |
 | Security | SEC-2 Router / LLM trace no private map | trace payload | no recovery private map | Yes | if trace path touched |
+| Security | SEC-3 recovery events no private payload | conversation events | no path id / slot overrides / evidence targets / private retry payload | Yes | public diagnostics only |
 | Regression | REG-1 verified happy path | targeted tests | no recovery menu on verified result | Yes | 11.3.5.6 preserved |
 | Regression | REG-2 pending choice normal selection | targeted tests | 11.3.5.7 choice still works | Yes | recovery kind does not break learned_action kind |
 
@@ -96,4 +97,3 @@ git diff --check
 | Console UI smoke | 本包不改 Console | Console recovery UI 未来另做 |
 | TaskPathPlanner | 属于 11.3.5.9 | 本包直接 retry / relearn / cancel |
 | Full `/items` live closed loop | 已由 11.3.5.6 验证成功路径 | 本包只做失败恢复 targeted tests |
-

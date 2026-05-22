@@ -8,7 +8,7 @@
 不能确认什么，并给用户三个明确选择：
 
 ```text
-A. 重试
+A. 重试执行该操作
 B. 重新学习
 C. 取消
 ```
@@ -55,9 +55,9 @@ C. 取消
 - replay failed 时，用户收到失败说明和 A/B/C 恢复选项。
 - evidence missing / `needs_review` / `uncertain` 时，系统不说成功，而是提示无法确认并给恢复选项。
 - URL mismatch / drift / blocked 时，系统不继续乱执行，并给恢复选项。
-- 用户输入 `A` / `1` / `第一个` 后，Runtime 重试同一个 learned action，保留原 `slot_overrides`。
+- 用户输入 `A` / `1` / `第一个` 后，Runtime 再次执行同一个 learned action，
+  保留原 `slot_overrides`，并在文案中提示可能重复副作用。
 - 用户输入 `B` / `2` / `第二个` 后，Runtime 进入重新学习分支，必要信息不足时追问。
 - 用户输入 `C` / `3` / `第三个` 或“算了”后，清理 pending state 和 active task。
 - retry / relearn / cancel 的 private payload 不暴露 `learned_path_id` 给用户、Router prompt 或 LLM trace。
 - 既有 `/items` verified happy path 不受影响。
-

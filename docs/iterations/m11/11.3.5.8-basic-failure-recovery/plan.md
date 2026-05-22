@@ -48,7 +48,20 @@ rg -n "TaskResultReporter|verification_outcome|execution_evidence|CHAT_EXECUTION
 Expected:
 
 - 11.3.5.7 choice / active task helpers 已存在。
+- 11.3.5.7 private map 不会通过 session public API / Router payload / LLM trace 外泄。
 - 11.3.5.5 reporter / evidence paths 已存在。
+
+Before implementation, run or confirm the 11.3.5.7 targeted tests that cover:
+
+```text
+pending choice creation
+choice selection
+choice miss / expiry
+cancel cleanup
+active_task updates
+session public payload sanitization
+slot_overrides preservation through choice selection
+```
 
 ### Step 2 · Add failure classification helper
 
@@ -68,6 +81,7 @@ Do not introduce complex taxonomy.
 
 - Build visible A/B/C choices.
 - Build private map with retry / relearn / cancel payload.
+- Use `重试执行该操作` as the visible retry label.
 - Ensure public payload has no `learned_path_id`, `slot_overrides`, selector or replay action.
 - Add unit tests.
 
@@ -96,6 +110,8 @@ learned_action -> existing 11.3.5.7 behavior
 - No Planner.
 - No LLM.
 - No automatic retry loop.
+- Every user choice A triggers at most one replay retry.
+- For evidence missing / uncertain / needs_review, user-facing text must say retry executes the operation again and may repeat side effects.
 - Add tests proving `slot_overrides.item_name` is preserved.
 
 ### Step 7 · Implement relearn
@@ -149,4 +165,3 @@ If performing manual closeout outside that skill, update `review.md` with:
 - tests run
 - skipped live run reasons
 - review findings and fixes
-

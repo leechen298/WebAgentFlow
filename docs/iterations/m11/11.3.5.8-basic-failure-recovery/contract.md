@@ -28,7 +28,7 @@ LLM / Router 不负责：
 本包复用 11.3.5.7 的 `pending_choice` visible payload。用户只看到：
 
 ```text
-A. 重试
+A. 重试执行该操作
 B. 重新学习
 C. 取消
 ```
@@ -97,11 +97,20 @@ P2 基础版只分类到能驱动用户下一步的粒度：
 
 Retry 必须满足：
 
+- Retry 是重新执行同一个 learned action，不是重新检查页面。
 - 只重试同一个 learned action。
 - 复用原 target URL。
 - 复用原 `slot_overrides` 和 evidence targets。
 - 不通过 TaskPathPlanner。
-- 默认最多自动重试一次。再次失败可以再次展示恢复选项，但不得循环自动重试。
+- 每次用户选择 A 只触发一次 replay retry。
+- retry 失败后可以再次展示恢复菜单，但系统不得自动再次选择 retry。
+
+对于 `evidence_missing`、`uncertain`、`needs_review`，操作可能已经发生，只是系统没有
+拿到足够页面证据。此时 retry 可能重复新增、提交或修改。用户可见文案必须明确提示：
+
+```text
+重试会再次执行该操作。
+```
 
 如果原失败没有足够 payload 重试，Runtime 不得猜测，应回复无法重试并建议重新学习或取消。
 
@@ -172,6 +181,30 @@ failure_recovery_cancelled
 
 event payload 不得暴露 private map 给 LLM-facing trace。
 
+`failure_recovery_offered`、`failure_recovery_selected`、`failure_recovery_retry_started`、
+`failure_recovery_relearn_started`、`failure_recovery_cancelled` 等 event payload 不得包含：
+
+```text
+pending_choice_private_map
+learned_path_id
+slot_overrides
+evidence_targets
+ReplayAction
+selector
+private retry / relearn payload
+```
+
+允许记录的 public diagnostic 字段包括：
+
+```text
+failure_class
+choice_group_id
+selected_choice_id
+recovery_kind
+retry_count
+public action alias
+```
+
 ## 兼容性契约
 
 - 没有 pending recovery choice 的旧 session 必须继续正常运行。
@@ -188,4 +221,3 @@ event payload 不得暴露 private map 给 LLM-facing trace。
 - 不做自动切换 URL。
 - 不做 retry backoff / scheduler。
 - 不做完整 M12 recovery / abort / interruption。
-
