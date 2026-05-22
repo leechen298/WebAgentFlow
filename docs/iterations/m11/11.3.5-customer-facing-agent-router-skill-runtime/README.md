@@ -130,8 +130,8 @@ Application Skill Registry，并把工作 Agent 的职责边界写清楚。
 | [11.3.5.5](../11.3.5.5-execution-evidence-result-reporter-adapter/) | ExecutionEvidence + TaskResultReporter adapter，runtime stop 前采集 DOM evidence | ready_for_implementation（design review passed） |
 | [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | `wagent chat` `/items` 学习 / 执行闭环测试方案与结果记录 | ready_for_implementation（design review passed） |
 | [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) | `pending_choice` + 最小 `active_task` ledger | ready_for_implementation（design review passed） |
-| [11.3.5.8](../11.3.5.8-basic-failure-recovery/) | 基础失败恢复 | draft_docs（待评审，未开始实现） |
-| 11.3.5.9 | TaskPathPlanner 多候选 chat 接入 | 后续 |
+| [11.3.5.8](../11.3.5.8-basic-failure-recovery/) | 基础失败恢复 | implementation complete（code review passed，targeted tests passed） |
+| [11.3.5.9](../11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) | TaskPathPlanner 多候选 chat 接入 | draft_docs（待评审，未开始实现） |
 
 ## 文档
 

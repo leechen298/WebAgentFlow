@@ -62,7 +62,7 @@ item_name slot
 | [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | `/items` 闭环测试方案与结果记录 | 写测试方案；跑“学习 A / 执行 B”；保留 step log、effective value、evidence、Reporter outcome；Codex 复核结果和日志 | 不新增验证 Agent；不扩大到搜索 / 编辑 / 删除；不修大功能，失败只记录问题和最小修复建议 | 形成可审计闭环证据 |
 | [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) | `pending_choice` + 最小 `active_task` | 多候选 A/B/C；choice_id 私有映射；pending 过期 / 清理；最小 active task；cancel 清理 | 不接 TaskPathPlanner 复杂路径；不做 failure recovery；不做 `learn_then_execute` | 用户模糊输入时不乱猜，能进入 choice mode |
 | [11.3.5.8](../11.3.5.8-basic-failure-recovery/) | 基础失败恢复 | replay 失败、URL 不匹配、evidence 不足时给“重试 / 重新学习 / 取消” | 不做复杂自治恢复；不做 LLM 自主探索；不做多步修复计划 | 失败时有安全出口，不编造成果 |
-| 11.3.5.9 | TaskPathPlanner 多候选 chat 接入 | 多 learned actions、模糊目标、planning preview / confirmed execution 接入 choice mode | 不影响单路径 P0 happy path；不把 Planner 接成所有执行的必经节点 | 多候选时通过 Planner + choice 安全选择 |
+| [11.3.5.9](../11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) | TaskPathPlanner 多候选 chat 接入 | 多 learned actions、模糊目标、planning preview / confirmed execution 接入 choice mode | 不影响单路径 P0 happy path；不把 Planner 接成所有执行的必经节点 | 多候选时通过 Planner + choice 安全选择 |
 
 ## 5. 依赖关系
 
@@ -74,7 +74,7 @@ item_name slot
 | [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | 11.3.5.3 - 11.3.5.5 | 只有页面、参数化 replay、evidence / reporter 都具备后，才能做闭环证据记录 |
 | [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) | [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | choice / ledger 应建立在已跑通的 P0 闭环上 |
 | [11.3.5.8](../11.3.5.8-basic-failure-recovery/) | [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/)，可在 [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) 后 | 失败恢复需要有清楚的成功 / 失败 evidence 语义 |
-| 11.3.5.9 | [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) | Planner 多候选接入依赖 choice mode 和私有映射 |
+| [11.3.5.9](../11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) | [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) | Planner 多候选接入依赖 choice mode 和私有映射 |
 
 当前继续按 11.3.5.3 - 11.3.5.9 规划；11.3.5.8 固定为 Basic Failure Recovery，
 11.3.5.9 固定为 TaskPathPlanner multi-candidate chat integration。

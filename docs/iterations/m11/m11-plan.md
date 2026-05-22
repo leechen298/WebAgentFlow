@@ -1635,7 +1635,7 @@ Customer-Facing Agent Router & Skill Runtime 的 working runtime 收口：让 `w
 | [11.3.5.6 · WAgent Chat `/items` Closed-loop Evaluation](./11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | 沉淀 `/items` 学习 / 执行闭环测试方案、实跑结果、完整日志和 Codex 复核记录 | implementation complete（closed-loop pass，result recorded） |
 | [11.3.5.7 · Pending Choice & Minimal Active Task Ledger](./11.3.5.7-pending-choice-active-task-ledger/) | 多候选澄清、choice 私有映射、最小 active task 状态账本、pending 清理 / 过期和 cancel cleanup | ready_for_implementation（design review passed） |
 | [11.3.5.8 · Basic Failure Recovery](./11.3.5.8-basic-failure-recovery/) | 基础失败恢复：重试、重新学习、取消；不做复杂自治恢复 | implementation complete（code review passed，targeted tests passed） |
-| 11.3.5.9 · TaskPathPlanner Multi-candidate Chat Integration | 多 learned actions、模糊目标、planning path 下接入 TaskPathPlanner 和 choice mode | 后续 |
+| [11.3.5.9 · TaskPathPlanner Multi-candidate Chat Integration](./11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) | 多 learned actions、模糊目标、planning path 下接入 TaskPathPlanner 和 choice mode | draft_docs（待评审，未开始实现） |
 
 第一条可验收窄闭环：
 
