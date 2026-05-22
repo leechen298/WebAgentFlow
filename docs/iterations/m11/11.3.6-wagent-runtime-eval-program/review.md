@@ -1,6 +1,17 @@
 # 复盘 / 评审（Review）
 
-状态：draft_for_review（总体测试规划已生成，未实现代码）
+状态：accepted_program_plan（program review passed，docs-only）
+
+## Current Decision
+
+- Reviewer：ChatGPT
+- Decision：accepted_program_plan
+- Code：not_started
+- Live eval：not_run
+- Notes：
+  - 11.3.6 作为 WAgent Runtime Eval Program 总纲通过。
+  - 11.3.6.1 承接第一版 runner core 实现。
+  - 11.3.6.2+ 按 case family 后续独立开包。
 
 ## 2026-05-22 拆分规划
 
@@ -14,12 +25,14 @@
   - 11.3.6.1 保留 ready-for-implementation 状态。
   - 后续 11.3.6.2 / 11.3.6.3 / 11.3.6.4 按 case family 独立开包。
 
-## 设计评审
+## 设计评审收口
 
-- Reviewer：pending
-- Decision：pending
+- Reviewer：ChatGPT
+- Decision：pass
 - Notes：
-  - 等待用户复核拆分后的总纲和子包边界。
+  - 11.3.6 program 方向通过，作为总纲文档可以保留。
+  - 11.3.6.1 runner core 通过，可以进入实现。
+  - 本包仍为 docs-only，不实现 runner，不运行 eval。
 
 ## 未运行项
 

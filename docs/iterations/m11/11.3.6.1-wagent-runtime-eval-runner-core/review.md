@@ -2,6 +2,16 @@
 
 状态：ready_for_implementation（design review passed，未实现代码）
 
+## Current Decision
+
+- Decision：ready_for_implementation
+- Code：not_started
+- Live eval：not_run
+- Parent program：accepted_program_plan
+- Notes：
+  - 11.3.6.1 runner core 通过，可以进入实现。
+  - 实现前仍需按 `plan.md` Step 1 复核当前 API / event / history 可观测性。
+
 ## 2026-05-22 原 11.3.6 文档生成（拆分前）
 
 - Author：Codex

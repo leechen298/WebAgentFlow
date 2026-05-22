@@ -64,7 +64,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.5.7-pending-choice-active-task-ledger](./11.3.5.7-pending-choice-active-task-ledger/) —— Pending Choice & Minimal Active Task Ledger：补多候选澄清、choice 私有映射、最小 active task 状态账本、pending 清理 / 过期和 cancel cleanup。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.5.8-basic-failure-recovery](./11.3.5.8-basic-failure-recovery/) —— Basic Failure Recovery：补基础失败恢复菜单：重试、重新学习、取消；不做复杂自治恢复。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.5.9-taskpathplanner-multi-candidate-chat-integration](./11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) —— TaskPathPlanner Multi-candidate Chat Integration：只在多候选、模糊目标、planning path 中接入 TaskPathPlanner，不进入单路径 happy path。状态：implementation complete（code review passed，targeted tests passed）。
-- [11.3.6-wagent-runtime-eval-program](./11.3.6-wagent-runtime-eval-program/) —— WAgent Runtime Eval Program：runtime eval 总体测试规划，定义 11.3.6.x 子包、artifact、exit code、hard gates 和 Codex 审计边界。状态：draft_for_review（总体测试规划已生成，未实现代码）。
+- [11.3.6-wagent-runtime-eval-program](./11.3.6-wagent-runtime-eval-program/) —— WAgent Runtime Eval Program：runtime eval 总体测试规划，定义 11.3.6.x 子包、artifact、exit code、hard gates 和 Codex 审计边界。状态：accepted_program_plan（program review passed，docs-only）。
 - [11.3.6.1-wagent-runtime-eval-runner-core](./11.3.6.1-wagent-runtime-eval-runner-core/) —— WAgent Runtime Eval Runner Core：实现 runner v1，覆盖 `/items` closed loop 和 single-path direct replay regression。状态：ready_for_implementation（design review passed，未实现代码）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是

@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：draft_for_review（总体测试规划已生成，未实现代码）
+状态：accepted_program_plan（program review passed，docs-only）
 
 ## 文件 / 模块
 

@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：draft_for_review（总体测试规划已生成，未实现代码）
+状态：accepted_program_plan（program review passed，docs-only）
 
 ## Eval Program Contract
 
@@ -45,8 +45,8 @@ WAgent Runtime Eval Program 是 M11 working runtime 的本地验收体系。它�
 11.3.6.x 子包默认共用 artifact 约定：
 
 ```text
-artifacts/wagent-eval/<runner-or-case>-<timestamp>.json
-docs/testing/results/m11-<package>-<case-or-runner>-<date>.md
+artifacts/wagent-eval/${runner_or_case}-${timestamp}.json
+docs/testing/results/m11-${package}-${case_or_runner}-${date}.md
 ```
 
 Markdown result 至少包含：

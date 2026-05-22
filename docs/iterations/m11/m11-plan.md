@@ -1650,7 +1650,7 @@ apps/product-test-site /items
 
 ## 11.3.6 · WAgent Runtime Eval Program
 
-状态：draft_for_review（总体测试规划已生成，未实现代码）。
+状态：accepted_program_plan（program review passed，docs-only）。
 
 11.3.6 不直接实现 runner，也不继续增加 Customer-Facing Agent Router / Skill Runtime
 的产品能力。它是 WAgent runtime eval 的总体测试规划包：定义 hard gates、artifact、

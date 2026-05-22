@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：draft_for_review（总体测试规划已生成，未实现代码）
+状态：accepted_program_plan（program review passed，docs-only）
 
 ## 目标
 

@@ -1,6 +1,6 @@
 # 11.3.6 · WAgent Runtime Eval Program
 
-状态：draft_for_review（总体测试规划已生成，未实现代码）
+状态：accepted_program_plan（program review passed，docs-only）
 里程碑：M11
 类型：docs
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -51,5 +51,5 @@ Codex 审计边界和 case roadmap。
 
 ## 当前状态
 
-总体规划已生成，等待用户复核。11.3.6.1 已承接 runner v1 的可实现设计；11.3.6.2+
+总体规划已通过 review。11.3.6.1 已承接 runner v1 的可实现设计；11.3.6.2+
 后续按 case family 另开完整迭代文档。

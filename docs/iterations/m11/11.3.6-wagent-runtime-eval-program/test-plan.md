@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：draft_for_review（总体测试规划已生成，未实现代码）
+状态：accepted_program_plan（program review passed，docs-only）
 
 ## 测试范围
 
