@@ -1,6 +1,6 @@
 # 11.3.5.8 · Basic Failure Recovery
 
-状态：ready_for_implementation（design review passed，未开始实现）
+状态：implementation complete（code review passed，targeted tests passed）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -86,9 +86,10 @@ C. 取消
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
-- [ ] `review.md` 在收尾前记录验证证据。
+- [x] `review.md` 在收尾前记录验证证据。
 
 ## 当前状态
 
-设计评审已通过，当前可进入实现阶段。实现前必须先按 `plan.md` 完成
-11.3.5.7 `pending_choice` / private map / `active_task` preflight。
+实现已完成并通过 targeted tests / scoped Ruff / `git diff --check`。
+本包未运行 `verify-scenario`、autonomous run 或 Console UI smoke；这些 live run
+不属于 11.3.5.8 默认验收范围，且本包明确禁止 autonomous-run 入口。
