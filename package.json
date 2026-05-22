@@ -18,6 +18,8 @@
     "dev:api:lan": ".venv/bin/python -m uvicorn app.main:app --app-dir apps/api --reload --host 0.0.0.0 --port ${API_PORT:-8001}",
     "dev:worker": "cd apps/worker && ../../.venv/bin/python -m watchfiles --filter python '../../.venv/bin/python -m app.main' .",
     "dev:lan": "concurrently -k -n console,api,worker,validation,product -c cyan,yellow,green,magenta,blue \"pnpm run dev:console:lan\" \"pnpm run dev:api:lan\" \"pnpm run dev:worker\" \"pnpm run dev:validation:lan\" \"pnpm run dev:product:lan\"",
+    "eval:wagent": ".venv/bin/python scripts/evals/wagent_runtime_eval.py",
+    "eval:wagent:items": ".venv/bin/python scripts/evals/wagent_runtime_eval.py --case items_closed_loop --case single_path_direct_replay_regression",
     "db:migrate:api": ".venv/bin/alembic -c apps/api/alembic.ini upgrade head",
     "build": "pnpm run build:packages && pnpm run build:console && pnpm run build:validation && pnpm run build:product",
     "build:packages": "pnpm --filter @web-agent-flow/shared-types build && pnpm --filter @web-agent-flow/skill-schema build && pnpm --filter @web-agent-flow/sdk-js build",
