@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：draft_for_review（failure recovery eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 当前状态（Current State）
 

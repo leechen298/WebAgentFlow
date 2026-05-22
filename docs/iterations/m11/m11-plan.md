@@ -1671,7 +1671,7 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 | Package | 目标 | 状态 |
 |---|---|---|
 | [11.3.6.1 · WAgent Runtime Eval Runner Core](./11.3.6.1-wagent-runtime-eval-runner-core/) | 实现 runner v1，覆盖 `items_closed_loop` 和 `single_path_direct_replay_regression` | ready_for_implementation（design review passed，未实现代码） |
-| [11.3.6.2 · Failure Recovery Eval](./11.3.6.2-failure-recovery-eval/) | recovery menu safety、retry / relearn / cancel、private payload safety | draft_for_review（未实现代码） |
+| [11.3.6.2 · Failure Recovery Eval](./11.3.6.2-failure-recovery-eval/) | recovery menu safety、retry / relearn / cancel、private payload safety | ready_for_implementation（design review passed，未实现代码） |
 | 11.3.6.3 · Pending Choice Multi-candidate Eval | A/B/C public choice、private map、用户选择后执行正确 path | planned |
 | 11.3.6.4 · Planner-backed Choice Eval | vague goal、planner choice path、single-path bypass Planner 回归 | planned |
 

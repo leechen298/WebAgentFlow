@@ -1,13 +1,18 @@
 # 评审记录（Review）
 
-状态：draft_for_review（failure recovery eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## Current Decision
 
-- Reviewer: pending
-- Decision: pending
+- Reviewer: ChatGPT
+- Decision: pass
 - Code: not_started
 - Live eval: not_run
+- Notes:
+  - failure trigger contract 稳定且不污染普通 runtime。
+  - recovery gates source / pass semantics 清楚。
+  - private payload redaction 覆盖 retry / relearn / cancel。
+  - live eval not-run 规则清楚。
 
 ## Design Summary
 
@@ -16,12 +21,12 @@
 
 ## Review Checklist
 
-- [ ] failure trigger contract 稳定且不污染普通 runtime。
-- [ ] recovery gates 有明确 source 和 pass / fail semantics。
-- [ ] private payload redaction 覆盖 retry / relearn / cancel 私有载荷。
-- [ ] happy path no-recovery gate 不依赖 Codex 主观判断。
-- [ ] direct replay / autonomous-run 边界清楚。
-- [ ] live eval not-run 规则清楚。
+- [x] failure trigger contract 稳定且不污染普通 runtime。
+- [x] recovery gates 有明确 source 和 pass / fail semantics。
+- [x] private payload redaction 覆盖 retry / relearn / cancel 私有载荷。
+- [x] happy path no-recovery gate 不依赖 Codex 主观判断。
+- [x] direct replay / autonomous-run 边界清楚。
+- [x] live eval not-run 规则清楚。
 
 ## Not Run
 
@@ -32,4 +37,4 @@
 
 ## Next Step
 
-设计 review 通过后，按 `plan.md` 实现 runner case、必要的 eval-only hook、tests 和文档更新。
+可以按 `plan.md` 实现 runner case、必要的 eval-only hook、tests 和文档更新。

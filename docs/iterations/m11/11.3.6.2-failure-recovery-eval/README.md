@@ -1,6 +1,6 @@
 # 11.3.6.2 · Failure Recovery Eval
 
-状态：draft_for_review（failure recovery eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 里程碑：M11
 类型：code
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -58,5 +58,5 @@ core 之上增加 failure recovery eval coverage，用 hard gates 验证 11.3.5.
 
 ## 当前状态
 
-设计稿已生成，等待 review。实现前必须先确认 11.3.6.1 runner core 的当前状态，并复核
+设计评审已通过，可以进入实现。实现前必须先确认 11.3.6.1 runner core 的当前状态，并复核
 11.3.5.8 recovery runtime 的现有可观测事件 / public payload。
