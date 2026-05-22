@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：ready_for_implementation（design review passed，未开始实现）
+状态：implementation complete（code review passed，targeted tests passed）
 
 ## 当前状态（Current State）
 

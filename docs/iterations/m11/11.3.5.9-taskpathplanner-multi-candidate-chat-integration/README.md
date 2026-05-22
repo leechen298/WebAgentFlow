@@ -1,6 +1,6 @@
 # 11.3.5.9 · TaskPathPlanner Multi-candidate Chat Integration
 
-状态：ready_for_implementation（design review passed，未开始实现）
+状态：implementation complete（code review passed，targeted tests passed）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -85,12 +85,12 @@ deterministic `TaskPathPlanner` 接入 `wagent chat` 的多候选 / 模糊目标
 - [x] `intent.md` 已存在。
 - [x] `contract.md` 已存在。
 - [x] `technical-design.md` 已存在。
-- [ ] 技术设计在实现前已经审核。
+- [x] 技术设计在实现前已经审核。
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
-- [ ] `review.md` 在收尾前记录验证证据。
+- [x] `review.md` 在收尾前记录验证证据。
 
 ## 当前状态
 
-文档已生成，等待设计评审。评审通过后才能进入代码实现阶段。
+实现已完成并通过 targeted tests。最终收口证据见 `review.md`。

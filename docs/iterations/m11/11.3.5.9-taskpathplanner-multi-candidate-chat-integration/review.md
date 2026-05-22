@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：ready_for_implementation（design review passed，未开始实现）
+状态：implementation complete（code review passed，targeted tests passed）
 
 ## 2026-05-22 文档生成
 
@@ -60,23 +60,62 @@
 
 ## 代码评审（Code Review）
 
-- Reviewer：
-- Decision：pending
+- Reviewer：ChatGPT
+- Decision：pass
 - Notes：
+  - 代码方向通过：Planner 已接入多候选 / 模糊目标路径，但未进入单路径
+    `/items` happy path。
+  - Planner 未被误用为 A/B/C 候选生成器；Runtime 仍负责生成 visible choices。
+  - `pending_choice` visible payload 和 planner events 做了 sanitized 输出，不暴露
+    `learned_path_id`、selector、raw slot values 或 private planner payload。
+  - 已修复两项 review feedback：
+    - visible planner warning 改为泛化文案，raw warning 只保存在 private map。
+    - active task + “继续” 优先返回当前任务提示，不进入 Planner。
 
 ## 用户反馈
 
-- N/A。
+- 用户确认 11.3.5.9 实现可以进入收口；本文件补齐 closeout review。
+
+## 2026-05-22 实现收口
+
+- Author：Codex
+- Code commit：`105eb82 feat: add planner-backed chat choices`
+- Decision：implementation_complete
+- Notes：
+  - 多 learned actions 或模糊目标时，Runtime 生成 ranked session candidates，
+    再调用 `TaskPathPlanner` 获取 top candidate 的 route / warning / risk /
+    uncertainty 信号。
+  - Runtime 生成 sanitized A/B/C `pending_choice`；private map 保存真实
+    learned action payload 和 planner metadata。
+  - URL 只作为 target hint，不再作为跳过 Planner / choice 的条件。
+  - pending choice / recovery choice / active task / pending intake / pending target
+    优先于 Planner；`继续` 不默认进入 Planner。
+  - planner unavailable / fallback 只记录 sanitized event。
+  - 单路径明确目标继续直接 replay，不经过 Planner。
 
 ## 最终差异（Final Delta）
 
 ### 实际交付
 
-- 待实现。
+- `apps/api/app/services/conversation/chat_runtime.py`
+  - 新增 planner candidate adapter，把 session learned actions 转成
+    `LearnedPathCandidate`。
+  - 新增 `TaskIntent` 构造和 multi-candidate planner path。
+  - 新增 `planner_route_choice` private map payload。
+  - 新增 sanitized planner progress events / fallback events。
+  - 修正 URL + 多候选 / 模糊动作时直接选第一个的问题。
+  - 保持单候选明确目标不进 Planner。
+  - 保护 pending / active / recovery 优先级。
+- `apps/api/tests/test_conversation_chat_runtime.py`
+  - 覆盖 planner 多候选、URL + 模糊动作、单路径跳过 Planner、
+    Planner unable / fallback、安全事件、visible warning sanitization、
+    active task “继续” 优先级和 choice selection execution regression。
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
-- 待实现。
+- 无阻断偏差。
+- 本包没有扩展正式 risk / consent gate，也没有接复杂组合任务多步执行。
+- 本包没有把 `PlanningPreviewService` raw user response 直接展示给用户。
 
 ### WebAgentFlow Live Run 边界（Live Run Boundary）
 
@@ -87,25 +126,23 @@
 
 ### E2E / Codex 外部测试操作员证据（E2E / Codex Evidence）
 
-- 当前没有 E2E / UI smoke。
-- 当前没有 CLI live run。
-- 当前只有文档生成。
+- 本包没有 E2E / UI smoke。
+- 本包没有 CLI live run。
+- 本包验收基于 mocked runtime / planner targeted tests。
 
 ### 验证证据（Validation Evidence）
 
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
 |---|---|---|---|---|---|---|
-| pytest targeted chat runtime | planner choice tests pass | not run | N/A | Skip | N/A | 文档生成阶段 |
-| planner regression tests | existing planner tests pass | not run | N/A | Skip | N/A | 文档生成阶段 |
-| scoped Ruff | changed Python files clean | not run | N/A | Skip | N/A | 文档生成阶段 |
-| `git diff --check` | clean | not run | N/A | Skip | N/A | 文档生成阶段 |
+| conversation targeted suite | planner choice / pending choice / API sanitizer / router / entry gate pass | 151 passed | 0 | Pass | `PYTHONPATH=. ../../.venv/bin/pytest tests/test_conversation_chat_runtime.py tests/test_conversation_api.py tests/test_conversation_entry_gate.py tests/test_conversation_router_agent.py` | Re-run during closeout |
+| focused planner / choice slice | planner / pending choice / recovery / items regressions pass | 19 passed, 46 deselected | 0 | Pass | `PYTHONPATH=. ../../.venv/bin/pytest tests/test_conversation_chat_runtime.py -k "planner or pending_choice or recovery or items"` | Includes planner-specific regressions |
+| scoped Ruff | changed Python / test files clean | All checks passed | 0 | Pass | `uv run ruff check apps/api/app/services/conversation/chat_runtime.py apps/api/app/services/conversation/context.py apps/api/app/services/conversation/history.py apps/api/app/routers/conversation.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_api.py apps/api/tests/test_conversation_entry_gate.py apps/api/tests/test_conversation_router_agent.py` | Closeout check |
+| `git diff --check` | clean | clean | 0 | Pass | `git diff --check` | Closeout check |
 
 ### 未运行 / 未验证（Not Run / Unverified）
 
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
-| Python tests | 尚未实现代码 | 实现阶段必须运行 |
-| Ruff | 尚未实现代码 | 实现阶段必须运行 |
 | live `wagent chat` | 本包默认 targeted tests，不要求 live run | 如后续需要手工验证再记录 |
 | `verify-scenario` | 本包明确禁止 | 无 |
 | autonomous run | 本包明确禁止 | 无 |
@@ -113,6 +150,7 @@
 
 ### 后续事项（Follow-ups）
 
-- 实现阶段必须守住 TaskPathPlanner 不进入单路径 happy path 的边界。
-- 实现阶段不得把 `PlanningPreviewService` raw response 直接展示给用户。
-- 实现前必须先跑 11.3.5.7 / 11.3.5.8 preflight targeted tests。
+- 后续如果引入正式 risk / consent gate，需要独立 contract，不要把 planner warning
+  直接当作用户确认语义。
+- 如果 history/debug payload 面向普通用户或 LLM prompt，需单独定义 planner
+  route metadata 和 learned path id 的可见性策略。
