@@ -33,6 +33,11 @@ from app.schemas.conversation_router import (
     RouteDecisionKind,
 )
 from app.schemas.learned_path_replay import ExecutionEvidenceTarget
+from app.schemas.task_planning import (
+    AgentDPlannerOutput,
+    LearnedPathCandidate,
+    TaskIntent,
+)
 from app.services.conversation.context import (
     ConversationContextCollector,
     PendingTarget,
@@ -56,6 +61,7 @@ from app.services.conversation.router_agent import CustomerFacingAgentRouterServ
 from app.services.conversation.skills import ApplicationSkillRegistry
 from app.services.conversation.trace_sanitizer import sanitize_provider_thinking
 from app.services.learning.learning_run_service import LearningRunResult
+from app.services.task_planning.planner import TaskPathPlanner
 
 ChatIntentKind = Literal["learn_page", "execute_task", "unknown"]
 
@@ -68,6 +74,7 @@ _VALUE_PATTERN = r"([^\s，。,.；;!！?？]+)"
 _PENDING_SENSITIVE_VALUES: dict[str, dict[str, str]] = {}
 _CHOICE_IDS = ("A", "B", "C", "D")
 _RECOVERY_SIDE_EFFECT_CLASSES = {"evidence_missing", "needs_review", "uncertain"}
+_LIVE_ACTIVE_TASK_STATUSES = {"waiting_for_user_input"}
 
 
 def clear_pending_sensitive_values(session_id: str) -> None:
@@ -636,7 +643,30 @@ class InteractiveChatRuntime:
                 previous_status=previous_status,
                 headless=headless,
             )
-        if selected.get("kind") != "learned_action":
+        selected_kind = selected.get("kind")
+        if selected_kind == "planner_route_choice":
+            planner_summary = selected.get("planner_summary")
+            self._append_event(
+                session_id,
+                ConversationEventType.CHAT_PROGRESS_RECORDED,
+                {
+                    "progress_kind": "planner_choice_selected",
+                    "selected_choice_id": choice_id,
+                    "planner_warning_count": _count_summary_items(
+                        planner_summary, "warnings"
+                    ),
+                    "planner_risk_count": _count_summary_items(
+                        planner_summary, "risk_hints"
+                    ),
+                    "confirmation_required": (
+                        bool(planner_summary.get("confirmation_required"))
+                        if isinstance(planner_summary, dict)
+                        else False
+                    ),
+                },
+                events,
+            )
+        elif selected_kind != "learned_action":
             return self._handle_choice_unavailable(
                 session_id=session_id,
                 reason="pending_choice_kind_unsupported",
@@ -1666,6 +1696,16 @@ class InteractiveChatRuntime:
             metadata=metadata,
             intake=intake,
         )
+        if _looks_like_active_task_continuation(intent.raw_text):
+            active_task = self._active_task(session_id)
+            if active_task is not None:
+                return self._handle_active_task_continuation(
+                    session_id=session_id,
+                    active_task=active_task,
+                    events=events,
+                    message_id=message_id,
+                    previous_status=previous_status,
+                )
         action = self._match_session_action(session_id, intent.raw_text, intake=intake)
         if action is None:
             user_url = _extract_url(intent.raw_text)
@@ -1674,8 +1714,8 @@ class InteractiveChatRuntime:
                 intent.raw_text,
                 intake=intake,
             )
-            if len(candidates) > 1 and not user_url:
-                return self._handle_pending_choice_question(
+            if len(candidates) > 1:
+                return self._handle_planner_pending_choice_question(
                     session_id=session_id,
                     raw_input=intent.raw_text,
                     candidates=candidates,
@@ -1685,8 +1725,9 @@ class InteractiveChatRuntime:
                     events=events,
                     message_id=message_id,
                     previous_status=previous_status,
-                    target_url=intent.url,
+                    target_url=intent.url or user_url,
                     goal=intake.action.goal if intake else intent.raw_text,
+                    intake=intake,
                 )
             if (
                 route_decision is not None
@@ -2096,6 +2137,284 @@ class InteractiveChatRuntime:
             events=events,
             message_id=message_id,
             previous_status=previous_status,
+        )
+
+    def _handle_active_task_continuation(
+        self,
+        *,
+        session_id: str,
+        active_task: dict[str, Any],
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+    ) -> DispatchResult:
+        goal = str(active_task.get("goal") or "").strip()
+        suffix = f"：{goal}" if goal else ""
+        response = (
+            f"当前还有一个操作需要你补充或确认{suffix}。"
+            "请直接补充需要的信息，或回复“取消”结束当前任务。"
+        )
+        self._append_agent_message(
+            session_id,
+            response,
+            provenance=code_response_provenance(CODE_PRODUCER_INTERACTIVE_CHAT),
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "active_task_continue_requested",
+                "active_task": redact_sensitive_payload(active_task),
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind="execute_task",
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
+
+    def _handle_planner_pending_choice_question(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        candidates: list[dict[str, Any]],
+        slot_overrides: dict[str, str],
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+        target_url: str | None,
+        goal: str | None,
+        intake: ConversationIntakeResult | None,
+    ) -> DispatchResult:
+        learned_path_repo = LearnedPathRepository(self._repo.session)
+        planner_candidates = _planner_candidates_from_session_actions(
+            candidates,
+            learned_path_repo=learned_path_repo,
+        )
+        valid_path_ids = {candidate.learned_path_id for candidate in planner_candidates}
+        ranked_candidates = [
+            action
+            for action in candidates
+            if str(action.get("learned_path_id") or "") in valid_path_ids
+        ]
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "planner_candidates_generated",
+                "candidate_count": len(ranked_candidates),
+            },
+            events,
+        )
+        if not planner_candidates or not ranked_candidates:
+            return self._handle_planner_fallback_choice(
+                session_id=session_id,
+                raw_input=raw_input,
+                candidates=candidates,
+                slot_overrides=slot_overrides,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+                target_url=target_url,
+                goal=goal,
+                reason="planner_candidates_empty",
+            )
+
+        task_intent = _build_task_intent_for_planner(
+            raw_input,
+            intake,
+            target_url=target_url,
+        )
+        try:
+            planner_output = TaskPathPlanner().plan(task_intent, planner_candidates)
+        except Exception:
+            return self._handle_planner_fallback_choice(
+                session_id=session_id,
+                raw_input=raw_input,
+                candidates=ranked_candidates,
+                slot_overrides=slot_overrides,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+                target_url=target_url,
+                goal=goal,
+                reason="planner_unavailable",
+            )
+
+        route_plan = planner_output.route_plan
+        if route_plan is None or not route_plan.steps:
+            return self._handle_planner_unable_to_plan(
+                session_id=session_id,
+                raw_input=raw_input,
+                planner_output=planner_output,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+                target_url=target_url,
+                goal=goal,
+            )
+
+        top_learned_path_id = str(route_plan.steps[0].learned_path_id or "")
+        top_choice_index = next(
+            (
+                index
+                for index, action in enumerate(ranked_candidates)
+                if str(action.get("learned_path_id") or "") == top_learned_path_id
+            ),
+            None,
+        )
+        if top_choice_index is None:
+            return self._handle_planner_fallback_choice(
+                session_id=session_id,
+                raw_input=raw_input,
+                candidates=ranked_candidates,
+                slot_overrides=slot_overrides,
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+                target_url=target_url,
+                goal=goal,
+                reason="planner_top_candidate_not_in_session",
+            )
+
+        pending_choice, private_map = _build_planner_pending_choice(
+            ranked_candidates,
+            slot_overrides=slot_overrides,
+            planner_output=planner_output,
+            top_choice_index=top_choice_index,
+        )
+        self._save_pending_choice(
+            session_id,
+            pending_choice=pending_choice,
+            private_map=private_map,
+        )
+        self._set_active_task(
+            session_id,
+            kind="clarify",
+            owner="runtime",
+            status="waiting_for_user_input",
+            target_url=target_url,
+            goal=goal or raw_input,
+        )
+        response = _pending_choice_response(pending_choice)
+        self._append_agent_message(
+            session_id,
+            response,
+            provenance=code_response_provenance(CODE_PRODUCER_INTERACTIVE_CHAT),
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            _planner_choice_created_event_payload(
+                pending_choice,
+                planner_output=planner_output,
+                candidate_count=len(ranked_candidates),
+            ),
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind="pending_choice",
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
+
+    def _handle_planner_unable_to_plan(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        planner_output: AgentDPlannerOutput,
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+        target_url: str | None,
+        goal: str | None,
+    ) -> DispatchResult:
+        self._save_last_no_path_reason(
+            session_id,
+            target_url=target_url,
+            user_goal=goal or raw_input,
+            reason="planner_unable_to_plan",
+            message_id=message_id,
+        )
+        self._set_active_task(
+            session_id,
+            kind="clarify",
+            owner="runtime",
+            status="waiting_for_user_input",
+            target_url=target_url,
+            goal=goal or raw_input,
+        )
+        response = "我还不能可靠判断要执行哪个已学习操作。你可以说得更具体，或者重新学习一个操作。"
+        self._append_agent_message(
+            session_id,
+            response,
+            provenance=code_response_provenance(CODE_PRODUCER_INTERACTIVE_CHAT),
+        )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "planner_unable_to_plan",
+                "planner_warning_count": len(planner_output.warnings),
+                "planner_risk_count": len(planner_output.risk_hints),
+                "uncertainty_count": len(planner_output.uncertainty),
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind="pending_choice",
+            user_response=response,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+            allowed=False,
+            error="planner_unable_to_plan",
+        )
+
+    def _handle_planner_fallback_choice(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        candidates: list[dict[str, Any]],
+        slot_overrides: dict[str, str],
+        events: list[str],
+        message_id: str | None,
+        previous_status: str,
+        target_url: str | None,
+        goal: str | None,
+        reason: str,
+    ) -> DispatchResult:
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "planner_fallback_used",
+                "reason": reason,
+                "candidate_count": len(candidates),
+            },
+            events,
+        )
+        return self._handle_pending_choice_question(
+            session_id=session_id,
+            raw_input=raw_input,
+            candidates=candidates,
+            slot_overrides=slot_overrides,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+            target_url=target_url,
+            goal=goal,
         )
 
     def _handle_pending_choice_question(
@@ -2817,6 +3136,17 @@ class InteractiveChatRuntime:
             if isinstance(value, dict)
         }
 
+    def _active_task(self, session_id: str) -> dict[str, Any] | None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        active_task = (session.metadata_json or {}).get("active_task")
+        if not isinstance(active_task, dict):
+            return None
+        if active_task.get("status") not in _LIVE_ACTIVE_TASK_STATUSES:
+            return None
+        return dict(active_task)
+
     def _save_pending_choice(
         self,
         session_id: str,
@@ -2968,9 +3298,13 @@ class InteractiveChatRuntime:
 
         if user_url:
             normalized_url = _normalize_url(user_url)
-            for action in candidates:
-                if _normalize_url(action.get("target_url")) == normalized_url:
-                    return action
+            url_matches = [
+                action
+                for action in candidates
+                if _normalize_url(action.get("target_url")) == normalized_url
+            ]
+            if len(url_matches) == 1:
+                return url_matches[0]
             return None
 
         if len(candidates) == 1:
@@ -3150,6 +3484,260 @@ def _build_pending_choice(
         "created_at": _utc_now_iso(),
     }
     return pending_choice, private_map
+
+
+def _build_task_intent_for_planner(
+    raw_input: str,
+    intake: ConversationIntakeResult | None,
+    *,
+    target_url: str | None,
+) -> TaskIntent:
+    normalized_goal = None
+    scenario_hint = None
+    target_page_hint = target_url
+    if intake is not None:
+        normalized_goal = intake.action.canonical_goal or intake.action.goal
+        scenario_hint = intake.action.canonical_goal or intake.action.goal
+        target_page_hint = intake.target.url or intake.target.page_hint or target_url
+    uncertainty: list[str] = []
+    if _looks_like_vague_operation_request(raw_input):
+        uncertainty.append("vague_goal")
+    return TaskIntent(
+        raw_text=raw_input,
+        normalized_goal=normalized_goal,
+        normalization_source="deterministic" if normalized_goal else "none",
+        target_page_hint=target_page_hint,
+        scenario_hint=scenario_hint,
+        uncertainty=uncertainty,
+    )
+
+
+def _planner_candidates_from_session_actions(
+    actions: list[dict[str, Any]],
+    *,
+    learned_path_repo: LearnedPathRepository,
+) -> list[LearnedPathCandidate]:
+    candidates: list[LearnedPathCandidate] = []
+    seen: set[str] = set()
+    for action in actions:
+        learned_path_id = str(action.get("learned_path_id") or "").strip()
+        if not learned_path_id or learned_path_id in seen:
+            continue
+        seen.add(learned_path_id)
+        row = learned_path_repo.get(learned_path_id)
+        trust = str(getattr(row, "trust", None) or "provisional")
+        if trust not in {"provisional", "confirmed", "flaky", "deprecated"}:
+            trust = "provisional"
+        if trust == "deprecated":
+            continue
+        page_template = (
+            str(getattr(row, "page_template", "") or "")
+            or str(action.get("page_template") or "")
+            or _path_template_from_url(action.get("target_url"))
+        )
+        scenario = (
+            str(getattr(row, "scenario", "") or "")
+            or str(action.get("scenario") or "")
+            or str(action.get("alias") or "")
+            or page_template
+            or "session_action"
+        )
+        match_reasons = _planner_candidate_match_reasons(action, page_template)
+        warnings: list[str] = []
+        trust_reason = getattr(row, "trust_reason", None) if row is not None else None
+        if trust_reason:
+            warnings.append(str(trust_reason))
+        if row is None:
+            warnings.append(
+                "Session learned action metadata used because LearnedPath row was unavailable."
+            )
+        candidates.append(
+            LearnedPathCandidate(
+                learned_path_id=learned_path_id,
+                scenario=scenario,
+                page_template=page_template or "/",
+                trust=trust,  # type: ignore[arg-type]
+                hit_count=int(getattr(row, "hit_count", 0) or 0),
+                match_reasons=match_reasons,
+                warnings=warnings,
+                drift_evidence_summary=trust_reason if trust == "flaky" else None,
+            )
+        )
+    return candidates
+
+
+def _planner_candidate_match_reasons(
+    action: dict[str, Any],
+    page_template: str,
+) -> list[str]:
+    reasons: list[str] = []
+    alias = str(action.get("alias") or "").strip()
+    if alias:
+        reasons.append(f"Session action alias: {alias}")
+    scenario = str(action.get("scenario") or "").strip()
+    if scenario:
+        reasons.append(f"Session scenario: {scenario}")
+    if page_template:
+        reasons.append(f"Session page: {page_template}")
+    return reasons
+
+
+def _path_template_from_url(value: Any) -> str:
+    parsed = urlparse(str(value or ""))
+    return parsed.path.rstrip("/") or parsed.path or "/"
+
+
+def _build_planner_pending_choice(
+    candidates: list[dict[str, Any]],
+    *,
+    slot_overrides: dict[str, str] | None,
+    planner_output: AgentDPlannerOutput,
+    top_choice_index: int,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    planner_summary = _planner_summary(
+        planner_output,
+        candidate_index=top_choice_index,
+    )
+    choices: list[dict[str, Any]] = []
+    private_map: dict[str, dict[str, Any]] = {}
+    for index, action in enumerate(candidates[: len(_CHOICE_IDS)]):
+        choice_id = _CHOICE_IDS[index]
+        description = _choice_description(action)
+        if index == top_choice_index:
+            description = _planner_choice_description(
+                description,
+                planner_summary=planner_summary,
+            )
+        choice = {
+            "choice_id": choice_id,
+            "label": _choice_label(action),
+            "description": description,
+            "intent": "execute_operation",
+        }
+        choices.append({key: value for key, value in choice.items() if value is not None})
+        private_choice: dict[str, Any] = {
+            "kind": "planner_route_choice",
+            "learned_path_id": action.get("learned_path_id"),
+            "target_url": action.get("target_url"),
+            "action_alias": action.get("alias"),
+            "page_template": action.get("page_template"),
+            "planner_summary": (
+                planner_summary
+                if index == top_choice_index
+                else {"candidate_index": index}
+            ),
+        }
+        if slot_overrides:
+            private_choice["slot_overrides"] = dict(slot_overrides)
+        private_map[choice_id] = private_choice
+    pending_choice = {
+        "type": "pending_choice",
+        "choice_group_id": f"choice-group-{uuid.uuid4()}",
+        "question": "我找到了多个可能的操作，你想让我执行哪一个？",
+        "choices": choices,
+        "turns_remaining": 2,
+        "created_at": _utc_now_iso(),
+    }
+    return pending_choice, private_map
+
+
+def _planner_summary(
+    planner_output: AgentDPlannerOutput,
+    *,
+    candidate_index: int,
+) -> dict[str, Any]:
+    route_plan = planner_output.route_plan
+    purpose = None
+    confirmation_required = bool(planner_output.confirmation_requirements)
+    if route_plan is not None:
+        confirmation_required = (
+            confirmation_required or bool(route_plan.confirmation_required)
+        )
+        if route_plan.steps:
+            purpose = _sanitize_planner_text(route_plan.steps[0].purpose)
+    return {
+        "candidate_index": candidate_index,
+        "purpose": purpose,
+        "confirmation_required": confirmation_required,
+        "warnings": [
+            _sanitize_planner_text(item)
+            for item in planner_output.warnings[:3]
+            if _sanitize_planner_text(item)
+        ],
+        "risk_hints": [
+            {
+                "type": _sanitize_planner_text(getattr(item, "risk_type", "")),
+                "reason": _sanitize_planner_text(getattr(item, "reason", "")),
+                "severity": _sanitize_planner_text(getattr(item, "severity", "")),
+            }
+            for item in planner_output.risk_hints[:3]
+        ],
+        "uncertainty": [
+            _sanitize_planner_text(item)
+            for item in planner_output.uncertainty[:3]
+            if _sanitize_planner_text(item)
+        ],
+    }
+
+
+def _planner_choice_description(
+    base_description: str | None,
+    *,
+    planner_summary: dict[str, Any],
+) -> str | None:
+    parts = [base_description] if base_description else []
+    warnings = planner_summary.get("warnings")
+    uncertainty = planner_summary.get("uncertainty")
+    risk_hints = planner_summary.get("risk_hints")
+    if planner_summary.get("confirmation_required"):
+        parts.append("需要你确认后执行")
+    if isinstance(warnings, list) and warnings:
+        parts.append("存在 Planner 警告")
+    if isinstance(risk_hints, list) and risk_hints:
+        parts.append("存在风险提示")
+    if isinstance(uncertainty, list) and uncertainty:
+        parts.append("存在不确定性")
+    return " · ".join(parts) if parts else None
+
+
+def _planner_choice_created_event_payload(
+    pending_choice: dict[str, Any],
+    *,
+    planner_output: AgentDPlannerOutput,
+    candidate_count: int,
+) -> dict[str, Any]:
+    route_plan = planner_output.route_plan
+    return {
+        "progress_kind": "planner_choice_created",
+        "candidate_count": candidate_count,
+        "choice_group_id": pending_choice.get("choice_group_id"),
+        "confirmation_required": bool(
+            planner_output.confirmation_requirements
+            or (route_plan and route_plan.confirmation_required)
+        ),
+        "planner_warning_count": len(planner_output.warnings),
+        "planner_risk_count": len(planner_output.risk_hints),
+        "uncertainty_count": len(planner_output.uncertainty),
+    }
+
+
+def _sanitize_planner_text(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return re.sub(
+        r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b",
+        "[internal-id]",
+        text,
+        flags=re.I,
+    )
+
+
+def _count_summary_items(summary: Any, key: str) -> int:
+    if not isinstance(summary, dict):
+        return 0
+    value = summary.get(key)
+    return len(value) if isinstance(value, list) else 0
 
 
 def _build_recovery_pending_choice(
@@ -3643,6 +4231,10 @@ def _scope_actions_for_vague_request(
         if scoped:
             return scoped
     return actions
+
+
+def _looks_like_active_task_continuation(text: str) -> bool:
+    return text.strip() in {"继续", "继续执行", "接着", "接着做", "下一步"}
 
 
 def _intake_match_terms(intake: ConversationIntakeResult | None) -> set[str]:

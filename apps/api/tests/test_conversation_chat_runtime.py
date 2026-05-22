@@ -29,6 +29,13 @@ from app.schemas.conversation_router import (
     RouteDecisionKind,
     RouterAgentRole,
 )
+from app.schemas.task_planning import (
+    AgentDPlannerOutput,
+    ConfirmationRequirement,
+    RiskHint,
+    RoutePlan,
+    RouteStep,
+)
 from app.services.conversation.chat_runtime import (
     _PENDING_SENSITIVE_VALUES,
     _fill_values_from_intake,
@@ -40,6 +47,7 @@ from app.services.conversation.entry_gate import ConversationEntryGateService
 from app.services.conversation.orchestrator import ConversationOrchestrator
 from app.services.conversation.page_context import PageContextBuilder
 from app.services.learning.learning_run_service import LearningRunResult
+from app.services.task_planning.planner import TaskPathPlanner
 
 
 @pytest.fixture
@@ -2411,7 +2419,9 @@ def test_interactive_chat_requires_url_for_same_alias_multiple_targets(
     assert pending_choice["choices"][0]["choice_id"] == "A"
     assert "learned_path_id" not in json.dumps(pending_choice, ensure_ascii=False)
     private_map = session.metadata_json["pending_choice_private_map"]
+    assert private_map["A"]["kind"] == "planner_route_choice"
     assert private_map["A"]["learned_path_id"] == path_a
+    assert private_map["B"]["kind"] == "planner_route_choice"
     assert private_map["B"]["learned_path_id"] == path_b
     assert session.metadata_json["active_task"]["kind"] == "clarify"
     assert session.metadata_json["active_task"]["status"] == "waiting_for_user_input"
@@ -2420,9 +2430,610 @@ def test_interactive_chat_requires_url_for_same_alias_multiple_targets(
         e
         for e in events
         if e.type == "chat_progress_recorded"
-        and e.payload_json.get("progress_kind") == "pending_choice_created"
+        and e.payload_json.get("progress_kind") == "planner_choice_created"
     ][-1]
+    assert created.payload_json["candidate_count"] == 2
     assert "learned_path_id" not in json.dumps(created.payload_json, ensure_ascii=False)
+
+
+def test_interactive_chat_multi_candidate_invokes_task_path_planner_and_sanitizes_choice(
+    monkeypatch: pytest.MonkeyPatch,
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_a = _ingest_workspace_path(db_session, source_run_id="run-planner-a")
+    path_b = _ingest_workspace_path(db_session, source_run_id="run-planner-b")
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_a,
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                },
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_b,
+                    "target_url": "http://localhost:5177/workspace-login",
+                    "site_origin": "http://localhost:5177",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                },
+            ]
+        },
+    )
+    planner_calls: list[tuple[str, list[str]]] = []
+
+    def plan(
+        self: TaskPathPlanner,
+        task_intent: Any,
+        candidates: list[Any],
+    ) -> AgentDPlannerOutput:
+        planner_calls.append(
+            (task_intent.raw_text, [candidate.learned_path_id for candidate in candidates])
+        )
+        return AgentDPlannerOutput(
+            route_plan=RoutePlan(
+                task_intent=task_intent,
+                steps=[
+                    RouteStep(
+                        order=0,
+                        learned_path_id=path_a,
+                        purpose="Execute workspace entry after user confirmation.",
+                    )
+                ],
+                confirmation_required=True,
+            ),
+            confirmation_requirements=[
+                ConfirmationRequirement(
+                    reason="ambiguous_selection",
+                    message="Please confirm the selected operation.",
+                    severity="info",
+                )
+            ],
+            risk_hints=[
+                RiskHint(
+                    risk_type="flaky_path",
+                    reason="This path has historical warning signals.",
+                    severity="warning",
+                )
+            ],
+            uncertainty=["multiple matching operations"],
+            warnings=["top candidate requires confirmation"],
+        )
+
+    monkeypatch.setattr(TaskPathPlanner, "plan", plan)
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
+        session_id,
+        "帮我进入工作台",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert planner_calls == [("帮我进入工作台", [path_a, path_b])]
+    assert replay_called is False
+    assert "我找到了多个可能的操作" in result.user_response
+    assert "learned_path_id" not in result.user_response
+    assert path_a not in result.user_response
+    assert path_b not in result.user_response
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    pending_choice = session.metadata_json["pending_choice"]
+    pending_choice_text = json.dumps(pending_choice, ensure_ascii=False)
+    assert path_a not in pending_choice_text
+    assert path_b not in pending_choice_text
+    assert "learned_path_id" not in pending_choice_text
+    assert "存在 Planner 警告" in pending_choice_text
+    assert "top candidate requires confirmation" not in pending_choice_text
+
+    private_map = session.metadata_json["pending_choice_private_map"]
+    assert private_map["A"]["kind"] == "planner_route_choice"
+    assert private_map["A"]["learned_path_id"] == path_a
+    assert private_map["A"]["planner_summary"]["confirmation_required"] is True
+    assert private_map["B"]["kind"] == "planner_route_choice"
+    assert private_map["B"]["learned_path_id"] == path_b
+
+    events = repo.list_events(session_id)
+    created = [
+        e
+        for e in events
+        if e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "planner_choice_created"
+    ][-1]
+    created_text = json.dumps(created.payload_json, ensure_ascii=False)
+    assert created.payload_json["candidate_count"] == 2
+    assert created.payload_json["planner_warning_count"] == 1
+    assert created.payload_json["planner_risk_count"] == 1
+    assert path_a not in created_text
+    assert path_b not in created_text
+    assert "learned_path_id" not in created_text
+
+
+def test_interactive_chat_planner_warning_uses_generic_visible_text(
+    monkeypatch: pytest.MonkeyPatch,
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_a = _ingest_workspace_path(db_session, source_run_id="run-planner-warning-a")
+    path_b = _ingest_workspace_path(db_session, source_run_id="run-planner-warning-b")
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_a,
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                },
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_b,
+                    "target_url": "http://localhost:5177/workspace-login",
+                    "site_origin": "http://localhost:5177",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                },
+            ]
+        },
+    )
+    private_warning = (
+        "selector=[data-testid='item-name-input']; item_name=测试项目B; "
+        f"selected_path_id={path_a}"
+    )
+
+    def plan(
+        self: TaskPathPlanner,
+        task_intent: Any,
+        candidates: list[Any],
+    ) -> AgentDPlannerOutput:
+        return AgentDPlannerOutput(
+            route_plan=RoutePlan(
+                task_intent=task_intent,
+                steps=[
+                    RouteStep(
+                        order=0,
+                        learned_path_id=path_a,
+                        purpose="Execute top candidate.",
+                    )
+                ],
+            ),
+            warnings=[private_warning],
+        )
+
+    monkeypatch.setattr(TaskPathPlanner, "plan", plan)
+
+    result = ConversationOrchestrator(repo).dispatch_user_input(
+        session_id,
+        "帮我进入工作台",
+        metadata={"client": "wagent_chat"},
+    )
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    pending_choice_text = json.dumps(
+        session.metadata_json["pending_choice"],
+        ensure_ascii=False,
+    )
+    visible_text = result.user_response + "\n" + pending_choice_text
+    assert "存在 Planner 警告" in visible_text
+    assert "data-testid" not in visible_text
+    assert "item-name-input" not in visible_text
+    assert "测试项目B" not in visible_text
+    assert "selected_path_id" not in visible_text
+    assert path_a not in visible_text
+    private_map_text = json.dumps(
+        session.metadata_json["pending_choice_private_map"],
+        ensure_ascii=False,
+    )
+    assert "item-name-input" in private_map_text
+    assert "测试项目B" in private_map_text
+
+
+def test_interactive_chat_continue_with_active_task_does_not_enter_planner(
+    monkeypatch: pytest.MonkeyPatch,
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_a = _ingest_workspace_path(db_session, source_run_id="run-active-task-a")
+    path_b = _ingest_workspace_path(db_session, source_run_id="run-active-task-b")
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "active_task": {
+                "task_id": "task-active",
+                "kind": "clarify",
+                "owner": "runtime",
+                "status": "waiting_for_user_input",
+                "target_url": "http://localhost:5176/workspace-login",
+                "goal": "进入工作台",
+                "created_at": "2026-05-22T00:00:00+08:00",
+                "updated_at": "2026-05-22T00:00:00+08:00",
+            },
+            "learned_actions": [
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_a,
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                },
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_b,
+                    "target_url": "http://localhost:5177/workspace-login",
+                    "site_origin": "http://localhost:5177",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                },
+            ],
+        },
+    )
+
+    def plan(
+        self: TaskPathPlanner,
+        task_intent: Any,
+        candidates: list[Any],
+    ) -> AgentDPlannerOutput:
+        raise AssertionError("active_task continuation must run before Planner")
+
+    monkeypatch.setattr(TaskPathPlanner, "plan", plan)
+
+    result = ConversationOrchestrator(repo).dispatch_user_input(
+        session_id,
+        "继续",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert "当前还有一个操作需要你补充或确认" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_choice" not in session.metadata_json
+    assert "pending_choice_private_map" not in session.metadata_json
+    events = repo.list_events(session_id)
+    assert not any(
+        e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "planner_choice_created"
+        for e in events
+    )
+
+
+def test_interactive_chat_completed_active_task_does_not_block_planner(
+    monkeypatch: pytest.MonkeyPatch,
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_a = _ingest_workspace_path(
+        db_session,
+        source_run_id="run-completed-active-task-a",
+    )
+    path_b = _ingest_workspace_path(
+        db_session,
+        source_run_id="run-completed-active-task-b",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "active_task": {
+                "task_id": "task-completed",
+                "kind": "clarify",
+                "owner": "runtime",
+                "status": "completed",
+                "target_url": "http://localhost:5176/workspace-login",
+                "goal": "进入工作台",
+                "created_at": "2026-05-22T00:00:00+08:00",
+                "updated_at": "2026-05-22T00:00:00+08:00",
+            },
+            "learned_actions": [
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_a,
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                },
+                {
+                    "alias": "查看工作台",
+                    "utterances": ["帮我查看工作台"],
+                    "learned_path_id": path_b,
+                    "target_url": "http://localhost:5177/workspace-login",
+                    "site_origin": "http://localhost:5177",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                },
+            ],
+        },
+    )
+    planner_calls = 0
+
+    def plan(
+        self: TaskPathPlanner,
+        task_intent: Any,
+        candidates: list[Any],
+    ) -> AgentDPlannerOutput:
+        nonlocal planner_calls
+        planner_calls += 1
+        return AgentDPlannerOutput(
+            route_plan=RoutePlan(
+                task_intent=task_intent,
+                steps=[
+                    RouteStep(
+                        order=0,
+                        learned_path_id=path_a,
+                        purpose="Continue with a fresh planner choice.",
+                    )
+                ],
+            )
+        )
+
+    monkeypatch.setattr(TaskPathPlanner, "plan", plan)
+
+    result = ConversationOrchestrator(repo).dispatch_user_input(
+        session_id,
+        "继续",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert planner_calls == 1
+    assert "我找到了多个可能的操作" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json["pending_choice"]["type"] == "pending_choice"
+    events = repo.list_events(session_id)
+    assert not any(
+        e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "active_task_continue_requested"
+        for e in events
+    )
+
+
+def test_interactive_chat_url_plus_vague_request_invokes_planner_instead_of_guessing(
+    monkeypatch: pytest.MonkeyPatch,
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_a = _ingest_workspace_path(
+        db_session,
+        source_run_id="run-planner-url-a",
+        page_template="/items",
+    )
+    path_b = _ingest_workspace_path(
+        db_session,
+        source_run_id="run-planner-url-b",
+        page_template="/items",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": path_a,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                    "scenario": "product_level",
+                },
+                {
+                    "alias": "查看项目",
+                    "utterances": ["帮我查看项目"],
+                    "learned_path_id": path_b,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                    "scenario": "product_level",
+                },
+            ]
+        },
+    )
+    planner_calls = 0
+
+    def plan(
+        self: TaskPathPlanner,
+        task_intent: Any,
+        candidates: list[Any],
+    ) -> AgentDPlannerOutput:
+        nonlocal planner_calls
+        planner_calls += 1
+        assert task_intent.target_page_hint == "http://localhost:5176/items"
+        return AgentDPlannerOutput(
+            route_plan=RoutePlan(
+                task_intent=task_intent,
+                steps=[
+                    RouteStep(
+                        order=0,
+                        learned_path_id=path_a,
+                        purpose="Execute top same-page candidate.",
+                    )
+                ],
+            ),
+        )
+
+    monkeypatch.setattr(TaskPathPlanner, "plan", plan)
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
+        session_id,
+        "http://localhost:5176/items 帮我处理一下这个页面",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert planner_calls == 1
+    assert replay_called is False
+    assert "我找到了多个可能的操作" in result.user_response
+    assert "A. 新增项目" in result.user_response
+    assert "B. 查看项目" in result.user_response
+
+
+def test_interactive_chat_single_candidate_skips_task_path_planner(
+    monkeypatch: pytest.MonkeyPatch,
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_workspace_path(db_session, source_run_id="run-single-no-plan")
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                }
+            ]
+        },
+    )
+
+    def plan(
+        self: TaskPathPlanner,
+        task_intent: Any,
+        candidates: list[Any],
+    ) -> AgentDPlannerOutput:
+        raise AssertionError("single-candidate execution must not call TaskPathPlanner")
+
+    monkeypatch.setattr(TaskPathPlanner, "plan", plan)
+    calls: list[tuple[str, str]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
+        session_id,
+        "帮我进入工作台",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.user_response == "执行中。\n进入工作台完成。"
+    assert calls == [(learned_path_id, "http://localhost:5176/workspace-login")]
+
+
+def test_interactive_chat_planner_unable_does_not_create_executable_private_map(
+    monkeypatch: pytest.MonkeyPatch,
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_a = _ingest_workspace_path(db_session, source_run_id="run-unable-a")
+    path_b = _ingest_workspace_path(db_session, source_run_id="run-unable-b")
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_a,
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                },
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": path_b,
+                    "target_url": "http://localhost:5177/workspace-login",
+                    "site_origin": "http://localhost:5177",
+                    "page_template": "/workspace-login",
+                    "scenario": "product_level",
+                },
+            ]
+        },
+    )
+
+    def plan(
+        self: TaskPathPlanner,
+        task_intent: Any,
+        candidates: list[Any],
+    ) -> AgentDPlannerOutput:
+        return AgentDPlannerOutput(
+            route_plan=None,
+            uncertainty=["No reliable top route."],
+            warnings=["Unable to plan safely."],
+        )
+
+    monkeypatch.setattr(TaskPathPlanner, "plan", plan)
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
+        session_id,
+        "帮我进入工作台",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert "还不能可靠判断" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_choice_private_map" not in session.metadata_json
+    events = repo.list_events(session_id)
+    unable = [
+        e
+        for e in events
+        if e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "planner_unable_to_plan"
+    ][-1]
+    unable_text = json.dumps(unable.payload_json, ensure_ascii=False)
+    assert path_a not in unable_text
+    assert path_b not in unable_text
+    assert "learned_path_id" not in unable_text
 
 
 def test_interactive_chat_pending_choice_selects_first_action_and_clears_state(
@@ -2562,6 +3173,10 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
     )
     assert "测试项目B" not in pending_choice_text
     assert (
+        session.metadata_json["pending_choice_private_map"]["A"]["kind"]
+        == "planner_route_choice"
+    )
+    assert (
         session.metadata_json["pending_choice_private_map"]["A"]["slot_overrides"]
         == {"item_name": "测试项目B"}
     )
@@ -2581,6 +3196,17 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
     target = calls[0][2]["evidence_targets"][0]
     assert target.text == "测试项目B"
     assert target.source_slot == "item_name"
+    events = repo.list_events(session_id)
+    selected = [
+        e
+        for e in events
+        if e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "planner_choice_selected"
+    ][-1]
+    selected_text = json.dumps(selected.payload_json, ensure_ascii=False)
+    assert path_a not in selected_text
+    assert "测试项目B" not in selected_text
+    assert "slot_overrides" not in selected_text
 
 
 def test_interactive_chat_parameterized_path_requires_runtime_item_name(
