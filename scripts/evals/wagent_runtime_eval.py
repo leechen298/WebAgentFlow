@@ -15,14 +15,21 @@ from typing import Any, Callable
 import httpx
 
 
-SCHEMA_VERSION = "11.3.6.3"
+SCHEMA_VERSION = "11.3.6.4"
 FAILURE_RECOVERY_CASE = "failure_recovery_menu_safety"
 PENDING_CHOICE_CASE = "pending_choice_multi_candidate"
+PLANNER_CHOICE_CASE = "planner_backed_choice"
+PLANNER_SINGLE_PATH_REGRESSION_CASE = "planner_single_path_bypass_regression"
 DEFAULT_CASES = [
     "items_closed_loop",
     "single_path_direct_replay_regression",
 ]
-ALL_CASES = [*DEFAULT_CASES, FAILURE_RECOVERY_CASE, PENDING_CHOICE_CASE]
+ALL_CASES = [
+    *DEFAULT_CASES,
+    FAILURE_RECOVERY_CASE,
+    PENDING_CHOICE_CASE,
+    PLANNER_CHOICE_CASE,
+]
 ITEM_LIST_SELECTOR = "[data-testid='item-list']"
 SENSITIVE_KEYS = {
     "api_key",
@@ -36,6 +43,7 @@ SENSITIVE_KEYS = {
     "execution_payload",
     "learned_path_id",
     "pending_choice_private_map",
+    "planner_summary",
     "password",
     "private_retry_payload",
     "raw_selector",
@@ -65,6 +73,7 @@ FORBIDDEN_PAYLOAD_TERMS = {
     "replay_action",
     "execution_payload",
     "pending_choice_private_map",
+    "planner_summary",
     "private_retry_payload",
     "credential",
     "password",
@@ -584,6 +593,105 @@ class GateEvaluator:
         ]
         return CaseResult(
             case_id=PENDING_CHOICE_CASE,
+            status=_case_status(gates),
+            gates=gates,
+            warnings=_warnings(gates),
+        )
+
+    def evaluate_planner_backed_choice(
+        self,
+        evidence: dict[str, Any],
+        *,
+        expected_item_name: str | None = None,
+    ) -> CaseResult:
+        selected_event = _latest_planner_choice_selected_event(evidence)
+        execution_event = _latest_event_after(
+            evidence,
+            "chat_execution_started",
+            selected_event,
+        )
+        completed_event = _latest_event_after(
+            evidence,
+            "chat_execution_completed",
+            execution_event,
+        )
+        reporter_event = _latest_event_after(
+            evidence,
+            "task_result_reported",
+            execution_event,
+        )
+        item_name = expected_item_name or _get(
+            execution_event or {}, "payload", "slot_overrides", "item_name"
+        )
+        gates = [
+            _gate_setup_planner_candidates_current_eval(evidence),
+            _gate_planner_candidates_generated(evidence),
+            _gate_planner_choice_created(evidence),
+            _gate_non_planner_choice_not_used(evidence),
+            _gate_public_choices_abc_visible(evidence),
+            _gate_planner_public_payload_sanitized(evidence),
+            _gate_planner_event_sanitized(evidence),
+            _gate_planner_warning_wording_safe(evidence),
+            _gate_planner_top_choice_observable(evidence),
+            _gate_select_planner_choice_dispatched(evidence),
+            _gate_planner_choice_selected(selected_event),
+            _gate_planner_choice_execution_started(execution_event),
+            _gate_execution_uses_selected_choice_path(evidence, execution_event),
+            _gate_pending_choice_cleared(evidence),
+            _gate_pending_choice_execution_verified(
+                completed_event,
+                reporter_event,
+                item_name,
+            ),
+            _gate_final_response_verified(evidence, item_name or ""),
+            _gate_no_autonomous_or_direct_replay(evidence),
+        ]
+        return CaseResult(
+            case_id=PLANNER_CHOICE_CASE,
+            status=_case_status(gates),
+            gates=gates,
+            warnings=_warnings(gates),
+        )
+
+    def evaluate_planner_single_path_bypass_regression(
+        self,
+        evidence: dict[str, Any],
+        *,
+        expected_item_name: str,
+        learned_path_id: str,
+    ) -> CaseResult:
+        execution_event = _latest_execution_started_for_item(
+            evidence,
+            expected_item_name,
+        )
+        completed_event = _latest_event_after(
+            evidence,
+            "chat_execution_completed",
+            execution_event,
+        )
+        reporter_event = _latest_event_after(
+            evidence,
+            "task_result_reported",
+            execution_event,
+        )
+        gates = [
+            _gate_single_candidate(evidence, learned_path_id),
+            _gate_no_planner_candidates_generated(evidence),
+            _gate_no_planner_choice_created(evidence),
+            _gate_direct_execution_started(execution_event),
+            _gate_execution_uses_current_learned_path(
+                execution_event,
+                learned_path_id,
+            ),
+            _gate_pending_choice_execution_verified(
+                completed_event,
+                reporter_event,
+                expected_item_name,
+            ),
+            _gate_final_response_verified(evidence, expected_item_name),
+        ]
+        return CaseResult(
+            case_id=PLANNER_SINGLE_PATH_REGRESSION_CASE,
             status=_case_status(gates),
             gates=gates,
             warnings=_warnings(gates),
@@ -1542,6 +1650,434 @@ def _gate_pending_choice_execution_verified(
     )
 
 
+def _gate_setup_planner_candidates_current_eval(
+    evidence: dict[str, Any],
+) -> GateResult:
+    manifest = evidence.get("setup_manifest")
+    if not isinstance(manifest, dict):
+        return GateResult(
+            "setup_planner_candidates_current_eval",
+            True,
+            "fail",
+            "setup manifest missing",
+            "setup_manifest",
+        )
+    setup_type = str(manifest.get("setup_type") or "")
+    candidates = _setup_candidates(evidence)
+    aliases = [
+        str(candidate.get("alias") or "")
+        for candidate in candidates
+        if candidate.get("alias")
+    ]
+    distinct_aliases = sorted(set(aliases))
+    current_real_path_count = sum(
+        1
+        for candidate in candidates
+        if candidate.get("is_current_eval_real_path")
+        or candidate.get("current_eval_run")
+        or candidate.get("source") == "current_eval_run"
+    )
+    live_capability = bool(manifest.get("live_multi_action_capability"))
+    distinct_path_capability = bool(manifest.get("planner_distinct_path_capability"))
+    if (
+        setup_type in _planner_choice_setup_types()
+        and len(candidates) >= 3
+        and len(distinct_aliases) >= 3
+        and (setup_type == "fixture_only" or current_real_path_count >= 1)
+    ):
+        return GateResult(
+            "setup_planner_candidates_current_eval",
+            True,
+            "pass",
+            (
+                f"setup_type={setup_type}; "
+                f"live_multi_action_capability={str(live_capability).lower()}; "
+                f"planner_distinct_path_capability={str(distinct_path_capability).lower()}; "
+                f"candidate_count={len(candidates)}; "
+                f"current_eval_real_path_count={current_real_path_count}; "
+                f"aliases={','.join(distinct_aliases)}"
+            ),
+            "setup_manifest",
+        )
+    return GateResult(
+        "setup_planner_candidates_current_eval",
+        True,
+        "fail",
+        (
+            f"setup_type={setup_type or 'missing'}; candidate_count={len(candidates)}; "
+            f"distinct_alias_count={len(distinct_aliases)}; "
+            f"current_eval_real_path_count={current_real_path_count}"
+        ),
+        "setup_manifest",
+    )
+
+
+def _planner_choice_setup_types() -> set[str]:
+    return {
+        "live_same_session_distinct_paths",
+        "live_setup_session_distinct_paths",
+        "eval_only_planner_candidate_binding",
+        "fixture_only",
+    }
+
+
+def _gate_planner_candidates_generated(evidence: dict[str, Any]) -> GateResult:
+    event = _latest_planner_candidates_generated_event(evidence)
+    if not event:
+        return GateResult(
+            "planner_candidates_generated",
+            True,
+            "fail",
+            "planner_candidates_generated event missing",
+            "events/history",
+        )
+    candidate_count = _get(event, "payload", "candidate_count")
+    setup_count = len(_setup_candidates(evidence))
+    if (
+        isinstance(candidate_count, int)
+        and setup_count
+        and candidate_count < setup_count
+    ):
+        return GateResult(
+            "planner_candidates_generated",
+            True,
+            "fail",
+            f"candidate_count={candidate_count} < setup_candidate_count={setup_count}",
+            "events/history",
+        )
+    return GateResult(
+        "planner_candidates_generated",
+        True,
+        "pass",
+        f"event_id={event.get('id')}; candidate_count={candidate_count}",
+        "events/history",
+    )
+
+
+def _gate_planner_choice_created(evidence: dict[str, Any]) -> GateResult:
+    event = _latest_planner_choice_created_event(evidence)
+    if event:
+        return GateResult(
+            "planner_choice_created",
+            True,
+            "pass",
+            f"event_id={event.get('id')}",
+            "events/history",
+        )
+    return GateResult(
+        "planner_choice_created",
+        True,
+        "fail",
+        "planner_choice_created event missing",
+        "events/history",
+    )
+
+
+def _gate_non_planner_choice_not_used(evidence: dict[str, Any]) -> GateResult:
+    for event in _events(evidence):
+        if _get(event, "payload", "progress_kind") == "pending_choice_created":
+            return GateResult(
+                "non_planner_choice_not_used",
+                True,
+                "fail",
+                f"non-planner pending_choice_created observed at event {event.get('id')}",
+                "events/history",
+            )
+    return GateResult(
+        "non_planner_choice_not_used",
+        True,
+        "pass",
+        "no non-planner pending_choice_created event observed",
+        "events/history",
+    )
+
+
+def _gate_planner_public_payload_sanitized(evidence: dict[str, Any]) -> GateResult:
+    surface = _planner_public_surface(evidence)
+    leak = _first_forbidden_term(surface)
+    if leak is None:
+        return GateResult(
+            "planner_public_payload_sanitized",
+            True,
+            "pass",
+            "visible planner choice payload contains no private tokens",
+            "messages/session/events",
+        )
+    return GateResult(
+        "planner_public_payload_sanitized",
+        True,
+        "fail",
+        f"private planner payload token observed: {leak}",
+        "messages/session/events",
+    )
+
+
+def _gate_planner_event_sanitized(evidence: dict[str, Any]) -> GateResult:
+    events = _planner_safety_events(evidence)
+    leak = _first_forbidden_term(events)
+    if leak is None:
+        return GateResult(
+            "planner_event_sanitized",
+            True,
+            "pass",
+            f"{len(events)} planner event(s) sanitized",
+            "events/history",
+        )
+    return GateResult(
+        "planner_event_sanitized",
+        True,
+        "fail",
+        f"private planner event token observed: {leak}",
+        "events/history",
+    )
+
+
+def _gate_planner_warning_wording_safe(evidence: dict[str, Any]) -> GateResult:
+    warning_count = _planner_signal_count(evidence, "planner_warning_count")
+    risk_count = _planner_signal_count(evidence, "planner_risk_count")
+    uncertainty_count = _planner_signal_count(evidence, "uncertainty_count")
+    if warning_count + risk_count + uncertainty_count == 0:
+        return GateResult(
+            "planner_warning_wording_safe",
+            False,
+            "not_observable",
+            "no planner warning/risk/uncertainty count observed",
+            "messages/events",
+        )
+    visible = "\n".join(_agent_messages(evidence))
+    raw_markers = (
+        "top candidate",
+        "historical warning",
+        "ambiguous_selection",
+        "provisional_trust",
+        "flaky_path",
+        "risk_type",
+        "confirmation_required",
+    )
+    leaked = next((marker for marker in raw_markers if marker in visible), None)
+    if leaked:
+        return GateResult(
+            "planner_warning_wording_safe",
+            True,
+            "fail",
+            f"raw planner wording leaked: {leaked}",
+            "messages/events",
+        )
+    generic_markers = (
+        "存在 Planner 警告",
+        "存在风险提示",
+        "存在不确定性",
+        "需要你确认后执行",
+    )
+    if any(marker in visible for marker in generic_markers):
+        return GateResult(
+            "planner_warning_wording_safe",
+            True,
+            "pass",
+            "visible planner warnings use generic wording",
+            "messages/events",
+        )
+    return GateResult(
+        "planner_warning_wording_safe",
+        True,
+        "fail",
+        "planner warning/risk/uncertainty exists but generic visible wording is missing",
+        "messages/events",
+    )
+
+
+def _gate_planner_top_choice_observable(evidence: dict[str, Any]) -> GateResult:
+    event = _latest_planner_choice_created_event(evidence)
+    top_choice_id = _get(event or {}, "payload", "top_choice_id")
+    top_path_hash = _get(event or {}, "payload", "top_path_hash")
+    if top_choice_id or top_path_hash:
+        return GateResult(
+            "planner_top_choice_observable",
+            False,
+            "pass",
+            f"top_choice_id={top_choice_id or 'N/A'}; top_path_hash={top_path_hash or 'N/A'}",
+            "events/history",
+        )
+    return GateResult(
+        "planner_top_choice_observable",
+        False,
+        "not_observable",
+        "current public read surface does not expose top choice id/hash",
+        "events/history",
+    )
+
+
+def _gate_select_planner_choice_dispatched(evidence: dict[str, Any]) -> GateResult:
+    expected_choice = str(
+        _get(evidence, "setup_manifest", "expected_selected_choice") or "A"
+    )
+    for turn in evidence.get("turns") or []:
+        text = ""
+        error = None
+        response = None
+        if isinstance(turn, TurnRecord):
+            text = turn.text
+            error = turn.error
+            response = turn.response
+        elif isinstance(turn, dict):
+            text = str(turn.get("text") or "")
+            error = turn.get("error")
+            response = turn.get("response")
+        if (
+            text.strip().upper() == expected_choice
+            and error is None
+            and response is not None
+        ):
+            return GateResult(
+                "select_planner_choice_dispatched",
+                True,
+                "pass",
+                f"choice {expected_choice} dispatch succeeded",
+                "turns",
+            )
+    return GateResult(
+        "select_planner_choice_dispatched",
+        True,
+        "fail",
+        f"successful {expected_choice} selection dispatch missing",
+        "turns",
+    )
+
+
+def _gate_planner_choice_selected(event: dict[str, Any] | None) -> GateResult:
+    if event:
+        return GateResult(
+            "planner_choice_selected",
+            True,
+            "pass",
+            f"event_id={event.get('id')}",
+            "events/history",
+        )
+    return GateResult(
+        "planner_choice_selected",
+        True,
+        "fail",
+        "planner_choice_selected event missing",
+        "events/history",
+    )
+
+
+def _gate_planner_choice_execution_started(
+    event: dict[str, Any] | None,
+) -> GateResult:
+    if event:
+        return GateResult(
+            "planner_choice_execution_started",
+            True,
+            "pass",
+            f"event_id={event.get('id')}",
+            "events",
+        )
+    return GateResult(
+        "planner_choice_execution_started",
+        True,
+        "fail",
+        "chat_execution_started missing after planner choice selection",
+        "events",
+    )
+
+
+def _gate_execution_uses_selected_choice_path(
+    evidence: dict[str, Any],
+    event: dict[str, Any] | None,
+) -> GateResult:
+    selected_choice = str(
+        _get(evidence, "setup_manifest", "expected_selected_choice") or "A"
+    )
+    expected = _setup_choice_path_id(evidence, selected_choice)
+    actual = _get(event or {}, "payload", "learned_path_id")
+    setup_type = str(_get(evidence, "setup_manifest", "setup_type") or "unknown")
+    distinct_path_capability = bool(
+        _get(evidence, "setup_manifest", "planner_distinct_path_capability")
+    )
+    expected_hash = _stable_hash(expected)
+    actual_hash = _stable_hash(actual)
+    alias = _setup_choice_alias(evidence, selected_choice) or selected_choice
+    match = bool(expected and actual and expected == actual)
+    evidence_text = (
+        f"expected_choice={selected_choice}; expected_alias={alias}; "
+        f"expected_path_hash={expected_hash}; actual_path_hash={actual_hash}; "
+        f"match={str(match).lower()}; setup_type={setup_type}; "
+        f"planner_distinct_path_capability={str(distinct_path_capability).lower()}"
+    )
+    if match:
+        return GateResult(
+            "execution_uses_selected_choice_path",
+            True,
+            "pass",
+            evidence_text,
+            "setup_manifest/events",
+        )
+    return GateResult(
+        "execution_uses_selected_choice_path",
+        True,
+        "fail",
+        evidence_text,
+        "setup_manifest/events",
+    )
+
+
+def _gate_no_planner_candidates_generated(evidence: dict[str, Any]) -> GateResult:
+    event = _latest_planner_candidates_generated_event(evidence)
+    if event:
+        return GateResult(
+            "no_planner_candidates_generated",
+            True,
+            "fail",
+            f"planner_candidates_generated observed at event {event.get('id')}",
+            "events/history",
+        )
+    return GateResult(
+        "no_planner_candidates_generated",
+        True,
+        "pass",
+        "no planner_candidates_generated event observed",
+        "events/history",
+    )
+
+
+def _gate_no_planner_choice_created(evidence: dict[str, Any]) -> GateResult:
+    event = _latest_planner_choice_created_event(evidence)
+    if event:
+        return GateResult(
+            "no_planner_choice_created",
+            True,
+            "fail",
+            f"planner_choice_created observed at event {event.get('id')}",
+            "events/history",
+        )
+    return GateResult(
+        "no_planner_choice_created",
+        True,
+        "pass",
+        "no planner_choice_created event observed",
+        "events/history",
+    )
+
+
+def _gate_direct_execution_started(event: dict[str, Any] | None) -> GateResult:
+    if event:
+        return GateResult(
+            "direct_execution_started",
+            True,
+            "pass",
+            f"event_id={event.get('id')}",
+            "events",
+        )
+    return GateResult(
+        "direct_execution_started",
+        True,
+        "fail",
+        "chat_execution_started missing",
+        "events",
+    )
+
+
 def _has_recovery_menu(message: str) -> bool:
     return all(marker in message for marker in ("A.", "B.", "C.")) and all(
         label in message for label in ("重试执行该操作", "重新学习", "取消")
@@ -1641,6 +2177,10 @@ def render_markdown_report(
         (case for case in result.case_results if case.case_id == PENDING_CHOICE_CASE),
         None,
     )
+    planner_choice_case = next(
+        (case for case in result.case_results if case.case_id == PLANNER_CHOICE_CASE),
+        None,
+    )
     lines = [
         "# M11.3.6 WAgent Runtime Eval Result",
         "",
@@ -1728,6 +2268,57 @@ def render_markdown_report(
                 "- Planner-backed choice: out of scope for 11.3.6.3.",
             ]
         )
+    if planner_choice_case is not None:
+        setup_gate = next(
+            (
+                gate
+                for gate in planner_choice_case.gates
+                if gate.name == "setup_planner_candidates_current_eval"
+            ),
+            None,
+        )
+        selected_gate = next(
+            (
+                gate
+                for gate in planner_choice_case.gates
+                if gate.name == "execution_uses_selected_choice_path"
+            ),
+            None,
+        )
+        planner_events = [
+            gate.name
+            for gate in planner_choice_case.gates
+            if gate.name in {"planner_candidates_generated", "planner_choice_created"}
+            and gate.status == "pass"
+        ]
+        setup_type = _evidence_field(
+            setup_gate.evidence if setup_gate else "", "setup_type"
+        )
+        live_multi = _evidence_field(
+            setup_gate.evidence if setup_gate else "",
+            "live_multi_action_capability",
+        )
+        distinct_path = _evidence_field(
+            setup_gate.evidence if setup_gate else "",
+            "planner_distinct_path_capability",
+        )
+        lines.extend(
+            [
+                "",
+                "## Planner-backed Choice Eval",
+                "",
+                f"- Live Conversation eval: {'run through Conversation API' if result.session_id else 'not run'}.",
+                f"- Candidate setup type: {setup_type or 'unknown'}.",
+                f"- Live multi-action capability: {live_multi or 'unknown'}.",
+                f"- Planner distinct-path capability: {distinct_path or 'unknown'}.",
+                f"- Planner events observed: {', '.join(planner_events) or 'none'}.",
+                f"- Selected choice evidence: {selected_gate.evidence if selected_gate else 'N/A'}.",
+                (
+                    "- Eval-only alias binding does not prove full live distinct-action "
+                    "Planner capability."
+                ),
+            ]
+        )
     lines.extend(
         [
             "",
@@ -1771,6 +2362,8 @@ def write_artifacts(
 def _markdown_result_filename(cases: list[str], timestamp: str) -> str:
     if FAILURE_RECOVERY_CASE in cases:
         return f"m11-11.3.6.2-failure-recovery-eval-{timestamp}.md"
+    if PLANNER_CHOICE_CASE in cases:
+        return f"m11-11.3.6.4-planner-backed-choice-eval-{timestamp}.md"
     if PENDING_CHOICE_CASE in cases:
         return f"m11-11.3.6.3-pending-choice-multi-candidate-eval-{timestamp}.md"
     return f"m11-11.3.6.1-wagent-runtime-eval-core-{timestamp}.md"
@@ -2019,6 +2612,119 @@ def run_eval(config: EvalConfig) -> EvalResult:
                         expected_item_name=exec_name,
                     )
                 )
+        if PLANNER_CHOICE_CASE in config.cases:
+            if learned_path_id is None:
+                learn_name = f"测试项目A-{stamp}"
+                exec_name = f"测试项目B-{stamp}"
+                for text in [
+                    config.product_url,
+                    f"学习新增项目，名称叫 {learn_name}",
+                    f"帮我新增项目，名称叫 {exec_name}",
+                ]:
+                    turn = driver.send_turn(session_id, text)
+                    turns.append(turn)
+                    if turn.error:
+                        raise EvalBlockedError(turn.error)
+                latest_evidence = collector.collect(session_id)
+                learned_path_id = _latest_learned_path_id(latest_evidence)
+                if learned_path_id and not latest_evidence.get("learned_path_detail"):
+                    latest_evidence = collector.collect(session_id, [learned_path_id])
+            if learned_path_id is None:
+                blocked_gate = GateResult(
+                    "items_closed_loop_dependency",
+                    True,
+                    "blocked",
+                    "planner-backed choice eval requires a learned path from this eval run",
+                    "runner",
+                )
+                case_results.append(
+                    CaseResult(
+                        case_id=PLANNER_CHOICE_CASE,
+                        status="blocked",
+                        gates=[blocked_gate],
+                    )
+                )
+                case_results.append(
+                    CaseResult(
+                        case_id=PLANNER_SINGLE_PATH_REGRESSION_CASE,
+                        status="blocked",
+                        gates=[blocked_gate],
+                    )
+                )
+            else:
+                setup_manifest = _build_planner_choice_setup_manifest(
+                    learned_path_id=learned_path_id,
+                    target_url=config.product_url,
+                )
+                eval_session = driver.create_session(
+                    metadata=_planner_choice_eval_session_metadata(setup_manifest),
+                )
+                session_id = eval_session["id"]
+                collector = EvidenceCollector(driver)
+                exec_name = f"测试项目PlannerA-{stamp}"
+                turn = driver.send_turn(session_id, config.product_url)
+                turns.append(turn)
+                if turn.error:
+                    raise EvalBlockedError(turn.error)
+                turn = driver.send_turn(
+                    session_id,
+                    f"帮我处理一下这个页面，名称叫 {exec_name}",
+                )
+                turns.append(turn)
+                if turn.error:
+                    raise EvalBlockedError(turn.error)
+                turn = driver.send_turn(session_id, "A")
+                turns.append(turn)
+                if turn.error:
+                    raise EvalBlockedError(turn.error)
+                latest_evidence = collector.collect(session_id, [learned_path_id])
+                latest_evidence["setup_manifest"] = setup_manifest
+                latest_evidence["turns"] = _to_jsonable(turns)
+                latest_evidence["raw_api_responses"] = {"records": driver.raw_records}
+                case_results.append(
+                    GateEvaluator().evaluate_planner_backed_choice(
+                        latest_evidence,
+                        expected_item_name=exec_name,
+                    )
+                )
+
+                single_session = driver.create_session(
+                    metadata={
+                        "pending_target": {"url": config.product_url},
+                        "learned_actions": [
+                            {
+                                "alias": "新增项目",
+                                "utterances": ["新增项目", "帮我新增项目"],
+                                "learned_path_id": learned_path_id,
+                                "target_url": config.product_url,
+                                "source": "wagent_eval_single_path_regression",
+                            }
+                        ],
+                    },
+                )
+                session_id = single_session["id"]
+                collector = EvidenceCollector(driver)
+                single_name = f"测试项目PlannerSingle-{stamp}"
+                turn = driver.send_turn(session_id, config.product_url)
+                turns.append(turn)
+                if turn.error:
+                    raise EvalBlockedError(turn.error)
+                turn = driver.send_turn(
+                    session_id, f"帮我新增项目，名称叫 {single_name}"
+                )
+                turns.append(turn)
+                if turn.error:
+                    raise EvalBlockedError(turn.error)
+                latest_evidence = collector.collect(session_id, [learned_path_id])
+                latest_evidence["turns"] = _to_jsonable(turns)
+                latest_evidence["raw_api_responses"] = {"records": driver.raw_records}
+                case_results.append(
+                    GateEvaluator().evaluate_planner_single_path_bypass_regression(
+                        latest_evidence,
+                        expected_item_name=single_name,
+                        learned_path_id=learned_path_id,
+                    )
+                )
         status = _overall_status(case_results)
         return EvalResult(
             schema_version=SCHEMA_VERSION,
@@ -2148,6 +2854,35 @@ def _build_pending_choice_setup_manifest(
     }
 
 
+def _build_planner_choice_setup_manifest(
+    *,
+    learned_path_id: str,
+    target_url: str,
+) -> dict[str, Any]:
+    aliases = [("A", "新增项目"), ("B", "添加项目"), ("C", "录入项目")]
+    candidates = []
+    for index, (choice_id, alias) in enumerate(aliases):
+        candidates.append(
+            {
+                "choice_id": choice_id,
+                "alias": alias,
+                "learned_path_id": learned_path_id,
+                "target_url": target_url,
+                "source": "current_eval_run" if index == 0 else "eval_alias_binding",
+                "is_current_eval_real_path": index == 0,
+                "path_hash": _stable_hash(learned_path_id),
+            }
+        )
+    return {
+        "case_id": PLANNER_CHOICE_CASE,
+        "setup_type": "eval_only_planner_candidate_binding",
+        "live_multi_action_capability": False,
+        "planner_distinct_path_capability": False,
+        "expected_selected_choice": "A",
+        "candidates": candidates,
+    }
+
+
 def _pending_choice_eval_session_metadata(
     setup_manifest: dict[str, Any],
 ) -> dict[str, Any]:
@@ -2173,6 +2908,46 @@ def _pending_choice_eval_session_metadata(
             "setup_type": setup_manifest.get("setup_type"),
             "live_multi_action_capability": setup_manifest.get(
                 "live_multi_action_capability",
+            ),
+            "candidate_count": len(actions),
+            "aliases": [action.get("alias") for action in actions],
+            "path_hashes": [
+                candidate.get("path_hash")
+                for candidate in setup_manifest.get("candidates") or []
+                if isinstance(candidate, dict)
+            ],
+        },
+    }
+
+
+def _planner_choice_eval_session_metadata(
+    setup_manifest: dict[str, Any],
+) -> dict[str, Any]:
+    actions = []
+    for candidate in setup_manifest.get("candidates") or []:
+        if not isinstance(candidate, dict):
+            continue
+        alias = str(candidate.get("alias") or "")
+        actions.append(
+            {
+                "alias": alias,
+                "utterances": [alias, f"帮我{alias}"] if alias else [],
+                "learned_path_id": candidate.get("learned_path_id"),
+                "target_url": candidate.get("target_url"),
+                "source": "wagent_eval_planner_candidate_binding",
+            }
+        )
+    return {
+        "pending_target": {"url": actions[0].get("target_url")} if actions else {},
+        "learned_actions": actions,
+        "eval_candidate_setup": {
+            "case_id": PLANNER_CHOICE_CASE,
+            "setup_type": setup_manifest.get("setup_type"),
+            "live_multi_action_capability": setup_manifest.get(
+                "live_multi_action_capability",
+            ),
+            "planner_distinct_path_capability": setup_manifest.get(
+                "planner_distinct_path_capability",
             ),
             "candidate_count": len(actions),
             "aliases": [action.get("alias") for action in actions],
@@ -2320,6 +3095,36 @@ def _latest_pending_choice_execution_started(
     return matches[-1] if matches else None
 
 
+def _latest_planner_candidates_generated_event(
+    evidence: dict[str, Any],
+) -> dict[str, Any] | None:
+    matches = []
+    for event in _events(evidence):
+        if _get(event, "payload", "progress_kind") == "planner_candidates_generated":
+            matches.append(event)
+    return matches[-1] if matches else None
+
+
+def _latest_planner_choice_created_event(
+    evidence: dict[str, Any],
+) -> dict[str, Any] | None:
+    matches = []
+    for event in _events(evidence):
+        if _get(event, "payload", "progress_kind") == "planner_choice_created":
+            matches.append(event)
+    return matches[-1] if matches else None
+
+
+def _latest_planner_choice_selected_event(
+    evidence: dict[str, Any],
+) -> dict[str, Any] | None:
+    matches = []
+    for event in _events(evidence):
+        if _get(event, "payload", "progress_kind") == "planner_choice_selected":
+            matches.append(event)
+    return matches[-1] if matches else None
+
+
 def _latest_execution_started_for_item(
     evidence: dict[str, Any],
     item_name: str,
@@ -2431,6 +3236,52 @@ def _pending_choice_public_surface(evidence: dict[str, Any]) -> dict[str, Any]:
         "messages": evidence.get("messages") or [],
         "pending_choice_payloads": _pending_choice_public_payloads(evidence),
     }
+
+
+def _planner_public_surface(evidence: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "messages": evidence.get("messages") or [],
+        "session_pending_choice": _get(
+            evidence, "session", "metadata", "pending_choice"
+        ),
+        "history_pending_choice": _get(
+            evidence,
+            "history",
+            "session",
+            "metadata",
+            "pending_choice",
+        ),
+        "planner_events": _planner_safety_events(evidence),
+    }
+
+
+def _planner_safety_events(evidence: dict[str, Any]) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for event in _events(evidence):
+        progress_kind = str(_get(event, "payload", "progress_kind") or "")
+        if (
+            progress_kind.startswith("planner_")
+            or progress_kind == "eval_candidate_setup_applied"
+        ):
+            events.append(event)
+    history_events = _get(evidence, "history", "events") or []
+    for event in history_events if isinstance(history_events, list) else []:
+        progress_kind = str(_get(event, "payload", "progress_kind") or "")
+        if (
+            progress_kind.startswith("planner_")
+            or progress_kind == "eval_candidate_setup_applied"
+        ):
+            events.append(event)
+    return events
+
+
+def _planner_signal_count(evidence: dict[str, Any], key: str) -> int:
+    values: list[int] = []
+    for event in _planner_safety_events(evidence):
+        value = _get(event, "payload", key)
+        if isinstance(value, int):
+            values.append(value)
+    return max(values) if values else 0
 
 
 def _setup_choice_path_id(evidence: dict[str, Any], choice_id: str) -> str | None:

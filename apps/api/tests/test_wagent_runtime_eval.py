@@ -355,6 +355,165 @@ def _valid_pending_choice_evidence() -> dict[str, Any]:
     }
 
 
+def _valid_planner_choice_evidence() -> dict[str, Any]:
+    return {
+        "setup_manifest": {
+            "case_id": "planner_backed_choice",
+            "setup_type": "eval_only_planner_candidate_binding",
+            "live_multi_action_capability": False,
+            "planner_distinct_path_capability": False,
+            "expected_selected_choice": "A",
+            "candidates": [
+                {
+                    "choice_id": "A",
+                    "alias": "新增项目",
+                    "learned_path_id": "lp-planner-a",
+                    "source": "current_eval_run",
+                    "is_current_eval_real_path": True,
+                    "path_hash": "sha256:planner-a",
+                },
+                {
+                    "choice_id": "B",
+                    "alias": "添加项目",
+                    "learned_path_id": "lp-planner-a",
+                    "source": "eval_alias_binding",
+                    "path_hash": "sha256:planner-a",
+                },
+                {
+                    "choice_id": "C",
+                    "alias": "录入项目",
+                    "learned_path_id": "lp-planner-a",
+                    "source": "eval_alias_binding",
+                    "path_hash": "sha256:planner-a",
+                },
+            ],
+        },
+        "session": {"id": "session-planner", "metadata": {}},
+        "turns": [
+            {
+                "text": "帮我处理一下这个页面，名称叫 测试项目PlannerA",
+                "response": {"user_response": "我找到了多个可能的操作"},
+                "error": None,
+            },
+            {"text": "A", "response": {"user_response": "执行完成"}, "error": None},
+        ],
+        "events": [
+            {
+                "id": "evt-setup",
+                "type": "chat_progress_recorded",
+                "payload": {
+                    "progress_kind": "eval_candidate_setup_applied",
+                    "case_id": "planner_backed_choice",
+                    "setup_type": "eval_only_planner_candidate_binding",
+                    "candidate_count": 3,
+                    "aliases": ["新增项目", "添加项目", "录入项目"],
+                    "path_hashes": ["sha256:planner-a"],
+                    "live_multi_action_capability": False,
+                    "planner_distinct_path_capability": False,
+                },
+            },
+            {
+                "id": "evt-candidates",
+                "type": "chat_progress_recorded",
+                "payload": {
+                    "progress_kind": "planner_candidates_generated",
+                    "candidate_count": 3,
+                },
+            },
+            {
+                "id": "evt-choice-created",
+                "type": "chat_progress_recorded",
+                "payload": {
+                    "progress_kind": "planner_choice_created",
+                    "candidate_count": 3,
+                    "choice_group_id": "choice-group-planner-eval",
+                    "confirmation_required": True,
+                    "planner_warning_count": 1,
+                    "planner_risk_count": 0,
+                    "uncertainty_count": 0,
+                },
+            },
+            {
+                "id": "evt-selected",
+                "type": "chat_progress_recorded",
+                "payload": {
+                    "progress_kind": "planner_choice_selected",
+                    "choice_id": "A",
+                    "choice_group_id": "choice-group-planner-eval",
+                    "planner_warning_count": 1,
+                    "planner_risk_count": 0,
+                    "confirmation_required": True,
+                },
+            },
+            {
+                "id": "evt-start-planner-a",
+                "type": "chat_execution_started",
+                "payload": {
+                    "learned_path_id": "lp-planner-a",
+                    "target_url": "http://127.0.0.1:5176/items",
+                    "alias": "新增项目",
+                    "slot_overrides": {"item_name": "测试项目PlannerA"},
+                },
+            },
+            {
+                "id": "evt-complete-planner-a",
+                "type": "chat_execution_completed",
+                "payload": {
+                    "learned_path_id": "lp-planner-a",
+                    "replay": {
+                        "learned_path_id": "lp-planner-a",
+                        "replay_status": "succeeded",
+                        "execution_evidence": [
+                            {
+                                "kind": "dom_text_present",
+                                "target": "测试项目PlannerA",
+                                "status": "verified",
+                                "confidence": 0.95,
+                                "summary": "列表中包含测试项目PlannerA",
+                            }
+                        ],
+                    },
+                },
+            },
+            {
+                "id": "evt-report-planner-a",
+                "type": "task_result_reported",
+                "payload": {
+                    "verification_outcome": "verified",
+                    "task_verified": True,
+                },
+            },
+        ],
+        "messages": [
+            {
+                "role": "agent",
+                "content": (
+                    "我找到了多个可能的操作，你想让我执行哪一个？\n"
+                    "A. 新增项目 - 在当前页面新增项目 · 存在 Planner 警告\n"
+                    "B. 添加项目 - 在当前页面添加项目\n"
+                    "C. 录入项目 - 在当前页面录入项目"
+                ),
+            },
+            {
+                "role": "agent",
+                "content": (
+                    "执行完成。我在列表中看到了“测试项目PlannerA”，所以可以确认新增项目成功。"
+                ),
+            },
+        ],
+        "history": {},
+        "raw_api_responses": {
+            "records": [
+                {"method": "POST", "path": "/conversation/sessions"},
+                {
+                    "method": "POST",
+                    "path": "/conversation/sessions/session-planner/dispatch",
+                },
+            ]
+        },
+    }
+
+
 def test_parse_config_defaults() -> None:
     runner = _load_runner()
 
@@ -386,6 +545,14 @@ def test_parse_config_accepts_pending_choice_case() -> None:
     config = runner.parse_config(["--case", "pending_choice_multi_candidate"])
 
     assert config.cases == ["pending_choice_multi_candidate"]
+
+
+def test_parse_config_accepts_planner_choice_case() -> None:
+    runner = _load_runner()
+
+    config = runner.parse_config(["--case", "planner_backed_choice"])
+
+    assert config.cases == ["planner_backed_choice"]
 
 
 def test_preflight_blocks_when_api_unreachable() -> None:
@@ -886,6 +1053,220 @@ def test_pending_choice_gate_fails_when_runner_calls_direct_replay_endpoint() ->
     assert gates["no_autonomous_or_direct_replay"].status == "fail"
 
 
+def test_planner_choice_gate_passes_with_eval_only_binding_evidence() -> None:
+    runner = _load_runner()
+    evidence = _valid_planner_choice_evidence()
+
+    result = runner.GateEvaluator().evaluate_planner_backed_choice(
+        evidence,
+        expected_item_name="测试项目PlannerA",
+    )
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "pass"
+    assert gates["setup_planner_candidates_current_eval"].status == "pass"
+    assert "setup_type=eval_only_planner_candidate_binding" in (
+        gates["setup_planner_candidates_current_eval"].evidence
+    )
+    assert "planner_distinct_path_capability=false" in (
+        gates["setup_planner_candidates_current_eval"].evidence
+    )
+    assert gates["planner_candidates_generated"].status == "pass"
+    assert gates["planner_choice_created"].status == "pass"
+    assert gates["non_planner_choice_not_used"].status == "pass"
+    assert gates["public_choices_abc_visible"].status == "pass"
+    assert gates["planner_public_payload_sanitized"].status == "pass"
+    assert gates["planner_event_sanitized"].status == "pass"
+    assert gates["planner_warning_wording_safe"].status == "pass"
+    assert gates["planner_top_choice_observable"].status == "not_observable"
+    assert gates["select_planner_choice_dispatched"].status == "pass"
+    assert gates["planner_choice_selected"].status == "pass"
+    assert gates["planner_choice_execution_started"].status == "pass"
+    assert gates["execution_uses_selected_choice_path"].status == "pass"
+    assert "lp-planner-a" not in gates["execution_uses_selected_choice_path"].evidence
+    assert "match=true" in gates["execution_uses_selected_choice_path"].evidence
+    assert gates["pending_choice_cleared"].status == "pass"
+    assert gates["execution_verified"].status == "pass"
+    assert gates["final_response_verified"].status == "pass"
+    assert gates["no_autonomous_or_direct_replay"].status == "pass"
+
+
+def test_planner_choice_gate_fails_when_planner_candidates_missing() -> None:
+    runner = _load_runner()
+    evidence = _valid_planner_choice_evidence()
+    evidence["events"] = [
+        event
+        for event in evidence["events"]
+        if event["payload"].get("progress_kind") != "planner_candidates_generated"
+    ]
+
+    result = runner.GateEvaluator().evaluate_planner_backed_choice(
+        evidence,
+        expected_item_name="测试项目PlannerA",
+    )
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["planner_candidates_generated"].status == "fail"
+
+
+def test_planner_choice_gate_fails_when_non_planner_choice_was_used() -> None:
+    runner = _load_runner()
+    evidence = _valid_planner_choice_evidence()
+    evidence["events"].insert(
+        2,
+        {
+            "id": "evt-non-planner",
+            "type": "chat_progress_recorded",
+            "payload": {"progress_kind": "pending_choice_created"},
+        },
+    )
+
+    result = runner.GateEvaluator().evaluate_planner_backed_choice(
+        evidence,
+        expected_item_name="测试项目PlannerA",
+    )
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["non_planner_choice_not_used"].status == "fail"
+
+
+def test_planner_choice_gate_fails_when_event_leaks_private_payload() -> None:
+    runner = _load_runner()
+    evidence = _valid_planner_choice_evidence()
+    evidence["events"][2]["payload"]["learned_path_id"] = "lp-planner-a"
+
+    result = runner.GateEvaluator().evaluate_planner_backed_choice(
+        evidence,
+        expected_item_name="测试项目PlannerA",
+    )
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["planner_event_sanitized"].status == "fail"
+
+
+def test_planner_choice_gate_fails_when_warning_text_leaks() -> None:
+    runner = _load_runner()
+    evidence = _valid_planner_choice_evidence()
+    evidence["messages"][0]["content"] += "\ntop candidate requires confirmation"
+
+    result = runner.GateEvaluator().evaluate_planner_backed_choice(
+        evidence,
+        expected_item_name="测试项目PlannerA",
+    )
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["planner_warning_wording_safe"].status == "fail"
+
+
+def test_planner_choice_gate_fails_when_selected_choice_executes_wrong_path() -> None:
+    runner = _load_runner()
+    evidence = _valid_planner_choice_evidence()
+    evidence["events"][4]["payload"]["learned_path_id"] = "lp-other"
+
+    result = runner.GateEvaluator().evaluate_planner_backed_choice(
+        evidence,
+        expected_item_name="测试项目PlannerA",
+    )
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["execution_uses_selected_choice_path"].status == "fail"
+    assert "lp-other" not in gates["execution_uses_selected_choice_path"].evidence
+
+
+def test_planner_single_path_bypass_regression_passes_without_planner_events() -> None:
+    runner = _load_runner()
+    evidence = _valid_items_evidence()
+    evidence["events"].extend(
+        [
+            {
+                "id": "evt-start-single",
+                "type": "chat_execution_started",
+                "payload": {
+                    "learned_path_id": "lp-current",
+                    "target_url": "http://127.0.0.1:5176/items",
+                    "alias": "新增项目",
+                    "slot_overrides": {"item_name": "测试项目Single"},
+                },
+            },
+            {
+                "id": "evt-complete-single",
+                "type": "chat_execution_completed",
+                "payload": {
+                    "learned_path_id": "lp-current",
+                    "replay": {
+                        "learned_path_id": "lp-current",
+                        "replay_status": "succeeded",
+                        "execution_evidence": [
+                            {
+                                "kind": "dom_text_present",
+                                "target": "测试项目Single",
+                                "status": "verified",
+                            }
+                        ],
+                    },
+                },
+            },
+            {
+                "id": "evt-report-single",
+                "type": "task_result_reported",
+                "payload": {
+                    "verification_outcome": "verified",
+                    "task_verified": True,
+                },
+            },
+        ]
+    )
+    evidence["messages"].append(
+        {
+            "role": "agent",
+            "content": "执行完成。我在列表中看到了“测试项目Single”，所以可以确认新增项目成功。",
+        }
+    )
+
+    result = runner.GateEvaluator().evaluate_planner_single_path_bypass_regression(
+        evidence,
+        expected_item_name="测试项目Single",
+        learned_path_id="lp-current",
+    )
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "pass"
+    assert gates["single_candidate_detected"].status == "pass"
+    assert gates["no_planner_candidates_generated"].status == "pass"
+    assert gates["no_planner_choice_created"].status == "pass"
+    assert gates["direct_execution_started"].status == "pass"
+    assert gates["execution_uses_current_learned_path"].status == "pass"
+    assert gates["execution_verified"].status == "pass"
+    assert gates["final_response_verified"].status == "pass"
+
+
+def test_planner_single_path_bypass_regression_fails_on_planner_choice() -> None:
+    runner = _load_runner()
+    evidence = _valid_items_evidence()
+    evidence["events"].append(
+        {
+            "id": "evt-planner",
+            "type": "chat_progress_recorded",
+            "payload": {"progress_kind": "planner_choice_created"},
+        }
+    )
+
+    result = runner.GateEvaluator().evaluate_planner_single_path_bypass_regression(
+        evidence,
+        expected_item_name="测试项目B",
+        learned_path_id="lp-current",
+    )
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["no_planner_choice_created"].status == "fail"
+
+
 def test_single_path_regression_fails_when_execution_uses_old_path() -> None:
     runner = _load_runner()
     evidence = _valid_items_evidence()
@@ -1108,6 +1489,29 @@ def test_failure_recovery_case_blocks_on_invalid_api_and_writes_case_result(
     assert result.case_results[0].gates[0].status == "blocked"
 
 
+def test_planner_choice_case_blocks_on_invalid_api_and_writes_case_result(
+    monkeypatch,
+) -> None:
+    runner = _load_runner()
+    config = runner.parse_config(["--case", "planner_backed_choice"])
+
+    monkeypatch.setattr(
+        runner,
+        "run_preflight",
+        lambda _config: runner.PreflightResult(
+            status="blocked",
+            exit_code=2,
+            services={"api": {"ok": False}, "product": {"ok": False}},
+        ),
+    )
+
+    result = runner.run_eval(config)
+
+    assert result.status == "blocked"
+    assert [case.case_id for case in result.case_results] == ["planner_backed_choice"]
+    assert result.case_results[0].gates[0].status == "blocked"
+
+
 def test_markdown_report_uses_normalized_gate_results(tmp_path: Path) -> None:
     runner = _load_runner()
     gate = runner.GateResult(
@@ -1245,3 +1649,70 @@ def test_markdown_report_includes_pending_choice_setup_boundary(
     assert "## Pending Choice Eval" in report
     assert "Candidate setup type: eval_only_candidate_binding" in report
     assert "Live multi-action capability: false" in report
+
+
+def test_markdown_report_includes_planner_choice_boundaries(tmp_path: Path) -> None:
+    runner = _load_runner()
+    case = runner.CaseResult(
+        case_id="planner_backed_choice",
+        status="pass",
+        turns=[],
+        gates=[
+            runner.GateResult(
+                name="setup_planner_candidates_current_eval",
+                required=True,
+                status="pass",
+                evidence=(
+                    "setup_type=eval_only_planner_candidate_binding; "
+                    "live_multi_action_capability=false; "
+                    "planner_distinct_path_capability=false; aliases=新增项目,添加项目,录入项目"
+                ),
+                source="setup_manifest",
+            ),
+            runner.GateResult(
+                name="planner_candidates_generated",
+                required=True,
+                status="pass",
+                evidence="candidate_count=3",
+                source="events/history",
+            ),
+            runner.GateResult(
+                name="execution_uses_selected_choice_path",
+                required=True,
+                status="pass",
+                evidence=(
+                    "expected_choice=A; expected_alias=新增项目; "
+                    "expected_path_hash=sha256:abc; actual_path_hash=sha256:abc; match=true"
+                ),
+                source="setup_manifest/events",
+            ),
+        ],
+        warnings=[],
+    )
+    result = runner.EvalResult(
+        schema_version=runner.SCHEMA_VERSION,
+        status="pass",
+        environment={"commit": "abc123"},
+        services={},
+        config={},
+        session_id="session-planner",
+        case_results=[case],
+        turns=[],
+        events=[],
+        messages=[],
+        history={},
+        learned_paths=[],
+        raw_api_responses={},
+        gate_summary={"required_passed": 3, "required_failed": 0},
+    )
+
+    report = runner.render_markdown_report(
+        result,
+        artifact_path=tmp_path / "artifact.json",
+    )
+
+    assert "## Planner-backed Choice Eval" in report
+    assert "Candidate setup type: eval_only_planner_candidate_binding" in report
+    assert "Live multi-action capability: false" in report
+    assert "Planner distinct-path capability: false" in report
+    assert "Selected choice evidence: expected_choice=A" in report

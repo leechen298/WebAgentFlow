@@ -67,6 +67,19 @@ Equivalent command:
   --case pending_choice_multi_candidate
 ```
 
+Planner-backed choice eval:
+
+```bash
+pnpm run eval:wagent:planner-choice
+```
+
+Equivalent command:
+
+```bash
+.venv/bin/python scripts/evals/wagent_runtime_eval.py \
+  --case planner_backed_choice
+```
+
 Useful options:
 
 ```bash
@@ -150,6 +163,26 @@ sets `live_multi_action_capability=false`. This proves pending-choice evaluator
 coverage, public/private payload safety, and choice-selection control flow; it
 does not claim full live distinct-action product capability.
 
+`planner_backed_choice`:
+
+1. Sets up a current eval learned action from `/items`.
+2. Creates an eval Conversation session with three safe aliases bound to that
+   current eval path.
+3. Sends a vague page operation request through the Conversation API.
+4. Checks `planner_candidates_generated` and `planner_choice_created` events.
+5. Sends `A` through the Conversation API.
+6. Verifies `planner_choice_selected`, selected-path execution, pending-choice
+   cleanup, verified execution evidence, final response evidence, public/private
+   payload redaction, and prohibited endpoint usage.
+7. Runs `planner_single_path_bypass_regression` as a required section: one clear
+   learned action must execute directly without planner events.
+
+The first implementation uses `setup_type=eval_only_planner_candidate_binding`
+and sets `live_multi_action_capability=false` plus
+`planner_distinct_path_capability=false`. This proves the planner branch,
+public/private payload safety, and selection control flow; it does not claim
+full live distinct-action Planner capability.
+
 ## Outputs
 
 JSON artifact:
@@ -164,6 +197,7 @@ Markdown result:
 docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-${timestamp}.md
 docs/testing/results/m11-11.3.6.2-failure-recovery-eval-${timestamp}.md
 docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-${timestamp}.md
+docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-${timestamp}.md
 ```
 
 Both outputs are derived from the normalized `EvalResult`. The JSON artifact
@@ -220,6 +254,33 @@ Pending choice gates are hard gates for `pending_choice_multi_candidate`:
 `slot_override_after_choice` may be `not_observable` only when the case does not
 carry a business slot. The `/items` eval path expects `item_name` and treats the
 slot override as required evidence.
+
+Planner-backed choice gates are hard gates for `planner_backed_choice`:
+
+- `setup_planner_candidates_current_eval`
+- `planner_candidates_generated`
+- `planner_choice_created`
+- `non_planner_choice_not_used`
+- `public_choices_abc_visible`
+- `planner_public_payload_sanitized`
+- `planner_event_sanitized`
+- `select_planner_choice_dispatched`
+- `planner_choice_selected`
+- `planner_choice_execution_started`
+- `execution_uses_selected_choice_path`
+- `pending_choice_cleared`
+- `execution_verified`
+- `final_response_verified`
+- `no_autonomous_or_direct_replay`
+
+`planner_warning_wording_safe` and `planner_top_choice_observable` are
+conditional. `planner_top_choice_observable` may be `not_observable` when the
+current public read surface does not expose a sanitized top choice id/hash.
+
+`planner_single_path_bypass_regression` is emitted as a required regression
+section for `planner_backed_choice`. It verifies one current-session learned
+action, no planner candidate/choice events, direct execution, selected current
+path usage, verified execution, and evidence-based final response.
 
 ## Exit Codes
 
