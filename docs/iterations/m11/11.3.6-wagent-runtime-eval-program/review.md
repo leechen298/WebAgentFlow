@@ -122,7 +122,7 @@
 
 - Author：Codex
 - Decision：blocked / implementation_review_failed
-- Commit：`77790f6`
+- Commit：`eceeaff`
 - Evidence：
   - API `/health` returned HTTP 200 with `database=ok`; product `/items` returned HTTP 200.
   - `pnpm run eval:wagent:pending-choice` -> exit `1`, `status=fail`,
@@ -141,3 +141,16 @@
     the planner result.
   - No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.
   - M11.3.6 remains blocked and needs a code-type fix iteration before it can close.
+
+## 2026-05-23 Gate failure fix 子包开包记录
+
+- Author：Codex
+- Decision：docs_created
+- Notes：
+  - 已创建 `11.3.6.6-runtime-eval-gate-failure-fixes` 作为 11.3.6.5 service-available
+    rerun 后的代码型 fix 文档包。
+  - 修复范围限定为 pending choice public payload leak、planner-backed choice selection 未启动
+    execution、以及 runner artifact raw response / dynamic private id redaction。
+  - 11.3.6.6 不新增 eval case、不扩展 runtime 产品能力、不关闭 11.3.6 program。
+  - 11.3.6.6 通过后必须回到 11.3.6.5 closeout sweep 重新运行 required eval，不能在 fix
+    package 内直接把 M11.3.6 标为 complete。

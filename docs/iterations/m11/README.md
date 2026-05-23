@@ -70,6 +70,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.6.3-pending-choice-multi-candidate-eval](./11.3.6.3-pending-choice-multi-candidate-eval/) —— Pending Choice Multi-candidate Eval：扩展 runner 覆盖 A/B/C public choice、private map safety 和用户选择后执行正确 action。状态：implementation_review_failed（service-available eval failed public payload redaction gate）。
 - [11.3.6.4-planner-backed-choice-eval](./11.3.6.4-planner-backed-choice-eval/) —— Planner-backed Choice Eval：扩展 runner 覆盖 vague goal、TaskPathPlanner-backed choices 和 single-path bypass Planner 回归。状态：implementation_review_failed（planner-backed choice execution gates failed，single-path bypass passed）。
 - [11.3.6.5-runtime-eval-program-closeout](./11.3.6.5-runtime-eval-program-closeout/) —— Runtime Eval Program Closeout：核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 11.3.6 program 状态。状态：blocked（required eval gates failed after services were available）。
+- [11.3.6.6-runtime-eval-gate-failure-fixes](./11.3.6.6-runtime-eval-gate-failure-fixes/) —— Runtime Eval Gate Failure Fixes：修复 11.3.6.5 service-available rerun 暴露的 pending choice public payload leak、planner-backed choice selection no-execution 和 raw artifact redaction failures。状态：draft_for_review。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -163,6 +164,11 @@ case，也不修 runtime；它用于运行或记录 pending-choice / planner-cho
 回填 11.3.6.3 / 11.3.6.4 review，并同步 11.3.6 program 与 M11 索引。状态：
 `blocked`。第一轮 closeout 因 API health 不可用写出 blocked artifact；第二轮在服务可用后
 两个 required eval 均返回 exit `1`，后续需要代码型 fix 迭代。
+`11.3.6.6-runtime-eval-gate-failure-fixes/` 是上述失败后的代码型 fix 文档包。它不新增
+eval case，也不扩大产品能力；只要求修复 pending choice public/private payload separation、
+planner-backed choice selection 到 execution 的 runtime 连接，以及 eval runner artifact redaction。
+本包当前仅完成设计文档，待 review 后才能实现；实现通过后仍需回到 11.3.6.5 closeout
+重新运行 required eval 并同步 program 状态。
 
 11.2 后续 backlog：
 
