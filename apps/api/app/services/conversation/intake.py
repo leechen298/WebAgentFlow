@@ -25,9 +25,7 @@ from app.schemas.llm import LlmMessage, LlmRequest
 from app.services import llm_provider
 from app.services.conversation.prompt_assets import PromptAssetError, load_prompt_asset
 
-IntakeProvider = Callable[
-    [str, dict[str, Any]], ConversationIntakeResult | dict[str, Any] | None
-]
+IntakeProvider = Callable[[str, dict[str, Any]], ConversationIntakeResult | dict[str, Any] | None]
 
 REDACTED = "[REDACTED]"
 
@@ -45,8 +43,7 @@ _JSON_SENSITIVE_TEXT_RE = re.compile(
     re.I,
 )
 _PASSWORD_TEXT_RE = re.compile(
-    r"((?:访问口令|登录口令|口令|密码)\s*(?:是|为)?\s*[:：]?\s*)"
-    + _VALUE_PATTERN
+    r"((?:访问口令|登录口令|口令|密码)\s*(?:是|为)?\s*[:：]?\s*)" + _VALUE_PATTERN
 )
 _POSITIONAL_CREDENTIAL_TEXT_RE = re.compile(
     r"((?:https?://[^\s，。,]+)[，,\s]+[A-Za-z0-9_.@-]+\s*/\s*)"
@@ -80,9 +77,7 @@ class ConversationIntakeService:
             "pending_intake": (session_metadata or {}).get("pending_intake"),
             "pending_target": (session_metadata or {}).get("pending_target"),
             "pending_choice": (session_metadata or {}).get("pending_choice"),
-            "last_no_path_reason": (session_metadata or {}).get(
-                "last_no_path_reason"
-            ),
+            "last_no_path_reason": (session_metadata or {}).get("last_no_path_reason"),
             "learned_actions": redact_sensitive_payload(
                 _strip_private_runtime_payload(
                     (session_metadata or {}).get("learned_actions") or []
@@ -130,6 +125,19 @@ class ConversationIntakeService:
                 result = payload
             else:
                 result = ConversationIntakeResult.model_validate(payload)
+            result = _normalize_intake_result(result)
+            if result.source == "provider_parse_error":
+                self.provider_fallback = True
+                if isinstance(trace_payload, dict):
+                    schema_validation = trace_payload.get("schema_validation")
+                    if not isinstance(schema_validation, dict):
+                        schema_validation = {"ok": False, "fallback": True}
+                    self._last_trace_payload = _redacted_trace_payload(
+                        trace_payload,
+                        parsed_output=None,
+                        schema_validation=schema_validation,
+                    )
+                return None
             if isinstance(trace_payload, dict):
                 result = result.model_copy(update={"source": "llm"})
                 schema_validation = trace_payload.get("schema_validation")
@@ -161,6 +169,88 @@ class ConversationIntakeService:
         except Exception:
             self.provider_fallback = True
             return None
+
+
+def _normalize_intake_result(result: ConversationIntakeResult) -> ConversationIntakeResult:
+    item_context = _is_item_intake_result(result)
+    slots = [
+        slot.model_copy(
+            update={
+                "semantic_type": _canonical_slot_semantic_type(
+                    slot.semantic_type,
+                    item_context=item_context,
+                ),
+                "name": (
+                    "item_name"
+                    if _canonical_slot_semantic_type(
+                        slot.semantic_type,
+                        item_context=item_context,
+                    )
+                    == "item_name"
+                    else slot.name
+                ),
+            }
+        )
+        for slot in result.slots
+    ]
+    present = {slot.semantic_type for slot in slots if slot.value}
+    missing = [
+        field.model_copy(
+            update={
+                "semantic_type": _canonical_slot_semantic_type(
+                    field.semantic_type,
+                    item_context=item_context,
+                ),
+                "display_name": (
+                    "项目名称"
+                    if _canonical_slot_semantic_type(
+                        field.semantic_type,
+                        item_context=item_context,
+                    )
+                    == "item_name"
+                    else field.display_name
+                ),
+            }
+        )
+        for field in result.missing_fields
+        if _canonical_slot_semantic_type(
+            field.semantic_type,
+            item_context=item_context,
+        )
+        not in present
+    ]
+    updates: dict[str, Any] = {
+        "slots": slots,
+        "missing_fields": missing,
+    }
+    if result.missing_fields and not missing:
+        updates["should_ask_user"] = False
+        updates["ask_user_message_hint"] = None
+    return result.model_copy(update=updates)
+
+
+def _canonical_slot_semantic_type(value: str, *, item_context: bool) -> str:
+    if value == "project_name" or (item_context and value in {"entity_name", "name"}):
+        return "item_name"
+    return value
+
+
+def _is_item_intake_result(result: ConversationIntakeResult) -> bool:
+    action_terms = {
+        value.lower()
+        for value in [
+            result.action.goal,
+            result.action.canonical_goal,
+            *result.action.aliases,
+        ]
+        if value
+    }
+    target_path = urlparse(result.target.url or "").path.rstrip("/")
+    return (
+        target_path == "/items"
+        or any("项目" in term for term in action_terms)
+        or any("item" in term for term in action_terms)
+    )
 
 
 def build_runtime_intake_service() -> ConversationIntakeService:
@@ -248,10 +338,7 @@ def _llm_intake_provider(
             LlmMessage(
                 role="user",
                 content=(
-                    "Current user message:\n"
-                    f"{raw_message}\n\n"
-                    "Redacted session context:\n"
-                    f"{context}"
+                    f"Current user message:\n{raw_message}\n\nRedacted session context:\n{context}"
                 ),
             )
         ],
@@ -317,9 +404,7 @@ def _llm_trace_payload(
     prompt_hash: str | None = None,
 ) -> dict[str, Any]:
     request_payload = request.model_dump(mode="json")
-    raw_response = (
-        response.model_dump(mode="json") if hasattr(response, "model_dump") else {}
-    )
+    raw_response = response.model_dump(mode="json") if hasattr(response, "model_dump") else {}
     raw_provider = raw_response.get("raw")
     request_id = raw_provider.get("id") if isinstance(raw_provider, dict) else None
     prompt_material = repr(
@@ -441,11 +526,7 @@ def _deterministic_intake(
             confidence=0.82,
         )
 
-    if (
-        has_item_name_slot
-        and not has_learn_keyword
-        and action.canonical_goal == "新增项目"
-    ):
+    if has_item_name_slot and not has_learn_keyword and action.canonical_goal == "新增项目":
         return ConversationIntakeResult(
             intent="execute_operation",
             target=target,
@@ -473,9 +554,7 @@ def _deterministic_intake(
             missing_fields=missing,
             confidence=0.86 if not missing else 0.78,
             should_ask_user=bool(missing),
-            ask_user_message_hint=(
-                "我需要登录用的用户名和密码。" if missing else None
-            ),
+            ask_user_message_hint=("我需要登录用的用户名和密码。" if missing else None),
         )
 
     return ConversationIntakeResult(

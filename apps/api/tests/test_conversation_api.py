@@ -230,6 +230,40 @@ def test_list_messages_ordered_by_created_at(client: TestClient) -> None:
     assert messages[1]["content"] == "second"
 
 
+def test_list_messages_strips_private_learned_path_metadata(
+    client: TestClient,
+) -> None:
+    session_id = _create_session(client)
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={
+            "role": "user",
+            "content": "A",
+            "metadata": {
+                "eval_candidate_setup": {
+                    "actions": [
+                        {
+                            "choice_id": "A",
+                            "alias": "新增项目",
+                            "learned_path_id": "lp-private-message",
+                        }
+                    ]
+                },
+                "pending_choice_private_map": {"A": {"learned_path_id": "lp-private-message"}},
+            },
+        },
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/messages")
+
+    assert resp.status_code == 200
+    payload_text = json.dumps(resp.json()["data"], ensure_ascii=False)
+    assert "eval_candidate_setup" in payload_text
+    assert "pending_choice_private_map" not in payload_text
+    assert "learned_path_id" not in payload_text
+    assert "lp-private-message" not in payload_text
+
+
 def test_list_messages_unknown_session_returns_404_not_empty(
     client: TestClient,
 ) -> None:
@@ -408,9 +442,7 @@ def test_dispatch_metadata_is_persisted_and_preview_event_recorded(
 
     events_resp = client.get(f"/conversation/sessions/{session_id}/events")
     events = events_resp.json()["data"]
-    command_parsed = [
-        event for event in events if event["type"] == "command_parsed"
-    ][0]
+    command_parsed = [event for event in events if event["type"] == "command_parsed"][0]
     assert command_parsed["payload"]["dispatch_metadata"] == {
         "source": "api-test",
         "request_id": "req-1",
@@ -806,8 +838,7 @@ def test_dispatch_slash_cancel_from_awaiting_confirmation_uses_confirmation_gate
     events = events_resp.json()["data"]
     assert any(e["type"] == "plan_cancelled" for e in events)
     assert not any(
-        e["type"] == "state_changed" and e["payload"].get("to") == "idle"
-        for e in events
+        e["type"] == "state_changed" and e["payload"].get("to") == "idle" for e in events
     )
 
 
@@ -846,9 +877,7 @@ def test_dispatch_replay_blocked_while_awaiting_confirmation(
 
     events_resp = client.get(f"/conversation/sessions/{session_id}/events")
     events = events_resp.json()["data"]
-    assert any(
-        e["type"] == "explicit_replay_blocked_by_pending_confirmation" for e in events
-    )
+    assert any(e["type"] == "explicit_replay_blocked_by_pending_confirmation" for e in events)
 
 
 # ── 11.1.6 Execution gate through dispatch endpoint ───────────────────────────
@@ -1014,6 +1043,7 @@ def test_dispatch_explicit_replay_compatible_outside_awaiting_confirmation(
     client: TestClient, monkeypatch
 ) -> None:
     """Explicit /replay still works independently of confirmed-plan execution."""
+
     def fake_replay(
         _db,
         learned_path_id: str,
@@ -1422,8 +1452,7 @@ def test_get_history_extracts_redacted_llm_traces(
                 {
                     "role": "user",
                     "content": (
-                        "学习这个入口：http://localhost:5176/workspace-login，"
-                        "demo / 123456"
+                        "学习这个入口：http://localhost:5176/workspace-login，demo / 123456"
                     ),
                 }
             ],
@@ -1507,7 +1536,7 @@ def test_get_history_removes_provider_thinking_from_raw_trace(
         "schema_version": "m11.3.4",
         "latency_ms": 17,
         "raw_response": {
-            "text": "<think>hidden chain</think>{\"intent\":\"unknown\"}",
+            "text": '<think>hidden chain</think>{"intent":"unknown"}',
             "thinking": "hidden field",
             "raw": {
                 "choices": [

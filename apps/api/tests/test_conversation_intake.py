@@ -120,6 +120,158 @@ def test_provider_unavailable_falls_back_to_deterministic_intake() -> None:
     }
 
 
+def test_provider_parse_error_falls_back_to_deterministic_pending_target() -> None:
+    def provider_parse_error(
+        raw_message: str,
+        context: dict[str, object],
+    ) -> dict[str, object]:
+        return {
+            "intake": {
+                "intent": "unknown",
+                "confidence": 0.0,
+                "should_ask_user": True,
+                "ask_user_message_hint": "我还需要再确认一下你的意思。",
+                "source": "provider_parse_error",
+            },
+            "llm_trace": {
+                "trace_id": "trace-provider-parse-error",
+                "purpose": "conversation_intake",
+                "agent_role": "conversation_intake_agent",
+                "provider": "fake-provider",
+                "model": "fake-model",
+                "raw_request": {"content": raw_message, "context": context},
+                "raw_response": {"text": '{"intent":"learn_operation"'},
+                "token_usage": {"total_tokens": 8},
+                "schema_validation": {"ok": False, "error_kind": "parse_error"},
+                "redaction": {"applied": True},
+            },
+        }
+
+    service = ConversationIntakeService(provider=provider_parse_error)
+
+    result = service.analyze(
+        "学习新增项目，名称叫测试项目A",
+        session_metadata={
+            "pending_target": {
+                "url": "http://localhost:5176/items",
+                "site_origin": "http://localhost:5176",
+                "page_hint": "/items",
+            }
+        },
+    )
+
+    assert service.provider_fallback is True
+    assert result.intent == "learn_operation"
+    assert result.target.url == "http://localhost:5176/items"
+    assert result.action.canonical_goal == "新增项目"
+    assert {slot.semantic_type: slot.value for slot in result.slots} == {"item_name": "测试项目A"}
+    trace = service.consume_last_trace_payload()
+    assert trace is not None
+    assert trace["trace_id"] == "trace-provider-parse-error"
+    assert trace["schema_validation"]["error_kind"] == "parse_error"
+
+
+def test_provider_result_drops_missing_field_when_slot_value_is_present() -> None:
+    def provider(
+        raw_message: str,
+        context: dict[str, object],
+    ) -> dict[str, object]:
+        return {
+            "intake": {
+                "intent": "learn_operation",
+                "target": {
+                    "url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_hint": "/items",
+                },
+                "action": {
+                    "goal": "新增项目",
+                    "canonical_goal": "add_item",
+                    "aliases": ["新增项目", "添加项目", "创建项目"],
+                },
+                "slots": [
+                    {
+                        "name": "project_name",
+                        "semantic_type": "project_name",
+                        "value": "测试项目A",
+                        "sensitive": False,
+                        "source": "user_message",
+                    }
+                ],
+                "missing_fields": [
+                    {
+                        "semantic_type": "project_name",
+                        "display_name": "项目名称",
+                    }
+                ],
+                "confidence": 0.85,
+                "should_ask_user": True,
+                "ask_user_message_hint": "我需要项目名称。",
+            },
+            "llm_trace": {
+                "trace_id": "trace-provider-slot-conflict",
+                "purpose": "conversation_intake",
+                "agent_role": "conversation_intake_agent",
+                "provider": "fake-provider",
+                "model": "fake-model",
+                "raw_request": {"content": raw_message, "context": context},
+                "raw_response": {"text": "{}"},
+                "token_usage": {"total_tokens": 8},
+                "redaction": {"applied": True},
+            },
+        }
+
+    result = ConversationIntakeService(provider=provider).analyze("学习新增项目，名称叫测试项目A")
+
+    assert result.missing_fields == []
+    assert result.should_ask_user is False
+    assert result.ask_user_message_hint is None
+    assert {slot.semantic_type: slot.value for slot in result.slots} == {"item_name": "测试项目A"}
+
+
+@pytest.mark.parametrize("semantic_type", ["entity_name", "name"])
+def test_provider_result_maps_generic_items_name_slot_to_item_name(
+    semantic_type: str,
+) -> None:
+    def provider(
+        raw_message: str,
+        context: dict[str, object],
+    ) -> dict[str, object]:
+        return {
+            "intent": "execute_operation",
+            "target": {
+                "url": "http://localhost:5176/items",
+                "site_origin": "http://localhost:5176",
+                "page_hint": "/items",
+            },
+            "action": {
+                "goal": "创建项目",
+                "canonical_goal": "create_item",
+                "aliases": ["新增项目", "添加项目", "录入项目"],
+            },
+            "slots": [
+                {
+                    "name": "name",
+                    "semantic_type": semantic_type,
+                    "value": "测试项目ChoiceA",
+                    "sensitive": False,
+                    "source": "user_message",
+                }
+            ],
+            "missing_fields": [],
+            "confidence": 0.85,
+            "should_ask_user": False,
+        }
+
+    result = ConversationIntakeService(provider=provider).analyze(
+        "帮我处理一下这个页面，名称叫 测试项目ChoiceA"
+    )
+
+    assert {slot.semantic_type: slot.value for slot in result.slots} == {
+        "item_name": "测试项目ChoiceA"
+    }
+
+
 def test_provider_success_without_source_is_marked_llm_when_trace_exists() -> None:
     def provider(raw_message: str, context: dict[str, object]) -> dict[str, object]:
         return {
@@ -212,10 +364,7 @@ def test_redact_sensitive_payload_redacts_positional_product_credentials() -> No
 def test_redact_sensitive_payload_redacts_json_string_sensitive_slot() -> None:
     payload = {
         "raw_response": {
-            "text": (
-                '{"slots":[{"semantic_type":"password","value":"123456",'
-                '"sensitive":true}]}'
-            )
+            "text": ('{"slots":[{"semantic_type":"password","value":"123456","sensitive":true}]}')
         }
     }
 

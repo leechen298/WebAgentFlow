@@ -21,6 +21,7 @@ from app.schemas.conversation_entry_gate import (
 from app.schemas.conversation_intake import (
     ConversationIntakeAction,
     ConversationIntakeResult,
+    ConversationIntakeSlot,
     ConversationIntakeTarget,
 )
 from app.schemas.conversation_router import (
@@ -888,6 +889,102 @@ def test_interactive_chat_bare_url_saves_pending_target_without_browser_action(
     assert not any(e.type == "chat_execution_started" for e in events)
 
 
+def test_interactive_chat_bare_url_with_learned_actions_does_not_plan(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-bare-url-existing-action",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ]
+        },
+    )
+
+    class UrlIntake:
+        confidence_threshold = 0.6
+
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            return ConversationIntakeResult(
+                intent="execute_operation",
+                target=ConversationIntakeTarget(
+                    url="http://localhost:5176/items",
+                    site_origin="http://localhost:5176",
+                ),
+                action=ConversationIntakeAction(
+                    goal="新增项目",
+                    aliases=["新增项目", "帮我新增项目"],
+                ),
+                confidence=0.9,
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    class MisroutingRouter:
+        def route(self, *, raw_message, intake, context, page_understanding=None):
+            return RouteDecision(
+                route_decision=RouteDecisionKind.DELEGATE_TO_WEB_OPERATION_AGENT,
+                next_agent=RouterAgentRole.WEB_OPERATION_AGENT,
+                recommended_skill=ApplicationSkillName.START_REPLAY,
+                target={"url": "http://localhost:5176/items"},
+                user_goal="新增项目",
+                confidence=0.9,
+                reason_summary="incorrectly treats bare URL as execution",
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("bare URL must not start replay")
+
+    orch = ConversationOrchestrator(
+        repo,
+        intake_service=UrlIntake(),
+        router_service=MisroutingRouter(),
+        replay_handler=replay_handler,
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "http://localhost:5176/items",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert result.command_kind == "ask_user"
+    assert result.user_response == "我已经记住这个页面地址。你想让我学习或执行哪个操作？"
+    events = repo.list_events(session_id)
+    assert not any(
+        e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "planner_candidates_generated"
+        for e in events
+    )
+    assert not any(e.type == "chat_execution_started" for e in events)
+
+
 def test_interactive_chat_inspect_route_uses_page_understanding_runtime(
     repo: ConversationRepository,
 ) -> None:
@@ -994,6 +1091,233 @@ def test_interactive_chat_inspect_route_uses_page_understanding_runtime(
     )
     assert not any(e.type == "chat_learning_started" for e in events)
     assert not any(e.type == "chat_execution_started" for e in events)
+
+
+def test_interactive_chat_learn_intent_overrides_router_inspect_route(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "pending_target": {
+                "url": "http://localhost:5176/items",
+                "site_origin": "http://localhost:5176",
+                "page_hint": "/items",
+            }
+        },
+    )
+    learning_calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    class LearnIntake:
+        confidence_threshold = 0.6
+
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            return ConversationIntakeResult(
+                intent="learn_operation",
+                target=ConversationIntakeTarget(
+                    url="http://localhost:5176/items",
+                    site_origin="http://localhost:5176",
+                    page_hint="/items",
+                ),
+                action=ConversationIntakeAction(
+                    goal="新增项目",
+                    canonical_goal="新增项目",
+                    aliases=["新增项目"],
+                ),
+                slots=[
+                    ConversationIntakeSlot(
+                        name="item_name",
+                        semantic_type="item_name",
+                        value="测试项目A",
+                    )
+                ],
+                confidence=0.95,
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    class MisroutingRouter:
+        def route(self, *, raw_message, intake, context, page_understanding=None):
+            return RouteDecision(
+                route_decision=RouteDecisionKind.UNDERSTAND_PAGE,
+                next_agent=RouterAgentRole.PAGE_UNDERSTANDING_AGENT,
+                recommended_skill=ApplicationSkillName.INSPECT_TARGET_PAGE,
+                target={"url": "http://localhost:5176/items"},
+                user_goal="新增项目",
+                confidence=0.9,
+                reason_summary="incorrectly asks for page understanding",
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        learning_calls.append((url, raw_input, kwargs))
+        learned_path_id = _ingest_items_path(
+            db_session,
+            source_run_id="run-learn-overrides-router-inspect",
+            value_slot="item_name",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-learn-overrides-router-inspect",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/items",
+            scenario="product_level",
+            action_label="新增项目",
+            suggested_utterances=["帮我新增项目"],
+        )
+
+    orch = ConversationOrchestrator(
+        repo,
+        intake_service=LearnIntake(),
+        router_service=MisroutingRouter(),
+        learning_handler=learning_handler,
+    )
+
+    result = orch.dispatch_user_input(
+        session_id,
+        "学习新增项目，名称叫 测试项目A",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.command_kind == "learn_page"
+    assert "学习完成：我学会了新增项目操作" in result.user_response
+    assert len(learning_calls) == 1
+    assert learning_calls[0][2]["fill_values"] == {"item_name": "测试项目A"}
+    events = repo.list_events(session_id)
+    assert any(e.type == "chat_learning_started" for e in events)
+    assert not any(
+        e.type == "skill_call_recorded" and e.payload_json["skill"] == "understand_page"
+        for e in events
+    )
+
+
+def test_interactive_chat_execute_intent_with_slot_overrides_router_inspect_route(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-execute-overrides-router-inspect",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ]
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    class ExecuteIntake:
+        confidence_threshold = 0.6
+
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            return ConversationIntakeResult(
+                intent="execute_operation",
+                target=ConversationIntakeTarget(
+                    url="http://localhost:5176/items",
+                    site_origin="http://localhost:5176",
+                    page_hint="/items",
+                ),
+                action=ConversationIntakeAction(
+                    goal="新增项目",
+                    canonical_goal="新增项目",
+                    aliases=["新增项目", "添加项目"],
+                ),
+                slots=[
+                    ConversationIntakeSlot(
+                        name="item_name",
+                        semantic_type="item_name",
+                        value="测试项目PlannerA",
+                    )
+                ],
+                confidence=0.9,
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    class MisroutingRouter:
+        def route(self, *, raw_message, intake, context, page_understanding=None):
+            return RouteDecision(
+                route_decision=RouteDecisionKind.UNDERSTAND_PAGE,
+                next_agent=RouterAgentRole.PAGE_UNDERSTANDING_AGENT,
+                recommended_skill=ApplicationSkillName.INSPECT_TARGET_PAGE,
+                target={"url": "http://localhost:5176/items"},
+                user_goal="新增项目",
+                confidence=0.9,
+                reason_summary="incorrectly asks for page understanding",
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            execution_evidence=[
+                {
+                    "kind": "dom_text_present",
+                    "target": "测试项目PlannerA",
+                    "status": "verified",
+                    "confidence": 0.95,
+                    "summary": "列表中出现了名称为“测试项目PlannerA”的项目行。",
+                }
+            ],
+        )
+
+    orch = ConversationOrchestrator(
+        repo,
+        intake_service=ExecuteIntake(),
+        router_service=MisroutingRouter(),
+        replay_handler=replay_handler,
+    )
+
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我处理一下这个页面，名称叫 测试项目PlannerA",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.command_kind == "execute_task"
+    assert "我在列表中看到了“测试项目PlannerA”" in result.user_response
+    assert len(calls) == 1
+    assert calls[0][0] == path_id
+    assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目PlannerA"}
+    events = repo.list_events(session_id)
+    assert any(e.type == "chat_execution_started" for e in events)
+    assert not any(
+        e.type == "skill_call_recorded" and e.payload_json["skill"] == "understand_page"
+        for e in events
+    )
 
 
 def test_interactive_chat_short_learn_uses_pending_target_and_asks_slots(
@@ -2169,6 +2493,68 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
     assert "learned_path_id" not in hook_text
     assert "pending_choice_private_map" not in hook_text
     assert "selector" not in hook_text
+
+
+def test_interactive_chat_history_strips_pending_choice_private_path_ids(
+    repo: ConversationRepository,
+) -> None:
+    from app.services.conversation.history import ConversationHistoryService
+
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "pending_choice": {
+                "type": "pending_choice",
+                "choice_group_id": "choice-group-leaky",
+                "question": "你想让我执行哪一个？",
+                "choices": [
+                    {
+                        "choice_id": "A",
+                        "label": "新增项目",
+                        "intent": "execute_operation",
+                        "learned_path_id": "lp-private-choice",
+                    }
+                ],
+                "turns_remaining": 2,
+                "created_at": "2026-05-21T00:00:00+00:00",
+            },
+            "pending_choice_private_map": {
+                "A": {
+                    "kind": "learned_action",
+                    "learned_path_id": "lp-private-choice",
+                    "slot_overrides": {"item_name": "测试项目B"},
+                }
+            },
+        },
+    )
+    repo.append_event(
+        session_id=session_id,
+        type="chat_progress_recorded",
+        payload={
+            "progress_kind": "pending_choice_created",
+            "pending_choice": {
+                "type": "pending_choice",
+                "choices": [
+                    {
+                        "choice_id": "A",
+                        "label": "新增项目",
+                        "learned_path_id": "lp-private-event",
+                    }
+                ],
+            },
+            "pending_choice_private_map": {"A": {"learned_path_id": "lp-private-event"}},
+        },
+    )
+
+    history = ConversationHistoryService(repo.session).get_history(session_id)
+
+    assert history is not None
+    payload_text = json.dumps(history.model_dump(mode="json"), ensure_ascii=False)
+    assert "pending_choice" in payload_text
+    assert "pending_choice_private_map" not in payload_text
+    assert "learned_path_id" not in payload_text
+    assert "lp-private-choice" not in payload_text
+    assert "lp-private-event" not in payload_text
 
 
 @pytest.mark.parametrize(
@@ -3559,6 +3945,180 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
     assert path_a not in selected_text
     assert "测试项目B" not in selected_text
     assert "slot_overrides" not in selected_text
+
+
+def test_interactive_chat_planner_choice_selection_executes_private_choice_when_action_missing(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_a = _ingest_items_path(
+        db_session,
+        source_run_id="run-choice-private-fallback-a",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "pending_choice": {
+                "type": "pending_choice",
+                "choice_group_id": "choice-group-private-fallback",
+                "question": "我找到了多个可能的操作，你想让我执行哪一个？",
+                "choices": [
+                    {
+                        "choice_id": "A",
+                        "label": "新增项目",
+                        "description": "在当前页面新增项目",
+                        "intent": "execute_operation",
+                    }
+                ],
+                "turns_remaining": 2,
+                "created_at": "2026-05-21T00:00:00+00:00",
+            },
+            "pending_choice_private_map": {
+                "A": {
+                    "kind": "planner_route_choice",
+                    "learned_path_id": path_a,
+                    "target_url": "http://localhost:5176/items",
+                    "action_alias": "新增项目",
+                    "page_template": "/items",
+                    "slot_overrides": {"item_name": "测试项目PrivateA"},
+                    "planner_summary": {"confirmation_required": True},
+                }
+            },
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            execution_evidence=[
+                {
+                    "kind": "dom_text_present",
+                    "target": "测试项目PrivateA",
+                    "status": "verified",
+                    "confidence": 0.95,
+                    "summary": "列表中出现了名称为“测试项目PrivateA”的项目行。",
+                }
+            ],
+        )
+
+    result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
+        session_id,
+        "A",
+        metadata={"client": "wagent_eval"},
+    )
+
+    assert result.allowed is True
+    assert "我在列表中看到了“测试项目PrivateA”" in result.user_response
+    assert len(calls) == 1
+    assert calls[0][0] == path_a
+    assert calls[0][1] == "http://localhost:5176/items"
+    assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目PrivateA"}
+    events = repo.list_events(session_id)
+    progress = [e.payload_json.get("progress_kind") for e in events]
+    assert "planner_choice_selected" in progress
+    assert any(e.type == "chat_execution_started" for e in events)
+
+
+def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    path_a = _ingest_items_path(
+        db_session,
+        source_run_id="run-choice-clarify-private-slot-a",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "pending_choice": {
+                "type": "pending_choice",
+                "choice_group_id": "choice-group-clarify-slot",
+                "question": "我找到了多个可能的操作，你想让我执行哪一个？",
+                "choices": [
+                    {
+                        "choice_id": "A",
+                        "label": "新增项目",
+                        "description": "在当前页面新增项目",
+                        "intent": "execute_operation",
+                    }
+                ],
+                "turns_remaining": 2,
+                "created_at": "2026-05-21T00:00:00+00:00",
+            },
+            "pending_choice_private_map": {
+                "A": {
+                    "kind": "planner_route_choice",
+                    "learned_path_id": path_a,
+                    "target_url": "http://localhost:5176/items",
+                    "action_alias": "新增项目",
+                    "page_template": "/items",
+                    "planner_summary": {"confirmation_required": True},
+                }
+            },
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            execution_evidence=[
+                {
+                    "kind": "dom_text_present",
+                    "target": "测试项目PlannerA",
+                    "status": "verified",
+                    "confidence": 0.95,
+                    "summary": "列表中出现了名称为“测试项目PlannerA”的项目行。",
+                }
+            ],
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    retry = orch.dispatch_user_input(
+        session_id,
+        "名称叫 测试项目PlannerA",
+        metadata={"client": "wagent_eval"},
+    )
+
+    assert retry.command_kind == "pending_choice_clarify"
+    session = repo.get_session(session_id)
+    assert session is not None
+    private_map = session.metadata_json["pending_choice_private_map"]
+    assert private_map["A"]["slot_overrides"] == {"item_name": "测试项目PlannerA"}
+    public_text = json.dumps(session.metadata_json["pending_choice"], ensure_ascii=False)
+    assert "测试项目PlannerA" not in public_text
+    events = repo.list_events(session_id)
+    retry_event = [
+        e
+        for e in events
+        if e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "pending_choice_retry"
+    ][-1]
+    retry_event_text = json.dumps(retry_event.payload_json, ensure_ascii=False)
+    assert "测试项目PlannerA" not in retry_event_text
+    assert "slot_overrides" not in retry_event_text
+
+    result = orch.dispatch_user_input(
+        session_id,
+        "A",
+        metadata={"client": "wagent_eval"},
+    )
+
+    assert result.allowed is True
+    assert "我在列表中看到了“测试项目PlannerA”" in result.user_response
+    assert calls[0][0] == path_a
+    assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目PlannerA"}
 
 
 def test_interactive_chat_parameterized_path_requires_runtime_item_name(

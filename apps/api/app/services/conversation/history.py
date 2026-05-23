@@ -71,7 +71,7 @@ class ConversationHistoryService:
                 id=e.id,
                 session_id=e.session_id,
                 type=e.type,
-                payload=_history_safe_payload(e.payload_json),
+                payload=conversation_event_public_payload(e.payload_json),
                 created_at=e.created_at,
             )
             for e in events
@@ -101,12 +101,8 @@ class ConversationHistoryService:
                     "current_mode": session.current_mode,
                     "previous_status": session.previous_status,
                     "metadata": session_metadata,
-                    "created_at": (
-                        session.created_at.isoformat() if session.created_at else None
-                    ),
-                    "updated_at": (
-                        session.updated_at.isoformat() if session.updated_at else None
-                    ),
+                    "created_at": (session.created_at.isoformat() if session.created_at else None),
+                    "updated_at": (session.updated_at.isoformat() if session.updated_at else None),
                 },
                 "messages": [self._raw_message(m) for m in messages],
                 "events": [
@@ -114,10 +110,8 @@ class ConversationHistoryService:
                         "id": e.id,
                         "session_id": e.session_id,
                         "type": e.type,
-                        "payload": _history_safe_payload(e.payload_json),
-                        "created_at": (
-                            e.created_at.isoformat() if e.created_at else None
-                        ),
+                        "payload": conversation_event_public_payload(e.payload_json),
+                        "created_at": (e.created_at.isoformat() if e.created_at else None),
                     }
                     for e in events
                 ],
@@ -125,14 +119,12 @@ class ConversationHistoryService:
                 "learning_runs": [run.model_dump() for run in learning_runs],
                 "replay_summaries": [s.model_dump() for s in replay_summaries],
                 "llm_traces": [trace.model_dump(mode="json") for trace in llm_traces],
-                "entry_gate_traces": [
-                    trace.model_dump(mode="json") for trace in entry_gate_traces
-                ],
+                "entry_gate_traces": [trace.model_dump(mode="json") for trace in entry_gate_traces],
             },
         )
 
     def _message_response(self, message: Any) -> ConversationMessageResponse:
-        metadata = _history_safe_payload(message.metadata_json)
+        metadata = session_public_payload(message.metadata_json)
         return ConversationMessageResponse(
             id=message.id,
             session_id=message.session_id,
@@ -147,7 +139,7 @@ class ConversationHistoryService:
         )
 
     def _raw_message(self, message: Any) -> dict[str, Any]:
-        metadata = _history_safe_payload(message.metadata_json)
+        metadata = session_public_payload(message.metadata_json)
         provenance = normalize_response_provenance(metadata, message.role)
         payload: dict[str, Any] = {
             "id": message.id,
@@ -155,24 +147,18 @@ class ConversationHistoryService:
             "role": message.role,
             "content": _history_safe_payload(message.content),
             "metadata": metadata,
-            "created_at": (
-                message.created_at.isoformat() if message.created_at else None
-            ),
+            "created_at": (message.created_at.isoformat() if message.created_at else None),
         }
         if provenance is not None:
             payload["response_provenance"] = provenance.model_dump(mode="json")
         return payload
 
-    def _build_summary(
-        self, session: ConversationSession
-    ) -> ConversationSessionSummaryResponse:
+    def _build_summary(self, session: ConversationSession) -> ConversationSessionSummaryResponse:
         message_count = self.repo.count_messages(session.id)
         event_count = self.repo.count_events(session.id)
         last_user = self.repo.get_last_message_by_role(session.id, "user")
         last_agent = self.repo.get_last_message_by_role(session.id, "agent")
-        learned_actions = session_public_payload(
-            session.metadata_json.get("learned_actions") or []
-        )
+        learned_actions = session_public_payload(session.metadata_json.get("learned_actions") or [])
         return ConversationSessionSummaryResponse(
             id=session.id,
             status=session.status,
@@ -181,19 +167,13 @@ class ConversationHistoryService:
             updated_at=session.updated_at,
             message_count=message_count,
             event_count=event_count,
-            last_user_message=(
-                _history_safe_payload(last_user.content) if last_user else None
-            ),
-            last_agent_message=(
-                _history_safe_payload(last_agent.content) if last_agent else None
-            ),
+            last_user_message=(_history_safe_payload(last_user.content) if last_user else None),
+            last_agent_message=(_history_safe_payload(last_agent.content) if last_agent else None),
             learned_action_count=len(learned_actions),
             learned_actions=learned_actions,
         )
 
-    def _extract_learning_runs(
-        self, events: list[Any]
-    ) -> list[ConversationLearningRunSummary]:
+    def _extract_learning_runs(self, events: list[Any]) -> list[ConversationLearningRunSummary]:
         results: list[ConversationLearningRunSummary] = []
         for event in events:
             if event.type != "chat_learning_completed":
@@ -206,9 +186,7 @@ class ConversationHistoryService:
                     run_id=payload.get("run_id"),
                     learned_path_id=payload.get("new_learned_path_id"),
                     status="learned",
-                    summary=payload.get("summary")
-                    or payload.get("message")
-                    or "学习完成",
+                    summary=payload.get("summary") or payload.get("message") or "学习完成",
                     raw=payload,
                 )
             )
@@ -228,10 +206,8 @@ class ConversationHistoryService:
                         source_event_type=event.type,
                         learned_path_id=replay.get("learned_path_id"),
                         run_id=replay.get("run_id"),
-                        status=replay.get("replay_status")
-                        or replay.get("status"),
-                        summary=replay.get("summary")
-                        or replay.get("message"),
+                        status=replay.get("replay_status") or replay.get("status"),
+                        summary=replay.get("summary") or replay.get("message"),
                         raw=replay,
                     )
                 )
@@ -256,16 +232,13 @@ class ConversationHistoryService:
                             learned_path_id=payload.get("learned_path_id"),
                             run_id=payload.get("run_id"),
                             status=status,
-                            summary=payload.get("summary")
-                            or payload.get("message"),
+                            summary=payload.get("summary") or payload.get("message"),
                             raw=payload,
                         )
                     )
         return results
 
-    def _extract_llm_traces(
-        self, events: list[Any]
-    ) -> list[ConversationLlmTraceResponse]:
+    def _extract_llm_traces(self, events: list[Any]) -> list[ConversationLlmTraceResponse]:
         results: list[ConversationLlmTraceResponse] = []
         for event in events:
             if event.type != "llm_trace_recorded":
@@ -284,9 +257,7 @@ class ConversationHistoryService:
                     prompt_hash=payload.get("prompt_hash"),
                     schema_name=payload.get("schema_name"),
                     schema_version=payload.get("schema_version"),
-                    schema_validation=_dict_or_empty(
-                        payload.get("schema_validation")
-                    ),
+                    schema_validation=_dict_or_empty(payload.get("schema_validation")),
                     latency_ms=payload.get("latency_ms"),
                     token_usage=_dict_or_empty(payload.get("token_usage")),
                     raw_request=_dict_or_empty(payload.get("raw_request")),
@@ -317,22 +288,15 @@ class ConversationHistoryService:
                 ConversationEntryGateTrace(
                     source_event_id=event.id,
                     category=entry_gate.get("category") or "needs_clarification",
-                    requires_agent_runtime=bool(
-                        entry_gate.get("requires_agent_runtime")
-                    ),
-                    skipped_intake_router=bool(
-                        payload.get("skipped_intake_router")
-                    ),
+                    requires_agent_runtime=bool(entry_gate.get("requires_agent_runtime")),
+                    skipped_intake_router=bool(payload.get("skipped_intake_router")),
                     confidence=float(entry_gate.get("confidence") or 0.0),
-                    latency_ms=payload.get("latency_ms")
-                    or entry_gate.get("latency_ms"),
-                    timeout_ms=payload.get("timeout_ms")
-                    or entry_gate.get("timeout_ms"),
+                    latency_ms=payload.get("latency_ms") or entry_gate.get("latency_ms"),
+                    timeout_ms=payload.get("timeout_ms") or entry_gate.get("timeout_ms"),
                     provider=payload.get("provider") or entry_gate.get("provider"),
                     model=payload.get("model") or entry_gate.get("model"),
                     fallback=bool(payload.get("fallback") or entry_gate.get("fallback")),
-                    error_kind=payload.get("error_kind")
-                    or entry_gate.get("error_kind"),
+                    error_kind=payload.get("error_kind") or entry_gate.get("error_kind"),
                     prompt_template_id=payload.get("prompt_template_id"),
                     prompt_hash=payload.get("prompt_hash"),
                     raw=payload if not raw else raw,
@@ -357,6 +321,20 @@ def _history_safe_payload(value: Any) -> Any:
     )
 
 
+def conversation_event_public_payload(value: Any) -> Any:
+    stripped = _strip_history_private_payload(value)
+    progress_kind = stripped.get("progress_kind") if isinstance(stripped, dict) else None
+    if progress_kind in {
+        "eval_candidate_setup_applied",
+        "pending_choice_created",
+        "pending_choice_retry",
+        "planner_choice_created",
+        "planner_choice_selected",
+    }:
+        stripped = _strip_session_private_payload(stripped)
+    return sanitize_provider_thinking(redact_sensitive_payload(stripped))
+
+
 def _strip_session_private_payload(value: Any) -> Any:
     if isinstance(value, list):
         return [_strip_session_private_payload(item) for item in value]
@@ -369,13 +347,23 @@ def _strip_session_private_payload(value: Any) -> Any:
     return value
 
 
-def _strip_history_private_payload(value: Any) -> Any:
+def _strip_history_private_payload(value: Any, *, in_pending_choice: bool = False) -> Any:
     if isinstance(value, list):
-        return [_strip_history_private_payload(item) for item in value]
+        return [
+            _strip_history_private_payload(item, in_pending_choice=in_pending_choice)
+            for item in value
+        ]
     if isinstance(value, dict):
-        return {
-            key: _strip_history_private_payload(item)
-            for key, item in value.items()
-            if key != "pending_choice_private_map"
-        }
+        result: dict[str, Any] = {}
+        for key, item in value.items():
+            if key == "pending_choice_private_map":
+                continue
+            child_in_pending_choice = in_pending_choice or key == "pending_choice"
+            if child_in_pending_choice and key == "learned_path_id":
+                continue
+            result[key] = _strip_history_private_payload(
+                item,
+                in_pending_choice=child_in_pending_choice,
+            )
+        return result
     return value

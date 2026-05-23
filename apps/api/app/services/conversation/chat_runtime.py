@@ -453,6 +453,60 @@ class InteractiveChatRuntime:
             route_decision=route_decision,
             llm_trace_context=router_llm_trace_context,
         )
+        if _is_bare_url_input(
+            raw_input,
+            intake.target.url or route_decision.target.url or context.current_message_url,
+        ):
+            return self._handle_pending_target_question(
+                session_id=session_id,
+                raw_input=raw_input,
+                intake=intake,
+                route_decision=route_decision,
+                trace_context=trace_context,
+                router_trace_context=router_trace_context,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+            )
+        if (
+            intake.intent == "learn_operation"
+            and intake.confidence >= self._intake_confidence_threshold()
+        ):
+            if intake.should_ask_user or intake.missing_fields:
+                return self._handle_pending_intake_question(
+                    session_id=session_id,
+                    intake=intake,
+                    trace_context=trace_context,
+                    message_id=message_id,
+                    metadata=metadata,
+                    previous_status=previous_status,
+                )
+            return self._handle_learn_page(
+                session_id=session_id,
+                intent=_chat_intent_from_intake(raw_input, intake),
+                intake=intake,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+                headless=headless,
+                route_decision=route_decision,
+            )
+        if (
+            intake.intent == "execute_operation"
+            and intake.confidence >= self._intake_confidence_threshold()
+            and context.learned_actions
+            and any(slot.value for slot in intake.slots)
+        ):
+            return self._handle_execute_task(
+                session_id=session_id,
+                intent=_chat_intent_from_intake(raw_input, intake),
+                intake=intake,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+                headless=headless,
+                route_decision=route_decision,
+            )
         if route_decision.route_decision in {
             RouteDecisionKind.INSPECT_PAGE,
             RouteDecisionKind.UNDERSTAND_PAGE,
@@ -703,6 +757,8 @@ class InteractiveChatRuntime:
             session_id,
             str(selected.get("learned_path_id") or ""),
         )
+        if action is None and selected_kind == "planner_route_choice":
+            action = self._action_from_private_choice(selected)
         if action is None:
             return self._handle_choice_unavailable(
                 session_id=session_id,
@@ -919,6 +975,12 @@ class InteractiveChatRuntime:
                 previous_status=previous_status,
             )
         pending = {**pending, "turns_remaining": remaining}
+        slot_overrides = _slot_overrides_from_pending_choice_clarification(raw_input)
+        if slot_overrides:
+            self._merge_pending_choice_private_slot_overrides(
+                session_id,
+                slot_overrides,
+            )
         self._save_pending_choice_payload(session_id, pending)
         self._update_active_task(session_id, status="waiting_for_user_input")
         response = _pending_choice_response(pending, prefix="我没有识别出你的选择。")
@@ -940,6 +1002,45 @@ class InteractiveChatRuntime:
             message_id=message_id,
             previous_status=previous_status,
         )
+
+    def _merge_pending_choice_private_slot_overrides(
+        self,
+        session_id: str,
+        slot_overrides: dict[str, str],
+    ) -> None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = dict(session.metadata_json or {})
+        private_map = metadata.get("pending_choice_private_map")
+        if not isinstance(private_map, dict):
+            return
+        changed = False
+        merged_map: dict[str, Any] = {}
+        for choice_id, raw_choice in private_map.items():
+            if not isinstance(raw_choice, dict):
+                continue
+            choice = dict(raw_choice)
+            if choice.get("kind") not in {
+                "learned_action",
+                "planner_route_choice",
+                "retry_replay",
+            }:
+                merged_map[str(choice_id)] = choice
+                continue
+            existing = choice.get("slot_overrides")
+            merged_slots = dict(existing) if isinstance(existing, dict) else {}
+            for key, value in slot_overrides.items():
+                if key and value is not None:
+                    merged_slots[str(key)] = str(value)
+            if merged_slots:
+                choice["slot_overrides"] = merged_slots
+                changed = True
+            merged_map[str(choice_id)] = choice
+        if not changed:
+            return
+        metadata["pending_choice_private_map"] = redact_sensitive_payload(merged_map)
+        self._replace_session_metadata(session_id, metadata)
 
     def _handle_choice_unavailable(
         self,
@@ -3511,6 +3612,27 @@ class InteractiveChatRuntime:
                 return action
         return None
 
+    def _action_from_private_choice(self, selected: dict[str, Any]) -> dict[str, Any] | None:
+        learned_path_id = str(selected.get("learned_path_id") or "").strip()
+        if not learned_path_id:
+            return None
+        row = LearnedPathRepository(self._repo.session).get(learned_path_id)
+        if row is None:
+            return None
+        target_url = str(selected.get("target_url") or "").strip()
+        parsed = urlparse(target_url)
+        site_origin = f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme else parsed.netloc
+        alias = str(selected.get("action_alias") or "").strip() or str(row.scenario or "")
+        return {
+            "alias": alias or "已学习操作",
+            "utterances": [alias] if alias else [],
+            "learned_path_id": learned_path_id,
+            "target_url": target_url,
+            "site_origin": site_origin,
+            "page_template": selected.get("page_template") or row.page_template,
+            "scenario": row.scenario,
+        }
+
     def _has_pending_runtime_context(self, session_id: str) -> bool:
         session = self._repo.get_session(session_id)
         if session is None:
@@ -3963,6 +4085,12 @@ def _slot_overrides_from_choice_selection(selected: dict[str, Any]) -> dict[str,
     }
 
 
+def _slot_overrides_from_pending_choice_clarification(raw_input: str) -> dict[str, str]:
+    values = _parse_product_inputs(raw_input) or {}
+    item_name = values.get("item_name")
+    return {"item_name": item_name} if item_name else {}
+
+
 def _fill_values_from_recovery_choice(selected: dict[str, Any]) -> dict[str, str]:
     fill_values = selected.get("fill_values")
     if not isinstance(fill_values, dict):
@@ -4097,6 +4225,13 @@ def _is_cancel_text(text: str) -> bool:
 def _extract_url(text: str) -> str | None:
     match = _URL_RE.search(text)
     return match.group(0) if match else None
+
+
+def _is_bare_url_input(raw_input: str, target_url: str | None) -> bool:
+    text = raw_input.strip()
+    if not text or not target_url:
+        return False
+    return _normalize_url(text) == _normalize_url(target_url)
 
 
 def _chat_intent_from_intake(

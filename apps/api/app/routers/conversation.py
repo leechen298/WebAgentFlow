@@ -27,7 +27,10 @@ from app.schemas.conversation import (
     ConversationSessionListResponse,
     ConversationSessionResponse,
 )
-from app.services.conversation.history import session_public_payload
+from app.services.conversation.history import (
+    conversation_event_public_payload,
+    session_public_payload,
+)
 from app.services.conversation.provenance import normalize_response_provenance
 
 router = APIRouter(prefix="/conversation", tags=["conversation"])
@@ -47,14 +50,15 @@ def _session_response(orm: ConversationSessionOrm) -> ConversationSessionRespons
 
 
 def _message_response(orm) -> ConversationMessageResponse:
+    metadata = session_public_payload(orm.metadata_json)
     return ConversationMessageResponse(
         id=orm.id,
         session_id=orm.session_id,
         role=orm.role,
         content=orm.content,
-        metadata=orm.metadata_json,
+        metadata=metadata,
         response_provenance=normalize_response_provenance(
-            orm.metadata_json,
+            metadata,
             orm.role,
         ),
         created_at=orm.created_at,
@@ -66,7 +70,7 @@ def _event_response(orm) -> ConversationEventResponse:
         id=orm.id,
         session_id=orm.session_id,
         type=orm.type,
-        payload=orm.payload_json,
+        payload=conversation_event_public_payload(orm.payload_json),
         created_at=orm.created_at,
     )
 
