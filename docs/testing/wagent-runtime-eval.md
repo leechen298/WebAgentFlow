@@ -54,6 +54,19 @@ Equivalent command:
   --case failure_recovery_menu_safety
 ```
 
+Pending choice multi-candidate eval:
+
+```bash
+pnpm run eval:wagent:pending-choice
+```
+
+Equivalent command:
+
+```bash
+.venv/bin/python scripts/evals/wagent_runtime_eval.py \
+  --case pending_choice_multi_candidate
+```
+
 Useful options:
 
 ```bash
@@ -117,6 +130,26 @@ The eval-only hook is ignored unless `client=wagent_eval`, the case id matches,
 and the reporter outcome is allowlisted. It does not bypass Conversation API
 dispatch and does not execute retry as a required gate.
 
+`pending_choice_multi_candidate`:
+
+1. Sets up a current eval learned action from `/items`.
+2. Creates an eval Conversation session with three safe aliases bound to that
+   current eval path.
+3. Sends a vague page operation request through the Conversation API with the
+   eval-only candidate binding metadata.
+4. Checks that non-planner public A/B/C choices are created without exposing
+   path ids, selectors, slot overrides, or private maps.
+5. Sends `A` through the Conversation API.
+6. Verifies that A dispatch starts execution with the expected raw path id
+   internally, while artifacts expose only matching path hashes.
+7. Checks pending choice cleanup, verified execution evidence, evidence-based
+   final response, and prohibited endpoint usage.
+
+The first implementation uses `setup_type=eval_only_candidate_binding` and
+sets `live_multi_action_capability=false`. This proves pending-choice evaluator
+coverage, public/private payload safety, and choice-selection control flow; it
+does not claim full live distinct-action product capability.
+
 ## Outputs
 
 JSON artifact:
@@ -130,6 +163,7 @@ Markdown result:
 ```text
 docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-${timestamp}.md
 docs/testing/results/m11-11.3.6.2-failure-recovery-eval-${timestamp}.md
+docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-${timestamp}.md
 ```
 
 Both outputs are derived from the normalized `EvalResult`. The JSON artifact
@@ -166,6 +200,26 @@ Failure recovery gates are hard gates for the failure-recovery case:
 `retry_execution_verified` is intentionally not required in 11.3.6.2. Markdown
 results must say `Retry execution: not run.` unless a later case explicitly
 executes and proves retry success.
+
+Pending choice gates are hard gates for `pending_choice_multi_candidate`:
+
+- `setup_multi_candidate_current_eval`
+- `pending_choice_created`
+- `public_choices_abc_visible`
+- `public_choice_payload_sanitized`
+- `planner_not_invoked`
+- `select_A_dispatched`
+- `choice_A_execution_started`
+- `execution_uses_choice_A_path`
+- `pending_choice_cleared`
+- `private_map_not_public_after_selection`
+- `execution_verified`
+- `final_response_verified`
+- `no_autonomous_or_direct_replay`
+
+`slot_override_after_choice` may be `not_observable` only when the case does not
+carry a business slot. The `/items` eval path expects `item_name` and treats the
+slot override as required evidence.
 
 ## Exit Codes
 

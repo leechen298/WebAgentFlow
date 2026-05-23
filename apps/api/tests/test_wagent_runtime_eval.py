@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 from typing import Any
 
@@ -213,6 +214,147 @@ def _valid_failure_recovery_evidence() -> dict[str, Any]:
     }
 
 
+def _valid_pending_choice_evidence() -> dict[str, Any]:
+    pending_choice = {
+        "type": "pending_choice",
+        "choice_group_id": "choice-group-pending-eval",
+        "question": "我找到了多个可能的操作，你想让我执行哪一个？",
+        "choices": [
+            {
+                "choice_id": "A",
+                "label": "新增项目",
+                "description": "在当前页面新增项目",
+                "intent": "execute_operation",
+            },
+            {
+                "choice_id": "B",
+                "label": "添加项目",
+                "description": "在当前页面添加项目",
+                "intent": "execute_operation",
+            },
+            {
+                "choice_id": "C",
+                "label": "录入项目",
+                "description": "在当前页面录入项目",
+                "intent": "execute_operation",
+            },
+        ],
+        "turns_remaining": 2,
+    }
+    return {
+        "setup_manifest": {
+            "case_id": "pending_choice_multi_candidate",
+            "setup_type": "eval_only_candidate_binding",
+            "live_multi_action_capability": False,
+            "candidates": [
+                {
+                    "choice_id": "A",
+                    "alias": "新增项目",
+                    "learned_path_id": "lp-choice-a",
+                    "source": "current_eval_run",
+                    "is_current_eval_real_path": True,
+                },
+                {
+                    "choice_id": "B",
+                    "alias": "添加项目",
+                    "learned_path_id": "lp-choice-a",
+                    "source": "eval_alias_binding",
+                },
+                {
+                    "choice_id": "C",
+                    "alias": "录入项目",
+                    "learned_path_id": "lp-choice-a",
+                    "source": "eval_alias_binding",
+                },
+            ],
+        },
+        "session": {"id": "session-1", "metadata": {}},
+        "turns": [
+            {
+                "text": "帮我处理一下这个页面，名称叫 测试项目ChoiceA",
+                "response": {"user_response": "我找到了多个可能的操作"},
+                "error": None,
+            },
+            {"text": "A", "response": {"user_response": "执行完成"}, "error": None},
+        ],
+        "events": [
+            {
+                "id": "evt-choice",
+                "type": "chat_progress_recorded",
+                "payload": {
+                    "progress_kind": "pending_choice_created",
+                    "pending_choice": pending_choice,
+                },
+            },
+            {
+                "id": "evt-start-a",
+                "type": "chat_execution_started",
+                "payload": {
+                    "learned_path_id": "lp-choice-a",
+                    "target_url": "http://127.0.0.1:5176/items",
+                    "alias": "新增项目",
+                    "slot_overrides": {"item_name": "测试项目ChoiceA"},
+                },
+            },
+            {
+                "id": "evt-complete-a",
+                "type": "chat_execution_completed",
+                "payload": {
+                    "learned_path_id": "lp-choice-a",
+                    "replay": {
+                        "learned_path_id": "lp-choice-a",
+                        "replay_status": "succeeded",
+                        "execution_evidence": [
+                            {
+                                "kind": "dom_text_present",
+                                "target": "测试项目ChoiceA",
+                                "status": "verified",
+                                "confidence": 0.95,
+                                "summary": "列表中包含测试项目ChoiceA",
+                            }
+                        ],
+                    },
+                },
+            },
+            {
+                "id": "evt-report-a",
+                "type": "task_result_reported",
+                "payload": {
+                    "verification_outcome": "verified",
+                    "task_verified": True,
+                },
+            },
+        ],
+        "messages": [
+            {
+                "role": "agent",
+                "content": (
+                    "我找到了多个可能的操作，你想让我执行哪一个？\n"
+                    "A. 新增项目 - 在当前页面新增项目\n"
+                    "B. 添加项目 - 在当前页面添加项目\n"
+                    "C. 录入项目 - 在当前页面录入项目"
+                ),
+            },
+            {
+                "role": "agent",
+                "content": (
+                    "执行完成。我在列表中看到了“测试项目ChoiceA”，所以可以确认新增项目成功。"
+                ),
+            },
+        ],
+        "history": {},
+        "raw_api_responses": {
+            "records": [
+                {"method": "POST", "path": "/conversation/sessions"},
+                {
+                    "method": "POST",
+                    "path": "/conversation/sessions/session-1/dispatch",
+                },
+            ]
+        },
+    }
+
+
 def test_parse_config_defaults() -> None:
     runner = _load_runner()
 
@@ -236,6 +378,14 @@ def test_parse_config_accepts_failure_recovery_case() -> None:
     config = runner.parse_config(["--case", "failure_recovery_menu_safety"])
 
     assert config.cases == ["failure_recovery_menu_safety"]
+
+
+def test_parse_config_accepts_pending_choice_case() -> None:
+    runner = _load_runner()
+
+    config = runner.parse_config(["--case", "pending_choice_multi_candidate"])
+
+    assert config.cases == ["pending_choice_multi_candidate"]
 
 
 def test_preflight_blocks_when_api_unreachable() -> None:
@@ -582,6 +732,160 @@ def test_failure_recovery_gate_fails_when_runner_calls_prohibited_endpoint() -> 
     assert gates["no_autonomous_or_direct_replay"].status == "fail"
 
 
+def test_pending_choice_gate_passes_with_eval_only_binding_evidence() -> None:
+    runner = _load_runner()
+    evidence = _valid_pending_choice_evidence()
+
+    result = runner.GateEvaluator().evaluate_pending_choice_multi_candidate(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "pass"
+    assert gates["setup_multi_candidate_current_eval"].status == "pass"
+    assert (
+        "live_multi_action_capability=false" in gates["setup_multi_candidate_current_eval"].evidence
+    )
+    assert gates["pending_choice_created"].status == "pass"
+    assert gates["public_choices_abc_visible"].status == "pass"
+    assert gates["public_choice_payload_sanitized"].status == "pass"
+    assert gates["planner_not_invoked"].status == "pass"
+    assert gates["select_A_dispatched"].status == "pass"
+    assert gates["choice_A_execution_started"].status == "pass"
+    assert gates["execution_uses_choice_A_path"].status == "pass"
+    assert "lp-choice-a" not in gates["execution_uses_choice_A_path"].evidence
+    assert "match=true" in gates["execution_uses_choice_A_path"].evidence
+    assert gates["slot_override_after_choice"].status == "pass"
+    assert gates["pending_choice_cleared"].status == "pass"
+    assert gates["private_map_not_public_after_selection"].status == "pass"
+    assert gates["execution_verified"].status == "pass"
+    assert gates["final_response_verified"].status == "pass"
+    assert gates["no_autonomous_or_direct_replay"].status == "pass"
+
+
+def test_pending_choice_gate_fails_with_fewer_than_three_candidates() -> None:
+    runner = _load_runner()
+    evidence = _valid_pending_choice_evidence()
+    evidence["setup_manifest"]["candidates"] = evidence["setup_manifest"]["candidates"][:2]
+
+    result = runner.GateEvaluator().evaluate_pending_choice_multi_candidate(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["setup_multi_candidate_current_eval"].status == "fail"
+
+
+def test_pending_choice_gate_fails_when_public_choice_c_missing() -> None:
+    runner = _load_runner()
+    evidence = _valid_pending_choice_evidence()
+    event_choice = evidence["events"][0]["payload"]["pending_choice"]
+    event_choice["choices"] = event_choice["choices"][:2]
+    evidence["messages"][0]["content"] = evidence["messages"][0]["content"].replace(
+        "\nC. 录入项目 - 在当前页面录入项目",
+        "",
+    )
+
+    result = runner.GateEvaluator().evaluate_pending_choice_multi_candidate(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["public_choices_abc_visible"].status == "fail"
+
+
+def test_pending_choice_gate_fails_when_public_choice_payload_leaks_private_id() -> None:
+    runner = _load_runner()
+    evidence = _valid_pending_choice_evidence()
+    choices = evidence["events"][0]["payload"]["pending_choice"]["choices"]
+    choices[0]["learned_path_id"] = "lp-choice-a"
+
+    result = runner.GateEvaluator().evaluate_pending_choice_multi_candidate(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["public_choice_payload_sanitized"].status == "fail"
+
+
+def test_pending_choice_gate_fails_when_eval_setup_event_leaks_private_id() -> None:
+    runner = _load_runner()
+    evidence = _valid_pending_choice_evidence()
+    evidence["events"].insert(
+        0,
+        {
+            "id": "evt-setup-hook",
+            "type": "chat_progress_recorded",
+            "payload": {
+                "progress_kind": "eval_candidate_setup_applied",
+                "learned_path_id": "lp-choice-a",
+            },
+        },
+    )
+
+    result = runner.GateEvaluator().evaluate_pending_choice_multi_candidate(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["public_choice_payload_sanitized"].status == "fail"
+
+
+def test_pending_choice_gate_fails_when_planner_event_present() -> None:
+    runner = _load_runner()
+    evidence = _valid_pending_choice_evidence()
+    evidence["events"].insert(
+        1,
+        {
+            "id": "evt-planner",
+            "type": "chat_progress_recorded",
+            "payload": {"progress_kind": "planner_choice_created"},
+        },
+    )
+
+    result = runner.GateEvaluator().evaluate_pending_choice_multi_candidate(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["planner_not_invoked"].status == "fail"
+
+
+def test_pending_choice_gate_fails_when_choice_a_executes_wrong_path() -> None:
+    runner = _load_runner()
+    evidence = _valid_pending_choice_evidence()
+    evidence["events"][1]["payload"]["learned_path_id"] = "lp-choice-b"
+
+    result = runner.GateEvaluator().evaluate_pending_choice_multi_candidate(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["execution_uses_choice_A_path"].status == "fail"
+    assert "lp-choice-b" not in gates["execution_uses_choice_A_path"].evidence
+
+
+def test_pending_choice_gate_fails_when_pending_choice_remains_public() -> None:
+    runner = _load_runner()
+    evidence = _valid_pending_choice_evidence()
+    evidence["session"]["metadata"]["pending_choice"] = {
+        "type": "pending_choice",
+        "choices": [{"choice_id": "A", "label": "新增项目"}],
+    }
+
+    result = runner.GateEvaluator().evaluate_pending_choice_multi_candidate(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["pending_choice_cleared"].status == "fail"
+
+
+def test_pending_choice_gate_fails_when_runner_calls_direct_replay_endpoint() -> None:
+    runner = _load_runner()
+    evidence = _valid_pending_choice_evidence()
+    evidence["raw_api_responses"]["records"].append(
+        {"method": "POST", "path": "/exploration/learned-paths/lp-choice-a/replay"}
+    )
+
+    result = runner.GateEvaluator().evaluate_pending_choice_multi_candidate(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["no_autonomous_or_direct_replay"].status == "fail"
+
+
 def test_single_path_regression_fails_when_execution_uses_old_path() -> None:
     runner = _load_runner()
     evidence = _valid_items_evidence()
@@ -711,6 +1015,65 @@ def test_redaction_removes_sensitive_keys_but_keeps_item_name() -> None:
     assert redacted["nested"]["cookie"] == "[REDACTED]"
 
 
+def test_artifact_redacts_raw_response_text_private_payload(
+    tmp_path: Path,
+) -> None:
+    runner = _load_runner()
+    result = runner.EvalResult(
+        schema_version=runner.SCHEMA_VERSION,
+        status="pass",
+        environment={"commit": "abc123"},
+        services={},
+        config={},
+        session_id="session-1",
+        case_results=[],
+        turns=[],
+        events=[],
+        messages=[],
+        history={},
+        learned_paths=[],
+        raw_api_responses={
+            "records": [
+                {
+                    "method": "POST",
+                    "path": "/conversation/sessions/session-1/dispatch",
+                    "response_text": (
+                        '{"learned_path_id":"lp-secret","slot_overrides":{"item_name":"测试项目B"}}'
+                    ),
+                    "response_json": {
+                        "data": {
+                            "learned_path_id": "lp-secret",
+                            "slot_overrides": {"item_name": "测试项目B"},
+                        }
+                    },
+                }
+            ]
+        },
+        gate_summary={},
+    )
+    config = runner.parse_config(
+        [
+            "--artifact-dir",
+            str(tmp_path / "artifacts"),
+            "--result-dir",
+            str(tmp_path / "results"),
+            "--no-markdown",
+        ]
+    )
+
+    json_path, _markdown_path = runner.write_artifacts(result, config)
+
+    artifact = json.loads(json_path.read_text(encoding="utf-8"))
+    record = artifact["raw_api_responses"]["records"][0]
+    assert record["response_text"] == "[REDACTED]"
+    artifact_text = json.dumps(artifact, ensure_ascii=False)
+    assert "lp-secret" not in artifact_text
+    assert '"learned_path_id":"lp-secret"' not in artifact_text
+    assert '"slot_overrides":{"item_name":"测试项目B"}' not in artifact_text
+    assert record["response_json"]["data"]["learned_path_id"] == "[REDACTED]"
+    assert record["response_json"]["data"]["slot_overrides"] == "[REDACTED]"
+
+
 def test_exit_code_reducer_prefers_actionable_status() -> None:
     runner = _load_runner()
 
@@ -833,3 +1196,52 @@ def test_markdown_report_includes_failure_recovery_not_run_boundary(
 
     assert "Live Conversation eval: not run" in report
     assert "Retry execution: not run" in report
+
+
+def test_markdown_report_includes_pending_choice_setup_boundary(
+    tmp_path: Path,
+) -> None:
+    runner = _load_runner()
+    case = runner.CaseResult(
+        case_id="pending_choice_multi_candidate",
+        status="pass",
+        turns=[],
+        gates=[
+            runner.GateResult(
+                name="setup_multi_candidate_current_eval",
+                required=True,
+                status="pass",
+                evidence=(
+                    "setup_type=eval_only_candidate_binding; "
+                    "live_multi_action_capability=false; aliases=新增项目,添加项目,录入项目"
+                ),
+                source="setup_manifest",
+            )
+        ],
+        warnings=[],
+    )
+    result = runner.EvalResult(
+        schema_version=runner.SCHEMA_VERSION,
+        status="pass",
+        environment={"commit": "abc123"},
+        services={},
+        config={},
+        session_id="session-pending",
+        case_results=[case],
+        turns=[],
+        events=[],
+        messages=[],
+        history={},
+        learned_paths=[],
+        raw_api_responses={},
+        gate_summary={"required_passed": 1, "required_failed": 0},
+    )
+
+    report = runner.render_markdown_report(
+        result,
+        artifact_path=tmp_path / "artifact.json",
+    )
+
+    assert "## Pending Choice Eval" in report
+    assert "Candidate setup type: eval_only_candidate_binding" in report
+    assert "Live multi-action capability: false" in report

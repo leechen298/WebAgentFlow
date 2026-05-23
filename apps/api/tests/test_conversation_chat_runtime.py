@@ -2041,6 +2041,219 @@ def test_interactive_chat_eval_fault_injection_ignored_unless_valid_opt_in(
     ]
 
 
+def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_choice(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-items-eval-choice-binding",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "client": "wagent_eval",
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ],
+        },
+    )
+    replay_calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        replay_calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            execution_evidence=[
+                {
+                    "kind": "dom_text_present",
+                    "target": "测试项目ChoiceA",
+                    "status": "verified",
+                    "confidence": 0.95,
+                    "summary": "列表中出现了名称为“测试项目ChoiceA”的项目行。",
+                }
+            ],
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    first = orch.dispatch_user_input(
+        session_id,
+        "帮我处理一下这个页面：http://localhost:5176/items，名称叫测试项目ChoiceA",
+        metadata={
+            "client": "wagent_eval",
+            "eval_candidate_setup": {
+                "case_id": "pending_choice_multi_candidate",
+                "setup_type": "eval_only_candidate_binding",
+                "live_multi_action_capability": False,
+                "actions": [
+                    {
+                        "choice_id": "A",
+                        "alias": "新增项目",
+                        "learned_path_id": learned_path_id,
+                    },
+                    {
+                        "choice_id": "B",
+                        "alias": "添加项目",
+                        "learned_path_id": learned_path_id,
+                    },
+                    {
+                        "choice_id": "C",
+                        "alias": "录入项目",
+                        "learned_path_id": learned_path_id,
+                    },
+                ],
+            },
+        },
+    )
+
+    assert replay_calls == []
+    assert "我找到了多个可能的操作" in first.user_response
+    assert "A. 新增项目" in first.user_response
+    assert "B. 添加项目" in first.user_response
+    assert "C. 录入项目" in first.user_response
+    assert learned_path_id not in first.user_response
+
+    session = repo.get_session(session_id)
+    assert session is not None
+    pending_choice_text = json.dumps(
+        session.metadata_json["pending_choice"],
+        ensure_ascii=False,
+    )
+    assert learned_path_id not in pending_choice_text
+    assert "learned_path_id" not in pending_choice_text
+    assert session.metadata_json["pending_choice_private_map"]["A"]["kind"] == "learned_action"
+    assert session.metadata_json["pending_choice_private_map"]["A"]["slot_overrides"] == {
+        "item_name": "测试项目ChoiceA"
+    }
+
+    result = orch.dispatch_user_input(
+        session_id,
+        "A",
+        metadata={"client": "wagent_eval"},
+    )
+
+    assert result.allowed is True
+    assert "我在列表中看到了“测试项目ChoiceA”" in result.user_response
+    assert len(replay_calls) == 1
+    assert replay_calls[0][0] == learned_path_id
+    assert replay_calls[0][1] == "http://localhost:5176/items"
+    assert replay_calls[0][2]["headless"] is False
+    assert replay_calls[0][2]["slot_overrides"] == {"item_name": "测试项目ChoiceA"}
+    assert replay_calls[0][2]["evidence_targets"]
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_choice" not in session.metadata_json
+    assert "pending_choice_private_map" not in session.metadata_json
+    events = repo.list_events(session_id)
+    assert any(
+        e.payload_json.get("progress_kind") == "eval_candidate_setup_applied" for e in events
+    )
+    assert any(e.payload_json.get("progress_kind") == "pending_choice_created" for e in events)
+    assert not any(e.payload_json.get("progress_kind") == "planner_choice_created" for e in events)
+    hook_event = [
+        e for e in events if e.payload_json.get("progress_kind") == "eval_candidate_setup_applied"
+    ][-1]
+    hook_text = json.dumps(hook_event.payload_json, ensure_ascii=False)
+    assert learned_path_id not in hook_text
+    assert "learned_path_id" not in hook_text
+    assert "pending_choice_private_map" not in hook_text
+    assert "selector" not in hook_text
+
+
+@pytest.mark.parametrize(
+    ("metadata", "session_client"),
+    [
+        ({}, "wagent_eval"),
+        (
+            {
+                "client": "wagent_chat",
+                "eval_candidate_setup": {
+                    "case_id": "pending_choice_multi_candidate",
+                    "setup_type": "eval_only_candidate_binding",
+                    "actions": [],
+                },
+            },
+            "wagent_chat",
+        ),
+        (
+            {
+                "client": "wagent_eval",
+                "eval_candidate_setup": {
+                    "case_id": "unknown",
+                    "setup_type": "eval_only_candidate_binding",
+                    "actions": [],
+                },
+            },
+            "wagent_eval",
+        ),
+    ],
+)
+def test_interactive_chat_eval_candidate_binding_ignored_unless_valid_opt_in(
+    db_session: Session,
+    repo: ConversationRepository,
+    metadata: dict[str, Any],
+    session_client: str,
+) -> None:
+    learned_path_id = _ingest_workspace_path(
+        db_session,
+        source_run_id=f"run-workspace-eval-choice-ignored-{session_client}",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "client": session_client,
+            "learned_actions": [
+                {
+                    "alias": "进入工作台",
+                    "utterances": ["帮我进入工作台"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/workspace-login",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/workspace-login",
+                }
+            ],
+        },
+    )
+    replay_calls: list[str] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        replay_calls.append(lid)
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
+        session_id,
+        "帮我处理一下这个页面：http://localhost:5176/workspace-login",
+        metadata=metadata,
+    )
+
+    assert result.allowed is True
+    assert replay_calls == [learned_path_id]
+    events = repo.list_events(session_id)
+    assert not [
+        e for e in events if e.payload_json.get("progress_kind") == "eval_candidate_setup_applied"
+    ]
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_choice" not in session.metadata_json
+    assert "pending_choice_private_map" not in session.metadata_json
+
+
 def test_interactive_chat_blocked_drift_offers_basic_recovery(
     db_session: Session,
     repo: ConversationRepository,

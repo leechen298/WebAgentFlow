@@ -2,6 +2,7 @@
 """WAgent runtime eval runner for M11.3.6.x."""
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -14,13 +15,14 @@ from typing import Any, Callable
 import httpx
 
 
-SCHEMA_VERSION = "11.3.6.2"
+SCHEMA_VERSION = "11.3.6.3"
 FAILURE_RECOVERY_CASE = "failure_recovery_menu_safety"
+PENDING_CHOICE_CASE = "pending_choice_multi_candidate"
 DEFAULT_CASES = [
     "items_closed_loop",
     "single_path_direct_replay_regression",
 ]
-ALL_CASES = [*DEFAULT_CASES, FAILURE_RECOVERY_CASE]
+ALL_CASES = [*DEFAULT_CASES, FAILURE_RECOVERY_CASE, PENDING_CHOICE_CASE]
 ITEM_LIST_SELECTOR = "[data-testid='item-list']"
 SENSITIVE_KEYS = {
     "api_key",
@@ -39,6 +41,7 @@ SENSITIVE_KEYS = {
     "raw_selector",
     "replay_action",
     "replayaction",
+    "response_text",
     "secret",
     "selector",
     "slot_overrides",
@@ -264,17 +267,24 @@ class ConversationDriver:
     def close(self) -> None:
         self.client.close()
 
-    def create_session(self) -> dict[str, Any]:
+    def create_session(
+        self,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        session_metadata = {
+            "client": "wagent_eval",
+            "browser_visibility": self.config.browser_visibility,
+            "eval_runner": {
+                "name": "wagent_runtime_eval",
+                "schema_version": SCHEMA_VERSION,
+            },
+        }
+        if metadata:
+            session_metadata.update(metadata)
         payload = {
             "current_mode": "interactive_chat",
-            "metadata": {
-                "client": "wagent_eval",
-                "browser_visibility": self.config.browser_visibility,
-                "eval_runner": {
-                    "name": "wagent_runtime_eval",
-                    "schema_version": SCHEMA_VERSION,
-                },
-            },
+            "metadata": session_metadata,
         }
         return self._request("POST", "/conversation/sessions", json_body=payload)
 
@@ -527,6 +537,53 @@ class GateEvaluator:
         ]
         return CaseResult(
             case_id=FAILURE_RECOVERY_CASE,
+            status=_case_status(gates),
+            gates=gates,
+            warnings=_warnings(gates),
+        )
+
+    def evaluate_pending_choice_multi_candidate(
+        self,
+        evidence: dict[str, Any],
+        *,
+        expected_item_name: str | None = None,
+    ) -> CaseResult:
+        execution_event = _latest_pending_choice_execution_started(evidence)
+        completed_event = _latest_event_after(
+            evidence,
+            "chat_execution_completed",
+            execution_event,
+        )
+        reporter_event = _latest_event_after(
+            evidence,
+            "task_result_reported",
+            execution_event,
+        )
+        item_name = expected_item_name or _get(
+            execution_event or {}, "payload", "slot_overrides", "item_name"
+        )
+        gates = [
+            _gate_setup_multi_candidate_current_eval(evidence),
+            _gate_pending_choice_created(evidence),
+            _gate_public_choices_abc_visible(evidence),
+            _gate_public_choice_payload_sanitized(evidence),
+            _gate_pending_choice_planner_not_invoked(evidence),
+            _gate_select_a_dispatched(evidence),
+            _gate_choice_a_execution_started(execution_event),
+            _gate_execution_uses_choice_a_path(evidence, execution_event),
+            _gate_slot_override_after_choice(execution_event, item_name),
+            _gate_pending_choice_cleared(evidence),
+            _gate_private_map_not_public_after_selection(evidence),
+            _gate_pending_choice_execution_verified(
+                completed_event,
+                reporter_event,
+                item_name,
+            ),
+            _gate_final_response_verified(evidence, item_name or ""),
+            _gate_no_autonomous_or_direct_replay(evidence),
+        ]
+        return CaseResult(
+            case_id=PENDING_CHOICE_CASE,
             status=_case_status(gates),
             gates=gates,
             warnings=_warnings(gates),
@@ -1135,6 +1192,356 @@ def _gate_no_autonomous_or_direct_replay(evidence: dict[str, Any]) -> GateResult
     )
 
 
+def _gate_setup_multi_candidate_current_eval(
+    evidence: dict[str, Any],
+) -> GateResult:
+    manifest = evidence.get("setup_manifest")
+    if not isinstance(manifest, dict):
+        return GateResult(
+            "setup_multi_candidate_current_eval",
+            True,
+            "fail",
+            "setup manifest missing",
+            "setup_manifest",
+        )
+    setup_type = str(manifest.get("setup_type") or "")
+    candidates = [
+        candidate
+        for candidate in manifest.get("candidates") or []
+        if isinstance(candidate, dict)
+    ]
+    aliases = [
+        str(candidate.get("alias") or "")
+        for candidate in candidates
+        if candidate.get("alias")
+    ]
+    distinct_aliases = sorted(set(aliases))
+    current_real_path_count = sum(
+        1
+        for candidate in candidates
+        if candidate.get("is_current_eval_real_path")
+        or candidate.get("current_eval_run")
+        or candidate.get("source") == "current_eval_run"
+    )
+    live_capability = bool(manifest.get("live_multi_action_capability"))
+    if (
+        setup_type in _pending_choice_setup_types()
+        and len(candidates) >= 3
+        and len(distinct_aliases) >= 3
+        and (setup_type == "fixture_only" or current_real_path_count >= 1)
+    ):
+        return GateResult(
+            "setup_multi_candidate_current_eval",
+            True,
+            "pass",
+            (
+                f"setup_type={setup_type}; "
+                f"live_multi_action_capability={str(live_capability).lower()}; "
+                f"candidate_count={len(candidates)}; "
+                f"current_eval_real_path_count={current_real_path_count}; "
+                f"aliases={','.join(distinct_aliases)}"
+            ),
+            "setup_manifest",
+        )
+    return GateResult(
+        "setup_multi_candidate_current_eval",
+        True,
+        "fail",
+        (
+            f"setup_type={setup_type or 'missing'}; candidate_count={len(candidates)}; "
+            f"distinct_alias_count={len(distinct_aliases)}; "
+            f"current_eval_real_path_count={current_real_path_count}"
+        ),
+        "setup_manifest",
+    )
+
+
+def _pending_choice_setup_types() -> set[str]:
+    return {
+        "live_same_session_distinct_paths",
+        "live_setup_session_distinct_paths",
+        "eval_only_candidate_binding",
+        "fixture_only",
+    }
+
+
+def _gate_pending_choice_created(evidence: dict[str, Any]) -> GateResult:
+    event = _latest_pending_choice_created_event(evidence)
+    if event:
+        return GateResult(
+            "pending_choice_created",
+            True,
+            "pass",
+            f"event_id={event.get('id')}",
+            "events/history",
+        )
+    return GateResult(
+        "pending_choice_created",
+        True,
+        "fail",
+        "non-planner pending_choice_created event missing",
+        "events/history",
+    )
+
+
+def _gate_public_choices_abc_visible(evidence: dict[str, Any]) -> GateResult:
+    choice_ids = set(_pending_choice_public_choice_ids(evidence))
+    messages_text = "\n".join(_agent_messages(evidence))
+    has_visible_markers = all(marker in messages_text for marker in ("A.", "B.", "C."))
+    if {"A", "B", "C"}.issubset(choice_ids) or has_visible_markers:
+        return GateResult(
+            "public_choices_abc_visible",
+            True,
+            "pass",
+            f"public choice ids={','.join(sorted(choice_ids)) or 'message_markers'}",
+            "message/events",
+        )
+    return GateResult(
+        "public_choices_abc_visible",
+        True,
+        "fail",
+        f"expected public choices A/B/C, got {','.join(sorted(choice_ids)) or 'none'}",
+        "message/events",
+    )
+
+
+def _gate_public_choice_payload_sanitized(
+    evidence: dict[str, Any],
+) -> GateResult:
+    surface = _pending_choice_public_surface(evidence)
+    leak = _first_forbidden_term(surface)
+    if leak is None:
+        return GateResult(
+            "public_choice_payload_sanitized",
+            True,
+            "pass",
+            "public pending choice payload contains no private tokens",
+            "messages/session/events",
+        )
+    return GateResult(
+        "public_choice_payload_sanitized",
+        True,
+        "fail",
+        f"private pending choice token observed: {leak}",
+        "messages/session/events",
+    )
+
+
+def _gate_pending_choice_planner_not_invoked(evidence: dict[str, Any]) -> GateResult:
+    for event in _events(evidence):
+        text = json.dumps(event, ensure_ascii=False, default=str)
+        progress_kind = str(_get(event, "payload", "progress_kind") or "")
+        if progress_kind.startswith("planner_") or "planner_choice" in text:
+            return GateResult(
+                "planner_not_invoked",
+                True,
+                "fail",
+                f"planner signal observed: {progress_kind or event.get('id')}",
+                "events/history",
+            )
+    return GateResult(
+        "planner_not_invoked",
+        True,
+        "pass",
+        "no planner choice signal observed",
+        "events/history",
+    )
+
+
+def _gate_select_a_dispatched(evidence: dict[str, Any]) -> GateResult:
+    for turn in evidence.get("turns") or []:
+        text = ""
+        error = None
+        response = None
+        if isinstance(turn, TurnRecord):
+            text = turn.text
+            error = turn.error
+            response = turn.response
+        elif isinstance(turn, dict):
+            text = str(turn.get("text") or "")
+            error = turn.get("error")
+            response = turn.get("response")
+        if text.strip().upper() == "A" and error is None and response is not None:
+            return GateResult(
+                "select_A_dispatched",
+                True,
+                "pass",
+                "choice A dispatch succeeded",
+                "turns",
+            )
+    return GateResult(
+        "select_A_dispatched",
+        True,
+        "fail",
+        "successful A selection dispatch missing",
+        "turns",
+    )
+
+
+def _gate_choice_a_execution_started(
+    event: dict[str, Any] | None,
+) -> GateResult:
+    if event:
+        return GateResult(
+            "choice_A_execution_started",
+            True,
+            "pass",
+            f"event_id={event.get('id')}",
+            "events",
+        )
+    return GateResult(
+        "choice_A_execution_started",
+        True,
+        "fail",
+        "chat_execution_started missing after A selection",
+        "events",
+    )
+
+
+def _gate_execution_uses_choice_a_path(
+    evidence: dict[str, Any],
+    event: dict[str, Any] | None,
+) -> GateResult:
+    expected = _setup_choice_path_id(evidence, "A")
+    actual = _get(event or {}, "payload", "learned_path_id")
+    setup_type = str(_get(evidence, "setup_manifest", "setup_type") or "unknown")
+    expected_hash = _stable_hash(expected)
+    actual_hash = _stable_hash(actual)
+    alias = _setup_choice_alias(evidence, "A") or "A"
+    match = bool(expected and actual and expected == actual)
+    evidence_text = (
+        f"expected_choice=A; expected_alias={alias}; "
+        f"expected_path_hash={expected_hash}; actual_path_hash={actual_hash}; "
+        f"match={str(match).lower()}; setup_type={setup_type}"
+    )
+    if match:
+        return GateResult(
+            "execution_uses_choice_A_path",
+            True,
+            "pass",
+            evidence_text,
+            "setup_manifest/events",
+        )
+    return GateResult(
+        "execution_uses_choice_A_path",
+        True,
+        "fail",
+        evidence_text,
+        "setup_manifest/events",
+    )
+
+
+def _gate_slot_override_after_choice(
+    event: dict[str, Any] | None,
+    expected_item_name: str | None,
+) -> GateResult:
+    if not expected_item_name:
+        return GateResult(
+            "slot_override_after_choice",
+            False,
+            "not_observable",
+            "no expected business slot for A selection",
+            "events",
+        )
+    actual = _get(event or {}, "payload", "slot_overrides", "item_name")
+    if actual == expected_item_name:
+        return GateResult(
+            "slot_override_after_choice",
+            True,
+            "pass",
+            f"slot_overrides.item_name={actual}",
+            "events",
+        )
+    return GateResult(
+        "slot_override_after_choice",
+        True,
+        "fail",
+        f"expected slot_overrides.item_name={expected_item_name}, got {actual}",
+        "events",
+    )
+
+
+def _gate_pending_choice_cleared(evidence: dict[str, Any]) -> GateResult:
+    metadata = _get(evidence, "session", "metadata") or {}
+    if (
+        isinstance(metadata, dict)
+        and "pending_choice" not in metadata
+        and "pending_choice_private_map" not in metadata
+    ):
+        return GateResult(
+            "pending_choice_cleared",
+            True,
+            "pass",
+            "public session has no pending_choice after selection",
+            "session",
+        )
+    return GateResult(
+        "pending_choice_cleared",
+        True,
+        "fail",
+        "pending choice state remains visible after selection",
+        "session",
+    )
+
+
+def _gate_private_map_not_public_after_selection(
+    evidence: dict[str, Any],
+) -> GateResult:
+    surface = {
+        "messages": evidence.get("messages") or [],
+        "session_metadata": _get(evidence, "session", "metadata") or {},
+        "history_session_metadata": _get(evidence, "history", "session", "metadata")
+        or {},
+    }
+    text = json.dumps(surface, ensure_ascii=False, default=str).lower()
+    if "pending_choice_private_map" not in text:
+        return GateResult(
+            "private_map_not_public_after_selection",
+            True,
+            "pass",
+            "messages and public session payload contain no private map",
+            "messages/session/history",
+        )
+    return GateResult(
+        "private_map_not_public_after_selection",
+        True,
+        "fail",
+        "pending_choice_private_map observed after selection",
+        "messages/session/history",
+    )
+
+
+def _gate_pending_choice_execution_verified(
+    completed_event: dict[str, Any] | None,
+    reporter_event: dict[str, Any] | None,
+    expected_item_name: str | None,
+) -> GateResult:
+    outcome = _get(reporter_event or {}, "payload", "verification_outcome")
+    if outcome == "verified":
+        return GateResult(
+            "execution_verified",
+            True,
+            "pass",
+            "verification_outcome=verified",
+            "task_result_reported",
+        )
+    if expected_item_name:
+        dom_gate = _gate_dom_evidence(
+            "execution_verified",
+            completed_event,
+            expected_item_name,
+        )
+        if dom_gate.status == "pass":
+            return dom_gate
+    return GateResult(
+        "execution_verified",
+        True,
+        "fail",
+        f"expected verified execution, reporter outcome={outcome}",
+        "events/history",
+    )
+
+
 def _has_recovery_menu(message: str) -> bool:
     return all(marker in message for marker in ("A.", "B.", "C.")) and all(
         label in message for label in ("重试执行该操作", "重新学习", "取消")
@@ -1230,6 +1637,10 @@ def render_markdown_report(
     has_failure_recovery = any(
         case.case_id == FAILURE_RECOVERY_CASE for case in result.case_results
     )
+    pending_choice_case = next(
+        (case for case in result.case_results if case.case_id == PENDING_CHOICE_CASE),
+        None,
+    )
     lines = [
         "# M11.3.6 WAgent Runtime Eval Result",
         "",
@@ -1290,6 +1701,33 @@ def render_markdown_report(
                 "- Retry execution: not run.",
             ]
         )
+    if pending_choice_case is not None:
+        setup_gate = next(
+            (
+                gate
+                for gate in pending_choice_case.gates
+                if gate.name == "setup_multi_candidate_current_eval"
+            ),
+            None,
+        )
+        setup_type = _evidence_field(
+            setup_gate.evidence if setup_gate else "", "setup_type"
+        )
+        live_multi = _evidence_field(
+            setup_gate.evidence if setup_gate else "",
+            "live_multi_action_capability",
+        )
+        lines.extend(
+            [
+                "",
+                "## Pending Choice Eval",
+                "",
+                f"- Live Conversation eval: {'run through Conversation API' if result.session_id else 'not run'}.",
+                f"- Candidate setup type: {setup_type or 'unknown'}.",
+                f"- Live multi-action capability: {live_multi or 'unknown'}.",
+                "- Planner-backed choice: out of scope for 11.3.6.3.",
+            ]
+        )
     lines.extend(
         [
             "",
@@ -1333,7 +1771,18 @@ def write_artifacts(
 def _markdown_result_filename(cases: list[str], timestamp: str) -> str:
     if FAILURE_RECOVERY_CASE in cases:
         return f"m11-11.3.6.2-failure-recovery-eval-{timestamp}.md"
+    if PENDING_CHOICE_CASE in cases:
+        return f"m11-11.3.6.3-pending-choice-multi-candidate-eval-{timestamp}.md"
     return f"m11-11.3.6.1-wagent-runtime-eval-core-{timestamp}.md"
+
+
+def _evidence_field(evidence: str, key: str) -> str | None:
+    prefix = f"{key}="
+    for part in evidence.split(";"):
+        value = part.strip()
+        if value.startswith(prefix):
+            return value[len(prefix) :].strip()
+    return None
 
 
 def run_eval(config: EvalConfig) -> EvalResult:
@@ -1496,6 +1945,80 @@ def run_eval(config: EvalConfig) -> EvalResult:
                         latest_evidence,
                     )
                 )
+        if PENDING_CHOICE_CASE in config.cases:
+            if learned_path_id is None:
+                learn_name = f"测试项目A-{stamp}"
+                exec_name = f"测试项目B-{stamp}"
+                for text in [
+                    config.product_url,
+                    f"学习新增项目，名称叫 {learn_name}",
+                    f"帮我新增项目，名称叫 {exec_name}",
+                ]:
+                    turn = driver.send_turn(session_id, text)
+                    turns.append(turn)
+                    if turn.error:
+                        raise EvalBlockedError(turn.error)
+                latest_evidence = collector.collect(session_id)
+                learned_path_id = _latest_learned_path_id(latest_evidence)
+                if learned_path_id and not latest_evidence.get("learned_path_detail"):
+                    latest_evidence = collector.collect(session_id, [learned_path_id])
+            if learned_path_id is None:
+                case_results.append(
+                    CaseResult(
+                        case_id=PENDING_CHOICE_CASE,
+                        status="blocked",
+                        gates=[
+                            GateResult(
+                                "items_closed_loop_dependency",
+                                True,
+                                "blocked",
+                                "pending choice eval requires a learned path from this eval run",
+                                "runner",
+                            )
+                        ],
+                    )
+                )
+            else:
+                setup_manifest = _build_pending_choice_setup_manifest(
+                    learned_path_id=learned_path_id,
+                    target_url=config.product_url,
+                )
+                eval_session = driver.create_session(
+                    metadata=_pending_choice_eval_session_metadata(setup_manifest),
+                )
+                session_id = eval_session["id"]
+                collector = EvidenceCollector(driver)
+                exec_name = f"测试项目ChoiceA-{stamp}"
+                turn = driver.send_turn(session_id, config.product_url)
+                turns.append(turn)
+                if turn.error:
+                    raise EvalBlockedError(turn.error)
+                turn = driver.send_turn(
+                    session_id,
+                    f"帮我处理一下这个页面，名称叫 {exec_name}",
+                    metadata={
+                        "eval_candidate_setup": _pending_choice_dispatch_setup(
+                            setup_manifest,
+                        )
+                    },
+                )
+                turns.append(turn)
+                if turn.error:
+                    raise EvalBlockedError(turn.error)
+                turn = driver.send_turn(session_id, "A")
+                turns.append(turn)
+                if turn.error:
+                    raise EvalBlockedError(turn.error)
+                latest_evidence = collector.collect(session_id, [learned_path_id])
+                latest_evidence["setup_manifest"] = setup_manifest
+                latest_evidence["turns"] = _to_jsonable(turns)
+                latest_evidence["raw_api_responses"] = {"records": driver.raw_records}
+                case_results.append(
+                    GateEvaluator().evaluate_pending_choice_multi_candidate(
+                        latest_evidence,
+                        expected_item_name=exec_name,
+                    )
+                )
         status = _overall_status(case_results)
         return EvalResult(
             schema_version=SCHEMA_VERSION,
@@ -1598,6 +2121,92 @@ def _config_dict(config: EvalConfig) -> dict[str, Any]:
     }
 
 
+def _build_pending_choice_setup_manifest(
+    *,
+    learned_path_id: str,
+    target_url: str,
+) -> dict[str, Any]:
+    aliases = [("A", "新增项目"), ("B", "添加项目"), ("C", "录入项目")]
+    candidates = []
+    for index, (choice_id, alias) in enumerate(aliases):
+        candidates.append(
+            {
+                "choice_id": choice_id,
+                "alias": alias,
+                "learned_path_id": learned_path_id,
+                "target_url": target_url,
+                "source": "current_eval_run" if index == 0 else "eval_alias_binding",
+                "is_current_eval_real_path": index == 0,
+                "path_hash": _stable_hash(learned_path_id),
+            }
+        )
+    return {
+        "case_id": PENDING_CHOICE_CASE,
+        "setup_type": "eval_only_candidate_binding",
+        "live_multi_action_capability": False,
+        "candidates": candidates,
+    }
+
+
+def _pending_choice_eval_session_metadata(
+    setup_manifest: dict[str, Any],
+) -> dict[str, Any]:
+    actions = []
+    for candidate in setup_manifest.get("candidates") or []:
+        if not isinstance(candidate, dict):
+            continue
+        alias = str(candidate.get("alias") or "")
+        actions.append(
+            {
+                "alias": alias,
+                "utterances": [alias] if alias else [],
+                "learned_path_id": candidate.get("learned_path_id"),
+                "target_url": candidate.get("target_url"),
+                "source": "wagent_eval_candidate_binding",
+            }
+        )
+    return {
+        "pending_target": {"url": actions[0].get("target_url")} if actions else {},
+        "learned_actions": actions,
+        "eval_candidate_setup": {
+            "case_id": PENDING_CHOICE_CASE,
+            "setup_type": setup_manifest.get("setup_type"),
+            "live_multi_action_capability": setup_manifest.get(
+                "live_multi_action_capability",
+            ),
+            "candidate_count": len(actions),
+            "aliases": [action.get("alias") for action in actions],
+            "path_hashes": [
+                candidate.get("path_hash")
+                for candidate in setup_manifest.get("candidates") or []
+                if isinstance(candidate, dict)
+            ],
+        },
+    }
+
+
+def _pending_choice_dispatch_setup(setup_manifest: dict[str, Any]) -> dict[str, Any]:
+    actions = []
+    for candidate in setup_manifest.get("candidates") or []:
+        if not isinstance(candidate, dict):
+            continue
+        actions.append(
+            {
+                "choice_id": candidate.get("choice_id"),
+                "alias": candidate.get("alias"),
+                "learned_path_id": candidate.get("learned_path_id"),
+            }
+        )
+    return {
+        "case_id": PENDING_CHOICE_CASE,
+        "setup_type": setup_manifest.get("setup_type"),
+        "live_multi_action_capability": setup_manifest.get(
+            "live_multi_action_capability",
+        ),
+        "actions": actions,
+    }
+
+
 def _to_jsonable(value: Any) -> Any:
     if is_dataclass(value):
         return _to_jsonable(asdict(value))
@@ -1681,6 +2290,36 @@ def _latest_event_after(
     return matches[-1] if matches else None
 
 
+def _latest_pending_choice_created_event(
+    evidence: dict[str, Any],
+) -> dict[str, Any] | None:
+    matches = []
+    for event in _events(evidence):
+        progress_kind = str(_get(event, "payload", "progress_kind") or "")
+        if progress_kind == "pending_choice_created":
+            matches.append(event)
+    return matches[-1] if matches else None
+
+
+def _latest_pending_choice_execution_started(
+    evidence: dict[str, Any],
+) -> dict[str, Any] | None:
+    choice_event = _latest_pending_choice_created_event(evidence)
+    matches = [
+        event
+        for event in _events_after(evidence, choice_event)
+        if event.get("type") == "chat_execution_started"
+    ]
+    if matches:
+        return matches[-1]
+    matches = [
+        event
+        for event in _events(evidence)
+        if event.get("type") == "chat_execution_started"
+    ]
+    return matches[-1] if matches else None
+
+
 def _latest_execution_started_for_item(
     evidence: dict[str, Any],
     item_name: str,
@@ -1736,6 +2375,94 @@ def _latest_learned_path_detail(evidence: dict[str, Any]) -> dict[str, Any] | No
     if paths:
         return paths[-1]
     return None
+
+
+def _pending_choice_public_choice_ids(evidence: dict[str, Any]) -> list[str]:
+    ids: list[str] = []
+    for payload in _pending_choice_public_payloads(evidence):
+        choices = payload.get("choices") if isinstance(payload, dict) else None
+        for choice in choices or []:
+            if isinstance(choice, dict) and choice.get("choice_id"):
+                ids.append(str(choice["choice_id"]))
+    return list(dict.fromkeys(ids))
+
+
+def _pending_choice_public_payloads(evidence: dict[str, Any]) -> list[dict[str, Any]]:
+    payloads: list[dict[str, Any]] = []
+    metadata_pending = _get(evidence, "session", "metadata", "pending_choice")
+    if isinstance(metadata_pending, dict):
+        payloads.append(metadata_pending)
+    history_pending = _get(evidence, "history", "session", "metadata", "pending_choice")
+    if isinstance(history_pending, dict):
+        payloads.append(history_pending)
+    for event in _events(evidence):
+        progress_kind = str(_get(event, "payload", "progress_kind") or "")
+        if progress_kind == "eval_candidate_setup_applied":
+            payload = event.get("payload")
+            if isinstance(payload, dict):
+                payloads.append(payload)
+            continue
+        if progress_kind not in {"pending_choice_created", "pending_choice_retry"}:
+            continue
+        pending = _get(event, "payload", "pending_choice")
+        if isinstance(pending, dict):
+            payloads.append(pending)
+        choices = _get(event, "payload", "choices")
+        if isinstance(choices, list):
+            payloads.append({"choices": choices})
+    history_events = _get(evidence, "history", "events") or []
+    for event in history_events if isinstance(history_events, list) else []:
+        progress_kind = str(_get(event, "payload", "progress_kind") or "")
+        if progress_kind == "eval_candidate_setup_applied":
+            payload = event.get("payload")
+            if isinstance(payload, dict):
+                payloads.append(payload)
+            continue
+        if progress_kind not in {"pending_choice_created", "pending_choice_retry"}:
+            continue
+        pending = _get(event, "payload", "pending_choice")
+        if isinstance(pending, dict):
+            payloads.append(pending)
+    return payloads
+
+
+def _pending_choice_public_surface(evidence: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "messages": evidence.get("messages") or [],
+        "pending_choice_payloads": _pending_choice_public_payloads(evidence),
+    }
+
+
+def _setup_choice_path_id(evidence: dict[str, Any], choice_id: str) -> str | None:
+    for candidate in _setup_candidates(evidence):
+        if candidate.get("choice_id") == choice_id and candidate.get("learned_path_id"):
+            return str(candidate["learned_path_id"])
+    return None
+
+
+def _setup_choice_alias(evidence: dict[str, Any], choice_id: str) -> str | None:
+    for candidate in _setup_candidates(evidence):
+        if candidate.get("choice_id") == choice_id and candidate.get("alias"):
+            return str(candidate["alias"])
+    return None
+
+
+def _setup_candidates(evidence: dict[str, Any]) -> list[dict[str, Any]]:
+    manifest = evidence.get("setup_manifest")
+    if not isinstance(manifest, dict):
+        return []
+    return [
+        candidate
+        for candidate in manifest.get("candidates") or []
+        if isinstance(candidate, dict)
+    ]
+
+
+def _stable_hash(value: Any) -> str:
+    if value is None:
+        return "sha256:none"
+    digest = hashlib.sha256(str(value).encode("utf-8")).hexdigest()[:12]
+    return f"sha256:{digest}"
 
 
 def _session_learned_actions(evidence: dict[str, Any]) -> list[dict[str, Any]]:

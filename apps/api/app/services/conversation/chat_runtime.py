@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import uuid
 from dataclasses import dataclass, replace
@@ -77,6 +78,8 @@ _RECOVERY_SIDE_EFFECT_CLASSES = {"evidence_missing", "needs_review", "uncertain"
 _LIVE_ACTIVE_TASK_STATUSES = {"waiting_for_user_input"}
 _EVAL_FAILURE_RECOVERY_CASE_ID = "failure_recovery_menu_safety"
 _EVAL_ALLOWED_REPORTER_OUTCOMES = {"needs_review"}
+_EVAL_PENDING_CHOICE_CASE_ID = "pending_choice_multi_candidate"
+_EVAL_CANDIDATE_SETUP_TYPES = {"eval_only_candidate_binding"}
 
 
 def clear_pending_sensitive_values(session_id: str) -> None:
@@ -1705,6 +1708,11 @@ class InteractiveChatRuntime:
             metadata=metadata,
             intake=intake,
         )
+        eval_non_planner_choice = self._maybe_apply_eval_candidate_setup(
+            session_id=session_id,
+            metadata=metadata,
+            events=events,
+        )
         if _looks_like_active_task_continuation(intent.raw_text):
             active_task = self._active_task(session_id)
             if active_task is not None:
@@ -1724,6 +1732,20 @@ class InteractiveChatRuntime:
                 intake=intake,
             )
             if len(candidates) > 1:
+                if eval_non_planner_choice:
+                    return self._handle_pending_choice_question(
+                        session_id=session_id,
+                        raw_input=intent.raw_text,
+                        candidates=candidates,
+                        slot_overrides=_slot_overrides_from_fill_values(
+                            _fill_values_from_intake(intake) or {}
+                        ),
+                        events=events,
+                        message_id=message_id,
+                        previous_status=previous_status,
+                        target_url=intent.url or user_url,
+                        goal=intake.action.goal if intake else intent.raw_text,
+                    )
                 return self._handle_planner_pending_choice_question(
                     session_id=session_id,
                     raw_input=intent.raw_text,
@@ -3356,6 +3378,121 @@ class InteractiveChatRuntime:
             ]
         return candidates
 
+    def _maybe_apply_eval_candidate_setup(
+        self,
+        *,
+        session_id: str,
+        metadata: dict[str, Any] | None,
+        events: list[str],
+    ) -> bool:
+        setup = self._valid_eval_candidate_setup(session_id, metadata)
+        if setup is None:
+            return False
+        self._bind_eval_candidate_actions(session_id, setup)
+        aliases = [str(action.get("alias") or "") for action in setup["actions"]]
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "eval_candidate_setup_applied",
+                "case_id": _EVAL_PENDING_CHOICE_CASE_ID,
+                "setup_type": setup["setup_type"],
+                "candidate_count": len(setup["actions"]),
+                "aliases": aliases,
+                "path_hashes": [
+                    _redacted_id_hash(str(action.get("learned_path_id") or ""))
+                    for action in setup["actions"]
+                ],
+                "live_multi_action_capability": setup["live_multi_action_capability"],
+            },
+            events,
+        )
+        return True
+
+    def _valid_eval_candidate_setup(
+        self,
+        session_id: str,
+        metadata: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        dispatch_metadata = metadata or {}
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        session_metadata = session.metadata_json or {}
+        client = dispatch_metadata.get("client") or session_metadata.get("client")
+        raw_setup = dispatch_metadata.get("eval_candidate_setup")
+        if client != "wagent_eval" or not isinstance(raw_setup, dict):
+            return None
+        if raw_setup.get("case_id") != _EVAL_PENDING_CHOICE_CASE_ID:
+            return None
+        setup_type = raw_setup.get("setup_type")
+        if setup_type not in _EVAL_CANDIDATE_SETUP_TYPES:
+            return None
+        raw_actions = raw_setup.get("actions")
+        if not isinstance(raw_actions, list) or len(raw_actions) < 3:
+            return None
+        existing_actions = [
+            action
+            for action in session_metadata.get("learned_actions") or []
+            if isinstance(action, dict)
+        ]
+        existing_by_path = {
+            str(action.get("learned_path_id") or ""): action
+            for action in existing_actions
+            if action.get("learned_path_id")
+        }
+        bound_actions: list[dict[str, Any]] = []
+        for raw_action in raw_actions:
+            if not isinstance(raw_action, dict):
+                return None
+            alias = str(raw_action.get("alias") or "").strip()
+            learned_path_id = str(raw_action.get("learned_path_id") or "").strip()
+            existing = existing_by_path.get(learned_path_id)
+            if not alias or existing is None:
+                return None
+            if LearnedPathRepository(self._repo.session).get(learned_path_id) is None:
+                return None
+            bound_actions.append(
+                {
+                    "choice_id": str(raw_action.get("choice_id") or ""),
+                    "alias": alias,
+                    "utterances": [alias, f"帮我{alias}"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": existing.get("target_url"),
+                    "site_origin": existing.get("site_origin"),
+                    "page_template": existing.get("page_template"),
+                    "scenario": existing.get("scenario"),
+                }
+            )
+        return {
+            "setup_type": str(setup_type),
+            "live_multi_action_capability": bool(
+                raw_setup.get("live_multi_action_capability", False)
+            ),
+            "actions": bound_actions,
+        }
+
+    def _bind_eval_candidate_actions(
+        self,
+        session_id: str,
+        setup: dict[str, Any],
+    ) -> None:
+        session = self._repo.get_session(session_id)
+        if session is None:
+            raise ValueError(f"session not found: {session_id}")
+        metadata = dict(session.metadata_json or {})
+        existing = [
+            action for action in metadata.get("learned_actions") or [] if isinstance(action, dict)
+        ]
+        setup_actions = [
+            action for action in setup.get("actions") or [] if isinstance(action, dict)
+        ]
+        setup_keys = {_action_scope_key(action) for action in setup_actions}
+        metadata["learned_actions"] = [
+            action for action in existing if _action_scope_key(action) not in setup_keys
+        ] + setup_actions
+        self._replace_session_metadata(session_id, metadata)
+
     def _learned_action_by_path_id(
         self,
         session_id: str,
@@ -4164,6 +4301,12 @@ def _normalize_url(url: str | None) -> str:
     path = parsed.path.rstrip("/") or "/"
     normalized = parsed._replace(path=path, fragment="")
     return normalized.geturl()
+
+
+def _redacted_id_hash(value: str) -> str:
+    if not value:
+        return "sha256:"
+    return "sha256:" + hashlib.sha256(value.encode()).hexdigest()[:12]
 
 
 def _action_scope_key(action: dict[str, Any]) -> tuple[str, str]:
