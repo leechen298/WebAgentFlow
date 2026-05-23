@@ -8,6 +8,7 @@
 
 - `docs/iterations/m11/11.3.6-wagent-runtime-eval-program/`
 - `docs/iterations/m11/11.3.6.1-wagent-runtime-eval-runner-core/`
+- `docs/iterations/m11/11.3.6.4-planner-backed-choice-eval/`
 - `docs/iterations/m11/README.md`
 - `docs/iterations/m11/m11-plan.md`
 
@@ -44,6 +45,7 @@
 
 - 11.3.6 program。
 - 11.3.6.1 runner core。
+- 11.3.6.4 planner-backed choice eval。
 
 ### Step 4 · 检查
 
@@ -52,6 +54,7 @@
 ```bash
 find docs/iterations/m11/11.3.6-wagent-runtime-eval-program -maxdepth 1 -type f | sort
 find docs/iterations/m11/11.3.6.1-wagent-runtime-eval-runner-core -maxdepth 1 -type f | sort
+find docs/iterations/m11/11.3.6.4-planner-backed-choice-eval -maxdepth 1 -type f | sort
 rg -n "11\\.3\\.6|11\\.3\\.6\\.1|Final Decision" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.6*
 rg -n "TBD|TODO|fill in|implement later" docs/iterations/m11/11.3.6* docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md
 git diff --check

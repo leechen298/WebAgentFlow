@@ -13,6 +13,7 @@
 |---|---|---|---|
 | Docs | 11.3.6 directory exists | seven planning docs exist | Yes |
 | Docs | 11.3.6.1 directory exists | runner core seven docs exist | Yes |
+| Docs | 11.3.6.4 directory exists | planner-backed choice eval seven docs exist | Yes |
 | Docs | M11 README links | both 11.3.6 and 11.3.6.1 are indexed | Yes |
 | Docs | m11-plan links | program and child package roadmap are indexed | Yes |
 | Docs | Review final decision | 11.3.6.1 review has parseable final decision | Yes |
@@ -23,6 +24,7 @@
 ```bash
 find docs/iterations/m11/11.3.6-wagent-runtime-eval-program -maxdepth 1 -type f | sort
 find docs/iterations/m11/11.3.6.1-wagent-runtime-eval-runner-core -maxdepth 1 -type f | sort
+find docs/iterations/m11/11.3.6.4-planner-backed-choice-eval -maxdepth 1 -type f | sort
 rg -n "11\\.3\\.6|11\\.3\\.6\\.1|Final Decision" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.6*
 rg -n "TBD|TODO|fill in|implement later" docs/iterations/m11/11.3.6* docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md
 git diff --check

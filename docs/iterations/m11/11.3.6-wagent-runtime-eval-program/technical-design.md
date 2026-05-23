@@ -49,6 +49,8 @@ The child package now lives at
 ### 11.3.6.4 Planner-backed Choice Eval
 
 Adds planner-backed choice coverage while preserving the single-path direct replay regression.
+The child package now lives at
+[`../11.3.6.4-planner-backed-choice-eval/`](../11.3.6.4-planner-backed-choice-eval/).
 
 ## Data Flow
 
