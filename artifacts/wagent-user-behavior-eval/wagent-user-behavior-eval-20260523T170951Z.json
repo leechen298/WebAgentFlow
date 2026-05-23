@@ -1,0 +1,179 @@
+{
+  "schema_version": "11.3.7.1",
+  "status": "blocked",
+  "environment": {
+    "commit": "58e8828",
+    "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1"
+  },
+  "spec": {
+    "target_name": "product-test-site-items",
+    "target_label": "Product test items page",
+    "product_url": "http://127.0.0.1:5176/items"
+  },
+  "config": {
+    "api_base": "http://127.0.0.1:8001",
+    "spec_path": "scripts/evals/specs/wagent_user_behavior_items.json",
+    "cases": [
+      "url_only_known_page",
+      "url_only_unknown_page",
+      "url_only_unknown_choose_learn_starts_learning",
+      "execute_known_action",
+      "execute_unknown_action",
+      "execute_unknown_choose_learn_then_execute_or_learning_flow",
+      "vague_input_no_execution",
+      "forbidden_test_target_not_in_runtime_code_or_prompts"
+    ],
+    "timeout": 15,
+    "artifact_dir": "artifacts/wagent-user-behavior-eval",
+    "result_dir": "docs/testing/results",
+    "browser_visibility": "headless",
+    "write_markdown": true
+  },
+  "services": {
+    "api": {
+      "url": "http://127.0.0.1:8001/health",
+      "ok": false,
+      "error": "[Errno 61] Connection refused"
+    }
+  },
+  "case_results": [
+    {
+      "case_id": "forbidden_test_target_not_in_runtime_code_or_prompts",
+      "status": "pass",
+      "gates": [
+        {
+          "name": "forbidden_target_scan",
+          "required": true,
+          "status": "pass",
+          "evidence": "status=pass; match_count=0",
+          "source": "webagentflow-eval-integrity forbidden_target_scan"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "url_only_known_page",
+      "status": "blocked",
+      "gates": [
+        {
+          "name": "preflight",
+          "required": true,
+          "status": "blocked",
+          "evidence": "API or product test surface unavailable",
+          "source": "runner"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "url_only_unknown_page",
+      "status": "blocked",
+      "gates": [
+        {
+          "name": "preflight",
+          "required": true,
+          "status": "blocked",
+          "evidence": "API or product test surface unavailable",
+          "source": "runner"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "url_only_unknown_choose_learn_starts_learning",
+      "status": "blocked",
+      "gates": [
+        {
+          "name": "preflight",
+          "required": true,
+          "status": "blocked",
+          "evidence": "API or product test surface unavailable",
+          "source": "runner"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "execute_known_action",
+      "status": "blocked",
+      "gates": [
+        {
+          "name": "preflight",
+          "required": true,
+          "status": "blocked",
+          "evidence": "API or product test surface unavailable",
+          "source": "runner"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "execute_unknown_action",
+      "status": "blocked",
+      "gates": [
+        {
+          "name": "preflight",
+          "required": true,
+          "status": "blocked",
+          "evidence": "API or product test surface unavailable",
+          "source": "runner"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "execute_unknown_choose_learn_then_execute_or_learning_flow",
+      "status": "blocked",
+      "gates": [
+        {
+          "name": "preflight",
+          "required": true,
+          "status": "blocked",
+          "evidence": "API or product test surface unavailable",
+          "source": "runner"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "vague_input_no_execution",
+      "status": "blocked",
+      "gates": [
+        {
+          "name": "preflight",
+          "required": true,
+          "status": "blocked",
+          "evidence": "API or product test surface unavailable",
+          "source": "runner"
+        }
+      ],
+      "warnings": []
+    }
+  ],
+  "sessions": {},
+  "operator_actions": [
+    {
+      "surface": "cli",
+      "action": "run_wagent_user_behavior_eval",
+      "command": [
+        "scripts/evals/wagent_user_behavior_eval.py",
+        "--",
+        "--timeout",
+        "15"
+      ],
+      "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1",
+      "started_at": "2026-05-23T17:09:51.785678+00:00",
+      "finished_at": "2026-05-23T17:09:51.857305+00:00",
+      "duration_ms": 72,
+      "exit_code": 2
+    }
+  ],
+  "raw_product_client_records": [],
+  "gate_summary": {
+    "required_total": 8,
+    "required_passed": 1,
+    "required_failed": 0,
+    "required_blocked": 7,
+    "warnings": 0
+  }
+}
