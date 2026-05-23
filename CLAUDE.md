@@ -133,6 +133,16 @@ report what the product returned. The AI must not pretend to be an internal
 WebAgentFlow role Agent, fabricate an Agent verdict, or bypass the product's
 runtime path by directly calling internal services.
 
+Every Agent-operated validation, current or future, must leave an auditable
+external-operator trail. If Codex / Claude / another AI runs a check, the
+record must say which approved surface was used (`cli` or `ui`), what command
+was run or what product control was operated, the working directory or page,
+the raw product-client request / response log when a project CLI is involved,
+and the resulting artifact / run id. The latest redacted record must be kept at
+a stable repo path so it can be committed / pushed and reviewed by ChatGPT or
+another Agent later. Timestamped archives may exist, but they do not replace the
+stable latest copy.
+
 The AI MAY trigger a run via the project-provided **`verify-scenario` skill**.
 The skill invocation is auditable (it goes through the HTTP API, persists to
 `exploration_runs`, emits the raw Supervisor verdict + scorecard), so the
@@ -156,6 +166,9 @@ each live autonomous run as auditable product evidence, not as a casual test.
 - Call `POST /exploration/autonomous-runs` or `.../stream` via curl, fetch,
   httpx, or any non-product UI HTTP client. Use the product UI or the
   `verify-scenario` skill instead.
+- Treat a direct API call, one-off script, service import, or hidden HTTP
+  client as an "Agent autonomous test". Agent-operated tests must go through an
+  approved CLI or product UI surface and must keep the operator action log.
 - Import `run_autonomous_exploration` and drive Playwright in-process on
   the user's behalf.
 - Pretend to be an internal WebAgentFlow Agent such as Task Path Planner
@@ -172,6 +185,8 @@ each live autonomous run as auditable product evidence, not as a casual test.
   confidence + summary quoted*.
 - Re-invoke the skill in a loop to average or "re-check" results — each
   call is a real Playwright + LLM run.
+- Submit or push raw Agent-operated evidence that has not been redacted, lacks
+  a latest reviewable artifact, or omits the original CLI/UI operation record.
 
 ### MAY
 
@@ -189,6 +204,11 @@ each live autonomous run as auditable product evidence, not as a casual test.
   `/exploration/autonomous-runs[/stream]`, report it as product-initiated UI
   traffic, include the run status / `run_id` when visible, and do not reshape
   the product's outcome.
+- Run project-provided eval CLIs such as `pnpm run eval:wagent:*` or `wagent`
+  commands when the requested validation belongs to that surface. The CLI must
+  write `operator_actions`, raw product-client request records, redacted JSON /
+  Markdown artifacts, and a stable `latest` copy before the result is treated as
+  reviewable Agent-operated evidence.
 - Ask the user to run a flow in the workbench when neither the skill nor
   external UI operation is appropriate (e.g. missing services, credentials, or
   manual judgment).

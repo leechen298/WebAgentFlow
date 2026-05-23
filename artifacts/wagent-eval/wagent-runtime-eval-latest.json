@@ -1,0 +1,83 @@
+{
+  "schema_version": "11.3.6.4",
+  "status": "blocked",
+  "environment": {
+    "commit": "04b5ff3",
+    "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1"
+  },
+  "services": {
+    "api": {
+      "url": "http://127.0.0.1:9/health",
+      "ok": false,
+      "error": "[Errno 1] Operation not permitted"
+    }
+  },
+  "config": {
+    "api_base": "http://127.0.0.1:9",
+    "product_url": "http://127.0.0.1:5176/items",
+    "cases": [
+      "failure_recovery_menu_safety"
+    ],
+    "timeout": 300,
+    "artifact_dir": "artifacts/wagent-eval",
+    "result_dir": "docs/testing/results",
+    "browser_visibility": "headless",
+    "write_markdown": true
+  },
+  "session_id": null,
+  "case_results": [
+    {
+      "case_id": "failure_recovery_menu_safety",
+      "status": "blocked",
+      "turns": [],
+      "gates": [
+        {
+          "name": "preflight",
+          "required": true,
+          "status": "blocked",
+          "evidence": "API or product site unavailable",
+          "source": "preflight"
+        },
+        {
+          "name": "operator_surface_audited",
+          "required": true,
+          "status": "pass",
+          "evidence": "allowed operator surfaces: cli; actions=run_wagent_runtime_eval; commands=scripts/evals/wagent_runtime_eval.py --case failure_recovery_menu_safety --api-base",
+          "source": "operator_actions"
+        }
+      ],
+      "warnings": []
+    }
+  ],
+  "turns": [],
+  "events": [],
+  "messages": [],
+  "history": {},
+  "learned_paths": [],
+  "raw_api_responses": {},
+  "gate_summary": {
+    "required_total": 2,
+    "required_passed": 1,
+    "required_failed": 0,
+    "required_blocked": 1,
+    "warnings": 0
+  },
+  "operator_actions": [
+    {
+      "surface": "cli",
+      "action": "run_wagent_runtime_eval",
+      "command": [
+        "scripts/evals/wagent_runtime_eval.py",
+        "--case",
+        "failure_recovery_menu_safety",
+        "--api-base",
+        "http://127.0.0.1:9"
+      ],
+      "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1",
+      "started_at": "2026-05-23T11:44:03.963845+00:00",
+      "finished_at": "2026-05-23T11:44:04.006549+00:00",
+      "duration_ms": 43,
+      "exit_code": 2
+    }
+  ]
+}

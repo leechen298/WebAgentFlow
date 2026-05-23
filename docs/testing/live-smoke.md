@@ -15,6 +15,8 @@
 - 不 import / run autonomous explorer。
 - 不把 live smoke 标成 deterministic E2E。
 - 不把 LLM-dependent result 标成 CI-safe。
+- 如果由 AI Agent 代为执行，不允许用直接 API / 一次性脚本冒充 live smoke。
+  必须保留 skill/CLI/UI 操作入口和原始输出记录。
 
 ## 执行方式
 
@@ -30,6 +32,7 @@ wagent verify --spec-id <spec_id> --scenario <scenario_id>
 
 ```text
 docs/testing/results/YYYY-MM-DD-verify-scenario-live-smoke.md
+docs/testing/results/verify-scenario-live-smoke-latest.md
 ```
 
 报告必须包含：
@@ -37,6 +40,7 @@ docs/testing/results/YYYY-MM-DD-verify-scenario-live-smoke.md
 - command
 - exit code
 - raw stdout/stderr excerpt
+- operator action log（谁用哪个入口触发、cwd、开始 / 结束时间）
 - `pass_gate.status`
 - `pass_gate.reasons`
 - Supervisor verdict

@@ -107,6 +107,15 @@ def _valid_items_evidence(*, include_evidence_targets: bool = True) -> dict[str,
             "id": "lp-current",
             "actions": [{"step": 1, "action_type": "fill", "value_slot": "item_name"}],
         },
+        "operator_actions": [
+            {
+                "surface": "cli",
+                "action": "run_wagent_runtime_eval",
+                "command": ["scripts/evals/wagent_runtime_eval.py", "--case", "items_closed_loop"],
+                "cwd": "/repo",
+                "started_at": "2026-05-23T00:00:00+00:00",
+            }
+        ],
     }
 
 
@@ -211,6 +220,19 @@ def _valid_failure_recovery_evidence() -> dict[str, Any]:
                 },
             ]
         },
+        "operator_actions": [
+            {
+                "surface": "cli",
+                "action": "run_wagent_runtime_eval",
+                "command": [
+                    "scripts/evals/wagent_runtime_eval.py",
+                    "--case",
+                    "failure_recovery_menu_safety",
+                ],
+                "cwd": "/repo",
+                "started_at": "2026-05-23T00:00:00+00:00",
+            }
+        ],
     }
 
 
@@ -352,6 +374,19 @@ def _valid_pending_choice_evidence() -> dict[str, Any]:
                 },
             ]
         },
+        "operator_actions": [
+            {
+                "surface": "cli",
+                "action": "run_wagent_runtime_eval",
+                "command": [
+                    "scripts/evals/wagent_runtime_eval.py",
+                    "--case",
+                    "pending_choice_multi_candidate",
+                ],
+                "cwd": "/repo",
+                "started_at": "2026-05-23T00:00:00+00:00",
+            }
+        ],
     }
 
 
@@ -511,6 +546,19 @@ def _valid_planner_choice_evidence() -> dict[str, Any]:
                 },
             ]
         },
+        "operator_actions": [
+            {
+                "surface": "cli",
+                "action": "run_wagent_runtime_eval",
+                "command": [
+                    "scripts/evals/wagent_runtime_eval.py",
+                    "--case",
+                    "planner_backed_choice",
+                ],
+                "cwd": "/repo",
+                "started_at": "2026-05-23T00:00:00+00:00",
+            }
+        ],
     }
 
 
@@ -606,6 +654,47 @@ def test_items_gate_passes_with_valid_structured_evidence() -> None:
     assert gates["dom_evidence_verified_B"].status == "pass"
     assert gates["reporter_verified"].status == "pass"
     assert gates["final_response_verified"].status == "pass"
+    assert gates["operator_surface_audited"].status == "pass"
+
+
+def test_items_gate_fails_when_operator_action_log_missing() -> None:
+    runner = _load_runner()
+    evidence = _valid_items_evidence()
+    evidence.pop("operator_actions")
+
+    result = runner.GateEvaluator().evaluate_items_closed_loop(
+        evidence,
+        expected_item_name="测试项目B",
+    )
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["operator_surface_audited"].status == "fail"
+    assert "operator action log missing" in gates["operator_surface_audited"].evidence
+
+
+def test_items_gate_fails_when_operator_surface_is_direct_api() -> None:
+    runner = _load_runner()
+    evidence = _valid_items_evidence()
+    evidence["operator_actions"] = [
+        {
+            "surface": "direct_api",
+            "action": "post_conversation_dispatch",
+            "command": ["python", "-c", "httpx.post(...)"],
+            "cwd": "/repo",
+            "started_at": "2026-05-23T00:00:00+00:00",
+        }
+    ]
+
+    result = runner.GateEvaluator().evaluate_items_closed_loop(
+        evidence,
+        expected_item_name="测试项目B",
+    )
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["operator_surface_audited"].status == "fail"
+    assert "direct_api" in gates["operator_surface_audited"].evidence
 
 
 def test_items_gate_fails_when_required_reporter_evidence_missing() -> None:
@@ -1455,6 +1544,161 @@ def test_artifact_redacts_raw_response_text_private_payload(
     assert record["response_json"]["data"]["slot_overrides"] == "[REDACTED]"
 
 
+def test_artifact_redacts_dynamic_private_path_id_from_all_serialized_surfaces(
+    tmp_path: Path,
+) -> None:
+    runner = _load_runner()
+    private_id = "11111111-2222-3333-4444-555555555555"
+    result = runner.EvalResult(
+        schema_version=runner.SCHEMA_VERSION,
+        status="pass",
+        environment={"commit": "abc123"},
+        services={},
+        config={},
+        session_id="session-1",
+        case_results=[
+            runner.CaseResult(
+                case_id="planner_backed_choice",
+                status="pass",
+                gates=[
+                    runner.GateResult(
+                        name="execution_uses_selected_choice_path",
+                        required=True,
+                        status="pass",
+                        evidence=f"selected private path {private_id} matched",
+                        source="setup_manifest/events",
+                    )
+                ],
+            )
+        ],
+        turns=[],
+        events=[
+            {
+                "type": "chat_progress_recorded",
+                "payload": {"progress_kind": "planner_choice_selected"},
+            }
+        ],
+        messages=[{"role": "agent", "content": f"safe text, path={private_id}"}],
+        history={
+            "session": {
+                "metadata": {"pending_choice_private_map": {"A": {"learned_path_id": private_id}}}
+            }
+        },
+        learned_paths=[{"id": private_id, "page_template": "/items"}],
+        raw_api_responses={
+            "records": [
+                {
+                    "method": "GET",
+                    "path": f"/exploration/learned-paths/{private_id}",
+                    "response_text": f"raw private path {private_id}",
+                    "response_json": {
+                        "data": {
+                            "new_learned_path_id": private_id,
+                            "summary": f"path {private_id}",
+                        }
+                    },
+                }
+            ]
+        },
+        gate_summary={},
+    )
+    config = runner.parse_config(
+        [
+            "--artifact-dir",
+            str(tmp_path / "artifacts"),
+            "--result-dir",
+            str(tmp_path / "results"),
+            "--case",
+            "planner_backed_choice",
+        ]
+    )
+
+    json_path, markdown_path = runner.write_artifacts(result, config)
+
+    artifact_text = json_path.read_text(encoding="utf-8")
+    assert private_id not in artifact_text
+    assert "sha256:" in artifact_text
+    assert markdown_path is not None
+    markdown_text = markdown_path.read_text(encoding="utf-8")
+    assert private_id not in markdown_text
+    assert "sha256:" in markdown_text
+
+
+def test_write_artifacts_keeps_latest_reviewable_copy(tmp_path: Path) -> None:
+    runner = _load_runner()
+    result = runner.EvalResult(
+        schema_version=runner.SCHEMA_VERSION,
+        status="blocked",
+        environment={"commit": "abc123"},
+        services={"api": {"ok": False}},
+        config={"api_base": "http://127.0.0.1:9"},
+        session_id=None,
+        case_results=[
+            runner.CaseResult(
+                case_id="failure_recovery_menu_safety",
+                status="blocked",
+                gates=[
+                    runner.GateResult(
+                        name="operator_surface_audited",
+                        required=True,
+                        status="pass",
+                        evidence="allowed operator surfaces: cli",
+                        source="operator_actions",
+                    )
+                ],
+            )
+        ],
+        turns=[],
+        events=[],
+        messages=[],
+        history={},
+        learned_paths=[],
+        raw_api_responses={},
+        gate_summary={"required_passed": 1, "required_failed": 0},
+        operator_actions=[
+            {
+                "surface": "cli",
+                "action": "run_wagent_runtime_eval",
+                "command": [
+                    "scripts/evals/wagent_runtime_eval.py",
+                    "--case",
+                    "failure_recovery_menu_safety",
+                ],
+                "cwd": "/repo",
+                "started_at": "2026-05-23T00:00:00+00:00",
+                "exit_code": 2,
+            }
+        ],
+    )
+    config = runner.parse_config(
+        [
+            "--artifact-dir",
+            str(tmp_path / "artifacts"),
+            "--result-dir",
+            str(tmp_path / "results"),
+            "--case",
+            "failure_recovery_menu_safety",
+        ]
+    )
+
+    json_path, markdown_path = runner.write_artifacts(result, config)
+
+    latest_json = tmp_path / "artifacts" / "wagent-runtime-eval-latest.json"
+    latest_case_json = tmp_path / "artifacts" / "wagent-runtime-eval-failure-recovery-latest.json"
+    latest_markdown = tmp_path / "results" / "m11-11.3.6.2-failure-recovery-eval-latest.md"
+    assert latest_json.exists()
+    assert json.loads(latest_json.read_text(encoding="utf-8")) == json.loads(
+        json_path.read_text(encoding="utf-8")
+    )
+    assert latest_case_json.exists()
+    assert json.loads(latest_case_json.read_text(encoding="utf-8")) == json.loads(
+        json_path.read_text(encoding="utf-8")
+    )
+    assert markdown_path is not None
+    assert latest_markdown.exists()
+    assert latest_markdown.read_text(encoding="utf-8") == markdown_path.read_text(encoding="utf-8")
+
+
 def test_exit_code_reducer_prefers_actionable_status() -> None:
     runner = _load_runner()
 
@@ -1487,6 +1731,9 @@ def test_failure_recovery_case_blocks_on_invalid_api_and_writes_case_result(
     assert result.status == "blocked"
     assert [case.case_id for case in result.case_results] == ["failure_recovery_menu_safety"]
     assert result.case_results[0].gates[0].status == "blocked"
+    assert result.case_results[0].gates[1].name == "operator_surface_audited"
+    assert result.case_results[0].gates[1].status == "pass"
+    assert result.operator_actions[0].surface == "cli"
 
 
 def test_planner_choice_case_blocks_on_invalid_api_and_writes_case_result(
@@ -1510,6 +1757,8 @@ def test_planner_choice_case_blocks_on_invalid_api_and_writes_case_result(
     assert result.status == "blocked"
     assert [case.case_id for case in result.case_results] == ["planner_backed_choice"]
     assert result.case_results[0].gates[0].status == "blocked"
+    assert result.case_results[0].gates[1].name == "operator_surface_audited"
+    assert result.case_results[0].gates[1].status == "pass"
 
 
 def test_markdown_report_uses_normalized_gate_results(tmp_path: Path) -> None:

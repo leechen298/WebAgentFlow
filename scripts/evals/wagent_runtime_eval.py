@@ -57,6 +57,11 @@ SENSITIVE_KEYS = {
     "token",
     "xpath",
 }
+PRIVATE_PATH_ID_KEYS = {
+    "learned_path_id",
+    "new_learned_path_id",
+    "old_learned_path_id",
+}
 RECOVERY_FAILURE_CLASSES = {
     "needs_review",
     "evidence_missing",
@@ -89,6 +94,7 @@ FORBIDDEN_PAYLOAD_TERMS = {
 }
 PROHIBITED_AUTONOMOUS_PATH_FRAGMENT = "autonomous" + "-runs"
 PROHIBITED_DIRECT_REPLAY_SUFFIX = "/" + "replay"
+ALLOWED_OPERATOR_SURFACES = {"cli", "ui"}
 
 
 @dataclass
@@ -129,6 +135,18 @@ class TurnRecord:
 
 
 @dataclass
+class OperatorActionRecord:
+    surface: str
+    action: str
+    command: list[str]
+    cwd: str
+    started_at: str
+    finished_at: str | None = None
+    duration_ms: int | None = None
+    exit_code: int | None = None
+
+
+@dataclass
 class CaseResult:
     case_id: str
     status: str
@@ -153,6 +171,9 @@ class EvalResult:
     learned_paths: list[dict[str, Any]]
     raw_api_responses: dict[str, Any]
     gate_summary: dict[str, Any]
+    operator_actions: list[OperatorActionRecord | dict[str, Any]] = field(
+        default_factory=list
+    )
 
 
 class EvalBlockedError(RuntimeError):
@@ -473,6 +494,7 @@ class GateEvaluator:
             ),
             _gate_reporter_verified(reporter_event),
             _gate_final_response_verified(evidence, expected_item_name),
+            _gate_operator_surface_audited(evidence),
         ]
         return CaseResult(
             case_id="items_closed_loop",
@@ -518,6 +540,7 @@ class GateEvaluator:
             ),
             _gate_reporter_verified(reporter_event),
             _gate_final_response_verified(evidence, expected_item_name),
+            _gate_operator_surface_audited(evidence),
         ]
         return CaseResult(
             case_id="single_path_direct_replay_regression",
@@ -543,6 +566,7 @@ class GateEvaluator:
             _gate_recovery_events_sanitized(evidence),
             _gate_verified_happy_path_no_recovery(evidence),
             _gate_no_autonomous_or_direct_replay(evidence),
+            _gate_operator_surface_audited(evidence),
         ]
         return CaseResult(
             case_id=FAILURE_RECOVERY_CASE,
@@ -590,6 +614,7 @@ class GateEvaluator:
             ),
             _gate_final_response_verified(evidence, item_name or ""),
             _gate_no_autonomous_or_direct_replay(evidence),
+            _gate_operator_surface_audited(evidence),
         ]
         return CaseResult(
             case_id=PENDING_CHOICE_CASE,
@@ -645,6 +670,7 @@ class GateEvaluator:
             ),
             _gate_final_response_verified(evidence, item_name or ""),
             _gate_no_autonomous_or_direct_replay(evidence),
+            _gate_operator_surface_audited(evidence),
         ]
         return CaseResult(
             case_id=PLANNER_CHOICE_CASE,
@@ -689,6 +715,7 @@ class GateEvaluator:
                 expected_item_name,
             ),
             _gate_final_response_verified(evidence, expected_item_name),
+            _gate_operator_surface_audited(evidence),
         ]
         return CaseResult(
             case_id=PLANNER_SINGLE_PATH_REGRESSION_CASE,
@@ -1297,6 +1324,64 @@ def _gate_no_autonomous_or_direct_replay(evidence: dict[str, Any]) -> GateResult
         "pass",
         "runner request log contains no autonomous-run or direct replay endpoint",
         "runner raw request log",
+    )
+
+
+def _gate_operator_surface_audited(evidence: dict[str, Any]) -> GateResult:
+    actions = evidence.get("operator_actions") or []
+    if not isinstance(actions, list) or not actions:
+        return GateResult(
+            "operator_surface_audited",
+            True,
+            "fail",
+            "operator action log missing; autonomous eval must record CLI/UI surface",
+            "operator_actions",
+        )
+
+    disallowed: list[str] = []
+    surfaces: list[str] = []
+    action_names: list[str] = []
+    command_summaries: list[str] = []
+    for item in actions:
+        if is_dataclass(item):
+            action = _to_jsonable(item)
+        elif isinstance(item, dict):
+            action = item
+        else:
+            disallowed.append(type(item).__name__)
+            continue
+        surface = str(action.get("surface") or "")
+        action_name = str(action.get("action") or "")
+        command = action.get("command")
+        surfaces.append(surface or "missing")
+        if action_name:
+            action_names.append(action_name)
+        if isinstance(command, list):
+            command_summaries.append(" ".join(str(part) for part in command[:4]))
+        if surface not in ALLOWED_OPERATOR_SURFACES:
+            disallowed.append(surface or "missing")
+        if action_name in {"direct_api", "post_autonomous_run", "direct_replay"}:
+            disallowed.append(action_name)
+
+    if disallowed:
+        return GateResult(
+            "operator_surface_audited",
+            True,
+            "fail",
+            f"disallowed operator surface/action observed: {', '.join(disallowed)}",
+            "operator_actions",
+        )
+
+    return GateResult(
+        "operator_surface_audited",
+        True,
+        "pass",
+        (
+            f"allowed operator surfaces: {', '.join(sorted(set(surfaces)))}; "
+            f"actions={', '.join(sorted(set(action_names))) or 'unknown'}; "
+            f"commands={'; '.join(command_summaries) or 'not recorded'}"
+        ),
+        "operator_actions",
     )
 
 
@@ -2164,12 +2249,72 @@ def redact_sensitive(value: Any) -> Any:
     return value
 
 
+def _collect_dynamic_private_ids(
+    value: Any, *, parent_key: str | None = None
+) -> set[str]:
+    ids: set[str] = set()
+    if isinstance(value, dict):
+        if parent_key in {"learned_paths", "learned_path_detail"}:
+            path_id = value.get("id")
+            if isinstance(path_id, str) and path_id:
+                ids.add(path_id)
+        for key, item in value.items():
+            key_text = str(key)
+            if key_text in PRIVATE_PATH_ID_KEYS:
+                ids.update(_string_values(item))
+            ids.update(_collect_dynamic_private_ids(item, parent_key=key_text))
+    elif isinstance(value, list):
+        for item in value:
+            ids.update(_collect_dynamic_private_ids(item, parent_key=parent_key))
+    return ids
+
+
+def _string_values(value: Any) -> set[str]:
+    if isinstance(value, str):
+        return {value} if value else set()
+    if isinstance(value, list):
+        values: set[str] = set()
+        for item in value:
+            values.update(_string_values(item))
+        return values
+    if isinstance(value, dict):
+        values: set[str] = set()
+        for item in value.values():
+            values.update(_string_values(item))
+        return values
+    return set()
+
+
+def _redact_dynamic_private_ids(value: Any, private_ids: set[str]) -> Any:
+    if not private_ids:
+        return value
+    if isinstance(value, dict):
+        return {
+            key: _redact_dynamic_private_ids(item, private_ids)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_dynamic_private_ids(item, private_ids) for item in value]
+    if isinstance(value, str):
+        redacted = value
+        for private_id in sorted(private_ids, key=len, reverse=True):
+            redacted = redacted.replace(private_id, _stable_hash(private_id))
+        return redacted
+    return value
+
+
 def render_markdown_report(
     result: EvalResult,
     *,
     artifact_path: Path,
+    dynamic_private_ids: set[str] | None = None,
 ) -> str:
-    warnings = [warning for case in result.case_results for warning in case.warnings]
+    private_ids = dynamic_private_ids or set()
+    warnings = [
+        _redact_dynamic_private_ids(warning, private_ids)
+        for case in result.case_results
+        for warning in case.warnings
+    ]
     has_failure_recovery = any(
         case.case_id == FAILURE_RECOVERY_CASE for case in result.case_results
     )
@@ -2217,7 +2362,8 @@ def render_markdown_report(
         for gate in case.gates:
             lines.append(
                 f"| {case.case_id} | {gate.name} | {gate.status} | "
-                f"{_md_escape(gate.evidence)} | {_md_escape(gate.source)} |"
+                f"{_md_escape(_redact_dynamic_private_ids(gate.evidence, private_ids))} | "
+                f"{_md_escape(_redact_dynamic_private_ids(gate.source, private_ids))} |"
             )
     lines.extend(["", "## Warnings / Not Observable", ""])
     if warnings:
@@ -2312,12 +2458,51 @@ def render_markdown_report(
                 f"- Live multi-action capability: {live_multi or 'unknown'}.",
                 f"- Planner distinct-path capability: {distinct_path or 'unknown'}.",
                 f"- Planner events observed: {', '.join(planner_events) or 'none'}.",
-                f"- Selected choice evidence: {selected_gate.evidence if selected_gate else 'N/A'}.",
+                (
+                    "- Selected choice evidence: "
+                    f"{_redact_dynamic_private_ids(selected_gate.evidence, private_ids) if selected_gate else 'N/A'}."
+                ),
                 (
                     "- Eval-only alias binding does not prove full live distinct-action "
                     "Planner capability."
                 ),
             ]
+        )
+    lines.extend(
+        [
+            "",
+            "## Operator Action Log",
+            "",
+        ]
+    )
+    if result.operator_actions:
+        lines.extend(
+            [
+                "| Surface | Action | Command | CWD | Exit Code |",
+                "|---|---|---|---|---:|",
+            ]
+        )
+        for item in result.operator_actions:
+            action = _to_jsonable(item)
+            if not isinstance(action, dict):
+                continue
+            command = action.get("command")
+            command_text = (
+                " ".join(str(part) for part in command)
+                if isinstance(command, list)
+                else str(command or "")
+            )
+            exit_code = action.get("exit_code")
+            lines.append(
+                f"| {_md_escape(action.get('surface') or '')} | "
+                f"{_md_escape(action.get('action') or '')} | "
+                f"{_md_escape(command_text)} | "
+                f"{_md_escape(action.get('cwd') or '')} | "
+                f"{_md_escape(exit_code if exit_code is not None else 'N/A')} |"
+            )
+    else:
+        lines.append(
+            "- Missing; this result is not reviewable as agent-operated eval evidence."
         )
     lines.extend(
         [
@@ -2341,9 +2526,22 @@ def write_artifacts(
     json_path = config.artifact_dir / f"wagent-runtime-eval-{timestamp}.json"
     markdown_path: Path | None = None
     config.artifact_dir.mkdir(parents=True, exist_ok=True)
-    result_dict = redact_sensitive(_to_jsonable(result))
+    result_payload = _to_jsonable(result)
+    dynamic_private_ids = _collect_dynamic_private_ids(result_payload)
+    result_dict = redact_sensitive(
+        _redact_dynamic_private_ids(result_payload, dynamic_private_ids)
+    )
+    json_text = json.dumps(result_dict, ensure_ascii=False, indent=2)
     json_path.write_text(
-        json.dumps(result_dict, ensure_ascii=False, indent=2),
+        json_text,
+        encoding="utf-8",
+    )
+    (config.artifact_dir / "wagent-runtime-eval-latest.json").write_text(
+        json_text,
+        encoding="utf-8",
+    )
+    (config.artifact_dir / _json_latest_result_filename(config.cases)).write_text(
+        json_text,
         encoding="utf-8",
     )
     if config.write_markdown:
@@ -2352,8 +2550,14 @@ def write_artifacts(
             config.cases,
             timestamp,
         )
-        markdown_path.write_text(
-            render_markdown_report(result, artifact_path=json_path),
+        markdown_text = render_markdown_report(
+            result,
+            artifact_path=json_path,
+            dynamic_private_ids=dynamic_private_ids,
+        )
+        markdown_path.write_text(markdown_text, encoding="utf-8")
+        (config.result_dir / _markdown_latest_result_filename(config.cases)).write_text(
+            markdown_text,
             encoding="utf-8",
         )
     return json_path, markdown_path
@@ -2369,6 +2573,97 @@ def _markdown_result_filename(cases: list[str], timestamp: str) -> str:
     return f"m11-11.3.6.1-wagent-runtime-eval-core-{timestamp}.md"
 
 
+def _markdown_latest_result_filename(cases: list[str]) -> str:
+    if FAILURE_RECOVERY_CASE in cases:
+        return "m11-11.3.6.2-failure-recovery-eval-latest.md"
+    if PLANNER_CHOICE_CASE in cases:
+        return "m11-11.3.6.4-planner-backed-choice-eval-latest.md"
+    if PENDING_CHOICE_CASE in cases:
+        return "m11-11.3.6.3-pending-choice-multi-candidate-eval-latest.md"
+    return "m11-11.3.6.1-wagent-runtime-eval-core-latest.md"
+
+
+def _json_latest_result_filename(cases: list[str]) -> str:
+    if FAILURE_RECOVERY_CASE in cases:
+        return "wagent-runtime-eval-failure-recovery-latest.json"
+    if PLANNER_CHOICE_CASE in cases:
+        return "wagent-runtime-eval-planner-choice-latest.json"
+    if PENDING_CHOICE_CASE in cases:
+        return "wagent-runtime-eval-pending-choice-latest.json"
+    return "wagent-runtime-eval-core-latest.json"
+
+
+def _build_cli_operator_action(
+    config: EvalConfig,
+    *,
+    started_at: str,
+) -> OperatorActionRecord:
+    command = ["scripts/evals/wagent_runtime_eval.py"]
+    for case in config.cases:
+        command.extend(["--case", case])
+    if config.api_base != "http://127.0.0.1:8001":
+        command.extend(["--api-base", config.api_base])
+    if config.product_url != "http://127.0.0.1:5176/items":
+        command.extend(["--product-url", config.product_url])
+    if config.timeout != 300:
+        command.extend(["--timeout", str(config.timeout)])
+    if config.browser_visibility != "headless":
+        command.extend(["--browser-visibility", config.browser_visibility])
+    return OperatorActionRecord(
+        surface="cli",
+        action="run_wagent_runtime_eval",
+        command=command,
+        cwd=str(Path.cwd()),
+        started_at=started_at,
+    )
+
+
+def _attach_operator_actions(
+    evidence: dict[str, Any],
+    operator_actions: list[OperatorActionRecord],
+) -> dict[str, Any]:
+    evidence["operator_actions"] = _to_jsonable(operator_actions)
+    return evidence
+
+
+def _finalize_cli_operator_action(
+    result: EvalResult,
+    *,
+    argv: list[str] | None,
+    started_at: str,
+    duration_ms: int,
+    exit_code: int,
+) -> None:
+    if not result.operator_actions:
+        result.operator_actions.append(
+            OperatorActionRecord(
+                surface="cli",
+                action="run_wagent_runtime_eval",
+                command=_argv_command(argv),
+                cwd=str(Path.cwd()),
+                started_at=started_at,
+            )
+        )
+    first = result.operator_actions[0]
+    if is_dataclass(first):
+        first.command = _argv_command(argv)
+        first.finished_at = utc_now()
+        first.duration_ms = duration_ms
+        first.exit_code = exit_code
+        return
+    if isinstance(first, dict):
+        first["command"] = _argv_command(argv)
+        first["finished_at"] = utc_now()
+        first["duration_ms"] = duration_ms
+        first["exit_code"] = exit_code
+
+
+def _argv_command(argv: list[str] | None) -> list[str]:
+    if argv is None:
+        return list(sys.argv)
+    return [sys.argv[0], *argv]
+
+
 def _evidence_field(evidence: str, key: str) -> str | None:
     prefix = f"{key}="
     for part in evidence.split(";"):
@@ -2379,10 +2674,13 @@ def _evidence_field(evidence: str, key: str) -> str | None:
 
 
 def run_eval(config: EvalConfig) -> EvalResult:
+    started_at = utc_now()
+    operator_actions = [_build_cli_operator_action(config, started_at=started_at)]
     preflight = run_preflight(config)
     environment = {"commit": _git_commit(), "cwd": str(Path.cwd())}
     config_dict = _config_dict(config)
     if preflight.status == "blocked":
+        operator_evidence = {"operator_actions": _to_jsonable(operator_actions)}
         cases = [
             CaseResult(
                 case_id=case,
@@ -2394,7 +2692,8 @@ def run_eval(config: EvalConfig) -> EvalResult:
                         "blocked",
                         "API or product site unavailable",
                         "preflight",
-                    )
+                    ),
+                    _gate_operator_surface_audited(operator_evidence),
                 ],
                 warnings=[],
             )
@@ -2415,6 +2714,7 @@ def run_eval(config: EvalConfig) -> EvalResult:
             learned_paths=[],
             raw_api_responses={},
             gate_summary=_gate_summary(cases),
+            operator_actions=operator_actions,
         )
 
     driver = ConversationDriver(config)
@@ -2440,9 +2740,17 @@ def run_eval(config: EvalConfig) -> EvalResult:
                 if turn.error:
                     raise EvalBlockedError(turn.error)
             latest_evidence = collector.collect(session_id)
+            latest_evidence = _attach_operator_actions(
+                latest_evidence,
+                operator_actions,
+            )
             learned_path_id = _latest_learned_path_id(latest_evidence)
             if learned_path_id and not latest_evidence.get("learned_path_detail"):
                 latest_evidence = collector.collect(session_id, [learned_path_id])
+                latest_evidence = _attach_operator_actions(
+                    latest_evidence,
+                    operator_actions,
+                )
             case_results.append(
                 GateEvaluator().evaluate_items_closed_loop(
                     latest_evidence,
@@ -2476,6 +2784,10 @@ def run_eval(config: EvalConfig) -> EvalResult:
                 if turn.error:
                     raise EvalBlockedError(turn.error)
                 latest_evidence = collector.collect(session_id, [learned_path_id])
+                latest_evidence = _attach_operator_actions(
+                    latest_evidence,
+                    operator_actions,
+                )
                 case_results.append(
                     GateEvaluator().evaluate_single_path_direct_replay_regression(
                         latest_evidence,
@@ -2497,9 +2809,17 @@ def run_eval(config: EvalConfig) -> EvalResult:
                     if turn.error:
                         raise EvalBlockedError(turn.error)
                 latest_evidence = collector.collect(session_id)
+                latest_evidence = _attach_operator_actions(
+                    latest_evidence,
+                    operator_actions,
+                )
                 learned_path_id = _latest_learned_path_id(latest_evidence)
                 if learned_path_id and not latest_evidence.get("learned_path_detail"):
                     latest_evidence = collector.collect(session_id, [learned_path_id])
+                    latest_evidence = _attach_operator_actions(
+                        latest_evidence,
+                        operator_actions,
+                    )
             if learned_path_id is None:
                 case_results.append(
                     CaseResult(
@@ -2532,6 +2852,10 @@ def run_eval(config: EvalConfig) -> EvalResult:
                 if turn.error:
                     raise EvalBlockedError(turn.error)
                 latest_evidence = collector.collect(session_id, [learned_path_id])
+                latest_evidence = _attach_operator_actions(
+                    latest_evidence,
+                    operator_actions,
+                )
                 latest_evidence["raw_api_responses"] = {"records": driver.raw_records}
                 case_results.append(
                     GateEvaluator().evaluate_failure_recovery_menu_safety(
@@ -2552,9 +2876,17 @@ def run_eval(config: EvalConfig) -> EvalResult:
                     if turn.error:
                         raise EvalBlockedError(turn.error)
                 latest_evidence = collector.collect(session_id)
+                latest_evidence = _attach_operator_actions(
+                    latest_evidence,
+                    operator_actions,
+                )
                 learned_path_id = _latest_learned_path_id(latest_evidence)
                 if learned_path_id and not latest_evidence.get("learned_path_detail"):
                     latest_evidence = collector.collect(session_id, [learned_path_id])
+                    latest_evidence = _attach_operator_actions(
+                        latest_evidence,
+                        operator_actions,
+                    )
             if learned_path_id is None:
                 case_results.append(
                     CaseResult(
@@ -2603,6 +2935,10 @@ def run_eval(config: EvalConfig) -> EvalResult:
                 if turn.error:
                     raise EvalBlockedError(turn.error)
                 latest_evidence = collector.collect(session_id, [learned_path_id])
+                latest_evidence = _attach_operator_actions(
+                    latest_evidence,
+                    operator_actions,
+                )
                 latest_evidence["setup_manifest"] = setup_manifest
                 latest_evidence["turns"] = _to_jsonable(turns)
                 latest_evidence["raw_api_responses"] = {"records": driver.raw_records}
@@ -2626,9 +2962,17 @@ def run_eval(config: EvalConfig) -> EvalResult:
                     if turn.error:
                         raise EvalBlockedError(turn.error)
                 latest_evidence = collector.collect(session_id)
+                latest_evidence = _attach_operator_actions(
+                    latest_evidence,
+                    operator_actions,
+                )
                 learned_path_id = _latest_learned_path_id(latest_evidence)
                 if learned_path_id and not latest_evidence.get("learned_path_detail"):
                     latest_evidence = collector.collect(session_id, [learned_path_id])
+                    latest_evidence = _attach_operator_actions(
+                        latest_evidence,
+                        operator_actions,
+                    )
             if learned_path_id is None:
                 blocked_gate = GateResult(
                     "items_closed_loop_dependency",
@@ -2678,6 +3022,10 @@ def run_eval(config: EvalConfig) -> EvalResult:
                 if turn.error:
                     raise EvalBlockedError(turn.error)
                 latest_evidence = collector.collect(session_id, [learned_path_id])
+                latest_evidence = _attach_operator_actions(
+                    latest_evidence,
+                    operator_actions,
+                )
                 latest_evidence["setup_manifest"] = setup_manifest
                 latest_evidence["turns"] = _to_jsonable(turns)
                 latest_evidence["raw_api_responses"] = {"records": driver.raw_records}
@@ -2716,6 +3064,10 @@ def run_eval(config: EvalConfig) -> EvalResult:
                 if turn.error:
                     raise EvalBlockedError(turn.error)
                 latest_evidence = collector.collect(session_id, [learned_path_id])
+                latest_evidence = _attach_operator_actions(
+                    latest_evidence,
+                    operator_actions,
+                )
                 latest_evidence["turns"] = _to_jsonable(turns)
                 latest_evidence["raw_api_responses"] = {"records": driver.raw_records}
                 case_results.append(
@@ -2741,6 +3093,7 @@ def run_eval(config: EvalConfig) -> EvalResult:
             learned_paths=latest_evidence.get("learned_paths") or [],
             raw_api_responses={"records": driver.raw_records},
             gate_summary=_gate_summary(case_results),
+            operator_actions=operator_actions,
         )
     except (EvalTimeoutError, httpx.TimeoutException) as exc:
         case_results.append(_terminal_case("timeout", str(exc), "dispatch"))
@@ -2764,6 +3117,7 @@ def run_eval(config: EvalConfig) -> EvalResult:
         learned_paths=latest_evidence.get("learned_paths") or [],
         raw_api_responses={"records": driver.raw_records},
         gate_summary=_gate_summary(case_results),
+        operator_actions=operator_actions,
     )
 
 
@@ -3363,14 +3717,23 @@ def _find_key_values(value: Any, key: str) -> list[Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    started_at = utc_now()
+    start = time.perf_counter()
     config = parse_config(argv)
     result = run_eval(config)
+    exit_code = reduce_exit_code([case.status for case in result.case_results])
+    _finalize_cli_operator_action(
+        result,
+        argv=argv,
+        started_at=started_at,
+        duration_ms=int((time.perf_counter() - start) * 1000),
+        exit_code=exit_code,
+    )
     try:
         artifact_path, markdown_path = write_artifacts(result, config)
     except Exception as exc:  # noqa: BLE001 - maps to artifact failure exit
         print(f"status=error artifact_write_failed={exc}", file=sys.stderr)
         return 4
-    exit_code = reduce_exit_code([case.status for case in result.case_results])
     print(f"status={result.status}")
     print(f"exit_code={exit_code}")
     print(f"json_artifact={artifact_path}")

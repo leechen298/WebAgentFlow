@@ -121,6 +121,14 @@ Codex 等）主要负责写代码，但当用户明确要求 UI smoke / 浏览�
 的结果。AI 不得伪装成 WebAgentFlow 内部角色 Agent，不得编造 Agent 裁决，
 也不得绕过产品运行路径直接调用内部服务。
 
+所有当前和未来的 Agent-operated validation 都必须留下可审计的外部操作轨迹。
+如果 Codex / Claude / 其他 AI 跑了一次校验，记录里必须说明使用的是哪个
+被允许的入口（`cli` 或 `ui`）、执行了什么命令或操作了哪个产品控件、工作
+目录或页面、项目 CLI 涉及时的原始 product-client request / response log，
+以及产出的 artifact / run id。最新一份已脱敏记录必须保留在稳定的仓库路径，
+方便 commit / push 后由 ChatGPT 或其他 Agent 复核。可以保留带时间戳的归档，
+但它不能替代稳定的 latest 副本。
+
 AI 可以通过项目提供的 **`verify-scenario` skill** 触发一次运行。通过
 skill 调用是可审计的（走 HTTP API、持久化进 `exploration_runs`、输出原
 始 Supervisor 裁决 + scorecard），所以验证逻辑依然成立：裁决由项目内
@@ -142,6 +150,9 @@ Workbench 的 `Run` 或 Use Cases 的 `Run selected`。这种情况下，
 - 用 curl、fetch、httpx 或任何非产品 UI 的 HTTP 客户端调用
   `POST /exploration/autonomous-runs` 或 `.../stream`。请通过产品 UI 或
   `verify-scenario` skill 触发。
+- 把直接 API 调用、一次性脚本、service import 或隐藏 HTTP client 包装成
+  "Agent 自主测试"。Agent-operated 测试必须通过被允许的 CLI 或产品 UI 入口，
+  并保留 operator action log。
 - 导入 `run_autonomous_exploration` 并在进程内直接驱动 Playwright。
 - 伪装成 Task Path Planner（legacy: Agent D）、Task Result Reporter
   （legacy: Agent E）、Supervisor Agent 等 WebAgentFlow 内部 Agent，或在
@@ -155,6 +166,8 @@ Workbench 的 `Run` 或 Use Cases 的 `Run selected`。这种情况下，
   **同时引用 Supervisor 的 confidence + summary 原文**。
 - 在循环里反复调 skill 来"平均"或"复核"结果 —— 每次调用都是一次真实
   的 Playwright + LLM 运行。
+- 提交或 push 未脱敏、没有 latest 可复核 artifact、或缺少原始 CLI/UI 操作
+  记录的 Agent-operated evidence。
 
 ### 允许做
 
@@ -170,6 +183,11 @@ Workbench 的 `Run` 或 Use Cases 的 `Run selected`。这种情况下，
   员操作产品 Console UI。如果因此触发 `/exploration/autonomous-runs[/stream]`，
   报告时要说明这是产品 UI 触发的流量；能看到 `run_id` / run status 时要
   记录；不得重写或美化产品返回的结果。
+- 当请求的校验属于项目 CLI 表面时，可以运行项目提供的 eval CLI，例如
+  `pnpm run eval:wagent:*` 或 `wagent` 命令。CLI 必须写入
+  `operator_actions`、原始 product-client request 记录、已脱敏 JSON /
+  Markdown artifact，以及稳定的 `latest` 副本；否则不能把结果当作可复核的
+  Agent-operated evidence。
 - 当 skill 和外部 UI 操作都不适合时（服务未启动、缺少凭据、需要人工判断
   等），请用户去 workbench 亲自跑。
 

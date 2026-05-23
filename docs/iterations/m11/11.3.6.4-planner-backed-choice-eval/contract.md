@@ -135,6 +135,7 @@ signals。
 | `execution_verified` | yes | execution evidence / reporter event | 对应执行结果 verified |
 | `final_response_verified` | yes | final WAgent message | 回复基于 evidence 说明执行成功 |
 | `no_autonomous_or_direct_replay` | yes | runner raw request log | runner 不调用 autonomous-run endpoints 或 direct replay endpoint |
+| `operator_surface_audited` | yes | operator action log | runner 通过允许的 CLI/UI 入口触发，并保留原始操作记录 |
 
 ### `planner_single_path_bypass_regression`
 
@@ -147,6 +148,7 @@ signals。
 | `execution_uses_current_learned_path` | yes | current eval learned path + execution event | execution path 来自当前 eval session |
 | `execution_verified` | yes | execution evidence / reporter event | 执行 verified |
 | `final_response_verified` | yes | final WAgent message | 回复基于 evidence 说明执行成功 |
+| `operator_surface_audited` | yes | operator action log | runner 通过允许的 CLI/UI 入口触发，并保留原始操作记录 |
 
 如果某个 source 当前不可观察，runner 只能给该 gate 标记 `not_observable` / `warning`，并在
 Markdown result 中写出 follow-up；不得从 final text 推断 Planner top choice、private map 或
@@ -228,7 +230,10 @@ Hash 必须稳定到足以审计同一次 artifact 内的 expected / actual matc
 
 ```text
 artifacts/wagent-eval/wagent-runtime-eval-${timestamp}.json
+artifacts/wagent-eval/wagent-runtime-eval-latest.json
+artifacts/wagent-eval/wagent-runtime-eval-planner-choice-latest.json
 docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-${date}.md
+docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-latest.md
 ```
 
 Markdown result 必须显式说明：

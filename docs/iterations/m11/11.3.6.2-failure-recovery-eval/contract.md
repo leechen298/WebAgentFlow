@@ -78,6 +78,7 @@ case 或 optional diagnostic。
 | `recovery_events_sanitized` | yes | events / history | public events 不暴露 private retry / relearn / cancel payload |
 | `verified_happy_path_no_recovery` | yes | previous or control turn messages/events | verified happy path 不出现 recovery menu |
 | `no_autonomous_or_direct_replay` | yes | runner source / raw request log | runner 不调用 autonomous-run endpoints 或 direct replay endpoint |
+| `operator_surface_audited` | yes | operator action log | runner 通过允许的 CLI/UI 入口触发，并保留原始操作记录 |
 | `retry_execution_verified` | optional | later retry turn evidence | 首版可不执行；若执行，必须证明 retry 后由 reporter verified |
 
 如果某个 source 当前不可观察，runner 只能给该 gate 标记 `not_observable` / `warning`，并在
@@ -105,7 +106,10 @@ JSON artifact、Markdown result 和 public gate evidence 必须脱敏：
 
 ```text
 artifacts/wagent-eval/wagent-runtime-eval-${timestamp}.json
+artifacts/wagent-eval/wagent-runtime-eval-latest.json
+artifacts/wagent-eval/wagent-runtime-eval-failure-recovery-latest.json
 docs/testing/results/m11-11.3.6.2-failure-recovery-eval-${date}.md
+docs/testing/results/m11-11.3.6.2-failure-recovery-eval-latest.md
 ```
 
 Markdown result 必须显式说明：

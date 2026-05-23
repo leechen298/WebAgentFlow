@@ -17,6 +17,7 @@
 - 打开真实页面。
 - 实际点击、输入、观察。
 - 记录浏览器观察、截图、trace、video 或 equivalent visible evidence。
+- 记录原始操作步骤：打开了哪个页面、点击了哪个按钮、输入了什么、观察到什么。
 - 产出人工可读报告。
 
 这不是 deterministic E2E，不进常规 CI，也不替代 Playwright Test。
@@ -37,6 +38,7 @@ Agent 也可以按同一份用例和报告模板执行。
 
 - 没有实际浏览器观察，不得写 PASS。
 - API-only 结果不能算 Agent-operated UI exploratory。
+- 没有原始 UI 操作记录，不能算 Agent-operated UI exploratory。
 - Headless E2E 不能算 Agent-operated UI exploratory。
 - Component test 不能算 Agent-operated UI exploratory。
 - Static selector smoke 不能算 Agent-operated UI exploratory。
@@ -49,8 +51,11 @@ Agent 也可以按同一份用例和报告模板执行。
 - 不 import / run autonomous explorer。
 - 如果工具无法打开页面，写 `BLOCKED`。
 - 报告必须写明 tool：Codex、Claude Code、headed Playwright 或其他具体工具。
+- 报告必须写明 operator action log：页面、控件、点击 / 输入 / 等待 / 观察顺序。
 - 报告必须写明是否调用 autonomous endpoint，默认应为 `no`。
 - 报告必须写明是否触发 WebAgentFlow 产品侧 LLM provider，默认应为 `no`。
+- 当前最新一份 Agent-operated UI 报告必须同步到稳定 latest 路径，方便 commit /
+  push 后由 ChatGPT 或其他 Agent 复核；带日期报告可作为历史归档。
 - Codex、Claude Code 或其他 browser-capable Agent 可以作为外部测试操作员；
   禁止的是伪装成 WebAgentFlow 内部 Agent、绕过产品 UI 直接调内部服务、
   或编造产品没有实际返回的结果。
@@ -81,6 +86,7 @@ Expected visible result:
 Forbidden actions:
 Evidence requirement:
 Report path:
+Latest report path:
 ```
 
 ## 当前用例组
@@ -106,6 +112,7 @@ docs/testing/agent-operated-ui/cases/learned-path-catalog-visual-ui.md
 
 ```text
 docs/testing/results/YYYY-MM-DD-catalog-visual-ui-exploratory.md
+docs/testing/results/agent-operated-ui-latest.md
 ```
 
 ### AUI-02 · Console Operator 可视化页面探索
@@ -131,6 +138,7 @@ docs/testing/agent-operated-ui/cases/console-operator-visual-ui.md
 ```text
 docs/testing/results/YYYY-MM-DD-console-operator-visual-ui-exploratory.md
 docs/testing/results/YYYY-MM-DD-console-operator-live-ui-smoke.md
+docs/testing/results/agent-operated-ui-latest.md
 ```
 
 ### AUI-03 · Validation-site 浏览器冒烟
@@ -173,6 +181,11 @@ Commit:
 | --- | --- | --- |
 
 ## 操作步骤与观察
+
+## Operator Action Log
+
+| Step | Surface | Action | Target | Value / Observation |
+| ---: | --- | --- | --- | --- |
 
 ## 边界
 

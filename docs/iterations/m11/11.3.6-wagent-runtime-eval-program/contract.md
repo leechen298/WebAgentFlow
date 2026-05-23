@@ -46,8 +46,26 @@ WAgent Runtime Eval Program 是 M11 working runtime 的本地验收体系。它�
 
 ```text
 artifacts/wagent-eval/${runner_or_case}-${timestamp}.json
+artifacts/wagent-eval/${runner_or_case}-latest.json
+artifacts/wagent-eval/wagent-runtime-eval-${case_family}-latest.json
 docs/testing/results/m11-${package}-${case_or_runner}-${date}.md
+docs/testing/results/m11-${package}-${case_or_runner}-latest.md
 ```
+
+`latest` files are the reviewable moving head for Agent-operated eval evidence.
+They must contain the same redacted payload as the newest timestamped artifact
+and are intended to be committed / pushed when the run is submitted as current
+evidence. Timestamped archives preserve history; the latest copy lets ChatGPT
+or another Agent audit the newest state without guessing which timestamp is
+current. When multiple eval case families may run in parallel, commit / push the
+case-family latest JSON rather than relying only on the generic latest file.
+
+JSON artifacts must include an `operator_actions` section. For CLI evals it
+records the allowed external surface (`cli`), command, cwd, timing, and exit
+code. For UI-operated smoke evidence, the Markdown result must record the page
+and product controls operated. Direct API clients, service imports, one-off
+HTTP scripts, and hidden replay/autonomous calls cannot be counted as
+Agent-operated validation evidence.
 
 Markdown result 至少包含：
 
@@ -59,6 +77,7 @@ Markdown result 至少包含：
 - required gates。
 - warnings / not observable。
 - raw JSON artifact path。
+- operator action log。
 - not-run / boundary statement。
 
 ## Exit Code Contract

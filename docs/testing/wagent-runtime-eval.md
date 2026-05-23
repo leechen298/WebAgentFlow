@@ -189,6 +189,11 @@ JSON artifact:
 
 ```text
 artifacts/wagent-eval/wagent-runtime-eval-${timestamp}.json
+artifacts/wagent-eval/wagent-runtime-eval-latest.json
+artifacts/wagent-eval/wagent-runtime-eval-core-latest.json
+artifacts/wagent-eval/wagent-runtime-eval-failure-recovery-latest.json
+artifacts/wagent-eval/wagent-runtime-eval-pending-choice-latest.json
+artifacts/wagent-eval/wagent-runtime-eval-planner-choice-latest.json
 ```
 
 Markdown result:
@@ -198,10 +203,28 @@ docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-${timestamp}.md
 docs/testing/results/m11-11.3.6.2-failure-recovery-eval-${timestamp}.md
 docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-${timestamp}.md
 docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-${timestamp}.md
+docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-latest.md
+docs/testing/results/m11-11.3.6.2-failure-recovery-eval-latest.md
+docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-latest.md
+docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-latest.md
 ```
 
 Both outputs are derived from the normalized `EvalResult`. The JSON artifact
-also stores raw API request / response records with sensitive keys redacted.
+also stores raw product-client request / response records with sensitive keys
+redacted. Each run writes a timestamped archive, a generic moving `latest` copy,
+and a case-family `latest` copy. Commit / push the case-family latest artifact
+when submitting current Agent-operated evidence, because parallel case families
+may overwrite the generic latest file.
+
+The JSON artifact includes:
+
+- `operator_actions`: the external operator trail. For CLI evals this records
+  the allowed surface (`cli`), command, cwd, timing, and exit code. UI-operated
+  smoke reports must record the page / product control path in their result
+  document.
+- `raw_api_responses.records`: the project CLI's product-client request log.
+  These records are allowed only for approved product APIs and must remain
+  redacted.
 
 ## Gate Status
 
@@ -230,6 +253,7 @@ Failure recovery gates are hard gates for the failure-recovery case:
 - `recovery_events_sanitized`
 - `verified_happy_path_no_recovery`
 - `no_autonomous_or_direct_replay`
+- `operator_surface_audited`
 
 `retry_execution_verified` is intentionally not required in 11.3.6.2. Markdown
 results must say `Retry execution: not run.` unless a later case explicitly
@@ -250,6 +274,7 @@ Pending choice gates are hard gates for `pending_choice_multi_candidate`:
 - `execution_verified`
 - `final_response_verified`
 - `no_autonomous_or_direct_replay`
+- `operator_surface_audited`
 
 `slot_override_after_choice` may be `not_observable` only when the case does not
 carry a business slot. The `/items` eval path expects `item_name` and treats the
@@ -272,6 +297,7 @@ Planner-backed choice gates are hard gates for `planner_backed_choice`:
 - `execution_verified`
 - `final_response_verified`
 - `no_autonomous_or_direct_replay`
+- `operator_surface_audited`
 
 `planner_warning_wording_safe` and `planner_top_choice_observable` are
 conditional. `planner_top_choice_observable` may be `not_observable` when the
@@ -280,7 +306,8 @@ current public read surface does not expose a sanitized top choice id/hash.
 `planner_single_path_bypass_regression` is emitted as a required regression
 section for `planner_backed_choice`. It verifies one current-session learned
 action, no planner candidate/choice events, direct execution, selected current
-path usage, verified execution, and evidence-based final response.
+path usage, verified execution, evidence-based final response, and the
+operator action log.
 
 ## Exit Codes
 
@@ -300,6 +327,8 @@ This runner must not:
 - call `verify-scenario`;
 - call autonomous-run endpoints;
 - call direct replay APIs as a substitute for Conversation API dispatch;
+- allow a hidden direct API client or one-off script to count as Agent-operated
+  validation evidence;
 - start long-running services implicitly;
 - treat Codex natural-language judgment as pass / fail evidence;
 - expose private payload maps, credentials, tokens, cookies, or authorization

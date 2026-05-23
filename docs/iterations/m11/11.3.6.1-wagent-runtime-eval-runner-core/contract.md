@@ -183,6 +183,7 @@ Required gates：
 | `dom_evidence_verified_B` | yes | execution evidence | `dom_text_present` verifies B |
 | `reporter_verified` | yes | `task_result_reported` / history | `verification_outcome=verified` |
 | `final_response_verified` | yes | final WAgent message | reply gives evidence-based success and references B |
+| `operator_surface_audited` | yes | operator action log | eval was triggered through an approved CLI/UI surface and preserved the original operation record |
 
 `evidence_target_item_list` 的 selector source 必须明确。当前 replay schema 中：
 
@@ -227,6 +228,7 @@ Required gates：
 | `dom_evidence_verified_C` | yes | execution evidence | `dom_text_present` verifies C |
 | `reporter_verified` | yes | result event / history | `verification_outcome=verified` |
 | `final_response_verified` | yes | final WAgent message | reply gives evidence-based success and references C |
+| `operator_surface_audited` | yes | operator action log | eval was triggered through an approved CLI/UI surface and preserved the original operation record |
 
 `single_path_direct_replay_regression` 必须以当前 eval session 的 evidence 判定 single path：
 
@@ -256,6 +258,8 @@ JSON raw artifact：
 
 ```text
 artifacts/wagent-eval/wagent-runtime-eval-${timestamp}.json
+artifacts/wagent-eval/wagent-runtime-eval-latest.json
+artifacts/wagent-eval/wagent-runtime-eval-core-latest.json
 ```
 
 必须包含：
@@ -274,14 +278,22 @@ artifacts/wagent-eval/wagent-runtime-eval-${timestamp}.json
   "history": {},
   "learned_paths": [],
   "raw_api_responses": {},
-  "gate_summary": {}
+  "gate_summary": {},
+  "operator_actions": []
 }
 ```
+
+`operator_actions` 记录外部测试操作者的原始入口。CLI runner 必须记录
+`surface=cli`、执行命令、cwd、开始 / 结束时间、duration、exit code。它不记录
+产品内部 Agent 身份，也不能把 direct API / one-off script 伪装成 CLI / UI 测试。
+稳定的 `latest` JSON 与最新 timestamp JSON 内容一致，用于 commit / push 后给
+ChatGPT 或其他 Agent 复核。
 
 Markdown result：
 
 ```text
 docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-${date}.md
+docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-latest.md
 ```
 
 必须包含：
@@ -294,6 +306,7 @@ docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-${date}.md
 - Cases table。
 - Required gates table。
 - Warnings / not observable。
+- Operator action log。
 - Raw artifact path。
 - Not run / boundary statement。
 

@@ -39,6 +39,8 @@ Codex evidence report、Browser Use / Computer Use report 和 manual live smoke�
 - 不进常规 CI。
 - API-only、component test、static selector smoke、headless E2E 都不能冒充这类
   可视化证据。
+- Agent-operated UI 报告必须保留原始操作记录（页面、控件、点击、输入、等待、
+  观察），并同步最新报告到稳定 latest 路径，方便 commit / push 后复核。
 
 ### API Exploratory / API 探索式验证
 
@@ -53,6 +55,8 @@ Agent-operated UI exploratory。
 - 不进常规 CI。
 - 需要 LLM provider 和 Supervisor verdict。
 - 只能通过 `verify-scenario` skill 触发，不能直接 curl autonomous endpoints。
+- 如果由 AI Agent 代为执行，必须记录 skill/CLI/UI 操作入口和原始输出；没有
+  操作记录的 live smoke 不能作为 Agent-operated evidence。
 
 ## 现有证据入口
 
