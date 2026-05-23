@@ -1,23 +1,23 @@
 # 评审记录（Review）
 
-状态：implementation_review_failed（runner case implemented，live eval required gate failed）
+状态：implementation_complete_verified（runner case implemented，live eval pass）
 
 ## Current Decision
 
 - Reviewer: ChatGPT
-- Decision: implementation_review_failed
+- Decision: implementation_complete_verified
 - Code: implemented
-- Live eval: fail
+- Live eval: pass
 - Notes:
   - non-planner pending choice scope is correct.
   - candidate setup practicality is clarified.
   - choice A path verification uses internal raw comparison plus public hash / alias redaction.
   - planner-backed choice remains 11.3.6.4.
   - Runner case and package script exist on current `v0.1`.
-  - 2026-05-23 service-available rerun returned exit `1` because the required
-    `public_choice_payload_sanitized` gate failed.
-  - The failure artifact records a real Conversation API eval failure; do not mark this
-    package complete until a code-type fix iteration addresses the leak and a rerun passes.
+  - 2026-05-23 final rerun after 11.3.6.6 fixes returned exit `0`.
+  - `pending_choice_multi_candidate` passed all required gates.
+  - Eval uses `setup_type=eval_only_candidate_binding`; it does not prove `/items` has
+    three real distinct product actions.
 
 ## Design Summary
 
@@ -75,3 +75,15 @@ successful implementation closeout.
 Closeout decision: implementation review failed. Services were available and the eval ran
 through Conversation API, but one required gate failed. This is no longer an environment
 blocked result.
+
+## 2026-05-23 Final Fix Rerun
+
+| Command / Surface | Expected | Actual result | Exit code | Status | Evidence | Notes |
+|---|---|---|---:|---|---|---|
+| `pnpm run eval:wagent:pending-choice` | all required gates pass | `status=pass`; `pending_choice_multi_candidate status=pass`; required gates `15/15` | 0 | Pass | `artifacts/wagent-eval/wagent-runtime-eval-20260523T134741Z.json`; `docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-20260523T134741Z.md`; session `0933b2ba-f300-4f63-9b8c-fd197f96b912` | `setup_type=eval_only_candidate_binding`; `live_multi_action_capability=false`; `current_eval_real_path_count=1`. |
+| latest JSON | stable case-family latest JSON exists | `artifacts/wagent-eval/wagent-runtime-eval-pending-choice-latest.json` | N/A | Pass | file present | Added for evidence hygiene. |
+| redaction grep | no private payload / selector / full path id leaks | no matches | 1 | Pass | closeout grep output | exit `1` means `rg` found no matches. |
+
+Closeout decision: implementation complete / verified. This package is pass with the
+documented caveat that the A/B/C choices are eval-only alias bindings over one real path,
+not proof of three live distinct product actions on `/items`.

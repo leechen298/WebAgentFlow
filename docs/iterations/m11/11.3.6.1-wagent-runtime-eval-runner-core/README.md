@@ -1,6 +1,6 @@
 # 11.3.6.1 · WAgent Runtime Eval Runner Core
 
-状态：ready_for_implementation（design review passed，未实现代码）
+状态：implemented_and_live_eval_passed（final closeout rerun pass）
 里程碑：M11
 类型：code
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -88,7 +88,7 @@ one command
   artifact writer 和最小只读可观测性扩展策略。
 - `test-plan.md` - runner 自测、API preflight、case gate、artifact、exit code 和安全边界。
 - `plan.md` - 实施步骤、文件清单、验证命令和收口流程。
-- `review.md` - 文档生成、设计评审、实现证据和未运行项记录。
+- `review.md` - 文档生成、设计评审、实现证据、最终重跑证据和未运行项记录。
 
 ## 代码型迭代门禁
 
@@ -99,9 +99,21 @@ one command
 - [x] 技术设计包含明确的 contract alignment。
 - [x] `test-plan.md` 已存在并与技术设计一致。
 - [x] `plan.md` 与 contract / technical design 一致。
-- [x] `review.md` 已记录设计评审结论，等待后续实现证据。
+- [x] `review.md` 已记录设计评审结论、实现证据和最终重跑证据。
 
 ## 当前状态
 
-文档包已完成设计评审修订，可以进入实现。当前未写 runner 代码，未修改 `package.json`，
-未运行 eval。
+runner core 已实现并在 2026-05-23 最终收口重跑中通过 live Conversation eval：
+
+- Command: `pnpm run eval:wagent:items`
+- Exit code: `0`
+- Cases: `items_closed_loop`, `single_path_direct_replay_regression`
+- Required gates: `10/10` and `9/9`
+- JSON artifact:
+  `artifacts/wagent-eval/wagent-runtime-eval-20260523T134338Z.json`
+- Markdown result:
+  `docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-20260523T134338Z.md`
+
+保留 caveats：`effective_value_B` 和 `evidence_target_item_list` 仍为 non-required
+`not_observable` warning；当前 public history/events 未暴露 replay step effective value
+或 request-side `evidence_targets` selector。

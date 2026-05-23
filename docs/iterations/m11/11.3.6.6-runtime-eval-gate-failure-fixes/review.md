@@ -1,17 +1,19 @@
 # 复盘 / 评审（Review）
 
-状态：ready_for_implementation（design review passed，未实现代码）
+状态：implementation_complete_verified（fixes implemented，final eval rerun pass）
 
 ## Current Decision
 
 - Reviewer：ChatGPT
-- Decision：pass
-- Code：not_started
-- Live eval：not_run
+- Decision：implementation_complete_verified
+- Code：implemented
+- Live eval：pass
 - Notes：
   - 11.3.6.6 作为代码型 fix 设计稿通过。
-  - 可以用 `webagentflow-iteration-dev` 按本包进入实现。
   - 实现范围仍限定为 11.3.6.5 service-available rerun 的 required gate failures。
+  - pending choice public payload leak、planner choice no-execution、dynamic private-id
+    artifact redaction fixes have landed.
+  - Final closeout rerun returned exit `0` for required 11.3.6 eval commands.
 
 ## Initial Evidence
 
@@ -56,5 +58,24 @@
 
 ## Next Step
 
-Implement exactly this package. Do not modify 11.3.6.5 closeout status until the required eval commands rerun
-and pass.
+11.3.6.5 closeout status can be updated because the required eval commands reran and passed.
+
+## 2026-05-23 Implementation Closeout
+
+| Area | Result | Evidence |
+|---|---|---|
+| Pending choice public payload leak | fixed | `pnpm run eval:wagent:pending-choice` exit `0`; `pending_choice_multi_candidate` required gates `15/15`; `public_choice_payload_sanitized` pass |
+| Planner choice no-execution | fixed | `pnpm run eval:wagent:planner-choice` exit `0`; `planner_backed_choice` required gates `17/17`; `planner_choice_execution_started` pass |
+| Single-path planner bypass | preserved | `planner_single_path_bypass_regression` required gates `8/8` |
+| Runner artifact redaction | fixed | redaction grep found no `pending_choice_private_map`, full `learned_path_id`, `selector`, `xpath`, `ReplayAction`, or raw credential fields in final submitted artifacts |
+| Intake spurious ask flag | fixed after final items rerun exposed it | `fix: normalize complete intake ask state` (`f2d7d55`); targeted intake regression passed |
+
+Final eval evidence:
+
+- `artifacts/wagent-eval/wagent-runtime-eval-20260523T134338Z.json`
+- `artifacts/wagent-eval/wagent-runtime-eval-20260523T134459Z.json`
+- `artifacts/wagent-eval/wagent-runtime-eval-20260523T134741Z.json`
+- `artifacts/wagent-eval/wagent-runtime-eval-20260523T135028Z.json`
+- `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T135028Z.md`
+
+No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.

@@ -1,6 +1,6 @@
 # 11.3.6.5 · Runtime Eval Program Closeout
 
-状态：blocked（service-available rerun executed，required eval gates failed）
+状态：completed_after_fix_rerun（final closeout rerun pass）
 里程碑：M11
 类型：docs
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -51,10 +51,16 @@ Conversation runtime、不改 TaskPathPlanner / recovery / pending choice 产品
 
 ## 当前状态
 
-Closeout sweep 已执行两轮。第一轮 `pnpm run eval:wagent:pending-choice` 和
-`pnpm run eval:wagent:planner-choice` 均返回 exit `2`，写出 blocked artifact。随后在 API
-和 product-test-site 可访问后重跑，两个 required eval 均返回 exit `1`：
-11.3.6.3 暴露 public payload 脱敏 gate failure，11.3.6.4 暴露 planner-backed choice
-execution / verification gate failure；新增 raw planner artifact 还暴露了 full private path id，
-因此 raw rerun artifact 不提交，只提交 sanitized closeout summary。M11.3.6 program 不能标
-`closed_live` 或 `closed_non_live`，后续需要代码型 fix 迭代。
+Closeout sweep 已执行三轮。第一轮 `pnpm run eval:wagent:pending-choice` 和
+`pnpm run eval:wagent:planner-choice` 均返回 exit `2`，写出 blocked artifact。第二轮在 API
+和 product-test-site 可访问后重跑，两个 required eval 均返回 exit `1`，因此开启
+11.3.6.6 代码型 fix 迭代。11.3.6.6 修复后，final closeout rerun 已通过：
+
+- `pnpm run eval:wagent:items` -> exit `0`
+- `pnpm run eval:wagent:failure-recovery` -> exit `0`
+- `pnpm run eval:wagent:pending-choice` -> exit `0`
+- `pnpm run eval:wagent:planner-choice` -> exit `0`
+
+Program-level closeout result:
+`docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T135028Z.md`。
+M11.3.6 program 可标记为 closed / pass with documented caveats。

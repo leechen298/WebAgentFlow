@@ -1,6 +1,6 @@
 # 11.3.6.3 · Pending Choice Multi-candidate Eval
 
-状态：ready_for_implementation（design review passed，未实现代码）
+状态：implementation_complete_verified（pending-choice eval pass）
 里程碑：M11
 类型：code
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -60,6 +60,11 @@ core 之上增加 pending choice multi-candidate eval coverage，用 hard gates 
 
 ## 当前状态
 
-设计评审已通过，可以进入实现。实现前必须先确认 11.3.6.1 / 11.3.6.2 runner 当前状态，
-复核 11.3.5.7 pending choice runtime 的 public / private evidence 可观测性，并按 contract
-使用可审计的 candidate setup type 与 redacted path hash evidence。
+实现已完成，并在 2026-05-23 final closeout rerun 中通过
+`pnpm run eval:wagent:pending-choice`。结果：exit `0`，`pending_choice_multi_candidate`
+required gates `15/15`。证据：
+`artifacts/wagent-eval/wagent-runtime-eval-20260523T134741Z.json` 和
+`docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-20260523T134741Z.md`。
+
+Caveat：当前 setup 为 `eval_only_candidate_binding`，
+`live_multi_action_capability=false`，不证明 `/items` 已有三个真实 distinct product actions。

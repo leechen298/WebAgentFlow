@@ -1,6 +1,6 @@
 # 11.3.6.2 · Failure Recovery Eval
 
-状态：implementation_complete_non_live（non-live checks passed，live Conversation eval not run）
+状态：implementation_complete_verified（live Conversation eval pass）
 里程碑：M11
 类型：code
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -58,13 +58,23 @@ core 之上增加 failure recovery eval coverage，用 hard gates 验证 11.3.5.
 
 ## 当前状态
 
-代码实现已完成并通过非 live 复核。当前 runner 已新增 `failure_recovery_menu_safety`，
-并通过 targeted unit / integration tests、ruff、format check、`git diff --check`、
-safety grep、CLI help 和 invalid API blocked artifact 检查。
+代码实现已完成并在 2026-05-23 最终收口重跑中通过 live Conversation eval。当前 runner 已新增
+`failure_recovery_menu_safety`，并通过 targeted unit / integration tests、ruff、format check、
+`git diff --check`、safety grep、CLI help、invalid API blocked artifact，以及最新 clean HEAD
+service-available eval 检查。
 
-Live Conversation eval 尚未运行；本包不得写成 live pass。当前证据：
+最终重跑证据：
+
+- Command: `pnpm run eval:wagent:failure-recovery`
+- Exit code: `0`
+- Case: `failure_recovery_menu_safety`
+- Required gates: `11/11`
+- Status: `pass`
 
 - JSON artifact:
-  `artifacts/wagent-eval/wagent-runtime-eval-20260522T163632Z.json`
+  `artifacts/wagent-eval/wagent-runtime-eval-20260523T134459Z.json`
 - Markdown result:
-  `docs/testing/results/m11-11.3.6.2-failure-recovery-eval-20260522T163632Z.md`
+  `docs/testing/results/m11-11.3.6.2-failure-recovery-eval-20260523T134459Z.md`
+
+Caveat：本包验证的是 failure recovery menu / redaction / happy-path non-regression。
+failure trigger 仍使用 eval-only hook，选择 retry 后的重新执行 side effect 不属于 11.3.6.2 required gate。

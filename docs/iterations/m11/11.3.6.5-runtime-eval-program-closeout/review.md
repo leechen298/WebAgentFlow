@@ -1,13 +1,13 @@
 # 复盘 / 评审（Review）
 
-状态：blocked（service-available rerun executed，required eval gates failed）
+状态：completed_after_fix_rerun（final closeout rerun pass）
 
 ## Current Decision
 
 - Reviewer：ChatGPT
-- Decision：blocked
-- Code：not_started
-- Live eval：fail
+- Decision：completed_after_fix_rerun
+- Code：not_changed_in_this_package
+- Live eval：pass
 - Notes：
   - 本包只定义 11.3.6 closeout sweep，不修改 runner 或 runtime。
   - blocked artifact 只能证明 blocked 被记录；不得把 blocked 写成 completed /
@@ -15,8 +15,8 @@
   - First sweep returned exit `2` for both required evals because API health was unavailable.
   - Service-available rerun returned exit `1` for both required evals because required gates
     failed.
-  - Program status remains blocked until a code-type fix iteration lands and the required evals
-    pass.
+  - 11.3.6.6 fixes landed; final rerun returned exit `0` for items, failure recovery,
+    pending choice, and planner choice.
 
 ## 初始复核记录
 
@@ -78,3 +78,18 @@
 | program closeout result | result file written | `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T095709Z.md` | N/A | Written | result file | Program remains blocked. |
 
 No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.
+
+## 2026-05-23 Final Closeout Rerun
+
+| Command / Surface | Expected | Actual result | Exit code | Status | Evidence | Notes |
+|---|---|---|---:|---|---|---|
+| `git rev-parse --short HEAD` | final fix commit recorded | `f2d7d55` | 0 | Pass | command output | Eval rerun started from clean fix HEAD. |
+| `pnpm run eval:wagent:items` | items and single-path direct replay pass | `status=pass`; `items_closed_loop status=pass`; `single_path_direct_replay_regression status=pass` | 0 | Pass | `artifacts/wagent-eval/wagent-runtime-eval-20260523T134338Z.json`; `docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-20260523T134338Z.md`; session `88c1412d-d3e5-4039-adc6-fb8d515c794b` | Items required gates `10/10`; direct replay regression required gates `9/9`. |
+| `pnpm run eval:wagent:failure-recovery` | failure recovery pass | `status=pass`; `failure_recovery_menu_safety status=pass` | 0 | Pass | `artifacts/wagent-eval/wagent-runtime-eval-20260523T134459Z.json`; `docs/testing/results/m11-11.3.6.2-failure-recovery-eval-20260523T134459Z.md`; session `b60d7b4c-3ea5-473d-a47b-5990943bdfe1` | Required gates `11/11`; failure trigger uses eval-only hook. |
+| `pnpm run eval:wagent:pending-choice` | pending choice pass | `status=pass`; `pending_choice_multi_candidate status=pass` | 0 | Pass | `artifacts/wagent-eval/wagent-runtime-eval-20260523T134741Z.json`; `docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-20260523T134741Z.md`; session `0933b2ba-f300-4f63-9b8c-fd197f96b912` | Required gates `15/15`; eval-only candidate binding caveat applies. |
+| `pnpm run eval:wagent:planner-choice` | planner and single-path bypass pass | `status=pass`; `planner_backed_choice status=pass`; `planner_single_path_bypass_regression status=pass` | 0 | Pass | `artifacts/wagent-eval/wagent-runtime-eval-20260523T135028Z.json`; `docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-20260523T135028Z.md`; session `8423e8c9-5b46-4958-a499-41086ad24ea2` | Planner required gates `17/17`; bypass required gates `8/8`; `planner_top_choice_observable` is non-required `not_observable`. |
+| redaction grep | no private payload / selector / full path id leaks | no matches | 1 | Pass | command output | exit `1` means `rg` found no matches. |
+
+Closeout decision: completed after fix rerun. The program can be marked closed / pass with
+documented caveats; no autonomous run, `verify-scenario`, Console UI smoke, or direct
+replay substitution was used.

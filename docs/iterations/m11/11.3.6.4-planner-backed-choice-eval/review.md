@@ -1,24 +1,22 @@
 # 复盘 / 评审（Review）
 
-状态：implementation_review_failed（runner case implemented，planner-backed live eval failed）
+状态：implementation_complete_verified（runner case implemented，live eval pass）
 
 ## Current Decision
 
 - Reviewer：ChatGPT
-- Decision：implementation_review_failed
+- Decision：implementation_complete_verified
 - Code：implemented
-- Live eval：fail
+- Live eval：pass
 - Notes：
   - 11.3.6.4 方向通过，可以进入实现。
   - `eval_only_planner_candidate_binding` 允许作为第一版 setup fallback，但必须显式记录 capability flags。
   - `planner_top_choice_observable` 保持 conditional，不可观察时只能 warning / not_observable。
   - `planner_single_path_bypass_regression` 作为本包 required regression 保留。
   - Runner case and package script exist on current `v0.1`.
-  - 2026-05-23 service-available rerun returned exit `1`: `planner_backed_choice`
-    failed required execution / verification gates, while
-    `planner_single_path_bypass_regression` passed.
-  - The failure artifact records a real Conversation API eval failure; do not mark this
-    package complete until a code-type fix iteration addresses planner-choice execution.
+  - 2026-05-23 final rerun after 11.3.6.6 fixes returned exit `0`.
+  - `planner_backed_choice` and `planner_single_path_bypass_regression` both passed.
+  - `planner_top_choice_observable` remains a non-required `not_observable` warning.
 
 ## 设计关注点
 
@@ -70,3 +68,16 @@ successful implementation closeout. Because preflight blocked before runtime exe
 Closeout decision: implementation review failed. Services were available and the eval ran
 through Conversation API. The single-path bypass regression passed, but the required
 planner-backed choice case failed.
+
+## 2026-05-23 Final Fix Rerun
+
+| Command / Surface | Expected | Actual result | Exit code | Status | Evidence | Notes |
+|---|---|---|---:|---|---|---|
+| `pnpm run eval:wagent:planner-choice` | all required gates pass | `status=pass`; `planner_backed_choice status=pass`; `planner_single_path_bypass_regression status=pass` | 0 | Pass | `artifacts/wagent-eval/wagent-runtime-eval-20260523T135028Z.json`; `docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-20260523T135028Z.md`; session `8423e8c9-5b46-4958-a499-41086ad24ea2` | Planner-backed choice required gates `17/17`; single-path bypass required gates `8/8`. |
+| latest JSON | stable case-family latest JSON exists | `artifacts/wagent-eval/wagent-runtime-eval-planner-choice-latest.json` | N/A | Pass | file present | Added for evidence hygiene. |
+| redaction grep | no private payload / selector / full path id leaks | no matches | 1 | Pass | closeout grep output | exit `1` means `rg` found no matches. |
+
+Closeout decision: implementation complete / verified. This package is pass with the
+documented caveats that planner candidate setup uses eval-only alias binding
+(`planner_distinct_path_capability=false`) and `planner_top_choice_observable` remains
+not observable on the current public read surface.

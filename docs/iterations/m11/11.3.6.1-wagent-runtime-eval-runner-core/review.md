@@ -10,15 +10,33 @@
 - Parent program：accepted_program_plan
 - Notes：
   - 11.3.6.1 runner core 已在 commit `6157626` 实现。
-  - 2026-05-23 实际运行 `pnpm run eval:wagent:items`，exit code `0`。
+  - 2026-05-23 最终收口重跑 `pnpm run eval:wagent:items`，exit code `0`。
   - Eval status：`pass`。
   - JSON artifact：
-    `artifacts/wagent-eval/wagent-runtime-eval-20260522T162710Z.json`。
+    `artifacts/wagent-eval/wagent-runtime-eval-20260523T134338Z.json`。
   - Markdown result：
-    `docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-20260522T162710Z.md`。
-  - Session ID：`9af0e6e3-84c3-4771-b72c-25ddb6c2d85b`。
-  - Live eval 运行在 HEAD `820b066`，该 HEAD 包含 runner implementation commit
-    `6157626`。
+    `docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-20260523T134338Z.md`。
+  - Session ID：`88c1412d-d3e5-4039-adc6-fb8d515c794b`。
+  - Final rerun evidence commit：`f2d7d55`。
+
+## 2026-05-23 最终收口重跑
+
+- Author：Codex
+- Decision：final_closeout_rerun_passed
+- Evidence commit：`f2d7d55`
+- Command：`pnpm run eval:wagent:items`
+- Exit code：`0`
+- JSON artifact：
+  `artifacts/wagent-eval/wagent-runtime-eval-20260523T134338Z.json`
+- Markdown result：
+  `docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-20260523T134338Z.md`
+- Session ID：`88c1412d-d3e5-4039-adc6-fb8d515c794b`
+- Cases：
+  - `items_closed_loop`：`pass`，required gates `10/10`，warnings `2`
+  - `single_path_direct_replay_regression`：`pass`，required gates `9/9`
+- Caveats：
+  - `effective_value_B` remains a non-required `not_observable` warning.
+  - `evidence_target_item_list` remains a non-required `not_observable` warning.
 
 ## 2026-05-23 实际运行与 Closeout
 

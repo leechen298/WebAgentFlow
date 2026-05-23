@@ -1650,7 +1650,7 @@ apps/product-test-site /items
 
 ## 11.3.6 · WAgent Runtime Eval Program
 
-状态：accepted_program_plan（program review passed，docs-only）。
+状态：closed_pass_with_caveats（final closeout rerun pass）。
 
 11.3.6 不直接实现 runner，也不继续增加 Customer-Facing Agent Router / Skill Runtime
 的产品能力。它是 WAgent runtime eval 的总体测试规划包：定义 hard gates、artifact、
@@ -1673,23 +1673,25 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 | Package | 目标 | 状态 |
 |---|---|---|
 | [11.3.6.1 · WAgent Runtime Eval Runner Core](./11.3.6.1-wagent-runtime-eval-runner-core/) | 实现 runner v1，覆盖 `items_closed_loop` 和 `single_path_direct_replay_regression` | implemented_and_live_eval_passed |
-| [11.3.6.2 · Failure Recovery Eval](./11.3.6.2-failure-recovery-eval/) | recovery menu safety、retry / relearn / cancel、private payload safety | implementation complete（non-live checks passed，live Conversation eval not run） |
-| [11.3.6.3 · Pending Choice Multi-candidate Eval](./11.3.6.3-pending-choice-multi-candidate-eval/) | A/B/C public choice、private map、用户选择后执行正确 path | implementation_review_failed（service-available eval failed public payload redaction gate） |
-| [11.3.6.4 · Planner-backed Choice Eval](./11.3.6.4-planner-backed-choice-eval/) | vague goal、planner-backed choice path、single-path bypass Planner 回归 | implementation_review_failed（planner-backed choice execution gates failed，single-path bypass passed） |
-| [11.3.6.5 · Runtime Eval Program Closeout](./11.3.6.5-runtime-eval-program-closeout/) | 收口 11.3.6.3 / 11.3.6.4 implementation evidence、result artifact、review 状态和 program 索引 | blocked（required eval gates failed after services were available） |
-| [11.3.6.6 · Runtime Eval Gate Failure Fixes](./11.3.6.6-runtime-eval-gate-failure-fixes/) | 修复 service-available rerun 暴露的 pending choice payload leak、planner choice no-execution 和 raw artifact redaction failures | ready_for_implementation（design review passed，未实现代码） |
+| [11.3.6.2 · Failure Recovery Eval](./11.3.6.2-failure-recovery-eval/) | recovery menu safety、retry / relearn / cancel、private payload safety | implementation_complete_verified |
+| [11.3.6.3 · Pending Choice Multi-candidate Eval](./11.3.6.3-pending-choice-multi-candidate-eval/) | A/B/C public choice、private map、用户选择后执行正确 path | implementation_complete_verified |
+| [11.3.6.4 · Planner-backed Choice Eval](./11.3.6.4-planner-backed-choice-eval/) | vague goal、planner-backed choice path、single-path bypass Planner 回归 | implementation_complete_verified |
+| [11.3.6.5 · Runtime Eval Program Closeout](./11.3.6.5-runtime-eval-program-closeout/) | 收口 11.3.6.3 / 11.3.6.4 implementation evidence、result artifact、review 状态和 program 索引 | completed_after_fix_rerun |
+| [11.3.6.6 · Runtime Eval Gate Failure Fixes](./11.3.6.6-runtime-eval-gate-failure-fixes/) | 修复 service-available rerun 暴露的 pending choice payload leak、planner choice no-execution 和 raw artifact redaction failures | implementation_complete_verified |
 
 关键边界：
 
 - 11.3.6 program 本身 docs-only，不写 runner 代码。
 - 11.3.6.1 承接已通过评审的 runner core 设计。
-- 11.3.6.2 已实现稳定 eval-only hook 和 recovery gates；non-live checks 已通过，live
-  Conversation eval 尚未运行。
-- 11.3.6.3 runner case 已实现，但 service-available eval 暴露 public payload redaction
-  gate failure，需要代码型 fix 迭代。
-- 11.3.6.4 runner case 已实现，但 planner-backed choice eval 暴露 execution / verification
-  gate failure；single-path bypass regression 已通过，需要代码型 fix 迭代。
-- 11.3.6.6 已开为代码型 fix 文档包；当前状态为 `ready_for_implementation`，可按文档实现。
+- 11.3.6.2 已实现稳定 eval-only hook 和 recovery gates；final closeout rerun live
+  Conversation eval 已通过。
+- 11.3.6.3 runner case 已实现；final closeout rerun pending-choice eval 已通过。Caveat：
+  eval 使用 eval-only candidate binding，不证明 `/items` 有三个真实 distinct product actions。
+- 11.3.6.4 runner case 已实现；final closeout rerun planner-backed choice 和
+  single-path bypass regression 均已通过。Caveat：`planner_top_choice_observable` 仍为
+  非 required `not_observable` warning。
+- 11.3.6.6 已实现并验证；final closeout rerun 中 items、failure recovery、pending choice、
+  planner choice 均返回 exit `0`。
 - 11.3.6.x runner 通过 Conversation API 驱动，不把 direct replay API 冒充 WAgent
   runtime 闭环。
 - Codex 复核 artifact，不替 runner 判定 pass / fail。

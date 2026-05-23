@@ -1,6 +1,6 @@
 # 11.3.6.6 · Runtime Eval Gate Failure Fixes
 
-状态：ready_for_implementation（design review passed，未实现代码）
+状态：implementation_complete_verified（fixes implemented，final eval rerun pass）
 里程碑：M11
 类型：code
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -57,5 +57,10 @@
 ## 当前状态
 
 11.3.6.5 service-available rerun 已证明问题不再是环境 blocked，而是 required gates fail。本包
-设计已通过 review，可以用 `webagentflow-iteration-dev` 按本包实现；实现完成后必须重跑
-pending-choice 和 planner-choice eval，两个命令 exit `0` 后才允许回到 11.3.6.5 关闭 program。
+设计已通过 review 并完成实现；final closeout rerun 中 pending-choice 和 planner-choice
+均 exit `0`，并额外重跑了 items / failure-recovery。实现过程中 final items rerun 暴露
+LLM provider 在完整 intake 上误置 `should_ask_user=true` 的缺口，已通过
+`fix: normalize complete intake ask state` (`f2d7d55`) 修复。
+
+最终证据见：
+`docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T135028Z.md`。

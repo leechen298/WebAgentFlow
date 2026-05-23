@@ -64,13 +64,13 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.5.7-pending-choice-active-task-ledger](./11.3.5.7-pending-choice-active-task-ledger/) —— Pending Choice & Minimal Active Task Ledger：补多候选澄清、choice 私有映射、最小 active task 状态账本、pending 清理 / 过期和 cancel cleanup。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.5.8-basic-failure-recovery](./11.3.5.8-basic-failure-recovery/) —— Basic Failure Recovery：补基础失败恢复菜单：重试、重新学习、取消；不做复杂自治恢复。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.5.9-taskpathplanner-multi-candidate-chat-integration](./11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) —— TaskPathPlanner Multi-candidate Chat Integration：只在多候选、模糊目标、planning path 中接入 TaskPathPlanner，不进入单路径 happy path。状态：implementation complete（code review passed，targeted tests passed）。
-- [11.3.6-wagent-runtime-eval-program](./11.3.6-wagent-runtime-eval-program/) —— WAgent Runtime Eval Program：runtime eval 总体测试规划，定义 11.3.6.x 子包、artifact、exit code、hard gates 和 Codex 审计边界。状态：accepted_program_plan（program review passed，docs-only）。
+- [11.3.6-wagent-runtime-eval-program](./11.3.6-wagent-runtime-eval-program/) —— WAgent Runtime Eval Program：runtime eval 总体测试规划，定义 11.3.6.x 子包、artifact、exit code、hard gates 和 Codex 审计边界。状态：closed_pass_with_caveats（final closeout rerun pass）。
 - [11.3.6.1-wagent-runtime-eval-runner-core](./11.3.6.1-wagent-runtime-eval-runner-core/) —— WAgent Runtime Eval Runner Core：实现 runner v1，覆盖 `/items` closed loop 和 single-path direct replay regression。状态：implemented_and_live_eval_passed。
-- [11.3.6.2-failure-recovery-eval](./11.3.6.2-failure-recovery-eval/) —— Failure Recovery Eval：扩展 runner 覆盖 recovery menu safety、retry / relearn / cancel 出口和 private payload safety。状态：implementation complete（non-live checks passed，live Conversation eval not run）。
-- [11.3.6.3-pending-choice-multi-candidate-eval](./11.3.6.3-pending-choice-multi-candidate-eval/) —— Pending Choice Multi-candidate Eval：扩展 runner 覆盖 A/B/C public choice、private map safety 和用户选择后执行正确 action。状态：implementation_review_failed（service-available eval failed public payload redaction gate）。
-- [11.3.6.4-planner-backed-choice-eval](./11.3.6.4-planner-backed-choice-eval/) —— Planner-backed Choice Eval：扩展 runner 覆盖 vague goal、TaskPathPlanner-backed choices 和 single-path bypass Planner 回归。状态：implementation_review_failed（planner-backed choice execution gates failed，single-path bypass passed）。
-- [11.3.6.5-runtime-eval-program-closeout](./11.3.6.5-runtime-eval-program-closeout/) —— Runtime Eval Program Closeout：核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 11.3.6 program 状态。状态：blocked（required eval gates failed after services were available）。
-- [11.3.6.6-runtime-eval-gate-failure-fixes](./11.3.6.6-runtime-eval-gate-failure-fixes/) —— Runtime Eval Gate Failure Fixes：修复 11.3.6.5 service-available rerun 暴露的 pending choice public payload leak、planner-backed choice selection no-execution 和 raw artifact redaction failures。状态：ready_for_implementation（design review passed，未实现代码）。
+- [11.3.6.2-failure-recovery-eval](./11.3.6.2-failure-recovery-eval/) —— Failure Recovery Eval：扩展 runner 覆盖 recovery menu safety、retry / relearn / cancel 出口和 private payload safety。状态：implementation_complete_verified（live Conversation eval pass）。
+- [11.3.6.3-pending-choice-multi-candidate-eval](./11.3.6.3-pending-choice-multi-candidate-eval/) —— Pending Choice Multi-candidate Eval：扩展 runner 覆盖 A/B/C public choice、private map safety 和用户选择后执行正确 action。状态：implementation_complete_verified（pending-choice eval pass）。
+- [11.3.6.4-planner-backed-choice-eval](./11.3.6.4-planner-backed-choice-eval/) —— Planner-backed Choice Eval：扩展 runner 覆盖 vague goal、TaskPathPlanner-backed choices 和 single-path bypass Planner 回归。状态：implementation_complete_verified（planner-backed choice and single-path bypass pass）。
+- [11.3.6.5-runtime-eval-program-closeout](./11.3.6.5-runtime-eval-program-closeout/) —— Runtime Eval Program Closeout：核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 11.3.6 program 状态。状态：completed_after_fix_rerun（final closeout rerun pass）。
+- [11.3.6.6-runtime-eval-gate-failure-fixes](./11.3.6.6-runtime-eval-gate-failure-fixes/) —— Runtime Eval Gate Failure Fixes：修复 11.3.6.5 service-available rerun 暴露的 pending choice public payload leak、planner-backed choice selection no-execution 和 raw artifact redaction failures。状态：implementation_complete_verified（fixes implemented，final eval rerun pass）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -145,30 +145,30 @@ direct replay regression，按 hard gates 写出 JSON / Markdown 证据，并用
 `11.3.6.2-failure-recovery-eval/` 是 11.3.6 program 的第二个执行包。它已在
 runner core 上增加 `failure_recovery_menu_safety`，用 eval-only hook 验证
 11.3.5.8 recovery menu 和 private payload redaction；首版不把 retry execution 成功作为
-required gate，也不调用 autonomous-run endpoints。当前已通过 non-live checks，live
-Conversation eval 尚未运行。
+required gate，也不调用 autonomous-run endpoints。最终 closeout rerun 已通过 live
+Conversation eval。
 `11.3.6.3-pending-choice-multi-candidate-eval/` 是 11.3.6 program 的第三个执行包。它计划在
 runner core 上增加 `pending_choice_multi_candidate`，用当前 eval run 的多候选 setup
 验证 11.3.5.7 pending choice public payload、private map safety 和选择 A 后执行正确 action；
-planner-backed choice 留到 11.3.6.4。状态：`implementation_review_failed`，当前 runner
-case 已实现；service-available rerun 中 `public_choice_payload_sanitized` required gate 失败，
-public surfaces 暴露了 private `learned_path_id` token。
+planner-backed choice 留到 11.3.6.4。最终 closeout rerun 已通过，状态：
+`implementation_complete_verified`。Caveat：当前 setup 为 eval-only candidate binding，
+不证明 `/items` 已有三个真实 distinct product actions。
 `11.3.6.4-planner-backed-choice-eval/` 是 11.3.6 program 的第四个执行包。它计划在 runner
 core 上增加 `planner_backed_choice`，验证 11.3.5.9 TaskPathPlanner-backed choice path、
 sanitized planner events、private payload safety，以及单路径明确目标必须 bypass Planner 的回归。
-状态：`implementation_review_failed`，当前 runner case 已实现；service-available rerun 中
-planner-backed choice path 创建并选择了 choice A，但没有启动 execution，execution /
-verification / final-response gates 失败；`planner_single_path_bypass_regression` 通过。
+最终 closeout rerun 已通过，状态：`implementation_complete_verified`。Caveat：
+`planner_top_choice_observable` 仍是非 required `not_observable` warning，且 planner setup
+为 eval-only candidate binding。
 `11.3.6.5-runtime-eval-program-closeout/` 是 11.3.6 program 的收口扫尾包。它不新增 runner
 case，也不修 runtime；它用于运行或记录 pending-choice / planner-choice eval、补齐 result artifact、
 回填 11.3.6.3 / 11.3.6.4 review，并同步 11.3.6 program 与 M11 索引。状态：
-`blocked`。第一轮 closeout 因 API health 不可用写出 blocked artifact；第二轮在服务可用后
-两个 required eval 均返回 exit `1`，后续需要代码型 fix 迭代。
+`completed_after_fix_rerun`。最终 rerun 中 items、failure recovery、pending choice、
+planner choice 均返回 exit `0`。
 `11.3.6.6-runtime-eval-gate-failure-fixes/` 是上述失败后的代码型 fix 文档包。它不新增
 eval case，也不扩大产品能力；只要求修复 pending choice public/private payload separation、
 planner-backed choice selection 到 execution 的 runtime 连接，以及 eval runner artifact redaction。
-本包设计已通过 review，可以进入实现；实现通过后仍需回到 11.3.6.5 closeout
-重新运行 required eval 并同步 program 状态。
+本包已实现并通过最终 rerun；同时修复了最终 items rerun 暴露的 complete-intake ask flag
+normalization 缺口。
 
 11.2 后续 backlog：
 

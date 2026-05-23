@@ -1,19 +1,19 @@
 # 评审记录（Review）
 
-状态：implementation_complete_non_live（non-live checks passed，live Conversation eval not run）
+状态：implementation_complete_verified（live Conversation eval pass）
 
 ## Current Decision
 
 - Reviewer: ChatGPT
-- Decision: implementation_passed_non_live
+- Decision: implementation_complete_verified
 - Code: implemented
-- Live eval: not_run
+- Live eval: pass
 - Notes:
   - failure trigger contract 稳定且不污染普通 runtime。
   - recovery gates source / pass semantics 清楚。
   - private payload redaction 覆盖 retry / relearn / cancel。
-  - live eval not-run 规则清楚。
-  - 2026-05-23 已完成非 live implementation review；live Conversation eval 未运行。
+  - live Conversation eval 于最终收口重跑通过。
+  - Retry execution after selecting A remains out of scope for 11.3.6.2.
 
 ## Design Summary
 
@@ -31,7 +31,7 @@
 
 ## Not Run
 
-- 未运行 live Conversation eval。
+- Retry execution after selecting A: not run; not required by 11.3.6.2.
 - 未触发 autonomous run。
 
 ## Implementation Closeout
@@ -102,6 +102,14 @@
 
 ### Final Decision
 
-11.3.6.2 implementation is complete for the scoped non-live review. It must remain
-marked as `live Conversation eval not run` until a real service-backed eval run records
-session id, JSON artifact, Markdown result, exit code and required gate summary.
+11.3.6.2 implementation is complete and verified by the final service-backed
+Conversation eval rerun.
+
+## 2026-05-23 Final Closeout Rerun
+
+| Command / Surface | Expected | Actual result | Exit code | Status | Evidence | Notes |
+|---|---|---|---:|---|---|---|
+| `pnpm run eval:wagent:failure-recovery` | all required gates pass | `status=pass`; `failure_recovery_menu_safety status=pass`; required gates `11/11` | 0 | Pass | `artifacts/wagent-eval/wagent-runtime-eval-20260523T134459Z.json`; `docs/testing/results/m11-11.3.6.2-failure-recovery-eval-20260523T134459Z.md`; session `b60d7b4c-3ea5-473d-a47b-5990943bdfe1` | Failure trigger uses eval-only hook; retry execution remains not run. |
+| redaction grep | no private payload / selector / full path id leaks | no matches | 1 | Pass | closeout grep output | exit `1` means `rg` found no matches. |
+
+No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.

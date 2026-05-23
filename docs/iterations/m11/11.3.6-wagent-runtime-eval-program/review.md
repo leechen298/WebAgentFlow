@@ -1,17 +1,19 @@
 # 复盘 / 评审（Review）
 
-状态：accepted_program_plan（program review passed，docs-only）
+状态：closed_pass_with_caveats（final closeout rerun pass）
 
 ## Current Decision
 
 - Reviewer：ChatGPT
-- Decision：accepted_program_plan
-- Code：not_started
-- Live eval：not_run
+- Decision：closed_pass_with_caveats
+- Code：implemented in child packages
+- Live eval：pass
 - Notes：
   - 11.3.6 作为 WAgent Runtime Eval Program 总纲通过。
   - 11.3.6.1 承接第一版 runner core 实现。
   - 11.3.6.2+ 按 case family 后续独立开包。
+  - Final closeout rerun passed after 11.3.6.6 fixes.
+  - Program is closed / pass with documented caveats.
 
 ## 2026-05-22 拆分规划
 
@@ -154,3 +156,40 @@
   - 11.3.6.6 不新增 eval case、不扩展 runtime 产品能力、不关闭 11.3.6 program。
   - 11.3.6.6 通过后必须回到 11.3.6.5 closeout sweep 重新运行 required eval，不能在 fix
     package 内直接把 M11.3.6 标为 complete。
+
+## 2026-05-23 Final Program Closeout
+
+- Author：Codex
+- Decision：closed_pass_with_caveats
+- Commit：`f2d7d55` for final fix rerun evidence
+- Evidence：
+  - `pnpm run eval:wagent:items` -> exit `0`, `items_closed_loop status=pass`,
+    `single_path_direct_replay_regression status=pass`,
+    `artifacts/wagent-eval/wagent-runtime-eval-20260523T134338Z.json`,
+    `docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-20260523T134338Z.md`
+  - `pnpm run eval:wagent:failure-recovery` -> exit `0`,
+    `failure_recovery_menu_safety status=pass`,
+    `artifacts/wagent-eval/wagent-runtime-eval-20260523T134459Z.json`,
+    `docs/testing/results/m11-11.3.6.2-failure-recovery-eval-20260523T134459Z.md`
+  - `pnpm run eval:wagent:pending-choice` -> exit `0`,
+    `pending_choice_multi_candidate status=pass`,
+    `artifacts/wagent-eval/wagent-runtime-eval-20260523T134741Z.json`,
+    `docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-20260523T134741Z.md`
+  - `pnpm run eval:wagent:planner-choice` -> exit `0`,
+    `planner_backed_choice status=pass`,
+    `planner_single_path_bypass_regression status=pass`,
+    `artifacts/wagent-eval/wagent-runtime-eval-20260523T135028Z.json`,
+    `docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-20260523T135028Z.md`
+  - Program closeout result:
+    `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T135028Z.md`
+  - Stable JSON latest artifacts:
+    `artifacts/wagent-eval/wagent-runtime-eval-core-latest.json`,
+    `artifacts/wagent-eval/wagent-runtime-eval-failure-recovery-latest.json`,
+    `artifacts/wagent-eval/wagent-runtime-eval-pending-choice-latest.json`,
+    `artifacts/wagent-eval/wagent-runtime-eval-planner-choice-latest.json`
+- Caveats：
+  - pending-choice / planner-choice use eval-only candidate binding and do not prove three
+    live distinct product actions on `/items`.
+  - `planner_top_choice_observable` remains a non-required `not_observable` warning.
+  - Failure recovery uses an eval-only hook; retry execution after choosing A remains out of scope.
+  - No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.

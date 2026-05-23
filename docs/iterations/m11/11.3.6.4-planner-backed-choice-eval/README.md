@@ -1,6 +1,6 @@
 # 11.3.6.4 · Planner-backed Choice Eval
 
-状态：ready_for_implementation（design review passed，未实现代码）
+状态：implementation_complete_verified（planner-backed choice eval pass）
 里程碑：M11
 类型：code
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -66,7 +66,12 @@ TaskPathPlanner 或生成 planner-backed pending choice。
 
 ## 当前状态
 
-设计评审已通过，可以进入实现。实现前必须先确认 11.3.6.1 / 11.3.6.3 runner 当前状态，
-复核 11.3.5.9 planner-backed choice runtime 的 events / history / public payload 可观测性，
-并按 contract 处理不可观察的 planner top-choice 映射，不得从 final response 猜测内部 Planner
-结论。
+实现已完成，并在 2026-05-23 final closeout rerun 中通过
+`pnpm run eval:wagent:planner-choice`。结果：exit `0`，`planner_backed_choice`
+required gates `17/17`，`planner_single_path_bypass_regression` required gates `8/8`。
+证据：`artifacts/wagent-eval/wagent-runtime-eval-20260523T135028Z.json` 和
+`docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-20260523T135028Z.md`。
+
+Caveat：当前 setup 为 `eval_only_planner_candidate_binding`，
+`planner_distinct_path_capability=false`；`planner_top_choice_observable` 仍是非 required
+`not_observable` warning。
