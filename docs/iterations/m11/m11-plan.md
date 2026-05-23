@@ -1674,6 +1674,7 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 | [11.3.6.2 · Failure Recovery Eval](./11.3.6.2-failure-recovery-eval/) | recovery menu safety、retry / relearn / cancel、private payload safety | implementation complete（non-live checks passed，live Conversation eval not run） |
 | [11.3.6.3 · Pending Choice Multi-candidate Eval](./11.3.6.3-pending-choice-multi-candidate-eval/) | A/B/C public choice、private map、用户选择后执行正确 path | ready_for_implementation（design review passed，未实现代码） |
 | [11.3.6.4 · Planner-backed Choice Eval](./11.3.6.4-planner-backed-choice-eval/) | vague goal、planner-backed choice path、single-path bypass Planner 回归 | ready_for_implementation（design review passed，未实现代码） |
+| [11.3.6.5 · Runtime Eval Program Closeout](./11.3.6.5-runtime-eval-program-closeout/) | 收口 11.3.6.3 / 11.3.6.4 implementation evidence、result artifact、review 状态和 program 索引 | draft_for_review |
 
 关键边界：
 

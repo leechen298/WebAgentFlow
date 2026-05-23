@@ -85,3 +85,13 @@
   - `planner_top_choice_observable` 保持 conditional，不可观察时只能 warning / not_observable。
   - `planner_single_path_bypass_regression` 作为 11.3.6.4 required regression 保留。
   - 11.3.6 program 仍保持 docs-only，不在 program 包内实现 runner 代码。
+
+## 2026-05-23 Program closeout 子包开包记录
+
+- Author：Codex
+- Decision：docs_created
+- Notes：
+  - 已创建 `11.3.6.5-runtime-eval-program-closeout` 作为 11.3.6 program 收口扫尾包。
+  - 当前最新 `v0.1` runner 代码已覆盖 pending choice 和 planner-backed choice eval scripts。
+  - 11.3.6.3 / 11.3.6.4 的 review 状态和 result artifacts 尚未与实现事实对齐。
+  - 11.3.6.5 不新增 runner 功能；只定义如何运行 / 记录 eval、回填 review、同步 program 与 M11 索引。

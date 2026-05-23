@@ -23,6 +23,7 @@ Codex 审计边界和 case roadmap。
 | [11.3.6.2 · Failure Recovery Eval](../11.3.6.2-failure-recovery-eval/) | 覆盖 recovery menu safety、retry / relearn / cancel 和 private payload safety | implementation_complete_non_live |
 | [11.3.6.3 · Pending Choice Multi-candidate Eval](../11.3.6.3-pending-choice-multi-candidate-eval/) | 覆盖 A/B/C public choice、private map 和用户选择后执行正确 path | ready_for_implementation |
 | [11.3.6.4 · Planner-backed Choice Eval](../11.3.6.4-planner-backed-choice-eval/) | 覆盖 vague goal、planner-backed choice path 和 single-path bypass Planner 回归 | ready_for_implementation |
+| [11.3.6.5 · Runtime Eval Program Closeout](../11.3.6.5-runtime-eval-program-closeout/) | 核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 program 状态 | draft_for_review |
 
 ## 本包做什么
 
@@ -54,4 +55,6 @@ Codex 审计边界和 case roadmap。
 总体规划已通过 review。11.3.6.1 已承接 runner v1 的可实现设计；11.3.6.2
 failure recovery eval 已完成 non-live implementation checks，live Conversation eval 尚未运行；
 11.3.6.3 pending choice eval 设计已通过 review，可以进入实现；
-11.3.6.4 planner-backed choice eval 设计已通过 review，可以进入实现。
+11.3.6.4 planner-backed choice eval 设计已通过 review，可以进入实现。当前 runner 代码已覆盖到
+11.3.6.4，但 11.3.6.3 / 11.3.6.4 closeout artifact 与 review 状态仍需通过 11.3.6.5
+统一收口后，才能判断 11.3.6 program 是否整体完成。
