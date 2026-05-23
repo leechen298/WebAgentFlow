@@ -1,22 +1,24 @@
 # 复盘 / 评审（Review）
 
-状态：implementation_complete_blocked（runner case implemented，closeout eval blocked）
+状态：implementation_review_failed（runner case implemented，planner-backed live eval failed）
 
 ## Current Decision
 
 - Reviewer：ChatGPT
-- Decision：implementation_complete_blocked
+- Decision：implementation_review_failed
 - Code：implemented
-- Live eval：blocked
+- Live eval：fail
 - Notes：
   - 11.3.6.4 方向通过，可以进入实现。
   - `eval_only_planner_candidate_binding` 允许作为第一版 setup fallback，但必须显式记录 capability flags。
   - `planner_top_choice_observable` 保持 conditional，不可观察时只能 warning / not_observable。
   - `planner_single_path_bypass_regression` 作为本包 required regression 保留。
-  - Runner case and package script exist on current `v0.1`, but 2026-05-23 closeout eval
-    returned exit `2` because API health was unavailable.
-  - The blocked artifact records the environment failure only; it does not count as
-    `implementation_complete_non_live` or live pass.
+  - Runner case and package script exist on current `v0.1`.
+  - 2026-05-23 service-available rerun returned exit `1`: `planner_backed_choice`
+    failed required execution / verification gates, while
+    `planner_single_path_bypass_regression` passed.
+  - The failure artifact records a real Conversation API eval failure; do not mark this
+    package complete until a code-type fix iteration addresses planner-choice execution.
 
 ## 设计关注点
 
@@ -34,7 +36,7 @@
 |---|---|
 | pytest | not run during this closeout sweep |
 | ruff | no Python changed during this closeout sweep |
-| live Conversation eval | blocked during preflight |
+| optional unit / ruff regression | no runtime code changed during this closeout sweep |
 | autonomous run | prohibited / out of scope |
 | `verify-scenario` | out of scope |
 
@@ -58,3 +60,13 @@
 Closeout decision: blocked. This records the blocked environment result only; it is not a
 successful implementation closeout. Because preflight blocked before runtime execution,
 `planner_single_path_bypass_regression` was not observed in this run.
+
+## 2026-05-23 Service-available Rerun
+
+| Command / Surface | Expected | Actual result | Exit code | Status | Evidence | Notes |
+|---|---|---|---:|---|---|---|
+| `pnpm run eval:wagent:planner-choice` | all required gates pass | `status=fail`; `planner_backed_choice status=fail`; `planner_single_path_bypass_regression status=pass` | 1 | Fail | Sanitized program summary `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T095709Z.md`; session `4db454fb-4983-48a2-9ac1-716b6cde15fa` | Planner candidates and public choices were created, but selecting choice A did not start execution; `execution_uses_selected_choice_path`, `execution_verified`, and `final_response_verified` failed. Raw rerun output is not submitted because it contained a full private path id. |
+
+Closeout decision: implementation review failed. Services were available and the eval ran
+through Conversation API. The single-path bypass regression passed, but the required
+planner-backed choice case failed.

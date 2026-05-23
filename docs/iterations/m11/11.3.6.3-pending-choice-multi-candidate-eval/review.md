@@ -1,22 +1,23 @@
 # 评审记录（Review）
 
-状态：implementation_complete_blocked（runner case implemented，closeout eval blocked）
+状态：implementation_review_failed（runner case implemented，live eval required gate failed）
 
 ## Current Decision
 
 - Reviewer: ChatGPT
-- Decision: implementation_complete_blocked
+- Decision: implementation_review_failed
 - Code: implemented
-- Live eval: blocked
+- Live eval: fail
 - Notes:
   - non-planner pending choice scope is correct.
   - candidate setup practicality is clarified.
   - choice A path verification uses internal raw comparison plus public hash / alias redaction.
   - planner-backed choice remains 11.3.6.4.
-  - Runner case and package script exist on current `v0.1`, but 2026-05-23 closeout eval
-    returned exit `2` because API health was unavailable.
-  - The blocked artifact records the environment failure only; it does not count as
-    `implementation_complete_non_live` or live pass.
+  - Runner case and package script exist on current `v0.1`.
+  - 2026-05-23 service-available rerun returned exit `1` because the required
+    `public_choice_payload_sanitized` gate failed.
+  - The failure artifact records a real Conversation API eval failure; do not mark this
+    package complete until a code-type fix iteration addresses the leak and a rerun passes.
 
 ## Design Summary
 
@@ -45,16 +46,15 @@ action 的闭环。
 
 ## Not Run
 
-- Live Conversation eval did not run because preflight was blocked.
 - Unit tests were not run during this closeout sweep.
 - `verify-scenario` was not run.
 - autonomous run endpoints were not called.
 
 ## Next Step
 
-Start API / product services and rerun `pnpm run eval:wagent:pending-choice`. If the
-command returns exit `0`, append a new pass artifact and update this package status. If it
-fails a required gate, open a code-type fix iteration instead of marking this package complete.
+Open a code-type fix iteration for the public pending-choice payload leak, then rerun
+`pnpm run eval:wagent:pending-choice`. Do not mark this package complete until the required
+gate passes.
 
 ## 2026-05-23 Closeout Sweep
 
@@ -65,3 +65,13 @@ fails a required gate, open a code-type fix iteration instead of marking this pa
 
 Closeout decision: blocked. This records the blocked environment result only; it is not a
 successful implementation closeout.
+
+## 2026-05-23 Service-available Rerun
+
+| Command / Surface | Expected | Actual result | Exit code | Status | Evidence | Notes |
+|---|---|---|---:|---|---|---|
+| `pnpm run eval:wagent:pending-choice` | all required gates pass | `status=fail`; `case=pending_choice_multi_candidate status=fail`; required gates `13/14` | 1 | Fail | Sanitized program summary `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T095709Z.md`; session `71182c21-efdc-4aab-b0e4-3d432c28fc4e` | `public_choice_payload_sanitized` failed because a private pending choice token `learned_path_id` was observed in public messages/session/events. Raw rerun output is not submitted because the paired planner artifact failed redaction. |
+
+Closeout decision: implementation review failed. Services were available and the eval ran
+through Conversation API, but one required gate failed. This is no longer an environment
+blocked result.

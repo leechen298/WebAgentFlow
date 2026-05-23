@@ -1,6 +1,6 @@
 # 11.3.6.5 · Runtime Eval Program Closeout
 
-状态：blocked（closeout sweep executed，pending/planner eval preflight blocked）
+状态：blocked（service-available rerun executed，required eval gates failed）
 里程碑：M11
 类型：docs
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -51,7 +51,10 @@ Conversation runtime、不改 TaskPathPlanner / recovery / pending choice 产品
 
 ## 当前状态
 
-Closeout sweep 已执行。`pnpm run eval:wagent:pending-choice` 和
-`pnpm run eval:wagent:planner-choice` 均返回 exit `2`，并写出 blocked artifact。由于 required
-child package eval 被 preflight blocked，M11.3.6 program 不能标 `closed_live` 或
-`closed_non_live`。
+Closeout sweep 已执行两轮。第一轮 `pnpm run eval:wagent:pending-choice` 和
+`pnpm run eval:wagent:planner-choice` 均返回 exit `2`，写出 blocked artifact。随后在 API
+和 product-test-site 可访问后重跑，两个 required eval 均返回 exit `1`：
+11.3.6.3 暴露 public payload 脱敏 gate failure，11.3.6.4 暴露 planner-backed choice
+execution / verification gate failure；新增 raw planner artifact 还暴露了 full private path id，
+因此 raw rerun artifact 不提交，只提交 sanitized closeout summary。M11.3.6 program 不能标
+`closed_live` 或 `closed_non_live`，后续需要代码型 fix 迭代。

@@ -117,3 +117,27 @@
   - Both evals blocked during preflight because API health was unavailable.
   - No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.
   - M11.3.6 remains blocked, not complete.
+
+## 2026-05-23 Program closeout rerun with services
+
+- Author：Codex
+- Decision：blocked / implementation_review_failed
+- Commit：`77790f6`
+- Evidence：
+  - API `/health` returned HTTP 200 with `database=ok`; product `/items` returned HTTP 200.
+  - `pnpm run eval:wagent:pending-choice` -> exit `1`, `status=fail`,
+    session `71182c21-efdc-4aab-b0e4-3d432c28fc4e`.
+  - `pnpm run eval:wagent:planner-choice` -> exit `1`, `status=fail`,
+    session `4db454fb-4983-48a2-9ac1-716b6cde15fa`.
+  - Program closeout result:
+    `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T095709Z.md`
+- Notes：
+  - 11.3.6.3 failed `public_choice_payload_sanitized`: public surfaces exposed the private
+    pending choice token `learned_path_id`.
+  - 11.3.6.4 failed the required planner-backed choice execution path: planner choices were
+    created and choice A dispatch succeeded, but execution did not start and result verification
+    did not complete. The single-path bypass regression passed.
+  - Raw rerun output is not submitted because redaction inspection found a full private path id in
+    the planner result.
+  - No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.
+  - M11.3.6 remains blocked and needs a code-type fix iteration before it can close.

@@ -1672,9 +1672,9 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 |---|---|---|
 | [11.3.6.1 · WAgent Runtime Eval Runner Core](./11.3.6.1-wagent-runtime-eval-runner-core/) | 实现 runner v1，覆盖 `items_closed_loop` 和 `single_path_direct_replay_regression` | implemented_and_live_eval_passed |
 | [11.3.6.2 · Failure Recovery Eval](./11.3.6.2-failure-recovery-eval/) | recovery menu safety、retry / relearn / cancel、private payload safety | implementation complete（non-live checks passed，live Conversation eval not run） |
-| [11.3.6.3 · Pending Choice Multi-candidate Eval](./11.3.6.3-pending-choice-multi-candidate-eval/) | A/B/C public choice、private map、用户选择后执行正确 path | implementation_complete_blocked（runner case implemented，closeout eval preflight blocked） |
-| [11.3.6.4 · Planner-backed Choice Eval](./11.3.6.4-planner-backed-choice-eval/) | vague goal、planner-backed choice path、single-path bypass Planner 回归 | implementation_complete_blocked（runner case implemented，closeout eval preflight blocked） |
-| [11.3.6.5 · Runtime Eval Program Closeout](./11.3.6.5-runtime-eval-program-closeout/) | 收口 11.3.6.3 / 11.3.6.4 implementation evidence、result artifact、review 状态和 program 索引 | blocked（pending/planner eval preflight blocked） |
+| [11.3.6.3 · Pending Choice Multi-candidate Eval](./11.3.6.3-pending-choice-multi-candidate-eval/) | A/B/C public choice、private map、用户选择后执行正确 path | implementation_review_failed（service-available eval failed public payload redaction gate） |
+| [11.3.6.4 · Planner-backed Choice Eval](./11.3.6.4-planner-backed-choice-eval/) | vague goal、planner-backed choice path、single-path bypass Planner 回归 | implementation_review_failed（planner-backed choice execution gates failed，single-path bypass passed） |
+| [11.3.6.5 · Runtime Eval Program Closeout](./11.3.6.5-runtime-eval-program-closeout/) | 收口 11.3.6.3 / 11.3.6.4 implementation evidence、result artifact、review 状态和 program 索引 | blocked（required eval gates failed after services were available） |
 
 关键边界：
 
@@ -1682,8 +1682,10 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 - 11.3.6.1 承接已通过评审的 runner core 设计。
 - 11.3.6.2 已实现稳定 eval-only hook 和 recovery gates；non-live checks 已通过，live
   Conversation eval 尚未运行。
-- 11.3.6.3 已完成 pending choice multi-candidate setup 和 choice-selection gates 设计评审，可以进入实现。
-- 11.3.6.4 已完成 planner-backed choice eval 设计评审，可以进入实现。
+- 11.3.6.3 runner case 已实现，但 service-available eval 暴露 public payload redaction
+  gate failure，需要代码型 fix 迭代。
+- 11.3.6.4 runner case 已实现，但 planner-backed choice eval 暴露 execution / verification
+  gate failure；single-path bypass regression 已通过，需要代码型 fix 迭代。
 - 11.3.6.x runner 通过 Conversation API 驱动，不把 direct replay API 冒充 WAgent
   runtime 闭环。
 - Codex 复核 artifact，不替 runner 判定 pass / fail。

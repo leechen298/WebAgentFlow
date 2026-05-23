@@ -1,19 +1,22 @@
 # 复盘 / 评审（Review）
 
-状态：blocked（closeout sweep executed，pending/planner eval preflight blocked）
+状态：blocked（service-available rerun executed，required eval gates failed）
 
 ## Current Decision
 
 - Reviewer：ChatGPT
 - Decision：blocked
 - Code：not_started
-- Live eval：blocked
+- Live eval：fail
 - Notes：
   - 本包只定义 11.3.6 closeout sweep，不修改 runner 或 runtime。
   - blocked artifact 只能证明 blocked 被记录；不得把 blocked 写成 completed /
     `closed_live` / `closed_non_live`。
-  - `pending-choice` and `planner-choice` eval commands both returned exit `2`.
-  - Program status remains blocked until the required evals can run and pass.
+  - First sweep returned exit `2` for both required evals because API health was unavailable.
+  - Service-available rerun returned exit `1` for both required evals because required gates
+    failed.
+  - Program status remains blocked until a code-type fix iteration lands and the required evals
+    pass.
 
 ## 初始复核记录
 
@@ -52,12 +55,26 @@
 |---|---|
 | `pnpm run eval:wagent:items` | optional regression not run in this closeout |
 | `pnpm run eval:wagent:failure-recovery` | optional regression not run in this closeout |
-| live Conversation eval | preflight blocked before session creation |
+| live Conversation eval | required 11.3.6.3 / 11.3.6.4 runs executed and failed |
 | autonomous run | prohibited / out of scope |
 | `verify-scenario` | out of scope |
 
 ## 后续事项
 
-- Start API / product services and rerun the blocked eval commands.
-- If either command fails required gates after services are available, open a code-type fix
-  iteration instead of marking 11.3.6 complete.
+- Open a code-type fix iteration for the failed required gates.
+- After the fix, rerun `pnpm run eval:wagent:pending-choice` and
+  `pnpm run eval:wagent:planner-choice`.
+- Do not mark 11.3.6 complete until both required evals return exit `0`.
+
+## 2026-05-23 Service-available Rerun
+
+| Command / Surface | Expected | Actual result | Exit code | Status | Evidence | Notes |
+|---|---|---|---:|---|---|---|
+| API health | API / DB available | HTTP 200, `database=ok` | 0 | Pass | `curl -i http://127.0.0.1:8001/health` | Run outside sandbox due local TCP restriction. |
+| product `/items` | page available | HTTP 200 | 0 | Pass | `curl -i http://127.0.0.1:5176/items` | Run outside sandbox due local TCP restriction. |
+| `pnpm run eval:wagent:pending-choice` | all required gates pass | `status=fail`; `case=pending_choice_multi_candidate status=fail`; required gates `13/14` | 1 | Fail | Sanitized program summary `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T095709Z.md`; session `71182c21-efdc-4aab-b0e4-3d432c28fc4e` | `public_choice_payload_sanitized` failed because public surfaces exposed `learned_path_id`. Raw rerun output is not submitted because the paired planner artifact failed redaction. |
+| `pnpm run eval:wagent:planner-choice` | all required gates pass | `status=fail`; `planner_backed_choice status=fail`; `planner_single_path_bypass_regression status=pass` | 1 | Fail | Sanitized program summary `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T095709Z.md`; session `4db454fb-4983-48a2-9ac1-716b6cde15fa` | Planner choice was created and selected, but execution did not start; execution / verification / final response gates failed. Raw rerun output is not submitted because it contained a full private path id. |
+| strict private-id grep | no full private path id in submitted artifacts | raw planner rerun output contained a full private path id | 0 | Fail | command output | The raw runner artifact/result from the service-available rerun must not be committed. |
+| program closeout result | result file written | `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T095709Z.md` | N/A | Written | result file | Program remains blocked. |
+
+No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.

@@ -21,8 +21,8 @@ Codex 审计边界和 case roadmap。
 |---|---|---|
 | [11.3.6.1 · WAgent Runtime Eval Runner Core](../11.3.6.1-wagent-runtime-eval-runner-core/) | 实现第一版可执行 runner，覆盖 first-wave runtime regression | implemented_and_live_eval_passed |
 | [11.3.6.2 · Failure Recovery Eval](../11.3.6.2-failure-recovery-eval/) | 覆盖 recovery menu safety、retry / relearn / cancel 和 private payload safety | implementation_complete_non_live |
-| [11.3.6.3 · Pending Choice Multi-candidate Eval](../11.3.6.3-pending-choice-multi-candidate-eval/) | 覆盖 A/B/C public choice、private map 和用户选择后执行正确 path | implementation_complete_blocked |
-| [11.3.6.4 · Planner-backed Choice Eval](../11.3.6.4-planner-backed-choice-eval/) | 覆盖 vague goal、planner-backed choice path 和 single-path bypass Planner 回归 | implementation_complete_blocked |
+| [11.3.6.3 · Pending Choice Multi-candidate Eval](../11.3.6.3-pending-choice-multi-candidate-eval/) | 覆盖 A/B/C public choice、private map 和用户选择后执行正确 path | implementation_review_failed |
+| [11.3.6.4 · Planner-backed Choice Eval](../11.3.6.4-planner-backed-choice-eval/) | 覆盖 vague goal、planner-backed choice path 和 single-path bypass Planner 回归 | implementation_review_failed |
 | [11.3.6.5 · Runtime Eval Program Closeout](../11.3.6.5-runtime-eval-program-closeout/) | 核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 program 状态 | blocked |
 
 ## 本包做什么
@@ -54,6 +54,8 @@ Codex 审计边界和 case roadmap。
 
 总体规划已通过 review。11.3.6.1 已 live eval pass；11.3.6.2 已完成 non-live
 implementation checks，live Conversation eval 尚未运行；当前 runner 代码已覆盖到 11.3.6.4。
-11.3.6.5 closeout sweep 已执行，但 11.3.6.3 / 11.3.6.4 eval preflight 均因 API health
-不可用返回 blocked artifact。因此 11.3.6 program 当前状态为 blocked，不能标
-`closed_live` 或 `closed_non_live`。
+11.3.6.5 closeout sweep 已执行两轮：第一轮因 sandbox 内 API health 不可用写出 blocked
+artifact；第二轮在 API / product-test-site 可访问后运行 required eval，11.3.6.3 和
+11.3.6.4 均返回 exit `1`；新增 raw planner artifact 还暴露 full private path id，因此不提交
+raw rerun artifact，只提交 sanitized closeout summary。因此 11.3.6 program 当前状态为
+blocked / implementation review failed，不能标 `closed_live` 或 `closed_non_live`。
