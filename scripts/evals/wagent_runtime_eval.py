@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WAgent runtime eval runner for M11.3.6.1."""
+"""WAgent runtime eval runner for M11.3.6.x."""
 
 import argparse
 import json
@@ -14,24 +14,69 @@ from typing import Any, Callable
 import httpx
 
 
-SCHEMA_VERSION = "11.3.6.1"
+SCHEMA_VERSION = "11.3.6.2"
+FAILURE_RECOVERY_CASE = "failure_recovery_menu_safety"
 DEFAULT_CASES = [
     "items_closed_loop",
     "single_path_direct_replay_regression",
 ]
+ALL_CASES = [*DEFAULT_CASES, FAILURE_RECOVERY_CASE]
 ITEM_LIST_SELECTOR = "[data-testid='item-list']"
 SENSITIVE_KEYS = {
-    "password",
+    "api_key",
+    "authorization",
+    "cookie",
+    "credential",
     "credential",
     "credentials",
-    "token",
+    "css_selector",
+    "evidence_targets",
+    "execution_payload",
+    "learned_path_id",
+    "pending_choice_private_map",
+    "password",
+    "private_retry_payload",
+    "raw_selector",
+    "replay_action",
+    "replayaction",
     "secret",
+    "selector",
+    "slot_overrides",
+    "target_selector",
+    "token",
+    "xpath",
+}
+RECOVERY_FAILURE_CLASSES = {
+    "needs_review",
+    "evidence_missing",
+    "uncertain",
+    "blocked",
+    "replay_failed",
+}
+RECOVERY_SIDE_EFFECT_CLASSES = {"needs_review", "evidence_missing", "uncertain"}
+FORBIDDEN_PAYLOAD_TERMS = {
+    "learned_path_id",
+    "slot_overrides",
+    "evidence_targets",
+    "ReplayAction",
+    "replay_action",
+    "execution_payload",
+    "pending_choice_private_map",
+    "private_retry_payload",
+    "credential",
+    "password",
+    "secret",
+    "token",
     "cookie",
     "authorization",
     "api_key",
-    "pending_choice_private_map",
-    "private_retry_payload",
+    "target_selector",
+    "raw_selector",
+    "css_selector",
+    "xpath",
 }
+PROHIBITED_AUTONOMOUS_PATH_FRAGMENT = "autonomous" + "-runs"
+PROHIBITED_DIRECT_REPLAY_SUFFIX = "/" + "replay"
 
 
 @dataclass
@@ -160,7 +205,7 @@ def _normalize_cases(raw_cases: list[str] | None) -> list[str]:
     cases: list[str] = []
     for raw in raw_cases:
         cases.extend(item.strip() for item in raw.split(",") if item.strip())
-    unknown = [case for case in cases if case not in DEFAULT_CASES]
+    unknown = [case for case in cases if case not in ALL_CASES]
     if unknown:
         raise SystemExit(f"unknown eval case(s): {', '.join(unknown)}")
     return cases
@@ -233,7 +278,13 @@ class ConversationDriver:
         }
         return self._request("POST", "/conversation/sessions", json_body=payload)
 
-    def send_turn(self, session_id: str, text: str) -> TurnRecord:
+    def send_turn(
+        self,
+        session_id: str,
+        text: str,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> TurnRecord:
         started = utc_now()
         start = time.perf_counter()
         try:
@@ -245,6 +296,7 @@ class ConversationDriver:
                     "metadata": {
                         "client": "wagent_eval",
                         "browser_visibility": self.config.browser_visibility,
+                        **(metadata or {}),
                     },
                 },
             )
@@ -450,6 +502,31 @@ class GateEvaluator:
         ]
         return CaseResult(
             case_id="single_path_direct_replay_regression",
+            status=_case_status(gates),
+            gates=gates,
+            warnings=_warnings(gates),
+        )
+
+    def evaluate_failure_recovery_menu_safety(
+        self,
+        evidence: dict[str, Any],
+    ) -> CaseResult:
+        failure_class = _latest_recovery_failure_class(evidence)
+        latest_message = _latest_agent_message(evidence)
+        gates = [
+            _gate_failure_triggered(failure_class),
+            _gate_recovery_menu_shown(latest_message),
+            _gate_retry_wording_safe(latest_message),
+            _gate_retry_side_effect_warning(latest_message, failure_class),
+            _gate_relearn_option_shown(latest_message),
+            _gate_cancel_option_shown(latest_message),
+            _gate_private_payload_not_visible(evidence),
+            _gate_recovery_events_sanitized(evidence),
+            _gate_verified_happy_path_no_recovery(evidence),
+            _gate_no_autonomous_or_direct_replay(evidence),
+        ]
+        return CaseResult(
+            case_id=FAILURE_RECOVERY_CASE,
             status=_case_status(gates),
             gates=gates,
             warnings=_warnings(gates),
@@ -820,6 +897,278 @@ def _gate_no_planner_choice(
     )
 
 
+def _latest_recovery_failure_class(evidence: dict[str, Any]) -> str | None:
+    for event in reversed(_events(evidence)):
+        failure_class = _get(event, "payload", "failure_class")
+        if failure_class in RECOVERY_FAILURE_CLASSES:
+            return str(failure_class)
+        outcome = _get(event, "payload", "verification_outcome")
+        if outcome in RECOVERY_FAILURE_CLASSES:
+            return str(outcome)
+    return None
+
+
+def _gate_failure_triggered(failure_class: str | None) -> GateResult:
+    if failure_class in RECOVERY_FAILURE_CLASSES:
+        return GateResult(
+            "failure_triggered",
+            True,
+            "pass",
+            f"failure_class={failure_class}",
+            "events/history",
+        )
+    return GateResult(
+        "failure_triggered",
+        True,
+        "fail",
+        "no recovery failure class observed",
+        "events/history",
+    )
+
+
+def _gate_recovery_menu_shown(message: str) -> GateResult:
+    if _has_recovery_menu(message):
+        return GateResult(
+            "recovery_menu_shown",
+            True,
+            "pass",
+            "visible reply contains A/B/C recovery menu",
+            "message",
+        )
+    return GateResult(
+        "recovery_menu_shown",
+        True,
+        "fail",
+        "visible reply does not contain A/B/C recovery menu",
+        "message",
+    )
+
+
+def _gate_retry_wording_safe(message: str) -> GateResult:
+    if "A. 重试执行该操作" in message or "A、重试执行该操作" in message:
+        return GateResult(
+            "retry_wording_safe",
+            True,
+            "pass",
+            "A option uses 重试执行该操作",
+            "message",
+        )
+    return GateResult(
+        "retry_wording_safe",
+        True,
+        "fail",
+        "A option must say 重试执行该操作",
+        "message",
+    )
+
+
+def _gate_retry_side_effect_warning(
+    message: str,
+    failure_class: str | None,
+) -> GateResult:
+    if failure_class not in RECOVERY_SIDE_EFFECT_CLASSES:
+        return GateResult(
+            "retry_side_effect_warning",
+            False,
+            "not_observable",
+            f"not required for failure_class={failure_class}",
+            "message",
+        )
+    if "重试会再次执行该操作" in message and (
+        "可能重复" in message or "重复" in message
+    ):
+        return GateResult(
+            "retry_side_effect_warning",
+            True,
+            "pass",
+            "retry warning mentions repeated execution risk",
+            "message",
+        )
+    return GateResult(
+        "retry_side_effect_warning",
+        True,
+        "fail",
+        "retry side-effect warning missing for conservative failure class",
+        "message",
+    )
+
+
+def _gate_relearn_option_shown(message: str) -> GateResult:
+    if "B. 重新学习" in message or "B、重新学习" in message:
+        return GateResult(
+            "relearn_option_shown",
+            True,
+            "pass",
+            "B option offers 重新学习",
+            "message",
+        )
+    return GateResult(
+        "relearn_option_shown",
+        True,
+        "fail",
+        "B option must offer 重新学习",
+        "message",
+    )
+
+
+def _gate_cancel_option_shown(message: str) -> GateResult:
+    if "C. 取消" in message or "C、取消" in message:
+        return GateResult(
+            "cancel_option_shown",
+            True,
+            "pass",
+            "C option offers 取消",
+            "message",
+        )
+    return GateResult(
+        "cancel_option_shown",
+        True,
+        "fail",
+        "C option must offer 取消",
+        "message",
+    )
+
+
+def _gate_private_payload_not_visible(evidence: dict[str, Any]) -> GateResult:
+    public_surface = {
+        "messages": evidence.get("messages") or [],
+        "session_metadata": _get(evidence, "session", "metadata") or {},
+    }
+    leak = _first_forbidden_term(public_surface)
+    if leak is None:
+        return GateResult(
+            "private_payload_not_visible",
+            True,
+            "pass",
+            "visible messages and session public payload are sanitized",
+            "messages/session",
+        )
+    return GateResult(
+        "private_payload_not_visible",
+        True,
+        "fail",
+        f"private payload token observed: {leak}",
+        "messages/session",
+    )
+
+
+def _gate_recovery_events_sanitized(evidence: dict[str, Any]) -> GateResult:
+    recovery_events = [
+        event for event in _events(evidence) if _is_recovery_safety_event(event)
+    ]
+    leak = _first_forbidden_term(recovery_events)
+    if leak is None:
+        return GateResult(
+            "recovery_events_sanitized",
+            True,
+            "pass",
+            f"{len(recovery_events)} recovery event(s) sanitized",
+            "events/history",
+        )
+    return GateResult(
+        "recovery_events_sanitized",
+        True,
+        "fail",
+        f"private recovery token observed: {leak}",
+        "events/history",
+    )
+
+
+def _is_recovery_safety_event(event: dict[str, Any]) -> bool:
+    progress_kind = str(_get(event, "payload", "progress_kind") or "")
+    return (
+        progress_kind.startswith("failure_recovery")
+        or progress_kind == "eval_fault_injection_applied"
+    )
+
+
+def _gate_verified_happy_path_no_recovery(evidence: dict[str, Any]) -> GateResult:
+    messages = _agent_messages(evidence)
+    prior_messages = messages[:-1]
+    if not prior_messages:
+        return GateResult(
+            "verified_happy_path_no_recovery",
+            True,
+            "fail",
+            "no prior happy-path message available",
+            "messages",
+        )
+    for index, message in enumerate(prior_messages):
+        if _has_recovery_menu(message):
+            return GateResult(
+                "verified_happy_path_no_recovery",
+                True,
+                "fail",
+                f"prior agent message {index} contains recovery menu",
+                "messages",
+            )
+    return GateResult(
+        "verified_happy_path_no_recovery",
+        True,
+        "pass",
+        "prior happy-path messages do not contain recovery menu",
+        "messages",
+    )
+
+
+def _gate_no_autonomous_or_direct_replay(evidence: dict[str, Any]) -> GateResult:
+    records = _get(evidence, "raw_api_responses", "records") or []
+    for record in records if isinstance(records, list) else []:
+        path = str(record.get("path") or "") if isinstance(record, dict) else ""
+        if PROHIBITED_AUTONOMOUS_PATH_FRAGMENT in path or (
+            "learned-paths/" in path
+            and path.rstrip("/").endswith(PROHIBITED_DIRECT_REPLAY_SUFFIX)
+        ):
+            return GateResult(
+                "no_autonomous_or_direct_replay",
+                True,
+                "fail",
+                f"prohibited runner request path observed: {path}",
+                "runner raw request log",
+            )
+    return GateResult(
+        "no_autonomous_or_direct_replay",
+        True,
+        "pass",
+        "runner request log contains no autonomous-run or direct replay endpoint",
+        "runner raw request log",
+    )
+
+
+def _has_recovery_menu(message: str) -> bool:
+    return all(marker in message for marker in ("A.", "B.", "C.")) and all(
+        label in message for label in ("重试执行该操作", "重新学习", "取消")
+    )
+
+
+def _agent_messages(evidence: dict[str, Any]) -> list[str]:
+    raw_messages = [
+        raw
+        for raw in evidence.get("messages") or []
+        if isinstance(raw, dict) and raw.get("role") in {"agent", "engine"}
+    ]
+    if not raw_messages:
+        raw_messages = [
+            raw
+            for raw in _get(evidence, "history", "messages") or []
+            if isinstance(raw, dict) and raw.get("role") in {"agent", "engine"}
+        ]
+    messages: list[str] = []
+    for raw in raw_messages:
+        if isinstance(raw, dict) and raw.get("role") in {"agent", "engine"}:
+            messages.append(str(raw.get("content") or ""))
+    return messages
+
+
+def _first_forbidden_term(value: Any) -> str | None:
+    text = json.dumps(value, ensure_ascii=False, default=str)
+    lowered = text.lower()
+    for term in sorted(FORBIDDEN_PAYLOAD_TERMS, key=str.lower):
+        if term.lower() in lowered:
+            return term
+    return None
+
+
 def _case_status(gates: list[GateResult]) -> str:
     required = [gate for gate in gates if gate.required]
     if any(gate.status == "blocked" for gate in required):
@@ -878,8 +1227,11 @@ def render_markdown_report(
     artifact_path: Path,
 ) -> str:
     warnings = [warning for case in result.case_results for warning in case.warnings]
+    has_failure_recovery = any(
+        case.case_id == FAILURE_RECOVERY_CASE for case in result.case_results
+    )
     lines = [
-        "# M11.3.6.1 WAgent Runtime Eval Result",
+        "# M11.3.6 WAgent Runtime Eval Result",
         "",
         f"Date: {datetime.now(UTC).isoformat()}",
         f"Status: {result.status}",
@@ -921,6 +1273,23 @@ def render_markdown_report(
         lines.extend(f"- {_md_escape(warning)}" for warning in warnings)
     else:
         lines.append("- None")
+    if has_failure_recovery:
+        live_status = "run through Conversation API" if result.session_id else "not run"
+        trigger_type = (
+            "eval-only hook"
+            if result.session_id and result.status != "blocked"
+            else "not run"
+        )
+        lines.extend(
+            [
+                "",
+                "## Failure Recovery Eval",
+                "",
+                f"- Live Conversation eval: {live_status}.",
+                f"- Failure trigger type: {trigger_type}.",
+                "- Retry execution: not run.",
+            ]
+        )
     lines.extend(
         [
             "",
@@ -950,14 +1319,21 @@ def write_artifacts(
     )
     if config.write_markdown:
         config.result_dir.mkdir(parents=True, exist_ok=True)
-        markdown_path = (
-            config.result_dir / f"m11-11.3.6.1-wagent-runtime-eval-core-{timestamp}.md"
+        markdown_path = config.result_dir / _markdown_result_filename(
+            config.cases,
+            timestamp,
         )
         markdown_path.write_text(
             render_markdown_report(result, artifact_path=json_path),
             encoding="utf-8",
         )
     return json_path, markdown_path
+
+
+def _markdown_result_filename(cases: list[str], timestamp: str) -> str:
+    if FAILURE_RECOVERY_CASE in cases:
+        return f"m11-11.3.6.2-failure-recovery-eval-{timestamp}.md"
+    return f"m11-11.3.6.1-wagent-runtime-eval-core-{timestamp}.md"
 
 
 def run_eval(config: EvalConfig) -> EvalResult:
@@ -1063,6 +1439,61 @@ def run_eval(config: EvalConfig) -> EvalResult:
                         latest_evidence,
                         expected_item_name=exec_name,
                         learned_path_id=learned_path_id,
+                    )
+                )
+        if FAILURE_RECOVERY_CASE in config.cases:
+            if learned_path_id is None:
+                learn_name = f"测试项目A-{stamp}"
+                exec_name = f"测试项目B-{stamp}"
+                for text in [
+                    config.product_url,
+                    f"学习新增项目，名称叫 {learn_name}",
+                    f"帮我新增项目，名称叫 {exec_name}",
+                ]:
+                    turn = driver.send_turn(session_id, text)
+                    turns.append(turn)
+                    if turn.error:
+                        raise EvalBlockedError(turn.error)
+                latest_evidence = collector.collect(session_id)
+                learned_path_id = _latest_learned_path_id(latest_evidence)
+                if learned_path_id and not latest_evidence.get("learned_path_detail"):
+                    latest_evidence = collector.collect(session_id, [learned_path_id])
+            if learned_path_id is None:
+                case_results.append(
+                    CaseResult(
+                        case_id=FAILURE_RECOVERY_CASE,
+                        status="blocked",
+                        gates=[
+                            GateResult(
+                                "items_closed_loop_dependency",
+                                True,
+                                "blocked",
+                                "failure recovery eval requires a learned path from this eval session",
+                                "runner",
+                            )
+                        ],
+                    )
+                )
+            else:
+                exec_name = f"测试项目D-{stamp}"
+                turn = driver.send_turn(
+                    session_id,
+                    f"帮我新增项目，名称叫 {exec_name}",
+                    metadata={
+                        "eval_fault_injection": {
+                            "case_id": FAILURE_RECOVERY_CASE,
+                            "reporter_outcome": "needs_review",
+                        }
+                    },
+                )
+                turns.append(turn)
+                if turn.error:
+                    raise EvalBlockedError(turn.error)
+                latest_evidence = collector.collect(session_id, [learned_path_id])
+                latest_evidence["raw_api_responses"] = {"records": driver.raw_records}
+                case_results.append(
+                    GateEvaluator().evaluate_failure_recovery_menu_safety(
+                        latest_evidence,
                     )
                 )
         status = _overall_status(case_results)

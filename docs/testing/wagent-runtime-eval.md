@@ -1,6 +1,6 @@
 # WAgent Runtime Eval Runner
 
-This page describes the local M11.3.6.1 WAgent runtime eval runner.
+This page describes the local M11.3.6.x WAgent runtime eval runner.
 
 The runner drives WebAgentFlow through the Conversation API and writes
 auditable JSON plus Markdown artifacts. It is not a product Agent, does not
@@ -41,6 +41,19 @@ Equivalent full command:
   --case single_path_direct_replay_regression
 ```
 
+Failure recovery eval:
+
+```bash
+pnpm run eval:wagent:failure-recovery
+```
+
+Equivalent command:
+
+```bash
+.venv/bin/python scripts/evals/wagent_runtime_eval.py \
+  --case failure_recovery_menu_safety
+```
+
 Useful options:
 
 ```bash
@@ -77,6 +90,33 @@ Useful options:
 The single-path case ignores old global `/items` LearnedPath rows. It uses the
 current eval session's learned action and runtime events as evidence.
 
+`failure_recovery_menu_safety`:
+
+1. Creates or reuses an `interactive_chat` eval session.
+2. Sets up the `/items` learned action when the case is run alone.
+3. Runs one verified happy-path execution as a control.
+4. Sends a new execution turn through the Conversation API with an eval-only
+   fault injection metadata key:
+
+   ```json
+   {
+     "client": "wagent_eval",
+     "eval_fault_injection": {
+       "case_id": "failure_recovery_menu_safety",
+       "reporter_outcome": "needs_review"
+     }
+   }
+   ```
+
+5. Evaluates gates for the A/B/C recovery menu, retry wording, repeated
+   side-effect warning, relearn / cancel options, public payload redaction,
+   sanitized recovery events, happy-path no-recovery control, and prohibited
+   endpoint usage.
+
+The eval-only hook is ignored unless `client=wagent_eval`, the case id matches,
+and the reporter outcome is allowlisted. It does not bypass Conversation API
+dispatch and does not execute retry as a required gate.
+
 ## Outputs
 
 JSON artifact:
@@ -89,6 +129,7 @@ Markdown result:
 
 ```text
 docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-${timestamp}.md
+docs/testing/results/m11-11.3.6.2-failure-recovery-eval-${timestamp}.md
 ```
 
 Both outputs are derived from the normalized `EvalResult`. The JSON artifact
@@ -108,6 +149,23 @@ Required gates must be `pass` for the case to pass. Conditional gates such as
 when current public history/events do not expose sanitized step logs or
 request-side `evidence_targets`. The runner must not infer selector data from
 `ExecutionEvidence`.
+
+Failure recovery gates are hard gates for the failure-recovery case:
+
+- `failure_triggered`
+- `recovery_menu_shown`
+- `retry_wording_safe`
+- `retry_side_effect_warning`
+- `relearn_option_shown`
+- `cancel_option_shown`
+- `private_payload_not_visible`
+- `recovery_events_sanitized`
+- `verified_happy_path_no_recovery`
+- `no_autonomous_or_direct_replay`
+
+`retry_execution_verified` is intentionally not required in 11.3.6.2. Markdown
+results must say `Retry execution: not run.` unless a later case explicitly
+executes and proves retry success.
 
 ## Exit Codes
 

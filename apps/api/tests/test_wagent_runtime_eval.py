@@ -109,6 +109,110 @@ def _valid_items_evidence(*, include_evidence_targets: bool = True) -> dict[str,
     }
 
 
+def _valid_failure_recovery_evidence() -> dict[str, Any]:
+    return {
+        "session": {
+            "id": "session-1",
+            "metadata": {
+                "pending_choice": {
+                    "type": "pending_choice",
+                    "choices": [
+                        {
+                            "choice_id": "A",
+                            "label": "重试执行该操作",
+                            "description": "重试会再次执行该操作，可能重复新增 / 提交。",
+                        },
+                        {"choice_id": "B", "label": "重新学习"},
+                        {"choice_id": "C", "label": "取消"},
+                    ],
+                }
+            },
+        },
+        "events": [
+            {
+                "id": "evt-happy-report",
+                "type": "task_result_reported",
+                "payload": {
+                    "verification_outcome": "verified",
+                    "task_verified": True,
+                },
+            },
+            {
+                "id": "evt-hook",
+                "type": "chat_progress_recorded",
+                "payload": {
+                    "progress_kind": "eval_fault_injection_applied",
+                    "case_id": "failure_recovery_menu_safety",
+                    "fault_class": "needs_review",
+                },
+            },
+            {
+                "id": "evt-failed",
+                "type": "chat_execution_failed",
+                "payload": {
+                    "failure_class": "needs_review",
+                    "replay": {"replay_status": "succeeded"},
+                },
+            },
+            {
+                "id": "evt-reported",
+                "type": "task_result_reported",
+                "payload": {
+                    "verification_outcome": "needs_review",
+                    "needs_review": True,
+                },
+            },
+            {
+                "id": "evt-recovery",
+                "type": "chat_progress_recorded",
+                "payload": {
+                    "progress_kind": "failure_recovery_offered",
+                    "failure_class": "needs_review",
+                    "choice_group_id": "choice-group-1",
+                    "retry_count": 0,
+                    "choices": [
+                        {
+                            "choice_id": "A",
+                            "label": "重试执行该操作",
+                            "description": "重试会再次执行该操作，可能重复新增 / 提交。",
+                        },
+                        {"choice_id": "B", "label": "重新学习"},
+                        {"choice_id": "C", "label": "取消"},
+                    ],
+                    "action_alias": "新增项目",
+                },
+            },
+        ],
+        "messages": [
+            {
+                "role": "agent",
+                "content": "执行完成。我在列表中看到了“测试项目B”，所以可以确认新增项目成功。",
+            },
+            {
+                "role": "agent",
+                "content": (
+                    "执行中。\n操作执行后，我没有在列表中确认看到“测试项目D”。"
+                    "可能页面更新较慢，也可能操作没有成功。\n"
+                    "你可以选择：\n"
+                    "A. 重试执行该操作 - 重试会再次执行该操作，可能重复新增 / 提交。\n"
+                    "B. 重新学习\n"
+                    "C. 取消"
+                ),
+            },
+        ],
+        "history": {},
+        "raw_api_responses": {
+            "records": [
+                {"method": "POST", "path": "/conversation/sessions"},
+                {
+                    "method": "POST",
+                    "path": "/conversation/sessions/session-1/dispatch",
+                },
+            ]
+        },
+    }
+
+
 def test_parse_config_defaults() -> None:
     runner = _load_runner()
 
@@ -124,6 +228,14 @@ def test_parse_config_defaults() -> None:
     assert config.artifact_dir == Path("artifacts/wagent-eval")
     assert config.result_dir == Path("docs/testing/results")
     assert config.browser_visibility == "headless"
+
+
+def test_parse_config_accepts_failure_recovery_case() -> None:
+    runner = _load_runner()
+
+    config = runner.parse_config(["--case", "failure_recovery_menu_safety"])
+
+    assert config.cases == ["failure_recovery_menu_safety"]
 
 
 def test_preflight_blocks_when_api_unreachable() -> None:
@@ -331,6 +443,145 @@ def test_single_path_regression_ignores_old_global_items_paths() -> None:
     assert gates["dom_evidence_verified_C"].status == "pass"
 
 
+def test_failure_recovery_gate_passes_with_sanitized_recovery_evidence() -> None:
+    runner = _load_runner()
+    evidence = _valid_failure_recovery_evidence()
+
+    result = runner.GateEvaluator().evaluate_failure_recovery_menu_safety(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "pass"
+    assert gates["failure_triggered"].status == "pass"
+    assert gates["recovery_menu_shown"].status == "pass"
+    assert gates["retry_wording_safe"].status == "pass"
+    assert gates["retry_side_effect_warning"].status == "pass"
+    assert gates["relearn_option_shown"].status == "pass"
+    assert gates["cancel_option_shown"].status == "pass"
+    assert gates["private_payload_not_visible"].status == "pass"
+    assert gates["recovery_events_sanitized"].status == "pass"
+    assert gates["verified_happy_path_no_recovery"].status == "pass"
+    assert gates["no_autonomous_or_direct_replay"].status == "pass"
+
+
+def test_failure_recovery_gate_deduplicates_history_message_echo() -> None:
+    runner = _load_runner()
+    evidence = _valid_failure_recovery_evidence()
+    evidence["history"] = {"messages": list(evidence["messages"])}
+
+    result = runner.GateEvaluator().evaluate_failure_recovery_menu_safety(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "pass"
+    assert gates["verified_happy_path_no_recovery"].status == "pass"
+
+
+def test_failure_recovery_gate_fails_for_generic_retry_wording() -> None:
+    runner = _load_runner()
+    evidence = _valid_failure_recovery_evidence()
+    evidence["messages"][-1]["content"] = evidence["messages"][-1]["content"].replace(
+        "A. 重试执行该操作",
+        "A. 重试",
+    )
+
+    result = runner.GateEvaluator().evaluate_failure_recovery_menu_safety(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["retry_wording_safe"].status == "fail"
+
+
+def test_failure_recovery_gate_fails_when_side_effect_warning_missing() -> None:
+    runner = _load_runner()
+    evidence = _valid_failure_recovery_evidence()
+    evidence["messages"][-1]["content"] = evidence["messages"][-1]["content"].replace(
+        " - 重试会再次执行该操作，可能重复新增 / 提交。",
+        "",
+    )
+
+    result = runner.GateEvaluator().evaluate_failure_recovery_menu_safety(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["retry_side_effect_warning"].status == "fail"
+
+
+def test_failure_recovery_gate_fails_when_relearn_or_cancel_option_missing() -> None:
+    runner = _load_runner()
+    evidence = _valid_failure_recovery_evidence()
+    evidence["messages"][-1]["content"] = evidence["messages"][-1]["content"].replace(
+        "B. 重新学习\nC. 取消",
+        "B. 重新学习",
+    )
+
+    result = runner.GateEvaluator().evaluate_failure_recovery_menu_safety(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["cancel_option_shown"].status == "fail"
+
+
+def test_failure_recovery_gate_fails_when_private_payload_visible() -> None:
+    runner = _load_runner()
+    evidence = _valid_failure_recovery_evidence()
+    evidence["messages"][-1]["content"] += "\nlearned_path_id=lp-private"
+
+    result = runner.GateEvaluator().evaluate_failure_recovery_menu_safety(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["private_payload_not_visible"].status == "fail"
+
+
+def test_failure_recovery_gate_fails_when_recovery_event_leaks_payload() -> None:
+    runner = _load_runner()
+    evidence = _valid_failure_recovery_evidence()
+    evidence["events"][-1]["payload"]["slot_overrides"] = {"item_name": "测试项目D"}
+
+    result = runner.GateEvaluator().evaluate_failure_recovery_menu_safety(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["recovery_events_sanitized"].status == "fail"
+
+
+def test_failure_recovery_gate_fails_when_eval_hook_event_leaks_payload() -> None:
+    runner = _load_runner()
+    evidence = _valid_failure_recovery_evidence()
+    evidence["events"][1]["payload"]["slot_overrides"] = {"item_name": "测试项目D"}
+
+    result = runner.GateEvaluator().evaluate_failure_recovery_menu_safety(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["recovery_events_sanitized"].status == "fail"
+
+
+def test_failure_recovery_gate_fails_when_happy_path_has_recovery_menu() -> None:
+    runner = _load_runner()
+    evidence = _valid_failure_recovery_evidence()
+    evidence["messages"][0]["content"] += "\nA. 重试执行该操作\nB. 重新学习\nC. 取消"
+
+    result = runner.GateEvaluator().evaluate_failure_recovery_menu_safety(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["verified_happy_path_no_recovery"].status == "fail"
+
+
+def test_failure_recovery_gate_fails_when_runner_calls_prohibited_endpoint() -> None:
+    runner = _load_runner()
+    evidence = _valid_failure_recovery_evidence()
+    evidence["raw_api_responses"]["records"].append(
+        {"method": "POST", "path": "/exploration/" + "autonomous" + "-runs"}
+    )
+
+    result = runner.GateEvaluator().evaluate_failure_recovery_menu_safety(evidence)
+
+    gates = {gate.name: gate for gate in result.gates}
+    assert result.status == "fail"
+    assert gates["no_autonomous_or_direct_replay"].status == "fail"
+
+
 def test_single_path_regression_fails_when_execution_uses_old_path() -> None:
     runner = _load_runner()
     evidence = _valid_items_evidence()
@@ -471,6 +722,29 @@ def test_exit_code_reducer_prefers_actionable_status() -> None:
     assert runner.reduce_exit_code(["pass"], artifact_write_failed=True) == 4
 
 
+def test_failure_recovery_case_blocks_on_invalid_api_and_writes_case_result(
+    monkeypatch,
+) -> None:
+    runner = _load_runner()
+    config = runner.parse_config(["--case", "failure_recovery_menu_safety"])
+
+    monkeypatch.setattr(
+        runner,
+        "run_preflight",
+        lambda _config: runner.PreflightResult(
+            status="blocked",
+            exit_code=2,
+            services={"api": {"ok": False}, "product": {"ok": False}},
+        ),
+    )
+
+    result = runner.run_eval(config)
+
+    assert result.status == "blocked"
+    assert [case.case_id for case in result.case_results] == ["failure_recovery_menu_safety"]
+    assert result.case_results[0].gates[0].status == "blocked"
+
+
 def test_markdown_report_uses_normalized_gate_results(tmp_path: Path) -> None:
     runner = _load_runner()
     gate = runner.GateResult(
@@ -514,3 +788,48 @@ def test_markdown_report_uses_normalized_gate_results(tmp_path: Path) -> None:
         "| items_closed_loop | reporter_verified | pass | "
         "verification_outcome=verified | task_result_reported |"
     ) in report
+
+
+def test_markdown_report_includes_failure_recovery_not_run_boundary(
+    tmp_path: Path,
+) -> None:
+    runner = _load_runner()
+    case = runner.CaseResult(
+        case_id="failure_recovery_menu_safety",
+        status="blocked",
+        turns=[],
+        gates=[
+            runner.GateResult(
+                name="preflight",
+                required=True,
+                status="blocked",
+                evidence="API unavailable",
+                source="preflight",
+            )
+        ],
+        warnings=[],
+    )
+    result = runner.EvalResult(
+        schema_version=runner.SCHEMA_VERSION,
+        status="blocked",
+        environment={"commit": "abc123"},
+        services={},
+        config={},
+        session_id=None,
+        case_results=[case],
+        turns=[],
+        events=[],
+        messages=[],
+        history={},
+        learned_paths=[],
+        raw_api_responses={},
+        gate_summary={"required_passed": 0, "required_failed": 0},
+    )
+
+    report = runner.render_markdown_report(
+        result,
+        artifact_path=tmp_path / "artifact.json",
+    )
+
+    assert "Live Conversation eval: not run" in report
+    assert "Retry execution: not run" in report

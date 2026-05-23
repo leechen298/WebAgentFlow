@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any, Literal
 from urllib.parse import urlparse
@@ -75,6 +75,8 @@ _PENDING_SENSITIVE_VALUES: dict[str, dict[str, str]] = {}
 _CHOICE_IDS = ("A", "B", "C", "D")
 _RECOVERY_SIDE_EFFECT_CLASSES = {"evidence_missing", "needs_review", "uncertain"}
 _LIVE_ACTIVE_TASK_STATUSES = {"waiting_for_user_input"}
+_EVAL_FAILURE_RECOVERY_CASE_ID = "failure_recovery_menu_safety"
+_EVAL_ALLOWED_REPORTER_OUTCOMES = {"needs_review"}
 
 
 def clear_pending_sensitive_values(session_id: str) -> None:
@@ -153,9 +155,7 @@ def _execution_evidence_dicts(
     replay_summary: ConversationReplaySummary,
 ) -> list[dict[str, Any]]:
     return [
-        item.model_dump(mode="json")
-        if hasattr(item, "model_dump")
-        else dict(item)
+        item.model_dump(mode="json") if hasattr(item, "model_dump") else dict(item)
         for item in replay_summary.execution_evidence
         if item is not None
     ]
@@ -228,12 +228,50 @@ def _basic_failure_class(
     if report.outcome == "needs_review":
         return "needs_review"
     if report.outcome == "uncertain":
-        return (
-            "evidence_missing"
-            if not _execution_evidence_dicts(replay_summary)
-            else "uncertain"
-        )
+        return "evidence_missing" if not _execution_evidence_dicts(replay_summary) else "uncertain"
     return "uncertain"
+
+
+def _eval_fault_reporter_outcome(
+    *,
+    session_metadata: dict[str, Any],
+    dispatch_metadata: dict[str, Any] | None,
+) -> str | None:
+    metadata = dispatch_metadata or {}
+    client = metadata.get("client") or session_metadata.get("client")
+    injection = metadata.get("eval_fault_injection")
+    if injection is None:
+        injection = session_metadata.get("eval_fault_injection")
+    if client != "wagent_eval" or not isinstance(injection, dict):
+        return None
+    if injection.get("case_id") != _EVAL_FAILURE_RECOVERY_CASE_ID:
+        return None
+    outcome = injection.get("reporter_outcome")
+    if outcome not in _EVAL_ALLOWED_REPORTER_OUTCOMES:
+        return None
+    return str(outcome)
+
+
+def _with_eval_fault_report(report: Any, outcome: str) -> Any:
+    event_payload = dict(report.event_payload)
+    event_payload.update(
+        {
+            "verification_outcome": outcome,
+            "task_verified": False,
+            "needs_review": True,
+            "eval_fault_injection": {
+                "case_id": _EVAL_FAILURE_RECOVERY_CASE_ID,
+                "fault_class": outcome,
+            },
+        }
+    )
+    return replace(
+        report,
+        outcome=outcome,
+        needs_review=True,
+        missing_evidence_summary="eval fault injection forced needs_review",
+        event_payload=event_payload,
+    )
 
 
 def _recovery_failure_message(
@@ -246,10 +284,7 @@ def _recovery_failure_message(
     if failure_class == "replay_failed":
         return "执行失败：这次操作没有完成。"
     if failure_class == "blocked":
-        return (
-            "我找到了已学习路径，但当前页面和学习时的页面不匹配，"
-            "所以没有继续确认执行结果。"
-        )
+        return "我找到了已学习路径，但当前页面和学习时的页面不匹配，所以没有继续确认执行结果。"
     if failure_class == "evidence_missing":
         if item_name:
             return (
@@ -281,14 +316,10 @@ def _entry_gate_user_response(category: ConversationEntryGateCategory) -> str:
         )
     if category == ConversationEntryGateCategory.UNSUPPORTED:
         return (
-            "这个请求不属于当前网页操作范围。你可以提供目标网页 URL，"
-            "并说明要学习或执行的页面操作。"
+            "这个请求不属于当前网页操作范围。你可以提供目标网页 URL，并说明要学习或执行的页面操作。"
         )
     if category == ConversationEntryGateCategory.NEEDS_CLARIFICATION:
-        return (
-            "我还需要确认这是不是网页操作任务。请提供目标页面 URL，"
-            "或说明要学习/执行的网页操作。"
-        )
+        return "我还需要确认这是不是网页操作任务。请提供目标页面 URL，或说明要学习/执行的网页操作。"
     return (
         "你好，我主要处理网页操作任务。你可以发给我目标页面 URL，"
         "并说明要学习哪个操作，或让我执行已经学会的操作。"
@@ -317,9 +348,7 @@ class InteractiveChatRuntime:
         self._router_service = router_service or CustomerFacingAgentRouterService()
         self._skill_registry = skill_registry or ApplicationSkillRegistry()
         self._page_context_provider = page_context_provider
-        self._page_understanding_service = (
-            page_understanding_service or PageUnderstandingService()
-        )
+        self._page_understanding_service = page_understanding_service or PageUnderstandingService()
 
     def try_handle(
         self,
@@ -405,9 +434,7 @@ class InteractiveChatRuntime:
                     else None
                 ),
                 "active_task": (
-                    context.active_task.model_dump(mode="json")
-                    if context.active_task
-                    else None
+                    context.active_task.model_dump(mode="json") if context.active_task else None
                 ),
                 "learned_action_count": len(context.learned_actions),
             },
@@ -443,8 +470,7 @@ class InteractiveChatRuntime:
             route_decision.route_decision == RouteDecisionKind.ASK_USER
             and route_decision.target.url
             and any(
-                field.semantic_type == "operation_goal"
-                for field in route_decision.missing_fields
+                field.semantic_type == "operation_goal" for field in route_decision.missing_fields
             )
         ):
             return self._handle_pending_target_question(
@@ -652,12 +678,8 @@ class InteractiveChatRuntime:
                 {
                     "progress_kind": "planner_choice_selected",
                     "selected_choice_id": choice_id,
-                    "planner_warning_count": _count_summary_items(
-                        planner_summary, "warnings"
-                    ),
-                    "planner_risk_count": _count_summary_items(
-                        planner_summary, "risk_hints"
-                    ),
+                    "planner_warning_count": _count_summary_items(planner_summary, "warnings"),
+                    "planner_risk_count": _count_summary_items(planner_summary, "risk_hints"),
                     "confirmation_required": (
                         bool(planner_summary.get("confirmation_required"))
                         if isinstance(planner_summary, dict)
@@ -1039,15 +1061,12 @@ class InteractiveChatRuntime:
         metadata: dict[str, Any] | None,
         previous_status: str,
     ) -> DispatchResult:
-        events = (
-            self._trace_event_types(trace_context)
-            + self._append_chat_command_event(
-                session_id=session_id,
-                raw_input="",
-                command_kind="unknown",
-                metadata=metadata,
-                intake=intake,
-            )
+        events = self._trace_event_types(trace_context) + self._append_chat_command_event(
+            session_id=session_id,
+            raw_input="",
+            command_kind="unknown",
+            metadata=metadata,
+            intake=intake,
         )
         response = intake.ask_user_message_hint or "我还需要再确认一下你的意思。"
         self._append_agent_message(
@@ -1082,15 +1101,12 @@ class InteractiveChatRuntime:
         turns_remaining: int | None = None,
     ) -> DispatchResult:
         trace_context = trace_context or IntakeTraceContext([], [])
-        events = (
-            self._trace_event_types(trace_context)
-            + self._append_chat_command_event(
-                session_id=session_id,
-                raw_input="",
-                command_kind="learn_page",
-                metadata=metadata,
-                intake=intake,
-            )
+        events = self._trace_event_types(trace_context) + self._append_chat_command_event(
+            session_id=session_id,
+            raw_input="",
+            command_kind="learn_page",
+            metadata=metadata,
+            intake=intake,
         )
         self._save_pending_intake(
             session_id,
@@ -1338,8 +1354,7 @@ class InteractiveChatRuntime:
             goal=route_decision.user_goal,
         )
         response = (
-            f"我已查看页面：{page_understanding.observed_page_summary}"
-            " 你想让我学习或执行哪个操作？"
+            f"我已查看页面：{page_understanding.observed_page_summary} 你想让我学习或执行哪个操作？"
         )
         self._append_agent_message(
             session_id,
@@ -1580,9 +1595,7 @@ class InteractiveChatRuntime:
             input_summary={
                 "target_url": intent.url,
                 "user_goal": intake.action.goal if intake else None,
-                "route_decision": (
-                    route_decision.route_decision.value if route_decision else None
-                ),
+                "route_decision": (route_decision.route_decision.value if route_decision else None),
             },
         )
         self._append_event(
@@ -1621,9 +1634,7 @@ class InteractiveChatRuntime:
             )
 
         path = (
-            LearnedPathRepository(self._repo.session).get(
-                learning_result.learned_path_id
-            )
+            LearnedPathRepository(self._repo.session).get(learning_result.learned_path_id)
             if learning_result.learned_path_id
             else None
         )
@@ -1657,9 +1668,7 @@ class InteractiveChatRuntime:
             ConversationEventType.CHAT_LEARNING_COMPLETED,
             {
                 "run_id": learning_result.run_id,
-                "old_learned_path_id": (
-                    old_action.get("learned_path_id") if old_action else None
-                ),
+                "old_learned_path_id": (old_action.get("learned_path_id") if old_action else None),
                 "new_learned_path_id": learning_result.learned_path_id,
                 "alias": action["alias"],
                 "target_url": action["target_url"],
@@ -1731,8 +1740,7 @@ class InteractiveChatRuntime:
                 )
             if (
                 route_decision is not None
-                and route_decision.recommended_skill
-                == ApplicationSkillName.LEARN_THEN_EXECUTE
+                and route_decision.recommended_skill == ApplicationSkillName.LEARN_THEN_EXECUTE
             ):
                 # M11.3.5 keeps learn-then-execute in guided mode: the Router may
                 # recommend it, but runtime requires explicit learning first.
@@ -1754,9 +1762,7 @@ class InteractiveChatRuntime:
                     ApplicationSkillName.LEARN_THEN_EXECUTE,
                     status="blocked",
                     input_summary=route_decision.model_dump(mode="json"),
-                    output_summary={
-                        "reason": "learning_confirmation_required_before_execution"
-                    },
+                    output_summary={"reason": "learning_confirmation_required_before_execution"},
                 )
                 response = "我还没学过这个操作。你可以先让我学习这个页面上的操作。"
                 self._append_agent_message(session_id, response)
@@ -1803,6 +1809,7 @@ class InteractiveChatRuntime:
             previous_status=previous_status,
             headless=headless,
             command_kind="execute_task",
+            dispatch_metadata=metadata,
         )
 
     def _execute_matched_action(
@@ -1818,6 +1825,7 @@ class InteractiveChatRuntime:
         headless: bool,
         command_kind: str,
         retry_count_override: int | None = None,
+        dispatch_metadata: dict[str, Any] | None = None,
     ) -> DispatchResult:
         if self._replay_handler is None:
             response = "执行失败：replay handler 未配置。"
@@ -1935,6 +1943,24 @@ class InteractiveChatRuntime:
                 replay_summary=replay_summary,
                 confirmed_plan_context=report_confirmed_context,
             )
+            session = self._repo.get_session(session_id)
+            session_metadata = session.metadata_json if session is not None else {}
+            eval_outcome = _eval_fault_reporter_outcome(
+                session_metadata=session_metadata or {},
+                dispatch_metadata=dispatch_metadata,
+            )
+            if eval_outcome is not None:
+                report = _with_eval_fault_report(report, eval_outcome)
+                self._append_event(
+                    session_id,
+                    ConversationEventType.CHAT_PROGRESS_RECORDED,
+                    {
+                        "progress_kind": "eval_fault_injection_applied",
+                        "case_id": _EVAL_FAILURE_RECOVERY_CASE_ID,
+                        "fault_class": eval_outcome,
+                    },
+                    events,
+                )
         failure_class = _basic_failure_class(replay_summary, report)
         if failure_class is None:
             if report is not None:
@@ -2948,10 +2974,10 @@ class InteractiveChatRuntime:
         intake: ConversationIntakeResult,
         trace_context: IntakeTraceContext,
     ) -> dict[str, Any]:
-        fallback = (
-            trace_context.fallback
-            or intake.source in {"provider_error", "provider_parse_error"}
-        )
+        fallback = trace_context.fallback or intake.source in {
+            "provider_error",
+            "provider_parse_error",
+        }
         if fallback:
             return code_response_provenance(
                 CODE_PRODUCER_INTERACTIVE_CHAT,
@@ -2996,9 +3022,7 @@ class InteractiveChatRuntime:
             (item for item in existing if _action_scope_key(item) == action_key),
             None,
         )
-        merged = [
-            item for item in existing if _action_scope_key(item) != action_key
-        ]
+        merged = [item for item in existing if _action_scope_key(item) != action_key]
         merged.append(action)
         metadata["learned_actions"] = merged
         metadata.pop("pending_intake", None)
@@ -3033,20 +3057,13 @@ class InteractiveChatRuntime:
             "intent": intake.intent.value,
             "target": intake.target.model_dump(mode="json", exclude_none=True),
             "action": intake.action.model_dump(mode="json", exclude_none=True),
-            "slots": [
-                slot.model_dump(mode="json", exclude_none=True)
-                for slot in intake.slots
-            ],
-            "missing_fields": [
-                field.semantic_type for field in intake.missing_fields
-            ],
+            "slots": [slot.model_dump(mode="json", exclude_none=True) for slot in intake.slots],
+            "missing_fields": [field.semantic_type for field in intake.missing_fields],
             "created_from_message_id": message_id,
             "turns_remaining": turns_remaining if turns_remaining is not None else 3,
         }
         sensitive_values = {
-            slot.semantic_type: slot.value
-            for slot in intake.slots
-            if slot.sensitive and slot.value
+            slot.semantic_type: slot.value for slot in intake.slots if slot.sensitive and slot.value
         }
         if sensitive_values:
             stored = dict(_PENDING_SENSITIVE_VALUES.get(session_id) or {})
@@ -3084,9 +3101,7 @@ class InteractiveChatRuntime:
         if session is None:
             raise ValueError(f"session not found: {session_id}")
         metadata = dict(session.metadata_json or {})
-        metadata["pending_target"] = redact_sensitive_payload(
-            target.model_dump(mode="json")
-        )
+        metadata["pending_target"] = redact_sensitive_payload(target.model_dump(mode="json"))
         self._replace_session_metadata(session_id, metadata)
 
     def _save_last_no_path_reason(
@@ -3380,10 +3395,7 @@ class InteractiveChatRuntime:
             raise ValueError(f"session not found: {session_id}")
         normalized_url = _normalize_url(url)
         actions = list((session.metadata_json or {}).get("learned_actions") or [])
-        return any(
-            _normalize_url(action.get("target_url")) == normalized_url
-            for action in actions
-        )
+        return any(_normalize_url(action.get("target_url")) == normalized_url for action in actions)
 
     def _has_ambiguous_action_match(self, session_id: str, raw_input: str) -> bool:
         if _extract_url(raw_input):
@@ -3622,9 +3634,7 @@ def _build_planner_pending_choice(
             "action_alias": action.get("alias"),
             "page_template": action.get("page_template"),
             "planner_summary": (
-                planner_summary
-                if index == top_choice_index
-                else {"candidate_index": index}
+                planner_summary if index == top_choice_index else {"candidate_index": index}
             ),
         }
         if slot_overrides:
@@ -3650,9 +3660,7 @@ def _planner_summary(
     purpose = None
     confirmation_required = bool(planner_output.confirmation_requirements)
     if route_plan is not None:
-        confirmation_required = (
-            confirmation_required or bool(route_plan.confirmation_required)
-        )
+        confirmation_required = confirmation_required or bool(route_plan.confirmation_required)
         if route_plan.steps:
             purpose = _sanitize_planner_text(route_plan.steps[0].purpose)
     return {
@@ -3768,14 +3776,9 @@ def _build_recovery_pending_choice(
         {"choice_id": "C", "label": "取消", "intent": "cancel"},
     ]
     choices = [
-        {key: value for key, value in choice.items() if value is not None}
-        for choice in choices
+        {key: value for key, value in choice.items() if value is not None} for choice in choices
     ]
-    fill_values = {
-        key: value
-        for key, value in slot_overrides.items()
-        if key and value is not None
-    }
+    fill_values = {key: value for key, value in slot_overrides.items() if key and value is not None}
     private_map: dict[str, dict[str, Any]] = {
         "A": {
             "kind": "retry_replay",
@@ -3783,9 +3786,7 @@ def _build_recovery_pending_choice(
             "target_url": action.get("target_url"),
             "action_alias": action.get("alias"),
             "slot_overrides": dict(slot_overrides),
-            "evidence_targets": [
-                target.model_dump(mode="json") for target in evidence_targets
-            ],
+            "evidence_targets": [target.model_dump(mode="json") for target in evidence_targets],
             "retry_count": retry_count,
             "failure_reason": failure_class,
         },
@@ -3821,9 +3822,7 @@ def _slot_overrides_from_choice_selection(selected: dict[str, Any]) -> dict[str,
     if not isinstance(slot_overrides, dict):
         return {}
     return {
-        str(key): str(value)
-        for key, value in slot_overrides.items()
-        if key and value is not None
+        str(key): str(value) for key, value in slot_overrides.items() if key and value is not None
     }
 
 
@@ -3831,11 +3830,7 @@ def _fill_values_from_recovery_choice(selected: dict[str, Any]) -> dict[str, str
     fill_values = selected.get("fill_values")
     if not isinstance(fill_values, dict):
         return {}
-    return {
-        str(key): str(value)
-        for key, value in fill_values.items()
-        if key and value is not None
-    }
+    return {str(key): str(value) for key, value in fill_values.items() if key and value is not None}
 
 
 def _choice_label(action: dict[str, Any]) -> str:

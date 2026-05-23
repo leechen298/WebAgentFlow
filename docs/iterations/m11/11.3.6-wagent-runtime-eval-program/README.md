@@ -20,7 +20,7 @@ Codex 审计边界和 case roadmap。
 | Package | 目标 | 状态 |
 |---|---|---|
 | [11.3.6.1 · WAgent Runtime Eval Runner Core](../11.3.6.1-wagent-runtime-eval-runner-core/) | 实现第一版可执行 runner，覆盖 first-wave runtime regression | ready_for_implementation |
-| [11.3.6.2 · Failure Recovery Eval](../11.3.6.2-failure-recovery-eval/) | 覆盖 recovery menu safety、retry / relearn / cancel 和 private payload safety | ready_for_implementation |
+| [11.3.6.2 · Failure Recovery Eval](../11.3.6.2-failure-recovery-eval/) | 覆盖 recovery menu safety、retry / relearn / cancel 和 private payload safety | implementation_complete_non_live |
 | [11.3.6.3 · Pending Choice Multi-candidate Eval](../11.3.6.3-pending-choice-multi-candidate-eval/) | 覆盖 A/B/C public choice、private map 和用户选择后执行正确 path | draft_for_review |
 | 11.3.6.4 · Planner-backed Choice Eval | 覆盖 vague goal、planner choice path 和 single-path bypass Planner 回归 | planned |
 
@@ -52,5 +52,6 @@ Codex 审计边界和 case roadmap。
 ## 当前状态
 
 总体规划已通过 review。11.3.6.1 已承接 runner v1 的可实现设计；11.3.6.2
-failure recovery eval 设计评审已通过；11.3.6.3 已开包进入 pending choice eval 设计评审；
+failure recovery eval 已完成 non-live implementation checks，live Conversation eval 尚未运行；
+11.3.6.3 已开包进入 pending choice eval 设计评审；
 11.3.6.4 后续另开完整迭代文档。

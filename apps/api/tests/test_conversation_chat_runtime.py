@@ -133,9 +133,7 @@ def _ingest_workspace_path(
             )
         )
 
-    fingerprint = hashlib.sha256(
-        (source_run_id or page_template).encode()
-    ).hexdigest()
+    fingerprint = hashlib.sha256((source_run_id or page_template).encode()).hexdigest()
     path, _created = LearnedPathRepository(db_session).ingest_run(
         page_template=page_template,
         query_signature={},
@@ -217,9 +215,7 @@ def _ingest_items_path(
 
 
 def test_parse_chat_intent_learn_page_extracts_url() -> None:
-    intent = parse_chat_intent(
-        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login"
-    )
+    intent = parse_chat_intent("学习一下这个登录页怎么登录，地址是 http://localhost:5175/login")
 
     assert intent.kind == "learn_page"
     assert intent.url == "http://localhost:5175/login"
@@ -297,9 +293,9 @@ def test_fill_values_from_intake_maps_project_name_to_item_name() -> None:
 
 
 def test_parse_product_inputs_does_not_extract_item_name_from_username() -> None:
-    assert _parse_product_inputs(
-        "学习新增项目：http://localhost:5176/items，username 是 demo"
-    ) is None
+    assert (
+        _parse_product_inputs("学习新增项目：http://localhost:5176/items，username 是 demo") is None
+    )
 
 
 def _fake_llm_trace_payload(trace_id: str = "trace-intake-1") -> dict[str, Any]:
@@ -326,8 +322,7 @@ def _fake_llm_trace_payload(trace_id: str = "trace-intake-1") -> dict[str, Any]:
                 {
                     "role": "user",
                     "content": (
-                        "学习这个入口：http://localhost:5176/workspace-login，"
-                        "demo / 123456"
+                        "学习这个入口：http://localhost:5176/workspace-login，demo / 123456"
                     ),
                 }
             ],
@@ -548,9 +543,7 @@ def test_interactive_chat_entry_gate_allows_web_task_to_reach_runtime(
     assert router.called is True
     events = repo.list_events(session_id)
     event_types = [event.type for event in events]
-    assert event_types.index("entry_gate_recorded") < event_types.index(
-        "agent_trace_recorded"
-    )
+    assert event_types.index("entry_gate_recorded") < event_types.index("agent_trace_recorded")
     entry_gate_event = next(e for e in events if e.type == "entry_gate_recorded")
     assert entry_gate_event.payload_json["skipped_intake_router"] is False
 
@@ -571,9 +564,7 @@ def test_interactive_chat_entry_gate_preflight_preserves_explicit_url_task(
             self.called = True
             return ConversationIntakeResult(
                 intent="execute_operation",
-                target=ConversationIntakeTarget(
-                    url="http://localhost:5176/workspace-login"
-                ),
+                target=ConversationIntakeTarget(url="http://localhost:5176/workspace-login"),
                 action=ConversationIntakeAction(goal="登录"),
                 confidence=0.82,
             )
@@ -624,10 +615,7 @@ def test_interactive_chat_entry_gate_preflight_preserves_explicit_url_task(
     assert router.called is True
     events = repo.list_events(session_id)
     entry_gate_event = next(e for e in events if e.type == "entry_gate_recorded")
-    assert (
-        entry_gate_event.payload_json["entry_gate"]["category"]
-        == "web_task_candidate"
-    )
+    assert entry_gate_event.payload_json["entry_gate"]["category"] == "web_task_candidate"
     assert entry_gate_event.payload_json["skipped_intake_router"] is False
 
 
@@ -893,8 +881,7 @@ def test_interactive_chat_bare_url_saves_pending_target_without_browser_action(
     events = repo.list_events(session_id)
     assert any(e.type == "agent_trace_recorded" for e in events)
     assert any(
-        e.type == "skill_call_recorded"
-        and e.payload_json["skill"] == "ask_user_for_missing_info"
+        e.type == "skill_call_recorded" and e.payload_json["skill"] == "ask_user_for_missing_info"
         for e in events
     )
     assert not any(e.type == "chat_learning_started" for e in events)
@@ -989,8 +976,7 @@ def test_interactive_chat_inspect_route_uses_page_understanding_runtime(
         for e in events
     )
     assert any(
-        e.type == "llm_trace_recorded"
-        and e.payload_json["trace_id"] == "router-trace-page-1"
+        e.type == "llm_trace_recorded" and e.payload_json["trace_id"] == "router-trace-page-1"
         for e in events
     )
     assert any(
@@ -1003,8 +989,7 @@ def test_interactive_chat_inspect_route_uses_page_understanding_runtime(
     history = ConversationHistoryService(repo.session).get_history(session_id)
     assert history is not None
     assert any(
-        trace.trace_id == "router-trace-page-1"
-        and trace.schema_name == "RouteDecision"
+        trace.trace_id == "router-trace-page-1" and trace.schema_name == "RouteDecision"
         for trace in history.llm_traces
     )
     assert not any(e.type == "chat_learning_started" for e in events)
@@ -1130,9 +1115,7 @@ def test_interactive_chat_merges_sensitive_slot_saved_before_missing_info(
         metadata={"client": "wagent_chat"},
     )
 
-    assert calls == [
-        {"headless": False, "fill_values": {"username": "demo", "password": "123456"}}
-    ]
+    assert calls == [{"headless": False, "fill_values": {"username": "demo", "password": "123456"}}]
 
 
 def test_interactive_chat_reasks_when_pending_sensitive_cache_is_missing(
@@ -1896,6 +1879,168 @@ def test_interactive_chat_replay_failed_offers_basic_recovery(
     assert "evidence_targets" not in offered_text
 
 
+def test_interactive_chat_eval_fault_injection_forces_needs_review_recovery(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_items_path(
+        db_session,
+        source_run_id="run-items-eval-fault",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "client": "wagent_eval",
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ],
+        },
+    )
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            execution_evidence=[
+                {
+                    "kind": "dom_text_present",
+                    "target": "测试项目B",
+                    "status": "verified",
+                    "confidence": 0.95,
+                    "summary": "列表中出现了名称为“测试项目B”的项目行。",
+                }
+            ],
+        )
+
+    result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
+        session_id,
+        "帮我新增项目，名称叫测试项目B",
+        metadata={
+            "client": "wagent_eval",
+            "eval_fault_injection": {
+                "case_id": "failure_recovery_menu_safety",
+                "reporter_outcome": "needs_review",
+            },
+        },
+    )
+
+    assert result.allowed is True
+    assert "A. 重试执行该操作" in result.user_response
+    assert "重试会再次执行该操作" in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json["pending_choice_private_map"]["A"]["kind"] == "retry_replay"
+    events = repo.list_events(session_id)
+    hook_event = [
+        e for e in events if e.payload_json.get("progress_kind") == "eval_fault_injection_applied"
+    ][-1]
+    assert hook_event.payload_json == {
+        "progress_kind": "eval_fault_injection_applied",
+        "case_id": "failure_recovery_menu_safety",
+        "fault_class": "needs_review",
+    }
+    hook_text = json.dumps(hook_event.payload_json, ensure_ascii=False)
+    assert "learned_path_id" not in hook_text
+    assert "slot_overrides" not in hook_text
+    assert "evidence_targets" not in hook_text
+
+
+@pytest.mark.parametrize(
+    ("metadata", "session_client"),
+    [
+        ({}, "wagent_eval"),
+        (
+            {
+                "client": "wagent_chat",
+                "eval_fault_injection": {
+                    "case_id": "failure_recovery_menu_safety",
+                    "reporter_outcome": "needs_review",
+                },
+            },
+            "wagent_chat",
+        ),
+        (
+            {
+                "client": "wagent_eval",
+                "eval_fault_injection": {
+                    "case_id": "failure_recovery_menu_safety",
+                    "reporter_outcome": "verified",
+                },
+            },
+            "wagent_eval",
+        ),
+    ],
+)
+def test_interactive_chat_eval_fault_injection_ignored_unless_valid_opt_in(
+    db_session: Session,
+    repo: ConversationRepository,
+    metadata: dict[str, Any],
+    session_client: str,
+) -> None:
+    learned_path_id = _ingest_items_path(
+        db_session,
+        source_run_id=f"run-items-eval-fault-ignored-{session_client}",
+        value_slot="item_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "client": session_client,
+            "learned_actions": [
+                {
+                    "alias": "新增项目",
+                    "utterances": ["帮我新增项目"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/items",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/items",
+                }
+            ],
+        },
+    )
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            execution_evidence=[
+                {
+                    "kind": "dom_text_present",
+                    "target": "测试项目B",
+                    "status": "verified",
+                    "confidence": 0.95,
+                    "summary": "列表中出现了名称为“测试项目B”的项目行。",
+                }
+            ],
+        )
+
+    result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
+        session_id,
+        "帮我新增项目，名称叫测试项目B",
+        metadata=metadata,
+    )
+
+    assert result.allowed is True
+    assert "我在列表中看到了“测试项目B”" in result.user_response
+    assert "A. 重试执行该操作" not in result.user_response
+    events = repo.list_events(session_id)
+    assert not [
+        e for e in events if e.payload_json.get("progress_kind") == "eval_fault_injection_applied"
+    ]
+
+
 def test_interactive_chat_blocked_drift_offers_basic_recovery(
     db_session: Session,
     repo: ConversationRepository,
@@ -1940,10 +2085,7 @@ def test_interactive_chat_blocked_drift_offers_basic_recovery(
     assert "A. 重试执行该操作" in result.user_response
     session = repo.get_session(session_id)
     assert session is not None
-    assert (
-        session.metadata_json["pending_choice_private_map"]["A"]["failure_reason"]
-        == "blocked"
-    )
+    assert session.metadata_json["pending_choice_private_map"]["A"]["failure_reason"] == "blocked"
 
 
 def test_interactive_chat_recovery_retry_replays_once_with_original_payload(
@@ -2600,8 +2742,7 @@ def test_interactive_chat_planner_warning_uses_generic_visible_text(
         },
     )
     private_warning = (
-        "selector=[data-testid='item-name-input']; item_name=测试项目B; "
-        f"selected_path_id={path_a}"
+        f"selector=[data-testid='item-name-input']; item_name=测试项目B; selected_path_id={path_a}"
     )
 
     def plan(
@@ -3173,13 +3314,11 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
     )
     assert "测试项目B" not in pending_choice_text
     assert (
-        session.metadata_json["pending_choice_private_map"]["A"]["kind"]
-        == "planner_route_choice"
+        session.metadata_json["pending_choice_private_map"]["A"]["kind"] == "planner_route_choice"
     )
-    assert (
-        session.metadata_json["pending_choice_private_map"]["A"]["slot_overrides"]
-        == {"item_name": "测试项目B"}
-    )
+    assert session.metadata_json["pending_choice_private_map"]["A"]["slot_overrides"] == {
+        "item_name": "测试项目B"
+    }
 
     result = orch.dispatch_user_input(
         session_id,
@@ -3573,9 +3712,7 @@ def test_visible_session_passes_headless_false_to_learning_handler(
     repo: ConversationRepository,
 ) -> None:
     """API-1: visible session calls learning handler with headless=False."""
-    session_id = _create_interactive_chat_session(
-        repo, metadata={"browser_visibility": "visible"}
-    )
+    session_id = _create_interactive_chat_session(repo, metadata={"browser_visibility": "visible"})
     calls: list[tuple[str, str, dict[str, Any]]] = []
 
     def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
@@ -3654,9 +3791,7 @@ def test_headless_session_passes_headless_true_to_handlers(
     repo: ConversationRepository,
 ) -> None:
     """API-3: headless session passes headless=True to learning and replay."""
-    session_id = _create_interactive_chat_session(
-        repo, metadata={"browser_visibility": "headless"}
-    )
+    session_id = _create_interactive_chat_session(repo, metadata={"browser_visibility": "headless"})
     learn_calls: list[dict[str, Any]] = []
 
     def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
