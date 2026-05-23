@@ -57,3 +57,12 @@
   - 已创建 `11.3.6.2-failure-recovery-eval` 作为下一个 child package 文档包。
   - 11.3.6 program 仍保持 docs-only，不在 program 包内实现 runner 代码。
   - 11.3.6.2 当前状态为 `ready_for_implementation`，design review 已通过，可以进入实现。
+
+## 2026-05-23 子包开包记录
+
+- Author：Codex
+- Decision：docs_created
+- Notes：
+  - 已创建 `11.3.6.3-pending-choice-multi-candidate-eval` 作为下一个 child package 文档包。
+  - 11.3.6 program 仍保持 docs-only，不在 program 包内实现 runner 代码。
+  - 11.3.6.3 当前状态为 `draft_for_review`，review 通过后再进入实现。

@@ -43,6 +43,8 @@ The child package now lives at
 ### 11.3.6.3 Pending Choice Multi-candidate Eval
 
 Adds multi-candidate choice coverage.
+The child package now lives at
+[`../11.3.6.3-pending-choice-multi-candidate-eval/`](../11.3.6.3-pending-choice-multi-candidate-eval/).
 
 ### 11.3.6.4 Planner-backed Choice Eval
 

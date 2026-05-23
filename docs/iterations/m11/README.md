@@ -67,6 +67,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.6-wagent-runtime-eval-program](./11.3.6-wagent-runtime-eval-program/) —— WAgent Runtime Eval Program：runtime eval 总体测试规划，定义 11.3.6.x 子包、artifact、exit code、hard gates 和 Codex 审计边界。状态：accepted_program_plan（program review passed，docs-only）。
 - [11.3.6.1-wagent-runtime-eval-runner-core](./11.3.6.1-wagent-runtime-eval-runner-core/) —— WAgent Runtime Eval Runner Core：实现 runner v1，覆盖 `/items` closed loop 和 single-path direct replay regression。状态：ready_for_implementation（design review passed，未实现代码）。
 - [11.3.6.2-failure-recovery-eval](./11.3.6.2-failure-recovery-eval/) —— Failure Recovery Eval：扩展 runner 覆盖 recovery menu safety、retry / relearn / cancel 出口和 private payload safety。状态：ready_for_implementation（design review passed，未实现代码）。
+- [11.3.6.3-pending-choice-multi-candidate-eval](./11.3.6.3-pending-choice-multi-candidate-eval/) —— Pending Choice Multi-candidate Eval：扩展 runner 覆盖 A/B/C public choice、private map safety 和用户选择后执行正确 action。状态：draft_for_review（未实现代码）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -142,6 +143,10 @@ direct replay regression，按 hard gates 写出 JSON / Markdown 证据，并用
 runner core 上增加 `failure_recovery_menu_safety`，用稳定 failure trigger 或 eval-only hook
 验证 11.3.5.8 recovery menu 和 private payload redaction；首版不把 retry execution 成功作为
 required gate，也不调用 autonomous-run endpoints。
+`11.3.6.3-pending-choice-multi-candidate-eval/` 是 11.3.6 program 的第三个执行包设计稿。它计划在
+runner core 上增加 `pending_choice_multi_candidate`，用当前 eval run 的多候选 setup
+验证 11.3.5.7 pending choice public payload、private map safety 和选择 A 后执行正确 action；
+planner-backed choice 留到 11.3.6.4。
 
 11.2 后续 backlog：
 
