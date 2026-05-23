@@ -229,6 +229,48 @@ def test_provider_result_drops_missing_field_when_slot_value_is_present() -> Non
     assert {slot.semantic_type: slot.value for slot in result.slots} == {"item_name": "测试项目A"}
 
 
+def test_provider_result_clears_spurious_ask_when_item_learning_is_complete() -> None:
+    def provider(
+        raw_message: str,
+        context: dict[str, object],
+    ) -> dict[str, object]:
+        return {
+            "intent": "learn_operation",
+            "target": {
+                "url": "http://localhost:5176/items",
+                "site_origin": "http://localhost:5176",
+                "page_hint": "/items",
+            },
+            "action": {
+                "goal": "新增项目",
+                "canonical_goal": "新增项目",
+                "aliases": ["添加项目", "创建项目"],
+            },
+            "slots": [
+                {
+                    "name": "project_name",
+                    "semantic_type": "project_name",
+                    "label_seen": "名称",
+                    "value": "测试项目A",
+                    "sensitive": False,
+                    "source": "user_message",
+                }
+            ],
+            "missing_fields": [],
+            "confidence": 0.95,
+            "should_ask_user": True,
+            "ask_user_message_hint": "好的，请开始执行新增项目操作，我将学习您的操作步骤。",
+        }
+
+    result = ConversationIntakeService(provider=provider).analyze("学习新增项目，名称叫 测试项目A")
+
+    assert result.intent == "learn_operation"
+    assert result.missing_fields == []
+    assert result.should_ask_user is False
+    assert result.ask_user_message_hint is None
+    assert {slot.semantic_type: slot.value for slot in result.slots} == {"item_name": "测试项目A"}
+
+
 @pytest.mark.parametrize("semantic_type", ["entity_name", "name"])
 def test_provider_result_maps_generic_items_name_slot_to_item_name(
     semantic_type: str,

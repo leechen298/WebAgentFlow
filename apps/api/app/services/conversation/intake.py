@@ -223,10 +223,30 @@ def _normalize_intake_result(result: ConversationIntakeResult) -> ConversationIn
         "slots": slots,
         "missing_fields": missing,
     }
-    if result.missing_fields and not missing:
+    if (result.missing_fields and not missing) or _has_actionable_intake_without_missing(
+        result,
+        slots,
+        missing,
+    ):
         updates["should_ask_user"] = False
         updates["ask_user_message_hint"] = None
     return result.model_copy(update=updates)
+
+
+def _has_actionable_intake_without_missing(
+    result: ConversationIntakeResult,
+    slots: list[ConversationIntakeSlot],
+    missing: list[ConversationMissingField],
+) -> bool:
+    if missing or not result.should_ask_user:
+        return False
+    if result.intent not in {"learn_operation", "execute_operation"}:
+        return False
+    if not result.target.url:
+        return False
+    if not (result.action.goal or result.action.canonical_goal or result.action.aliases):
+        return False
+    return any(slot.value for slot in slots)
 
 
 def _canonical_slot_semantic_type(value: str, *, item_context: bool) -> str:
