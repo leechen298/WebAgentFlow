@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：in_progress
+状态：ready_for_implementation（design review passed）
 
 ## 2026-05-23 文档草案
 
@@ -70,6 +70,18 @@
   - Read-only inspection found likely current runtime blockers in conversation intake, chat runtime and
     learning run service; test constants in `scripts/evals/` remain test-only and are not product runtime.
 
+## 2026-05-23 设计评审收口
+
+- Reviewer：ChatGPT
+- Decision：pass
+- Notes：
+  - First-wave user-facing cases are complete, including unknown choose-learn and staged
+    execute-unknown learning flow.
+  - Anti-hardcoding gate is strict and has no grandfather exception.
+  - Known / unknown isolation is defined.
+  - Current runtime target-specific blockers are documented and must be cleaned before 11.3.7 can pass.
+  - Package status is raised to `ready_for_implementation`; implementation has not started.
+
 ## 最终差异（Final Delta）
 
 ### 实际交付
@@ -79,11 +91,13 @@
   from user-facing product behavior acceptance.
 - Revised 11.3.7 docs to make anti-hardcoding, no-grandfather blocker handling, first-wave choose-learn
   cases, known / unknown isolation and allowed target-detail locations explicit.
+- Marked 11.3.7 as `ready_for_implementation` after ChatGPT design review passed, while preserving
+  `runtime blocker cleanup required before pass`.
 - No runtime code changed.
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
-- None for docs draft.
+- None for docs draft / design closeout.
 
 ### WebAgentFlow Live Run 边界（Live Run Boundary）
 
@@ -117,6 +131,6 @@ execution。
 
 ### 后续事项（Follow-ups）
 
-- Review and approve 11.3.7 docs before implementation.
+- Begin implementation from the approved 11.3.7 docs.
 - Implement forbidden-token scanner before behavior cases.
 - Keep target-specific test content out of feature code and product prompt assets.

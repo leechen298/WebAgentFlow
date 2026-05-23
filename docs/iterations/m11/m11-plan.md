@@ -1714,7 +1714,7 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 
 ## 11.3.7 · User-facing WAgent Behavior Eval
 
-状态：proposed（docs drafted，implementation pending）。
+状态：ready_for_implementation（design review passed，runtime blocker cleanup required before pass）。
 
 11.3.7 是 11.3.6 之后的用户视角产品行为验收包。它不再重复测试 `value_slot`、
 `slot_overrides`、Reporter adapter、pending choice private map 等底层零件，而是验证

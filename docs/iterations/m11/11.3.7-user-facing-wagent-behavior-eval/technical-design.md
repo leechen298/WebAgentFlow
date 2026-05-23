@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：proposed
+状态：ready_for_implementation（design review passed）
 
 ## 当前状态（Current State）
 
@@ -275,4 +275,5 @@ The exact command will be added during implementation. The intended validation s
 pnpm run eval:wagent:user-behavior
 ```
 
-Until the command exists, this iteration remains proposed / unverified.
+Until the command exists and passes, the 11.3.7 runtime behavior remains unverified. The package is
+ready for implementation, not already implemented.

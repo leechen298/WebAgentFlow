@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：proposed
+状态：ready_for_implementation（design review passed）
 
 ## 目标
 

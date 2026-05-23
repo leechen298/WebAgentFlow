@@ -1,6 +1,6 @@
 # 11.3.7 · User-facing WAgent Behavior Eval
 
-状态：proposed（docs drafted，implementation pending）
+状态：ready_for_implementation（design review passed，runtime blocker cleanup required before pass）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -81,7 +81,7 @@
 
 ## 当前状态
 
-本包当前只完成文档定义，尚未实现 runner，也未执行任何 CLI / UI / live eval。
-后续进入实现前必须先完成 design review。实现阶段必须先建立测试页面细节的 forbidden-token
-清单和代码 / prompt 扫描 gate，并清理当前产品 runtime 中的测试站点特判，再实现用户行为
-场景本身。
+本包设计评审已通过，可以进入实现。它尚未实现 runner，也未执行任何 CLI / UI / live eval。
+实现阶段必须先建立测试页面细节的 forbidden-token 清单和代码 / prompt 扫描 gate，并清理当前
+产品 runtime 中的测试站点特判，再实现用户行为场景本身。未完成 blocker cleanup 前，
+11.3.7 不得标记为 pass。

@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：proposed
+状态：ready_for_implementation（design review passed）
 
 ## 输入
 
@@ -23,10 +23,10 @@
 
 ## 步骤
 
-1. 完成 design review。
-   - 产出：确认 first-wave case、known / unknown isolation strategy、forbidden-token hard gate
-     和 allowed / forbidden path list。
-   - 未通过 review 前不得进入实现。
+1. 确认 design review 通过并锁定实现范围。
+   - 产出：以已通过评审的 first-wave case、known / unknown isolation strategy、
+     forbidden-token hard gate 和 allowed / forbidden path list 作为实现输入。
+   - 要求：不得在实现中放宽 anti-hardcoding、isolation 或 unknown choose-learn gates。
 2. 新增 test-only eval spec。
    - 产出：目标 URL、测试话术、expected behavior gates、forbidden runtime tokens 都在 spec 中。
    - 要求：spec 不被产品 runtime import。

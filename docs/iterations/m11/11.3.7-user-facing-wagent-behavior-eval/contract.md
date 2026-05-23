@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：proposed
+状态：ready_for_implementation（design review passed）
 
 ## 概念 / 边界契约
 
