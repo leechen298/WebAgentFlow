@@ -1,6 +1,6 @@
 # 实施计划（Plan）
 
-状态：draft_for_review
+状态：ready_for_implementation
 
 ## Step 1：复核当前仓库状态
 
@@ -94,7 +94,7 @@ pnpm run eval:wagent:failure-recovery
 新增：
 
 ```text
-docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-<timestamp>.md
+docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-${timestamp}.md
 ```
 
 内容包括：

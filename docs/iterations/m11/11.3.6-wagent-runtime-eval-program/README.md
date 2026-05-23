@@ -23,7 +23,7 @@ Codex 审计边界和 case roadmap。
 | [11.3.6.2 · Failure Recovery Eval](../11.3.6.2-failure-recovery-eval/) | 覆盖 recovery menu safety、retry / relearn / cancel 和 private payload safety | implementation_complete_non_live |
 | [11.3.6.3 · Pending Choice Multi-candidate Eval](../11.3.6.3-pending-choice-multi-candidate-eval/) | 覆盖 A/B/C public choice、private map 和用户选择后执行正确 path | ready_for_implementation |
 | [11.3.6.4 · Planner-backed Choice Eval](../11.3.6.4-planner-backed-choice-eval/) | 覆盖 vague goal、planner-backed choice path 和 single-path bypass Planner 回归 | ready_for_implementation |
-| [11.3.6.5 · Runtime Eval Program Closeout](../11.3.6.5-runtime-eval-program-closeout/) | 核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 program 状态 | draft_for_review |
+| [11.3.6.5 · Runtime Eval Program Closeout](../11.3.6.5-runtime-eval-program-closeout/) | 核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 program 状态 | ready_for_implementation |
 
 ## 本包做什么
 

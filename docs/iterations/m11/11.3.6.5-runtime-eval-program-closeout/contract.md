@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：draft_for_review
+状态：ready_for_implementation
 
 ## 概念 / 边界契约
 
@@ -19,7 +19,7 @@ Program closeout 状态只允许使用以下值：
 | Status | 含义 |
 |---|---|
 | `closed_live` | 所有 required child packages 已实现，且按 contract 要求完成 live Conversation eval pass。 |
-| `closed_non_live` | 所有 required child packages 已实现，non-live checks / blocked path / unit checks 完成，但至少一个 live eval 明确未运行。 |
+| `closed_non_live` | 所有 required child packages 已实现，required non-live checks pass，但至少一个 live eval 明确未运行；required child package 不得处于 blocked。 |
 | `partially_closed` | 部分 child packages 已 closeout，仍有 package 缺 review、artifact 或明确结果。 |
 | `blocked` | closeout 命令无法运行、服务不可用、artifact 写入失败，或 required gate fail。 |
 | `not_run` | closeout sweep 尚未执行。 |
@@ -33,6 +33,17 @@ Program closeout 状态只允许使用以下值：
 - `ready_for_implementation`
 
 不得把 `implementation_complete_non_live` 自动升级为 `implemented_and_live_eval_passed`。
+
+Blocked artifact 只能证明 blocked 状态已经被记录，不能证明对应 child package 完成：
+
+- 如果 11.3.6.3 或 11.3.6.4 只产生 blocked artifact，对应子包状态必须是
+  `implementation_complete_blocked` 或 `blocked`。
+- 这种情况下不得写 `implementation_complete_non_live` 或
+  `implemented_and_live_eval_passed`。
+- Program status 不得为 `closed_live` 或 `closed_non_live`；只能是 `partially_closed` 或
+  `blocked`。
+- 只有 required gates pass，或明确被 contract 标为 optional / not_run 的项不影响 required
+  closeout 时，才允许进入 `closed_non_live`。
 
 ## Schema / API 契约
 

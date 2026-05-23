@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：draft_for_review
+状态：ready_for_implementation
 
 ## 测试目标
 
@@ -20,8 +20,8 @@
 
 | ID | Command | Required? | 通过标准 |
 |---|---|---|---|
-| RC-1 | `pnpm run eval:wagent:pending-choice` | Required unless services unavailable | exit `0` pass 或 exit `2` blocked，均需 artifact。 |
-| RC-2 | `pnpm run eval:wagent:planner-choice` | Required unless services unavailable | exit `0` pass 或 exit `2` blocked，均需 artifact。 |
+| RC-1 | `pnpm run eval:wagent:pending-choice` | Required unless services unavailable | exit `0` 才能 closeout pass；exit `2` 只能记录 blocked artifact。 |
+| RC-2 | `pnpm run eval:wagent:planner-choice` | Required unless services unavailable | exit `0` 才能 closeout pass；exit `2` 只能记录 blocked artifact。 |
 | RC-3 | `pnpm run eval:wagent:items` | Optional regression | 若运行，必须记录 exit code / artifact。 |
 | RC-4 | `pnpm run eval:wagent:failure-recovery` | Optional regression | 若运行，必须记录 exit code / artifact。 |
 
@@ -45,6 +45,7 @@ Exit code 解释沿用 11.3.6 runner contract：
 | AR-3 | sensitive grep | 不泄露 full `learned_path_id`、private map、selector、slot overrides、credentials。 |
 | AR-4 | result status | 与 runner exit code 一致。 |
 | AR-5 | live run wording | 未跑 live 时写 `not_run`，blocked 时写 `blocked`，不得写 pass。 |
+| AR-6 | blocked completion wording | blocked artifact 不得让子包进入 `implementation_complete_non_live` / `implemented_and_live_eval_passed`。 |
 
 ## Review / Index Checks
 
@@ -71,4 +72,6 @@ run_id / product output 和 pass gate，不得混入本 closeout 默认流程。
 
 - `RC-1` 或 `RC-2` gate fail：closeout result 写 `blocked` 或 `partially_closed`，并建议新开 fix。
 - artifact redaction fail：不得提交 artifact；先开 fix 或重生成。
-- 服务不可用：允许记录 blocked artifact，但 M11.3.6 不能标 complete。
+- 服务不可用：允许记录 blocked artifact，但对应子包只能写 `implementation_complete_blocked`
+  或 `blocked`；M11.3.6 program 只能写 `partially_closed` 或 `blocked`，不能写
+  `closed_live` / `closed_non_live` / complete。

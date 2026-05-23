@@ -1,16 +1,18 @@
 # 复盘 / 评审（Review）
 
-状态：draft_for_review
+状态：ready_for_implementation（design review passed，closeout sweep 未执行）
 
 ## Current Decision
 
-- Reviewer：pending
-- Decision：pending
+- Reviewer：ChatGPT
+- Decision：ready_for_implementation
 - Code：not_started
 - Live eval：not_run
 - Notes：
   - 本包只定义 11.3.6 closeout sweep，不执行 runner，不修改 runtime。
-  - 设计评审通过后，才按 `plan.md` 执行 pending-choice / planner-choice closeout。
+  - blocked artifact 只能证明 blocked 被记录；不得把 blocked 写成 completed /
+    `closed_live` / `closed_non_live`。
+  - 下一步可以按 `plan.md` 执行 pending-choice / planner-choice closeout。
 
 ## 初始复核记录
 
@@ -25,12 +27,14 @@
 - `artifacts/wagent-eval/` 当前只有 11.3.6.1 / 11.3.6.2 JSON artifact。
 - 11.3.6.3 / 11.3.6.4 review 仍显示 `Code: not_started` / `Live eval: not_run`。
 
-## 设计评审待确认
+## 设计评审收口
 
-- 是否接受 11.3.6.5 作为 docs / verification closeout 包。
-- 是否要求 11.3.6.3 / 11.3.6.4 必须 live Conversation eval pass，还是允许
-  `implementation_complete_non_live`。
-- 如果服务不可用，是否允许提交 blocked artifact 作为 closeout evidence。
+- 11.3.6.5 作为 docs / verification closeout 包通过。
+- 11.3.6.3 / 11.3.6.4 可按实际结果记录 live / non-live / blocked；未跑 live 时不得写
+  live pass。
+- 如果服务不可用，允许提交 blocked artifact 作为 blocked evidence，但对应子包不得写
+  `implementation_complete_non_live` 或 `implemented_and_live_eval_passed`。
+- Program status 在存在 required blocked 子包时不得写 `closed_live` 或 `closed_non_live`。
 
 ## 未运行项
 

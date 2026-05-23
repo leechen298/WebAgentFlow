@@ -1,6 +1,6 @@
 # 11.3.6.5 · Runtime Eval Program Closeout
 
-状态：draft_for_review（closeout sweep 设计稿，未执行）
+状态：ready_for_implementation（design review passed，closeout sweep 未执行）
 里程碑：M11
 类型：docs
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -53,4 +53,5 @@ Conversation runtime、不改 TaskPathPlanner / recovery / pending choice 产品
 
 已确认最新 `origin/v0.1` runner 代码覆盖到 11.3.6.4，但公开文档状态仍显示
 11.3.6.3 / 11.3.6.4 为 `ready_for_implementation`，且结果目录目前只有 11.3.6.1 /
-11.3.6.2 artifact。下一步应先评审本 closeout sweep，再执行，不要直接宣称 M11.3.6 全部完成。
+11.3.6.2 artifact。本 closeout sweep 设计已通过评审，下一步可以按 `plan.md` 执行；
+执行前仍不得直接宣称 M11.3.6 全部完成。

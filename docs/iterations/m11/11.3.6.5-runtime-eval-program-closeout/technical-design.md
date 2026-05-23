@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：draft_for_review
+状态：ready_for_implementation
 
 ## 设计摘要
 
@@ -26,13 +26,13 @@ Repository state audit
 - `docs/iterations/m11/11.3.6-wagent-runtime-eval-program/review.md`
 - `docs/iterations/m11/README.md`
 - `docs/iterations/m11/m11-plan.md`
-- `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-<timestamp>.md`
+- `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-${timestamp}.md`
 
 按实际命令输出允许新增：
 
-- `artifacts/wagent-eval/wagent-runtime-eval-<timestamp>.json`
-- `docs/testing/results/m11-11.3.6.3-pending-choice-eval-<timestamp>.md`
-- `docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-<timestamp>.md`
+- `artifacts/wagent-eval/wagent-runtime-eval-${timestamp}.json`
+- `docs/testing/results/m11-11.3.6.3-pending-choice-eval-${timestamp}.md`
+- `docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-${timestamp}.md`
 
 默认不修改：
 
@@ -81,6 +81,10 @@ pnpm run eval:wagent:failure-recovery
 
 如果 API / product site 未启动，runner 应返回 exit code `2`，并生成 blocked artifact。Closeout
 文档必须记录 blocked，不得把 blocked 写成 pass。
+
+Blocked artifact 不得推动子包进入 `implementation_complete_non_live`。如果 pending-choice 或
+planner-choice 只拿到 exit code `2`，closeout 只能记录该子包 blocked，并把 program 状态写成
+`partially_closed` 或 `blocked`。
 
 如果用户明确要求 live pass 证据，则应先启动所需服务，再运行对应 eval；否则可以记录
 `live Conversation eval: not_run`，但 M11.3.6 program 不能标 `closed_live`。

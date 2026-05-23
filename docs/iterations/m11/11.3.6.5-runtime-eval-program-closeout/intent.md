@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：draft_for_review
+状态：ready_for_implementation
 
 ## 目标
 
