@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：ready_for_implementation（design review passed）
+状态：behavior_eval_runner_implemented（live first-wave behavior eval blocked by unavailable API）
 
 ## 2026-05-23 文档草案
 
@@ -172,6 +172,72 @@
   - 11.3.7 must not be marked `pass` until the first-wave behavior cases, known / unknown isolation and artifact
     redaction gates run with reviewable artifacts.
 
+## 2026-05-24 User-facing behavior eval runner 实现后复核
+
+- Reviewer：Codex using `webagentflow-eval-integrity`
+- Decision：runner implemented; overall 11.3.7 remains `blocked` / not pass because live API preflight is unavailable
+- Implemented commits：
+  - `58e8828 test: add 11.3.7 user behavior eval runner`
+  - `24cbbf6 test: record 11.3.7 user behavior blocked artifact`
+  - Follow-up review fix: scan-`blocked` hard-gate short-circuit and docs refresh before push.
+- Scope：
+  - Added `pnpm run eval:wagent:user-behavior`.
+  - Added `scripts/evals/wagent_user_behavior_eval.py` and eval-only spec
+    `scripts/evals/specs/wagent_user_behavior_items.json`.
+  - The runner drives only Conversation API surfaces:
+    `/conversation/sessions`, `/dispatch`, `/messages`, `/events` and `/history`.
+  - The runner does not call `verify-scenario`, autonomous-run endpoints, Console UI smoke or direct replay.
+  - Product runtime / prompt code was not changed by the runner implementation.
+- First-wave cases represented in the runner：
+  - `url_only_known_page`
+  - `url_only_unknown_page`
+  - `url_only_unknown_choose_learn_starts_learning`
+  - `execute_known_action`
+  - `execute_unknown_action`
+  - `execute_unknown_choose_learn_then_execute_or_learning_flow`
+  - `vague_input_no_execution`
+  - `forbidden_test_target_not_in_runtime_code_or_prompts`
+- Evidence：
+  - Command: `PYTHONPATH=. ../../.venv/bin/pytest tests/test_wagent_user_behavior_eval.py tests/test_target_agnostic_runtime_cleanup.py tests/test_wagent_runtime_eval.py tests/test_conversation_chat_runtime.py tests/test_conversation_intake.py tests/test_learning_run_service.py tests/test_learned_path_replay.py tests/test_conversation_replay_hook.py tests/test_replay_observation_summary.py -q`
+  - Result after hard-gate fix: `267 passed in 9.41s`.
+  - Command: `../../.venv/bin/ruff check tests/test_wagent_user_behavior_eval.py ../../scripts/evals/wagent_user_behavior_eval.py`
+  - Result: `All checks passed!`.
+  - Command: `pnpm run eval:wagent:user-behavior -- --case forbidden_test_target_not_in_runtime_code_or_prompts --json-only`
+  - Result: exit `0`, `status=pass`, `case=forbidden_test_target_not_in_runtime_code_or_prompts status=pass`.
+  - Command: `pnpm run eval:wagent:user-behavior -- --timeout 15`
+  - Result: exit `2`, top-level `status=blocked`.
+  - Blocked reason in committed JSON: API preflight for `http://127.0.0.1:8001/health` returned
+    `[Errno 61] Connection refused`.
+  - Stable JSON artifact: `artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json`.
+  - Stable Markdown artifact:
+    `docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md`.
+  - Command:
+    `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_artifact_redaction_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-20260523T170951Z.json docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-20260523T170951Z.md`
+  - Result: `status=pass`, `match_count=0`.
+- Gate decision：
+  - `forbidden_test_target_not_in_runtime_code_or_prompts`: PASS in the committed artifact.
+  - user-facing first-wave behavior cases: BLOCKED / NOT VALIDATED because API preflight is unavailable.
+  - known / unknown isolation: NOT VALIDATED live because the behavior cases did not reach Conversation API sessions.
+  - redaction: PASS for the committed blocked JSON / Markdown artifacts.
+  - Overall 11.3.7: not pass.
+
+## 2026-05-24 Runner hard-gate review fix
+
+- Reviewer：ChatGPT
+- Decision：fix required before push
+- Finding：
+  - The runner short-circuited on forbidden-target scan `fail`, but not on scan `blocked`.
+  - Because the forbidden-target gate is a hard preflight gate, any non-`pass` scan result must stop before service
+    preflight or product interaction.
+- Fix：
+  - `run_eval()` now short-circuits unless the forbidden-target case status is exactly `pass`.
+  - Added regression test:
+    `test_blocked_forbidden_scan_stops_before_service_preflight`.
+- Status：
+  - This fixes eval-runner integrity only.
+  - It does not change the committed behavior artifact decision: 11.3.7 remains not pass until live first-wave cases
+    run against available Conversation API and product-test-site services.
+
 ## 最终差异（Final Delta）
 
 ### 实际交付
@@ -181,22 +247,30 @@
   from user-facing product behavior acceptance.
 - Revised 11.3.7 docs to make anti-hardcoding, no-grandfather blocker handling, first-wave choose-learn
   cases, known / unknown isolation and allowed target-detail locations explicit.
-- Marked 11.3.7 as `ready_for_implementation` after ChatGPT design review passed, while preserving
-  `runtime blocker cleanup required before pass`.
-- No runtime code changed.
+- Recorded post-cleanup preflight status: anti-hardcoding blocker cleanup implemented, forbidden-target scan pass,
+  overall 11.3.7 behavior still unverified.
+- Implemented `pnpm run eval:wagent:user-behavior` runner and eval-only target spec.
+- Added unit coverage for first-wave gate semantics, artifact redaction, exit-code mapping, scan-only execution,
+  pnpm argument separator handling and blocked forbidden-scan short-circuit.
+- Added stable JSON / Markdown artifacts for the current behavior eval run. The committed artifact is `blocked`
+  because the local Conversation API was unavailable, not because 11.3.7 passed.
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
-- None for docs draft / design closeout.
+- The original docs-only draft later became a mixed docs + eval-runner implementation package.
+- The first live behavior artifact is `blocked` due unavailable local API; this is evidence of runnable eval
+  plumbing and hard-gate behavior, not first-wave behavior pass evidence.
 
 ### WebAgentFlow Live Run 边界（Live Run Boundary）
 
-本轮没有触发 `verify-scenario`、autonomous run、Console UI smoke 或 product-driven browser
-execution。
+本轮没有触发 `verify-scenario`、autonomous run、Console UI smoke、direct replay endpoint 或
+product-driven browser execution。`pnpm run eval:wagent:user-behavior` only attempted the approved
+Conversation API eval surface and stopped at API preflight when the service was unavailable.
 
 ### E2E / Codex 外部测试操作员证据（E2E / Codex Evidence）
 
-本轮是 docs-only drafting。没有运行未来 11.3.7 eval runner，因此不得声称 11.3.7 已测试或通过。
+本轮已运行 11.3.7 eval runner, but the live behavior cases did not execute because API preflight was
+unavailable. Therefore 11.3.7 must not be claimed as tested pass.
 
 ### 验证证据（Validation Evidence）
 
@@ -208,19 +282,24 @@ execution。
 | anti-hardcoding / isolation grep | Blocker, no-grandfather and isolation language discoverable | Matches found for no grandfather, blocker / blocked, fresh session, isolated scope, explicit filtered catalog, product runtime import, fixture item names and operation aliases | 0 | Pass | command output | Confirms this revision is represented in docs |
 | runtime special-case inspection | Identify whether current product runtime has target-specific blockers | Found likely blockers in `apps/api/app/services/conversation/intake.py`, `apps/api/app/services/conversation/chat_runtime.py`, and `apps/api/app/services/learning/learning_run_service.py`; eval runner constants remained under `scripts/evals/` | 0 | Pass | command output | Read-only inspection only; no runtime cleanup performed in this docs revision |
 | placeholder scan for template tokens | No template placeholders | No matches | 1 | Pass | command output | exit `1` means `rg` found no matches |
+| `PYTHONPATH=. ../../.venv/bin/pytest tests/test_wagent_user_behavior_eval.py tests/test_target_agnostic_runtime_cleanup.py tests/test_wagent_runtime_eval.py tests/test_conversation_chat_runtime.py tests/test_conversation_intake.py tests/test_learning_run_service.py tests/test_learned_path_replay.py tests/test_conversation_replay_hook.py tests/test_replay_observation_summary.py -q` | Targeted runtime / eval regression passes | `267 passed in 9.41s` | 0 | Pass | command output | Runner unit coverage plus related runtime tests |
+| `../../.venv/bin/ruff check tests/test_wagent_user_behavior_eval.py ../../scripts/evals/wagent_user_behavior_eval.py` | Lint passes | `All checks passed!` | 0 | Pass | command output | Runner / test lint |
+| `pnpm run eval:wagent:user-behavior -- --case forbidden_test_target_not_in_runtime_code_or_prompts --json-only` | Static forbidden case can run without live API | `status=pass`, `exit_code=0` | 0 | Pass | command output | Static anti-hardcoding case only |
+| `pnpm run eval:wagent:user-behavior -- --timeout 15` | Full runner emits artifact and honest non-pass when preflight blocked | `status=blocked`, exit `2`; API health connection refused | 2 | Blocked | committed JSON / Markdown artifact | This is not a behavior pass |
+| `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_result_gate_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json` | Committed JSON is not treated as pass | `decision=BLOCKED`, reason `top-level status is blocked` | 2 | Blocked | command output | Exit `2` is expected for blocked artifact |
+| `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_artifact_redaction_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-20260523T170951Z.json docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-20260523T170951Z.md` | Public artifact redaction passes | `status=pass`, `match_count=0` | 0 | Pass | command output | Applies to blocked artifact |
 
 ### 未运行 / 未验证（Not Run / Unverified）
 
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
-| `pnpm run eval:wagent:user-behavior` | Runner not implemented in this docs draft | User-facing behavior remains unverified |
-| Unit / API tests | No code changed | Runtime regressions are not assessed by this docs-only change |
-| Runtime special-case cleanup | This turn only revised docs | 11.3.7 implementation must remove / generalize current product-test-site blockers before pass |
+| Live first-wave behavior cases | API preflight returned connection refused | URL-only known / unknown, choose-learn, execute-known / unknown, vague input and live isolation remain unverified |
+| Full `learn_then_execute` behavior | Live behavior cases did not run | If unsupported, future live artifact must record staged learning-flow result / follow-up rather than full pass |
 | Console UI smoke | Not requested | UI-specific behavior remains unverified |
 | `verify-scenario` / autonomous run | Out of scope and prohibited by default | No Supervisor pass_gate evidence claimed |
 
 ### 后续事项（Follow-ups）
 
-- Begin implementation from the approved 11.3.7 docs.
-- Implement forbidden-token scanner before behavior cases.
+- Start API / product-test-site services and rerun `pnpm run eval:wagent:user-behavior`.
 - Keep target-specific test content out of feature code and product prompt assets.
+- Do not mark 11.3.7 pass unless the live first-wave required gates pass with reviewable artifacts.

@@ -140,6 +140,47 @@ def test_scan_only_eval_does_not_require_service_preflight(tmp_path, monkeypatch
     ]
 
 
+def test_blocked_forbidden_scan_stops_before_service_preflight(tmp_path, monkeypatch) -> None:
+    runner = _load_runner()
+    spec_path = tmp_path / "spec.json"
+    spec_path.write_text(
+        json.dumps(
+            {
+                "target_name": "unit",
+                "target_label": "Unit",
+                "product_url": "http://127.0.0.1:5176/items",
+                "target_manifest": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    config = runner.parse_config(["--spec", str(spec_path), "--json-only"])
+
+    monkeypatch.setattr(
+        runner,
+        "run_forbidden_target_scan",
+        lambda _spec: {
+            "status": "blocked",
+            "match_count": 0,
+            "matches": [],
+            "reason": "scanner unavailable",
+        },
+    )
+    monkeypatch.setattr(
+        runner,
+        "run_preflight",
+        lambda _config, _spec: (_ for _ in ()).throw(AssertionError("preflight called")),
+    )
+
+    result = runner.run_eval(config)
+
+    assert result.status == "blocked"
+    assert [case.case_id for case in result.case_results] == [
+        "forbidden_test_target_not_in_runtime_code_or_prompts"
+    ]
+    assert result.case_results[0].gates[0].status == "blocked"
+
+
 def test_forbidden_target_gate_passes_only_when_scan_has_no_matches() -> None:
     runner = _load_runner()
 

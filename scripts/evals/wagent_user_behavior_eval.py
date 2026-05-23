@@ -1090,7 +1090,7 @@ def run_eval(config: EvalConfig) -> EvalResult:
     services: dict[str, Any] = {}
     behavior_cases = [case for case in config.cases if case != FORBIDDEN_TARGET_SCAN_CASE]
 
-    if case_results[0].status == "fail":
+    if case_results[0].status != "pass":
         return _build_eval_result(
             config=config,
             spec=spec,

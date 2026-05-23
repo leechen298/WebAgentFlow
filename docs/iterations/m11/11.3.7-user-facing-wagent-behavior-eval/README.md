@@ -1,6 +1,6 @@
 # 11.3.7 · User-facing WAgent Behavior Eval
 
-状态：ready_for_behavior_eval_implementation（anti-hardcoding blocker cleanup implemented，first-wave behavior eval unverified）
+状态：behavior_eval_runner_implemented（anti-hardcoding gate pass，live first-wave behavior eval blocked by unavailable API）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -74,7 +74,7 @@
 - `intent.md` - 用户视角验收目标、动机、边界和成功标准。
 - `contract.md` - page-entry、learned / unlearned、intent handling、anti-hardcoding
   和 evidence 边界契约。
-- `technical-design.md` - future eval runner / spec / hard gate 的设计，不包含本轮代码实现。
+- `technical-design.md` - user-facing behavior eval runner / spec / hard gate 的设计。
 - `test-plan.md` - 第一批和后续扩展 case、反作弊扫描、live run 边界。
 - `plan.md` - 后续实现步骤和验证入口。
 - `review.md` - 本次文档生成、用户反馈和后续评审记录。
@@ -85,9 +85,17 @@
 11.3.7 anti-hardcoding blocker 清理包；post-cleanup forbidden-target scan 已在产品 runtime /
 prompt 路径上返回 `pass` / `0 matches`。
 
-这仍不是 11.3.7 测试通过。`eval:wagent:user-behavior` runner 尚未实现，也没有 11.3.7
-first-wave behavior artifacts；URL-only known / unknown、unknown choose-learn、execute-known /
-unknown、vague input、known / unknown isolation 和 artifact redaction 仍未验证。
+`pnpm run eval:wagent:user-behavior` runner 已实现，并已产出稳定 JSON / Markdown artifact。
+当前 artifact 的总体状态是 `blocked`，不是 `pass`：forbidden-target case pass，但本地
+Conversation API `http://127.0.0.1:8001/health` 返回 connection refused，因此 URL-only known /
+unknown、unknown choose-learn、execute-known / unknown、vague input 和 live known / unknown
+isolation 仍未完成有效产品行为验证。
 
-11.3.7 只能在实现用户行为 runner、跑完 first-wave gates、产出稳定 artifacts 并通过 redaction
-检查后，再根据证据判断 `pass` / `fail` / `blocked` / `unverified`。
+当前 reviewable artifact：
+
+- `artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json`
+- `docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md`
+
+11.3.7 只能在 live Conversation API / product-test-site preflight 可用、first-wave gates 全部跑完、
+稳定 artifacts 通过 redaction 检查后，再根据证据判断 `pass` / `fail` / `blocked` /
+`unverified`。
