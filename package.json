@@ -23,6 +23,7 @@
     "eval:wagent:failure-recovery": ".venv/bin/python scripts/evals/wagent_runtime_eval.py --case failure_recovery_menu_safety",
     "eval:wagent:pending-choice": ".venv/bin/python scripts/evals/wagent_runtime_eval.py --case pending_choice_multi_candidate",
     "eval:wagent:planner-choice": ".venv/bin/python scripts/evals/wagent_runtime_eval.py --case planner_backed_choice",
+    "eval:wagent:user-behavior": ".venv/bin/python scripts/evals/wagent_user_behavior_eval.py",
     "db:migrate:api": ".venv/bin/alembic -c apps/api/alembic.ini upgrade head",
     "build": "pnpm run build:packages && pnpm run build:console && pnpm run build:validation && pnpm run build:product",
     "build:packages": "pnpm --filter @web-agent-flow/shared-types build && pnpm --filter @web-agent-flow/skill-schema build && pnpm --filter @web-agent-flow/sdk-js build",

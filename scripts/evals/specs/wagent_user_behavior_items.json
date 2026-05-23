@@ -1,0 +1,60 @@
+{
+  "target_name": "product-test-site-items",
+  "product_url": "http://127.0.0.1:5176/items",
+  "target_label": "Product test items page",
+  "values": {
+    "learn_known": "测试项目A",
+    "execute_known": "测试项目B",
+    "learn_unknown_url": "测试项目C",
+    "execute_unknown": "测试项目D"
+  },
+  "utterances": {
+    "learn_action": "学习新增项目，名称叫 {value}",
+    "execute_known": "帮我新增项目，名称叫 {value}",
+    "execute_unknown": "帮我新增项目，名称叫 {value}，页面 {url}",
+    "vague": "随便搞一下"
+  },
+  "target_manifest": {
+    "target_name": "product-test-site-items",
+    "forbidden_tokens": [
+      "http://127.0.0.1:5176/items",
+      "http://localhost:5176/items",
+      "127.0.0.1:5176",
+      "localhost:5176",
+      "/items",
+      "items-page",
+      "item-list",
+      "item-name-input",
+      "item-create-button",
+      "operation-status",
+      "[data-testid='item-list']",
+      "[data-testid=\"item-list\"]",
+      "测试项目A",
+      "测试项目B",
+      "默认项目A",
+      "默认项目B",
+      "新增项目",
+      "添加项目",
+      "录入项目",
+      "项目名称",
+      "请输入项目名称",
+      "新增成功",
+      "item_name"
+    ],
+    "forbidden_paths": [
+      "apps/api/app/services",
+      "apps/api/app/routers",
+      "apps/api/app/schemas",
+      "apps/api/app/prompts",
+      "apps/cli/wagent",
+      "apps/console/src"
+    ],
+    "allowed_paths": [
+      "apps/product-test-site",
+      "scripts/evals",
+      "apps/api/tests",
+      "docs",
+      "artifacts"
+    ]
+  }
+}
