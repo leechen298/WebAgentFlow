@@ -1,6 +1,6 @@
 # 11.3.6.6 · Runtime Eval Gate Failure Fixes
 
-状态：draft_for_review（code fix 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 里程碑：M11
 类型：code
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -56,6 +56,6 @@
 
 ## 当前状态
 
-11.3.6.5 service-available rerun 已证明问题不再是环境 blocked，而是 required gates fail。下一步
-应先完成本包设计评审，再用 `webagentflow-iteration-dev` 按本包实现；实现完成后必须重跑
+11.3.6.5 service-available rerun 已证明问题不再是环境 blocked，而是 required gates fail。本包
+设计已通过 review，可以用 `webagentflow-iteration-dev` 按本包实现；实现完成后必须重跑
 pending-choice 和 planner-choice eval，两个命令 exit `0` 后才允许回到 11.3.6.5 关闭 program。

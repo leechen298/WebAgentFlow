@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：draft_for_review
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 测试目标
 

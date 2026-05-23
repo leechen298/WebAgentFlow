@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：draft_for_review
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 设计摘要
 

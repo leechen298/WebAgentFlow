@@ -1,17 +1,17 @@
 # 复盘 / 评审（Review）
 
-状态：draft_for_review
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## Current Decision
 
-- Reviewer：pending
-- Decision：pending
+- Reviewer：ChatGPT
+- Decision：pass
 - Code：not_started
 - Live eval：not_run
 - Notes：
-  - 本包是代码型 fix 设计稿，尚未实现。
-  - 必须先通过设计评审，再用 `webagentflow-iteration-dev` 进入实现。
-  - 目标是修复 11.3.6.5 service-available rerun 的 required gate failures。
+  - 11.3.6.6 作为代码型 fix 设计稿通过。
+  - 可以用 `webagentflow-iteration-dev` 按本包进入实现。
+  - 实现范围仍限定为 11.3.6.5 service-available rerun 的 required gate failures。
 
 ## Initial Evidence
 
@@ -28,18 +28,26 @@
 
 ## Design Review Checklist
 
-- [ ] pending choice public/private payload contract is precise.
-- [ ] planner route choice selection execution path is scoped and does not break single-path bypass.
-- [ ] runner dynamic private-id redaction is required before artifact write.
-- [ ] tests include redaction, pending choice execution, planner execution, and single-path regression.
-- [ ] required eval commands and pass criteria are explicit.
-- [ ] no autonomous-run / `verify-scenario` / direct replay substitution is introduced.
+- [x] pending choice public/private payload contract is precise.
+- [x] planner route choice selection execution path is scoped and does not break single-path bypass.
+- [x] runner dynamic private-id redaction is required before artifact write.
+- [x] tests include redaction, pending choice execution, planner execution, and single-path regression.
+- [x] required eval commands and pass criteria are explicit.
+- [x] no autonomous-run / `verify-scenario` / direct replay substitution is introduced.
+
+## Design Review Notes
+
+- 设计评审结论：通过，可以进入实现。
+- 本包不新增 eval case、不扩大 runtime 产品能力、不关闭 11.3.6 program。
+- 实现阶段只修 pending choice public payload leak、planner-backed choice selection no-execution、
+  runner raw artifact / dynamic private id redaction。
+- 11.3.6.6 通过后必须回到 11.3.6.5 重新执行 closeout sweep。
 
 ## 未运行项
 
 | Item | Reason |
 |---|---|
-| pytest | design draft only |
+| pytest | design review only |
 | ruff | no code changed |
 | `pnpm run eval:wagent:pending-choice` | not implemented yet |
 | `pnpm run eval:wagent:planner-choice` | not implemented yet |
@@ -48,5 +56,5 @@
 
 ## Next Step
 
-After design review passes, implement exactly this package. Do not modify 11.3.6.5 closeout status until
-the required eval commands rerun and pass.
+Implement exactly this package. Do not modify 11.3.6.5 closeout status until the required eval commands rerun
+and pass.

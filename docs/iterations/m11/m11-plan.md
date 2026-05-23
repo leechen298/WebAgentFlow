@@ -1677,7 +1677,7 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 | [11.3.6.3 · Pending Choice Multi-candidate Eval](./11.3.6.3-pending-choice-multi-candidate-eval/) | A/B/C public choice、private map、用户选择后执行正确 path | implementation_review_failed（service-available eval failed public payload redaction gate） |
 | [11.3.6.4 · Planner-backed Choice Eval](./11.3.6.4-planner-backed-choice-eval/) | vague goal、planner-backed choice path、single-path bypass Planner 回归 | implementation_review_failed（planner-backed choice execution gates failed，single-path bypass passed） |
 | [11.3.6.5 · Runtime Eval Program Closeout](./11.3.6.5-runtime-eval-program-closeout/) | 收口 11.3.6.3 / 11.3.6.4 implementation evidence、result artifact、review 状态和 program 索引 | blocked（required eval gates failed after services were available） |
-| [11.3.6.6 · Runtime Eval Gate Failure Fixes](./11.3.6.6-runtime-eval-gate-failure-fixes/) | 修复 service-available rerun 暴露的 pending choice payload leak、planner choice no-execution 和 raw artifact redaction failures | draft_for_review |
+| [11.3.6.6 · Runtime Eval Gate Failure Fixes](./11.3.6.6-runtime-eval-gate-failure-fixes/) | 修复 service-available rerun 暴露的 pending choice payload leak、planner choice no-execution 和 raw artifact redaction failures | ready_for_implementation（design review passed，未实现代码） |
 
 关键边界：
 
@@ -1689,7 +1689,7 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
   gate failure，需要代码型 fix 迭代。
 - 11.3.6.4 runner case 已实现，但 planner-backed choice eval 暴露 execution / verification
   gate failure；single-path bypass regression 已通过，需要代码型 fix 迭代。
-- 11.3.6.6 已开为代码型 fix 文档包；当前只处于 `draft_for_review`，待 review 后实现。
+- 11.3.6.6 已开为代码型 fix 文档包；当前状态为 `ready_for_implementation`，可按文档实现。
 - 11.3.6.x runner 通过 Conversation API 驱动，不把 direct replay API 冒充 WAgent
   runtime 闭环。
 - Codex 复核 artifact，不替 runner 判定 pass / fail。
