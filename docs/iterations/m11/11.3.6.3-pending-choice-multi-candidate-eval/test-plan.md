@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：draft_for_review（pending choice eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## Test Strategy
 
@@ -26,6 +26,10 @@
 | UT-8 | pending choice remains after A selection | `pending_choice_cleared=fail` |
 | UT-9 | reporter not verified | `execution_verified=fail` |
 | UT-10 | raw request log contains direct replay endpoint | `no_autonomous_or_direct_replay=fail` |
+| UT-11 | `eval_only_candidate_binding` manifest has distinct aliases and one current-run real path | setup gate passes with `live_multi_action_capability=false` |
+| UT-12 | path match gate evidence includes full `learned_path_id` | redaction fails or evidence writer strips full id |
+| UT-13 | A path comparison has matching raw ids | public gate evidence reports matching hashes and `match=true` |
+| UT-14 | A path comparison has different raw ids | `execution_uses_choice_A_path=fail` with redacted expected / actual hashes |
 
 ## Integration Tests
 
@@ -38,7 +42,9 @@ Only required if implementation adds eval-only candidate setup hook.
 | IT-3 | invalid case id | hook ignored |
 | IT-4 | fake learned path id | hook rejected or case blocked |
 | IT-5 | valid setup ids | learned actions bound, no public id leak |
-| IT-6 | hook event payload | no learned path id / private map / selector |
+| IT-6 | hook event payload | no full learned path id / private map / selector |
+| IT-7 | eval-only candidate binding hook | setup event records `setup_type=eval_only_candidate_binding` and `live_multi_action_capability=false` |
+| IT-8 | fixture-only setup used in live result | case cannot claim live runtime pass |
 
 ## Runner Case Tests
 
@@ -49,6 +55,8 @@ Only required if implementation adds eval-only candidate setup hook.
 | CASE-3 | choice A executes wrong learned path | status `fail`, exit `1` |
 | CASE-4 | public payload leak | status `fail`, exit `1` |
 | CASE-5 | timeout during choice dispatch | status `timeout`, exit `3` |
+| CASE-6 | live setup cannot produce 3 candidates and no approved binding exists | status `blocked` or `not_run`, no live pass claim |
+| CASE-7 | eval-only binding pass | status may pass as pending-choice evaluator coverage, Markdown states setup type and `live_multi_action_capability=false` |
 
 ## Safety Checks
 

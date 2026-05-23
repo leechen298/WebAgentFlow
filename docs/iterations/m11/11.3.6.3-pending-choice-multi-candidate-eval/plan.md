@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：draft_for_review（pending choice eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 文件 / 模块
 
@@ -24,6 +24,8 @@
 - 11.3.5.7 pending choice runtime 的现有 events / history / public payload。
 - 当前 public API 是否能从 live Conversation flow 稳定准备三个候选 learned actions。
 - `pending_choice_private_map` 当前是否只存在 private metadata，public history / session 是否已脱敏。
+- 如果 live setup 不稳定，确认是否采用 `eval_only_candidate_binding`，并记录它不能声称 full
+  live distinct-action product capability。
 
 ## Step 2 · 扩展 runner case registry
 
@@ -45,7 +47,16 @@ pending_choice_multi_candidate
 优先通过 Conversation API 学习三个当前 eval run candidates。
 
 如果实现阶段确认自然 setup 不稳定，可以实现最小 eval-only setup hook，但 hook 必须只绑定当前
-eval run 已知 learned path ids，且必须默认关闭。
+eval run 已知真实 learned path 或受控 fixture，且必须默认关闭。manifest 必须记录：
+
+```text
+setup_type
+live_multi_action_capability
+candidate aliases
+redacted path hashes
+```
+
+公开 artifact / Markdown 不得输出完整 `learned_path_id`。
 
 ## Step 4 · 实现 pending choice gate evaluator
 
@@ -66,14 +77,19 @@ eval run 已知 learned path ids，且必须默认关闭。
 - `final_response_verified`
 - `no_autonomous_or_direct_replay`
 
+`execution_uses_choice_A_path` 允许 runner 内部用 raw path id 比较 expected / actual，但 gate
+evidence 只能输出 alias、redacted hash 和 `match=true|false`。
+
 ## Step 5 · 更新 artifact / Markdown result
 
 Markdown result 增加：
 
 - candidate setup type。
+- `live_multi_action_capability`，尤其是 alias binding 场景必须为 `false`。
 - setup manifest summary。
 - public choices evidence。
 - A selection evidence。
+- expected / actual path hash match evidence。
 - private payload scan evidence。
 - live eval not-run statement when applicable。
 

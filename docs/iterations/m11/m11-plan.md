@@ -1672,7 +1672,7 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 |---|---|---|
 | [11.3.6.1 · WAgent Runtime Eval Runner Core](./11.3.6.1-wagent-runtime-eval-runner-core/) | 实现 runner v1，覆盖 `items_closed_loop` 和 `single_path_direct_replay_regression` | ready_for_implementation（design review passed，未实现代码） |
 | [11.3.6.2 · Failure Recovery Eval](./11.3.6.2-failure-recovery-eval/) | recovery menu safety、retry / relearn / cancel、private payload safety | implementation complete（non-live checks passed，live Conversation eval not run） |
-| [11.3.6.3 · Pending Choice Multi-candidate Eval](./11.3.6.3-pending-choice-multi-candidate-eval/) | A/B/C public choice、private map、用户选择后执行正确 path | draft_for_review（未实现代码） |
+| [11.3.6.3 · Pending Choice Multi-candidate Eval](./11.3.6.3-pending-choice-multi-candidate-eval/) | A/B/C public choice、private map、用户选择后执行正确 path | ready_for_implementation（design review passed，未实现代码） |
 | 11.3.6.4 · Planner-backed Choice Eval | vague goal、planner choice path、single-path bypass Planner 回归 | planned |
 
 关键边界：
@@ -1681,7 +1681,7 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 - 11.3.6.1 承接已通过评审的 runner core 设计。
 - 11.3.6.2 已实现稳定 eval-only hook 和 recovery gates；non-live checks 已通过，live
   Conversation eval 尚未运行。
-- 11.3.6.3 已开包设计 pending choice multi-candidate setup 和 choice-selection gates。
+- 11.3.6.3 已完成 pending choice multi-candidate setup 和 choice-selection gates 设计评审，可以进入实现。
 - 11.3.6.x runner 通过 Conversation API 驱动，不把 direct replay API 冒充 WAgent
   runtime 闭环。
 - Codex 复核 artifact，不替 runner 判定 pass / fail。

@@ -1,6 +1,6 @@
 # 11.3.6.3 · Pending Choice Multi-candidate Eval
 
-状态：draft_for_review（pending choice eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 里程碑：M11
 类型：code
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -60,5 +60,6 @@ core 之上增加 pending choice multi-candidate eval coverage，用 hard gates 
 
 ## 当前状态
 
-设计稿已生成，等待 review。实现前必须先确认 11.3.6.1 / 11.3.6.2 runner 当前状态，并复核
-11.3.5.7 pending choice runtime 的 public / private evidence 可观测性。
+设计评审已通过，可以进入实现。实现前必须先确认 11.3.6.1 / 11.3.6.2 runner 当前状态，
+复核 11.3.5.7 pending choice runtime 的 public / private evidence 可观测性，并按 contract
+使用可审计的 candidate setup type 与 redacted path hash evidence。

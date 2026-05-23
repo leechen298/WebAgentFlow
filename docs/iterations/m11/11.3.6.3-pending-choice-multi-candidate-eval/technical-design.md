@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：draft_for_review（pending choice eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 当前状态（Current State）
 
@@ -71,11 +71,34 @@ source_event_id
 如果实际 runtime 会因为 alias / target scope 合并而无法得到三个 distinct candidates，runner
 不得猜测；应转入 blocked / not observable，或使用已评审的 eval-only setup hook。
 
+### Candidate Setup Practicality
+
+Runner setup manifest 必须记录 setup source：
+
+```text
+setup_type =
+  live_same_session_distinct_paths |
+  live_setup_session_distinct_paths |
+  eval_only_candidate_binding |
+  fixture_only
+```
+
+`live_same_session_distinct_paths` / `live_setup_session_distinct_paths` 是最高保真路径。
+如果 `/items` 当前 live UI 只能稳定提供一个真实 action，第一版可使用
+`eval_only_candidate_binding` 稳定触发 pending choice evaluator：
+
+- 至少一个真实 LearnedPath 来自当前 eval run。
+- 其他 A/B/C candidates 可作为 aliases 绑定到当前 eval run 的真实 path；受控 fixture 仅用于
+  `fixture_only` / non-live evaluator tests。
+- manifest 必须写入 `live_multi_action_capability=false`。
+- Markdown result 必须说明该结果只验证 pending choice evaluator 和 public / private payload
+  safety，不声称产品已有完整 live distinct-action capability。
+
 ### Eval-only Setup Hook
 
-如果需要 hook，hook 只负责把当前 eval run 已知的 learned path ids 绑定成多个 safe
-learned action summaries。它不得创建 fake path，也不得直接写 private map。pending choice
-仍必须由后续 Conversation API dispatch 触发。
+如果需要 hook，hook 只负责把当前 eval run 已知的真实 path 绑定成多个 safe learned action
+summaries。它不得直接写 private map。pending choice 仍必须由后续 Conversation API dispatch
+触发。受控 fixture 只能在 non-live evaluator tests 中使用，不能冒充 live runtime pass。
 
 推荐 metadata shape：
 
@@ -84,6 +107,8 @@ learned action summaries。它不得创建 fake path，也不得直接写 privat
   "client": "wagent_eval",
   "eval_candidate_setup": {
     "case_id": "pending_choice_multi_candidate",
+    "setup_type": "eval_only_candidate_binding",
+    "live_multi_action_capability": false,
     "actions": [
       {"choice_id": "A", "alias": "新增项目", "learned_path_id": "..."},
       {"choice_id": "B", "alias": "添加项目", "learned_path_id": "..."},
@@ -93,8 +118,8 @@ learned action summaries。它不得创建 fake path，也不得直接写 privat
 }
 ```
 
-Hook event 如需记录，只能记录 case id、candidate count 和 aliases；不得记录 learned path ids
-或 private map。
+Hook event 如需记录，只能记录 case id、setup type、candidate count、aliases 和 redacted
+path hashes；不得记录完整 learned path ids 或 private map。
 
 ## Conversation Flow
 
@@ -127,20 +152,41 @@ EvidenceCollector 需要读取：
 - runner setup manifest。
 
 Runner setup manifest 是 runner 内部 evidence，用于记录 A/B/C expected mapping。它可以进入
-redacted JSON artifact，但 learned path ids 必须按 11.3.6 redaction 规则处理；gate evidence 可
-使用短 hash / alias / event id 等审计线索，不把完整 private id 写进 Markdown。
+redacted JSON artifact，但 learned path ids 必须按 11.3.6 redaction 规则处理；gate evidence
+必须使用短 hash / alias / event id 等审计线索，不把完整 private id 写进 Markdown。
+
+For `execution_uses_choice_A_path`, GateEvaluator may compare raw ids before redaction:
+
+```text
+expected_raw_path_id = setup_manifest.choice["A"].learned_path_id
+actual_raw_path_id = chat_execution_started.payload.learned_path_id
+match = expected_raw_path_id == actual_raw_path_id
+```
+
+Public evidence must then emit only:
+
+```text
+expected_choice=A
+expected_alias=<alias>
+expected_path_hash=<sha256-prefix>
+actual_path_hash=<sha256-prefix>
+match=true|false
+setup_type=<setup_type>
+```
 
 ## Gate Evaluation
 
 新增 evaluator helpers：
 
 - detect current eval setup candidates。
+- record setup type and live multi-action capability。
 - detect non-planner `pending_choice_created` event。
 - parse public A/B/C choices from message / public event / session payload。
 - scan public payload for forbidden private tokens。
 - detect planner events and fail this case when present。
 - resolve expected choice A learned path from setup manifest。
-- verify A-turn `chat_execution_started.learned_path_id` matches expected A path。
+- verify A-turn `chat_execution_started.learned_path_id` matches expected A path internally。
+- output only redacted path hashes / aliases in gate evidence。
 - verify pending choice cleanup after A selection。
 - verify reporter / DOM evidence success for A execution。
 
