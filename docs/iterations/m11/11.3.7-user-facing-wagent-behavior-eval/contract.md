@@ -25,9 +25,17 @@ Reporter adapter 或 pending choice 私有映射的孤立单元能力。
 
 | State | Meaning | Required behavior |
 |---|---|---|
-| `known_page` | 当前 session 或允许的 lookup scope 中存在可用 learned action | 列出可执行操作或匹配用户目标 |
-| `unknown_page` | 没有可用 learned action | 说明还没学过，并引导学习或取消 |
+| `known_page` | 当前 eval session 或 explicit eval scope 中存在可用 learned action | 列出可执行操作或匹配用户目标 |
+| `unknown_page` | 当前 eval session / isolated scope / explicit filtered catalog 中没有可用 learned action | 说明还没学过，并引导学习或取消 |
 | `ambiguous_page` | URL / target 不足或无法解析 | 追问目标页面，不执行 |
+
+Known / unknown isolation is required:
+
+- known cases may only use learned actions created or selected for the current eval session / eval scope;
+- unknown cases must use a fresh session, isolated scope, explicit filtered catalog, or equivalent
+  deterministic isolation;
+- global historical LearnedPath rows must not make an unknown case look known;
+- if old global LearnedPath data cannot be isolated, the unknown case is `blocked`, not pass.
 
 ### User intent handling
 
@@ -48,7 +56,7 @@ Reporter adapter 或 pending choice 私有映射的孤立单元能力。
 
 - 测试页面 URL、host、port、route 或路径模板；
 - 测试页面专有标题、说明文案、按钮名、字段 label、placeholder；
-- fixture 专有业务实体名、测试 item 名称、测试别名；
+- fixture 专有业务实体名、fixture item names、测试 item 名称、operation aliases、测试别名；
 - DOM test id、fixture selector、fixture CSS class；
 - 针对该测试页面的 hard-coded operation list 或 branching rule；
 - 只为了通过本轮测试而加入的 prompt 示例、few-shot 或自然语言模板。
@@ -61,6 +69,9 @@ Reporter adapter 或 pending choice 私有映射的孤立单元能力。
 - unit / integration / E2E 测试文件；
 - docs、review、testing result 和 redacted artifact。
 
+These allowed locations are not runtime configuration. Product runtime must not import eval specs,
+test-only fixtures, docs, review files, testing results, or artifacts to learn target details.
+
 功能代码包括但不限于：
 
 - `apps/api/app/services/**`
@@ -72,6 +83,16 @@ Reporter adapter 或 pending choice 私有映射的孤立单元能力。
 
 如果 implementation 需要识别页面能力，只能使用通用 page analysis、DOM / accessibility 信号、
 LearnedPath metadata、用户消息和明确的 eval spec 输入，不能靠测试页面常量。
+
+Existing target-specific runtime special cases are blockers. Examples include route checks such as
+the test page path, selector checks such as the test list selector, hard-coded fixture field names,
+or operation aliases that only exist to pass the product-test-site scenario. They must be removed,
+made generic, or moved into eval spec / test-only code before 11.3.7 can pass.
+
+No grandfather exception is allowed. If cleanup cannot happen in the 11.3.7 implementation run, the
+review must open a cleanup issue / follow-up and mark 11.3.7 `blocked`; it must not mark the eval pass.
+Opening a cleanup follow-up is only a way to record why the eval is blocked, not permission to ship
+or pass with target-specific runtime behavior still present.
 
 ## 状态 / 结果契约
 
@@ -94,6 +115,20 @@ LearnedPath metadata、用户消息和明确的 eval spec 输入，不能靠测�
 4. `execute_unknown_action`
 5. `vague_input_no_execution`
 6. `forbidden_test_target_not_in_runtime_code_or_prompts`
+7. `url_only_unknown_choose_learn_starts_learning`
+8. `execute_unknown_choose_learn_then_execute_or_learning_flow`
+
+`url_only_unknown_choose_learn_starts_learning` is required. After WAgent says the page is not learned,
+the user's public learn choice must enter a real learning flow or produce a product-level blocked
+state with evidence. A no-op reply, fake learning-complete text, or hidden execution is fail.
+
+`execute_unknown_choose_learn_then_execute_or_learning_flow` has a staged contract:
+
+- if full `learn_then_execute` is supported, the case must prove learning succeeded, execution ran
+  after learning, and evidence verified the final result;
+- if full `learn_then_execute` is not supported, the case may only pass the narrower learning-flow
+  gate: choosing the learn option starts the controlled learning flow and does not claim execution;
+- in the latter case, full learn-then-execute must be recorded as a follow-up, not a pass.
 
 ### Follow-up scenarios
 
@@ -157,6 +192,10 @@ LearnedPath metadata、用户消息和明确的 eval spec 输入，不能靠测�
   contract 不因本轮文档变化而改变。
 - 后续实现如发现功能代码已有测试页面常量，必须作为 11.3.7 阻断项或单独 cleanup task 处理，
   不能让新的 eval 靠这些常量通过。
+- Cleanup follow-up is not a grandfather exception. Until the target-specific runtime / prompt content
+  is removed or isolated into test-only layers, 11.3.7 remains `blocked`.
+- Known current runtime special cases must be cleaned up during implementation, not accepted as
+  historical behavior.
 
 ## 不变契约
 
@@ -176,10 +215,11 @@ LearnedPath metadata、用户消息和明确的 eval spec 输入，不能靠测�
 - 不证明已生成完整页面操作库。
 - 不在未知操作上静默 learn-then-execute。
 - 不把测试页面常量写入产品 prompt 来提升通过率。
+- 不让 global catalog 中的旧 LearnedPath 决定 unknown case。
 
 ## 未决问题
 
 - 11.3.7 第一版 runner 是否复用 11.3.6 `scripts/evals/wagent_runtime_eval.py`，还是新建
   user-behavior runner：implementation design review 决定。
-- known / unknown 页面状态是否通过 fresh database、fresh session 或 explicit fixture scope
-  隔离：implementation design review 决定。
+- known / unknown 页面状态必须隔离；implementation design review 只决定具体机制：
+  fresh session、isolated eval scope、explicit filtered catalog，或等价方案。

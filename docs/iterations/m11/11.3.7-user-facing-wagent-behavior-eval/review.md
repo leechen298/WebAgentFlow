@@ -29,6 +29,46 @@
   写入 contract、technical design、test plan 和 review checklist。
 - “因为出现的话，可能会出现针对性的实现功能，影响整体产品。” -> accepted，作为
   forbidden-token hard gate 的动机。
+- “如果当前代码已有 `/items`、`[data-testid='item-list']` 等测试站点特判，11.3.7 应将其
+  视为 blocker，必须改为 generic runtime 或移入 eval spec / test-only layer。” -> accepted，
+  已写入 contract、technical design、test plan 和 plan。
+- “不允许用 grandfather exception 直接放过，除非明确开 cleanup issue 并将 11.3.7 标为
+  blocked。” -> accepted。
+- “第一批 required cases 需要包含 `url_only_unknown_choose_learn_starts_learning` 和
+  `execute_unknown_choose_learn_then_execute_or_learning_flow`。” -> accepted。
+- “如果 `learn_then_execute` 当前不支持，则明确写为 follow-up，不能伪造 pass。” -> accepted。
+- “known / unknown 页面状态隔离策略必须明确，不能被全局旧 LearnedPath 污染。” -> accepted。
+- “测试页面细节只能存在于 product-test-site fixture source、eval spec、tests、docs / review /
+  testing results / artifacts，不能被 product runtime import。” -> accepted。
+- “没学过 -> 用户选择学习 -> 真进入学习流程” -> accepted，已明确为 first-wave required
+  `url_only_unknown_choose_learn_starts_learning`；必须进入真实 learning flow，或以 evidence-backed
+  blocker 记录，不能伪造 pass。
+- “anti-hardcoding gate 必须严格执行，已有测试站点特判也应该修掉，不能放过。” -> accepted，
+  已把现有特判清理写成 11.3.7 实现步骤和 pass 前置条件。
+
+## 2026-05-23 文档修订
+
+- Author：Codex
+- Decision：docs_revised
+- Notes：
+  - Strengthened anti-hardcoding gate with product-test-site URL / route / button text / field label /
+    DOM test id / fixture item names / operation aliases.
+  - Added explicit blocker language for existing runtime / prompt target special cases, including route
+    and selector checks. No grandfather exception is allowed.
+  - Added first-wave required scenarios:
+    `url_only_unknown_choose_learn_starts_learning` and
+    `execute_unknown_choose_learn_then_execute_or_learning_flow`.
+  - Added staged handling for unsupported full `learn_then_execute`: start learning truthfully and record
+    full learn-then-execute as follow-up, not pass.
+  - Added known / unknown isolation requirement: current eval session / scope for known; fresh session,
+    isolated scope or explicit filtered catalog for unknown.
+  - Clarified that product runtime must not import eval spec, docs, review, testing results or artifacts
+    to access target details.
+  - Follow-up user clarification made unknown choose-learn a required real learning-flow gate.
+  - Follow-up user clarification made cleanup of existing product-test-site runtime special cases a
+    required implementation prerequisite before 11.3.7 can pass.
+  - Read-only inspection found likely current runtime blockers in conversation intake, chat runtime and
+    learning run service; test constants in `scripts/evals/` remain test-only and are not product runtime.
 
 ## 最终差异（Final Delta）
 
@@ -37,6 +77,8 @@
 - Created 11.3.7 iteration documentation package.
 - Updated M11 index / plan and 11.3.6 closeout wording to separate runtime component acceptance
   from user-facing product behavior acceptance.
+- Revised 11.3.7 docs to make anti-hardcoding, no-grandfather blocker handling, first-wave choose-learn
+  cases, known / unknown isolation and allowed target-detail locations explicit.
 - No runtime code changed.
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
@@ -58,6 +100,9 @@ execution。
 |---|---|---|---|---|---|---|
 | `find docs/iterations/m11/11.3.7-user-facing-wagent-behavior-eval -maxdepth 1 -type f | sort` | Seven docs exist | Seven files listed: README, intent, contract, technical-design, test-plan, plan, review | 0 | Pass | command output | Docs package is complete |
 | `rg -n "11\\.3\\.7|User-facing WAgent Behavior Eval|测试页面链接|forbidden-token|runtime execution capabilities" docs/iterations/m11 docs/testing/wagent-runtime-eval.md docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T135028Z.md` | Scope correction discoverable | Matches found in M11 index / plan, 11.3.6 program docs, closeout docs, runtime eval docs and 11.3.7 package | 0 | Pass | command output | Scope correction is discoverable |
+| scenario id grep | Required first-wave scenarios discoverable | All eight required scenario ids found across 11.3.7 docs | 0 | Pass | command output | Includes choose-learn and forbidden-target scenario ids |
+| anti-hardcoding / isolation grep | Blocker, no-grandfather and isolation language discoverable | Matches found for no grandfather, blocker / blocked, fresh session, isolated scope, explicit filtered catalog, product runtime import, fixture item names and operation aliases | 0 | Pass | command output | Confirms this revision is represented in docs |
+| runtime special-case inspection | Identify whether current product runtime has target-specific blockers | Found likely blockers in `apps/api/app/services/conversation/intake.py`, `apps/api/app/services/conversation/chat_runtime.py`, and `apps/api/app/services/learning/learning_run_service.py`; eval runner constants remained under `scripts/evals/` | 0 | Pass | command output | Read-only inspection only; no runtime cleanup performed in this docs revision |
 | placeholder scan for template tokens | No template placeholders | No matches | 1 | Pass | command output | exit `1` means `rg` found no matches |
 
 ### 未运行 / 未验证（Not Run / Unverified）
@@ -66,6 +111,7 @@ execution。
 |---|---|---|
 | `pnpm run eval:wagent:user-behavior` | Runner not implemented in this docs draft | User-facing behavior remains unverified |
 | Unit / API tests | No code changed | Runtime regressions are not assessed by this docs-only change |
+| Runtime special-case cleanup | This turn only revised docs | 11.3.7 implementation must remove / generalize current product-test-site blockers before pass |
 | Console UI smoke | Not requested | UI-specific behavior remains unverified |
 | `verify-scenario` / autonomous run | Out of scope and prohibited by default | No Supervisor pass_gate evidence claimed |
 

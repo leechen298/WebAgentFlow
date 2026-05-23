@@ -176,11 +176,14 @@ normalization 缺口。
 `11.3.7-user-facing-wagent-behavior-eval/` 是 11.3.6 之后的用户视角验收包。它要验证的不是
 底层 slot / reporter / recovery 零件，而是普通用户输入进入时，WAgent 是否知道该查 learned
 actions、该学习、该执行、该追问、该拒绝乱来，以及执行后是否基于 evidence 回复。第一批
-case 聚焦 URL-only known / unknown、execute-known、execute-unknown 和 vague-input；后续再扩展
-explicit learn、pending continuation、choice selection、failure recovery 和受控 page capability
-learning。该包加入 hard gate：测试页面链接、route、页面文案、按钮名、字段名、DOM test id
-和 fixture 业务内容不得进入功能代码或产品 prompt，只能存在于 fixture、eval spec、测试、
-docs 和 artifact 中。
+case 聚焦 URL-only known / unknown、unknown 后选择学习必须进入真实 learning flow、
+execute-known、execute-unknown、execute-unknown 后选择 learn / learn-then-execute、
+vague-input 和 forbidden target scan；后续再扩展 explicit learn、pending continuation、
+choice selection、failure recovery 和受控 page capability learning。该包加入 hard gate：
+测试页面链接、route、页面文案、按钮名、字段名、DOM test id、fixture item names 和
+operation aliases 不得进入功能代码或产品 prompt，只能存在于 fixture、eval spec、测试、
+docs 和 artifact 中；当前已有 product-test-site runtime 特判也必须清理，未清理则 11.3.7
+只能 blocked，不能 pass。
 
 11.2 后续 backlog：
 

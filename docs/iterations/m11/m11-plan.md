@@ -1736,9 +1736,12 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 |---|---|
 | URL-only known page | 用户只发页面 URL，WAgent 自动列出已学操作并让用户选择 |
 | URL-only unknown page | 用户只发未学习页面，WAgent 说明未学过并引导学习 / 查看 / 取消 |
+| URL-only unknown choose learn | 用户选择学习后，WAgent 必须进入真实 learning flow 或以 evidence-backed blocker 停止 |
 | execute-known action | 用户明确要求执行已学操作，WAgent 自动匹配路径、补参数、执行并验证 evidence |
 | execute-unknown action | 用户要求执行未学操作，WAgent 不直接 replay，而是询问学习并执行 / 只学习 / 取消 |
+| execute-unknown choose learn | 用户选择 learn / learn-then-execute 后，WAgent 必须真实开始 learning flow；完整 learn-then-execute 若暂不支持只能记 follow-up，不能伪造 pass |
 | vague input | 用户说得模糊或乱说，WAgent 不执行，要求补页面或操作目标 |
+| forbidden target scan | product runtime / product prompt 不得包含测试页面目标细节 |
 
 后续扩展：
 
@@ -1758,6 +1761,8 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
   artifact 中。
 - 后续实现必须先建立 forbidden-token scan，再运行行为 case；如果发现功能代码或产品 prompt
   包含测试目标细节，11.3.7 必须 fail。
+- 当前已有 product-test-site runtime 特判必须改成 generic runtime 或移入 eval spec /
+  test-only layer；不能 grandfather。未清理时 11.3.7 必须 blocked，不能 pass。
 
 迭代文档：
 

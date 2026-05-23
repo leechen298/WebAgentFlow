@@ -28,12 +28,15 @@
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
-| URL-only known page must list learned operations | Eval runner prepares a session with learned actions, sends only target URL through Conversation API | `test-plan.md` CASE-1 | Reply must not expose private ids |
-| URL-only unknown page must not pretend execution is possible | Eval runner uses fresh session / isolated lookup scope with no learned actions | `test-plan.md` CASE-2 | Must offer learning / inspect / cancel style next step |
+| URL-only known page must list learned operations | Eval runner prepares current eval session / explicit eval scope with learned actions, sends only target URL through Conversation API | `test-plan.md` CASE-1 | Reply must not expose private ids |
+| URL-only unknown page must not pretend execution is possible | Eval runner uses fresh session / isolated scope / explicit filtered catalog with no learned actions | `test-plan.md` CASE-2 | Global historical LearnedPath rows cannot make this pass |
+| Unknown URL choose-learn starts learning | Eval runner selects the public learn option after unknown URL guidance and asserts a real learning flow starts | `test-plan.md` CASE-2A | Required; no fake learning-complete text |
 | execute-known must match learned action and verify result | Conversation runtime matches learned action, applies user slots, runs replay, checks evidence | `test-plan.md` CASE-3 | Existing 11.3.6 replay gates are supporting, not sufficient |
 | execute-unknown must ask for confirmation before learning | Runtime returns learn-and-execute / learn-only / cancel choice | `test-plan.md` CASE-4 | No hidden relearning |
+| Execute-unknown choose-learn must not fake full learn-then-execute | Eval runner selects the public learn / learn-and-execute option and records whether runtime supports full continuation | `test-plan.md` CASE-4A | If unsupported, full learn-then-execute is follow-up, not pass |
 | vague input must not execute | Router / orchestrator produces clarification or guidance without replay | `test-plan.md` CASE-5 | Mis-execution is a hard fail |
 | Test target details must not enter feature code or product prompts | Forbidden-token list from eval spec, scanned against runtime code and prompt assets | `test-plan.md` STATIC-1 | Hard fail before behavior cases can pass |
+| Existing test-target special cases block the eval | Scanner and review classify route / selector / operation constants in runtime or prompts as blockers | `test-plan.md` STATIC-1 | No grandfather exception |
 | Eval evidence must be auditable | JSON / Markdown artifacts include session id, commands, sanitized public responses, gates | `test-plan.md` ARTIFACT-1 | Raw private payload must be redacted |
 | No autonomous-run endpoint substitution | Runner drives Conversation API or approved UI only | `test-plan.md` BOUNDARY-1 | Direct autonomous endpoint calls are prohibited |
 
@@ -78,19 +81,43 @@ Forbidden paths:
 Any forbidden match fails the eval. The report must include only sanitized token labels or hashes
 when a token is sensitive.
 
-### 3. First-wave behavior cases
+Existing runtime special cases are not exempt. If the scan finds target page route constants,
+target-specific selectors, button text, field labels, fixture item names, operation aliases, or prompt
+examples in product runtime / prompt assets, the implementation must remove or generalize them. Moving
+them into eval spec / test-only code is acceptable. Leaving them in place with a cleanup note means
+the 11.3.7 result is `blocked`, not pass.
 
-Implement five required user-facing cases:
+Known target-specific runtime code must be cleaned up before 11.3.7 can pass. Read-only inspection has
+already found likely blocker patterns in runtime services, including the conversation intake, chat
+runtime and learning run service. Implementation should treat those as cleanup targets, while keeping
+test constants in eval runner / fixture / tests as test-only data.
+
+### 3. Known / unknown state isolation
+
+Known and unknown setup must be deterministic:
+
+- known cases seed or create learned actions only in the current eval session / explicit eval scope;
+- unknown cases use a fresh session, isolated eval scope, explicit filtered catalog, or equivalent
+  mechanism that excludes old global LearnedPath rows;
+- the artifact records the isolation mechanism and the learned action count seen by the runtime;
+- if isolation fails or historical global data can affect the answer, unknown cases are `blocked`.
+
+### 4. First-wave behavior cases
+
+Implement these required user-facing cases:
 
 | Case | Setup | User input | Expected behavior |
 |---|---|---|---|
 | `url_only_known_page` | Session has one or more learned operations for the target | target URL only | WAgent lists learned operations and offers to learn a new operation |
 | `url_only_unknown_page` | Session / scope has no learned operations | target URL only | WAgent says it has not learned the page and asks whether to learn or inspect |
+| `url_only_unknown_choose_learn_starts_learning` | Continue from unknown URL guidance | User selects learn / start learning option | WAgent enters a real learning flow, or returns a product-level blocked state with evidence; it does not execute or fake completion |
 | `execute_known_action` | Session has matching learned operation | natural-language execution request with needed value | WAgent executes without relearning and verifies evidence |
 | `execute_unknown_action` | No matching learned operation | natural-language execution request | WAgent asks whether to learn and execute, only learn, or cancel |
+| `execute_unknown_choose_learn_then_execute_or_learning_flow` | Continue from execute-unknown choice | User selects learn-and-execute / learn option | If supported, WAgent learns, executes and verifies; if unsupported, WAgent starts learning only and records full learn-then-execute as follow-up |
 | `vague_input_no_execution` | Missing target or ambiguous operation | vague user message | WAgent does not execute and asks for page / operation clarification |
+| `forbidden_test_target_not_in_runtime_code_or_prompts` | Static scan over product runtime and prompt assets | N/A | No target-specific URL / route / text / selector / alias appears outside allowed test/docs/fixture layers |
 
-### 4. Follow-up behavior cases
+### 5. Follow-up behavior cases
 
 After the first-wave cases pass, extend the runner with:
 
@@ -102,7 +129,10 @@ After the first-wave cases pass, extend the runner with:
 - controlled multi-operation learning;
 - natural-language reuse across multiple learned operations.
 
-### 5. Artifact and closeout reporting
+Full `learn_then_execute` completion belongs here only if the current product cannot truthfully complete
+learning, immediate execution and evidence verification during the first-wave case.
+
+### 6. Artifact and closeout reporting
 
 The runner should write:
 
@@ -166,7 +196,7 @@ The product runtime should remain generic:
 eval spec
 -> forbidden-token scan against runtime code and product prompts
 -> preflight API / product surface availability
--> setup known or unknown session state
+-> setup known or unknown session state with explicit isolation
 -> send user message through Conversation API
 -> collect public response, events, session metadata and reporter evidence
 -> evaluate gates
@@ -185,8 +215,10 @@ Overall status priority:
 2. `fail` if forbidden-token scan fails.
 3. `fail` if any required behavior gate fails.
 4. `fail` if redaction scan finds private payload leakage.
-5. `pass` if all required gates pass.
-6. `unverified` only for docs-only review or skipped behavior surfaces.
+5. `blocked` if known / unknown isolation cannot exclude global historical LearnedPath rows.
+6. `blocked` if current runtime has target-specific code / prompt special cases and cleanup is not completed.
+7. `pass` if all required gates pass.
+8. `unverified` only for docs-only review or skipped behavior surfaces.
 
 `unverified` is not a pass.
 
@@ -203,10 +235,16 @@ Overall status priority:
 - Product page unavailable: case is `blocked`, not fail.
 - API unavailable: case is `blocked`, not fail.
 - Known setup cannot produce learned action: affected cases are `blocked` with setup reason.
+- Unknown setup can see old global LearnedPath data: affected cases are `blocked`.
+- Unknown URL choose-learn does not start a real learning flow: `fail`, unless the product returns a
+  reviewable blocked state explaining why learning cannot start.
 - Runtime executes on vague input: hard `fail`.
 - Runtime hidden-learns unknown action without user confirmation: hard `fail`.
+- Runtime or product prompt contains target route / selector / fixture item / operation alias: hard `fail`
+  if discovered during scan; if cleanup is deferred, overall 11.3.7 is `blocked`.
 - Public response leaks private id / selector / private map: hard `fail`.
 - Test target string appears in product code or prompt asset: hard `fail`.
+- Product runtime imports eval spec / docs / artifact to access target details: hard `fail`.
 - Evidence says executed but reporter cannot verify DOM / observation result: case is fail or
   unverified according to reporter output, never pass.
 
@@ -223,7 +261,8 @@ Overall status priority:
 | Test area | Coverage goal | Detailed plan |
 |---|---|---|
 | Static target-generalization scan | Prove target details are absent from feature code and product prompts | `test-plan.md` STATIC-1 |
-| Conversation behavior eval | Prove URL-only, execute-known, execute-unknown and vague input behavior | `test-plan.md` CASE-1 to CASE-5 |
+| State isolation | Prove known / unknown are determined by current eval session / scope, not old global catalog rows | `test-plan.md` ISOLATION-1 |
+| Conversation behavior eval | Prove URL-only, choose-learn, execute-known, execute-unknown and vague input behavior | `test-plan.md` CASE-1 to CASE-5 |
 | Evidence / reporter | Prove execute-known final reply is evidence-backed | `test-plan.md` CASE-3 |
 | Redaction | Prove public response and artifacts do not leak private ids / selectors / maps | `test-plan.md` REDACTION-1 |
 | Boundary | Prove eval did not use autonomous-run endpoint or direct replay substitution | `test-plan.md` BOUNDARY-1 |

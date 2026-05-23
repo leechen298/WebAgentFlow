@@ -48,6 +48,12 @@
 - 定义页面能力学习 eval 的后续扩展目标：能力发现、多操作学习、LearnedPath catalog
   生成、自然语言复用执行。
 - 定义反作弊 / 泛化硬 gate：测试页面链接及其相关页面内容不得进入功能代码或产品提示词。
+- 定义 known / unknown 页面状态隔离：known 只能来自当前 eval session / eval scope 的
+  learned actions；unknown 必须使用 fresh session、isolated scope 或 explicit filtered catalog，
+  不能被全局旧 LearnedPath 污染。
+- 明确 “没学过 -> 用户选择学习 -> 真进入学习流程” 是第一批 required gate，不是可选扩展。
+- 明确现有 product-test-site runtime 特判必须在 11.3.7 实现中清理；未清理只能 blocked，
+  不能 pass。
 - 约束所有 live / CLI / UI 证据必须通过可审计产品入口或 project eval runner 产生。
 
 ## 本包不做
@@ -56,7 +62,10 @@
 - 不实现 L1 Page Understanding Agent，也不让 LLM 逐步控制浏览器。
 - 不默认执行 `verify-scenario`、autonomous run 或 Console UI smoke。
 - 不在功能代码或产品 prompt 中写入测试页面 URL、route、页面文案、测试按钮名、
-  测试字段名、DOM test id 或 fixture 业务内容。
+  测试字段名、DOM test id、fixture item names、operation aliases 或 fixture 业务内容。
+- 不允许把现有测试站点特判 grandfather 进 11.3.7；如果 runtime / prompt 中已有测试站点
+  URL、route、selector 或 operation 常量，必须改成 generic runtime，或移到 eval spec /
+  test-only layer。否则 11.3.7 标为 blocked。
 - 不把 eval-only candidate binding 冒充真实页面多操作能力。
 - 不碰登录页作为第一批验收目标。
 
@@ -74,4 +83,5 @@
 
 本包当前只完成文档定义，尚未实现 runner，也未执行任何 CLI / UI / live eval。
 后续进入实现前必须先完成 design review。实现阶段必须先建立测试页面细节的 forbidden-token
-清单和代码 / prompt 扫描 gate，再实现用户行为场景本身。
+清单和代码 / prompt 扫描 gate，并清理当前产品 runtime 中的测试站点特判，再实现用户行为
+场景本身。
