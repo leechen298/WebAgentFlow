@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：draft_for_review（planner-backed choice eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 文件 / 模块
 
@@ -36,7 +36,7 @@
 planner_backed_choice
 ```
 
-可选新增：
+同时必须覆盖：
 
 ```text
 planner_single_path_bypass_regression

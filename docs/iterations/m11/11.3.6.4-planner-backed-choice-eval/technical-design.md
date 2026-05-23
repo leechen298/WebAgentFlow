@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：draft_for_review（planner-backed choice eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## 当前状态（Current State）
 
@@ -182,6 +182,10 @@ planner_top_choice_observable = not_observable / warning
 ```
 
 The runner must not infer Planner top choice from final WAgent text or Codex judgment.
+
+Design review decision: this gate remains conditional for the first implementation. Adding a minimal read-only
+top-choice hash surface is allowed only if existing events / history cannot support useful observability, and that
+change must stay additive and sanitized.
 
 If a minimal read-only exposure is added later, it must expose only:
 

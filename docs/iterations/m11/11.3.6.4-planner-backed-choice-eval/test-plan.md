@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：draft_for_review（planner-backed choice eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## Test Strategy
 

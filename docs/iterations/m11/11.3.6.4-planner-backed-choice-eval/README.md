@@ -1,6 +1,6 @@
 # 11.3.6.4 · Planner-backed Choice Eval
 
-状态：draft_for_review（planner-backed choice eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 里程碑：M11
 类型：code
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -66,7 +66,7 @@ TaskPathPlanner 或生成 planner-backed pending choice。
 
 ## 当前状态
 
-设计稿已生成，等待 review。实现前必须先确认 11.3.6.1 / 11.3.6.3 runner 当前状态，
+设计评审已通过，可以进入实现。实现前必须先确认 11.3.6.1 / 11.3.6.3 runner 当前状态，
 复核 11.3.5.9 planner-backed choice runtime 的 events / history / public payload 可观测性，
 并按 contract 处理不可观察的 planner top-choice 映射，不得从 final response 猜测内部 Planner
 结论。

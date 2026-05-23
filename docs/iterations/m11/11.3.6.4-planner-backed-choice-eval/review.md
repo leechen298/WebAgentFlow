@@ -1,16 +1,18 @@
 # 复盘 / 评审（Review）
 
-状态：draft_for_review（planner-backed choice eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## Current Decision
 
-- Reviewer：pending
-- Decision：pending
+- Reviewer：ChatGPT
+- Decision：ready_for_implementation
 - Code：not_started
 - Live eval：not_run
 - Notes：
-  - 11.3.6.4 文档已生成，等待 design review。
-  - 本包只准备 Planner-backed choice eval 的实现 contract。
+  - 11.3.6.4 方向通过，可以进入实现。
+  - `eval_only_planner_candidate_binding` 允许作为第一版 setup fallback，但必须显式记录 capability flags。
+  - `planner_top_choice_observable` 保持 conditional，不可观察时只能 warning / not_observable。
+  - `planner_single_path_bypass_regression` 作为本包 required regression 保留。
   - 未修改 runner 代码，未运行 live Conversation eval。
 
 ## 设计关注点
@@ -34,11 +36,12 @@
 | autonomous run | prohibited / out of scope |
 | `verify-scenario` | out of scope |
 
-## 待 review 问题
+## 设计评审收口
 
-- `planner_top_choice_observable` 是否应保持 conditional，还是要求 implementation 先补最小只读
-  top choice hash 暴露。
-- 第一版是否允许 `eval_only_planner_candidate_binding` 使用 alias binding 验证 planner branch，
-  并以 `planner_distinct_path_capability=false` 明确不声明 full live multi-action capability。
-- `planner_single_path_bypass_regression` 是否作为独立 case，还是作为 `planner_backed_choice`
-  的 required regression section。
+- `planner_top_choice_observable` 保持 conditional；如果 public read surface 不可观察，runner
+  必须标记 `not_observable` / `warning`，不得猜测。
+- 第一版允许 `eval_only_planner_candidate_binding` 使用 alias binding 验证 planner branch，但
+  artifact / Markdown 必须记录 `live_multi_action_capability=false` 和
+  `planner_distinct_path_capability=false`。
+- `planner_single_path_bypass_regression` 是本包 required regression。实现上可以是独立 case，也可以
+  是 `planner_backed_choice` 的 required section，但 artifact 必须单独列出 gates。

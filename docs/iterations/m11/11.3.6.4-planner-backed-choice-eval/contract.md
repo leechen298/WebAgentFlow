@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：draft_for_review（planner-backed choice eval 设计稿，未实现代码）
+状态：ready_for_implementation（design review passed，未实现代码）
 
 ## Scope Contract
 
@@ -57,6 +57,21 @@ signals。
 
 本 case 必须避免全局旧 LearnedPath 污染。候选数量、choice 映射和 expected execution path
 只能来自当前 eval run 的 setup evidence。
+
+## Design Review Decisions
+
+本包进入实现前已确认以下 contract 决策：
+
+1. `eval_only_planner_candidate_binding` 可以作为第一版 live setup fallback，但 artifact 和
+   Markdown 必须显式记录 `setup_type`、`live_multi_action_capability=false` 和
+   `planner_distinct_path_capability=false`。它只能证明 planner branch / public-private safety /
+   selection control flow，不能声称 full live distinct-action Planner capability。
+2. `planner_top_choice_observable` 保持 conditional gate。若当前 public read surface 无法观察
+   exact top choice id / top path hash，runner 必须输出 `not_observable` / `warning`，不得从
+   final WAgent text 或 Codex 判断推断。
+3. `planner_single_path_bypass_regression` 是本包 required regression，可以作为独立 case 或
+   `planner_backed_choice` 的 required section 实现，但最终 artifact 必须单独列出它的 required
+   gates。
 
 允许的 setup 来源优先级：
 

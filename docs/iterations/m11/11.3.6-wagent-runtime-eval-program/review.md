@@ -74,4 +74,14 @@
 - Notes：
   - 已创建 `11.3.6.4-planner-backed-choice-eval` 作为下一个 child package 文档包。
   - 11.3.6 program 仍保持 docs-only，不在 program 包内实现 runner 代码。
-  - 11.3.6.4 当前状态为 `draft_for_review`，等待 design review 后再进入实现。
+  - 11.3.6.4 当前状态为 `ready_for_implementation`，design review 已通过，可以进入实现。
+
+## 2026-05-23 Planner 子包设计评审收口
+
+- Reviewer：ChatGPT
+- Decision：ready_for_implementation
+- Notes：
+  - `eval_only_planner_candidate_binding` 允许作为第一版 setup fallback，但必须显式记录 capability flags。
+  - `planner_top_choice_observable` 保持 conditional，不可观察时只能 warning / not_observable。
+  - `planner_single_path_bypass_regression` 作为 11.3.6.4 required regression 保留。
+  - 11.3.6 program 仍保持 docs-only，不在 program 包内实现 runner 代码。
