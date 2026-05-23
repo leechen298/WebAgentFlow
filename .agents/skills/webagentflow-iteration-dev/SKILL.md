@@ -1,8 +1,15 @@
+---
+name: webagentflow-iteration-dev
+description: WebAgentFlow 迭代实现工作流。用于在 WebAgentFlow 仓库内按已审核 intent、contract、technical-design、test-plan、plan 实现和自测；不得创建、补写、改写或删除迭代文档；没有可复查证据时禁止声称完成 E2E、UI smoke、CLI、verify-scenario 或 autonomous-run 测试。
+metadata:
+  short-description: WebAgentFlow 按文档实现和自测门禁
+---
+
 # WebAgentFlow 迭代实现 Agent 工作流
 
 状态：active
 
-本文是 WebAgentFlow 迭代实现工作流的仓库级同步母本。Claude Code、Kimi Code、Codex 等本机 Skill 应与本文保持一致；各工具可以保留平台特有 metadata / frontmatter，但正文语义不得漂移。
+本文是 WebAgentFlow 迭代实现工作流的项目级 Agent Skill。仓库内 `.agents/skills/<skill-name>/SKILL.md` 是项目专用 skill 的唯一事实来源；不得再维护 `docs/agent-workflows/` 这类第二份母本。Claude Code、Kimi Code 等如需本机副本或 symlink，应从 `.agents/skills/` 派生，且不得反向改写本文件。
 
 仓库迭代文档是权威事实来源。本工作流只负责按已审核文档实现、自测、汇报证据；不负责创建、补写、改写、删除或重排任何迭代文档。
 
@@ -39,7 +46,7 @@
 - `docs/iterations/**/test-plan.md`
 - `docs/iterations/**/plan.md`
 - `docs/iterations/**/review.md`
-- `docs/agent-workflows/**`
+- `.agents/skills/**`
 - `AGENTS.md`
 - `CLAUDE.md`
 - `CLAUDE.zh.md`

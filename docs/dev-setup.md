@@ -83,6 +83,20 @@ Or start all four at once with `pnpm run dev` from the repo root.
 `pip install -e ./apps/cli` is done in step 4 of Install, the
 binary lives at `.venv/bin/wagent`.
 
+## Project-level Agent skills
+
+Project-specific coding-agent skills live in `.agents/skills/` and are
+committed with the repository. Treat those `SKILL.md` files as the canonical
+source.
+
+Claude Code discovers project skills from `.claude/skills/`, so this repo may
+commit `.claude/skills/<skill-name>` symlinks that point back to
+`.agents/skills/<skill-name>`. Do not edit the symlink target through a local
+Claude copy; edit `.agents/skills/<skill-name>/SKILL.md` first.
+
+`.codex/` and non-skill `.claude/` contents are local tool configuration /
+state and remain ignored.
+
 ### Verify a scenario
 
 Runs one autonomous exploration via the HTTP API and prints the

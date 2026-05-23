@@ -28,7 +28,9 @@ apps/worker/.coverage
 *.log
 
 .codex/
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 .playwright-cli/
 .dev-logs/
 /data/

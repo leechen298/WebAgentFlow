@@ -82,6 +82,19 @@ CLI 术语：
 - M16 未来可能开放稳定 external CLI / Skill / Tool 接口，供外部调度和集成。
 - 这三类入口必须区分清楚，不要混用。
 
+项目级 Agent Skills：
+
+- WebAgentFlow 专用的 coding-agent skills 放在 `.agents/skills/`。
+- `.agents/skills/<skill-name>/SKILL.md` 是项目级 skill 的唯一事实来源，
+  应随仓库提交。
+- `.claude/skills/<skill-name>` 可以提交指向 `.agents/skills/<skill-name>` 的
+  symlink，让 Claude Code 能发现同一套 skill，而不维护重复内容。
+- 不要在 `docs/agent-workflows/` 或 `.codex/skills/` 维护第二份 skill 源头。
+- `.codex/` 和非 skill 的 `.claude/` 内容是本地工具配置 / 状态目录，默认继续
+  忽略；除非未来有明确文档例外，否则不提交。
+- 如果 Claude Code 需要个人本地安装 skill，应从 `.agents/skills/` 派生 copy
+  或 symlink；修改时先改仓库里的项目级 skill，不要反向修改本地副本。
+
 产品方向：早期目标是 CLI-first 跑通完整功能闭环。有开发能力的用户应能
 通过 CLI / API 把 WebAgentFlow 接入自己的系统或自建操作台。
 

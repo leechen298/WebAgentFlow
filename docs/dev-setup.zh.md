@@ -85,6 +85,18 @@
 `wagent` 是 WebAgentFlow 的命令行工具。步骤 4 里 `pip install -e ./apps/cli`
 做完后，二进制位于 `.venv/bin/wagent`。
 
+## 项目级 Agent skills
+
+项目专用 coding-agent skills 放在 `.agents/skills/`，并随仓库提交。这些
+`SKILL.md` 是唯一事实来源。
+
+Claude Code 从 `.claude/skills/` 发现项目级 skills，所以本仓库可以提交
+`.claude/skills/<skill-name>` symlink，指向 `.agents/skills/<skill-name>`。
+不要通过本地 Claude 副本反向修改 skill；先改
+`.agents/skills/<skill-name>/SKILL.md`。
+
+`.codex/` 和非 skill 的 `.claude/` 内容是本地工具配置 / 状态，继续忽略。
+
 ### 跑一次场景验证
 
 通过 HTTP API 跑一次自主探索并打印结果 JSON。API 必须在跑（`pnpm run dev:api`）。

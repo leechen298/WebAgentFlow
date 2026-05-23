@@ -85,6 +85,23 @@ CLI terminology:
   schedulers and integrations.
 - Keep those three surfaces distinct.
 
+Project-level Agent Skills:
+
+- WebAgentFlow-specific coding-agent skills live in `.agents/skills/`.
+- `.agents/skills/<skill-name>/SKILL.md` is the canonical source for
+  project-scoped skills and should be committed with the repository.
+- `.claude/skills/<skill-name>` may contain committed symlinks to
+  `.agents/skills/<skill-name>` so Claude Code can discover the same skills
+  without maintaining duplicate content.
+- Do not keep a second skill source under `docs/agent-workflows/` or
+  `.codex/skills/`.
+- `.codex/` and non-skill `.claude/` contents are local tool configuration /
+  state directories and remain ignored unless a future documented exception says
+  otherwise.
+- If Claude Code needs a personal local skill install, use a derived copy or
+  symlink from `.agents/skills/`; edit the repository skill first, not the
+  local copy.
+
 Product direction: the early goal is CLI-first closure of the complete
 functional loop. Developer-capable users should be able to integrate
 WebAgentFlow into their own systems or operator consoles through CLI / API.
