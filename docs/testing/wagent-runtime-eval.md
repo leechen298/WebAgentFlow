@@ -82,13 +82,13 @@ current eval session's learned action and runtime events as evidence.
 JSON artifact:
 
 ```text
-artifacts/wagent-eval/wagent-runtime-eval-<timestamp>.json
+artifacts/wagent-eval/wagent-runtime-eval-${timestamp}.json
 ```
 
 Markdown result:
 
 ```text
-docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-<timestamp>.md
+docs/testing/results/m11-11.3.6.1-wagent-runtime-eval-core-${timestamp}.md
 ```
 
 Both outputs are derived from the normalized `EvalResult`. The JSON artifact
