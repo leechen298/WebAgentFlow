@@ -1,18 +1,19 @@
 # 复盘 / 评审（Review）
 
-状态：ready_for_implementation（design review passed，closeout sweep 未执行）
+状态：blocked（closeout sweep executed，pending/planner eval preflight blocked）
 
 ## Current Decision
 
 - Reviewer：ChatGPT
-- Decision：ready_for_implementation
+- Decision：blocked
 - Code：not_started
-- Live eval：not_run
+- Live eval：blocked
 - Notes：
-  - 本包只定义 11.3.6 closeout sweep，不执行 runner，不修改 runtime。
+  - 本包只定义 11.3.6 closeout sweep，不修改 runner 或 runtime。
   - blocked artifact 只能证明 blocked 被记录；不得把 blocked 写成 completed /
     `closed_live` / `closed_non_live`。
-  - 下一步可以按 `plan.md` 执行 pending-choice / planner-choice closeout。
+  - `pending-choice` and `planner-choice` eval commands both returned exit `2`.
+  - Program status remains blocked until the required evals can run and pass.
 
 ## 初始复核记录
 
@@ -36,17 +37,27 @@
   `implementation_complete_non_live` 或 `implemented_and_live_eval_passed`。
 - Program status 在存在 required blocked 子包时不得写 `closed_live` 或 `closed_non_live`。
 
+## 2026-05-23 Closeout Sweep
+
+| Command / Surface | Expected | Actual result | Exit code | Status | Evidence | Notes |
+|---|---|---|---:|---|---|---|
+| `git rev-parse --short HEAD` | current commit recorded | `51967a7` | 0 | Pass | command output | first closeout-ready commit |
+| `pnpm run eval:wagent:pending-choice` | pass or blocked artifact | `status=blocked`; artifact written | 2 | Blocked | `artifacts/wagent-eval/wagent-runtime-eval-20260523T093605Z.json`; `docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-20260523T093605Z.md` | API health unavailable |
+| `pnpm run eval:wagent:planner-choice` | pass or blocked artifact | `status=blocked`; artifact written | 2 | Blocked | `artifacts/wagent-eval/wagent-runtime-eval-20260523T093610Z.json`; `docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-20260523T093610Z.md` | API health unavailable |
+| artifact redaction grep | no private payload leaks | no matches | 1 | Pass | command output | exit `1` means `rg` found no matches |
+
 ## 未运行项
 
 | Item | Reason |
 |---|---|
-| `pnpm run eval:wagent:pending-choice` | closeout sweep 尚未执行 |
-| `pnpm run eval:wagent:planner-choice` | closeout sweep 尚未执行 |
-| live Conversation eval | closeout sweep 尚未执行 |
+| `pnpm run eval:wagent:items` | optional regression not run in this closeout |
+| `pnpm run eval:wagent:failure-recovery` | optional regression not run in this closeout |
+| live Conversation eval | preflight blocked before session creation |
 | autonomous run | prohibited / out of scope |
 | `verify-scenario` | out of scope |
 
 ## 后续事项
 
-- 设计评审通过后，按 `plan.md` 执行 closeout。
-- 若 eval gate fail，另开代码型 fix 迭代，不在本 closeout 包内补 runner 逻辑。
+- Start API / product services and rerun the blocked eval commands.
+- If either command fails required gates after services are available, open a code-type fix
+  iteration instead of marking 11.3.6 complete.

@@ -1670,11 +1670,11 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 
 | Package | 目标 | 状态 |
 |---|---|---|
-| [11.3.6.1 · WAgent Runtime Eval Runner Core](./11.3.6.1-wagent-runtime-eval-runner-core/) | 实现 runner v1，覆盖 `items_closed_loop` 和 `single_path_direct_replay_regression` | ready_for_implementation（design review passed，未实现代码） |
+| [11.3.6.1 · WAgent Runtime Eval Runner Core](./11.3.6.1-wagent-runtime-eval-runner-core/) | 实现 runner v1，覆盖 `items_closed_loop` 和 `single_path_direct_replay_regression` | implemented_and_live_eval_passed |
 | [11.3.6.2 · Failure Recovery Eval](./11.3.6.2-failure-recovery-eval/) | recovery menu safety、retry / relearn / cancel、private payload safety | implementation complete（non-live checks passed，live Conversation eval not run） |
-| [11.3.6.3 · Pending Choice Multi-candidate Eval](./11.3.6.3-pending-choice-multi-candidate-eval/) | A/B/C public choice、private map、用户选择后执行正确 path | ready_for_implementation（design review passed，未实现代码） |
-| [11.3.6.4 · Planner-backed Choice Eval](./11.3.6.4-planner-backed-choice-eval/) | vague goal、planner-backed choice path、single-path bypass Planner 回归 | ready_for_implementation（design review passed，未实现代码） |
-| [11.3.6.5 · Runtime Eval Program Closeout](./11.3.6.5-runtime-eval-program-closeout/) | 收口 11.3.6.3 / 11.3.6.4 implementation evidence、result artifact、review 状态和 program 索引 | ready_for_implementation |
+| [11.3.6.3 · Pending Choice Multi-candidate Eval](./11.3.6.3-pending-choice-multi-candidate-eval/) | A/B/C public choice、private map、用户选择后执行正确 path | implementation_complete_blocked（runner case implemented，closeout eval preflight blocked） |
+| [11.3.6.4 · Planner-backed Choice Eval](./11.3.6.4-planner-backed-choice-eval/) | vague goal、planner-backed choice path、single-path bypass Planner 回归 | implementation_complete_blocked（runner case implemented，closeout eval preflight blocked） |
+| [11.3.6.5 · Runtime Eval Program Closeout](./11.3.6.5-runtime-eval-program-closeout/) | 收口 11.3.6.3 / 11.3.6.4 implementation evidence、result artifact、review 状态和 program 索引 | blocked（pending/planner eval preflight blocked） |
 
 关键边界：
 

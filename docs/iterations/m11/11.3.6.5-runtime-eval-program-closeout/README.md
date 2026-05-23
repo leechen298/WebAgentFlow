@@ -1,6 +1,6 @@
 # 11.3.6.5 · Runtime Eval Program Closeout
 
-状态：ready_for_implementation（design review passed，closeout sweep 未执行）
+状态：blocked（closeout sweep executed，pending/planner eval preflight blocked）
 里程碑：M11
 类型：docs
 父迭代：[`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
@@ -51,7 +51,7 @@ Conversation runtime、不改 TaskPathPlanner / recovery / pending choice 产品
 
 ## 当前状态
 
-已确认最新 `origin/v0.1` runner 代码覆盖到 11.3.6.4，但公开文档状态仍显示
-11.3.6.3 / 11.3.6.4 为 `ready_for_implementation`，且结果目录目前只有 11.3.6.1 /
-11.3.6.2 artifact。本 closeout sweep 设计已通过评审，下一步可以按 `plan.md` 执行；
-执行前仍不得直接宣称 M11.3.6 全部完成。
+Closeout sweep 已执行。`pnpm run eval:wagent:pending-choice` 和
+`pnpm run eval:wagent:planner-choice` 均返回 exit `2`，并写出 blocked artifact。由于 required
+child package eval 被 preflight blocked，M11.3.6 program 不能标 `closed_live` 或
+`closed_non_live`。

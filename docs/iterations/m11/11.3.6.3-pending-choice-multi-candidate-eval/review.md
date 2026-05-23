@@ -1,18 +1,22 @@
 # 评审记录（Review）
 
-状态：ready_for_implementation（design review passed，未实现代码）
+状态：implementation_complete_blocked（runner case implemented，closeout eval blocked）
 
 ## Current Decision
 
 - Reviewer: ChatGPT
-- Decision: pass
-- Code: not_started
-- Live eval: not_run
+- Decision: implementation_complete_blocked
+- Code: implemented
+- Live eval: blocked
 - Notes:
   - non-planner pending choice scope is correct.
   - candidate setup practicality is clarified.
   - choice A path verification uses internal raw comparison plus public hash / alias redaction.
   - planner-backed choice remains 11.3.6.4.
+  - Runner case and package script exist on current `v0.1`, but 2026-05-23 closeout eval
+    returned exit `2` because API health was unavailable.
+  - The blocked artifact records the environment failure only; it does not count as
+    `implementation_complete_non_live` or live pass.
 
 ## Design Summary
 
@@ -41,11 +45,23 @@ action 的闭环。
 
 ## Not Run
 
-- 未实现代码。
-- 未运行 unit tests。
-- 未运行 live Conversation eval。
-- 未触发 autonomous run。
+- Live Conversation eval did not run because preflight was blocked.
+- Unit tests were not run during this closeout sweep.
+- `verify-scenario` was not run.
+- autonomous run endpoints were not called.
 
 ## Next Step
 
-可以按 `plan.md` 实现 runner case、必要的 eval-only setup hook、tests 和文档更新。
+Start API / product services and rerun `pnpm run eval:wagent:pending-choice`. If the
+command returns exit `0`, append a new pass artifact and update this package status. If it
+fails a required gate, open a code-type fix iteration instead of marking this package complete.
+
+## 2026-05-23 Closeout Sweep
+
+| Command / Surface | Expected | Actual result | Exit code | Status | Evidence | Notes |
+|---|---|---|---:|---|---|---|
+| `pnpm run eval:wagent:pending-choice` | pending choice eval pass or blocked artifact | `status=blocked`; `case=pending_choice_multi_candidate status=blocked` | 2 | Blocked | `artifacts/wagent-eval/wagent-runtime-eval-20260523T093605Z.json`; `docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-20260523T093605Z.md` | API health unavailable: `[Errno 1] Operation not permitted` |
+| artifact redaction grep | no private payload leaks | no matches | 1 | Pass | command output | exit `1` means `rg` found no matches |
+
+Closeout decision: blocked. This records the blocked environment result only; it is not a
+successful implementation closeout.

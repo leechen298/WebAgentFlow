@@ -1,0 +1,58 @@
+{
+  "schema_version": "11.3.6.4",
+  "status": "blocked",
+  "environment": {
+    "commit": "51967a7",
+    "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1"
+  },
+  "services": {
+    "api": {
+      "url": "http://127.0.0.1:8001/health",
+      "ok": false,
+      "error": "[Errno 1] Operation not permitted"
+    }
+  },
+  "config": {
+    "api_base": "http://127.0.0.1:8001",
+    "product_url": "http://127.0.0.1:5176/items",
+    "cases": [
+      "planner_backed_choice"
+    ],
+    "timeout": 300,
+    "artifact_dir": "artifacts/wagent-eval",
+    "result_dir": "docs/testing/results",
+    "browser_visibility": "headless",
+    "write_markdown": true
+  },
+  "session_id": null,
+  "case_results": [
+    {
+      "case_id": "planner_backed_choice",
+      "status": "blocked",
+      "turns": [],
+      "gates": [
+        {
+          "name": "preflight",
+          "required": true,
+          "status": "blocked",
+          "evidence": "API or product site unavailable",
+          "source": "preflight"
+        }
+      ],
+      "warnings": []
+    }
+  ],
+  "turns": [],
+  "events": [],
+  "messages": [],
+  "history": {},
+  "learned_paths": [],
+  "raw_api_responses": {},
+  "gate_summary": {
+    "required_total": 1,
+    "required_passed": 0,
+    "required_failed": 0,
+    "required_blocked": 1,
+    "warnings": 0
+  }
+}

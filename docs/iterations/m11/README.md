@@ -65,11 +65,11 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.5.8-basic-failure-recovery](./11.3.5.8-basic-failure-recovery/) —— Basic Failure Recovery：补基础失败恢复菜单：重试、重新学习、取消；不做复杂自治恢复。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.5.9-taskpathplanner-multi-candidate-chat-integration](./11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) —— TaskPathPlanner Multi-candidate Chat Integration：只在多候选、模糊目标、planning path 中接入 TaskPathPlanner，不进入单路径 happy path。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.6-wagent-runtime-eval-program](./11.3.6-wagent-runtime-eval-program/) —— WAgent Runtime Eval Program：runtime eval 总体测试规划，定义 11.3.6.x 子包、artifact、exit code、hard gates 和 Codex 审计边界。状态：accepted_program_plan（program review passed，docs-only）。
-- [11.3.6.1-wagent-runtime-eval-runner-core](./11.3.6.1-wagent-runtime-eval-runner-core/) —— WAgent Runtime Eval Runner Core：实现 runner v1，覆盖 `/items` closed loop 和 single-path direct replay regression。状态：ready_for_implementation（design review passed，未实现代码）。
+- [11.3.6.1-wagent-runtime-eval-runner-core](./11.3.6.1-wagent-runtime-eval-runner-core/) —— WAgent Runtime Eval Runner Core：实现 runner v1，覆盖 `/items` closed loop 和 single-path direct replay regression。状态：implemented_and_live_eval_passed。
 - [11.3.6.2-failure-recovery-eval](./11.3.6.2-failure-recovery-eval/) —— Failure Recovery Eval：扩展 runner 覆盖 recovery menu safety、retry / relearn / cancel 出口和 private payload safety。状态：implementation complete（non-live checks passed，live Conversation eval not run）。
-- [11.3.6.3-pending-choice-multi-candidate-eval](./11.3.6.3-pending-choice-multi-candidate-eval/) —— Pending Choice Multi-candidate Eval：扩展 runner 覆盖 A/B/C public choice、private map safety 和用户选择后执行正确 action。状态：ready_for_implementation（design review passed，未实现代码）。
-- [11.3.6.4-planner-backed-choice-eval](./11.3.6.4-planner-backed-choice-eval/) —— Planner-backed Choice Eval：扩展 runner 覆盖 vague goal、TaskPathPlanner-backed choices 和 single-path bypass Planner 回归。状态：ready_for_implementation（design review passed，未实现代码）。
-- [11.3.6.5-runtime-eval-program-closeout](./11.3.6.5-runtime-eval-program-closeout/) —— Runtime Eval Program Closeout：核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 11.3.6 program 状态。状态：ready_for_implementation。
+- [11.3.6.3-pending-choice-multi-candidate-eval](./11.3.6.3-pending-choice-multi-candidate-eval/) —— Pending Choice Multi-candidate Eval：扩展 runner 覆盖 A/B/C public choice、private map safety 和用户选择后执行正确 action。状态：implementation_complete_blocked（runner case implemented，closeout eval preflight blocked）。
+- [11.3.6.4-planner-backed-choice-eval](./11.3.6.4-planner-backed-choice-eval/) —— Planner-backed Choice Eval：扩展 runner 覆盖 vague goal、TaskPathPlanner-backed choices 和 single-path bypass Planner 回归。状态：implementation_complete_blocked（runner case implemented，closeout eval preflight blocked）。
+- [11.3.6.5-runtime-eval-program-closeout](./11.3.6.5-runtime-eval-program-closeout/) —— Runtime Eval Program Closeout：核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 11.3.6 program 状态。状态：blocked（pending/planner eval preflight blocked）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -149,15 +149,16 @@ Conversation eval 尚未运行。
 `11.3.6.3-pending-choice-multi-candidate-eval/` 是 11.3.6 program 的第三个执行包。它计划在
 runner core 上增加 `pending_choice_multi_candidate`，用当前 eval run 的多候选 setup
 验证 11.3.5.7 pending choice public payload、private map safety 和选择 A 后执行正确 action；
-planner-backed choice 留到 11.3.6.4。状态：`ready_for_implementation`。
+planner-backed choice 留到 11.3.6.4。状态：`implementation_complete_blocked`，当前 runner
+case 已实现，但 closeout eval preflight blocked。
 `11.3.6.4-planner-backed-choice-eval/` 是 11.3.6 program 的第四个执行包。它计划在 runner
 core 上增加 `planner_backed_choice`，验证 11.3.5.9 TaskPathPlanner-backed choice path、
 sanitized planner events、private payload safety，以及单路径明确目标必须 bypass Planner 的回归。
-状态：`ready_for_implementation`。
+状态：`implementation_complete_blocked`，当前 runner case 已实现，但 closeout eval preflight blocked。
 `11.3.6.5-runtime-eval-program-closeout/` 是 11.3.6 program 的收口扫尾包。它不新增 runner
 case，也不修 runtime；它用于运行或记录 pending-choice / planner-choice eval、补齐 result artifact、
 回填 11.3.6.3 / 11.3.6.4 review，并同步 11.3.6 program 与 M11 索引。状态：
-`ready_for_implementation`。
+`blocked`。
 
 11.2 后续 backlog：
 

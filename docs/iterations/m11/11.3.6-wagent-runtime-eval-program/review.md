@@ -89,11 +89,31 @@
 ## 2026-05-23 Program closeout 子包开包记录
 
 - Author：Codex
-- Decision：ready_for_implementation
+- Decision：blocked
 - Notes：
   - 已创建 `11.3.6.5-runtime-eval-program-closeout` 作为 11.3.6 program 收口扫尾包。
   - 当前最新 `v0.1` runner 代码已覆盖 pending choice 和 planner-backed choice eval scripts。
-  - 11.3.6.3 / 11.3.6.4 的 review 状态和 result artifacts 尚未与实现事实对齐。
+  - 11.3.6.3 / 11.3.6.4 的 review 状态和 result artifacts 已按 2026-05-23 closeout sweep
+    回填为 blocked。
   - 11.3.6.5 不新增 runner 功能；只定义如何运行 / 记录 eval、回填 review、同步 program 与 M11 索引。
   - blocked artifact 只能证明 blocked 被记录，不得让子包或 program 进入 completed /
     `closed_live` / `closed_non_live` 状态。
+
+## 2026-05-23 Program closeout sweep
+
+- Author：Codex
+- Decision：blocked
+- Commit：`51967a7`
+- Evidence：
+  - `pnpm run eval:wagent:pending-choice` -> exit `2`, `status=blocked`,
+    `artifacts/wagent-eval/wagent-runtime-eval-20260523T093605Z.json`,
+    `docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-20260523T093605Z.md`
+  - `pnpm run eval:wagent:planner-choice` -> exit `2`, `status=blocked`,
+    `artifacts/wagent-eval/wagent-runtime-eval-20260523T093610Z.json`,
+    `docs/testing/results/m11-11.3.6.4-planner-backed-choice-eval-20260523T093610Z.md`
+  - Program closeout result:
+    `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T093610Z.md`
+- Notes：
+  - Both evals blocked during preflight because API health was unavailable.
+  - No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.
+  - M11.3.6 remains blocked, not complete.
