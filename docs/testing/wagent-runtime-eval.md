@@ -7,6 +7,14 @@ auditable JSON plus Markdown artifacts. It is not a product Agent, does not
 call autonomous-run endpoints, and does not use Codex judgment as a pass
 criterion.
 
+Scope boundary: M11.3.6 validates controlled runtime execution capabilities
+such as known-path reuse, parameterized replay, evidence reporting, choice
+handling and recovery menu safety. It does not validate page-wide automatic
+operation discovery, automatic learning of every operation on a page, complete
+operation library generation, or arbitrary user-task execution from an
+unlearned page. User-facing entry behavior is tracked separately in
+`docs/iterations/m11/11.3.7-user-facing-wagent-behavior-eval/`.
+
 ## Prerequisites
 
 Start required services separately. The runner does not start API, PostgreSQL,

@@ -75,3 +75,34 @@ Program closeout result:
 - Failure recovery eval 使用 eval-only hook 触发 failure menu；retry option execution 不在
   11.3.6.2 范围内。
 - No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.
+
+## 结论口径
+
+11.3.6 的 pass 只能表述为：
+
+```text
+M11.3.6 runtime eval program is closed as pass with caveats for runtime execution capabilities.
+```
+
+它验证：
+
+- known / learned path learning and replay reuse；
+- parameterized execution；
+- DOM evidence reporting；
+- pending choice；
+- planner-backed choice branch；
+- basic recovery menu；
+- public / private payload redaction。
+
+它不验证：
+
+- WAgent 能自动学习页面所有操作；
+- WAgent 能从新页面生成完整操作库；
+- WAgent 已具备页面级 automatic capability discovery；
+- WAgent 面对任意用户任务都能从页面能力里自动学会并执行；
+- 当前测试页已经存在多个真实 distinct product actions。
+
+下一阶段验收应放在
+[`11.3.7-user-facing-wagent-behavior-eval`](../11.3.7-user-facing-wagent-behavior-eval/)：
+验证用户从普通输入进入时，WAgent 是否能查学习记录、判断学习 / 执行 / 追问 / 拒绝乱来，
+并基于 evidence 回复。

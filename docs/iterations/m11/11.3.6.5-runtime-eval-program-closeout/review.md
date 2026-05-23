@@ -93,3 +93,18 @@ No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substit
 Closeout decision: completed after fix rerun. The program can be marked closed / pass with
 documented caveats; no autonomous run, `verify-scenario`, Console UI smoke, or direct
 replay substitution was used.
+
+## 2026-05-23 结论口径纠偏
+
+- Author：Codex
+- Decision：scope_corrected
+- Notes：
+  - Final closeout rerun pass 只代表 11.3.6 runtime eval program 的 required runtime gates
+    通过，并且仍带 documented caveats。
+  - 该结果不代表 WAgent 已经完成页面级 automatic operation learning、完整操作库生成、
+    任意用户任务自动命中执行，或完整产品视角验收。
+  - 用户视角的下一阶段验收转入
+    `docs/iterations/m11/11.3.7-user-facing-wagent-behavior-eval/`。
+  - 后续 11.3.7 必须把测试页面链接、route、页面文案、按钮名、字段名、DOM test id、
+    fixture 业务内容和测试别名限制在 eval spec / fixture / tests / docs / artifact 中；
+    不得写入功能代码或产品 prompt。

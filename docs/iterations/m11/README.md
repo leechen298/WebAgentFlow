@@ -71,6 +71,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.6.4-planner-backed-choice-eval](./11.3.6.4-planner-backed-choice-eval/) —— Planner-backed Choice Eval：扩展 runner 覆盖 vague goal、TaskPathPlanner-backed choices 和 single-path bypass Planner 回归。状态：implementation_complete_verified（planner-backed choice and single-path bypass pass）。
 - [11.3.6.5-runtime-eval-program-closeout](./11.3.6.5-runtime-eval-program-closeout/) —— Runtime Eval Program Closeout：核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 11.3.6 program 状态。状态：completed_after_fix_rerun（final closeout rerun pass）。
 - [11.3.6.6-runtime-eval-gate-failure-fixes](./11.3.6.6-runtime-eval-gate-failure-fixes/) —— Runtime Eval Gate Failure Fixes：修复 11.3.6.5 service-available rerun 暴露的 pending choice public payload leak、planner-backed choice selection no-execution 和 raw artifact redaction failures。状态：implementation_complete_verified（fixes implemented，final eval rerun pass）。
+- [11.3.7-user-facing-wagent-behavior-eval](./11.3.7-user-facing-wagent-behavior-eval/) —— User-facing WAgent Behavior Eval：下一阶段用户视角验收，覆盖 URL-only、execute-known、execute-unknown、learn-explicit / vague-input 等入口行为，并加入测试页面细节不得进入功能代码或产品 prompt 的 hard gate。状态：proposed（docs drafted，implementation pending）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -137,7 +138,10 @@ Conversation Entry Gate，并要求 CLI 在等待 API 返回期间显示持续 w
 它不实现 runner，而是定义 11.3.6.x 子包路线：11.3.6.1 做 runner core 和 `/items`
 两条核心回归，11.3.6.2 / 11.3.6.3 / 11.3.6.4 后续分别扩展 failure recovery、
 pending choice 和 planner-backed choice eval。Codex 在该体系中只做 artifact 审计员，
-不作为 pass / fail 裁判。
+不作为 pass / fail 裁判。11.3.6 closeout 的 `pass_with_caveats` 只表示受控 runtime
+执行能力通过：已学路径参数化复用、evidence reporting、pending choice、planner-backed
+choice 分支和 basic recovery menu；它不代表 WAgent 已经具备页面级自动能力发现、
+自动学习所有操作、自动生成完整操作库或面对任意新任务自动命中并执行的产品能力。
 `11.3.6.1-wagent-runtime-eval-runner-core/` 承接原 11.3.6 runner 设计，负责第一版
 可执行 runner。它通过 Conversation API 一次性运行 `/items` closed loop 和 single-path
 direct replay regression，按 hard gates 写出 JSON / Markdown 证据，并用 exit code 表示
@@ -169,6 +173,14 @@ eval case，也不扩大产品能力；只要求修复 pending choice public/pri
 planner-backed choice selection 到 execution 的 runtime 连接，以及 eval runner artifact redaction。
 本包已实现并通过最终 rerun；同时修复了最终 items rerun 暴露的 complete-intake ask flag
 normalization 缺口。
+`11.3.7-user-facing-wagent-behavior-eval/` 是 11.3.6 之后的用户视角验收包。它要验证的不是
+底层 slot / reporter / recovery 零件，而是普通用户输入进入时，WAgent 是否知道该查 learned
+actions、该学习、该执行、该追问、该拒绝乱来，以及执行后是否基于 evidence 回复。第一批
+case 聚焦 URL-only known / unknown、execute-known、execute-unknown 和 vague-input；后续再扩展
+explicit learn、pending continuation、choice selection、failure recovery 和受控 page capability
+learning。该包加入 hard gate：测试页面链接、route、页面文案、按钮名、字段名、DOM test id
+和 fixture 业务内容不得进入功能代码或产品 prompt，只能存在于 fixture、eval spec、测试、
+docs 和 artifact 中。
 
 11.2 后续 backlog：
 

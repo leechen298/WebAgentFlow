@@ -193,3 +193,20 @@
   - `planner_top_choice_observable` remains a non-required `not_observable` warning.
   - Failure recovery uses an eval-only hook; retry execution after choosing A remains out of scope.
   - No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.
+
+## 2026-05-23 结论口径纠偏
+
+- Author：Codex
+- Decision：scope_corrected
+- Notes：
+  - 11.3.6 的 `closed_pass_with_caveats` 不得表述为 WAgent 完整产品能力通过。
+  - 当前 closeout 只证明 chat runtime 对已学习路径的参数化复用、evidence reporting、
+    pending choice、planner-backed choice 分支和 recovery menu。
+  - 当前 closeout 不证明页面级自动能力发现、自动学习页面所有操作、完整页面操作库生成，
+    或任意用户任务自动命中并执行。
+  - `pending_choice_multi_candidate` 和 `planner_backed_choice` 的 candidate setup 仍使用
+    eval-only binding；它们不证明当前测试页已有三个真实 distinct product actions。
+  - 下一阶段用户视角产品行为验收转入
+    `docs/iterations/m11/11.3.7-user-facing-wagent-behavior-eval/`。
+  - 11.3.7 必须禁止测试页面链接及相关页面内容进入功能代码或产品 prompt，以避免针对测试页
+    定制实现而污染整体产品能力。

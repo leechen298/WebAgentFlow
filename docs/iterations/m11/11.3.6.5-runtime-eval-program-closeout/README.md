@@ -64,3 +64,25 @@ Closeout sweep 已执行三轮。第一轮 `pnpm run eval:wagent:pending-choice`
 Program-level closeout result:
 `docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T135028Z.md`。
 M11.3.6 program 可标记为 closed / pass with documented caveats。
+
+## 结论口径
+
+本包 closeout 只能作为 runtime execution capabilities 的 pass with caveats：
+
+- 已学路径可以参数化复用；
+- 可以基于 DOM evidence 汇报结果；
+- pending choice / planner-backed choice 分支可执行；
+- basic recovery menu 和 private payload redaction 已通过 11.3.6 gates。
+
+本包不证明：
+
+- WAgent 会自动学习页面所有操作；
+- WAgent 会自动生成完整页面操作库；
+- WAgent 面对任意新任务都能从页面能力里自动学会并执行；
+- 当前测试页已经具备多个真实 distinct product actions；
+- 完整用户视角产品行为已经通过。
+
+下一阶段应使用
+[`11.3.7-user-facing-wagent-behavior-eval`](../11.3.7-user-facing-wagent-behavior-eval/)
+验证 URL-only、execute-known、execute-unknown、learn / vague input、pending continuation、
+choice 和 recovery 的用户视角行为。

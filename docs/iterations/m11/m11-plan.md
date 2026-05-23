@@ -1692,6 +1692,10 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
   非 required `not_observable` warning。
 - 11.3.6.6 已实现并验证；final closeout rerun 中 items、failure recovery、pending choice、
   planner choice 均返回 exit `0`。
+- 11.3.6 closeout 的 pass 口径必须保持为 runtime execution capabilities pass with
+  documented caveats。它验证已学路径复用、参数化执行、evidence reporting、多候选选择、
+  planner-backed choice 分支和 basic recovery menu；它不验证页面级自动能力发现、自动学习
+  页面所有操作、完整操作库生成或任意用户任务自动命中执行。
 - 11.3.6.x runner 通过 Conversation API 驱动，不把 direct replay API 冒充 WAgent
   runtime 闭环。
 - Codex 复核 artifact，不替 runner 判定 pass / fail。
@@ -1707,6 +1711,57 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 - [`11.3.6.4-planner-backed-choice-eval/`](./11.3.6.4-planner-backed-choice-eval/)
 - [`11.3.6.5-runtime-eval-program-closeout/`](./11.3.6.5-runtime-eval-program-closeout/)
 - [`11.3.6.6-runtime-eval-gate-failure-fixes/`](./11.3.6.6-runtime-eval-gate-failure-fixes/)
+
+## 11.3.7 · User-facing WAgent Behavior Eval
+
+状态：proposed（docs drafted，implementation pending）。
+
+11.3.7 是 11.3.6 之后的用户视角产品行为验收包。它不再重复测试 `value_slot`、
+`slot_overrides`、Reporter adapter、pending choice private map 等底层零件，而是验证
+普通用户进入时，WAgent 是否能自己完成：
+
+```text
+用户输入
+-> 解析页面 / 目标 / 意图
+-> 查询 learned actions
+-> 判断 known / unknown / ambiguous
+-> 学习、执行、追问或安全拒绝
+-> 基于 evidence 回复
+-> 失败时给出安全恢复出口
+```
+
+第一批 required cases：
+
+| Case | 目标 |
+|---|---|
+| URL-only known page | 用户只发页面 URL，WAgent 自动列出已学操作并让用户选择 |
+| URL-only unknown page | 用户只发未学习页面，WAgent 说明未学过并引导学习 / 查看 / 取消 |
+| execute-known action | 用户明确要求执行已学操作，WAgent 自动匹配路径、补参数、执行并验证 evidence |
+| execute-unknown action | 用户要求执行未学操作，WAgent 不直接 replay，而是询问学习并执行 / 只学习 / 取消 |
+| vague input | 用户说得模糊或乱说，WAgent 不执行，要求补页面或操作目标 |
+
+后续扩展：
+
+- explicit learn；
+- pending slot continuation；
+- A / 1 / 第一个 choice selection；
+- failure recovery menu；
+- controlled page capability discovery；
+- controlled multi-operation learning；
+- natural-language reuse across multiple learned actions。
+
+硬性泛化约束：
+
+- 测试页面 URL、route、页面文案、按钮名、字段名、DOM test id、fixture 业务内容和测试别名
+  不得出现在功能代码或产品 prompt 中。
+- 这些测试目标细节只能存在于 fixture、eval spec、test data、测试文件、docs、redacted
+  artifact 中。
+- 后续实现必须先建立 forbidden-token scan，再运行行为 case；如果发现功能代码或产品 prompt
+  包含测试目标细节，11.3.7 必须 fail。
+
+迭代文档：
+
+- [`11.3.7-user-facing-wagent-behavior-eval/`](./11.3.7-user-facing-wagent-behavior-eval/)
 
 ## Later M11.x · Page Context Bridge Decision Point
 
