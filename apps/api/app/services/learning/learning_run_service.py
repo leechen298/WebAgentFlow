@@ -229,8 +229,8 @@ class LearningRunService:
         if request.product_level:
             # product-level: no spec oracle; accept if explorer reports success
             # or the LLM supervisor explicitly says this path should be saved.
-            # Static-page flows such as /items can mutate DOM state without a
-            # URL/title change, so the rule-side success flag is too narrow.
+            # Static-page flows can mutate DOM state without a URL/title change,
+            # so the rule-side success flag is too narrow.
             if not _product_learning_should_save_path(final_data):
                 return None
         else:
@@ -243,10 +243,6 @@ class LearningRunService:
         url = analysis.url or request.url
         actions = _trim_actions_for_learned_path(final_data.get("steps") or [])
         fill_values = request.fill_values or {}
-        if not _supports_item_name_parameterization(request, url):
-            fill_values = {
-                key: value for key, value in fill_values.items() if key != "item_name"
-            }
         actions, _parameterization_report = parameterize_learned_path_actions(
             actions,
             fill_values,
@@ -328,8 +324,12 @@ def parameterize_learned_path_actions(
     actions: list[dict[str, Any]],
     fill_values: dict[str, str],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    item_name = fill_values.get("item_name")
-    if not item_name:
+    slot_values = {
+        str(key): str(value)
+        for key, value in fill_values.items()
+        if key and value is not None and str(value)
+    }
+    if not slot_values:
         return actions, {"status": "skipped", "slots": [], "warnings": []}
 
     bound_count = 0
@@ -337,17 +337,25 @@ def parameterize_learned_path_actions(
     parameterized: list[dict[str, Any]] = []
     for action in actions:
         updated = dict(action)
-        if (
-            str(updated.get("action_type") or "").lower() == "fill"
-            and updated.get("value") == item_name
-        ):
-            if updated.get("value_slot") not in (None, "item_name"):
+        if str(updated.get("action_type") or "").lower() == "fill":
+            matching_slot = next(
+                (
+                    slot_name
+                    for slot_name, value in slot_values.items()
+                    if updated.get("value") == value
+                ),
+                None,
+            )
+            if matching_slot is not None and updated.get("value_slot") not in (
+                None,
+                matching_slot,
+            ):
                 warnings.append(
                     f"fill action at step {updated.get('step')} already has value_slot"
                 )
-            else:
-                if updated.get("value_slot") != "item_name":
-                    updated["value_slot"] = "item_name"
+            elif matching_slot is not None:
+                if updated.get("value_slot") != matching_slot:
+                    updated["value_slot"] = matching_slot
                 bound_count += 1
         parameterized.append(updated)
 
@@ -356,13 +364,13 @@ def parameterize_learned_path_actions(
             "status": "not_bound",
             "slots": [],
             "warnings": warnings,
-            "reason": "No fill action matched item_name learning value",
+            "reason": "No fill action matched learning fill values",
         }
     if bound_count > 1:
-        warnings.append("multiple fill actions matched item_name")
+        warnings.append("multiple fill actions matched learning fill values")
     return parameterized, {
         "status": "bound",
-        "slots": ["item_name"],
+        "slots": list(slot_values),
         "warnings": warnings,
     }
 
@@ -472,8 +480,6 @@ def _product_action_label_for(request: LearningRunRequest) -> str:
         return "进入工作台"
 
     goal = _strip_product_learning_noise(request.goal or "")
-    if _looks_like_add_item_goal(goal):
-        return "新增项目"
     if "进入工作台" in goal:
         return "进入工作台"
     if "登录" in goal and "工作台" in goal:
@@ -486,22 +492,6 @@ def _product_action_label_for(request: LearningRunRequest) -> str:
             goal = goal[len(prefix):].strip(" ，,。.!！?？")
             break
     return (goal or "执行操作").strip(" ，,。.!！?？")[:20]
-
-
-def _looks_like_add_item_goal(text: str) -> bool:
-    lowered = text.lower()
-    return any(token in text for token in ("新增", "创建", "添加")) and (
-        "项目" in text or "item" in lowered
-    )
-
-
-def _supports_item_name_parameterization(
-    request: LearningRunRequest,
-    url: str,
-) -> bool:
-    if path_template(url).rstrip("/") != "/items":
-        return False
-    return _product_action_label_for(request) == "新增项目"
 
 
 def _strip_product_learning_noise(text: str) -> str:

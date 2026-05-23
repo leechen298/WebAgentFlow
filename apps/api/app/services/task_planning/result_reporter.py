@@ -180,7 +180,7 @@ class TaskResultReporter:
             confirmed_plan_context,
             replay_summary,
         )
-        expected_target = self._expected_item_target(
+        expected_target = self._expected_text_target(
             execution_payload,
             confirmed_plan_context,
         )
@@ -271,7 +271,7 @@ class TaskResultReporter:
             "summary": str(raw.get("summary") or ""),
         }
 
-    def _expected_item_target(
+    def _expected_text_target(
         self,
         execution_payload: dict[str, Any] | None,
         confirmed_plan_context: dict[str, Any] | None,
@@ -279,11 +279,19 @@ class TaskResultReporter:
         for payload in (confirmed_plan_context, execution_payload):
             if not payload:
                 continue
+            for raw_target in payload.get("evidence_targets") or []:
+                if not isinstance(raw_target, dict):
+                    continue
+                if raw_target.get("kind") != "dom_text_present":
+                    continue
+                text = raw_target.get("text")
+                if isinstance(text, str) and text:
+                    return text
             slot_overrides = payload.get("slot_overrides") or {}
-            if isinstance(slot_overrides, dict):
-                item_name = slot_overrides.get("item_name")
-                if isinstance(item_name, str) and item_name:
-                    return item_name
+            if isinstance(slot_overrides, dict) and len(slot_overrides) == 1:
+                value = next(iter(slot_overrides.values()))
+                if isinstance(value, str) and value:
+                    return value
         return None
 
     def _build_evidence_summary(

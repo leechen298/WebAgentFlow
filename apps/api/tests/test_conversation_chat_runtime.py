@@ -290,7 +290,7 @@ def test_fill_values_from_intake_maps_project_name_to_item_name() -> None:
         ],
     )
 
-    assert _fill_values_from_intake(intake) == {"item_name": "测试项目B"}
+    assert _fill_values_from_intake(intake) == {"project_name": "测试项目B"}
 
 
 def test_parse_product_inputs_does_not_extract_item_name_from_username() -> None:
@@ -1308,7 +1308,7 @@ def test_interactive_chat_execute_intent_with_slot_overrides_router_inspect_rout
     )
 
     assert result.command_kind == "execute_task"
-    assert "我在列表中看到了“测试项目PlannerA”" in result.user_response
+    assert "页面证据已确认目标值“测试项目PlannerA”" in result.user_response
     assert len(calls) == 1
     assert calls[0][0] == path_id
     assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目PlannerA"}
@@ -2017,7 +2017,7 @@ def test_interactive_chat_execute_passes_item_name_slot_overrides(
     assert target.kind == "dom_text_present"
     assert target.text == "测试项目B"
     assert target.source_slot == "item_name"
-    assert target.selector == "[data-testid='item-list']"
+    assert target.selector is None
     events = repo.list_events(session_id)
     started = next(e for e in events if e.type == "chat_execution_started")
     assert started.payload_json["slot_overrides"] == {"item_name": "测试项目B"}
@@ -2077,7 +2077,7 @@ def test_interactive_chat_execute_uses_reporter_verified_response(
     )
 
     assert result.allowed is True
-    assert "我在列表中看到了“测试项目B”" in result.user_response
+    assert "页面证据已确认目标值“测试项目B”" in result.user_response
     events = repo.list_events(session_id)
     reported = next(e for e in events if e.type == "task_result_reported")
     assert reported.payload_json["verification_outcome"] == "verified"
@@ -2357,7 +2357,7 @@ def test_interactive_chat_eval_fault_injection_ignored_unless_valid_opt_in(
     )
 
     assert result.allowed is True
-    assert "我在列表中看到了“测试项目B”" in result.user_response
+    assert "页面证据已确认目标值“测试项目B”" in result.user_response
     assert "A. 重试执行该操作" not in result.user_response
     events = repo.list_events(session_id)
     assert not [
@@ -2458,7 +2458,7 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
     assert "learned_path_id" not in pending_choice_text
     assert session.metadata_json["pending_choice_private_map"]["A"]["kind"] == "learned_action"
     assert session.metadata_json["pending_choice_private_map"]["A"]["slot_overrides"] == {
-        "item_name": "测试项目ChoiceA"
+        "entity_name": "测试项目ChoiceA"
     }
 
     result = orch.dispatch_user_input(
@@ -2468,7 +2468,7 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
     )
 
     assert result.allowed is True
-    assert "我在列表中看到了“测试项目ChoiceA”" in result.user_response
+    assert "页面证据已确认目标值“测试项目ChoiceA”" in result.user_response
     assert len(replay_calls) == 1
     assert replay_calls[0][0] == learned_path_id
     assert replay_calls[0][1] == "http://localhost:5176/items"
@@ -2753,7 +2753,7 @@ def test_interactive_chat_recovery_retry_replays_once_with_original_payload(
         metadata={"client": "wagent_chat"},
     )
 
-    assert "我在列表中看到了“测试项目B”" in retry.user_response
+    assert "页面证据已确认目标值“测试项目B”" in retry.user_response
     assert len(calls) == 2
     assert calls[1][0] == learned_path_id
     assert calls[1][1] == "http://localhost:5176/items"
@@ -3046,11 +3046,11 @@ def test_interactive_chat_blocks_item_name_replay_without_value_slot(
 
     assert replay_called is False
     assert result.allowed is False
-    assert "还不是可参数化路径" in result.user_response
+    assert "还不支持这次输入里的参数替换" in result.user_response
     events = repo.list_events(session_id)
     assert any(
         e.type == "chat_execution_failed"
-        and e.payload_json["reason"] == "missing_item_name_value_slot"
+        and e.payload_json["reason"] == "unsupported_value_slot"
         for e in events
     )
     assert not any(e.type == "chat_execution_started" for e in events)
@@ -3916,7 +3916,7 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
         session.metadata_json["pending_choice_private_map"]["A"]["kind"] == "planner_route_choice"
     )
     assert session.metadata_json["pending_choice_private_map"]["A"]["slot_overrides"] == {
-        "item_name": "测试项目B"
+        "entity_name": "测试项目B"
     }
 
     result = orch.dispatch_user_input(
@@ -3926,7 +3926,7 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
     )
 
     assert result.allowed is True
-    assert "我在列表中看到了“测试项目B”" in result.user_response
+    assert "页面证据已确认目标值“测试项目B”" in result.user_response
     assert len(calls) == 1
     assert calls[0][0] == path_a
     assert calls[0][1] == "http://localhost:5176/items"
@@ -4014,7 +4014,7 @@ def test_interactive_chat_planner_choice_selection_executes_private_choice_when_
     )
 
     assert result.allowed is True
-    assert "我在列表中看到了“测试项目PrivateA”" in result.user_response
+    assert "页面证据已确认目标值“测试项目PrivateA”" in result.user_response
     assert len(calls) == 1
     assert calls[0][0] == path_a
     assert calls[0][1] == "http://localhost:5176/items"
@@ -4095,7 +4095,7 @@ def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
     session = repo.get_session(session_id)
     assert session is not None
     private_map = session.metadata_json["pending_choice_private_map"]
-    assert private_map["A"]["slot_overrides"] == {"item_name": "测试项目PlannerA"}
+    assert private_map["A"]["slot_overrides"] == {"entity_name": "测试项目PlannerA"}
     public_text = json.dumps(session.metadata_json["pending_choice"], ensure_ascii=False)
     assert "测试项目PlannerA" not in public_text
     events = repo.list_events(session_id)
@@ -4116,7 +4116,7 @@ def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
     )
 
     assert result.allowed is True
-    assert "我在列表中看到了“测试项目PlannerA”" in result.user_response
+    assert "页面证据已确认目标值“测试项目PlannerA”" in result.user_response
     assert calls[0][0] == path_a
     assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目PlannerA"}
 
@@ -4159,7 +4159,7 @@ def test_interactive_chat_parameterized_path_requires_runtime_item_name(
     )
 
     assert replay_called is False
-    assert "还需要项目名称" in result.user_response
+    assert "还需要参数 item_name" in result.user_response
     session = repo.get_session(session_id)
     assert session is not None
     assert session.metadata_json["active_task"]["kind"] == "clarify"
@@ -4288,7 +4288,7 @@ def test_interactive_chat_pending_choice_revision_reruns_intake(
         metadata={"client": "wagent_chat"},
     )
 
-    assert "我在列表中看到了“测试项目B”" in result.user_response
+    assert "页面证据已确认目标值“测试项目B”" in result.user_response
     assert len(calls) == 1
     assert calls[0][0] == items_path
     assert calls[0][1] == "http://localhost:5176/items"

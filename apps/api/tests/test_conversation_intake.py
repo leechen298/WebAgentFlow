@@ -62,19 +62,21 @@ def test_deterministic_intake_extracts_item_name_learning_slot() -> None:
     result = ConversationIntakeService().analyze("学习新增项目，名称叫测试项目A")
 
     assert result.intent == "learn_operation"
-    assert result.action.canonical_goal == "新增项目"
+    assert result.action.goal == "学习新增项目，名称叫测试项目A"
+    assert result.action.canonical_goal is None
     slots = {slot.semantic_type: slot for slot in result.slots}
-    assert slots["item_name"].value == "测试项目A"
-    assert slots["item_name"].sensitive is False
+    assert slots["entity_name"].value == "测试项目A"
+    assert slots["entity_name"].sensitive is False
 
 
 def test_deterministic_intake_extracts_item_name_execute_slot() -> None:
     result = ConversationIntakeService().analyze("帮我新增项目，名称叫测试项目B")
 
     assert result.intent == "execute_operation"
-    assert result.action.canonical_goal == "新增项目"
+    assert result.action.goal == "帮我新增项目，名称叫测试项目B"
+    assert result.action.canonical_goal is None
     slots = {slot.semantic_type: slot.value for slot in result.slots}
-    assert slots["item_name"] == "测试项目B"
+    assert slots["entity_name"] == "测试项目B"
 
 
 def test_deterministic_intake_does_not_extract_item_name_from_username() -> None:
@@ -87,12 +89,11 @@ def test_deterministic_intake_does_not_extract_item_name_from_username() -> None
 
 
 @pytest.mark.parametrize(
-    ("utterance", "expected"),
-    [
-        ("项目名是测试项目A", "测试项目A"),
-        ("name 是测试项目A", "测试项目A"),
-        ("新增测试项目A", "测试项目A"),
-    ],
+        ("utterance", "expected"),
+        [
+            ("name 是测试项目A", "测试项目A"),
+            ("名称是测试项目A", "测试项目A"),
+        ],
 )
 def test_deterministic_intake_normalizes_item_name_aliases(
     utterance: str,
@@ -101,7 +102,7 @@ def test_deterministic_intake_normalizes_item_name_aliases(
     result = ConversationIntakeService().analyze(utterance)
 
     slots = {slot.semantic_type: slot.value for slot in result.slots}
-    assert slots["item_name"] == expected
+    assert slots["entity_name"] == expected
 
 
 def test_provider_unavailable_falls_back_to_deterministic_intake() -> None:
@@ -163,8 +164,10 @@ def test_provider_parse_error_falls_back_to_deterministic_pending_target() -> No
     assert service.provider_fallback is True
     assert result.intent == "learn_operation"
     assert result.target.url == "http://localhost:5176/items"
-    assert result.action.canonical_goal == "新增项目"
-    assert {slot.semantic_type: slot.value for slot in result.slots} == {"item_name": "测试项目A"}
+    assert result.action.canonical_goal is None
+    assert {slot.semantic_type: slot.value for slot in result.slots} == {
+        "entity_name": "测试项目A"
+    }
     trace = service.consume_last_trace_payload()
     assert trace is not None
     assert trace["trace_id"] == "trace-provider-parse-error"
@@ -226,7 +229,9 @@ def test_provider_result_drops_missing_field_when_slot_value_is_present() -> Non
     assert result.missing_fields == []
     assert result.should_ask_user is False
     assert result.ask_user_message_hint is None
-    assert {slot.semantic_type: slot.value for slot in result.slots} == {"item_name": "测试项目A"}
+    assert {slot.semantic_type: slot.value for slot in result.slots} == {
+        "project_name": "测试项目A"
+    }
 
 
 def test_provider_result_clears_spurious_ask_when_item_learning_is_complete() -> None:
@@ -268,7 +273,9 @@ def test_provider_result_clears_spurious_ask_when_item_learning_is_complete() ->
     assert result.missing_fields == []
     assert result.should_ask_user is False
     assert result.ask_user_message_hint is None
-    assert {slot.semantic_type: slot.value for slot in result.slots} == {"item_name": "测试项目A"}
+    assert {slot.semantic_type: slot.value for slot in result.slots} == {
+        "project_name": "测试项目A"
+    }
 
 
 @pytest.mark.parametrize("semantic_type", ["entity_name", "name"])
@@ -310,7 +317,7 @@ def test_provider_result_maps_generic_items_name_slot_to_item_name(
     )
 
     assert {slot.semantic_type: slot.value for slot in result.slots} == {
-        "item_name": "测试项目ChoiceA"
+        semantic_type: "测试项目ChoiceA"
     }
 
 

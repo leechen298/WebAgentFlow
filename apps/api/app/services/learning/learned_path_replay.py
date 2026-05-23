@@ -199,7 +199,7 @@ def _capture_dom_text_present(
             target=target.text,
             status="verified",
             confidence=0.95,
-            summary=f"列表中出现了名称为“{target.text}”的项目行。",
+            summary=f"页面文本中出现了目标值“{target.text}”。",
         )
 
     return ExecutionEvidence(
@@ -207,7 +207,7 @@ def _capture_dom_text_present(
         target=target.text,
         status="missing",
         confidence=0.7,
-        summary=f"操作执行后，列表中没有确认看到“{target.text}”。",
+        summary=f"操作执行后，页面文本中没有确认看到“{target.text}”。",
     )
 
 

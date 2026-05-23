@@ -82,6 +82,41 @@
   - Current runtime target-specific blockers are documented and must be cleaned before 11.3.7 can pass.
   - Package status is raised to `ready_for_implementation`; implementation has not started.
 
+## 2026-05-24 证据完整性预检
+
+- Reviewer：Codex using `webagentflow-eval-integrity`
+- Decision：BLOCKED for any 11.3.7 pass claim
+- Scope：
+  - This was a pre-implementation integrity review, not a behavior eval run.
+  - No `verify-scenario`, autonomous run, Console UI smoke or direct replay endpoint was invoked.
+  - No 11.3.7-specific JSON / Markdown result artifact exists yet.
+- Evidence：
+  - Command:
+    `python3 .agents/skills/webagentflow-eval-integrity/scripts/forbidden_target_scan.py --manifest /private/tmp/waf-11.3.7-target-manifest.json --root /Users/leechen/projects/WebAgentFlow/v0.1`
+  - Result: exit `1`, `status=fail`, `match_count=100`.
+  - High-confidence blocker examples:
+    - `apps/api/app/services/conversation/chat_runtime.py:134` contains `/items`.
+    - `apps/api/app/services/conversation/chat_runtime.py:152` contains `[data-testid='item-list']`.
+    - `apps/api/app/services/conversation/chat_runtime.py:193` contains target-specific `新增项目` result wording.
+    - `apps/api/app/services/conversation/intake.py:270` contains `/items`.
+    - `apps/api/app/services/conversation/intake.py:770` returns `新增项目`.
+    - `apps/api/app/services/learning/learning_run_service.py:502` checks `/items`.
+    - `apps/api/app/services/learning/learning_run_service.py:504` checks `新增项目`.
+  - Command: `pnpm run eval:wagent:user-behavior`
+  - Result: exit `1`, `ERR_PNPM_NO_SCRIPT`, script not implemented.
+  - Runner inspection found only `scripts/evals/wagent_runtime_eval.py`; no
+    `scripts/evals/wagent_user_behavior_eval.py` or equivalent first-wave 11.3.7 runner exists.
+- Gate decision：
+  - `forbidden_test_target_not_in_runtime_code_or_prompts`: FAIL / BLOCKER.
+  - user-facing first-wave behavior cases: NOT RUN / UNVERIFIED because the preflight hard gate fails
+    and the runner is missing.
+  - known / unknown isolation: UNVERIFIED because no 11.3.7 runner artifact records isolation strategy
+    or visible learned-action counts.
+  - redaction: NOT APPLICABLE for 11.3.7-specific artifacts because none exist yet.
+- Required next step：
+  - Remove or generalize target-specific product runtime / prompt content before treating 11.3.7 as passable.
+  - Then implement the 11.3.7 user-behavior runner, isolation evidence, stable artifacts and redaction check.
+
 ## 最终差异（Final Delta）
 
 ### 实际交付

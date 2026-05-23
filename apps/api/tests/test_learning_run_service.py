@@ -246,7 +246,7 @@ def test_product_learning_accepts_llm_supervisor_save_path_when_url_is_static(
     assert path.actions[0]["value_slot"] == "item_name"
 
 
-def test_product_learning_does_not_parameterize_item_name_outside_items_goal(
+def test_product_learning_parameterizes_matching_fill_values_without_route_gate(
     db_session: Session,
 ) -> None:
     def explorer(**kwargs):
@@ -292,7 +292,8 @@ def test_product_learning_does_not_parameterize_item_name_outside_items_goal(
     assert result.learned_path_id is not None
     path = db_session.get(LearnedPath, result.learned_path_id)
     assert path is not None
-    assert "value_slot" not in path.actions[0]
+    assert path.actions[0]["value_slot"] == "item_name"
+    assert path.actions[1]["value_slot"] == "password"
 
 
 def test_product_learning_dedup_metadata_merge_adds_missing_value_slot(

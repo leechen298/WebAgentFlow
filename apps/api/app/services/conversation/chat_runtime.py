@@ -130,28 +130,23 @@ def _chat_headless(session: Any) -> bool:
     return metadata.get("browser_visibility") == "headless"
 
 
-def _is_items_target(action: dict[str, Any]) -> bool:
-    if action.get("page_template") == "/items":
-        return True
-    target_url = action.get("target_url") or ""
-    return urlparse(target_url).path.rstrip("/") == "/items"
-
-
 def _build_execution_evidence_targets(
-    action: dict[str, Any],
+    learned_path: Any | None,
     slot_overrides: dict[str, str],
 ) -> list[ExecutionEvidenceTarget]:
-    item_name = slot_overrides.get("item_name")
-    if not item_name or not _is_items_target(action):
-        return []
-    return [
-        ExecutionEvidenceTarget(
-            kind="dom_text_present",
-            text=item_name,
-            source_slot="item_name",
-            selector="[data-testid='item-list']",
+    targets: list[ExecutionEvidenceTarget] = []
+    for slot_name in _learned_path_value_slots(learned_path):
+        value = slot_overrides.get(slot_name)
+        if not value:
+            continue
+        targets.append(
+            ExecutionEvidenceTarget(
+                kind="dom_text_present",
+                text=value,
+                source_slot=slot_name,
+            )
         )
-    ]
+    return targets
 
 
 def _execution_evidence_dicts(
@@ -168,37 +163,45 @@ def _build_replay_reporter_context(
     *,
     action: dict[str, Any],
     slot_overrides: dict[str, str],
+    evidence_targets: list[ExecutionEvidenceTarget],
     replay_summary: ConversationReplaySummary,
 ) -> tuple[str, dict[str, Any], dict[str, Any]]:
     evidence = _execution_evidence_dicts(replay_summary)
+    evidence_target_payload = [
+        item.model_dump(mode="json") if hasattr(item, "model_dump") else dict(item)
+        for item in evidence_targets
+        if item is not None
+    ]
     execution_payload = {
         "learned_path_id": replay_summary.learned_path_id,
         "target_url": action["target_url"],
         "alias": action.get("alias", ""),
         "slot_overrides": slot_overrides,
         "execution_evidence": evidence,
+        "evidence_targets": evidence_target_payload,
     }
     confirmed_plan_context = {
         "learned_path_id": replay_summary.learned_path_id,
         "target_url": action["target_url"],
         "slot_overrides": slot_overrides,
         "postcondition_evidence": evidence,
+        "evidence_targets": evidence_target_payload,
     }
     return "completed", execution_payload, confirmed_plan_context
 
 
 def _chat_report_user_response(report: Any, slot_overrides: dict[str, str]) -> str:
-    item_name = slot_overrides.get("item_name", "")
-    if report.outcome == "verified" and item_name:
-        return f"执行完成。我在列表中看到了“{item_name}”，所以可以确认新增项目成功。"
-    if report.outcome == "uncertain" and item_name:
+    target_value = _first_user_value(slot_overrides)
+    if report.outcome == "verified" and target_value:
+        return f"执行完成。页面证据已确认目标值“{target_value}”。"
+    if report.outcome == "uncertain" and target_value:
         return (
             "操作已经执行，但我还没有拿到足够页面证据确认结果。"
-            f"建议你查看列表是否出现了“{item_name}”。"
+            f"建议你查看页面上是否出现了“{target_value}”。"
         )
-    if report.outcome == "needs_review" and item_name:
+    if report.outcome == "needs_review" and target_value:
         return (
-            f"操作执行后，我没有在列表中确认看到“{item_name}”。"
+            f"操作执行后，我没有在页面上确认看到“{target_value}”。"
             "可能页面更新较慢，也可能操作没有成功。"
         )
     if report.outcome == "blocked":
@@ -207,7 +210,7 @@ def _chat_report_user_response(report: Any, slot_overrides: dict[str, str]) -> s
             "所以没有继续执行。请确认是否打开了正确的页面。"
         )
     if report.outcome == "failed":
-        return "执行过程中遇到问题，这次没有完成新增项目。"
+        return "执行过程中遇到问题，这次没有完成该操作。"
     return report.user_response
 
 
@@ -283,16 +286,16 @@ def _recovery_failure_message(
     report: Any | None,
     slot_overrides: dict[str, str],
 ) -> str:
-    item_name = slot_overrides.get("item_name", "")
+    target_value = _first_user_value(slot_overrides)
     if failure_class == "replay_failed":
         return "执行失败：这次操作没有完成。"
     if failure_class == "blocked":
         return "我找到了已学习路径，但当前页面和学习时的页面不匹配，所以没有继续确认执行结果。"
     if failure_class == "evidence_missing":
-        if item_name:
+        if target_value:
             return (
                 "操作已经执行，但我还没有拿到足够页面证据确认结果。"
-                f"我没有在列表中确认看到“{item_name}”。"
+                f"我没有在页面上确认看到“{target_value}”。"
             )
         return "操作已经执行，但我还没有拿到足够页面证据确认结果。"
     if report is not None:
@@ -1838,9 +1841,7 @@ class InteractiveChatRuntime:
                         session_id=session_id,
                         raw_input=intent.raw_text,
                         candidates=candidates,
-                        slot_overrides=_slot_overrides_from_fill_values(
-                            _fill_values_from_intake(intake) or {}
-                        ),
+                        slot_overrides=_fill_values_from_intake(intake) or {},
                         events=events,
                         message_id=message_id,
                         previous_status=previous_status,
@@ -1851,9 +1852,7 @@ class InteractiveChatRuntime:
                     session_id=session_id,
                     raw_input=intent.raw_text,
                     candidates=candidates,
-                    slot_overrides=_slot_overrides_from_fill_values(
-                        _fill_values_from_intake(intake) or {}
-                    ),
+                    slot_overrides=_fill_values_from_intake(intake) or {},
                     events=events,
                     message_id=message_id,
                     previous_status=previous_status,
@@ -1974,28 +1973,34 @@ class InteractiveChatRuntime:
                 error="Replay handler is not configured.",
             )
 
-        fill_values = _fill_values_from_intake(intake) or {}
-        slot_overrides = (
-            dict(slot_overrides_override)
-            if slot_overrides_override is not None
-            else _slot_overrides_from_fill_values(fill_values)
-        )
         path = LearnedPathRepository(self._repo.session).get(action["learned_path_id"])
-        supports_item_name = _learned_path_supports_value_slot(path, "item_name")
-        if slot_overrides.get("item_name") and supports_item_name is False:
-            return self._handle_missing_parameterized_path(
+        fill_values = _fill_values_from_intake(intake) or {}
+        raw_slot_overrides = (
+            dict(slot_overrides_override) if slot_overrides_override is not None else fill_values
+        )
+        slot_overrides, unsupported_slots = _slot_overrides_for_path(
+            raw_slot_overrides,
+            path,
+        )
+        supported_slots = set(_learned_path_value_slots(path))
+        if unsupported_slots:
+            return self._handle_unsupported_slot_overrides(
                 session_id=session_id,
                 action=action,
                 slot_overrides=slot_overrides,
+                unsupported_slots=unsupported_slots,
                 events=events,
                 message_id=message_id,
                 previous_status=previous_status,
             )
-        if supports_item_name is True and not slot_overrides.get("item_name"):
+        missing_slots = [
+            slot_name for slot_name in supported_slots if not slot_overrides.get(slot_name)
+        ]
+        if missing_slots:
             return self._handle_missing_runtime_slot(
                 session_id=session_id,
                 action=action,
-                slot_name="item_name",
+                slot_name=missing_slots[0],
                 events=events,
                 message_id=message_id,
                 previous_status=previous_status,
@@ -2038,7 +2043,7 @@ class InteractiveChatRuntime:
         replay_kwargs: dict[str, Any] = {"headless": headless}
         if slot_overrides:
             replay_kwargs["slot_overrides"] = slot_overrides
-        evidence_targets = _build_execution_evidence_targets(action, slot_overrides)
+        evidence_targets = _build_execution_evidence_targets(path, slot_overrides)
         if evidence_targets:
             replay_kwargs["evidence_targets"] = evidence_targets
         replay_summary = self._replay_handler(
@@ -2058,6 +2063,7 @@ class InteractiveChatRuntime:
             ) = _build_replay_reporter_context(
                 action=action,
                 slot_overrides=slot_overrides,
+                evidence_targets=evidence_targets,
                 replay_summary=replay_summary,
             )
             report = TaskResultReporter().build_report(
@@ -2187,21 +2193,21 @@ class InteractiveChatRuntime:
             error=error,
         )
 
-    def _handle_missing_parameterized_path(
+    def _handle_unsupported_slot_overrides(
         self,
         *,
         session_id: str,
         action: dict[str, Any],
         slot_overrides: dict[str, str],
+        unsupported_slots: list[str],
         events: list[str],
         message_id: str | None,
         previous_status: str,
     ) -> DispatchResult:
         self._update_active_task(session_id, status="failed")
-        item_name = slot_overrides.get("item_name", "")
         response = (
-            "我找到了已学习的“新增项目”路径，但它还不是可参数化路径，"
-            f"不能安全地把项目名替换成“{item_name}”。请重新学习一次新增项目操作。"
+            "我找到了已学习路径，但它还不支持这次输入里的参数替换。"
+            "请重新学习一次该操作，或补充一个已支持的参数。"
         )
         self._record_skill_call(
             session_id,
@@ -2213,18 +2219,22 @@ class InteractiveChatRuntime:
                 "alias": action["alias"],
                 "slot_overrides": slot_overrides,
             },
-            output_summary={"reason": "missing_item_name_value_slot"},
+            output_summary={
+                "reason": "unsupported_value_slot",
+                "unsupported_slots": unsupported_slots,
+            },
         )
         self._append_agent_message(session_id, response)
         self._append_event(
             session_id,
             ConversationEventType.CHAT_EXECUTION_FAILED,
             {
-                "reason": "missing_item_name_value_slot",
+                "reason": "unsupported_value_slot",
                 "learned_path_id": action["learned_path_id"],
                 "target_url": action["target_url"],
                 "alias": action["alias"],
                 "slot_overrides": slot_overrides,
+                "unsupported_slots": unsupported_slots,
             },
             events,
         )
@@ -2236,7 +2246,7 @@ class InteractiveChatRuntime:
             message_id=message_id,
             previous_status=previous_status,
             allowed=False,
-            error="missing_item_name_value_slot",
+            error="unsupported_value_slot",
         )
 
     def _handle_missing_runtime_slot(
@@ -2257,9 +2267,8 @@ class InteractiveChatRuntime:
             target_url=action.get("target_url"),
             goal=action.get("alias"),
         )
-        display_name = "项目名称" if slot_name == "item_name" else slot_name
         alias = action.get("alias", "网页操作")
-        response = f"我找到了已学习的“{alias}”路径，但还需要{display_name}。"
+        response = f"我找到了已学习的“{alias}”路径，但还需要参数 {slot_name}。"
         self._record_skill_call(
             session_id,
             ApplicationSkillName.ASK_USER_FOR_MISSING_INFO,
@@ -4086,9 +4095,7 @@ def _slot_overrides_from_choice_selection(selected: dict[str, Any]) -> dict[str,
 
 
 def _slot_overrides_from_pending_choice_clarification(raw_input: str) -> dict[str, str]:
-    values = _parse_product_inputs(raw_input) or {}
-    item_name = values.get("item_name")
-    return {"item_name": item_name} if item_name else {}
+    return _parse_product_inputs(raw_input) or {}
 
 
 def _fill_values_from_recovery_choice(selected: dict[str, Any]) -> dict[str, str]:
@@ -4266,28 +4273,52 @@ def _fill_values_from_intake(
         return None
     values: dict[str, str] = {}
     for slot in intake.slots:
-        semantic_type = "item_name" if slot.semantic_type == "project_name" else slot.semantic_type
-        if slot.value and semantic_type in {"username", "password", "item_name"}:
+        semantic_type = (slot.semantic_type or slot.name or "").strip()
+        if slot.value and semantic_type:
             values[semantic_type] = slot.value
     return values or None
 
 
-def _slot_overrides_from_fill_values(fill_values: dict[str, str]) -> dict[str, str]:
-    item_name = fill_values.get("item_name")
-    return {"item_name": item_name} if item_name else {}
+def _slot_overrides_for_path(
+    values: dict[str, str],
+    learned_path: Any | None,
+) -> tuple[dict[str, str], list[str]]:
+    supported_slots = _learned_path_value_slots(learned_path)
+    if not values:
+        return {}, []
+
+    slot_overrides = {
+        key: value
+        for key, value in values.items()
+        if key in supported_slots and value is not None
+    }
+    unsupported = [
+        key
+        for key, value in values.items()
+        if key not in supported_slots and value is not None
+    ]
+
+    if len(supported_slots) == 1 and not slot_overrides and len(unsupported) == 1:
+        source_key = unsupported[0]
+        return {supported_slots[0]: values[source_key]}, []
+
+    return slot_overrides, unsupported
 
 
-def _learned_path_supports_value_slot(path: Any | None, slot_name: str) -> bool | None:
+def _learned_path_value_slots(path: Any | None) -> list[str]:
     if path is None:
-        return None
+        return []
+    slots: list[str] = []
+    seen: set[str] = set()
     for raw_action in path.actions or []:
-        if (
-            isinstance(raw_action, dict)
-            and str(raw_action.get("action_type") or "").lower() == "fill"
-            and raw_action.get("value_slot") == slot_name
-        ):
-            return True
-    return False
+        if not isinstance(raw_action, dict):
+            continue
+        slot_name = str(raw_action.get("value_slot") or "").strip()
+        if not slot_name or slot_name in seen:
+            continue
+        seen.add(slot_name)
+        slots.append(slot_name)
+    return slots
 
 
 def _parse_product_inputs(text: str) -> dict[str, str] | None:
@@ -4303,14 +4334,14 @@ def _parse_product_inputs(text: str) -> dict[str, str] | None:
         if m:
             values["password"] = m.group(1)
             break
-    item_name = _parse_item_name_input(text)
-    if item_name:
-        values["item_name"] = item_name
+    named_value = _parse_named_value_input(text)
+    if named_value:
+        values["entity_name"] = named_value
     return values if values else None
 
 
-def _parse_item_name_input(text: str) -> str | None:
-    for label in ("项目名称", "项目名", "名称", "name"):
+def _parse_named_value_input(text: str) -> str | None:
+    for label in ("名称", "name"):
         if label == "name":
             label_pattern = r"(?<![A-Za-z0-9_])name(?![A-Za-z0-9_])"
         else:
@@ -4322,17 +4353,15 @@ def _parse_item_name_input(text: str) -> str | None:
         )
         if not match:
             continue
-        value = match.group(1)
-        if label in ("项目名称", "项目名") or "项目" in value:
+        return match.group(1)
+    return None
+
+
+def _first_user_value(values: dict[str, str]) -> str:
+    for value in values.values():
+        if value:
             return value
-    if "名称" in text or "项目名" in text or "name" in text.lower():
-        return None
-    match = re.search(
-        rf"(?:新增|创建|添加)\s*(?!项目(?:$|[\s，。,.；;!！?？])){_VALUE_PATTERN}",
-        text,
-        re.I,
-    )
-    return match.group(1) if match else None
+    return ""
 
 
 def _question_for_missing_fields(intake: ConversationIntakeResult) -> str:
