@@ -117,6 +117,61 @@
   - Remove or generalize target-specific product runtime / prompt content before treating 11.3.7 as passable.
   - Then implement the 11.3.7 user-behavior runner, isolation evidence, stable artifacts and redaction check.
 
+## 2026-05-24 Target-agnostic cleanup 后复核
+
+- Reviewer：Codex using `webagentflow-eval-integrity`
+- Decision：UNVERIFIED for overall 11.3.7 behavior eval; static forbidden-target gate now passes
+- Scope：
+  - This was a post-cleanup integrity check after `11.3.7.1 Target-Agnostic Runtime Cleanup`.
+  - No `verify-scenario`, autonomous run, Console UI smoke or direct replay endpoint was invoked.
+  - No first-wave 11.3.7 user-facing behavior eval artifact exists yet.
+- Evidence：
+  - Command:
+    `python3 .agents/skills/webagentflow-eval-integrity/scripts/forbidden_target_scan.py --manifest /private/tmp/waf-11.3.7-target-agnostic-cleanup-manifest.json --root /Users/leechen/projects/WebAgentFlow/v0.1`
+  - Result: exit `0`, `status=pass`, `match_count=0`, `missing_forbidden_paths=[]`.
+  - Command: `pnpm run eval:wagent:user-behavior`
+  - Result: exit `1`, `ERR_PNPM_NO_SCRIPT`, script not implemented.
+  - Runner / artifact inspection found no committed `scripts/evals/wagent_user_behavior_eval.py`, no `eval:wagent:user-behavior`
+    package script, and no 11.3.7 user-behavior result artifact under `artifacts`, `docs/testing/results` or
+    `scripts/evals`.
+- Gate decision：
+  - `forbidden_test_target_not_in_runtime_code_or_prompts`: PASS for the scanned product runtime / prompt paths.
+  - user-facing first-wave behavior cases: NOT RUN / UNVERIFIED because the runner is still missing.
+  - known / unknown isolation: UNVERIFIED because no 11.3.7 runner artifact records isolation strategy
+    or visible learned-action counts.
+  - redaction: NOT APPLICABLE for 11.3.7-specific artifacts because no such artifacts exist yet.
+- Required next step：
+  - Implement the 11.3.7 user-behavior runner, target manifest / eval spec, isolation evidence, stable artifacts
+    and artifact redaction check.
+  - Do not mark 11.3.7 as `pass` until all first-wave gates run through the allowed Conversation / eval surface
+    and the reviewable artifacts pass redaction.
+
+## 2026-05-24 `2f36fc6` 外部审核
+
+- Reviewer：ChatGPT
+- Decision：cleanup package accepted; 11.3.7 remains not passed
+- Reviewed commit：`2f36fc6 fix: remove target-specific runtime constants`
+- Accepted scope：
+  - Treat this commit as the `11.3.7.1 Target-Agnostic Runtime Cleanup` package.
+  - It clears the main anti-hardcoding blocker where product runtime carried product-test-site `/items`
+    answers such as route checks, `item_name`, list selectors and item-specific evidence wording.
+  - It does not complete the 11.3.7 user-facing behavior eval.
+- Notes：
+  - `entry_gate.py` removed obvious product-test-site item vocabulary while retaining generic web-task terms.
+  - `intake.py` moved from test-page `item_name` semantics toward generic `entity_name` / named-value handling.
+  - `learned_path_replay.py` and reporter-facing evidence wording now describe generic page text evidence.
+  - The new target-agnostic regression test keeps product runtime / prompt paths free of the forbidden target tokens.
+  - Legacy `scripts/evals/wagent_runtime_eval.py` remains allowed to contain `/items` and `item_name` because it is
+    test-only, but future use should either keep it clearly legacy / items-specific or migrate its gates to generic
+    slot-aware assertions.
+  - Login / workspace handling remains out of this cleanup scope and should be evaluated separately only if a later
+    anti-hardcoding gate targets those surfaces.
+- Status after review：
+  - Previous state: `BLOCKED: forbidden target constants detected`.
+  - Current state: `anti-hardcoding blocker cleanup implemented; awaiting user-facing behavior eval implementation`.
+  - 11.3.7 must not be marked `pass` until the first-wave behavior cases, known / unknown isolation and artifact
+    redaction gates run with reviewable artifacts.
+
 ## 最终差异（Final Delta）
 
 ### 实际交付
