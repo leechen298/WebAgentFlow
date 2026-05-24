@@ -2628,7 +2628,7 @@ def test_interactive_chat_history_strips_pending_choice_private_path_ids(
                 "choices": [
                     {
                         "choice_id": "A",
-                        "label": "新增项目",
+                        "label": "创建记录",
                         "intent": "execute_operation",
                         "learned_path_id": "lp-private-choice",
                     }
@@ -2640,7 +2640,7 @@ def test_interactive_chat_history_strips_pending_choice_private_path_ids(
                 "A": {
                     "kind": "learned_action",
                     "learned_path_id": "lp-private-choice",
-                    "slot_overrides": {"item_name": "测试项目B"},
+                    "slot_overrides": {"record_name": "BetaRecord"},
                 }
             },
         },
@@ -2655,7 +2655,7 @@ def test_interactive_chat_history_strips_pending_choice_private_path_ids(
                 "choices": [
                     {
                         "choice_id": "A",
-                        "label": "新增项目",
+                        "label": "创建记录",
                         "learned_path_id": "lp-private-event",
                     }
                 ],
@@ -3184,12 +3184,12 @@ def test_interactive_chat_rejects_unlearned_target_url(
         metadata={
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/workflow",
                     "scenario": None,
                 }
             ]
@@ -3210,7 +3210,7 @@ def test_interactive_chat_rejects_unlearned_target_url(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "帮我在 http://localhost:5176/orders 进入工作台",
+        "帮我在 http://example.test/orders 打开目标页面",
         metadata={"client": "wagent_chat"},
     )
 
@@ -3232,21 +3232,21 @@ def test_interactive_chat_requires_url_for_same_alias_multiple_targets(
         metadata={
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/workflow",
                     "scenario": None,
                 },
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_b,
                     "target_url": GENERIC_ALT_WORKFLOW_URL,
                     "site_origin": "http://alt.example.test",
-                    "page_template": "/workspace-login",
+                    "page_template": "/workflow",
                     "scenario": None,
                 },
             ]
@@ -3267,13 +3267,13 @@ def test_interactive_chat_requires_url_for_same_alias_multiple_targets(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "帮我进入工作台",
+        "帮我打开目标页面",
         metadata={"client": "wagent_chat"},
     )
 
     assert "我找到了多个可能的操作" in result.user_response
-    assert "A. 进入工作台" in result.user_response
-    assert "B. 进入工作台" in result.user_response
+    assert "A. 打开目标页面" in result.user_response
+    assert "B. 打开目标页面" in result.user_response
     assert replay_called is False
     session = repo.get_session(session_id)
     assert session is not None
@@ -3310,21 +3310,21 @@ def test_interactive_chat_multi_candidate_invokes_task_path_planner_and_sanitize
         metadata={
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 },
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_b,
                     "target_url": GENERIC_ALT_WORKFLOW_URL,
                     "site_origin": "http://alt.example.test",
-                    "page_template": "/workspace-login",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 },
             ]
@@ -3347,7 +3347,7 @@ def test_interactive_chat_multi_candidate_invokes_task_path_planner_and_sanitize
                     RouteStep(
                         order=0,
                         learned_path_id=path_a,
-                        purpose="Execute workspace entry after user confirmation.",
+                        purpose="Execute workflow after user confirmation.",
                     )
                 ],
                 confirmation_required=True,
@@ -3385,11 +3385,11 @@ def test_interactive_chat_multi_candidate_invokes_task_path_planner_and_sanitize
 
     result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
         session_id,
-        "帮我进入工作台",
+        "帮我打开目标页面",
         metadata={"client": "wagent_chat"},
     )
 
-    assert planner_calls == [("帮我进入工作台", [path_a, path_b])]
+    assert planner_calls == [("帮我打开目标页面", [path_a, path_b])]
     assert replay_called is False
     assert "我找到了多个可能的操作" in result.user_response
     assert "learned_path_id" not in result.user_response
@@ -3441,28 +3441,29 @@ def test_interactive_chat_planner_warning_uses_generic_visible_text(
         metadata={
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 },
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_b,
                     "target_url": GENERIC_ALT_WORKFLOW_URL,
                     "site_origin": "http://alt.example.test",
-                    "page_template": "/workspace-login",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 },
             ]
         },
     )
     private_warning = (
-        f"selector=[data-testid='item-name-input']; item_name=测试项目B; selected_path_id={path_a}"
+        f"selector=[data-testid='record-name-input']; record_name=BetaRecord; "
+        f"selected_path_id={path_a}"
     )
 
     def plan(
@@ -3488,7 +3489,7 @@ def test_interactive_chat_planner_warning_uses_generic_visible_text(
 
     result = ConversationOrchestrator(repo).dispatch_user_input(
         session_id,
-        "帮我进入工作台",
+        "帮我打开目标页面",
         metadata={"client": "wagent_chat"},
     )
 
@@ -3501,16 +3502,16 @@ def test_interactive_chat_planner_warning_uses_generic_visible_text(
     visible_text = result.user_response + "\n" + pending_choice_text
     assert "存在 Planner 警告" in visible_text
     assert "data-testid" not in visible_text
-    assert "item-name-input" not in visible_text
-    assert "测试项目B" not in visible_text
+    assert "record-name-input" not in visible_text
+    assert "BetaRecord" not in visible_text
     assert "selected_path_id" not in visible_text
     assert path_a not in visible_text
     private_map_text = json.dumps(
         session.metadata_json["pending_choice_private_map"],
         ensure_ascii=False,
     )
-    assert "item-name-input" in private_map_text
-    assert "测试项目B" in private_map_text
+    assert "record-name-input" in private_map_text
+    assert "BetaRecord" in private_map_text
 
 
 def test_interactive_chat_continue_with_active_task_does_not_enter_planner(
@@ -3528,28 +3529,28 @@ def test_interactive_chat_continue_with_active_task_does_not_enter_planner(
                 "kind": "clarify",
                 "owner": "runtime",
                 "status": "waiting_for_user_input",
-                "target_url": "http://localhost:5176/workspace-login",
-                "goal": "进入工作台",
+                "target_url": GENERIC_WORKFLOW_URL,
+                "goal": "打开目标页面",
                 "created_at": "2026-05-22T00:00:00+08:00",
                 "updated_at": "2026-05-22T00:00:00+08:00",
             },
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 },
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_b,
                     "target_url": GENERIC_ALT_WORKFLOW_URL,
                     "site_origin": "http://alt.example.test",
-                    "page_template": "/workspace-login",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 },
             ],
@@ -3605,28 +3606,28 @@ def test_interactive_chat_completed_active_task_does_not_block_planner(
                 "kind": "clarify",
                 "owner": "runtime",
                 "status": "completed",
-                "target_url": "http://localhost:5176/workspace-login",
-                "goal": "进入工作台",
+                "target_url": GENERIC_WORKFLOW_URL,
+                "goal": "打开目标页面",
                 "created_at": "2026-05-22T00:00:00+08:00",
                 "updated_at": "2026-05-22T00:00:00+08:00",
             },
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 },
                 {
-                    "alias": "查看工作台",
-                    "utterances": ["帮我查看工作台"],
+                    "alias": "查看目标页面",
+                    "utterances": ["帮我查看目标页面"],
                     "learned_path_id": path_b,
                     "target_url": GENERIC_ALT_WORKFLOW_URL,
                     "site_origin": "http://alt.example.test",
-                    "page_template": "/workspace-login",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 },
             ],
@@ -3683,33 +3684,33 @@ def test_interactive_chat_url_plus_vague_request_invokes_planner_instead_of_gues
     path_a = _ingest_workspace_path(
         db_session,
         source_run_id="run-planner-url-a",
-        page_template="/items",
+        page_template="/records",
     )
     path_b = _ingest_workspace_path(
         db_session,
         source_run_id="run-planner-url-b",
-        page_template="/items",
+        page_template="/records",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                     "scenario": "product_level",
                 },
                 {
-                    "alias": "查看项目",
-                    "utterances": ["帮我查看项目"],
+                    "alias": "查看记录",
+                    "utterances": ["帮我查看记录"],
                     "learned_path_id": path_b,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                     "scenario": "product_level",
                 },
             ]
@@ -3724,7 +3725,7 @@ def test_interactive_chat_url_plus_vague_request_invokes_planner_instead_of_gues
     ) -> AgentDPlannerOutput:
         nonlocal planner_calls
         planner_calls += 1
-        assert task_intent.target_page_hint == "http://localhost:5176/items"
+        assert task_intent.target_page_hint == GENERIC_RECORDS_URL
         return AgentDPlannerOutput(
             route_plan=RoutePlan(
                 task_intent=task_intent,
@@ -3753,15 +3754,15 @@ def test_interactive_chat_url_plus_vague_request_invokes_planner_instead_of_gues
 
     result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
         session_id,
-        "http://localhost:5176/items 帮我处理一下这个页面",
+        f"{GENERIC_RECORDS_URL} 帮我处理一下这个页面",
         metadata={"client": "wagent_chat"},
     )
 
     assert planner_calls == 1
     assert replay_called is False
     assert "我找到了多个可能的操作" in result.user_response
-    assert "A. 新增项目" in result.user_response
-    assert "B. 查看项目" in result.user_response
+    assert "A. 创建记录" in result.user_response
+    assert "B. 查看记录" in result.user_response
 
 
 def test_interactive_chat_single_candidate_skips_task_path_planner(
@@ -3775,12 +3776,12 @@ def test_interactive_chat_single_candidate_skips_task_path_planner(
         metadata={
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 }
             ]
@@ -3808,12 +3809,12 @@ def test_interactive_chat_single_candidate_skips_task_path_planner(
 
     result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
         session_id,
-        "帮我进入工作台",
+        "帮我打开目标页面",
         metadata={"client": "wagent_chat"},
     )
 
-    assert result.user_response == "执行中。\n进入工作台完成。"
-    assert calls == [(learned_path_id, "http://localhost:5176/workspace-login")]
+    assert result.user_response == "执行中。\n打开目标页面完成。"
+    assert calls == [(learned_path_id, GENERIC_WORKFLOW_URL)]
 
 
 def test_interactive_chat_planner_unable_does_not_create_executable_private_map(
@@ -3828,21 +3829,21 @@ def test_interactive_chat_planner_unable_does_not_create_executable_private_map(
         metadata={
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 },
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_b,
                     "target_url": GENERIC_ALT_WORKFLOW_URL,
                     "site_origin": "http://alt.example.test",
-                    "page_template": "/workspace-login",
+                    "page_template": "/workflow",
                     "scenario": "product_level",
                 },
             ]
@@ -3875,7 +3876,7 @@ def test_interactive_chat_planner_unable_does_not_create_executable_private_map(
 
     result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
         session_id,
-        "帮我进入工作台",
+        "帮我打开目标页面",
         metadata={"client": "wagent_chat"},
     )
 
@@ -3908,21 +3909,21 @@ def test_interactive_chat_pending_choice_selects_first_action_and_clears_state(
         metadata={
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/workflow",
                     "scenario": None,
                 },
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_b,
                     "target_url": GENERIC_ALT_WORKFLOW_URL,
                     "site_origin": "http://alt.example.test",
-                    "page_template": "/workspace-login",
+                    "page_template": "/workflow",
                     "scenario": None,
                 },
             ]
@@ -3942,7 +3943,7 @@ def test_interactive_chat_pending_choice_selects_first_action_and_clears_state(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     orch.dispatch_user_input(
         session_id,
-        "帮我进入工作台",
+        "帮我打开目标页面",
         metadata={"client": "wagent_chat"},
     )
     result = orch.dispatch_user_input(
@@ -3952,8 +3953,8 @@ def test_interactive_chat_pending_choice_selects_first_action_and_clears_state(
     )
 
     assert result.allowed is True
-    assert result.user_response == "执行中。\n进入工作台完成。"
-    assert calls == [(path_a, "http://localhost:5176/workspace-login")]
+    assert result.user_response == "执行中。\n打开目标页面完成。"
+    assert calls == [(path_a, GENERIC_WORKFLOW_URL)]
     session = repo.get_session(session_id)
     assert session is not None
     assert "pending_choice" not in session.metadata_json
@@ -3961,39 +3962,39 @@ def test_interactive_chat_pending_choice_selects_first_action_and_clears_state(
     assert "active_task" not in session.metadata_json
 
 
-def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
+def test_interactive_chat_pending_choice_selection_preserves_record_name_override(
     db_session: Session,
     repo: ConversationRepository,
 ) -> None:
     path_a = _ingest_items_path(
         db_session,
         source_run_id="run-choice-items-a",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     path_b = _ingest_items_path(
         db_session,
         source_run_id="run-choice-items-b",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 },
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": path_b,
                     "target_url": GENERIC_ALT_RECORDS_URL,
                     "site_origin": "http://alt.example.test",
-                    "page_template": "/items",
+                    "page_template": "/records",
                 },
             ]
         },
@@ -4010,10 +4011,10 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
             execution_evidence=[
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目B",
+                    "target": "BetaRecord",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目B”的项目行。",
+                    "summary": "记录列表中出现了名称为“BetaRecord”的记录行。",
                 }
             ],
         )
@@ -4021,7 +4022,7 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     first = orch.dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
 
@@ -4032,12 +4033,12 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
         session.metadata_json["pending_choice"],
         ensure_ascii=False,
     )
-    assert "测试项目B" not in pending_choice_text
+    assert "BetaRecord" not in pending_choice_text
     assert (
         session.metadata_json["pending_choice_private_map"]["A"]["kind"] == "planner_route_choice"
     )
     assert session.metadata_json["pending_choice_private_map"]["A"]["slot_overrides"] == {
-        "entity_name": "测试项目B"
+        "entity_name": "BetaRecord"
     }
 
     result = orch.dispatch_user_input(
@@ -4047,14 +4048,14 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
     )
 
     assert result.allowed is True
-    assert "页面证据已确认目标值“测试项目B”" in result.user_response
+    assert "页面证据已确认目标值“BetaRecord”" in result.user_response
     assert len(calls) == 1
     assert calls[0][0] == path_a
-    assert calls[0][1] == "http://localhost:5176/items"
-    assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目B"}
+    assert calls[0][1] == GENERIC_RECORDS_URL
+    assert calls[0][2]["slot_overrides"] == {"record_name": "BetaRecord"}
     target = calls[0][2]["evidence_targets"][0]
-    assert target.text == "测试项目B"
-    assert target.source_slot == "item_name"
+    assert target.text == "BetaRecord"
+    assert target.source_slot == "record_name"
     events = repo.list_events(session_id)
     selected = [
         e
@@ -4064,7 +4065,7 @@ def test_interactive_chat_pending_choice_selection_preserves_item_name_override(
     ][-1]
     selected_text = json.dumps(selected.payload_json, ensure_ascii=False)
     assert path_a not in selected_text
-    assert "测试项目B" not in selected_text
+    assert "BetaRecord" not in selected_text
     assert "slot_overrides" not in selected_text
 
 
@@ -4075,7 +4076,7 @@ def test_interactive_chat_planner_choice_selection_executes_private_choice_when_
     path_a = _ingest_items_path(
         db_session,
         source_run_id="run-choice-private-fallback-a",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
@@ -4087,8 +4088,8 @@ def test_interactive_chat_planner_choice_selection_executes_private_choice_when_
                 "choices": [
                     {
                         "choice_id": "A",
-                        "label": "新增项目",
-                        "description": "在当前页面新增项目",
+                        "label": "创建记录",
+                        "description": "在当前页面创建记录",
                         "intent": "execute_operation",
                     }
                 ],
@@ -4099,10 +4100,10 @@ def test_interactive_chat_planner_choice_selection_executes_private_choice_when_
                 "A": {
                     "kind": "planner_route_choice",
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/items",
-                    "action_alias": "新增项目",
-                    "page_template": "/items",
-                    "slot_overrides": {"item_name": "测试项目PrivateA"},
+                    "target_url": GENERIC_RECORDS_URL,
+                    "action_alias": "创建记录",
+                    "page_template": "/records",
+                    "slot_overrides": {"record_name": "PrivateRecord"},
                     "planner_summary": {"confirmation_required": True},
                 }
             },
@@ -4120,10 +4121,10 @@ def test_interactive_chat_planner_choice_selection_executes_private_choice_when_
             execution_evidence=[
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目PrivateA",
+                    "target": "PrivateRecord",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目PrivateA”的项目行。",
+                    "summary": "记录列表中出现了名称为“PrivateRecord”的记录行。",
                 }
             ],
         )
@@ -4135,25 +4136,25 @@ def test_interactive_chat_planner_choice_selection_executes_private_choice_when_
     )
 
     assert result.allowed is True
-    assert "页面证据已确认目标值“测试项目PrivateA”" in result.user_response
+    assert "页面证据已确认目标值“PrivateRecord”" in result.user_response
     assert len(calls) == 1
     assert calls[0][0] == path_a
-    assert calls[0][1] == "http://localhost:5176/items"
-    assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目PrivateA"}
+    assert calls[0][1] == GENERIC_RECORDS_URL
+    assert calls[0][2]["slot_overrides"] == {"record_name": "PrivateRecord"}
     events = repo.list_events(session_id)
     progress = [e.payload_json.get("progress_kind") for e in events]
     assert "planner_choice_selected" in progress
     assert any(e.type == "chat_execution_started" for e in events)
 
 
-def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
+def test_interactive_chat_pending_choice_clarify_preserves_record_name_privately(
     db_session: Session,
     repo: ConversationRepository,
 ) -> None:
     path_a = _ingest_items_path(
         db_session,
         source_run_id="run-choice-clarify-private-slot-a",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
@@ -4165,8 +4166,8 @@ def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
                 "choices": [
                     {
                         "choice_id": "A",
-                        "label": "新增项目",
-                        "description": "在当前页面新增项目",
+                        "label": "创建记录",
+                        "description": "在当前页面创建记录",
                         "intent": "execute_operation",
                     }
                 ],
@@ -4177,9 +4178,9 @@ def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
                 "A": {
                     "kind": "planner_route_choice",
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/items",
-                    "action_alias": "新增项目",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "action_alias": "创建记录",
+                    "page_template": "/records",
                     "planner_summary": {"confirmation_required": True},
                 }
             },
@@ -4197,10 +4198,10 @@ def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
             execution_evidence=[
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目PlannerA",
+                    "target": "PlannerRecord",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目PlannerA”的项目行。",
+                    "summary": "记录列表中出现了名称为“PlannerRecord”的记录行。",
                 }
             ],
         )
@@ -4208,7 +4209,7 @@ def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     retry = orch.dispatch_user_input(
         session_id,
-        "名称叫 测试项目PlannerA",
+        "名称叫PlannerRecord",
         metadata={"client": "wagent_eval"},
     )
 
@@ -4216,9 +4217,9 @@ def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
     session = repo.get_session(session_id)
     assert session is not None
     private_map = session.metadata_json["pending_choice_private_map"]
-    assert private_map["A"]["slot_overrides"] == {"entity_name": "测试项目PlannerA"}
+    assert private_map["A"]["slot_overrides"] == {"entity_name": "PlannerRecord"}
     public_text = json.dumps(session.metadata_json["pending_choice"], ensure_ascii=False)
-    assert "测试项目PlannerA" not in public_text
+    assert "PlannerRecord" not in public_text
     events = repo.list_events(session_id)
     retry_event = [
         e
@@ -4227,7 +4228,7 @@ def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
         and e.payload_json.get("progress_kind") == "pending_choice_retry"
     ][-1]
     retry_event_text = json.dumps(retry_event.payload_json, ensure_ascii=False)
-    assert "测试项目PlannerA" not in retry_event_text
+    assert "PlannerRecord" not in retry_event_text
     assert "slot_overrides" not in retry_event_text
 
     result = orch.dispatch_user_input(
@@ -4237,31 +4238,31 @@ def test_interactive_chat_pending_choice_clarify_preserves_item_name_privately(
     )
 
     assert result.allowed is True
-    assert "页面证据已确认目标值“测试项目PlannerA”" in result.user_response
+    assert "页面证据已确认目标值“PlannerRecord”" in result.user_response
     assert calls[0][0] == path_a
-    assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目PlannerA"}
+    assert calls[0][2]["slot_overrides"] == {"record_name": "PlannerRecord"}
 
 
-def test_interactive_chat_parameterized_path_requires_runtime_item_name(
+def test_interactive_chat_parameterized_path_requires_runtime_record_name(
     db_session: Session,
     repo: ConversationRepository,
 ) -> None:
     learned_path_id = _ingest_items_path(
         db_session,
         source_run_id="run-items-needs-runtime-slot",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ]
         },
@@ -4271,16 +4272,16 @@ def test_interactive_chat_parameterized_path_requires_runtime_item_name(
     def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
         nonlocal replay_called
         replay_called = True
-        raise AssertionError("parameterized path must wait for item_name")
+        raise AssertionError("parameterized path must wait for record_name")
 
     result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
         session_id,
-        "帮我新增项目",
+        "帮我创建记录",
         metadata={"client": "wagent_chat"},
     )
 
     assert replay_called is False
-    assert "还需要参数 item_name" in result.user_response
+    assert "还需要参数 record_name" in result.user_response
     session = repo.get_session(session_id)
     assert session is not None
     assert session.metadata_json["active_task"]["kind"] == "clarify"
@@ -4298,18 +4299,18 @@ def test_interactive_chat_pending_choice_invalid_answer_expires(
         metadata={
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_a,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "page_template": "/workflow",
                 },
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": path_b,
                     "target_url": GENERIC_ALT_WORKFLOW_URL,
-                    "page_template": "/workspace-login",
+                    "page_template": "/workflow",
                 },
             ]
         },
@@ -4317,7 +4318,7 @@ def test_interactive_chat_pending_choice_invalid_answer_expires(
     orch = ConversationOrchestrator(repo)
     orch.dispatch_user_input(
         session_id,
-        "帮我进入工作台",
+        "帮我打开目标页面",
         metadata={"client": "wagent_chat"},
     )
 
@@ -4353,26 +4354,26 @@ def test_interactive_chat_pending_choice_revision_reruns_intake(
     items_path = _ingest_items_path(
         db_session,
         source_run_id="run-revise-items",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": workspace_path,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "page_template": "/workflow",
                 },
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": items_path,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 },
             ]
         },
@@ -4389,10 +4390,10 @@ def test_interactive_chat_pending_choice_revision_reruns_intake(
             execution_evidence=[
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目B",
+                    "target": "BetaRecord",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目B”的项目行。",
+                    "summary": "记录列表中出现了名称为“BetaRecord”的记录行。",
                 }
             ],
         )
@@ -4405,17 +4406,17 @@ def test_interactive_chat_pending_choice_revision_reruns_intake(
     )
     result = orch.dispatch_user_input(
         session_id,
-        "不是，我要新增项目，名称叫测试项目B",
+        "不是，我要创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
 
-    assert "页面证据已确认目标值“测试项目B”" in result.user_response
+    assert "页面证据已确认目标值“BetaRecord”" in result.user_response
     assert len(calls) == 1
     assert calls[0][0] == items_path
-    assert calls[0][1] == "http://localhost:5176/items"
+    assert calls[0][1] == GENERIC_RECORDS_URL
     assert calls[0][2]["headless"] is False
-    assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目B"}
-    assert calls[0][2]["evidence_targets"][0].text == "测试项目B"
+    assert calls[0][2]["slot_overrides"] == {"record_name": "BetaRecord"}
+    assert calls[0][2]["evidence_targets"][0].text == "BetaRecord"
     session = repo.get_session(session_id)
     assert session is not None
     assert "pending_choice" not in session.metadata_json
@@ -4431,7 +4432,7 @@ def test_interactive_chat_chinese_cancel_clears_pending_choice_and_active_task(
         repo,
         metadata={
             "pending_intake": {"intent": "learn_operation"},
-            "pending_target": {"url": "http://localhost:5176/workspace-login"},
+            "pending_target": {"url": GENERIC_WORKFLOW_URL},
             "pending_choice": {
                 "type": "pending_choice",
                 "choice_group_id": "choice-group-test",
@@ -4439,7 +4440,7 @@ def test_interactive_chat_chinese_cancel_clears_pending_choice_and_active_task(
                 "choices": [
                     {
                         "choice_id": "A",
-                        "label": "进入工作台",
+                        "label": "打开目标页面",
                         "intent": "execute_operation",
                     }
                 ],
