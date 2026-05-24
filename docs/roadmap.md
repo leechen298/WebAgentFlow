@@ -14,8 +14,10 @@ Operational view of what's shipped, what's current, and what's next.
 
 ## Release Status
 
-- **v0.1**: first working task-to-path MVP; release closeout prepared. See
-  [`docs/releases/v0.1.md`](./releases/v0.1.md).
+- **v0.1**: first working task-to-path and runtime-chat MVP; M11 runtime
+  closeout is complete with documented caveats. See
+  [`docs/releases/v0.1.md`](./releases/v0.1.md) and
+  [`docs/testing/results/m11-runtime-final-closeout-20260524.md`](./testing/results/m11-runtime-final-closeout-20260524.md).
 - **v0.2**: planned; failure recovery / abort / runtime robustness.
 
 ## Shipped (foundation + autonomous exploration subsystem)
@@ -161,9 +163,10 @@ has a first evidence report (`PASS 12 / FAIL 0 / BLOCKED 0 / NOT_RUN 4`).
 evidence and drift evidence, but 10.2 did not implement a full
 negative-knowledge store.
 
-As of the v0.1 closeout, M11.0 and M11.1 have completed through
-`11.1.8-task-to-path-tests-and-evidence`. The branch is being prepared as the
-first working task-to-path MVP, not as a released/tagged artifact yet.
+As of the M11 runtime closeout, M11 has completed through
+`11.3.7-user-facing-wagent-behavior-eval` for the current v0.1 runtime scope.
+The branch is being prepared as the first working task-to-path and runtime-chat
+MVP, not as a released/tagged artifact yet.
 
 ## M11.0 — Runtime Conversation Shell & Agent Orchestration
 
@@ -258,7 +261,7 @@ TaskInput -> LearnedPath retrieval / ranking -> Task Path Planner
 
 Current boundaries:
 
-- Slot Binding remains future scope.
+- Broad-domain Slot Binding remains future scope.
 - `replay completed` does not mean `task succeeded`.
 - Missing postcondition evidence returns `uncertain` / `needs review`.
 - Failed / blocked execution does not trigger automatic recovery or hidden
@@ -271,16 +274,17 @@ flows.
 
 ## M11.2 — 运行时观察与真实网页稳健性增强
 
-M11.2 是 v0.1 后续稳健性增强轨道。它不重新展开 task-to-path planning，
-也不启动 v0.2 / M12。它的目标是在 replay 周围定义并后续实现 observation
-layer：动作之后页面发生了什么、预期变化是否被观察到、哪些结构化信号可以作为
-result evidence。
+M11.2 是 v0.1 稳健性增强轨道。它不重新展开 task-to-path planning，也不启动
+v0.2 / M12。它在 replay 周围定义并实现了 scoped observation layer：动作之后页面发生了
+什么、预期变化是否被观察到、哪些结构化信号可以作为 result evidence。
 
-11.2.0 是文档初始化包：只初始化 runtime observation scope 和
-realistic web runtime case catalog。它记录 Post-action Observation、Passive
-Runtime Observation，以及 modal、toast、delayed button、loading state、
-partial refresh、SPA content change、server push、passive DOM mutation 等真实
-网页场景。
+Delivered scope:
+
+- 11.2.0 runtime observation scope and realistic web runtime case catalog。
+- 11.2.2 step-level `wait_result`。
+- 11.2.3 replay-level `observation_summary`。
+- 11.2.4 / 11.2.4.1 / 11.2.4.2 realistic fixture planning and basic business
+  fixture pages for controlled runtime hardening.
 
 详细 11.2.x 拆包计划放在
 [`docs/iterations/m11/m11-plan.md`](./iterations/m11/m11-plan.md) 和
@@ -297,7 +301,7 @@ M11.3 turns the runtime conversation substrate into a product-facing
 teach and run page operations without understanding sessions, LearnedPath,
 preview, or replay internals.
 
-Delivered / current packages:
+Delivered packages:
 
 - **11.3 Interactive Chat Closed Loop** — accepted; `wagent chat` creates an
   `interactive_chat` session, learns a page operation, persists a LearnedPath,
@@ -314,14 +318,21 @@ Delivered / current packages:
   schema-constrained natural-language intake role, deterministic fallback,
   guardrails, response provenance, and redacted LLM trace history. Scoped tests
   passed; real LLM-backed smoke remains pending.
-- **11.3.5 Customer-Facing Agent Router & Skill Runtime** — ready for implementation;
-  docs review passed, implementation not started. It
-  expands the chat recovery problem into the product-facing Agent routing
-  layer. It defines Customer-Facing Agent Router != Conversation Orchestrator,
-  the Application Skill Registry, Page Understanding / Learning / Web Operation
-  worker-Agent boundaries, target resolution, MVP high-impact boundary, no-thinking routing,
-  progress/loading behavior, and history traces for route decisions and
-  skill calls.
+- **11.3.5 Customer-Facing Agent Router & Skill Runtime** — planning refined and
+  implemented through focused 11.3.5.x working-runtime slices: entry gate /
+  latency UX, task-state reducer / learning preconditions, product-test-site
+  fixture, parameterized learning / replay slots, execution evidence adapter,
+  closed-loop chat evaluation, pending choice, basic recovery, and
+  planner-backed choice integration.
+- **11.3.6 WAgent Runtime Eval Program** — closed as
+  `pass_with_caveats` for controlled runtime execution capabilities:
+  parameterized known-path reuse, evidence reporting, pending choice,
+  planner-backed choice branch, basic recovery menu, and private payload safety.
+- **11.3.7 User-facing WAgent Behavior Eval** — closed as `pass` for
+  first-wave Conversation API behavior gates: URL-only known / unknown,
+  unknown choose-learn, execute-known, execute-unknown guidance,
+  execute-unknown choose learning flow, vague input no execution, known /
+  unknown isolation, anti-hardcoding, and artifact redaction.
 
 M11.3.4 and M11.3.5 do not let an LLM operate the browser. The LLM understands
 user language, page semantics, and next-step routing; code validates scope,
@@ -330,6 +341,11 @@ Replay / execution services for the browser work.
 
 Codex CLI can read history for debugging as an external development Agent, but
 it is not a product runtime Reply Producer.
+
+M11.3.7 caveats remain explicit: full learn-then-execute, page-wide automatic
+capability discovery, automatic learning of every operation on a page, Console
+UI smoke, and external black-box site validation are not claimed by the M11
+runtime closeout.
 
 ## M12 — Recovery & Abort Dialogue
 

@@ -20,6 +20,22 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 的共同入口层。当前最小可行 runtime surface 是 CLI-first：先跑通完整功能
 闭环，再扩展更丰富的操作员界面或稳定对外接口。
 
+## M11 收口状态
+
+状态：`closed_with_caveats`（2026-05-24）。
+
+M11 runtime 已按当前 v0.1 范围收口：M11.0 conversation shell、M11.1
+task-to-path happy path、M11.2 scoped observation hardening、M11.3 interactive
+chat productization，以及 11.3.7 first-wave user-facing WAgent behavior eval
+均已有对应实现 / 验收记录。
+
+收口证据：
+[`docs/testing/results/m11-runtime-final-closeout-20260524.md`](../../testing/results/m11-runtime-final-closeout-20260524.md)。
+
+该状态不代表完整页面全量自动能力发现、批量学习所有操作、full learn-then-execute、
+Console UI smoke、外部黑盒站点验证或 M12 recovery / retry / abort 已完成。外部验证站点迁移
+另作独立工作，不纳入本次 M11 收口。
+
 ## 迭代索引
 
 - [m11-plan](./m11-plan.md) —— M11 全量计划与 M11.0 / M11.1 执行包拆分。状态：持续更新。

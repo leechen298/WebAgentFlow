@@ -638,11 +638,15 @@ Teaching Guide Agent / 教学引导器边界：
   schema-constrained intake、deterministic fallback、pending-intake guardrails、
   response provenance 和脱敏 LLM trace history。裸 URL -> “学习”以及更完整的
   面客路由问题转入 M11.3.5。
-- **L3 task execution / 实际任务执行**：未开工。没有 Task Path Planner /
-  任务路径规划器实现，没有 Task Result Reporter / 任务结果汇报器实现，没有
-  task-to-path 执行闭环，没有结果验证闭环，也没有恢复对话或 teaching mode。
-  Replay / drift 是 M10 基础；M11.0 是运行时沟通基础，M11.1 是第一版
-  L3 快乐路径 MVP。
+- **M11.3 runtime-chat closeout / 运行时 chat 收口**：已完成到 11.3.7 的
+  first-wave user-facing behavior。当前 runtime 可以处理 known / unknown page entry、
+  通过 replay 执行已学动作、在 unknown choose-learn 后进入学习流程、对 vague input
+  保持不执行，并在 Conversation API eval surface 下基于 evidence 回复。
+- **L3 task execution / 实际任务执行**：scoped happy path 已实现。M11.1 引入
+  Task Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器，用于
+  learned-path retrieval、confirmation、replay execution 和 evidence-bound reporting。
+  M11.3 补了 first-wave product-facing chat behavior。Recovery dialogue、teaching mode、
+  full learn-then-execute 和 page-wide automatic capability discovery 仍是后续工作。
 
 某个生命周期阶段完整落地后，回来更新本段。
 
@@ -657,6 +661,7 @@ Teaching Guide Agent / 教学引导器边界：
 | M11.1 · Task-to-Path Planning & Execution MVP / 任务到路径规划与执行 MVP | Task Path Planner / Task Result Reporter、LearnedPath retrieval / ranking、slot binding、task result verification MVP、basic artifact capture、risk / consent gate MVP。 | Task Path Planner / 任务路径规划器（legacy: Agent D）；Task Result Reporter / 任务结果汇报器（legacy: Agent E）。 |
 | M11.3.4 · Conversation Intake Agent / 对话理解 Agent | `wagent chat` 的 schema-constrained intake：理解用户语言、target、action、slots 和 missing information，再交给 Orchestrator 校验。 | Conversation Intake Agent / 对话理解 Agent（无 legacy alias）。 |
 | M11.3.5 · Customer-Facing Agent Router & Skill Runtime / 面客 Agent 路由与应用技能运行时 | `wagent chat` 的面客路由层：上下文收集、Agent Router 建议、Orchestrator 裁决、Application Skill Registry、Page Understanding / Learning / Web Operation 工作边界、MVP 高影响动作边界、progress / trace UX。 | Customer-Facing Agent Router；Page Understanding Agent 作为页面语义解释器提前使用；Learning Agent 和 Web Operation Agent 作为受 Orchestrator 控制的工作角色。 |
+| M11.3.7 · User-facing WAgent Behavior Eval / 用户视角 WAgent 行为验收 | First-wave runtime-chat behavior gates：URL-only known / unknown、execute-known、execute-unknown guidance、unknown choose-learn、vague input no execution、anti-hardcoding、known / unknown isolation 和 artifact redaction。 | 通过产品 Conversation surface 验证 Conversation Intake / Router / Orchestrator / Learning / Replay / Reporter 协作；不新增 Agent。 |
 | M12 · Recovery & Abort Dialogue / 恢复与中断对话 | Failure recovery、user interrupt handling，以及 continue / replan / rerun / takeover / abandon choices。 | Failure Recovery Agent / 失败恢复助手（legacy: Agent F）；User Abort Handler / 用户中断处理器（legacy: Agent G）。 |
 | M13 · User-Guided Learning, Teaching & Correction / 用户引导学习、教学与纠正 | Visible browser、user demonstration recording、Teaching Guide Agent guidance、highlight / shadow / indicator / tooltip、provenance=user write-back、correction UI。 | Teaching Guide Agent / 教学引导器（legacy: Agent H）；保留用户来源。 |
 | M14 · Learning Quality, Coverage & Negative Knowledge / 学习质量、覆盖与负面知识 | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent、popup controls、custom click-toggle、label extractor expansion、cross-page pattern mining、failure evidence / negative knowledge store。 | Page Understanding Agent / 页面理解器（legacy: Agent A）；Attempt Evaluation Agent / 尝试评估器（legacy: Agent B）；Learning Report Agent / 学习报告器（legacy: Agent C）。 |

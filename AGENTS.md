@@ -44,13 +44,19 @@ Current delivery status:
 - **M11.1 Task-to-Path Planning & Execution MVP** has completed its scoped
   path: retrieval / ranking, Task Path Planner, confirmation gate, replay
   execution, Task Result Reporter, and tests / evidence closure.
-- **M11.2 Runtime Observation & Realistic Web Hardening** is the current
-  follow-up optimization track. 11.2.2 shipped step-level `wait_result`;
-  11.2.3 shipped replay-level `observation_summary`.
-- Next recommended package: **11.2.4 Realistic Fixture Pages**.
+- **M11.2 Runtime Observation & Realistic Web Hardening** completed its current
+  v0.1 scoped hardening track: 11.2.2 shipped step-level `wait_result`;
+  11.2.3 shipped replay-level `observation_summary`; 11.2.4.x added realistic
+  fixture planning / fixture shell / basic business fixture pages.
+- **M11.3 Interactive Chat Productization** is closed through 11.3.7:
+  `wagent chat` working runtime slices, 11.3.6 runtime eval program
+  `pass_with_caveats`, and 11.3.7 first-wave user-facing behavior eval `pass`.
+- M11 runtime final closeout is recorded at
+  `docs/testing/results/m11-runtime-final-closeout-20260524.md`.
 - M12 recovery / retry / abort / interruption has not started.
-- Agent routing, L3 task runner, L2 guided teaching, and Teaching Guide Agent
-  (legacy: Agent H) remain future work unless a milestone document says
+- Full learn-then-execute, page-wide automatic capability discovery, external
+  black-box validation-site migration, L2 guided teaching, and Teaching Guide
+  Agent (legacy: Agent H) remain future work unless a milestone document says
   otherwise.
 
 Internal Agent naming:
@@ -407,10 +413,13 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - Conversation domain / store / API / CLI / Orchestrator service skeleton,
   explicit replay hook, public dispatch endpoint, CLI dispatch integration,
   and conversation runtime E2E are implemented through M11.0.7.
-- M11.1 task planning domain schemas shipped in 11.1.1 (24 tests). Task Path
-  Planner / Task Result Reporter (legacy: Agent D/E), retrieval, slot
-  binding, task execution, result verification, confirmation, recovery, and
-  teaching remain future work.
+- M11.1 Task Path Planner / Task Result Reporter (legacy: Agent D/E),
+  retrieval, confirmation, task execution, and evidence-bound reporting are
+  implemented for the scoped happy path. Broad-domain slot binding, automatic
+  recovery, and teaching remain future work.
+- M11.3.7 first-wave user-facing WAgent behavior eval is `pass`; full
+  learn-then-execute and page-wide automatic capability discovery remain
+  follow-up work.
 - L2 teaching support, highlight targets, and user action recording.
 - Artifact lifecycle handling.
 - Failure evidence / negative knowledge.

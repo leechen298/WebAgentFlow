@@ -45,12 +45,19 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
   路径规划器、confirmation gate、replay execution、Task Result Reporter /
   任务结果汇报器、tests / evidence closure。
 - **M11.2 Runtime Observation & Realistic Web Hardening / 运行时观察与真实
-  网页稳健性增强** 是当前 v0.1 后续优化轨道。11.2.2 已交付 step-level
-  `wait_result`；11.2.3 已交付 replay-level `observation_summary`。
-- 下一步建议进入 **11.2.4 Realistic Fixture Pages / 真实网页 fixture 页**。
+  网页稳健性增强** 已完成当前 v0.1 scoped hardening track：11.2.2 已交付
+  step-level `wait_result`；11.2.3 已交付 replay-level `observation_summary`；
+  11.2.4.x 已补 realistic fixture planning / fixture shell / basic business
+  fixture pages。
+- **M11.3 Interactive Chat Productization / 交互式 chat 产品化** 已收口到
+  11.3.7：`wagent chat` working runtime slices、11.3.6 runtime eval program
+  `pass_with_caveats`、11.3.7 first-wave user-facing behavior eval `pass`。
+- M11 runtime final closeout 记录在
+  `docs/testing/results/m11-runtime-final-closeout-20260524.md`。
 - M12 recovery / retry / abort / interruption 尚未开始。
-- Agent routing、L3 task runner、L2 guided teaching、Teaching Guide Agent /
-  教学引导器（legacy: Agent H）仍属后续规划，除非里程碑文档另有说明。
+- full learn-then-execute、page-wide automatic capability discovery、外部黑盒
+  validation-site migration、L2 guided teaching、Teaching Guide Agent / 教学引导器
+  （legacy: Agent H）仍属后续规划，除非里程碑文档另有说明。
 
 内部 Agent 命名规则：
 
@@ -378,10 +385,12 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
 - Conversation domain / store / API / CLI / Orchestrator service skeleton、
   explicit replay hook、public dispatch endpoint、CLI dispatch 接入和
   conversation runtime E2E 已通过 M11.0.7 实现。
-- M11.1 task planning domain schema 在 11.1.1 已交付（24 个测试）。Task
-  Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器
-  （legacy: Agent D/E）、retrieval、slot binding、task execution、
-  result verification、confirmation、recovery、teaching 仍是后续工作。
+- M11.1 Task Path Planner / 任务路径规划器和 Task Result Reporter / 任务结果汇报器
+  （legacy: Agent D/E）、retrieval、confirmation、task execution 和
+  evidence-bound reporting 已按 scoped happy path 实现。Broad-domain slot
+  binding、automatic recovery 和 teaching 仍是后续工作。
+- M11.3.7 first-wave user-facing WAgent behavior eval 是 `pass`；full
+  learn-then-execute 和 page-wide automatic capability discovery 仍是后续工作。
 - L2 teaching support、highlight targets 和 user action recording。
 - Artifact lifecycle handling。
 - Failure evidence / negative knowledge。

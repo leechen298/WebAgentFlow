@@ -7,7 +7,8 @@ FastAPI backend, Python CLI, validation fixtures, and Playwright runtime.
 
 ## Version Status
 
-- **v0.1**: first working task-to-path MVP; release closeout prepared. See
+- **v0.1**: first working task-to-path and runtime-chat MVP; M11 runtime
+  closeout complete with documented caveats. See
   [`docs/releases/v0.1.md`](./docs/releases/v0.1.md).
 - **v0.2**: planned; failure recovery / abort / runtime robustness.
 

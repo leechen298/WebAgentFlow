@@ -1782,6 +1782,34 @@ Closeout evidence:
 
 - [`11.3.7-user-facing-wagent-behavior-eval/`](./11.3.7-user-facing-wagent-behavior-eval/)
 
+## M11 Runtime Final Closeout
+
+状态：`closed_with_caveats`（2026-05-24）。
+
+M11 已按当前 v0.1 runtime 范围收口。收口范围包括：
+
+- M11.0 Runtime Conversation Shell & Agent Orchestration；
+- M11.1 Task-to-Path Planning & Execution MVP；
+- M11.2 scoped runtime observation / realistic web hardening；
+- M11.3 interactive chat productization through 11.3.7 first-wave user-facing behavior eval。
+
+收口证据：
+
+- [`docs/testing/results/m11-runtime-final-closeout-20260524.md`](../../testing/results/m11-runtime-final-closeout-20260524.md)
+
+本收口不声明：
+
+- full learn-then-execute；
+- page-wide automatic capability discovery；
+- automatic learning of every operation on a page；
+- arbitrary task execution on an unlearned page；
+- Console UI smoke for 11.3.7；
+- external black-box site validation or migration；
+- `verify-scenario` / autonomous-run pass evidence；
+- M12 recovery / retry / abort / interruption。
+
+外部验证站点迁移不在本次 M11 收口范围内，后续独立处理。
+
 ## Later M11.x · Page Context Bridge Decision Point
 
 状态：候选决策点，不是已确定执行包。

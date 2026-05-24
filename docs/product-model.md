@@ -735,11 +735,17 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
   deterministic fallback, pending-intake guardrails, response provenance, and
   redacted LLM trace history. Bare URL -> "learn" recovery and broader
   customer-facing routing are deferred to M11.3.5.
-- **L3 task execution**: not started. No Task Path Planner implementation,
-  no Task Result Reporter implementation, no task-to-path execution loop, no
-  result verification loop, no recovery dialogue, and no teaching mode.
-  Replay / drift is the M10 foundation; M11.0 is the runtime-conversation
-  foundation, and M11.1 is the first planned L3 happy-path MVP.
+- **M11.3 runtime-chat closeout**: completed through 11.3.7 for first-wave
+  user-facing behavior. The current runtime can route known / unknown page
+  entry, execute known learned actions through replay, start learning after
+  unknown choose-learn, avoid execution on vague input, and report from
+  evidence under the Conversation API eval surface.
+- **L3 task execution**: scoped happy path implemented. M11.1 introduced Task
+  Path Planner and Task Result Reporter for learned-path retrieval, confirmation,
+  replay execution, and evidence-bound reporting. M11.3 added first-wave
+  product-facing chat behavior. Recovery dialogue, teaching mode,
+  full learn-then-execute, and page-wide automatic capability discovery remain
+  future work.
 
 When a lifecycle stage fully lands, update this section to reflect it.
 
@@ -755,6 +761,7 @@ task execution:
 | M11.1 · Task-to-Path Planning & Execution MVP | Task Path Planner / Task Result Reporter, LearnedPath retrieval / ranking, slot binding, task result verification MVP, basic artifact capture, and risk / consent gate MVP. | Task Path Planner (legacy: Agent D); Task Result Reporter (legacy: Agent E). |
 | M11.3.4 · Conversation Intake Agent | Schema-constrained intake for `wagent chat`: understand user language, target, action, slots, and missing information before Orchestrator validation. | Conversation Intake Agent (no legacy alias). |
 | M11.3.5 · Customer-Facing Agent Router & Skill Runtime | Product-facing routing layer for `wagent chat`: context collection, Agent Router recommendation, Orchestrator adjudication, Application Skill Registry, Page Understanding / Learning / Web Operation worker boundaries, MVP high-impact boundary, and progress / trace UX. | Customer-Facing Agent Router; Page Understanding Agent used as semantic page interpreter; Learning Agent and Web Operation Agent as worker roles under Orchestrator control. |
+| M11.3.7 · User-facing WAgent Behavior Eval | First-wave runtime-chat behavior gates: URL-only known / unknown, execute-known, execute-unknown guidance, unknown choose-learn, vague input no execution, anti-hardcoding, known / unknown isolation, and artifact redaction. | Validates Conversation Intake / Router / Orchestrator / Learning / Replay / Reporter interaction through product conversation surface; no new Agent. |
 | M12 · Recovery & Abort Dialogue | Failure recovery, user interrupt handling, and continue / replan / rerun / takeover / abandon choices. | Failure Recovery Agent (legacy: Agent F); User Abort Handler (legacy: Agent G). |
 | M13 · User-Guided Learning, Teaching & Correction | Visible browser, user demonstration recording, Teaching Guide Agent guidance, highlight / shadow / indicator / tooltip, provenance=user write-back, and correction UI. | Teaching Guide Agent (legacy: Agent H); preserve user provenance. |
 | M14 · Learning Quality, Coverage & Negative Knowledge | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent, popup controls, custom click-toggle, label extractor expansion, cross-page pattern mining, and failure evidence / negative knowledge store. | Page Understanding Agent (legacy: Agent A); Attempt Evaluation Agent (legacy: Agent B); Learning Report Agent (legacy: Agent C). |

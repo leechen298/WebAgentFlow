@@ -9,6 +9,14 @@
   **交付里程碑 M<N>**，避免和生命周期阶段 L1/L2/L3 混淆。
 - 历史 12 步架构时间线请见 [`architecture.zh.md`](./architecture.zh.md) §E。
 
+## 版本状态
+
+- **v0.1**：第一个可工作的 task-to-path + runtime chat MVP；M11 runtime
+  已按当前范围完成收口，并保留明确 caveat。见
+  [`docs/releases/v0.1.md`](./releases/v0.1.md) 和
+  [`docs/testing/results/m11-runtime-final-closeout-20260524.md`](./testing/results/m11-runtime-final-closeout-20260524.md)。
+- **v0.2**：计划中；failure recovery / abort / runtime robustness。
+
 ## 已交付（基础设施 + 自主探索子系统）
 
 2026-04-20 清理之后，仓库里唯一的产品表面就是**基于 Playwright 的
@@ -140,8 +148,9 @@ M10 收口时，LearnedPath 已经可以持久化、进入 catalog、执行 trus
 drift 结果未来会成为 failure evidence 和 drift evidence 的来源，但 10.2
 本身没有实现完整 negative knowledge store。
 
-当前：**M11.1 Task-to-Path Planning & Execution MVP / 任务到路径规划与执行
-MVP** 规划，从 `11.1.1-task-planning-domain-contract` 开始。
+当前：M11 已按 v0.1 runtime 范围收口到
+`11.3.7-user-facing-wagent-behavior-eval`。该状态不代表 full learn-then-execute、
+页面全量自动能力发现、批量学习所有操作、外部黑盒站点验证或 M12 recovery 已完成。
 
 ## M11.0 —— Runtime Conversation Shell & Agent Orchestration / 运行时沟通与 Agent 编排
 
@@ -170,8 +179,7 @@ M11.0 建立第一版运行时产品入口，让用户可以和 WebAgentFlow 沟
   走 dispatch（`179 passed` API + `67 passed` CLI）。
 - 11.0.7 Conversation Tests and Evidence 已交付：conversation runtime E2E
   smoke 和 replay / conversation fresh evidence（`10 passed` E2E）。
-- M11.0 执行包已完成。M11.1 规划从
-  `11.1.1-task-planning-domain-contract` 开始。
+- M11.0 执行包已完成。
 
 预期交付：
 
@@ -194,15 +202,21 @@ M11.1 是第一版 L3 实际工作里程碑。用户通过 M11.0 conversation su
 描述任务；WebAgentFlow 从已学路径中选择并绑定参数，通过 M10 replay
 engine 执行，在能力范围内验证任务结果，然后汇报结果。
 
-当前 M11.1 执行包：`11.1.2-learned-path-retrieval-ranking`。它基于 11.1.1
-的 domain contract 实现 LearnedPath retrieval 和 ranking。
+M11.1 已完成到 `11.1.8-task-to-path-tests-and-evidence`。它连接自然语言任务输入、
+LearnedPath retrieval / ranking、Task Path Planner preview、confirmation、
+deterministic replay execution 和 Task Result Reporter output。
 
-- 11.1.1 Task Planning Domain Contract 已交付：17 个 schema 定义
-  （`TaskInput`、`TaskIntent`、`LearnedPathCandidate`、`RoutePlan`、
-  `RouteStep`、`SlotBindingProposal`、`ConfirmationRequirement`、
-  `RiskHint`、`ConsentRequirement`、`PostconditionSignal`、
-  `TaskExecutionResult`、`ArtifactReference`、`AgentDPlannerInput/Output`、
-  `AgentEReporterInput/Output`），24 个测试通过，ruff clean。
+已交付：
+
+- 11.1.1 Task Planning Domain Contract。
+- 11.1.2 LearnedPath Retrieval and Ranking。
+- 11.1.3 Task Path Planner MVP。
+- 11.1.4 Task Planning Dispatch Preview。
+- 11.1.5 Plan Confirmation and Consent Gate。
+- 11.1.6 Execution via Replay。
+- 11.1.7 Result Verification and Task Result Reporter。
+- 11.1.8 Task-to-path Tests and Evidence（`1104` API tests passed，
+  `25` E2E passed，ruff clean，no unresolved P1/P2）。
 
 纳入 / 明确的产品内部 Agent：
 
@@ -213,25 +227,33 @@ engine 执行，在能力范围内验证任务结果，然后汇报结果。
   postcondition check、artifact status 和 final-state signals，输出
   用户可读报告和 UI 可渲染结构化字段。
 
-预期交付：
+v0.1 已交付链路：
 
-- LearnedPath 检索和排序。
-- Slot binding：把姓名、日期、状态、导出格式、搜索词等任务参数填入
-  学过的动作值。
-- planner 路线或绑定参数不确定时，执行前让用户确认。
-- 通过 M10 replay engine 执行，不走 autonomous exploration。
-- task result verification MVP：postcondition check、artifact status、
-  final-state signals；无法验证时明确报告 `uncertain` / `needs review`。
-- basic artifact capture / return：下载文件、导出、截图、最终 artifact
-  reference。
-- action risk & consent gate MVP：危险、不可逆、外部发送、批量修改、
-  权限修改或用户自定义敏感操作，在执行前需要确认。
-
-第一版 risk gate 可以由 Orchestrator 持有的 deterministic policy + 用户
-可配置规则完成。本里程碑不新增新的 Agent。
+```text
+TaskInput -> LearnedPath retrieval / ranking -> Task Path Planner
+-> planning preview -> confirmation -> replay execution
+-> Task Result Reporter
+```
 
 M11.1 明确不做：隐藏式自主重学、不做逐步 LLM 浏览器控制、不做完整恢复
 对话；失败先返回清晰状态，并交给后续 M12 能力处理。
+
+## M11.2 —— Runtime Observation & Realistic Web Hardening / 运行时观察与真实网页稳健性增强
+
+M11.2 是 v0.1 稳健性增强轨道。它不重新展开 task-to-path planning，也不启动
+v0.2 / M12。它在 replay 周围定义并实现 scoped observation layer：动作之后页面发生了
+什么、预期变化是否被观察到、哪些结构化信号可以作为 result evidence。
+
+已交付范围：
+
+- 11.2.0 runtime observation scope and realistic web runtime case catalog。
+- 11.2.2 step-level `wait_result`。
+- 11.2.3 replay-level `observation_summary`。
+- 11.2.4 / 11.2.4.1 / 11.2.4.2 realistic fixture planning and basic business
+  fixture pages for controlled runtime hardening。
+
+M11.2 不定义 recovery、retry、abort、user interruption、takeover 或 teaching
+behavior。这些仍属于 v0.2 / M12 或更后续阶段。
 
 ## M11.3.x —— Interactive Chat Productization / 交互式聊天产品化
 
@@ -239,7 +261,7 @@ M11.3 把 runtime conversation 底座收束成面向普通用户的 `wagent chat
 它仍然是 CLI-first，但用户不应该理解 session、LearnedPath、preview 或 replay
 内部概念，也能教系统操作页面并执行已学操作。
 
-已交付 / 当前包：
+已交付包：
 
 - **11.3 Interactive Chat Closed Loop**：accepted；`wagent chat` 创建
   `interactive_chat` session，学习页面操作，沉淀 LearnedPath，并在同一 session 中执行。
@@ -254,12 +276,17 @@ M11.3 把 runtime conversation 底座收束成面向普通用户的 `wagent chat
   response provenance 和脱敏 LLM trace history。Scoped tests passed；真实
   LLM-backed smoke 仍 pending。
 - **11.3.5 Customer-Facing Agent Router & Skill Runtime / 面客 Agent 路由与应用技能运行时**：
-  ready for implementation；docs review passed，implementation not started。它把
-  chat recovery 问题扩展为面客 Agent 路由层，并定义
-  Customer-Facing Agent Router != Conversation Orchestrator、Application Skill Registry、
-  Page Understanding / Learning / Web Operation 工作 Agent 边界、target resolution、
-  MVP 高影响动作边界、no-thinking routing、progress / loading 行为，以及 route decision /
-  skill call 在 history 中的 trace。
+  已通过聚焦的 11.3.5.x working-runtime slices 落地：entry gate / latency UX、
+  task-state reducer / learning preconditions、product-test-site fixture、
+  parameterized learning / replay slots、execution evidence adapter、closed-loop
+  chat evaluation、pending choice、basic recovery 和 planner-backed choice integration。
+- **11.3.6 WAgent Runtime Eval Program**：以 `pass_with_caveats` 收口，覆盖受控
+  runtime execution capabilities：parameterized known-path reuse、evidence reporting、
+  pending choice、planner-backed choice branch、basic recovery menu、private payload safety。
+- **11.3.7 User-facing WAgent Behavior Eval**：first-wave Conversation API behavior
+  gates 为 `pass`：URL-only known / unknown、unknown choose-learn、execute-known、
+  execute-unknown guidance、execute-unknown choose learning flow、vague input no execution、
+  known / unknown isolation、anti-hardcoding 和 artifact redaction。
 
 M11.3.4 和 M11.3.5 都不让 LLM 操作浏览器。LLM 理解用户语言、页面语义和下一步路由；
 代码校验 scope、state、M11.3.5 MVP 边界和执行策略；注册 skill 调用 Learning / Replay /
@@ -267,6 +294,9 @@ execution services 完成真实浏览器工作。
 
 Codex CLI 可以作为外部开发 Agent 读取 history 辅助调试，但它不是产品运行时的
 Reply Producer。
+
+M11.3.7 caveat 必须保留：本次 M11 runtime closeout 不声明 full learn-then-execute、
+页面全量自动能力发现、批量学习所有页面操作、Console UI smoke 或外部黑盒站点验证。
 
 ## M12 —— Recovery & Abort Dialogue / 恢复与中断对话
 
