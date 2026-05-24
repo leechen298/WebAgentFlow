@@ -121,43 +121,43 @@ def test_replay_request_slot_overrides_defaults_to_empty_dict() -> None:
 
 def test_replay_request_accepts_slot_overrides() -> None:
     request = ReplayRequest(
-        url="http://127.0.0.1:5176/items",
-        slot_overrides={"item_name": "测试项目B"},
+        url="http://example.test/records",
+        slot_overrides={"record_name": "Beta Record"},
     )
 
-    assert request.slot_overrides == {"item_name": "测试项目B"}
+    assert request.slot_overrides == {"record_name": "Beta Record"}
 
 
 def test_replay_request_accepts_evidence_targets() -> None:
     request = ReplayRequest(
-        url="http://127.0.0.1:5176/items",
+        url="http://example.test/records",
         evidence_targets=[
             {
                 "kind": "dom_text_present",
-                "text": "测试项目B-001",
-                "source_slot": "item_name",
-                "selector": "[data-testid='item-list']",
+                "text": "Beta Record 001",
+                "source_slot": "record_name",
+                "selector": "[data-testid='record-list']",
             }
         ],
     )
 
     target = request.evidence_targets[0]
     assert target.kind == "dom_text_present"
-    assert target.text == "测试项目B-001"
-    assert target.source_slot == "item_name"
-    assert target.selector == "[data-testid='item-list']"
+    assert target.text == "Beta Record 001"
+    assert target.source_slot == "record_name"
+    assert target.selector == "[data-testid='record-list']"
 
 
 def test_replay_request_rejects_blank_evidence_target_text() -> None:
     with pytest.raises(ValidationError):
         ReplayRequest(
-            url="http://127.0.0.1:5176/items",
+            url="http://example.test/records",
             evidence_targets=[
                 {
                     "kind": "dom_text_present",
                     "text": "   ",
-                    "source_slot": "item_name",
-                    "selector": "[data-testid='item-list']",
+                    "source_slot": "record_name",
+                    "selector": "[data-testid='record-list']",
                 }
             ],
         )
@@ -167,7 +167,7 @@ def test_execution_evidence_rejects_invalid_confidence() -> None:
     with pytest.raises(ValidationError):
         ExecutionEvidence(
             kind="dom_text_present",
-            target="测试项目B-001",
+            target="Beta Record 001",
             status="verified",
             confidence=1.1,
             summary="invalid",
@@ -177,18 +177,18 @@ def test_execution_evidence_rejects_invalid_confidence() -> None:
 def test_capture_execution_evidence_finds_text_inside_selector() -> None:
     target = ExecutionEvidenceTarget(
         kind="dom_text_present",
-        text="测试项目B-001",
-        source_slot="item_name",
-        selector="[data-testid='item-list']",
+        text="Beta Record 001",
+        source_slot="record_name",
+        selector="[data-testid='record-list']",
     )
     page = _make_text_page(
-        {"[data-testid='item-list']": "测试项目A\n测试项目B-001"}
+        {"[data-testid='record-list']": "Alpha Record\nBeta Record 001"}
     )
 
     evidence = capture_execution_evidence(page, [target])
 
     assert evidence[0].kind == "dom_text_present"
-    assert evidence[0].target == "测试项目B-001"
+    assert evidence[0].target == "Beta Record 001"
     assert evidence[0].status == "verified"
     assert evidence[0].confidence == 0.95
 
@@ -196,16 +196,16 @@ def test_capture_execution_evidence_finds_text_inside_selector() -> None:
 def test_capture_execution_evidence_missing_text_inside_selector() -> None:
     target = ExecutionEvidenceTarget(
         kind="dom_text_present",
-        text="测试项目B-001",
-        source_slot="item_name",
-        selector="[data-testid='item-list']",
+        text="Beta Record 001",
+        source_slot="record_name",
+        selector="[data-testid='record-list']",
     )
-    page = _make_text_page({"[data-testid='item-list']": "测试项目A"})
+    page = _make_text_page({"[data-testid='record-list']": "Alpha Record"})
 
     evidence = capture_execution_evidence(page, [target])
 
     assert evidence[0].kind == "dom_text_present"
-    assert evidence[0].target == "测试项目B-001"
+    assert evidence[0].target == "Beta Record 001"
     assert evidence[0].status == "missing"
     assert evidence[0].confidence == 0.7
 
@@ -213,15 +213,15 @@ def test_capture_execution_evidence_missing_text_inside_selector() -> None:
 def test_capture_execution_evidence_unknown_when_page_unavailable() -> None:
     target = ExecutionEvidenceTarget(
         kind="dom_text_present",
-        text="测试项目B-001",
-        source_slot="item_name",
-        selector="[data-testid='item-list']",
+        text="Beta Record 001",
+        source_slot="record_name",
+        selector="[data-testid='record-list']",
     )
 
     evidence = capture_execution_evidence(None, [target])
 
     assert evidence[0].kind == "unknown"
-    assert evidence[0].target == "测试项目B-001"
+    assert evidence[0].target == "Beta Record 001"
     assert evidence[0].status == "unknown"
     assert evidence[0].confidence == 0.0
 
@@ -230,7 +230,7 @@ def test_capture_execution_evidence_does_not_verify_blank_target_text() -> None:
     target = ExecutionEvidenceTarget.model_construct(
         kind="dom_text_present",
         text="",
-        source_slot="item_name",
+        source_slot="record_name",
         selector="body",
     )
     page = _make_text_page({"body": "any page text"})
@@ -249,14 +249,14 @@ def test_build_replay_actions_reads_value_slot() -> None:
             "step": 1,
             "action_type": "fill",
             "target_selector": "#name",
-            "value": "测试项目A",
-            "value_slot": "item_name",
+            "value": "Alpha Record",
+            "value_slot": "record_name",
         }
     ]
 
     actions = _build_replay_actions(raw)
 
-    assert actions[0].value_slot == "item_name"
+    assert actions[0].value_slot == "record_name"
 
 
 # ── page_mismatch ────────────────────────────────────────────────────────────
@@ -551,15 +551,15 @@ def test_run_replay_success_with_structured_result() -> None:
 
 def test_run_replay_applies_slot_override_to_execute_and_wait() -> None:
     path = _make_learned_path(
-        dom_fingerprint=dom_fingerprint(_make_page_analysis(url="http://127.0.0.1:5176/items")),
-        page_template="/items",
+        dom_fingerprint=dom_fingerprint(_make_page_analysis(url="http://example.test/records")),
+        page_template="/records",
         actions=[
             {
                 "step": 0,
                 "action_type": "fill",
                 "target_selector": "#name",
-                "value": "测试项目A",
-                "value_slot": "item_name",
+                "value": "Alpha Record",
+                "value_slot": "record_name",
             }
         ],
     )
@@ -576,8 +576,8 @@ def test_run_replay_applies_slot_override_to_execute_and_wait() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5176/items"
-    mock_runtime.current_title.return_value = "项目列表"
+    mock_runtime.current_url.return_value = "http://example.test/records"
+    mock_runtime.current_title.return_value = "Records"
 
     executed_values: list[str | None] = []
     waited_values: list[str | None] = []
@@ -602,7 +602,7 @@ def test_run_replay_applies_slot_override_to_execute_and_wait() -> None:
     ):
         with patch(
             "app.services.learning.learned_path_replay.analyze_page",
-            return_value=_make_page_analysis(url="http://127.0.0.1:5176/items"),
+            return_value=_make_page_analysis(url="http://example.test/records"),
         ):
             with patch(
                 "app.services.execution.action_executor.execute_action",
@@ -614,31 +614,31 @@ def test_run_replay_applies_slot_override_to_execute_and_wait() -> None:
                 ):
                     result = run_replay(
                         path,
-                        "http://127.0.0.1:5176/items",
-                        slot_overrides={"item_name": "测试项目B"},
+                        "http://example.test/records",
+                        slot_overrides={"record_name": "Beta Record"},
                     )
 
     assert result.status == "succeeded"
-    assert executed_values == ["测试项目B"]
-    assert waited_values == ["测试项目B"]
+    assert executed_values == ["Beta Record"]
+    assert waited_values == ["Beta Record"]
     step = result.steps[0]
-    assert step.value_slot == "item_name"
+    assert step.value_slot == "record_name"
     assert step.override_applied is True
-    assert step.effective_value == "测试项目B"
+    assert step.effective_value == "Beta Record"
 
 
 def test_run_replay_captures_evidence_before_runtime_stop() -> None:
     path = _make_learned_path(
         dom_fingerprint=dom_fingerprint(
-            _make_page_analysis(url="http://127.0.0.1:5176/items")
+            _make_page_analysis(url="http://example.test/records")
         ),
-        page_template="/items",
+        page_template="/records",
         actions=[
             {
                 "step": 0,
                 "action_type": "fill",
                 "target_selector": "#name",
-                "value": "测试项目A",
+                "value": "Alpha Record",
             }
         ],
     )
@@ -650,7 +650,7 @@ def test_run_replay_captures_evidence_before_runtime_stop() -> None:
     def inner_text(*, timeout: int) -> str:
         call_order.append("capture")
         assert timeout == 1000
-        return "测试项目A\n测试项目B"
+        return "Alpha Record\nBeta Record"
 
     mock_locator.inner_text.side_effect = inner_text
 
@@ -663,8 +663,8 @@ def test_run_replay_captures_evidence_before_runtime_stop() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop.side_effect = lambda: call_order.append("stop")
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5176/items"
-    mock_runtime.current_title.return_value = "项目列表"
+    mock_runtime.current_url.return_value = "http://example.test/records"
+    mock_runtime.current_title.return_value = "Records"
 
     def fake_execute(action, runtime):
         return {
@@ -680,7 +680,7 @@ def test_run_replay_captures_evidence_before_runtime_stop() -> None:
     ):
         with patch(
             "app.services.learning.learned_path_replay.analyze_page",
-            return_value=_make_page_analysis(url="http://127.0.0.1:5176/items"),
+            return_value=_make_page_analysis(url="http://example.test/records"),
         ):
             with patch(
                 "app.services.execution.action_executor.execute_action",
@@ -688,19 +688,19 @@ def test_run_replay_captures_evidence_before_runtime_stop() -> None:
             ):
                 result = run_replay(
                     path,
-                    "http://127.0.0.1:5176/items",
+                    "http://example.test/records",
                     evidence_targets=[
                         ExecutionEvidenceTarget(
                             kind="dom_text_present",
-                            text="测试项目B",
-                            source_slot="item_name",
-                            selector="[data-testid='item-list']",
+                            text="Beta Record",
+                            source_slot="record_name",
+                            selector="[data-testid='record-list']",
                         )
                     ],
                 )
 
     assert result.status == "succeeded"
-    assert result.execution_evidence[0].target == "测试项目B"
+    assert result.execution_evidence[0].target == "Beta Record"
     assert result.execution_evidence[0].status == "verified"
     assert call_order == ["capture", "stop"]
 
@@ -713,8 +713,8 @@ def test_run_replay_fails_without_required_slot_override() -> None:
                 "step": 0,
                 "action_type": "fill",
                 "target_selector": "#q",
-                "value": "测试项目A",
-                "value_slot": "item_name",
+                "value": "Alpha Record",
+                "value_slot": "record_name",
             }
         ],
     )
@@ -761,7 +761,7 @@ def test_run_replay_leaves_unbound_action_value_unchanged() -> None:
                 "step": 0,
                 "action_type": "fill",
                 "target_selector": "#q",
-                "value": "测试项目A",
+                "value": "Alpha Record",
             }
         ],
     )
@@ -808,11 +808,11 @@ def test_run_replay_leaves_unbound_action_value_unchanged() -> None:
                 result = run_replay(
                     path,
                     "http://127.0.0.1:5175/users",
-                    slot_overrides={"item_name": "测试项目B"},
+                    slot_overrides={"record_name": "Beta Record"},
                 )
 
     assert result.status == "succeeded"
-    assert executed_values == ["测试项目A"]
+    assert executed_values == ["Alpha Record"]
     assert result.steps[0].override_applied is False
     assert result.steps[0].effective_value is None
 
