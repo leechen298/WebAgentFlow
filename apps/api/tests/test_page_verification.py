@@ -6,6 +6,7 @@ checks, verify_against_spec integration, and load_spec.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -44,6 +45,8 @@ from app.services.learning.page_verification import (
     _element_actual_category,
     _find_match,
     _matches,
+    get_spec_root,
+    iter_spec_paths,
     load_spec,
     verify_against_spec,
 )
@@ -989,13 +992,38 @@ class TestVerifyAgainstSpec:
 
 
 class TestLoadSpec:
-    def test_load_spec_not_found(self):
+    @staticmethod
+    def _write_spec(root: Path, spec_id: str, page_id: str | None = None) -> Path:
+        path = root / f"{spec_id}.assertions.json"
+        path.write_text(
+            json.dumps({
+                "page_id": page_id or spec_id,
+                "description": f"{spec_id} test spec",
+                "critical_elements": [],
+                "scenarios": {
+                    "s": {
+                        "description": "test scenario",
+                    },
+                },
+            }),
+            encoding="utf-8",
+        )
+        return path
+
+    def test_load_spec_not_found(self, monkeypatch):
+        monkeypatch.delenv("WAF_PAGE_SPEC_ROOT", raising=False)
         with pytest.raises(FileNotFoundError, match="not found"):
             load_spec("nonexistent_spec_12345")
 
-    def test_load_spec_real(self):
+    def test_load_spec_real(self, monkeypatch):
         """If login spec exists, load it and verify structure."""
-        spec_path = Path(__file__).resolve().parents[2] / "validation-site" / "specs" / "login.assertions.json"
+        monkeypatch.delenv("WAF_PAGE_SPEC_ROOT", raising=False)
+        spec_path = (
+            Path(__file__).resolve().parents[2]
+            / "validation-site"
+            / "specs"
+            / "login.assertions.json"
+        )
         if not spec_path.exists():
             pytest.skip("login spec not found")
         spec, path = load_spec("login")
@@ -1003,3 +1031,48 @@ class TestLoadSpec:
         assert path == spec_path
         assert len(spec.critical_elements) > 0
         assert len(spec.scenarios) > 0
+
+    def test_load_spec_uses_configured_external_root_without_fallback(
+        self,
+        monkeypatch,
+        tmp_path,
+    ):
+        root = tmp_path / "external-specs"
+        root.mkdir()
+        expected_path = self._write_spec(root, "external_login", page_id="login")
+        monkeypatch.setenv("WAF_PAGE_SPEC_ROOT", str(root))
+
+        assert get_spec_root() == root.resolve()
+        spec, path = load_spec("external_login")
+
+        assert spec.page_id == "login"
+        assert path == expected_path.resolve()
+        with pytest.raises(FileNotFoundError, match=str(root.resolve())):
+            load_spec("login")
+
+    def test_iter_spec_paths_uses_stable_sorted_order(self, monkeypatch, tmp_path):
+        root = tmp_path / "external-specs"
+        root.mkdir()
+        self._write_spec(root, "zeta")
+        self._write_spec(root, "alpha")
+        monkeypatch.setenv("WAF_PAGE_SPEC_ROOT", str(root))
+
+        assert [path.name for path in iter_spec_paths()] == [
+            "alpha.assertions.json",
+            "zeta.assertions.json",
+        ]
+
+    @pytest.mark.parametrize(
+        "spec_id",
+        [
+            "../login",
+            "nested/login",
+            "/tmp/login",
+            "login/../users",
+            r"nested\login",
+        ],
+    )
+    def test_load_spec_rejects_unsafe_spec_id(self, monkeypatch, tmp_path, spec_id):
+        monkeypatch.setenv("WAF_PAGE_SPEC_ROOT", str(tmp_path))
+        with pytest.raises(ValueError, match="Invalid spec_id"):
+            load_spec(spec_id)

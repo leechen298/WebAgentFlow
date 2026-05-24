@@ -1,8 +1,8 @@
 """Page verification — compare an autonomous run against a spec.
 
-Loads ``specs/<page>.assertions.json`` from the validation-site and
-scores a completed ``AutonomousExplorationResult`` against it. Produces
-a ``PageVerificationScorecard`` with 5 independent scores (no total).
+Loads ``<page>.assertions.json`` from the configured page spec root and scores
+a completed ``AutonomousExplorationResult`` against it. Produces a
+``PageVerificationScorecard`` with 5 independent scores (no total).
 
 All logic is rule-based. This is project code — not Claude Code analysis,
 not an LLM — so results are deterministic and auditable.
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -38,8 +39,10 @@ from app.schemas.page_verification import (
 logger = logging.getLogger(__name__)
 
 
-# Root of the validation-site specs. parents[5] == project root.
-_SPEC_ROOT = Path(__file__).resolve().parents[5] / "apps" / "validation-site" / "specs"
+_PAGE_SPEC_ROOT_ENV = "WAF_PAGE_SPEC_ROOT"
+_EMBEDDED_SPEC_ROOT = (
+    Path(__file__).resolve().parents[5] / "apps" / "validation-site" / "specs"
+)
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -47,9 +50,48 @@ _SPEC_ROOT = Path(__file__).resolve().parents[5] / "apps" / "validation-site" / 
 # ───────────────────────────────────────────────────────────────────
 
 
+def get_spec_root() -> Path:
+    """Return the configured page spec root.
+
+    ``WAF_PAGE_SPEC_ROOT`` is the preferred external fixture contract. The
+    embedded validation-site fallback is transitional and will be removed in
+    Phase 2B.
+    """
+    raw_root = os.environ.get(_PAGE_SPEC_ROOT_ENV, "").strip()
+    if raw_root:
+        return Path(raw_root).expanduser().resolve()
+    return _EMBEDDED_SPEC_ROOT.resolve()
+
+
+def _validate_spec_id(spec_id: str) -> None:
+    if (
+        not spec_id
+        or spec_id in {".", ".."}
+        or "/" in spec_id
+        or "\\" in spec_id
+        or Path(spec_id).is_absolute()
+        or ".." in Path(spec_id).parts
+    ):
+        raise ValueError(f"Invalid spec_id: {spec_id!r}")
+
+
+def iter_spec_paths() -> list[Path]:
+    """Return available spec files in deterministic sorted order."""
+    root = get_spec_root()
+    if not root.exists():
+        return []
+    return sorted(root.glob("*.assertions.json"))
+
+
 def load_spec(spec_id: str) -> tuple[PageVerificationSpec, Path]:
     """Load a page spec by id. Returns (spec, source_path)."""
-    path = _SPEC_ROOT / f"{spec_id}.assertions.json"
+    _validate_spec_id(spec_id)
+    root = get_spec_root()
+    path = (root / f"{spec_id}.assertions.json").resolve()
+    try:
+        path.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"Invalid spec_id: {spec_id!r}") from exc
     if not path.exists():
         raise FileNotFoundError(f"Page verification spec not found: {path}")
     with path.open("r", encoding="utf-8") as f:

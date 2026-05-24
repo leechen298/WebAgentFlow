@@ -31,7 +31,11 @@ OUTPUT_PATH = TMP_DIR / "replay-fixtures.json"
 
 
 def _validation_base_url() -> str:
-    return os.environ.get("E2E_VALIDATION_BASE_URL", "http://127.0.0.1:5175").rstrip("/")
+    return (
+        os.environ.get("WAF_FIXTURE_SITE_URL")
+        or os.environ.get("E2E_VALIDATION_BASE_URL")
+        or "http://127.0.0.1:5175"
+    ).rstrip("/")
 
 
 def _analyze_users_signature(validation_base_url: str) -> dict[str, Any]:
@@ -181,7 +185,7 @@ def _build_rows(signature: dict[str, Any]) -> list[tuple[str, str, LearnedPath]]
 
 def main() -> None:
     validation_base_url = _validation_base_url()
-    print(f"Analyzing validation-site signature: {validation_base_url}/users")
+    print(f"Analyzing fixture-site signature: {validation_base_url}/users")
     signature = _analyze_users_signature(validation_base_url)
 
     rows = _build_rows(signature)

@@ -381,7 +381,8 @@ class AutonomousExplorePayload(BaseModel):
     headless: bool = Field(default=True, description="Run browser in headless mode.")
     spec_id: str | None = Field(
         default=None,
-        description="If set, load apps/validation-site/specs/<spec_id>.assertions.json "
+        description="If set, load <spec_id>.assertions.json from the configured "
+        "page spec root "
         "and run the comparator after exploration.",
     )
     scenario: str | None = Field(
@@ -756,16 +757,13 @@ class SpecSummary(BaseModel):
 def list_specs() -> ApiResponse[list[SpecSummary]]:
     """List all authored page-verification specs.
 
-    Scans ``apps/validation-site/specs/*.assertions.json`` and returns
-    each spec's scenarios for the workbench dropdowns.
+    Scans the configured page spec root and returns each spec's scenarios for
+    the workbench dropdowns.
     """
-    from app.services.learning.page_verification import _SPEC_ROOT, load_spec
-
-    if not _SPEC_ROOT.exists():
-        return ApiResponse(data=[])
+    from app.services.learning.page_verification import iter_spec_paths, load_spec
 
     items: list[SpecSummary] = []
-    for path in sorted(_SPEC_ROOT.glob("*.assertions.json")):
+    for path in iter_spec_paths():
         spec_id = path.stem.removesuffix(".assertions")
         try:
             spec, _ = load_spec(spec_id)
@@ -807,6 +805,8 @@ def get_spec(spec_id: str) -> ApiResponse[SpecSummary]:
         spec, _ = load_spec(spec_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     summary = SpecSummary(
         spec_id=spec_id,

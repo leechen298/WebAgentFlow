@@ -36,7 +36,8 @@ def test_element_matcher_accepts_element_value() -> None:
     assert m.element_value == "active"
 
 
-def test_users_spec_loads_with_filter_by_status() -> None:
+def test_users_spec_loads_with_filter_by_status(monkeypatch) -> None:
+    monkeypatch.delenv("WAF_PAGE_SPEC_ROOT", raising=False)
     spec, _ = load_spec("users")
     assert "filter_by_status" in spec.scenarios
     sc = spec.scenarios["filter_by_status"]
@@ -48,7 +49,8 @@ def test_users_spec_loads_with_filter_by_status() -> None:
     assert "click:search_button" in sc.expected_actions
 
 
-def test_users_spec_has_status_radio_active_critical_element() -> None:
+def test_users_spec_has_status_radio_active_critical_element(monkeypatch) -> None:
+    monkeypatch.delenv("WAF_PAGE_SPEC_ROOT", raising=False)
     spec, _ = load_spec("users")
     roles = [ce.role for ce in spec.critical_elements]
     assert "status_radio_active" in roles

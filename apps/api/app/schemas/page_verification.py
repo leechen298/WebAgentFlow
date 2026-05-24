@@ -1,8 +1,8 @@
 """Page verification schemas.
 
-Structured representations for per-page verification specs (authored in
-``apps/validation-site/specs/<page>.assertions.json``) and the scorecard
-produced after an autonomous run is compared against a spec.
+Structured representations for per-page verification specs (loaded from the
+configured page spec root) and the scorecard produced after an autonomous run
+is compared against a spec.
 
 Design notes:
   - Specs are authored BEFORE any autonomous-run output, as an independent

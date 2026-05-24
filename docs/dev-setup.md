@@ -63,13 +63,29 @@
    pnpm run dev:worker
    ```
 
-5. Start the validation-site fixtures (port 5175):
+5. Start the external Fixture-Site (port 5175) from its standalone repo:
 
    ```bash
-   pnpm run dev:validation
+   cd /Users/leechen/projects/WebAgentFlow-Fixture-Site
+   pnpm dev
    ```
 
-Or start all four at once with `pnpm run dev` from the repo root.
+   Configure WebAgentFlow to use that external fixture URL and spec root:
+
+   ```bash
+   export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+   export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
+   # Local example:
+   export WAF_PAGE_SPEC_ROOT=/Users/leechen/projects/WebAgentFlow-Fixture-Site/web/specs
+   ```
+
+   `WAF_PAGE_SPEC_ROOT` is the explicit spec source for page verification.
+   If it is unset, the API still falls back to `apps/validation-site/specs`
+   for Phase 2A compatibility. That embedded fallback is transitional and
+   will be removed in Phase 2B.
+
+Or start repo-local services with `pnpm run dev` from the repo root; that still
+uses the transitional embedded validation-site during Phase 2A.
 
 ## Build and Quality Checks
 
@@ -104,7 +120,7 @@ result JSON. The API must be running (`pnpm run dev:api`).
 
 ```bash
 .venv/bin/wagent verify --spec-id login --scenario valid_credentials
-.venv/bin/wagent verify --url http://localhost:5175/users \
+.venv/bin/wagent verify --url "${WAF_FIXTURE_SITE_URL:-http://127.0.0.1:5175}/users" \
     --fill-values '{"name":"alice"}'
 ```
 

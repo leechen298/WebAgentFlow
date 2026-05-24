@@ -68,11 +68,28 @@
    pnpm run dev:worker
    ```
 
-5. 起 validation-site（自主探索的验证靶站）：
+5. 从独立仓库启动外部 Fixture-Site（端口 5175）：
 
    ```bash
-   pnpm run dev:validation
+   cd /Users/leechen/projects/WebAgentFlow-Fixture-Site
+   pnpm dev
    ```
+
+   配置 WebAgentFlow 使用这个外部 fixture URL 和 spec root：
+
+   ```bash
+   export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+   export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
+   # 本机示例：
+   export WAF_PAGE_SPEC_ROOT=/Users/leechen/projects/WebAgentFlow-Fixture-Site/web/specs
+   ```
+
+   `WAF_PAGE_SPEC_ROOT` 是 page verification 的显式 spec 来源。未设置时，
+   API 仍会为了 Phase 2A 过渡兼容回退到 `apps/validation-site/specs`。
+   这个内嵌 fallback 是临时的，将在 Phase 2B 移除。
+
+也可以在主仓库根目录用 `pnpm run dev` 启动仓库内服务；Phase 2A 期间这仍会
+使用过渡性的内嵌 validation-site。
 
 ## 构建与质量检查
 
@@ -103,7 +120,7 @@ Claude Code 从 `.claude/skills/` 发现项目级 skills，所以本仓库可以
 
 ```bash
 .venv/bin/wagent verify --spec-id login --scenario valid_credentials
-.venv/bin/wagent verify --url http://localhost:5175/users \
+.venv/bin/wagent verify --url "${WAF_FIXTURE_SITE_URL:-http://127.0.0.1:5175}/users" \
     --fill-values '{"name":"alice"}'
 ```
 

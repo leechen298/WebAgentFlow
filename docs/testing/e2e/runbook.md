@@ -38,7 +38,7 @@ exploratory，必须使用 Codex、Claude Code 或其他浏览器能力工具，
 第一版默认由开发者手动启动依赖服务：
 
 - FastAPI server。
-- validation-site。
+- 外部 Fixture-Site。
 - console。
 - 已完成 schema 迁移并写入 E2E seed 数据的 PostgreSQL。
 
@@ -50,12 +50,24 @@ Playwright config 暂时不使用 `webServer` 编排全部服务。等回归轨�
 1. 启动 Docker 基础设施：`pnpm run docker:up`。
 2. 执行 API 数据库迁移：`pnpm run db:migrate:api`。
 3. 启动 API server：`API_PORT=8001 pnpm run dev:api`。
-4. 启动 validation-site：`pnpm run dev:validation`。
+4. 从独立仓库启动外部 Fixture-Site：
+   `cd /Users/leechen/projects/WebAgentFlow-Fixture-Site && pnpm dev`。
 5. 启动 console：
    `VITE_USE_DEV_PROXY=true API_PORT=8001 CONSOLE_PORT=5174 pnpm run dev:console`。
-6. 写入 replay 固定数据：
+6. 配置 fixture URL 和显式 spec root：
+   `export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175`；
+   `export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs`。
+   本机示例：
+   `export WAF_PAGE_SPEC_ROOT=/Users/leechen/projects/WebAgentFlow-Fixture-Site/web/specs`。
+7. 写入 replay 固定数据：
    `.venv/bin/python apps/e2e/scripts/seed-replay-fixtures.py`。
-7. 运行 E2E：`pnpm run test:e2e`。
+8. 运行 E2E：`pnpm run test:e2e`。
+
+`WAF_PAGE_SPEC_ROOT` 未设置时，API 仍会为了 Phase 2A 过渡兼容回退到
+`apps/validation-site/specs`。这个内嵌 fallback 是临时的，将在 Phase 2B
+移除。E2E fixture URL 的优先级固定为 `WAF_FIXTURE_SITE_URL` >
+`E2E_VALIDATION_BASE_URL` > `http://127.0.0.1:5175`；`E2E_VALIDATION_BASE_URL`
+只是临时兼容 fallback。
 
 首次运行前，用 `pnpm run test:e2e:install` 安装 Playwright Test Chromium
 浏览器。如果该命令卡在 `playwright install chromium`，通常是浏览器下载或网络

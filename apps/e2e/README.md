@@ -51,9 +51,30 @@ pnpm run db:migrate:api
 
 ```bash
 API_PORT=8001 pnpm run dev:api
-pnpm run dev:validation
 VITE_USE_DEV_PROXY=true API_PORT=8001 CONSOLE_PORT=5174 pnpm run dev:console
 ```
+
+另外从独立仓库启动外部 Fixture-Site：
+
+```bash
+cd /Users/leechen/projects/WebAgentFlow-Fixture-Site
+pnpm dev
+```
+
+配置 WebAgentFlow E2E 使用外部 fixture URL 和显式 spec root：
+
+```bash
+export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
+# 本机示例：
+export WAF_PAGE_SPEC_ROOT=/Users/leechen/projects/WebAgentFlow-Fixture-Site/web/specs
+```
+
+`WAF_PAGE_SPEC_ROOT` 未设置时，API 仍会为了 Phase 2A 过渡兼容回退到
+`apps/validation-site/specs`。这个内嵌 fallback 是临时的，将在 Phase 2B
+移除。E2E fixture URL 的优先级固定为 `WAF_FIXTURE_SITE_URL` >
+`E2E_VALIDATION_BASE_URL` > `http://127.0.0.1:5175`；`E2E_VALIDATION_BASE_URL`
+只是临时兼容 fallback。
 
 第一版 E2E 默认这些服务已经运行，不使用 Playwright `webServer` 自动编排。
 
@@ -91,14 +112,15 @@ pnpm run test:e2e:ui
 
 - API：`http://127.0.0.1:8001`
 - Console：`http://127.0.0.1:5174`
-- Validation site：`http://127.0.0.1:5175`
+- Fixture site：`http://127.0.0.1:5175`
 
 可以通过环境变量覆盖：
 
 ```bash
 E2E_API_BASE_URL=http://127.0.0.1:8001 \
 E2E_CONSOLE_BASE_URL=http://127.0.0.1:5174 \
-E2E_VALIDATION_BASE_URL=http://127.0.0.1:5175 \
+WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175 \
+WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs \
 pnpm run test:e2e
 ```
 
