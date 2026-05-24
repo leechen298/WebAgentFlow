@@ -1,5 +1,9 @@
 {
   "target_name": "product-test-site-items",
+  "metadata": {
+    "status": "historical",
+    "note": "Targets the removed embedded product-test-site and is retained for M11.3 historical reproduction only."
+  },
   "product_url": "http://127.0.0.1:5176/items",
   "target_label": "Product test items page",
   "values": {

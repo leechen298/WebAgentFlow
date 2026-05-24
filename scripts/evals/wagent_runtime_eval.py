@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""WAgent runtime eval runner for M11.3.6.x."""
+"""Historical WAgent runtime eval runner for M11.3.6.x.
+
+This runner targets the removed embedded product-test-site. It is retained for
+historical reproduction only and requires explicit opt-in before live behavior
+cases can run.
+"""
 
 import argparse
 import hashlib
@@ -95,6 +100,11 @@ FORBIDDEN_PAYLOAD_TERMS = {
 PROHIBITED_AUTONOMOUS_PATH_FRAGMENT = "autonomous" + "-runs"
 PROHIBITED_DIRECT_REPLAY_SUFFIX = "/" + "replay"
 ALLOWED_OPERATOR_SURFACES = {"cli", "ui"}
+LEGACY_PRODUCT_SITE_BLOCK_REASON = "legacy_product_site_eval_requires_explicit_opt_in"
+LEGACY_PRODUCT_SITE_BLOCK_MESSAGE = (
+    "This eval targets the removed embedded product-test-site and is historical "
+    "only. Use --allow-legacy-product-site only for historical reproduction."
+)
 
 
 @dataclass
@@ -107,6 +117,7 @@ class EvalConfig:
     result_dir: Path
     browser_visibility: str
     write_markdown: bool = True
+    allow_legacy_product_site: bool = False
 
 
 @dataclass
@@ -174,6 +185,8 @@ class EvalResult:
     operator_actions: list[OperatorActionRecord | dict[str, Any]] = field(
         default_factory=list
     )
+    block_reason: str | None = None
+    legacy_product_site: bool = False
 
 
 class EvalBlockedError(RuntimeError):
@@ -214,6 +227,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-markdown", action="store_true")
     parser.add_argument("--json-only", action="store_true")
+    parser.add_argument(
+        "--allow-legacy-product-site",
+        action="store_true",
+        help=(
+            "Allow historical reproduction against the removed embedded "
+            "product-test-site target."
+        ),
+    )
     return parser
 
 
@@ -229,6 +250,7 @@ def parse_config(argv: list[str] | None = None) -> EvalConfig:
         result_dir=args.result_dir,
         browser_visibility=args.browser_visibility,
         write_markdown=not (args.no_markdown or args.json_only),
+        allow_legacy_product_site=args.allow_legacy_product_site,
     )
 
 
@@ -2609,6 +2631,8 @@ def _build_cli_operator_action(
         command.extend(["--timeout", str(config.timeout)])
     if config.browser_visibility != "headless":
         command.extend(["--browser-visibility", config.browser_visibility])
+    if config.allow_legacy_product_site:
+        command.append("--allow-legacy-product-site")
     return OperatorActionRecord(
         surface="cli",
         action="run_wagent_runtime_eval",
@@ -2664,6 +2688,34 @@ def _argv_command(argv: list[str] | None) -> list[str]:
     return [sys.argv[0], *argv]
 
 
+def _legacy_product_site_blocked_case(case_id: str) -> CaseResult:
+    return CaseResult(
+        case_id=case_id,
+        status="blocked",
+        gates=[
+            GateResult(
+                "legacy_product_site_archived",
+                True,
+                "blocked",
+                (
+                    f"{LEGACY_PRODUCT_SITE_BLOCK_REASON}: "
+                    f"{LEGACY_PRODUCT_SITE_BLOCK_MESSAGE}"
+                ),
+                "runner",
+            )
+        ],
+        warnings=[LEGACY_PRODUCT_SITE_BLOCK_MESSAGE],
+    )
+
+
+def _is_legacy_product_site_blocked(result: EvalResult) -> bool:
+    return (
+        result.status == "blocked"
+        and result.legacy_product_site
+        and result.block_reason == LEGACY_PRODUCT_SITE_BLOCK_REASON
+    )
+
+
 def _evidence_field(evidence: str, key: str) -> str | None:
     prefix = f"{key}="
     for part in evidence.split(";"):
@@ -2676,9 +2728,31 @@ def _evidence_field(evidence: str, key: str) -> str | None:
 def run_eval(config: EvalConfig) -> EvalResult:
     started_at = utc_now()
     operator_actions = [_build_cli_operator_action(config, started_at=started_at)]
-    preflight = run_preflight(config)
     environment = {"commit": _git_commit(), "cwd": str(Path.cwd())}
     config_dict = _config_dict(config)
+    if not config.allow_legacy_product_site:
+        cases = [_legacy_product_site_blocked_case(case) for case in config.cases]
+        return EvalResult(
+            schema_version=SCHEMA_VERSION,
+            status="blocked",
+            environment=environment,
+            services={},
+            config=config_dict,
+            session_id=None,
+            case_results=cases,
+            turns=[],
+            events=[],
+            messages=[],
+            history={},
+            learned_paths=[],
+            raw_api_responses={},
+            gate_summary=_gate_summary(cases),
+            operator_actions=operator_actions,
+            block_reason=LEGACY_PRODUCT_SITE_BLOCK_REASON,
+            legacy_product_site=True,
+        )
+
+    preflight = run_preflight(config)
     if preflight.status == "blocked":
         operator_evidence = {"operator_actions": _to_jsonable(operator_actions)}
         cases = [
@@ -3178,6 +3252,7 @@ def _config_dict(config: EvalConfig) -> dict[str, Any]:
         "result_dir": str(config.result_dir),
         "browser_visibility": config.browser_visibility,
         "write_markdown": config.write_markdown,
+        "allow_legacy_product_site": config.allow_legacy_product_site,
     }
 
 
@@ -3729,6 +3804,14 @@ def main(argv: list[str] | None = None) -> int:
         duration_ms=int((time.perf_counter() - start) * 1000),
         exit_code=exit_code,
     )
+    if _is_legacy_product_site_blocked(result):
+        print(f"status={result.status}")
+        print(f"exit_code={exit_code}")
+        print(f"block_reason={result.block_reason}")
+        print(LEGACY_PRODUCT_SITE_BLOCK_MESSAGE)
+        for case in result.case_results:
+            print(f"case={case.case_id} status={case.status}")
+        return exit_code
     try:
         artifact_path, markdown_path = write_artifacts(result, config)
     except Exception as exc:  # noqa: BLE001 - maps to artifact failure exit

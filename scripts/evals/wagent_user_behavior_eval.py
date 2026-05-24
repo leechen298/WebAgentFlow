@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""11.3.7 user-facing WAgent behavior eval runner.
+"""Historical 11.3.7 user-facing WAgent behavior eval runner.
 
 This runner is a project eval surface. It drives the Conversation API and
 records sanitized operator evidence. It must not call direct replay,
 autonomous-run endpoints, or verify-scenario.
+
+The default spec targets the removed embedded product-test-site. Live behavior
+cases are retained for historical reproduction only and require explicit opt-in.
 """
 
 import argparse
@@ -41,10 +44,16 @@ DEFAULT_CASES = [
     FORBIDDEN_TARGET_SCAN_CASE,
 ]
 ALL_CASES = set(DEFAULT_CASES)
+SCAN_ONLY_CASES = {FORBIDDEN_TARGET_SCAN_CASE}
 
 PROHIBITED_AUTONOMOUS_PATH_FRAGMENT = "autonomous" + "-runs"
 PROHIBITED_DIRECT_REPLAY_SUFFIX = "/" + "replay"
 ALLOWED_OPERATOR_SURFACES = {"cli", "ui"}
+LEGACY_PRODUCT_SITE_BLOCK_REASON = "legacy_product_site_eval_requires_explicit_opt_in"
+LEGACY_PRODUCT_SITE_BLOCK_MESSAGE = (
+    "This eval targets the removed embedded product-test-site and is historical "
+    "only. Use --allow-legacy-product-site only for historical reproduction."
+)
 CURRENT_SCOPE_STRATEGIES = {"current_eval_session", "current_eval_scope", "explicit_eval_scope"}
 UNKNOWN_SCOPE_STRATEGIES = {"fresh_session", "isolated_scope", "explicit_filtered_catalog"}
 SENSITIVE_TERMS = {
@@ -86,6 +95,7 @@ class EvalConfig:
     result_dir: Path
     browser_visibility: str
     write_markdown: bool = True
+    allow_legacy_product_site: bool = False
 
 
 @dataclass
@@ -139,6 +149,8 @@ class EvalResult:
     operator_actions: list[OperatorActionRecord | dict[str, Any]]
     raw_product_client_records: list[dict[str, Any]]
     gate_summary: dict[str, Any]
+    block_reason: str | None = None
+    legacy_product_site: bool = False
 
 
 class EvalBlockedError(RuntimeError):
@@ -184,6 +196,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-markdown", action="store_true")
     parser.add_argument("--json-only", action="store_true")
+    parser.add_argument(
+        "--allow-legacy-product-site",
+        action="store_true",
+        help=(
+            "Allow historical reproduction against the removed embedded "
+            "product-test-site target."
+        ),
+    )
     return parser
 
 
@@ -202,6 +222,7 @@ def parse_config(argv: list[str] | None = None) -> EvalConfig:
         result_dir=args.result_dir,
         browser_visibility=args.browser_visibility,
         write_markdown=not (args.no_markdown or args.json_only),
+        allow_legacy_product_site=args.allow_legacy_product_site,
     )
 
 
@@ -218,7 +239,7 @@ def _normalize_cases(raw_cases: list[str] | None) -> list[str]:
 
 
 def load_spec(path: Path) -> dict[str, Any]:
-    spec_path = path if path.is_absolute() else Path.cwd() / path
+    spec_path = path if path.is_absolute() else repo_root() / path
     return json.loads(spec_path.read_text(encoding="utf-8"))
 
 
@@ -1082,13 +1103,31 @@ def run_eval(config: EvalConfig) -> EvalResult:
     operator_actions = [_build_cli_operator_action(config, started_at)]
     spec = load_spec(config.spec_path)
     evaluator = UserBehaviorGateEvaluator()
-    scan_result = run_forbidden_target_scan(spec)
-    case_results = [evaluator.evaluate_forbidden_target_scan(scan_result)]
     environment = {"commit": _git_commit(), "cwd": str(Path.cwd())}
     sessions: dict[str, str] = {}
     raw_records: list[dict[str, Any]] = []
     services: dict[str, Any] = {}
     behavior_cases = [case for case in config.cases if case != FORBIDDEN_TARGET_SCAN_CASE]
+
+    if _requires_legacy_product_site_opt_in(config):
+        case_results = [
+            _legacy_product_site_blocked_case(case_id) for case_id in config.cases
+        ]
+        return _build_eval_result(
+            config=config,
+            spec=spec,
+            environment=environment,
+            services=services,
+            case_results=case_results,
+            sessions=sessions,
+            raw_records=raw_records,
+            operator_actions=operator_actions,
+            block_reason=LEGACY_PRODUCT_SITE_BLOCK_REASON,
+            legacy_product_site=True,
+        )
+
+    scan_result = run_forbidden_target_scan(spec)
+    case_results = [evaluator.evaluate_forbidden_target_scan(scan_result)]
 
     if case_results[0].status != "pass":
         return _build_eval_result(
@@ -1390,6 +1429,40 @@ def _blocked_case(case_id: str, reason: str) -> CaseResult:
     )
 
 
+def _legacy_product_site_blocked_case(case_id: str) -> CaseResult:
+    return CaseResult(
+        case_id=case_id,
+        status="blocked",
+        gates=[
+            GateResult(
+                "legacy_product_site_archived",
+                True,
+                "blocked",
+                (
+                    f"{LEGACY_PRODUCT_SITE_BLOCK_REASON}: "
+                    f"{LEGACY_PRODUCT_SITE_BLOCK_MESSAGE}"
+                ),
+                "runner",
+            )
+        ],
+        warnings=[LEGACY_PRODUCT_SITE_BLOCK_MESSAGE],
+    )
+
+
+def _requires_legacy_product_site_opt_in(config: EvalConfig) -> bool:
+    return (not config.allow_legacy_product_site) and any(
+        case not in SCAN_ONLY_CASES for case in config.cases
+    )
+
+
+def _is_legacy_product_site_blocked(result: EvalResult) -> bool:
+    return (
+        result.status == "blocked"
+        and result.legacy_product_site
+        and result.block_reason == LEGACY_PRODUCT_SITE_BLOCK_REASON
+    )
+
+
 def _terminal_case(status: str, evidence: str, source: str) -> CaseResult:
     return CaseResult(
         case_id="runner",
@@ -1408,6 +1481,8 @@ def _build_eval_result(
     sessions: dict[str, str],
     raw_records: list[dict[str, Any]],
     operator_actions: list[OperatorActionRecord],
+    block_reason: str | None = None,
+    legacy_product_site: bool = False,
 ) -> EvalResult:
     status = overall_status(case_results)
     return EvalResult(
@@ -1426,6 +1501,8 @@ def _build_eval_result(
         operator_actions=operator_actions,
         raw_product_client_records=raw_records,
         gate_summary=_gate_summary(case_results),
+        block_reason=block_reason,
+        legacy_product_site=legacy_product_site,
     )
 
 
@@ -1439,6 +1516,7 @@ def _config_dict(config: EvalConfig) -> dict[str, Any]:
         "result_dir": str(config.result_dir),
         "browser_visibility": config.browser_visibility,
         "write_markdown": config.write_markdown,
+        "allow_legacy_product_site": config.allow_legacy_product_site,
     }
 
 
@@ -1687,6 +1765,14 @@ def main(argv: list[str] | None = None) -> int:
         duration_ms=int((time.perf_counter() - start) * 1000),
         exit_code=exit_code,
     )
+    if _is_legacy_product_site_blocked(result):
+        print(f"status={result.status}")
+        print(f"exit_code={exit_code}")
+        print(f"block_reason={result.block_reason}")
+        print(LEGACY_PRODUCT_SITE_BLOCK_MESSAGE)
+        for case in result.case_results:
+            print(f"case={case.case_id} status={case.status}")
+        return exit_code
     artifact_path, markdown_path = write_artifacts(result, config)
     print(f"status={result.status}")
     print(f"exit_code={exit_code}")

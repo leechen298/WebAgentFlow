@@ -577,6 +577,66 @@ def test_parse_config_defaults() -> None:
     assert config.artifact_dir == Path("artifacts/wagent-eval")
     assert config.result_dir == Path("docs/testing/results")
     assert config.browser_visibility == "headless"
+    assert config.allow_legacy_product_site is False
+
+
+def test_parse_config_accepts_legacy_product_site_opt_in() -> None:
+    runner = _load_runner()
+
+    config = runner.parse_config(["--allow-legacy-product-site"])
+
+    assert config.allow_legacy_product_site is True
+
+
+def test_default_run_eval_blocks_legacy_product_site_without_preflight(
+    monkeypatch,
+) -> None:
+    runner = _load_runner()
+    config = runner.parse_config([])
+
+    monkeypatch.setattr(
+        runner,
+        "run_preflight",
+        lambda _config: (_ for _ in ()).throw(AssertionError("preflight called")),
+    )
+
+    result = runner.run_eval(config)
+
+    assert result.status == "blocked"
+    assert result.block_reason == "legacy_product_site_eval_requires_explicit_opt_in"
+    assert result.legacy_product_site is True
+    assert result.services == {}
+    assert [case.status for case in result.case_results] == ["blocked", "blocked"]
+    assert result.case_results[0].gates[0].name == "legacy_product_site_archived"
+
+
+def test_default_main_blocks_legacy_product_site_without_artifacts(
+    monkeypatch,
+    capsys,
+) -> None:
+    runner = _load_runner()
+
+    monkeypatch.setattr(
+        runner,
+        "run_preflight",
+        lambda _config: (_ for _ in ()).throw(AssertionError("preflight called")),
+    )
+    monkeypatch.setattr(
+        runner,
+        "write_artifacts",
+        lambda _result, _config: (_ for _ in ()).throw(
+            AssertionError("artifact write called")
+        ),
+    )
+
+    exit_code = runner.main(["--json-only"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 2
+    assert "status=blocked" in captured.out
+    assert "legacy_product_site_eval_requires_explicit_opt_in" in captured.out
+    assert "--allow-legacy-product-site" in captured.out
+    assert "json_artifact=" not in captured.out
 
 
 def test_parse_config_accepts_failure_recovery_case() -> None:
@@ -1422,7 +1482,9 @@ def test_single_path_regression_fails_when_execution_uses_old_path() -> None:
 
 def test_evidence_collection_timeout_becomes_timeout_result(monkeypatch) -> None:
     runner = _load_runner()
-    config = runner.parse_config(["--case", "items_closed_loop"])
+    config = runner.parse_config(
+        ["--case", "items_closed_loop", "--allow-legacy-product-site"]
+    )
 
     monkeypatch.setattr(
         runner,
@@ -1714,7 +1776,9 @@ def test_failure_recovery_case_blocks_on_invalid_api_and_writes_case_result(
     monkeypatch,
 ) -> None:
     runner = _load_runner()
-    config = runner.parse_config(["--case", "failure_recovery_menu_safety"])
+    config = runner.parse_config(
+        ["--case", "failure_recovery_menu_safety", "--allow-legacy-product-site"]
+    )
 
     monkeypatch.setattr(
         runner,
@@ -1740,7 +1804,9 @@ def test_planner_choice_case_blocks_on_invalid_api_and_writes_case_result(
     monkeypatch,
 ) -> None:
     runner = _load_runner()
-    config = runner.parse_config(["--case", "planner_backed_choice"])
+    config = runner.parse_config(
+        ["--case", "planner_backed_choice", "--allow-legacy-product-site"]
+    )
 
     monkeypatch.setattr(
         runner,
