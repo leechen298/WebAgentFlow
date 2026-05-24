@@ -28,6 +28,22 @@ from app.services.conversation.intake import redact_sensitive_payload
 from app.services.conversation.provenance import normalize_response_provenance
 from app.services.conversation.trace_sanitizer import sanitize_provider_thinking
 
+_PUBLIC_PRIVATE_KEYS = {
+    "pending_choice_private_map",
+    "learned_path_id",
+    "old_learned_path_id",
+    "new_learned_path_id",
+    "path_id",
+    "slot_overrides",
+    "evidence_targets",
+    "execution_payload",
+    "replay_action",
+    "replay_actions",
+    "selector",
+    "target_selector",
+    "xpath",
+}
+
 
 class ConversationHistoryService:
     def __init__(self, db_session: Session) -> None:
@@ -71,7 +87,7 @@ class ConversationHistoryService:
                 id=e.id,
                 session_id=e.session_id,
                 type=e.type,
-                payload=conversation_event_public_payload(e.payload_json),
+                payload=conversation_event_public_payload(e.payload_json, event_type=e.type),
                 created_at=e.created_at,
             )
             for e in events
@@ -110,7 +126,10 @@ class ConversationHistoryService:
                         "id": e.id,
                         "session_id": e.session_id,
                         "type": e.type,
-                        "payload": conversation_event_public_payload(e.payload_json),
+                        "payload": conversation_event_public_payload(
+                            e.payload_json,
+                            event_type=e.type,
+                        ),
                         "created_at": (e.created_at.isoformat() if e.created_at else None),
                     }
                     for e in events
@@ -129,7 +148,7 @@ class ConversationHistoryService:
             id=message.id,
             session_id=message.session_id,
             role=message.role,
-            content=_history_safe_payload(message.content),
+            content=conversation_message_public_content(message.content),
             metadata=metadata,
             response_provenance=normalize_response_provenance(
                 metadata,
@@ -243,7 +262,7 @@ class ConversationHistoryService:
         for event in events:
             if event.type != "llm_trace_recorded":
                 continue
-            payload = _history_safe_payload(event.payload_json or {})
+            payload = _public_llm_trace_payload(event.payload_json or {})
             trace_id = str(payload.get("trace_id") or event.id)
             results.append(
                 ConversationLlmTraceResponse(
@@ -257,14 +276,10 @@ class ConversationHistoryService:
                     prompt_hash=payload.get("prompt_hash"),
                     schema_name=payload.get("schema_name"),
                     schema_version=payload.get("schema_version"),
-                    schema_validation=_dict_or_empty(payload.get("schema_validation")),
+                    validation=_dict_or_empty(payload.get("validation")),
                     latency_ms=payload.get("latency_ms"),
-                    token_usage=_dict_or_empty(payload.get("token_usage")),
-                    raw_request=_dict_or_empty(payload.get("raw_request")),
-                    raw_response=_dict_or_empty(payload.get("raw_response")),
-                    parsed_output=_dict_or_empty(payload.get("parsed_output")),
+                    usage=_dict_or_empty(payload.get("usage")),
                     redaction=_dict_or_empty(payload.get("redaction")),
-                    raw=payload,
                     source_event_id=event.id,
                     created_at=event.created_at,
                 )
@@ -321,7 +336,13 @@ def _history_safe_payload(value: Any) -> Any:
     )
 
 
-def conversation_event_public_payload(value: Any) -> Any:
+def conversation_message_public_content(value: Any) -> Any:
+    return _history_safe_payload(value)
+
+
+def conversation_event_public_payload(value: Any, *, event_type: str | None = None) -> Any:
+    if event_type == "llm_trace_recorded":
+        return _public_llm_trace_payload(value)
     stripped = _strip_history_private_payload(value)
     progress_kind = stripped.get("progress_kind") if isinstance(stripped, dict) else None
     if progress_kind in {
@@ -335,6 +356,82 @@ def conversation_event_public_payload(value: Any) -> Any:
     return sanitize_provider_thinking(redact_sensitive_payload(stripped))
 
 
+def _public_llm_trace_payload(value: Any) -> dict[str, Any]:
+    payload = _dict_or_empty(value)
+    result: dict[str, Any] = {}
+    for key in (
+        "trace_id",
+        "purpose",
+        "agent_role",
+        "provider",
+        "model",
+        "request_id",
+        "prompt_template_id",
+        "prompt_hash",
+        "schema_name",
+        "schema_version",
+        "latency_ms",
+    ):
+        if payload.get(key) is not None:
+            result[key] = sanitize_provider_thinking(redact_sensitive_payload(payload.get(key)))
+
+    validation = _public_trace_validation(payload.get("schema_validation"))
+    if validation:
+        result["validation"] = validation
+    usage = _public_trace_usage(payload.get("token_usage") or payload.get("usage"))
+    if usage:
+        result["usage"] = usage
+    redaction = _public_trace_redaction(payload.get("redaction"))
+    if redaction:
+        result["redaction"] = redaction
+    return result
+
+
+def _public_trace_validation(value: Any) -> dict[str, Any]:
+    validation = _dict_or_empty(value)
+    if not validation:
+        return {}
+    if validation.get("ok") is True or validation.get("valid") is True:
+        return {"status": "ok"}
+    status = str(validation.get("status") or "").strip().lower()
+    if status in {"ok", "valid", "pass", "passed"}:
+        return {"status": "ok"}
+    if status in {"error", "invalid", "failed", "fail"}:
+        result: dict[str, Any] = {"status": "error"}
+    else:
+        result = {"status": "error" if validation else "unknown"}
+    error_count = validation.get("error_count")
+    if isinstance(error_count, int):
+        result["error_count"] = error_count
+    return result
+
+
+def _public_trace_usage(value: Any) -> dict[str, Any]:
+    usage = _dict_or_empty(value)
+    result: dict[str, Any] = {}
+    for source_key, public_key in (
+        ("prompt_tokens", "prompt"),
+        ("completion_tokens", "completion"),
+        ("total_tokens", "total"),
+        ("prompt", "prompt"),
+        ("completion", "completion"),
+        ("total", "total"),
+    ):
+        metric = usage.get(source_key)
+        if isinstance(metric, int | float):
+            result[public_key] = metric
+    return result
+
+
+def _public_trace_redaction(value: Any) -> dict[str, Any]:
+    redaction = _dict_or_empty(value)
+    result: dict[str, Any] = {}
+    for key in ("applied", "status", "strategy"):
+        if key in redaction:
+            result[key] = sanitize_provider_thinking(redact_sensitive_payload(redaction[key]))
+    return result
+
+
 def _strip_session_private_payload(value: Any) -> Any:
     if isinstance(value, list):
         return [_strip_session_private_payload(item) for item in value]
@@ -342,7 +439,7 @@ def _strip_session_private_payload(value: Any) -> Any:
         return {
             key: _strip_session_private_payload(item)
             for key, item in value.items()
-            if key not in {"pending_choice_private_map", "learned_path_id"}
+            if key not in _PUBLIC_PRIVATE_KEYS
         }
     return value
 
@@ -356,11 +453,18 @@ def _strip_history_private_payload(value: Any, *, in_pending_choice: bool = Fals
     if isinstance(value, dict):
         result: dict[str, Any] = {}
         for key, item in value.items():
-            if key == "pending_choice_private_map":
+            if key in _PUBLIC_PRIVATE_KEYS:
+                if key == "execution_payload" and isinstance(item, dict):
+                    result["execution_summary"] = _strip_history_private_payload(
+                        {
+                            "target_url": item.get("target_url"),
+                            "alias": item.get("alias"),
+                            "execution_evidence": item.get("execution_evidence"),
+                        },
+                        in_pending_choice=in_pending_choice,
+                    )
                 continue
             child_in_pending_choice = in_pending_choice or key == "pending_choice"
-            if child_in_pending_choice and key == "learned_path_id":
-                continue
             result[key] = _strip_history_private_payload(
                 item,
                 in_pending_choice=child_in_pending_choice,

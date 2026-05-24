@@ -1,6 +1,6 @@
 # 11.3.7 · User-facing WAgent Behavior Eval
 
-状态：behavior_eval_runner_implemented（anti-hardcoding gate pass，live first-wave behavior eval blocked by unavailable API）
+状态：pass（first-wave user-facing behavior gates passed；full learn-then-execute remains non-required follow-up）
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
@@ -85,17 +85,17 @@
 11.3.7 anti-hardcoding blocker 清理包；post-cleanup forbidden-target scan 已在产品 runtime /
 prompt 路径上返回 `pass` / `0 matches`。
 
-`pnpm run eval:wagent:user-behavior` runner 已实现，并已产出稳定 JSON / Markdown artifact。
-当前 artifact 的总体状态是 `blocked`，不是 `pass`：forbidden-target case pass，但本地
-Conversation API `http://127.0.0.1:8001/health` 返回 connection refused，因此 URL-only known /
-unknown、unknown choose-learn、execute-known / unknown、vague input 和 live known / unknown
-isolation 仍未完成有效产品行为验证。
+`pnpm run eval:wagent:user-behavior` runner 已实现，并已在本地 API + product-test-site 可用时跑完
+first-wave behavior gates。当前稳定 JSON / Markdown artifact 的总体状态是 `pass`：forbidden-target
+case、URL-only known / unknown、unknown choose-learn、execute-known / unknown、execute-unknown
+choose-learn staged learning flow、vague input、known / unknown isolation 和 public redaction gates
+均通过。`full_learn_then_execute` 仍记录为 non-required `follow_up`，不能解读为完整 learn-then-execute
+能力已经完成。
 
 当前 reviewable artifact：
 
 - `artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json`
 - `docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md`
 
-11.3.7 只能在 live Conversation API / product-test-site preflight 可用、first-wave gates 全部跑完、
-稳定 artifacts 通过 redaction 检查后，再根据证据判断 `pass` / `fail` / `blocked` /
-`unverified`。
+11.3.7 的当前判断来自最新稳定 artifacts 和 integrity checks；如果后续修改 runtime、eval runner、
+target spec 或 product-test-site，需要重新运行 eval 和 redaction / forbidden-target gates。

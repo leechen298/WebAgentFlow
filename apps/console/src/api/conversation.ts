@@ -48,14 +48,10 @@ export interface ConversationLlmTrace {
   prompt_hash: string | null;
   schema_name: string | null;
   schema_version: string | null;
-  schema_validation: Record<string, unknown>;
+  validation: Record<string, unknown>;
   latency_ms: number | null;
-  token_usage: Record<string, unknown>;
-  raw_request: Record<string, unknown>;
-  raw_response: Record<string, unknown>;
-  parsed_output: Record<string, unknown>;
+  usage: Record<string, unknown>;
   redaction: Record<string, unknown>;
-  raw: Record<string, unknown>;
   source_event_id: string | null;
   created_at: string | null;
 }

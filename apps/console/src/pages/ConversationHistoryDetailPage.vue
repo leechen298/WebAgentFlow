@@ -65,7 +65,7 @@
                   <span>{{ trace.request_id || '-' }}</span>
                   <span>{{ trace.schema_name || '-' }}</span>
                   <span>{{ trace.latency_ms ?? '-' }} ms</span>
-                  <span>{{ tokenUsageLabel(trace.token_usage) }}</span>
+                  <span>{{ usageLabel(trace.usage) }}</span>
                   <span>{{ redactionLabel(trace.redaction) }}</span>
                 </div>
               </a-timeline-item>
@@ -185,10 +185,10 @@ function tracesForMessage(messageItem: ConversationHistoryMessage): Conversation
     .filter((trace): trace is ConversationLlmTrace => Boolean(trace));
 }
 
-function tokenUsageLabel(tokenUsage: Record<string, unknown>): string {
-  const prompt = tokenUsage.prompt_tokens ?? '-';
-  const completion = tokenUsage.completion_tokens ?? '-';
-  const total = tokenUsage.total_tokens ?? '-';
+function usageLabel(usage: Record<string, unknown>): string {
+  const prompt = usage.prompt ?? '-';
+  const completion = usage.completion ?? '-';
+  const total = usage.total ?? '-';
   return `prompt ${prompt} / completion ${completion} / total ${total}`;
 }
 

@@ -68,8 +68,8 @@ ChatIntentKind = Literal["learn_page", "execute_task", "unknown"]
 
 _URL_RE = re.compile(r"https?://[^\s，。]+")
 _LEARN_KEYWORDS = ("学习", "学一下", "learn", "teach")
-_NO_PATH_RESPONSE = "还没学过这个操作，需要先学习。"
-_UNLEARNED_TARGET_RESPONSE = "还没学过这个站点或页面，需要先学习。"
+_NO_PATH_RESPONSE = "还没学过这个页面或操作。请提供页面地址和要做的操作，或先学习这个操作。"
+_UNLEARNED_TARGET_RESPONSE = "还没学过这个页面。你可以先学习这个页面上的操作、查看页面，或取消。"
 _AMBIGUOUS_TARGET_RESPONSE = "这个操作在多个站点学过，请带上要操作的页面地址。"
 _VALUE_PATTERN = r"([^\s，。,.；;!！?？]+)"
 _PENDING_SENSITIVE_VALUES: dict[str, dict[str, str]] = {}
@@ -1291,7 +1291,15 @@ class InteractiveChatRuntime:
             input_summary={"missing_fields": ["operation_goal"]},
             output_summary={"target_url": target.url},
         )
-        response = "我已经记住这个页面地址。你想让我学习或执行哪个操作？"
+        target_actions = self._learned_actions_for_target(session_id, target.url)
+        if target_actions:
+            labels = _safe_action_label_list(target_actions)
+            response = (
+                f"我已经记住这个页面地址。这个页面已学过这些操作：{labels}。"
+                "你想执行哪个操作，或学习新的操作？"
+            )
+        else:
+            response = _UNLEARNED_TARGET_RESPONSE
         self._append_agent_message(
             session_id,
             response,
@@ -1830,6 +1838,13 @@ class InteractiveChatRuntime:
         action = self._match_session_action(session_id, intent.raw_text, intake=intake)
         if action is None:
             user_url = _extract_url(intent.raw_text)
+            target_url = (
+                intent.url
+                or user_url
+                or (intake.target.url if intake else None)
+                or (route_decision.target.url if route_decision else None)
+            )
+            target_actions = self._learned_actions_for_target(session_id, target_url)
             candidates = self._matching_session_actions(
                 session_id,
                 intent.raw_text,
@@ -1845,7 +1860,7 @@ class InteractiveChatRuntime:
                         events=events,
                         message_id=message_id,
                         previous_status=previous_status,
-                        target_url=intent.url or user_url,
+                        target_url=target_url,
                         goal=intake.action.goal if intake else intent.raw_text,
                     )
                 return self._handle_planner_pending_choice_question(
@@ -1856,7 +1871,7 @@ class InteractiveChatRuntime:
                     events=events,
                     message_id=message_id,
                     previous_status=previous_status,
-                    target_url=intent.url or user_url,
+                    target_url=target_url,
                     goal=intake.action.goal if intake else intent.raw_text,
                     intake=intake,
                 )
@@ -1868,16 +1883,14 @@ class InteractiveChatRuntime:
                 # recommend it, but runtime requires explicit learning first.
                 self._save_last_no_path_reason(
                     session_id,
-                    target_url=route_decision.target.url,
+                    target_url=target_url,
                     user_goal=route_decision.user_goal,
                     reason="learn_then_execute_requires_learning_first",
                     message_id=message_id,
                 )
                 self._save_pending_target(
                     session_id,
-                    make_pending_target(route_decision.target.url)
-                    if route_decision.target.url
-                    else None,
+                    make_pending_target(target_url) if target_url else None,
                 )
                 self._record_skill_call(
                     session_id,
@@ -1886,23 +1899,19 @@ class InteractiveChatRuntime:
                     input_summary=route_decision.model_dump(mode="json"),
                     output_summary={"reason": "learning_confirmation_required_before_execution"},
                 )
-                response = "我还没学过这个操作。你可以先让我学习这个页面上的操作。"
-                self._append_agent_message(session_id, response)
-                self._append_event(
-                    session_id,
-                    ConversationEventType.CHAT_NO_PATH,
-                    {"reason": "learn_then_execute_requires_learning_first"},
-                    events,
-                )
-                return self._result(
-                    session_id=session_id,
-                    command_kind="execute_task",
-                    user_response=response,
-                    events=events,
-                    message_id=message_id,
-                    previous_status=previous_status,
-                )
-            if user_url and not self._has_learned_target(session_id, user_url):
+                if target_actions:
+                    return self._handle_unmatched_target_operation(
+                        session_id=session_id,
+                        command_kind="execute_task",
+                        message_id=message_id,
+                        metadata=metadata,
+                        existing_events=events,
+                        previous_status=previous_status,
+                        target_url=target_url,
+                        user_goal=route_decision.user_goal,
+                        learned_actions=target_actions,
+                        reason="learn_then_execute_requires_learning_first",
+                    )
                 return self._handle_unlearned_target(
                     session_id=session_id,
                     command_kind="execute_task",
@@ -1910,8 +1919,32 @@ class InteractiveChatRuntime:
                     metadata=metadata,
                     existing_events=events,
                     previous_status=previous_status,
-                    target_url=user_url,
+                    target_url=target_url,
+                    user_goal=route_decision.user_goal,
+                    reason="learn_then_execute_requires_learning_first",
+                )
+            if target_url and not target_actions:
+                return self._handle_unlearned_target(
+                    session_id=session_id,
+                    command_kind="execute_task",
+                    message_id=message_id,
+                    metadata=metadata,
+                    existing_events=events,
+                    previous_status=previous_status,
+                    target_url=target_url,
                     user_goal=intake.action.goal if intake else None,
+                )
+            if target_actions:
+                return self._handle_unmatched_target_operation(
+                    session_id=session_id,
+                    command_kind="execute_task",
+                    message_id=message_id,
+                    metadata=metadata,
+                    existing_events=events,
+                    previous_status=previous_status,
+                    target_url=target_url,
+                    user_goal=intake.action.goal if intake else None,
+                    learned_actions=target_actions,
                 )
             return self._handle_no_path(
                 session_id=session_id,
@@ -2719,6 +2752,7 @@ class InteractiveChatRuntime:
         previous_status: str = ConversationStatus.TASK_INTAKE.value,
         target_url: str | None = None,
         user_goal: str | None = None,
+        reason: str = "unlearned_target_url",
     ) -> DispatchResult:
         events = existing_events or self._append_chat_command_event(
             session_id=session_id,
@@ -2730,7 +2764,7 @@ class InteractiveChatRuntime:
             session_id,
             target_url=target_url,
             user_goal=user_goal,
-            reason="unlearned_target_url",
+            reason=reason,
             message_id=message_id,
         )
         if target_url:
@@ -2740,7 +2774,7 @@ class InteractiveChatRuntime:
             session_id,
             ConversationEventType.CHAT_NO_PATH,
             {
-                "reason": "unlearned_target_url",
+                "reason": reason,
                 "target_url": target_url,
                 "user_goal": user_goal,
             },
@@ -2750,6 +2784,64 @@ class InteractiveChatRuntime:
             session_id=session_id,
             command_kind=command_kind,
             user_response=_UNLEARNED_TARGET_RESPONSE,
+            events=events,
+            message_id=message_id,
+            previous_status=previous_status,
+        )
+
+    def _handle_unmatched_target_operation(
+        self,
+        *,
+        session_id: str,
+        command_kind: str,
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        learned_actions: list[dict[str, Any]],
+        existing_events: list[str] | None = None,
+        previous_status: str = ConversationStatus.TASK_INTAKE.value,
+        target_url: str | None = None,
+        user_goal: str | None = None,
+        reason: str = "target_operation_unmatched",
+    ) -> DispatchResult:
+        events = existing_events or self._append_chat_command_event(
+            session_id=session_id,
+            raw_input="",
+            command_kind=command_kind,
+            metadata=metadata,
+        )
+        self._save_last_no_path_reason(
+            session_id,
+            target_url=target_url,
+            user_goal=user_goal,
+            reason=reason,
+            message_id=message_id,
+        )
+        if target_url:
+            self._save_pending_target(session_id, make_pending_target(target_url))
+        labels = _safe_action_label_list(learned_actions)
+        response = (
+            f"我学过这个页面的一些操作：{labels}。"
+            "但还没学过你要做的这个操作。你可以先学习这个新操作，学会后再让我执行，或取消。"
+        )
+        self._append_agent_message(session_id, response)
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_NO_PATH,
+            {
+                "reason": reason,
+                "target_url": target_url,
+                "user_goal": user_goal,
+                "learned_action_count": len(learned_actions),
+                "learned_action_labels": [
+                    str(action.get("alias") or "") for action in learned_actions
+                ],
+            },
+            events,
+        )
+        return self._result(
+            session_id=session_id,
+            command_kind=command_kind,
+            user_response=response,
             events=events,
             message_id=message_id,
             previous_status=previous_status,
@@ -3658,12 +3750,29 @@ class InteractiveChatRuntime:
         )
 
     def _has_learned_target(self, session_id: str, url: str) -> bool:
+        return bool(self._learned_actions_for_target(session_id, url))
+
+    def _learned_actions_for_target(
+        self,
+        session_id: str,
+        url: str | None,
+    ) -> list[dict[str, Any]]:
         session = self._repo.get_session(session_id)
         if session is None:
             raise ValueError(f"session not found: {session_id}")
+        actions = [
+            action
+            for action in list((session.metadata_json or {}).get("learned_actions") or [])
+            if isinstance(action, dict)
+        ]
+        if not url:
+            return []
         normalized_url = _normalize_url(url)
-        actions = list((session.metadata_json or {}).get("learned_actions") or [])
-        return any(_normalize_url(action.get("target_url")) == normalized_url for action in actions)
+        return [
+            action
+            for action in actions
+            if _normalize_url(action.get("target_url")) == normalized_url
+        ]
 
     def _has_ambiguous_action_match(self, session_id: str, raw_input: str) -> bool:
         if _extract_url(raw_input):
@@ -4477,6 +4586,20 @@ def _action_scope_key(action: dict[str, Any]) -> tuple[str, str]:
     return (str(action.get("alias") or ""), _normalize_url(action.get("target_url")))
 
 
+def _safe_action_label_list(actions: list[dict[str, Any]], *, limit: int = 5) -> str:
+    labels: list[str] = []
+    seen: set[str] = set()
+    for action in actions:
+        label = str(action.get("alias") or "").strip()
+        if not label or label in seen:
+            continue
+        seen.add(label)
+        labels.append(label)
+        if len(labels) >= limit:
+            break
+    return "、".join(labels) if labels else "已学习操作"
+
+
 def _matching_actions(
     actions: list[dict[str, Any]],
     normalized_input: str,
@@ -4484,6 +4607,10 @@ def _matching_actions(
     intake: ConversationIntakeResult | None = None,
 ) -> list[dict[str, Any]]:
     intake_terms = _intake_match_terms(intake)
+    normalized_intake_terms = {
+        phrase for term in intake_terms if (phrase := _normalize_action_match_phrase(term))
+    }
+    normalized_user_phrase = _normalize_action_match_phrase(normalized_input)
     candidates: list[dict[str, Any]] = []
     for action in actions:
         utterances = action.get("utterances") or []
@@ -4491,13 +4618,61 @@ def _matching_actions(
         action_terms = {str(item) for item in utterances if item}
         if alias:
             action_terms.add(str(alias))
+        normalized_action_terms = {
+            phrase
+            for term in action_terms
+            if (phrase := _normalize_action_match_phrase(term))
+        }
         if (
             normalized_input in action_terms
             or (alias and alias in normalized_input)
             or (intake_terms and action_terms.intersection(intake_terms))
+            or (
+                normalized_user_phrase
+                and normalized_user_phrase in normalized_action_terms
+            )
+            or bool(normalized_intake_terms.intersection(normalized_action_terms))
         ):
             candidates.append(action)
     return candidates
+
+
+def _normalize_action_match_phrase(text: str) -> str:
+    value = (text or "").strip().lower()
+    if not value:
+        return ""
+    value = _URL_RE.sub("", value)
+    value = re.sub(
+        r"(?:名称|(?<![a-z0-9_])name(?![a-z0-9_]))"
+        r"\s*(?:叫|是|为|=|:|：)\s*[^\s，。,.；;!！?？]+",
+        "",
+        value,
+        flags=re.I,
+    )
+    value = re.sub(r"\b(?:url|address)\b\s*[:：]?", "", value, flags=re.I)
+    for phrase in ("页面地址", "当前页面", "这个页面", "页面", "地址是", "地址"):
+        value = value.replace(phrase, "")
+    for prefix in (
+        "请帮我",
+        "你帮我",
+        "帮我",
+        "帮忙",
+        "请",
+        "我要",
+        "我想",
+        "执行一下",
+        "执行",
+        "学习一下",
+        "学一下",
+        "学习",
+        "please",
+        "can you",
+    ):
+        if value.startswith(prefix):
+            value = value[len(prefix):]
+            break
+    value = re.sub(r"[\s，。,.；;!！?？:：\"'“”‘’（）()\[\]{}]+", "", value)
+    return value
 
 
 def _looks_like_vague_operation_request(text: str) -> bool:

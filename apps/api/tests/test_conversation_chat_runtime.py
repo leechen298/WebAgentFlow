@@ -215,6 +215,55 @@ def _ingest_items_path(
     return str(path.id)
 
 
+def _ingest_record_path(
+    db_session: Session,
+    *,
+    source_run_id: str | None = None,
+    value_slot: str | None = "entity_name",
+    page_template: str = "/records",
+) -> str:
+    if source_run_id is not None and db_session.get(ExplorationRun, source_run_id) is None:
+        ExplorationRunRepository(db_session).create(
+            ExplorationRun(
+                id=source_run_id,
+                page_signature=page_template,
+                status="completed",
+                summary="records test run",
+                result_snapshot_json={},
+            )
+        )
+
+    fingerprint = hashlib.sha256(
+        (source_run_id or f"records-{value_slot or 'fixed'}").encode()
+    ).hexdigest()
+    fill_action: dict[str, Any] = {
+        "step": 1,
+        "action_type": "fill",
+        "target_selector": "#record-name",
+        "target_description": "Name",
+        "value": "Alpha",
+    }
+    if value_slot:
+        fill_action["value_slot"] = value_slot
+    path, _created = LearnedPathRepository(db_session).ingest_run(
+        page_template=page_template,
+        query_signature={},
+        dom_fingerprint=fingerprint,
+        scenario="product_level",
+        actions=[
+            fill_action,
+            {
+                "step": 2,
+                "action_type": "click",
+                "target_selector": "button[type=submit]",
+                "target_description": "Create",
+            },
+        ],
+        source_run_id=source_run_id,
+    )
+    return str(path.id)
+
+
 def test_parse_chat_intent_learn_page_extracts_url() -> None:
     intent = parse_chat_intent("学习一下这个登录页怎么登录，地址是 http://localhost:5175/login")
 
@@ -870,7 +919,10 @@ def test_interactive_chat_bare_url_saves_pending_target_without_browser_action(
     assert learning_called is False
     assert replay_called is False
     assert result.command_kind == "ask_user"
-    assert result.user_response == "我已经记住这个页面地址。你想让我学习或执行哪个操作？"
+    assert "还没学过这个页面" in result.user_response
+    assert "学习" in result.user_response
+    assert "查看" in result.user_response
+    assert "取消" in result.user_response
 
     session = repo.get_session(session_id)
     assert session is not None
@@ -975,11 +1027,68 @@ def test_interactive_chat_bare_url_with_learned_actions_does_not_plan(
 
     assert replay_called is False
     assert result.command_kind == "ask_user"
-    assert result.user_response == "我已经记住这个页面地址。你想让我学习或执行哪个操作？"
+    assert "新增项目" in result.user_response
+    assert "学习" in result.user_response
+    assert "执行" in result.user_response
     events = repo.list_events(session_id)
     assert not any(
         e.type == "chat_progress_recorded"
         and e.payload_json.get("progress_kind") == "planner_candidates_generated"
+        for e in events
+    )
+    assert not any(e.type == "chat_execution_started" for e in events)
+
+
+def test_interactive_chat_unknown_url_choose_learn_starts_learning_flow(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        calls.append((url, raw_input, kwargs))
+        learned_path_id = _ingest_record_path(
+            db_session,
+            source_run_id="run-url-unknown-choose-learn",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-url-unknown-choose-learn",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/records",
+            scenario="product_level",
+            action_label="创建记录",
+            suggested_utterances=["帮我创建记录", "创建记录一下"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    first = orch.dispatch_user_input(
+        session_id,
+        "http://localhost:5176/records",
+        metadata={"client": "wagent_chat"},
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "学习创建记录，名称叫 Alpha",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert "还没学过这个页面" in first.user_response
+    assert result.allowed is True
+    assert result.command_kind == "learn_page"
+    assert len(calls) == 1
+    assert calls[0] == (
+        "http://localhost:5176/records",
+        "学习创建记录，名称叫 Alpha",
+        {"headless": False, "fill_values": {"entity_name": "Alpha"}},
+    )
+    events = repo.list_events(session_id)
+    assert any(e.type == "chat_learning_started" for e in events)
+    assert any(
+        e.type == "chat_learning_completed"
+        and e.payload_json.get("run_id") == "run-url-unknown-choose-learn"
         for e in events
     )
     assert not any(e.type == "chat_execution_started" for e in events)
@@ -3096,7 +3205,10 @@ def test_interactive_chat_rejects_unlearned_target_url(
         metadata={"client": "wagent_chat"},
     )
 
-    assert result.user_response == "还没学过这个站点或页面，需要先学习。"
+    assert "还没学过这个页面" in result.user_response
+    assert "学习" in result.user_response
+    assert "查看" in result.user_response
+    assert "取消" in result.user_response
     assert replay_called is False
 
 
@@ -4404,6 +4516,188 @@ def test_interactive_chat_execute_uses_canonical_goal_aliases(
     assert calls == [(learned_path_id, "http://localhost:5176/workspace-login")]
 
 
+def test_interactive_chat_execute_matches_value_specific_learned_alias_generically(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_record_path(
+        db_session,
+        source_run_id="run-value-specific-alias",
+        value_slot="entity_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "创建记录名称叫 Alpha",
+                    "utterances": ["帮我创建记录名称叫 Alpha"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/records",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/records",
+                    "scenario": None,
+                }
+            ]
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            execution_evidence=[
+                {
+                    "kind": "dom_text_present",
+                    "target": "Beta",
+                    "status": "verified",
+                    "confidence": 0.95,
+                    "summary": "页面文本中出现了目标值“Beta”。",
+                }
+            ],
+        )
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我创建记录，名称叫 Beta",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert "页面证据已确认目标值“Beta”" in result.user_response
+    assert len(calls) == 1
+    assert calls[0][0] == learned_path_id
+    assert calls[0][1] == "http://localhost:5176/records"
+    assert calls[0][2]["slot_overrides"] == {"entity_name": "Beta"}
+    assert calls[0][2]["evidence_targets"][0].text == "Beta"
+    events = repo.list_events(session_id)
+    assert any(e.type == "chat_execution_started" for e in events)
+    assert any(
+        e.type == "task_result_reported"
+        and e.payload_json.get("verification_outcome") == "verified"
+        for e in events
+    )
+
+
+def test_interactive_chat_single_candidate_conflicting_action_does_not_execute(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_record_path(db_session, source_run_id="run-conflict-action")
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/records",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/records",
+                    "scenario": None,
+                }
+            ]
+        },
+    )
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("conflicting explicit action must not replay the only candidate")
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我删除记录，页面 http://localhost:5176/records",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert "学过这个页面的一些操作" in result.user_response
+    assert "还没学过你要做的这个操作" in result.user_response
+    events = repo.list_events(session_id)
+    assert not any(e.type == "chat_execution_started" for e in events)
+
+
+def test_interactive_chat_execute_unknown_page_guidance_does_not_replay(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("unknown page must not replay")
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我创建记录，名称叫 Alpha，页面 http://localhost:5176/records",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert "还没学过这个页面" in result.user_response
+    assert "学习" in result.user_response
+    assert "查看" in result.user_response
+    assert "取消" in result.user_response
+    events = repo.list_events(session_id)
+    assert not any(e.type == "chat_execution_started" for e in events)
+
+
+def test_interactive_chat_execute_learned_page_unmatched_operation_guidance(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_record_path(db_session, source_run_id="run-unmatched-operation")
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": "http://localhost:5176/records",
+                    "site_origin": "http://localhost:5176",
+                    "page_template": "/records",
+                    "scenario": None,
+                }
+            ]
+        },
+    )
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("unmatched operation must not replay unrelated action")
+
+    orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        "帮我删除记录，页面 http://localhost:5176/records",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert "学过这个页面的一些操作" in result.user_response
+    assert "创建记录" in result.user_response
+    assert "还没学过你要做的这个操作" in result.user_response
+    assert "学习" in result.user_response
+    assert "取消" in result.user_response
+    events = repo.list_events(session_id)
+    assert not any(e.type == "chat_execution_started" for e in events)
+
+
 def test_interactive_chat_missing_session_action_does_not_use_global_paths(
     db_session: Session,
     repo: ConversationRepository,
@@ -4433,7 +4727,8 @@ def test_interactive_chat_missing_session_action_does_not_use_global_paths(
     assert result.command_kind == "execute_task"
     assert result.previous_status == "idle"
     assert result.next_status == "task_intake"
-    assert result.user_response == "还没学过这个操作，需要先学习。"
+    assert "还没学过这个页面" in result.user_response
+    assert "学习" in result.user_response
     assert replay_called is False
 
 

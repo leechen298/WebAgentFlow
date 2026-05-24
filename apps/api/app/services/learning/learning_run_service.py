@@ -231,7 +231,10 @@ class LearningRunService:
             # or the LLM supervisor explicitly says this path should be saved.
             # Static-page flows can mutate DOM state without a URL/title change,
             # so the rule-side success flag is too narrow.
-            if not _product_learning_should_save_path(final_data):
+            if not _product_learning_should_save_path(
+                final_data,
+                request.fill_values or {},
+            ):
                 return None
         else:
             if _pass_gate_from_final_data(final_data) != "pass":
@@ -405,8 +408,14 @@ def _pass_gate_from_final_data(final_data: dict[str, Any]) -> str | None:
     return gate.get("status")
 
 
-def _product_learning_should_save_path(final_data: dict[str, Any]) -> bool:
+def _product_learning_should_save_path(
+    final_data: dict[str, Any],
+    fill_values: dict[str, str],
+) -> bool:
     if final_data.get("success"):
+        return True
+
+    if _final_state_confirms_fill_value(final_data, fill_values):
         return True
 
     supervisor = final_data.get("supervisor")
@@ -418,6 +427,30 @@ def _product_learning_should_save_path(final_data: dict[str, Any]) -> bool:
         and supervisor.get("_supervisor_source") == "llm"
         and not supervisor.get("_supervisor_partial_parse", False)
     )
+
+
+def _final_state_confirms_fill_value(
+    final_data: dict[str, Any],
+    fill_values: dict[str, str],
+) -> bool:
+    values = [str(value).strip() for value in fill_values.values() if str(value).strip()]
+    if not values:
+        return False
+    final_state = final_data.get("final_state")
+    if not isinstance(final_state, dict):
+        return False
+    visible_parts: list[str] = []
+    for key in ("body_text", "visible_text", "page_text"):
+        value = final_state.get(key)
+        if isinstance(value, str):
+            visible_parts.append(value)
+    alerts = final_state.get("alert_texts")
+    if isinstance(alerts, list):
+        visible_parts.extend(str(item) for item in alerts if item is not None)
+    visible_text = "\n".join(visible_parts)
+    if not visible_text:
+        return False
+    return any(value in visible_text for value in values)
 
 
 def _scenario_matched_from(final_data: dict[str, Any]) -> bool | None:
@@ -480,6 +513,7 @@ def _product_action_label_for(request: LearningRunRequest) -> str:
         return "进入工作台"
 
     goal = _strip_product_learning_noise(request.goal or "")
+    goal = _strip_named_value_clauses(goal)
     if "进入工作台" in goal:
         return "进入工作台"
     if "登录" in goal and "工作台" in goal:
@@ -501,3 +535,14 @@ def _strip_product_learning_noise(text: str) -> str:
     for phrase in ("学习一下", "学一下", "学习", "这个", "页面", "地址是"):
         cleaned = cleaned.replace(phrase, "")
     return cleaned.strip()
+
+
+def _strip_named_value_clauses(text: str) -> str:
+    cleaned = re.sub(
+        r"(?:名称|(?<![A-Za-z0-9_])name(?![A-Za-z0-9_]))"
+        r"\s*(?:叫|是|为|=|:|：)\s*[^\s，。,.；;!！?？]+",
+        "",
+        text,
+        flags=re.I,
+    )
+    return cleaned.strip(" ，,。.!！?？")

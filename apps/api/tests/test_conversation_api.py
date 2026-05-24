@@ -1474,21 +1474,60 @@ def test_get_history_extracts_redacted_llm_traces(
         json={"type": "llm_trace_recorded", "payload": trace_payload},
     )
 
+    events_resp = client.get(f"/conversation/sessions/{session_id}/events")
     resp = client.get(f"/conversation/sessions/{session_id}/history")
 
+    assert events_resp.status_code == 200
     assert resp.status_code == 200
+    public_dump = json.dumps(
+        {
+            "events": events_resp.json()["data"],
+            "history": resp.json()["data"],
+        },
+        ensure_ascii=False,
+    ).lower()
+    for forbidden in (
+        "password",
+        "credential",
+        "token",
+        "secret",
+        "raw_request",
+        "raw_response",
+        "parsed_output",
+        "prompt messages",
+        "content",
+        "123456",
+    ):
+        assert forbidden not in public_dump
+
+    event_payload = events_resp.json()["data"][0]["payload"]
+    assert event_payload == {
+        "trace_id": "trace-1",
+        "purpose": "conversation_intake",
+        "agent_role": "conversation_intake_agent",
+        "provider": "openai_compatible",
+        "model": "m-test",
+        "request_id": "req-1",
+        "prompt_template_id": "conversation_intake_agent.v1",
+        "prompt_hash": "hash-1",
+        "schema_name": "ConversationIntakeResult",
+        "schema_version": "m11.3.4",
+        "validation": {"status": "ok"},
+        "latency_ms": 42,
+        "usage": {"prompt": 10, "completion": 5, "total": 15},
+        "redaction": {"applied": True},
+    }
+
     payload = resp.json()["data"]
-    assert "123456" not in str(payload)
     assert payload["llm_traces"][0]["trace_id"] == "trace-1"
     assert payload["llm_traces"][0]["provider"] == "openai_compatible"
     assert payload["llm_traces"][0]["model"] == "m-test"
     assert payload["llm_traces"][0]["request_id"] == "req-1"
     assert payload["llm_traces"][0]["schema_name"] == "ConversationIntakeResult"
     assert payload["llm_traces"][0]["latency_ms"] == 42
-    assert payload["llm_traces"][0]["token_usage"]["total_tokens"] == 15
+    assert payload["llm_traces"][0]["usage"]["total"] == 15
     assert payload["llm_traces"][0]["redaction"]["applied"] is True
     assert payload["raw"]["llm_traces"][0]["trace_id"] == "trace-1"
-    assert "[REDACTED]" in str(payload["raw"]["llm_traces"][0])
 
 
 def test_get_history_extracts_entry_gate_trace(

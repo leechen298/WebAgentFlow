@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：behavior_eval_runner_implemented（live first-wave behavior eval blocked by unavailable API）
+状态：pass（first-wave user-facing behavior gates passed；full learn-then-execute remains non-required follow-up）
 
 ## 2026-05-23 文档草案
 
@@ -238,6 +238,74 @@
   - It does not change the committed behavior artifact decision: 11.3.7 remains not pass until live first-wave cases
     run against available Conversation API and product-test-site services.
 
+## 2026-05-24 User-facing behavior gate fix closeout
+
+- Reviewer：Codex using `webagentflow-eval-integrity`
+- Decision：PASS for 11.3.7 first-wave required gates
+- Scope：
+  - Fixed only the current required gate failures:
+    public `llm_trace_recorded` redaction, known action matching / execution,
+    URL-only unknown guidance and execute-unknown guidance.
+  - Product runtime / prompts remain target-agnostic; no product-test-site route, selector, fixture item,
+    field name or operation alias was added to runtime / prompts.
+  - Eval was driven through `pnpm run eval:wagent:user-behavior`, which uses the Conversation API surface.
+  - No `verify-scenario`, Console UI smoke, direct replay endpoint or direct autonomous-run endpoint was used.
+- Implementation notes：
+  - Public LLM trace events / history now expose safe trace metadata only and omit raw prompt / response /
+    parsed output content.
+  - Known action matching now normalizes generic action phrases and strips user-provided named values, so
+    value-specific learned aliases do not block later parameterized execution.
+  - Single-candidate scope does not override an explicit conflicting user action; unmatched operations are routed
+    to no-match / learn guidance rather than replaying an unrelated action.
+  - Unknown URL and unknown execute flows distinguish no learned actions for the page from a learned page with an
+    unmatched operation.
+  - Product-level learning can save a path when generic visible page text confirms a user-provided value, without
+    relying on target-specific constants or external LLM supervisor success.
+- Live eval setup：
+  - Local API and product-test-site were started.
+  - API was restarted with `LLM_API_KEY` empty so intake / router / entry-gate use deterministic fallback and no
+    external LLM provider receives local page / conversation data during this run.
+- Evidence：
+  - Command:
+    `PYTHONPATH=. ../../.venv/bin/pytest tests/test_conversation_api.py tests/test_conversation_chat_runtime.py tests/test_wagent_user_behavior_eval.py tests/test_target_agnostic_runtime_cleanup.py tests/test_conversation_intake.py tests/test_learning_run_service.py tests/test_learned_path_replay.py tests/test_conversation_replay_hook.py tests/test_replay_observation_summary.py -q`
+  - Result: `283 passed in 12.66s`.
+  - Command:
+    `cd apps/api && ../../.venv/bin/python -m ruff check app/services/conversation/chat_runtime.py app/services/conversation/history.py app/services/learning/learning_run_service.py tests/test_conversation_api.py tests/test_conversation_chat_runtime.py tests/test_learning_run_service.py tests/test_wagent_user_behavior_eval.py tests/test_target_agnostic_runtime_cleanup.py`
+  - Result: `All checks passed!`.
+  - Command:
+    `pnpm run eval:wagent:user-behavior -- --timeout 300`
+  - Result: exit `0`, top-level `status=pass`.
+  - Stable JSON artifact: `artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json`.
+  - Stable Markdown artifact:
+    `docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md`.
+  - Timestamped JSON artifact:
+    `artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-20260524T022511Z.json`.
+  - Timestamped Markdown artifact:
+    `docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-20260524T022511Z.md`.
+  - Command:
+    `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_result_gate_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json`
+  - Result: `decision=PASS`, reason `all detectable required gates/cases passed`.
+  - Command:
+    `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_artifact_redaction_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md`
+  - Result: `status=pass`, `match_count=0`.
+  - Command:
+    `python3 .agents/skills/webagentflow-eval-integrity/scripts/forbidden_target_scan.py --manifest /private/tmp/wagent-user-behavior-target-manifest.json --root /Users/leechen/projects/WebAgentFlow/v0.1`
+  - Result: `status=pass`, `match_count=0`, `missing_forbidden_paths=[]`.
+  - Command: `git diff --check`
+  - Result: pass.
+- Gate summary from latest artifact：
+  - `forbidden_test_target_not_in_runtime_code_or_prompts`: pass.
+  - `url_only_known_page`: pass.
+  - `execute_known_action`: pass.
+  - `url_only_unknown_page`: pass.
+  - `url_only_unknown_choose_learn_starts_learning`: pass.
+  - `execute_unknown_action`: pass.
+  - `execute_unknown_choose_learn_then_execute_or_learning_flow`: pass for required staged learning-flow gates.
+  - `vague_input_no_execution`: pass.
+- Caveat：
+  - `full_learn_then_execute` is explicitly non-required and remains `follow_up` in the latest artifact.
+    This PASS does not claim complete learn-then-execute support.
+
 ## 最终差异（Final Delta）
 
 ### 实际交付
@@ -252,25 +320,26 @@
 - Implemented `pnpm run eval:wagent:user-behavior` runner and eval-only target spec.
 - Added unit coverage for first-wave gate semantics, artifact redaction, exit-code mapping, scan-only execution,
   pnpm argument separator handling and blocked forbidden-scan short-circuit.
-- Added stable JSON / Markdown artifacts for the current behavior eval run. The committed artifact is `blocked`
-  because the local Conversation API was unavailable, not because 11.3.7 passed.
+- Added stable JSON / Markdown artifacts for the current behavior eval run. The latest stable artifact is `pass`
+  for all first-wave required gates, with full learn-then-execute recorded as a non-required follow-up.
 
 ### 相对 Intent / Contract / Technical Design / Test Plan / Plan 的偏差
 
 - The original docs-only draft later became a mixed docs + eval-runner implementation package.
-- The first live behavior artifact is `blocked` due unavailable local API; this is evidence of runnable eval
-  plumbing and hard-gate behavior, not first-wave behavior pass evidence.
+- Earlier behavior artifacts were `blocked` or `fail`; the latest artifact supersedes them for the current code and
+  records first-wave required gate pass evidence.
 
 ### WebAgentFlow Live Run 边界（Live Run Boundary）
 
-本轮没有触发 `verify-scenario`、autonomous run、Console UI smoke、direct replay endpoint 或
-product-driven browser execution。`pnpm run eval:wagent:user-behavior` only attempted the approved
-Conversation API eval surface and stopped at API preflight when the service was unavailable.
+本轮没有触发 `verify-scenario`、Console UI smoke、direct replay endpoint 或 direct autonomous-run
+endpoint。`pnpm run eval:wagent:user-behavior` used the approved Conversation API eval surface. Product-level
+learning inside the API used the existing product learning runtime as part of the Conversation flow; it was not invoked
+through a direct autonomous-run endpoint by Codex.
 
 ### E2E / Codex 外部测试操作员证据（E2E / Codex Evidence）
 
-本轮已运行 11.3.7 eval runner, but the live behavior cases did not execute because API preflight was
-unavailable. Therefore 11.3.7 must not be claimed as tested pass.
+本轮已运行 11.3.7 eval runner against local API + product-test-site services. The latest artifact is `pass`;
+the pass claim is limited to first-wave required gates and does not include full learn-then-execute.
 
 ### 验证证据（Validation Evidence）
 
@@ -288,18 +357,23 @@ unavailable. Therefore 11.3.7 must not be claimed as tested pass.
 | `pnpm run eval:wagent:user-behavior -- --timeout 15` | Full runner emits artifact and honest non-pass when preflight blocked | `status=blocked`, exit `2`; API health connection refused | 2 | Blocked | committed JSON / Markdown artifact | This is not a behavior pass |
 | `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_result_gate_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json` | Committed JSON is not treated as pass | `decision=BLOCKED`, reason `top-level status is blocked` | 2 | Blocked | command output | Exit `2` is expected for blocked artifact |
 | `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_artifact_redaction_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-20260523T170951Z.json docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-20260523T170951Z.md` | Public artifact redaction passes | `status=pass`, `match_count=0` | 0 | Pass | command output | Applies to blocked artifact |
+| `PYTHONPATH=. ../../.venv/bin/pytest tests/test_conversation_api.py tests/test_conversation_chat_runtime.py tests/test_wagent_user_behavior_eval.py tests/test_target_agnostic_runtime_cleanup.py tests/test_conversation_intake.py tests/test_learning_run_service.py tests/test_learned_path_replay.py tests/test_conversation_replay_hook.py tests/test_replay_observation_summary.py -q` | Targeted runtime / eval regression passes after gate fixes | `283 passed in 12.66s` | 0 | Pass | command output | Current code |
+| `cd apps/api && ../../.venv/bin/python -m ruff check app/services/conversation/chat_runtime.py app/services/conversation/history.py app/services/learning/learning_run_service.py tests/test_conversation_api.py tests/test_conversation_chat_runtime.py tests/test_learning_run_service.py tests/test_wagent_user_behavior_eval.py tests/test_target_agnostic_runtime_cleanup.py` | Touched API/test lint passes | `All checks passed!` | 0 | Pass | command output | Current code |
+| `pnpm run eval:wagent:user-behavior -- --timeout 300` | First-wave user-facing behavior gates pass | `status=pass`, exit `0`; all eight cases pass | 0 | Pass | JSON / Markdown artifact | API was started with `LLM_API_KEY` empty; full learn-then-execute remains follow-up |
+| `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_result_gate_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json` | Latest JSON gate decision is pass | `decision=PASS`, reason `all detectable required gates/cases passed` | 0 | Pass | command output | Current latest artifact |
+| `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_artifact_redaction_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md` | Latest artifacts are redacted | `status=pass`, `match_count=0` | 0 | Pass | command output | Current latest artifact |
+| `python3 .agents/skills/webagentflow-eval-integrity/scripts/forbidden_target_scan.py --manifest /private/tmp/wagent-user-behavior-target-manifest.json --root /Users/leechen/projects/WebAgentFlow/v0.1` | Product runtime / prompt target scan passes | `status=pass`, `match_count=0`, `missing_forbidden_paths=[]` | 0 | Pass | command output | Manifest extracted from eval-only spec |
+| `git diff --check` | No whitespace errors | No output | 0 | Pass | command output | Current diff |
 
 ### 未运行 / 未验证（Not Run / Unverified）
 
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
-| Live first-wave behavior cases | API preflight returned connection refused | URL-only known / unknown, choose-learn, execute-known / unknown, vague input and live isolation remain unverified |
-| Full `learn_then_execute` behavior | Live behavior cases did not run | If unsupported, future live artifact must record staged learning-flow result / follow-up rather than full pass |
+| Full `learn_then_execute` behavior | Latest artifact records staged learning-flow only | Remains non-required follow-up; do not claim full learn-then-execute |
 | Console UI smoke | Not requested | UI-specific behavior remains unverified |
 | `verify-scenario` / autonomous run | Out of scope and prohibited by default | No Supervisor pass_gate evidence claimed |
 
 ### 后续事项（Follow-ups）
 
-- Start API / product-test-site services and rerun `pnpm run eval:wagent:user-behavior`.
 - Keep target-specific test content out of feature code and product prompt assets.
-- Do not mark 11.3.7 pass unless the live first-wave required gates pass with reviewable artifacts.
+- Implement full learn-then-execute later if it becomes a required capability.

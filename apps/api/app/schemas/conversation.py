@@ -183,14 +183,10 @@ class ConversationLlmTraceResponse(BaseModel):
     prompt_hash: str | None = None
     schema_name: str | None = None
     schema_version: str | None = None
-    schema_validation: dict[str, Any] = Field(default_factory=dict)
+    validation: dict[str, Any] = Field(default_factory=dict)
     latency_ms: int | None = None
-    token_usage: dict[str, Any] = Field(default_factory=dict)
-    raw_request: dict[str, Any] = Field(default_factory=dict)
-    raw_response: dict[str, Any] = Field(default_factory=dict)
-    parsed_output: dict[str, Any] = Field(default_factory=dict)
+    usage: dict[str, Any] = Field(default_factory=dict)
     redaction: dict[str, Any] = Field(default_factory=dict)
-    raw: dict[str, Any] = Field(default_factory=dict)
     source_event_id: str | None = None
     created_at: datetime | None = None
 

@@ -32,6 +32,7 @@ def _exploration_result(
     success: bool = True,
     supervisor: dict[str, object] | None = None,
     steps: list[dict[str, object]] | None = None,
+    final_state: dict[str, object] | None = None,
 ) -> AutonomousExplorationResult:
     return AutonomousExplorationResult(
         page_analysis=PageAnalysis(url=url, title=title),
@@ -44,6 +45,7 @@ def _exploration_result(
         total_steps=len(steps or [1, 2, 3]),
         final_url=final_url,
         final_title=final_title,
+        final_state=final_state or {},
         verdict=verdict,
         success=success,
         summary="login ok",
@@ -141,6 +143,92 @@ def test_product_learning_does_not_load_validation_spec_and_labels_workspace_act
     assert result.suggested_utterances == ["帮我进入工作台", "进入工作台一下"]
     assert "scenario_name" not in explorer_calls[0]
     assert explorer_calls[0]["fill_values"] == {"username": "demo", "password": "123456"}
+
+
+def test_product_learning_strips_generic_named_value_from_action_label(
+    db_session: Session,
+) -> None:
+    def explorer(**kwargs):
+        return _exploration_result(
+            url="http://localhost:5176/records",
+            title="记录",
+            final_url="http://localhost:5176/records",
+            final_title="记录",
+        )
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=_DummyRuntimeFactory(),
+        explorer=explorer,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url="http://localhost:5176/records",
+            goal="学习创建记录，名称叫 Alpha-1",
+            fill_values={"entity_name": "Alpha-1"},
+            product_level=True,
+        )
+    )
+
+    assert result.status == "learned"
+    assert result.action_label == "创建记录"
+    assert result.suggested_utterances == ["帮我创建记录", "创建记录一下"]
+
+
+def test_product_learning_saves_path_when_visible_text_confirms_user_value(
+    db_session: Session,
+) -> None:
+    def explorer(**kwargs):
+        return _exploration_result(
+            url="http://localhost:5176/records",
+            title="记录",
+            final_url="http://localhost:5176/records",
+            final_title="记录",
+            verdict="failure",
+            success=False,
+            final_state={"body_text": "Alpha 已创建", "alert_texts": []},
+            steps=[
+                {
+                    "step": 1,
+                    "action_type": "fill",
+                    "target_selector": "#record-name",
+                    "value": "Alpha",
+                },
+                {
+                    "step": 2,
+                    "action_type": "click",
+                    "target_selector": "button[type=submit]",
+                },
+            ],
+            supervisor={
+                "verdict": "failure",
+                "should_save_path": False,
+                "_supervisor_source": "fallback",
+            },
+        )
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=_DummyRuntimeFactory(),
+        explorer=explorer,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url="http://localhost:5176/records",
+            goal="学习创建记录，名称叫 Alpha",
+            fill_values={"entity_name": "Alpha"},
+            product_level=True,
+        )
+    )
+
+    assert result.status == "learned"
+    assert result.learned_path_id is not None
+
+    path = db_session.get(LearnedPath, result.learned_path_id)
+    assert path is not None
+    assert path.actions[0]["value_slot"] == "entity_name"
 
 
 def test_product_learning_parameterizes_item_name_fill_action(

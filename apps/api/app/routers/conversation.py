@@ -29,6 +29,7 @@ from app.schemas.conversation import (
 )
 from app.services.conversation.history import (
     conversation_event_public_payload,
+    conversation_message_public_content,
     session_public_payload,
 )
 from app.services.conversation.provenance import normalize_response_provenance
@@ -55,7 +56,7 @@ def _message_response(orm) -> ConversationMessageResponse:
         id=orm.id,
         session_id=orm.session_id,
         role=orm.role,
-        content=orm.content,
+        content=conversation_message_public_content(orm.content),
         metadata=metadata,
         response_provenance=normalize_response_provenance(
             metadata,
@@ -70,7 +71,7 @@ def _event_response(orm) -> ConversationEventResponse:
         id=orm.id,
         session_id=orm.session_id,
         type=orm.type,
-        payload=conversation_event_public_payload(orm.payload_json),
+        payload=conversation_event_public_payload(orm.payload_json, event_type=orm.type),
         created_at=orm.created_at,
     )
 
