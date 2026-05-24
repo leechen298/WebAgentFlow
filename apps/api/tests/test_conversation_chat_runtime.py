@@ -2081,26 +2081,26 @@ def test_interactive_chat_executes_current_session_action_without_confirmation(
     assert "登录完成。" in agent_messages
 
 
-def test_interactive_chat_execute_passes_item_name_slot_overrides(
+def test_interactive_chat_execute_passes_record_name_slot_overrides(
     db_session: Session,
     repo: ConversationRepository,
 ) -> None:
     learned_path_id = _ingest_items_path(
         db_session,
-        source_run_id="run-items-param",
-        value_slot="item_name",
+        source_run_id="run-records-param",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                     "scenario": None,
                 }
             ]
@@ -2120,7 +2120,7 @@ def test_interactive_chat_execute_passes_item_name_slot_overrides(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
 
@@ -2128,17 +2128,17 @@ def test_interactive_chat_execute_passes_item_name_slot_overrides(
     assert "还没有拿到足够页面证据确认结果" in result.user_response
     assert len(calls) == 1
     assert calls[0][0] == learned_path_id
-    assert calls[0][1] == "http://localhost:5176/items"
+    assert calls[0][1] == GENERIC_RECORDS_URL
     assert calls[0][2]["headless"] is False
-    assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目B"}
+    assert calls[0][2]["slot_overrides"] == {"record_name": "BetaRecord"}
     target = calls[0][2]["evidence_targets"][0]
     assert target.kind == "dom_text_present"
-    assert target.text == "测试项目B"
-    assert target.source_slot == "item_name"
+    assert target.text == "BetaRecord"
+    assert target.source_slot == "record_name"
     assert target.selector is None
     events = repo.list_events(session_id)
     started = next(e for e in events if e.type == "chat_execution_started")
-    assert started.payload_json["slot_overrides"] == {"item_name": "测试项目B"}
+    assert started.payload_json["slot_overrides"] == {"record_name": "BetaRecord"}
     reported = next(e for e in events if e.type == "task_result_reported")
     assert reported.payload_json["verification_outcome"] == "uncertain"
     assert reported.payload_json["task_verified"] is False
@@ -2150,20 +2150,20 @@ def test_interactive_chat_execute_uses_reporter_verified_response(
 ) -> None:
     learned_path_id = _ingest_items_path(
         db_session,
-        source_run_id="run-items-evidence",
-        value_slot="item_name",
+        source_run_id="run-records-evidence",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                     "scenario": None,
                 }
             ]
@@ -2179,10 +2179,10 @@ def test_interactive_chat_execute_uses_reporter_verified_response(
             execution_evidence=[
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目B",
+                    "target": "BetaRecord",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目B”的项目行。",
+                    "summary": "Record list shows BetaRecord.",
                 }
             ],
         )
@@ -2190,12 +2190,12 @@ def test_interactive_chat_execute_uses_reporter_verified_response(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
 
     assert result.allowed is True
-    assert "页面证据已确认目标值“测试项目B”" in result.user_response
+    assert "页面证据已确认目标值“BetaRecord”" in result.user_response
     events = repo.list_events(session_id)
     reported = next(e for e in events if e.type == "task_result_reported")
     assert reported.payload_json["verification_outcome"] == "verified"
@@ -2208,20 +2208,20 @@ def test_interactive_chat_execute_does_not_claim_success_without_evidence(
 ) -> None:
     learned_path_id = _ingest_items_path(
         db_session,
-        source_run_id="run-items-no-evidence",
-        value_slot="item_name",
+        source_run_id="run-records-no-evidence",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                     "scenario": None,
                 }
             ]
@@ -2239,12 +2239,12 @@ def test_interactive_chat_execute_does_not_claim_success_without_evidence(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
 
     assert result.allowed is True
-    assert "新增项目成功" not in result.user_response
+    assert "创建记录成功" not in result.user_response
     assert "还没有拿到足够页面证据确认结果" in result.user_response
 
 
