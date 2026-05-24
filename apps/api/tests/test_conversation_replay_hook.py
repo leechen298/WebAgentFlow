@@ -491,7 +491,7 @@ def test_run_explicit_replay_passes_slot_overrides(
     from unittest.mock import MagicMock, patch
 
     row, _ = LearnedPathRepository(db_session).ingest_run(
-        page_template="/items",
+        page_template="/records",
         query_signature={},
         dom_fingerprint="b" * 64,
         scenario="product_level",
@@ -500,8 +500,8 @@ def test_run_explicit_replay_passes_slot_overrides(
                 "step": 1,
                 "action_type": "fill",
                 "target_selector": "#name",
-                "value": "测试项目A",
-                "value_slot": "item_name",
+                "value": "Alpha Record",
+                "value_slot": "record_name",
             }
         ],
         source_run_id=None,
@@ -519,19 +519,19 @@ def test_run_explicit_replay_passes_slot_overrides(
             drift_status="none",
             drift_reasons=[],
             warnings=[],
-            final_url="http://127.0.0.1:5176/items",
-            final_title="Items",
+            final_url="http://example.test/records",
+            final_title="Records",
             steps=[],
         )
         run_explicit_replay(
             db_session,
             str(row.id),
-            "http://127.0.0.1:5176/items",
-            slot_overrides={"item_name": "测试项目B"},
+            "http://example.test/records",
+            slot_overrides={"record_name": "Beta Record"},
         )
 
     assert mock_run_replay.call_args.kwargs["slot_overrides"] == {
-        "item_name": "测试项目B"
+        "record_name": "Beta Record"
     }
 
 
@@ -541,7 +541,7 @@ def test_run_explicit_replay_passes_evidence_targets(
     from unittest.mock import MagicMock, patch
 
     row, _ = LearnedPathRepository(db_session).ingest_run(
-        page_template="/items",
+        page_template="/records",
         query_signature={},
         dom_fingerprint="c" * 64,
         scenario="product_level",
@@ -553,9 +553,9 @@ def test_run_explicit_replay_passes_evidence_targets(
     )
     target = ExecutionEvidenceTarget(
         kind="dom_text_present",
-        text="测试项目B-001",
-        source_slot="item_name",
-        selector="[data-testid='item-list']",
+        text="Beta Record 001",
+        source_slot="record_name",
+        selector="[data-testid='record-list']",
     )
 
     with patch(
@@ -567,15 +567,15 @@ def test_run_explicit_replay_passes_evidence_targets(
             drift_status="none",
             drift_reasons=[],
             warnings=[],
-            final_url="http://127.0.0.1:5176/items",
-            final_title="Items",
+            final_url="http://example.test/records",
+            final_title="Records",
             steps=[],
             execution_evidence=[],
         )
         run_explicit_replay(
             db_session,
             str(row.id),
-            "http://127.0.0.1:5176/items",
+            "http://example.test/records",
             evidence_targets=[target],
         )
 
@@ -588,7 +588,7 @@ def test_run_explicit_replay_summary_contains_execution_evidence(
     from unittest.mock import MagicMock, patch
 
     row, _ = LearnedPathRepository(db_session).ingest_run(
-        page_template="/items",
+        page_template="/records",
         query_signature={},
         dom_fingerprint="d" * 64,
         scenario="product_level",
@@ -601,10 +601,10 @@ def test_run_explicit_replay_summary_contains_execution_evidence(
     evidence = [
         ExecutionEvidence(
             kind="dom_text_present",
-            target="测试项目B-001",
+            target="Beta Record 001",
             status="verified",
             confidence=0.95,
-            summary="列表中出现了名称为“测试项目B-001”的项目行。",
+            summary="record list contains Beta Record 001.",
         )
     ]
 
@@ -617,15 +617,15 @@ def test_run_explicit_replay_summary_contains_execution_evidence(
             drift_status="none",
             drift_reasons=[],
             warnings=[],
-            final_url="http://127.0.0.1:5176/items",
-            final_title="Items",
+            final_url="http://example.test/records",
+            final_title="Records",
             steps=[],
             execution_evidence=evidence,
         )
         summary = run_explicit_replay(
             db_session,
             str(row.id),
-            "http://127.0.0.1:5176/items",
+            "http://example.test/records",
         )
 
     assert summary.execution_evidence == evidence

@@ -908,11 +908,11 @@ def test_replay_request_passes_evidence_targets(
         drift_status="none",
         drift_reasons=[],
         warnings=[],
-        stored_signature={"page_template": "/items"},
-        current_signature={"page_template": "/items"},
+        stored_signature={"page_template": "/records"},
+        current_signature={"page_template": "/records"},
         steps=[],
-        final_url="http://127.0.0.1:5176/items",
-        final_title="Items",
+        final_url="http://example.test/records",
+        final_title="Records",
     )
 
     with patch(
@@ -922,13 +922,13 @@ def test_replay_request_passes_evidence_targets(
         resp = client.post(
             f"/exploration/learned-paths/{path_id}/replay",
             json={
-                "url": "http://127.0.0.1:5176/items",
+                "url": "http://example.test/records",
                 "evidence_targets": [
                     {
                         "kind": "dom_text_present",
-                        "text": "测试项目B-001",
-                        "source_slot": "item_name",
-                        "selector": "[data-testid='item-list']",
+                        "text": "Beta Record 001",
+                        "source_slot": "record_name",
+                        "selector": "[data-testid='record-list']",
                     }
                 ],
             },
@@ -937,6 +937,6 @@ def test_replay_request_passes_evidence_targets(
     assert resp.status_code == 200
     target = mock_run_replay.call_args.kwargs["evidence_targets"][0]
     assert target.kind == "dom_text_present"
-    assert target.text == "测试项目B-001"
-    assert target.source_slot == "item_name"
-    assert target.selector == "[data-testid='item-list']"
+    assert target.text == "Beta Record 001"
+    assert target.source_slot == "record_name"
+    assert target.selector == "[data-testid='record-list']"
