@@ -102,40 +102,40 @@ def test_replay_succeeded_no_postcondition_returns_uncertain(
     assert report.needs_review is True
 
 
-def test_verified_when_structured_dom_text_evidence_matches_item_name(
+def test_verified_when_structured_dom_text_evidence_matches_record_name(
     reporter: TaskResultReporter,
 ) -> None:
     summary = ConversationReplaySummary(
         learned_path_id="lp-001",
-        url="http://localhost:5176/items",
+        url="http://example.test/records",
         replay_status="succeeded",
         drift_status="none",
     )
     report = reporter.build_report(
         execution_status="completed",
         execution_payload={
-            "slot_overrides": {"item_name": "测试项目B-001"},
+            "slot_overrides": {"record_name": "Beta Record 001"},
             "execution_evidence": [
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目B-001",
+                    "target": "Beta Record 001",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目B-001”的项目行。",
+                    "summary": "record list contains Beta Record 001.",
                 }
             ],
         },
         replay_summary=summary,
         confirmed_plan_context={
             "learned_path_id": "lp-001",
-            "slot_overrides": {"item_name": "测试项目B-001"},
+            "slot_overrides": {"record_name": "Beta Record 001"},
             "postcondition_evidence": [
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目B-001",
+                    "target": "Beta Record 001",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目B-001”的项目行。",
+                    "summary": "record list contains Beta Record 001.",
                 }
             ],
         },
@@ -144,7 +144,10 @@ def test_verified_when_structured_dom_text_evidence_matches_item_name(
     assert report.outcome == "verified"
     assert report.needs_review is False
     assert report.event_payload["task_verified"] is True
-    assert report.event_payload["execution_evidence"][0]["target"] == "测试项目B-001"
+    assert (
+        report.event_payload["execution_evidence"][0]["target"]
+        == "Beta Record 001"
+    )
 
 
 def test_not_verified_when_dom_text_evidence_missing(
@@ -152,28 +155,31 @@ def test_not_verified_when_dom_text_evidence_missing(
 ) -> None:
     summary = ConversationReplaySummary(
         learned_path_id="lp-001",
-        url="http://localhost:5176/items",
+        url="http://example.test/records",
         replay_status="succeeded",
         drift_status="none",
     )
     report = reporter.build_report(
         execution_status="completed",
         execution_payload={
-            "slot_overrides": {"item_name": "测试项目B-001"},
+            "slot_overrides": {"record_name": "Beta Record 001"},
             "execution_evidence": [
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目B-001",
+                    "target": "Beta Record 001",
                     "status": "missing",
                     "confidence": 0.7,
-                    "summary": "操作执行后，列表中没有确认看到“测试项目B-001”。",
+                    "summary": (
+                        "record list did not visibly confirm Beta Record 001 "
+                        "after execution."
+                    ),
                 }
             ],
         },
         replay_summary=summary,
         confirmed_plan_context={
             "learned_path_id": "lp-001",
-            "slot_overrides": {"item_name": "测试项目B-001"},
+            "slot_overrides": {"record_name": "Beta Record 001"},
         },
     )
 
@@ -182,26 +188,26 @@ def test_not_verified_when_dom_text_evidence_missing(
     assert report.event_payload["task_verified"] is False
 
 
-def test_not_verified_when_evidence_target_mismatches_item_name(
+def test_not_verified_when_evidence_target_mismatches_record_name(
     reporter: TaskResultReporter,
 ) -> None:
     summary = ConversationReplaySummary(
         learned_path_id="lp-001",
-        url="http://localhost:5176/items",
+        url="http://example.test/records",
         replay_status="succeeded",
         drift_status="none",
     )
     report = reporter.build_report(
         execution_status="completed",
         execution_payload={
-            "slot_overrides": {"item_name": "测试项目B-001"},
+            "slot_overrides": {"record_name": "Beta Record 001"},
             "execution_evidence": [
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目A",
+                    "target": "Alpha Record",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目A”的项目行。",
+                    "summary": "record list contains Alpha Record.",
                 }
             ],
         },
