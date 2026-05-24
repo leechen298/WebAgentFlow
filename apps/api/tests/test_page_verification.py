@@ -34,6 +34,9 @@ from app.schemas.page_verification import (
     VerdictCheck,
 )
 from app.services.learning.page_verification import (
+    SpecNotFound,
+    SpecRootNotConfigured,
+    UnsafeSpecId,
     _all_elements,
     _check_action,
     _check_distraction,
@@ -1010,27 +1013,15 @@ class TestLoadSpec:
         )
         return path
 
-    def test_load_spec_not_found(self, monkeypatch):
+    def test_get_spec_root_requires_env_only_when_specs_are_used(self, monkeypatch):
         monkeypatch.delenv("WAF_PAGE_SPEC_ROOT", raising=False)
-        with pytest.raises(FileNotFoundError, match="not found"):
-            load_spec("nonexistent_spec_12345")
+        with pytest.raises(SpecRootNotConfigured, match="WAF_PAGE_SPEC_ROOT"):
+            get_spec_root()
 
-    def test_load_spec_real(self, monkeypatch):
-        """If login spec exists, load it and verify structure."""
-        monkeypatch.delenv("WAF_PAGE_SPEC_ROOT", raising=False)
-        spec_path = (
-            Path(__file__).resolve().parents[2]
-            / "validation-site"
-            / "specs"
-            / "login.assertions.json"
-        )
-        if not spec_path.exists():
-            pytest.skip("login spec not found")
-        spec, path = load_spec("login")
-        assert spec.page_id == "login"
-        assert path == spec_path
-        assert len(spec.critical_elements) > 0
-        assert len(spec.scenarios) > 0
+    def test_load_spec_not_found_in_configured_root(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("WAF_PAGE_SPEC_ROOT", str(tmp_path))
+        with pytest.raises(SpecNotFound, match="not found"):
+            load_spec("nonexistent_spec_12345")
 
     def test_load_spec_uses_configured_external_root_without_fallback(
         self,
@@ -1047,8 +1038,13 @@ class TestLoadSpec:
 
         assert spec.page_id == "login"
         assert path == expected_path.resolve()
-        with pytest.raises(FileNotFoundError, match=str(root.resolve())):
+        with pytest.raises(SpecNotFound, match=str(root.resolve())):
             load_spec("login")
+
+    def test_iter_spec_paths_requires_configured_root(self, monkeypatch):
+        monkeypatch.delenv("WAF_PAGE_SPEC_ROOT", raising=False)
+        with pytest.raises(SpecRootNotConfigured, match="WAF_PAGE_SPEC_ROOT"):
+            iter_spec_paths()
 
     def test_iter_spec_paths_uses_stable_sorted_order(self, monkeypatch, tmp_path):
         root = tmp_path / "external-specs"
@@ -1074,5 +1070,56 @@ class TestLoadSpec:
     )
     def test_load_spec_rejects_unsafe_spec_id(self, monkeypatch, tmp_path, spec_id):
         monkeypatch.setenv("WAF_PAGE_SPEC_ROOT", str(tmp_path))
-        with pytest.raises(ValueError, match="Invalid spec_id"):
+        with pytest.raises(UnsafeSpecId, match="Invalid spec_id"):
             load_spec(spec_id)
+
+    def test_spec_routes_keep_health_independent_from_spec_root(
+        self,
+        monkeypatch,
+        client,
+    ):
+        monkeypatch.delenv("WAF_PAGE_SPEC_ROOT", raising=False)
+
+        health = client.get("/health")
+        specs = client.get("/exploration/specs")
+
+        assert health.status_code == 200
+        assert specs.status_code == 503
+        assert "WAF_PAGE_SPEC_ROOT" in specs.json()["msg"]
+
+    def test_spec_routes_map_missing_spec_to_404(self, monkeypatch, tmp_path, client):
+        monkeypatch.setenv("WAF_PAGE_SPEC_ROOT", str(tmp_path))
+
+        response = client.get("/exploration/specs/missing")
+
+        assert response.status_code == 404
+        assert "Page verification spec not found" in response.json()["msg"]
+
+    def test_spec_routes_map_unsafe_spec_id_to_400(
+        self,
+        monkeypatch,
+        tmp_path,
+        client,
+    ):
+        monkeypatch.setenv("WAF_PAGE_SPEC_ROOT", str(tmp_path))
+
+        response = client.get("/exploration/specs/%5Cbad")
+
+        assert response.status_code == 400
+        assert "Invalid spec_id" in response.json()["msg"]
+
+    def test_list_specs_reads_configured_root_in_sorted_order(
+        self,
+        monkeypatch,
+        tmp_path,
+        client,
+    ):
+        self._write_spec(tmp_path, "zeta")
+        self._write_spec(tmp_path, "alpha")
+        monkeypatch.setenv("WAF_PAGE_SPEC_ROOT", str(tmp_path))
+
+        response = client.get("/exploration/specs")
+
+        assert response.status_code == 200
+        payload = response.json()["data"]
+        assert [item["spec_id"] for item in payload] == ["alpha", "zeta"]

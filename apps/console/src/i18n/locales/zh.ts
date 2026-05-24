@@ -191,7 +191,7 @@ export default {
     // 来源说明
     legendProjectCode: '由 WebAgentFlow 项目内模块（analyzer / planner / explorer / comparator）直接产出。规则式、可重现。',
     legendProjectLlm: '由项目内 Supervisor Agent 调用 LLM（services/llm_provider）产出，非确定性结果。',
-    legendSpec: '基线来自 apps/validation-site/specs/<page>.assertions.json，是 comparator 的判定依据。',
+    legendSpec: '基线来自配置的 WAF_PAGE_SPEC_ROOT，是 comparator 的判定依据。',
     legendNone: '没有 tag 的文字（表单标签、UI 结构）只是界面元素，并非系统产出。',
     // Supervisor 思考过程
     thinkingProcess: '思考过程（LLM 原始推理）',

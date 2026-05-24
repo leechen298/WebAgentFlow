@@ -109,43 +109,6 @@ importers:
         specifier: ^5.9.2
         version: 5.9.3
 
-  apps/validation-site:
-    dependencies:
-      '@ant-design/icons-vue':
-        specifier: ^7.0.0
-        version: 7.0.1(vue@3.5.30(typescript@5.9.3))
-      ant-design-vue:
-        specifier: ^4.2.0
-        version: 4.2.6(vue@3.5.30(typescript@5.9.3))
-      axios:
-        specifier: ^1.7.0
-        version: 1.13.6
-      dayjs:
-        specifier: ^1.11.0
-        version: 1.11.20
-      vue:
-        specifier: ^3.5.18
-        version: 3.5.30(typescript@5.9.3)
-      vue-i18n:
-        specifier: ^11.3.2
-        version: 11.3.2(vue@3.5.30(typescript@5.9.3))
-      vue-router:
-        specifier: ^4.5.1
-        version: 4.6.4(vue@3.5.30(typescript@5.9.3))
-    devDependencies:
-      '@vitejs/plugin-vue':
-        specifier: ^6.0.1
-        version: 6.0.5(vite@7.3.1(@types/node@24.12.0)(jiti@2.6.1))(vue@3.5.30(typescript@5.9.3))
-      typescript:
-        specifier: ^5.9.2
-        version: 5.9.3
-      vite:
-        specifier: ^7.1.2
-        version: 7.3.1(@types/node@24.12.0)(jiti@2.6.1)
-      vue-tsc:
-        specifier: ^3.0.5
-        version: 3.2.5(typescript@5.9.3)
-
   packages/sdk-js:
     devDependencies:
       typescript:

@@ -5,7 +5,7 @@ E2E workspace 位于 `apps/e2e/`。
 
 E2E 用例按产品能力域组织在 `apps/e2e/tests/` 下，例如
 `apps/e2e/tests/replay/` 和 `apps/e2e/tests/conversation/`。这些用例是跨
-console、API、数据库、validation-site 和后端 Playwright replay 的产品闭环测试。
+console、API、数据库、外部 Fixture-Site 和后端 Playwright replay 的产品闭环测试。
 它们不是 console 前端单元测试，不应放到 `apps/console/src/__tests__/`。
 
 ## 当前覆盖
@@ -17,7 +17,7 @@ console、API、数据库、validation-site 和后端 Playwright replay 的产�
 - M10.2 LearnedPath catalog list / trust filter / drawer / replay section presence。
 - M11.0 conversation runtime explicit replay smoke。
 - M11.0 `wagent conversation` CLI-driven explicit replay smoke。
-- Validation-site deterministic browser smoke：覆盖 `/login` 和 `/users`。
+- Fixture-site deterministic browser smoke：覆盖 `/login` 和 `/users`。
 
 这不会新增产品行为，也不会扩大 M10.2 范围。
 
@@ -63,9 +63,9 @@ Playwright config 暂时不使用 `webServer` 编排全部服务。等回归轨�
    `.venv/bin/python apps/e2e/scripts/seed-replay-fixtures.py`。
 8. 运行 E2E：`pnpm run test:e2e`。
 
-`WAF_PAGE_SPEC_ROOT` 未设置时，API 仍会为了 Phase 2A 过渡兼容回退到
-`apps/validation-site/specs`。这个内嵌 fallback 是临时的，将在 Phase 2B
-移除。E2E fixture URL 的优先级固定为 `WAF_FIXTURE_SITE_URL` >
+`WAF_PAGE_SPEC_ROOT` 是 page verification 的显式 spec 来源。只有列出或加载
+page verification specs 时需要；API 启动和 `/health` 不需要它。E2E fixture
+URL 的优先级固定为 `WAF_FIXTURE_SITE_URL` >
 `E2E_VALIDATION_BASE_URL` > `http://127.0.0.1:5175`；`E2E_VALIDATION_BASE_URL`
 只是临时兼容 fallback。
 
@@ -82,7 +82,7 @@ Playwright config 暂时不使用 `webServer` 编排全部服务。等回归轨�
 [`../results/2026-05-11-conversation-cli-e2e.md`](../results/2026-05-11-conversation-cli-e2e.md)
 了解 `wagent conversation` CLI-driven E2E 结果；查看
 [`../results/2026-05-11-validation-site-deterministic-e2e.md`](../results/2026-05-11-validation-site-deterministic-e2e.md)
-了解 validation-site browser smoke 结果。
+了解历史 validation-site browser smoke 结果。
 
 `apps/e2e/test-results/` 和 `apps/e2e/playwright-report/` 是 Playwright
 原始输出，保持 gitignore。人类可读的测试运行摘要放在
@@ -119,11 +119,11 @@ seed 脚本通过 API 侧 page analyzer 和 execution runtime 计算当前 `/use
 | signature changed but executable | `drift_status=signature_changed`，存在 warning，且 replay 仍可执行 |
 | conversation runtime replay | session dispatch `/replay` 后完成，transcript/events 记录 replay 结果 |
 | conversation CLI runtime replay | `wagent conversation` 创建 session、发送 `/replay`、读取 transcript/events |
-| validation-site login controls | `/login` 显示 username/password/submit，默认无 visible alert |
-| validation-site invalid login | wrong/wrong 后显示可见错误提示并停留在 login |
-| validation-site users controls | `/users` 显示 search controls、result card、seeded rows |
-| validation-site users name search | name=alice 后 URL 和结果区反映筛选 |
-| validation-site users empty search | no-match 搜索显示 empty state |
+| fixture-site login controls | `/login` 显示 username/password/submit，默认无 visible alert |
+| fixture-site invalid login | wrong/wrong 后显示可见错误提示并停留在 login |
+| fixture-site users controls | `/users` 显示 search controls、result card、seeded rows |
+| fixture-site users name search | name=alice 后 URL 和结果区反映筛选 |
+| fixture-site users empty search | no-match 搜索显示 empty state |
 
 ## 暂缓项
 

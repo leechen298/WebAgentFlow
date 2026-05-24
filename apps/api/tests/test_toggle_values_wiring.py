@@ -15,9 +15,51 @@ pins down the glue:
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from app.routers.exploration import AutonomousExplorePayload, SpecScenarioSummary
 from app.schemas.page_verification import ElementMatcher, ScenarioSpec
 from app.services.learning.page_verification import load_spec
+
+
+def _write_users_spec(root: Path) -> None:
+    (root / "users.assertions.json").write_text(
+        json.dumps({
+            "page_id": "users",
+            "description": "External users fixture spec for toggle wiring.",
+            "critical_elements": [
+                {
+                    "role": "status_radio_active",
+                    "expected_category": "toggle",
+                    "match_by": {
+                        "tag": "input",
+                        "element_type": "radio",
+                        "element_value": "active",
+                    },
+                },
+                {
+                    "role": "search_button",
+                    "expected_category": "submit",
+                    "match_by": {
+                        "tag": "button",
+                        "text_contains": "Search",
+                    },
+                },
+            ],
+            "scenarios": {
+                "filter_by_status": {
+                    "description": "Filter users by active status.",
+                    "selections": {"status": "active"},
+                    "expected_actions": [
+                        "click:status_radio_active",
+                        "click:search_button",
+                    ],
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
 
 
 def test_scenario_spec_accepts_selections() -> None:
@@ -36,8 +78,9 @@ def test_element_matcher_accepts_element_value() -> None:
     assert m.element_value == "active"
 
 
-def test_users_spec_loads_with_filter_by_status(monkeypatch) -> None:
-    monkeypatch.delenv("WAF_PAGE_SPEC_ROOT", raising=False)
+def test_users_spec_loads_with_filter_by_status(monkeypatch, tmp_path) -> None:
+    _write_users_spec(tmp_path)
+    monkeypatch.setenv("WAF_PAGE_SPEC_ROOT", str(tmp_path))
     spec, _ = load_spec("users")
     assert "filter_by_status" in spec.scenarios
     sc = spec.scenarios["filter_by_status"]
@@ -49,8 +92,9 @@ def test_users_spec_loads_with_filter_by_status(monkeypatch) -> None:
     assert "click:search_button" in sc.expected_actions
 
 
-def test_users_spec_has_status_radio_active_critical_element(monkeypatch) -> None:
-    monkeypatch.delenv("WAF_PAGE_SPEC_ROOT", raising=False)
+def test_users_spec_has_status_radio_active_critical_element(monkeypatch, tmp_path) -> None:
+    _write_users_spec(tmp_path)
+    monkeypatch.setenv("WAF_PAGE_SPEC_ROOT", str(tmp_path))
     spec, _ = load_spec("users")
     roles = [ce.role for ce in spec.critical_elements]
     assert "status_radio_active" in roles

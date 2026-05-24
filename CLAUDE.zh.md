@@ -12,11 +12,14 @@ WebAgentFlow —— 一个以 Agent 为驱动的 web 工作流引擎 monorepo。
 - `apps/console` —— Vue 3 操作控制台。
 - `apps/api` —— FastAPI 后端（routes / services / schemas / LLM provider）。
 - `apps/worker` —— 异步 worker（当前是骨架）。
-- `apps/validation-site` —— 自主探索的自建验证站点。
 - `apps/cli` —— Python CLI（`wagent`）。它是 `verify-scenario` 开发验证
   skill 的后端，同时已经包含 M11.0 runtime conversation CLI（`wagent
   conversation`）。M16 后续可能开放稳定 external CLI / Skill / Tool 接口。
 - `packages/` —— 共享 TypeScript 包。
+
+Fixture 页面位于本仓库外部。需要 fixture-backed verification 时，通过
+`WAF_FIXTURE_SITE_URL` 和 `WAF_PAGE_SPEC_ROOT` 指向独立的 WebAgentFlow
+Fixture-Site。
 
 **产品形态**（WebAgentFlow 到底是什么）：
 [`docs/product-model.zh.md`](./docs/product-model.zh.md)。提议任何
@@ -289,7 +292,7 @@ docker compose -f infra/docker/docker-compose.yml up -d
 # 应用数据库迁移
 pnpm run db:migrate:api
 
-# 一键起全部（console + api + worker + validation-site）
+# 一键启动仓库内服务（console + api + worker）
 pnpm run dev
 pnpm run dev:lan                # 绑到 0.0.0.0，局域网可访问
 
@@ -297,7 +300,12 @@ pnpm run dev:lan                # 绑到 0.0.0.0，局域网可访问
 pnpm run dev:console            # Vite，端口 5174
 pnpm run dev:api                # Uvicorn，端口 8001
 pnpm run dev:worker             # Python 文件改动自动 reload（走 watchfiles）
-pnpm run dev:validation         # 验证站点，端口 5175
+
+# 外部 Fixture-Site（本 workspace 外）
+cd /Users/leechen/projects/WebAgentFlow-Fixture-Site
+pnpm dev
+export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
 ```
 
 ### 构建 / Lint / 测试
@@ -343,9 +351,8 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   `/exploration/specs[/{id}]`（workbench 拉 spec 做预填用）、
   `/exploration/autonomous-runs[/{run_id}]`（落库后的 run 历史），以及
   LearnedPath catalog routes。
-- `apps/api/app/routers/validation_api.py` —— 验证站点 mock 后端。
-- `apps/validation-site/specs/<page>.{md,assertions.json}` —— 基线定义。
-- `apps/validation-site/src/pages/IndexPage.vue` —— `/` 下的测试页目录。
+- `apps/api/app/services/learning/page_verification.py` —— 从配置的
+  `WAF_PAGE_SPEC_ROOT` 加载 authored baselines。
 - `apps/console/src/pages/AutonomousWorkbenchPage.vue` —— 用户驱动的工作台。
 - `apps/console/src/pages/LearnedPathCatalogPage.vue` —— M10.1.5 LearnedPath
   catalog UI。

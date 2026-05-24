@@ -4,7 +4,7 @@ import { validationUrl } from '../../fixtures/config';
 
 const noMatchName = 'zzzz-no-match-9999';
 
-test.describe('Validation-site browser smoke', () => {
+test.describe('Fixture-site browser smoke', () => {
   test('login page renders key controls', async ({ page }) => {
     await page.goto(validationUrl('/login'));
 

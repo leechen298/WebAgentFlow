@@ -36,6 +36,11 @@ from app.schemas.learned_path import (
 )
 from app.schemas.learned_path_replay import ReplayRequest, ReplayResult
 from app.schemas.page_analysis import PageAnalysis
+from app.services.learning.page_verification import (
+    SpecNotFound,
+    SpecRootNotConfigured,
+    UnsafeSpecId,
+)
 from app.services.learning.page_signature import (
     dom_fingerprint,
     path_template,
@@ -50,6 +55,17 @@ _SCREENSHOT_DIR = Path(__file__).resolve().parents[4] / "data" / "screenshots"
 _SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
 DbSession = Annotated[Session, Depends(get_db)]
+
+
+def _spec_http_exception(exc: Exception) -> HTTPException:
+    """Map page spec loader exceptions to stable public HTTP errors."""
+    if isinstance(exc, SpecRootNotConfigured):
+        return HTTPException(status_code=503, detail=str(exc))
+    if isinstance(exc, UnsafeSpecId):
+        return HTTPException(status_code=400, detail=str(exc))
+    if isinstance(exc, SpecNotFound):
+        return HTTPException(status_code=404, detail=str(exc))
+    return HTTPException(status_code=500, detail="Page verification spec error.")
 
 
 def _scenario_matched_for(item: ExplorationRun) -> bool | None:
@@ -476,8 +492,8 @@ def autonomous_exploration_endpoint(
                 "scenario": payload.scenario,
                 "scorecard": scorecard.model_dump(),
             }
-        except FileNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except (SpecRootNotConfigured, UnsafeSpecId, SpecNotFound) as exc:
+            raise _spec_http_exception(exc) from exc
         except KeyError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:
@@ -657,8 +673,15 @@ def autonomous_exploration_stream(
                         "scorecard": scorecard.model_dump(),
                     }
                     emit("verification_done", verification_payload)
-                except FileNotFoundError as exc:
-                    emit("verification_done", {"error": f"spec not found: {exc}"})
+                except (SpecRootNotConfigured, UnsafeSpecId, SpecNotFound) as exc:
+                    http_exc = _spec_http_exception(exc)
+                    emit(
+                        "verification_done",
+                        {
+                            "error": str(http_exc.detail),
+                            "status_code": http_exc.status_code,
+                        },
+                    )
                 except KeyError as exc:
                     emit("verification_done", {"error": f"scenario not found: {exc}"})
                 except Exception as exc:
@@ -763,10 +786,17 @@ def list_specs() -> ApiResponse[list[SpecSummary]]:
     from app.services.learning.page_verification import iter_spec_paths, load_spec
 
     items: list[SpecSummary] = []
-    for path in iter_spec_paths():
+    try:
+        spec_paths = iter_spec_paths()
+    except (SpecRootNotConfigured, UnsafeSpecId, SpecNotFound) as exc:
+        raise _spec_http_exception(exc) from exc
+
+    for path in spec_paths:
         spec_id = path.stem.removesuffix(".assertions")
         try:
             spec, _ = load_spec(spec_id)
+        except (SpecRootNotConfigured, UnsafeSpecId, SpecNotFound) as exc:
+            raise _spec_http_exception(exc) from exc
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning("Failed to load spec %s: %s", spec_id, exc)
             continue
@@ -803,10 +833,8 @@ def get_spec(spec_id: str) -> ApiResponse[SpecSummary]:
 
     try:
         spec, _ = load_spec(spec_id)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except (SpecRootNotConfigured, UnsafeSpecId, SpecNotFound) as exc:
+        raise _spec_http_exception(exc) from exc
 
     summary = SpecSummary(
         spec_id=spec_id,

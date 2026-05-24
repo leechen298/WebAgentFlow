@@ -12,12 +12,15 @@ WebAgentFlow — monorepo for an agent-driven web workflow engine.
 - `apps/console` — Vue 3 operator console.
 - `apps/api` — FastAPI backend (routes, services, schemas, LLM provider).
 - `apps/worker` — async worker (currently scaffold).
-- `apps/validation-site` — self-hosted page fixtures for autonomous exploration.
 - `apps/cli` — Python CLI (`wagent`). It backs the `verify-scenario`
   development verification skill and now includes the M11.0 runtime
   conversation CLI (`wagent conversation`). M16 may later expose stable
   external CLI / Skill / Tool interfaces.
 - `packages/` — shared TypeScript packages.
+
+Fixture pages are external to this repository. Use `WAF_FIXTURE_SITE_URL` and
+`WAF_PAGE_SPEC_ROOT` when running fixture-backed verification against the
+standalone WebAgentFlow Fixture-Site.
 
 **Product model** (what WebAgentFlow actually is):
 [`docs/product-model.md`](./docs/product-model.md). Read this before
@@ -318,7 +321,7 @@ docker compose -f infra/docker/docker-compose.yml up -d
 # Apply database migrations
 pnpm run db:migrate:api
 
-# Run everything (console + api + worker + validation-site)
+# Run repo-local services (console + api + worker)
 pnpm run dev
 pnpm run dev:lan                # LAN-accessible (0.0.0.0)
 
@@ -326,7 +329,12 @@ pnpm run dev:lan                # LAN-accessible (0.0.0.0)
 pnpm run dev:console            # Vite dev server, port 5174
 pnpm run dev:api                # Uvicorn dev server, port 8001
 pnpm run dev:worker             # Python file changes auto-reload via watchfiles
-pnpm run dev:validation         # Validation-site fixtures, port 5175
+
+# External Fixture-Site (outside this workspace)
+cd /Users/leechen/projects/WebAgentFlow-Fixture-Site
+pnpm dev
+export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
 ```
 
 ### Build, Lint, Test
@@ -392,9 +400,8 @@ cd apps/api && .venv/bin/pytest -k "test_create" -v
   plus `/exploration/specs[/{id}]` (spec metadata for workbench prefill)
   and `/exploration/autonomous-runs[/{run_id}]` (persisted run history), plus
   LearnedPath catalog routes.
-- `apps/api/app/routers/validation_api.py` — validation-site mock backend.
-- `apps/validation-site/specs/<page>.{md,assertions.json}` — authored baselines.
-- `apps/validation-site/src/pages/IndexPage.vue` — fixture catalogue at `/`.
+- `apps/api/app/services/learning/page_verification.py` — loads authored
+  baselines from the configured `WAF_PAGE_SPEC_ROOT`.
 - `apps/console/src/pages/AutonomousWorkbenchPage.vue` — user-driven workbench.
 - `apps/console/src/pages/LearnedPathCatalogPage.vue` — M10.1.5 LearnedPath
   catalog UI.

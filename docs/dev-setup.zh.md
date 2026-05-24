@@ -84,12 +84,11 @@
    export WAF_PAGE_SPEC_ROOT=/Users/leechen/projects/WebAgentFlow-Fixture-Site/web/specs
    ```
 
-   `WAF_PAGE_SPEC_ROOT` 是 page verification 的显式 spec 来源。未设置时，
-   API 仍会为了 Phase 2A 过渡兼容回退到 `apps/validation-site/specs`。
-   这个内嵌 fallback 是临时的，将在 Phase 2B 移除。
+   `WAF_PAGE_SPEC_ROOT` 是 page verification 的显式 spec 来源。只有列出或
+   加载 page verification specs 时需要；API 启动和 `/health` 不需要它。
 
-也可以在主仓库根目录用 `pnpm run dev` 启动仓库内服务；Phase 2A 期间这仍会
-使用过渡性的内嵌 validation-site。
+也可以在主仓库根目录用 `pnpm run dev` 启动 WebAgentFlow 仓库内服务。外部
+Fixture-Site 仍是本 workspace 外的独立进程。
 
 ## 构建与质量检查
 

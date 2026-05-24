@@ -3,19 +3,19 @@
 本 workspace 存放 WebAgentFlow 的确定性 Playwright Test E2E 覆盖。
 当前套件覆盖 M10.2 LearnedPath replay API / catalog UI、M11.0
 conversation runtime replay smoke / CLI-driven replay smoke，以及
-validation-site deterministic browser smoke。
+fixture-site deterministic browser smoke。
 
 它不依赖 LLM 服务，不调用 autonomous-run 接口，也不创建 live autonomous run。
 
 `apps/e2e/tests/` 下的测试按产品能力域组织。Replay 覆盖放在
 `apps/e2e/tests/replay/`，conversation 覆盖放在
-`apps/e2e/tests/conversation/`，validation-site fixture 覆盖放在
-`apps/e2e/tests/validation-site/`。这些是跨 console、API、数据库、
-validation-site 和后端 Playwright replay 的 E2E 测试，不是
+`apps/e2e/tests/conversation/`，fixture-site 覆盖放在
+`apps/e2e/tests/fixture-site/`。这些是跨 console、API、数据库、
+外部 Fixture-Site 和后端 Playwright replay 的 E2E 测试，不是
 `apps/console/src/__tests__/` 下的 console 单元测试。
 Conversation E2E 同时覆盖 API-request runtime flow 和真实 `wagent conversation`
 CLI subprocess flow。
-Validation-site browser smoke 直接打开 fixture 页面，保护 `/login` 和 `/users`
+Fixture-site browser smoke 直接打开 fixture 页面，保护 `/login` 和 `/users`
 的稳定浏览器交互地基。
 
 ## 一次性设置
@@ -70,9 +70,9 @@ export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
 export WAF_PAGE_SPEC_ROOT=/Users/leechen/projects/WebAgentFlow-Fixture-Site/web/specs
 ```
 
-`WAF_PAGE_SPEC_ROOT` 未设置时，API 仍会为了 Phase 2A 过渡兼容回退到
-`apps/validation-site/specs`。这个内嵌 fallback 是临时的，将在 Phase 2B
-移除。E2E fixture URL 的优先级固定为 `WAF_FIXTURE_SITE_URL` >
+`WAF_PAGE_SPEC_ROOT` 是 page verification 的显式 spec 来源。只有列出或加载
+page verification specs 时需要；API 启动和 `/health` 不需要它。E2E fixture
+URL 的优先级固定为 `WAF_FIXTURE_SITE_URL` >
 `E2E_VALIDATION_BASE_URL` > `http://127.0.0.1:5175`；`E2E_VALIDATION_BASE_URL`
 只是临时兼容 fallback。
 

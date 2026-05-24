@@ -80,12 +80,12 @@
    ```
 
    `WAF_PAGE_SPEC_ROOT` is the explicit spec source for page verification.
-   If it is unset, the API still falls back to `apps/validation-site/specs`
-   for Phase 2A compatibility. That embedded fallback is transitional and
-   will be removed in Phase 2B.
+   It is required when listing or loading page verification specs; API startup
+   and `/health` do not require it.
 
-Or start repo-local services with `pnpm run dev` from the repo root; that still
-uses the transitional embedded validation-site during Phase 2A.
+Or start repo-local WebAgentFlow services with `pnpm run dev` from the repo
+root. The external Fixture-Site remains a separate process outside this
+workspace.
 
 ## Build and Quality Checks
 

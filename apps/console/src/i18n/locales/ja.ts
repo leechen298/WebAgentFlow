@@ -191,7 +191,7 @@ export default {
     // 凡例
     legendProjectCode: 'WebAgentFlow のモジュール（analyzer / planner / explorer / comparator）が直接生成。決定論的・ルールベース。',
     legendProjectLlm: 'プロジェクト内 Supervisor Agent が services/llm_provider 経由で LLM を呼び出して生成。非決定論的。',
-    legendSpec: 'apps/validation-site/specs/<page>.assertions.json に記述されたベースライン。comparator の判定基準。',
+    legendSpec: '設定された WAF_PAGE_SPEC_ROOT のベースライン。comparator の判定基準。',
     legendNone: 'タグなしの文字列（フォームラベル、UI）は単なるレイアウトで、システム出力ではありません。',
     // Supervisor 思考プロセス
     thinkingProcess: '思考プロセス（LLM 生の推論）',

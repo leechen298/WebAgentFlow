@@ -191,7 +191,7 @@ export default {
     // Legend descriptions
     legendProjectCode: 'output produced directly by a WebAgentFlow module (analyzer, planner, explorer, verification comparator). Deterministic, rule-based.',
     legendProjectLlm: "output produced by the project's internal supervisor Agent calling an LLM via services/llm_provider. Non-deterministic.",
-    legendSpec: "authored assertions from apps/validation-site/specs/<page>.assertions.json. The comparator's source of truth.",
+    legendSpec: "authored assertions from the configured WAF_PAGE_SPEC_ROOT. The comparator's source of truth.",
     legendNone: 'labels without a tag (form labels, UI chrome) are just layout. No system output here.',
     // Supervisor thinking trace
     thinkingProcess: 'Thinking process (raw LLM reasoning)',

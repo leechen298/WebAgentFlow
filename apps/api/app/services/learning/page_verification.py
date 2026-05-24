@@ -40,9 +40,6 @@ logger = logging.getLogger(__name__)
 
 
 _PAGE_SPEC_ROOT_ENV = "WAF_PAGE_SPEC_ROOT"
-_EMBEDDED_SPEC_ROOT = (
-    Path(__file__).resolve().parents[5] / "apps" / "validation-site" / "specs"
-)
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -50,17 +47,30 @@ _EMBEDDED_SPEC_ROOT = (
 # ───────────────────────────────────────────────────────────────────
 
 
+class SpecRootNotConfigured(RuntimeError):
+    """Raised when page verification needs specs but no spec root is configured."""
+
+
+class UnsafeSpecId(ValueError):
+    """Raised when a spec id attempts path traversal or nested path access."""
+
+
+class SpecNotFound(FileNotFoundError):
+    """Raised when a configured spec root or spec file is missing."""
+
+
 def get_spec_root() -> Path:
     """Return the configured page spec root.
 
-    ``WAF_PAGE_SPEC_ROOT`` is the preferred external fixture contract. The
-    embedded validation-site fallback is transitional and will be removed in
-    Phase 2B.
+    ``WAF_PAGE_SPEC_ROOT`` is required only when specs are loaded/listed. API
+    app startup and health checks do not require this configuration.
     """
     raw_root = os.environ.get(_PAGE_SPEC_ROOT_ENV, "").strip()
     if raw_root:
         return Path(raw_root).expanduser().resolve()
-    return _EMBEDDED_SPEC_ROOT.resolve()
+    raise SpecRootNotConfigured(
+        "WAF_PAGE_SPEC_ROOT is required for page verification specs."
+    )
 
 
 def _validate_spec_id(spec_id: str) -> None:
@@ -72,14 +82,14 @@ def _validate_spec_id(spec_id: str) -> None:
         or Path(spec_id).is_absolute()
         or ".." in Path(spec_id).parts
     ):
-        raise ValueError(f"Invalid spec_id: {spec_id!r}")
+        raise UnsafeSpecId(f"Invalid spec_id: {spec_id!r}")
 
 
 def iter_spec_paths() -> list[Path]:
     """Return available spec files in deterministic sorted order."""
     root = get_spec_root()
     if not root.exists():
-        return []
+        raise SpecNotFound(f"Page verification spec root not found: {root}")
     return sorted(root.glob("*.assertions.json"))
 
 
@@ -91,9 +101,9 @@ def load_spec(spec_id: str) -> tuple[PageVerificationSpec, Path]:
     try:
         path.relative_to(root)
     except ValueError as exc:
-        raise ValueError(f"Invalid spec_id: {spec_id!r}") from exc
+        raise UnsafeSpecId(f"Invalid spec_id: {spec_id!r}") from exc
     if not path.exists():
-        raise FileNotFoundError(f"Page verification spec not found: {path}")
+        raise SpecNotFound(f"Page verification spec not found: {path}")
     with path.open("r", encoding="utf-8") as f:
         raw = json.load(f)
     return PageVerificationSpec(**raw), path
