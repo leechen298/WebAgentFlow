@@ -73,6 +73,7 @@ def _create_interactive_chat_session(
 
 
 GENERIC_WORKFLOW_URL = "http://example.test/workflow"
+GENERIC_LOGIN_URL = "http://example.test/login"
 GENERIC_RECORDS_URL = "http://example.test/records"
 GENERIC_ALT_WORKFLOW_URL = "http://alt.example.test/workflow"
 GENERIC_ALT_RECORDS_URL = "http://alt.example.test/records"
@@ -823,30 +824,30 @@ def test_product_learning_uses_user_url_and_utterance_inputs(
             run_id="run-workspace",
             learned_path_id=learned_path_id,
             target_url=url,
-            page_template="/workspace-login",
+            page_template="/workflow",
             scenario=None,
-            action_label="进入工作台",
-            suggested_utterances=["帮我进入工作台", "进入工作台一下"],
+            action_label="打开目标页面",
+            suggested_utterances=["帮我打开目标页面", "打开目标页面一下"],
         )
 
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     result = orch.dispatch_user_input(
         session_id,
         (
-            "学习一下这个工作台登录页怎么进入，地址是 "
-            "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+            f"学习一下这个目标页面怎么打开，地址是 {GENERIC_WORKFLOW_URL}，"
+            "操作员账号是 demo，访问口令是 123456"
         ),
         metadata={"client": "wagent_chat"},
     )
 
     assert result.allowed is True
-    assert "学习完成：我学会了进入工作台操作" in result.user_response
+    assert "学习完成：我学会了打开目标页面操作" in result.user_response
     assert calls == [
         (
-            "http://localhost:5176/workspace-login",
+            GENERIC_WORKFLOW_URL,
             (
-                "学习一下这个工作台登录页怎么进入，地址是 "
-                "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+                f"学习一下这个目标页面怎么打开，地址是 {GENERIC_WORKFLOW_URL}，"
+                "操作员账号是 demo，访问口令是 123456"
             ),
             {"headless": False, "fill_values": {"username": "demo", "password": "123456"}},
         )
@@ -856,10 +857,10 @@ def test_product_learning_uses_user_url_and_utterance_inputs(
     assert session is not None
     actions = session.metadata_json["learned_actions"]
     assert len(actions) == 1
-    assert actions[0]["alias"] == "进入工作台"
-    assert actions[0]["target_url"] == "http://localhost:5176/workspace-login"
-    assert actions[0]["site_origin"] == "http://localhost:5176"
-    assert actions[0]["page_template"] == "/workspace-login"
+    assert actions[0]["alias"] == "打开目标页面"
+    assert actions[0]["target_url"] == GENERIC_WORKFLOW_URL
+    assert actions[0]["site_origin"] == "http://example.test"
+    assert actions[0]["page_template"] == "/workflow"
 
 
 def test_interactive_chat_missing_learning_info_saves_pending_intake(
@@ -876,7 +877,7 @@ def test_interactive_chat_missing_learning_info_saves_pending_intake(
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        f"学习一下这个登录页：{GENERIC_WORKFLOW_URL}",
         metadata={"client": "wagent_chat"},
     )
 
@@ -890,7 +891,7 @@ def test_interactive_chat_missing_learning_info_saves_pending_intake(
     assert session is not None
     pending = session.metadata_json["pending_intake"]
     assert pending["intent"] == "learn_operation"
-    assert pending["target"]["url"] == "http://localhost:5176/workspace-login"
+    assert pending["target"]["url"] == GENERIC_WORKFLOW_URL
     assert pending["missing_fields"] == ["username", "password"]
 
     events = repo.list_events(session_id)
@@ -921,7 +922,7 @@ def test_interactive_chat_bare_url_saves_pending_target_without_browser_action(
     )
     result = orch.dispatch_user_input(
         session_id,
-        "http://localhost:5176/workspace-login",
+        GENERIC_WORKFLOW_URL,
         metadata={"client": "wagent_chat"},
     )
 
@@ -935,9 +936,7 @@ def test_interactive_chat_bare_url_saves_pending_target_without_browser_action(
 
     session = repo.get_session(session_id)
     assert session is not None
-    assert session.metadata_json["pending_target"]["url"] == (
-        "http://localhost:5176/workspace-login"
-    )
+    assert session.metadata_json["pending_target"]["url"] == GENERIC_WORKFLOW_URL
     assert "pending_intake" not in session.metadata_json
 
     events = repo.list_events(session_id)
@@ -957,19 +956,19 @@ def test_interactive_chat_bare_url_with_learned_actions_does_not_plan(
     path_id = _ingest_items_path(
         db_session,
         source_run_id="run-bare-url-existing-action",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ]
         },
@@ -987,12 +986,12 @@ def test_interactive_chat_bare_url_with_learned_actions_does_not_plan(
             return ConversationIntakeResult(
                 intent="execute_operation",
                 target=ConversationIntakeTarget(
-                    url="http://localhost:5176/items",
-                    site_origin="http://localhost:5176",
+                    url=GENERIC_RECORDS_URL,
+                    site_origin="http://example.test",
                 ),
                 action=ConversationIntakeAction(
-                    goal="新增项目",
-                    aliases=["新增项目", "帮我新增项目"],
+                    goal="创建记录",
+                    aliases=["创建记录", "帮我创建记录"],
                 ),
                 confidence=0.9,
             )
@@ -1006,8 +1005,8 @@ def test_interactive_chat_bare_url_with_learned_actions_does_not_plan(
                 route_decision=RouteDecisionKind.DELEGATE_TO_WEB_OPERATION_AGENT,
                 next_agent=RouterAgentRole.WEB_OPERATION_AGENT,
                 recommended_skill=ApplicationSkillName.START_REPLAY,
-                target={"url": "http://localhost:5176/items"},
-                user_goal="新增项目",
+                target={"url": GENERIC_RECORDS_URL},
+                user_goal="创建记录",
                 confidence=0.9,
                 reason_summary="incorrectly treats bare URL as execution",
             )
@@ -1030,13 +1029,13 @@ def test_interactive_chat_bare_url_with_learned_actions_does_not_plan(
     )
     result = orch.dispatch_user_input(
         session_id,
-        "http://localhost:5176/items",
+        GENERIC_RECORDS_URL,
         metadata={"client": "wagent_chat"},
     )
 
     assert replay_called is False
     assert result.command_kind == "ask_user"
-    assert "新增项目" in result.user_response
+    assert "创建记录" in result.user_response
     assert "学习" in result.user_response
     assert "执行" in result.user_response
     events = repo.list_events(session_id)
@@ -1075,7 +1074,7 @@ def test_interactive_chat_unknown_url_choose_learn_starts_learning_flow(
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     first = orch.dispatch_user_input(
         session_id,
-        "http://localhost:5176/records",
+        GENERIC_RECORDS_URL,
         metadata={"client": "wagent_chat"},
     )
     result = orch.dispatch_user_input(
@@ -1089,7 +1088,7 @@ def test_interactive_chat_unknown_url_choose_learn_starts_learning_flow(
     assert result.command_kind == "learn_page"
     assert len(calls) == 1
     assert calls[0] == (
-        "http://localhost:5176/records",
+        GENERIC_RECORDS_URL,
         "学习创建记录，名称叫 Alpha",
         {"headless": False, "fill_values": {"entity_name": "Alpha"}},
     )
@@ -1114,8 +1113,8 @@ def test_interactive_chat_inspect_route_uses_page_understanding_runtime(
                 route_decision=RouteDecisionKind.UNDERSTAND_PAGE,
                 next_agent=RouterAgentRole.PAGE_UNDERSTANDING_AGENT,
                 recommended_skill=ApplicationSkillName.INSPECT_TARGET_PAGE,
-                target={"url": "http://localhost:5176/workspace-login"},
-                user_goal="登录",
+                target={"url": GENERIC_WORKFLOW_URL},
+                user_goal="打开目标页面",
                 confidence=0.91,
                 reason_summary="needs page context",
                 source="llm",
@@ -1145,13 +1144,13 @@ def test_interactive_chat_inspect_route_uses_page_understanding_runtime(
     def page_context_provider(*, route_decision, intake, headless):
         return PageContextBuilder().build_from_html(
             url=route_decision.target.url,
-            title="Workspace Login",
+            title="Workflow Page",
             html="""
             <main>
-              <h1>Workspace Login</h1>
+              <h1>Workflow Page</h1>
               <label>用户名<input name="username" /></label>
               <label>密码<input name="password" type="password" /></label>
-              <button>登录</button>
+              <button>打开目标页面</button>
             </main>
             """,
             learned_actions=[],
@@ -1164,7 +1163,7 @@ def test_interactive_chat_inspect_route_uses_page_understanding_runtime(
     )
     result = orch.dispatch_user_input(
         session_id,
-        "看一下 http://localhost:5176/workspace-login 能做什么",
+        f"看一下 {GENERIC_WORKFLOW_URL} 能做什么",
         metadata={"client": "wagent_chat"},
     )
 
@@ -1173,9 +1172,7 @@ def test_interactive_chat_inspect_route_uses_page_understanding_runtime(
     assert "我已查看页面" in result.user_response
     session = repo.get_session(session_id)
     assert session is not None
-    assert session.metadata_json["pending_target"]["url"] == (
-        "http://localhost:5176/workspace-login"
-    )
+    assert session.metadata_json["pending_target"]["url"] == GENERIC_WORKFLOW_URL
 
     events = repo.list_events(session_id)
     assert any(
@@ -1219,9 +1216,9 @@ def test_interactive_chat_learn_intent_overrides_router_inspect_route(
         repo,
         metadata={
             "pending_target": {
-                "url": "http://localhost:5176/items",
-                "site_origin": "http://localhost:5176",
-                "page_hint": "/items",
+                "url": GENERIC_RECORDS_URL,
+                "site_origin": "http://example.test",
+                "page_hint": "/records",
             }
         },
     )
@@ -1239,20 +1236,20 @@ def test_interactive_chat_learn_intent_overrides_router_inspect_route(
             return ConversationIntakeResult(
                 intent="learn_operation",
                 target=ConversationIntakeTarget(
-                    url="http://localhost:5176/items",
-                    site_origin="http://localhost:5176",
-                    page_hint="/items",
+                    url=GENERIC_RECORDS_URL,
+                    site_origin="http://example.test",
+                    page_hint="/records",
                 ),
                 action=ConversationIntakeAction(
-                    goal="新增项目",
-                    canonical_goal="新增项目",
-                    aliases=["新增项目"],
+                    goal="创建记录",
+                    canonical_goal="创建记录",
+                    aliases=["创建记录"],
                 ),
                 slots=[
                     ConversationIntakeSlot(
-                        name="item_name",
-                        semantic_type="item_name",
-                        value="测试项目A",
+                        name="record_name",
+                        semantic_type="record_name",
+                        value="AlphaRecord",
                     )
                 ],
                 confidence=0.95,
@@ -1267,8 +1264,8 @@ def test_interactive_chat_learn_intent_overrides_router_inspect_route(
                 route_decision=RouteDecisionKind.UNDERSTAND_PAGE,
                 next_agent=RouterAgentRole.PAGE_UNDERSTANDING_AGENT,
                 recommended_skill=ApplicationSkillName.INSPECT_TARGET_PAGE,
-                target={"url": "http://localhost:5176/items"},
-                user_goal="新增项目",
+                target={"url": GENERIC_RECORDS_URL},
+                user_goal="创建记录",
                 confidence=0.9,
                 reason_summary="incorrectly asks for page understanding",
             )
@@ -1281,17 +1278,17 @@ def test_interactive_chat_learn_intent_overrides_router_inspect_route(
         learned_path_id = _ingest_items_path(
             db_session,
             source_run_id="run-learn-overrides-router-inspect",
-            value_slot="item_name",
+            value_slot="record_name",
         )
         return LearningRunResult(
             status="learned",
             run_id="run-learn-overrides-router-inspect",
             learned_path_id=learned_path_id,
             target_url=url,
-            page_template="/items",
+            page_template="/records",
             scenario="product_level",
-            action_label="新增项目",
-            suggested_utterances=["帮我新增项目"],
+            action_label="创建记录",
+            suggested_utterances=["帮我创建记录"],
         )
 
     orch = ConversationOrchestrator(
@@ -1303,14 +1300,14 @@ def test_interactive_chat_learn_intent_overrides_router_inspect_route(
 
     result = orch.dispatch_user_input(
         session_id,
-        "学习新增项目，名称叫 测试项目A",
+        "学习创建记录，名称叫AlphaRecord",
         metadata={"client": "wagent_chat"},
     )
 
     assert result.command_kind == "learn_page"
-    assert "学习完成：我学会了新增项目操作" in result.user_response
+    assert "学习完成：我学会了创建记录操作" in result.user_response
     assert len(learning_calls) == 1
-    assert learning_calls[0][2]["fill_values"] == {"item_name": "测试项目A"}
+    assert learning_calls[0][2]["fill_values"] == {"record_name": "AlphaRecord"}
     events = repo.list_events(session_id)
     assert any(e.type == "chat_learning_started" for e in events)
     assert not any(
@@ -1326,19 +1323,19 @@ def test_interactive_chat_execute_intent_with_slot_overrides_router_inspect_rout
     path_id = _ingest_items_path(
         db_session,
         source_run_id="run-execute-overrides-router-inspect",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ]
         },
@@ -1357,20 +1354,20 @@ def test_interactive_chat_execute_intent_with_slot_overrides_router_inspect_rout
             return ConversationIntakeResult(
                 intent="execute_operation",
                 target=ConversationIntakeTarget(
-                    url="http://localhost:5176/items",
-                    site_origin="http://localhost:5176",
-                    page_hint="/items",
+                    url=GENERIC_RECORDS_URL,
+                    site_origin="http://example.test",
+                    page_hint="/records",
                 ),
                 action=ConversationIntakeAction(
-                    goal="新增项目",
-                    canonical_goal="新增项目",
-                    aliases=["新增项目", "添加项目"],
+                    goal="创建记录",
+                    canonical_goal="创建记录",
+                    aliases=["创建记录", "添加记录"],
                 ),
                 slots=[
                     ConversationIntakeSlot(
-                        name="item_name",
-                        semantic_type="item_name",
-                        value="测试项目PlannerA",
+                        name="record_name",
+                        semantic_type="record_name",
+                        value="PlannerRecord",
                     )
                 ],
                 confidence=0.9,
@@ -1385,8 +1382,8 @@ def test_interactive_chat_execute_intent_with_slot_overrides_router_inspect_rout
                 route_decision=RouteDecisionKind.UNDERSTAND_PAGE,
                 next_agent=RouterAgentRole.PAGE_UNDERSTANDING_AGENT,
                 recommended_skill=ApplicationSkillName.INSPECT_TARGET_PAGE,
-                target={"url": "http://localhost:5176/items"},
-                user_goal="新增项目",
+                target={"url": GENERIC_RECORDS_URL},
+                user_goal="创建记录",
                 confidence=0.9,
                 reason_summary="incorrectly asks for page understanding",
             )
@@ -1404,10 +1401,10 @@ def test_interactive_chat_execute_intent_with_slot_overrides_router_inspect_rout
             execution_evidence=[
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目PlannerA",
+                    "target": "PlannerRecord",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目PlannerA”的项目行。",
+                    "summary": "记录列表中出现了名称为“PlannerRecord”的记录行。",
                 }
             ],
         )
@@ -1421,15 +1418,15 @@ def test_interactive_chat_execute_intent_with_slot_overrides_router_inspect_rout
 
     result = orch.dispatch_user_input(
         session_id,
-        "帮我处理一下这个页面，名称叫 测试项目PlannerA",
+        "帮我处理一下这个页面，名称叫PlannerRecord",
         metadata={"client": "wagent_chat"},
     )
 
     assert result.command_kind == "execute_task"
-    assert "页面证据已确认目标值“测试项目PlannerA”" in result.user_response
+    assert "页面证据已确认目标值“PlannerRecord”" in result.user_response
     assert len(calls) == 1
     assert calls[0][0] == path_id
-    assert calls[0][2]["slot_overrides"] == {"item_name": "测试项目PlannerA"}
+    assert calls[0][2]["slot_overrides"] == {"record_name": "PlannerRecord"}
     events = repo.list_events(session_id)
     assert any(e.type == "chat_execution_started" for e in events)
     assert not any(
@@ -1446,7 +1443,7 @@ def test_interactive_chat_short_learn_uses_pending_target_and_asks_slots(
 
     orch.dispatch_user_input(
         session_id,
-        "http://localhost:5176/workspace-login",
+        GENERIC_LOGIN_URL,
         metadata={"client": "wagent_chat"},
     )
     result = orch.dispatch_user_input(
@@ -1461,7 +1458,7 @@ def test_interactive_chat_short_learn_uses_pending_target_and_asks_slots(
     session = repo.get_session(session_id)
     assert session is not None
     pending = session.metadata_json["pending_intake"]
-    assert pending["target"]["url"] == "http://localhost:5176/workspace-login"
+    assert pending["target"]["url"] == GENERIC_LOGIN_URL
     assert pending["missing_fields"] == ["username", "password"]
 
 
@@ -1483,16 +1480,16 @@ def test_interactive_chat_merges_pending_intake_and_starts_learning(
             run_id="run-pending-intake",
             learned_path_id=learned_path_id,
             target_url=url,
-            page_template="/workspace-login",
+            page_template="/workflow",
             scenario=None,
-            action_label="进入工作台",
-            suggested_utterances=["帮我进入工作台", "打开工作台"],
+            action_label="打开目标页面",
+            suggested_utterances=["帮我打开目标页面", "查看目标页面"],
         )
 
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        f"学习一下这个登录页：{GENERIC_WORKFLOW_URL}",
         metadata={"client": "wagent_chat"},
     )
     result = orch.dispatch_user_input(
@@ -1505,7 +1502,7 @@ def test_interactive_chat_merges_pending_intake_and_starts_learning(
     assert result.command_kind == "learn_page"
     assert len(calls) == 1
     assert calls[0] == (
-        "http://localhost:5176/workspace-login",
+        GENERIC_WORKFLOW_URL,
         "用户名 demo，密码 123456",
         {"headless": False, "fill_values": {"username": "demo", "password": "123456"}},
     )
@@ -1533,16 +1530,16 @@ def test_interactive_chat_merges_sensitive_slot_saved_before_missing_info(
             run_id="run-sensitive-pending",
             learned_path_id=learned_path_id,
             target_url=url,
-            page_template="/workspace-login",
+            page_template="/workflow",
             scenario=None,
-            action_label="进入工作台",
-            suggested_utterances=["帮我进入工作台"],
+            action_label="打开目标页面",
+            suggested_utterances=["帮我打开目标页面"],
         )
 
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     first = orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页：http://localhost:5176/workspace-login，密码 123456",
+        f"学习一下这个登录页：{GENERIC_WORKFLOW_URL}，密码 123456",
         metadata={"client": "wagent_chat"},
     )
     assert "用户名" in first.user_response
@@ -1578,16 +1575,16 @@ def test_interactive_chat_reasks_when_pending_sensitive_cache_is_missing(
             run_id="run-sensitive-cache-missing",
             learned_path_id=learned_path_id,
             target_url=url,
-            page_template="/workspace-login",
+            page_template="/workflow",
             scenario=None,
-            action_label="进入工作台",
-            suggested_utterances=["帮我进入工作台"],
+            action_label="打开目标页面",
+            suggested_utterances=["帮我打开目标页面"],
         )
 
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页：http://localhost:5176/workspace-login，密码 123456",
+        f"学习一下这个登录页：{GENERIC_WORKFLOW_URL}，密码 123456",
         metadata={"client": "wagent_chat"},
     )
     _PENDING_SENSITIVE_VALUES.pop(session_id, None)
@@ -1612,7 +1609,7 @@ def test_interactive_chat_cancel_clears_runtime_sensitive_cache(
     orch = ConversationOrchestrator(repo)
     orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页：http://localhost:5176/workspace-login，密码 123456",
+        f"学习一下这个登录页：{GENERIC_WORKFLOW_URL}，密码 123456",
         metadata={"client": "wagent_chat"},
     )
     assert _PENDING_SENSITIVE_VALUES.get(session_id) == {"password": "123456"}
@@ -1662,7 +1659,7 @@ def test_interactive_chat_rejects_pending_intake_target_change(
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        f"学习一下这个登录页：{GENERIC_WORKFLOW_URL}",
         metadata={"client": "wagent_chat"},
     )
     result = orch.dispatch_user_input(
@@ -1675,9 +1672,7 @@ def test_interactive_chat_rejects_pending_intake_target_change(
     assert "页面地址变了" in result.user_response
     session = repo.get_session(session_id)
     assert session is not None
-    assert session.metadata_json["pending_intake"]["target"]["url"] == (
-        "http://localhost:5176/workspace-login"
-    )
+    assert session.metadata_json["pending_intake"]["target"]["url"] == GENERIC_WORKFLOW_URL
 
 
 def test_interactive_chat_cancel_clears_pending_intake(
@@ -1687,7 +1682,7 @@ def test_interactive_chat_cancel_clears_pending_intake(
     orch = ConversationOrchestrator(repo)
     orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        f"学习一下这个登录页：{GENERIC_WORKFLOW_URL}",
         metadata={"client": "wagent_chat"},
     )
     assert repo.get_session(session_id).metadata_json.get("pending_intake")
@@ -1710,7 +1705,7 @@ def test_interactive_chat_pending_intake_expires_after_turns_remaining(
     orch = ConversationOrchestrator(repo)
     orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        f"学习一下这个登录页：{GENERIC_WORKFLOW_URL}",
         metadata={"client": "wagent_chat"},
     )
 
@@ -1747,13 +1742,13 @@ def test_interactive_chat_invalid_provider_output_preserves_pending_intake(
                 return ConversationIntakeResult(
                     intent="learn_operation",
                     target=ConversationIntakeTarget(
-                        url="http://localhost:5176/workspace-login",
-                        site_origin="http://localhost:5176",
+                        url=GENERIC_WORKFLOW_URL,
+                        site_origin="http://example.test",
                     ),
                     action=ConversationIntakeAction(
                         goal="登录",
-                        canonical_goal="进入工作台",
-                        aliases=["登录", "进入工作台"],
+                        canonical_goal="打开目标页面",
+                        aliases=["登录", "打开目标页面"],
                     ),
                     missing_fields=[
                         {"semantic_type": "username", "display_name": "用户名或账号"},
@@ -1785,7 +1780,7 @@ def test_interactive_chat_invalid_provider_output_preserves_pending_intake(
     )
     orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页：http://localhost:5176/workspace-login",
+        f"学习一下这个登录页：{GENERIC_WORKFLOW_URL}",
         metadata={"client": "wagent_chat"},
     )
     result = orch.dispatch_user_input(
@@ -1814,13 +1809,13 @@ def test_interactive_chat_low_confidence_intake_does_not_start_browser_action(
             return ConversationIntakeResult(
                 intent="learn_operation",
                 target=ConversationIntakeTarget(
-                    url="http://localhost:5176/workspace-login",
-                    site_origin="http://localhost:5176",
+                    url=GENERIC_WORKFLOW_URL,
+                    site_origin="http://example.test",
                 ),
                 action=ConversationIntakeAction(
                     goal="登录",
-                    canonical_goal="进入工作台",
-                    aliases=["登录", "进入工作台"],
+                    canonical_goal="打开目标页面",
+                    aliases=["登录", "打开目标页面"],
                 ),
                 confidence=0.2,
                 should_ask_user=False,
@@ -1971,25 +1966,25 @@ def test_same_alias_learning_keeps_different_target_urls(
             run_id=source_run_id,
             learned_path_id=learned_path_id,
             target_url=url,
-            page_template="/workspace-login",
+            page_template="/workflow",
             scenario=None,
-            action_label="进入工作台",
-            suggested_utterances=["帮我进入工作台"],
+            action_label="打开目标页面",
+            suggested_utterances=["帮我打开目标页面"],
         )
 
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     orch.dispatch_user_input(
         session_id,
         (
-            "学习一下这个工作台登录页怎么进入，地址是 "
-            "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+            f"学习一下这个目标页面怎么打开，地址是 {GENERIC_WORKFLOW_URL}，"
+            "操作员账号是 demo，访问口令是 123456"
         ),
         metadata={"client": "wagent_chat"},
     )
     orch.dispatch_user_input(
         session_id,
         (
-            "学习一下这个工作台登录页怎么进入，地址是 "
+            "学习一下这个目标页面怎么打开，地址是 "
             f"{GENERIC_ALT_WORKFLOW_URL}，操作员账号是 demo，访问口令是 123456"
         ),
         metadata={"client": "wagent_chat"},
@@ -2000,7 +1995,7 @@ def test_same_alias_learning_keeps_different_target_urls(
     actions = session.metadata_json["learned_actions"]
     assert len(actions) == 2
     assert {action["target_url"] for action in actions} == {
-        "http://localhost:5176/workspace-login",
+        GENERIC_WORKFLOW_URL,
         GENERIC_ALT_WORKFLOW_URL,
     }
 
@@ -2255,19 +2250,19 @@ def test_interactive_chat_replay_failed_offers_basic_recovery(
     learned_path_id = _ingest_items_path(
         db_session,
         source_run_id="run-items-replay-failed",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ]
         },
@@ -2284,7 +2279,7 @@ def test_interactive_chat_replay_failed_offers_basic_recovery(
 
     result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
 
@@ -2301,7 +2296,7 @@ def test_interactive_chat_replay_failed_offers_basic_recovery(
     private_map = session.metadata_json["pending_choice_private_map"]
     assert private_map["A"]["kind"] == "retry_replay"
     assert private_map["A"]["learned_path_id"] == learned_path_id
-    assert private_map["A"]["slot_overrides"] == {"item_name": "测试项目B"}
+    assert private_map["A"]["slot_overrides"] == {"record_name": "BetaRecord"}
     assert private_map["B"]["kind"] == "relearn_operation"
     assert private_map["C"]["kind"] == "cancel"
     active_task = session.metadata_json["active_task"]
@@ -2328,7 +2323,7 @@ def test_interactive_chat_eval_fault_injection_forces_needs_review_recovery(
     learned_path_id = _ingest_items_path(
         db_session,
         source_run_id="run-items-eval-fault",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
@@ -2336,12 +2331,12 @@ def test_interactive_chat_eval_fault_injection_forces_needs_review_recovery(
             "client": "wagent_eval",
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ],
         },
@@ -2356,17 +2351,17 @@ def test_interactive_chat_eval_fault_injection_forces_needs_review_recovery(
             execution_evidence=[
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目B",
+                    "target": "BetaRecord",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目B”的项目行。",
+                    "summary": "记录列表中出现了名称为“BetaRecord”的记录行。",
                 }
             ],
         )
 
     result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={
             "client": "wagent_eval",
             "eval_fault_injection": {
@@ -2432,7 +2427,7 @@ def test_interactive_chat_eval_fault_injection_ignored_unless_valid_opt_in(
     learned_path_id = _ingest_items_path(
         db_session,
         source_run_id=f"run-items-eval-fault-ignored-{session_client}",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
@@ -2440,12 +2435,12 @@ def test_interactive_chat_eval_fault_injection_ignored_unless_valid_opt_in(
             "client": session_client,
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ],
         },
@@ -2460,22 +2455,22 @@ def test_interactive_chat_eval_fault_injection_ignored_unless_valid_opt_in(
             execution_evidence=[
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目B",
+                    "target": "BetaRecord",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目B”的项目行。",
+                    "summary": "记录列表中出现了名称为“BetaRecord”的记录行。",
                 }
             ],
         )
 
     result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata=metadata,
     )
 
     assert result.allowed is True
-    assert "页面证据已确认目标值“测试项目B”" in result.user_response
+    assert "页面证据已确认目标值“BetaRecord”" in result.user_response
     assert "A. 重试执行该操作" not in result.user_response
     events = repo.list_events(session_id)
     assert not [
@@ -2490,7 +2485,7 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
     learned_path_id = _ingest_items_path(
         db_session,
         source_run_id="run-items-eval-choice-binding",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
@@ -2498,12 +2493,12 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
             "client": "wagent_eval",
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ],
         },
@@ -2520,10 +2515,10 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
             execution_evidence=[
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目ChoiceA",
+                    "target": "ChoiceRecord",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目ChoiceA”的项目行。",
+                    "summary": "记录列表中出现了名称为“ChoiceRecord”的记录行。",
                 }
             ],
         )
@@ -2531,7 +2526,7 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     first = orch.dispatch_user_input(
         session_id,
-        "帮我处理一下这个页面：http://localhost:5176/items，名称叫测试项目ChoiceA",
+        f"帮我处理一下这个页面：{GENERIC_RECORDS_URL}，名称叫ChoiceRecord",
         metadata={
             "client": "wagent_eval",
             "eval_candidate_setup": {
@@ -2541,17 +2536,17 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
                 "actions": [
                     {
                         "choice_id": "A",
-                        "alias": "新增项目",
+                        "alias": "创建记录",
                         "learned_path_id": learned_path_id,
                     },
                     {
                         "choice_id": "B",
-                        "alias": "添加项目",
+                        "alias": "添加记录",
                         "learned_path_id": learned_path_id,
                     },
                     {
                         "choice_id": "C",
-                        "alias": "录入项目",
+                        "alias": "录入记录",
                         "learned_path_id": learned_path_id,
                     },
                 ],
@@ -2561,9 +2556,9 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
 
     assert replay_calls == []
     assert "我找到了多个可能的操作" in first.user_response
-    assert "A. 新增项目" in first.user_response
-    assert "B. 添加项目" in first.user_response
-    assert "C. 录入项目" in first.user_response
+    assert "A. 创建记录" in first.user_response
+    assert "B. 添加记录" in first.user_response
+    assert "C. 录入记录" in first.user_response
     assert learned_path_id not in first.user_response
 
     session = repo.get_session(session_id)
@@ -2576,7 +2571,7 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
     assert "learned_path_id" not in pending_choice_text
     assert session.metadata_json["pending_choice_private_map"]["A"]["kind"] == "learned_action"
     assert session.metadata_json["pending_choice_private_map"]["A"]["slot_overrides"] == {
-        "entity_name": "测试项目ChoiceA"
+        "entity_name": "ChoiceRecord"
     }
 
     result = orch.dispatch_user_input(
@@ -2586,12 +2581,12 @@ def test_interactive_chat_eval_candidate_binding_creates_non_planner_pending_cho
     )
 
     assert result.allowed is True
-    assert "页面证据已确认目标值“测试项目ChoiceA”" in result.user_response
+    assert "页面证据已确认目标值“ChoiceRecord”" in result.user_response
     assert len(replay_calls) == 1
     assert replay_calls[0][0] == learned_path_id
-    assert replay_calls[0][1] == "http://localhost:5176/items"
+    assert replay_calls[0][1] == GENERIC_RECORDS_URL
     assert replay_calls[0][2]["headless"] is False
-    assert replay_calls[0][2]["slot_overrides"] == {"item_name": "测试项目ChoiceA"}
+    assert replay_calls[0][2]["slot_overrides"] == {"record_name": "ChoiceRecord"}
     assert replay_calls[0][2]["evidence_targets"]
     session = repo.get_session(session_id)
     assert session is not None
@@ -2719,12 +2714,12 @@ def test_interactive_chat_eval_candidate_binding_ignored_unless_valid_opt_in(
             "client": session_client,
             "learned_actions": [
                 {
-                    "alias": "进入工作台",
-                    "utterances": ["帮我进入工作台"],
+                    "alias": "打开目标页面",
+                    "utterances": ["帮我打开目标页面"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/workspace-login",
+                    "target_url": GENERIC_WORKFLOW_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/workflow",
                 }
             ],
         },
@@ -2742,7 +2737,7 @@ def test_interactive_chat_eval_candidate_binding_ignored_unless_valid_opt_in(
 
     result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
         session_id,
-        "帮我处理一下这个页面：http://localhost:5176/workspace-login",
+        f"帮我处理一下这个页面：{GENERIC_WORKFLOW_URL}",
         metadata=metadata,
     )
 
@@ -2765,19 +2760,19 @@ def test_interactive_chat_blocked_drift_offers_basic_recovery(
     learned_path_id = _ingest_items_path(
         db_session,
         source_run_id="run-items-recovery-drift",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ]
         },
@@ -2793,7 +2788,7 @@ def test_interactive_chat_blocked_drift_offers_basic_recovery(
 
     result = ConversationOrchestrator(repo, replay_handler=replay_handler).dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
 
@@ -2812,19 +2807,19 @@ def test_interactive_chat_recovery_retry_replays_once_with_original_payload(
     learned_path_id = _ingest_items_path(
         db_session,
         source_run_id="run-items-recovery-retry",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ]
         },
@@ -2848,10 +2843,10 @@ def test_interactive_chat_recovery_retry_replays_once_with_original_payload(
             execution_evidence=[
                 {
                     "kind": "dom_text_present",
-                    "target": "测试项目B",
+                    "target": "BetaRecord",
                     "status": "verified",
                     "confidence": 0.95,
-                    "summary": "列表中出现了名称为“测试项目B”的项目行。",
+                    "summary": "记录列表中出现了名称为“BetaRecord”的记录行。",
                 }
             ],
         )
@@ -2859,7 +2854,7 @@ def test_interactive_chat_recovery_retry_replays_once_with_original_payload(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     first = orch.dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
 
@@ -2871,12 +2866,12 @@ def test_interactive_chat_recovery_retry_replays_once_with_original_payload(
         metadata={"client": "wagent_chat"},
     )
 
-    assert "页面证据已确认目标值“测试项目B”" in retry.user_response
+    assert "页面证据已确认目标值“BetaRecord”" in retry.user_response
     assert len(calls) == 2
     assert calls[1][0] == learned_path_id
-    assert calls[1][1] == "http://localhost:5176/items"
-    assert calls[1][2]["slot_overrides"] == {"item_name": "测试项目B"}
-    assert calls[1][2]["evidence_targets"][0].text == "测试项目B"
+    assert calls[1][1] == GENERIC_RECORDS_URL
+    assert calls[1][2]["slot_overrides"] == {"record_name": "BetaRecord"}
+    assert calls[1][2]["evidence_targets"][0].text == "BetaRecord"
     session = repo.get_session(session_id)
     assert session is not None
     assert "pending_choice" not in session.metadata_json
@@ -2908,19 +2903,19 @@ def test_interactive_chat_recovery_retry_failure_does_not_auto_loop(
     learned_path_id = _ingest_items_path(
         db_session,
         source_run_id="run-items-recovery-retry-fails",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ]
         },
@@ -2940,7 +2935,7 @@ def test_interactive_chat_recovery_retry_failure_does_not_auto_loop(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     orch.dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
     retry = orch.dispatch_user_input(
@@ -2964,19 +2959,19 @@ def test_interactive_chat_recovery_relearn_starts_learning_without_replay(
     learned_path_id = _ingest_items_path(
         db_session,
         source_run_id="run-items-recovery-relearn-old",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ]
         },
@@ -2998,17 +2993,17 @@ def test_interactive_chat_recovery_relearn_starts_learning_without_replay(
         new_path_id = _ingest_items_path(
             db_session,
             source_run_id="run-items-recovery-relearn-new",
-            value_slot="item_name",
+            value_slot="record_name",
         )
         return LearningRunResult(
             status="learned",
             run_id="run-items-recovery-relearn-new",
             learned_path_id=new_path_id,
             target_url=url,
-            page_template="/items",
+            page_template="/records",
             scenario="product_level",
-            action_label="新增项目",
-            suggested_utterances=["帮我新增项目"],
+            action_label="创建记录",
+            suggested_utterances=["帮我创建记录"],
         )
 
     orch = ConversationOrchestrator(
@@ -3018,7 +3013,7 @@ def test_interactive_chat_recovery_relearn_starts_learning_without_replay(
     )
     orch.dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
     result = orch.dispatch_user_input(
@@ -3030,8 +3025,8 @@ def test_interactive_chat_recovery_relearn_starts_learning_without_replay(
     assert "学习完成" in result.user_response
     assert len(replay_calls) == 1
     assert len(learning_calls) == 1
-    assert learning_calls[0][0] == "http://localhost:5176/items"
-    assert learning_calls[0][2]["fill_values"] == {"item_name": "测试项目B"}
+    assert learning_calls[0][0] == GENERIC_RECORDS_URL
+    assert learning_calls[0][2]["fill_values"] == {"record_name": "BetaRecord"}
     session = repo.get_session(session_id)
     assert session is not None
     assert "pending_choice" not in session.metadata_json
@@ -3055,19 +3050,19 @@ def test_interactive_chat_recovery_cancel_clears_state_and_records_event(
     learned_path_id = _ingest_items_path(
         db_session,
         source_run_id="run-items-recovery-cancel",
-        value_slot="item_name",
+        value_slot="record_name",
     )
     session_id = _create_interactive_chat_session(
         repo,
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                 }
             ],
         },
@@ -3085,7 +3080,7 @@ def test_interactive_chat_recovery_cancel_clears_state_and_records_event(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     orch.dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
     repo.update_session_status(
@@ -3093,7 +3088,7 @@ def test_interactive_chat_recovery_cancel_clears_state_and_records_event(
         "task_intake",
         metadata_patch={
             "pending_intake": {"intent": "execute_operation"},
-            "pending_target": {"url": "http://localhost:5176/items"},
+            "pending_target": {"url": GENERIC_RECORDS_URL},
             "last_no_path_reason": {"reason": "test"},
         },
     )
@@ -3127,7 +3122,7 @@ def test_interactive_chat_recovery_cancel_clears_state_and_records_event(
     assert "slot_overrides" not in cancelled_text
 
 
-def test_interactive_chat_blocks_item_name_replay_without_value_slot(
+def test_interactive_chat_blocks_record_name_replay_without_value_slot(
     db_session: Session,
     repo: ConversationRepository,
 ) -> None:
@@ -3137,12 +3132,12 @@ def test_interactive_chat_blocks_item_name_replay_without_value_slot(
         metadata={
             "learned_actions": [
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_template": "/items",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
                     "scenario": None,
                 }
             ]
@@ -3153,12 +3148,12 @@ def test_interactive_chat_blocks_item_name_replay_without_value_slot(
     def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
         nonlocal replay_called
         replay_called = True
-        raise AssertionError("non-parameterized item path must not replay")
+        raise AssertionError("non-parameterized record path must not replay")
 
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "帮我新增项目，名称叫测试项目B",
+        "帮我创建记录，名称叫BetaRecord",
         metadata={"client": "wagent_chat"},
     )
 
@@ -4543,8 +4538,8 @@ def test_interactive_chat_execute_matches_value_specific_learned_alias_generical
                     "alias": "创建记录名称叫 Alpha",
                     "utterances": ["帮我创建记录名称叫 Alpha"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/records",
-                    "site_origin": "http://localhost:5176",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
                     "page_template": "/records",
                     "scenario": None,
                 }
@@ -4582,7 +4577,7 @@ def test_interactive_chat_execute_matches_value_specific_learned_alias_generical
     assert "页面证据已确认目标值“Beta”" in result.user_response
     assert len(calls) == 1
     assert calls[0][0] == learned_path_id
-    assert calls[0][1] == "http://localhost:5176/records"
+    assert calls[0][1] == GENERIC_RECORDS_URL
     assert calls[0][2]["slot_overrides"] == {"entity_name": "Beta"}
     assert calls[0][2]["evidence_targets"][0].text == "Beta"
     events = repo.list_events(session_id)
@@ -4607,8 +4602,8 @@ def test_interactive_chat_single_candidate_conflicting_action_does_not_execute(
                     "alias": "创建记录",
                     "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/records",
-                    "site_origin": "http://localhost:5176",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
                     "page_template": "/records",
                     "scenario": None,
                 }
@@ -4625,7 +4620,7 @@ def test_interactive_chat_single_candidate_conflicting_action_does_not_execute(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "帮我删除记录，页面 http://localhost:5176/records",
+        f"帮我删除记录，页面 {GENERIC_RECORDS_URL}",
         metadata={"client": "wagent_chat"},
     )
 
@@ -4650,7 +4645,7 @@ def test_interactive_chat_execute_unknown_page_guidance_does_not_replay(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "帮我创建记录，名称叫 Alpha，页面 http://localhost:5176/records",
+        f"帮我创建记录，名称叫 Alpha，页面 {GENERIC_RECORDS_URL}",
         metadata={"client": "wagent_chat"},
     )
 
@@ -4676,8 +4671,8 @@ def test_interactive_chat_execute_learned_page_unmatched_operation_guidance(
                     "alias": "创建记录",
                     "utterances": ["帮我创建记录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5176/records",
-                    "site_origin": "http://localhost:5176",
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
                     "page_template": "/records",
                     "scenario": None,
                 }
@@ -4694,7 +4689,7 @@ def test_interactive_chat_execute_learned_page_unmatched_operation_guidance(
     orch = ConversationOrchestrator(repo, replay_handler=replay_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "帮我删除记录，页面 http://localhost:5176/records",
+        f"帮我删除记录，页面 {GENERIC_RECORDS_URL}",
         metadata={"client": "wagent_chat"},
     )
 
