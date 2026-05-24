@@ -99,7 +99,7 @@ def test_learning_service_returns_run_id_and_queryable_learned_path_id(
     assert result.suggested_utterances == ["帮我登录", "登录一下"]
 
 
-def test_product_learning_does_not_load_validation_spec_and_labels_workspace_action(
+def test_product_learning_does_not_load_validation_spec_and_labels_login_action(
     db_session: Session,
 ) -> None:
     explorer_calls = []
@@ -107,10 +107,10 @@ def test_product_learning_does_not_load_validation_spec_and_labels_workspace_act
     def explorer(**kwargs):
         explorer_calls.append(kwargs)
         return _exploration_result(
-            url="http://localhost:5176/workspace-login",
-            title="工作台入口",
-            final_url="http://localhost:5176/workspace-home",
-            final_title="工作台首页",
+            url="http://localhost:8080/login",
+            title="登录入口",
+            final_url="http://localhost:8080/account",
+            final_title="账户首页",
         )
 
     def spec_loader(spec_id: str):
@@ -125,10 +125,10 @@ def test_product_learning_does_not_load_validation_spec_and_labels_workspace_act
 
     result = service.run(
         LearningRunRequest(
-            url="http://localhost:5176/workspace-login",
+            url="http://localhost:8080/login",
             goal=(
-                "学习一下这个工作台登录页怎么进入，地址是 "
-                "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+                "学习一下这个登录页怎么登录，地址是 "
+                "http://localhost:8080/login，操作员账号是 demo，访问口令是 123456"
             ),
             fill_values={"username": "demo", "password": "123456"},
             product_level=True,
@@ -139,8 +139,8 @@ def test_product_learning_does_not_load_validation_spec_and_labels_workspace_act
     assert result.run_id is not None
     assert result.learned_path_id is not None
     assert result.scenario is None
-    assert result.action_label == "进入工作台"
-    assert result.suggested_utterances == ["帮我进入工作台", "进入工作台一下"]
+    assert result.action_label == "登录"
+    assert result.suggested_utterances == ["帮我登录", "登录一下"]
     assert "scenario_name" not in explorer_calls[0]
     assert explorer_calls[0]["fill_values"] == {"username": "demo", "password": "123456"}
 
@@ -339,10 +339,10 @@ def test_product_learning_parameterizes_matching_fill_values_without_route_gate(
 ) -> None:
     def explorer(**kwargs):
         return _exploration_result(
-            url="http://localhost:5176/workspace-login",
-            title="工作台入口",
-            final_url="http://localhost:5176/workspace-home",
-            final_title="工作台首页",
+            url="http://localhost:8080/login",
+            title="登录入口",
+            final_url="http://localhost:8080/account",
+            final_title="账户首页",
             steps=[
                 {
                     "step": 1,
@@ -369,7 +369,7 @@ def test_product_learning_parameterizes_matching_fill_values_without_route_gate(
 
     result = service.run(
         LearningRunRequest(
-            url="http://localhost:5176/workspace-login",
+            url="http://localhost:8080/login",
             goal="学习登录",
             fill_values={"item_name": "demo", "password": "123456"},
             product_level=True,

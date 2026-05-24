@@ -535,7 +535,7 @@ def _target_from_url(url: str | None, text: str) -> ConversationIntakeTarget:
         return ConversationIntakeTarget()
     parsed = urlparse(url)
     origin = f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else None
-    page_hint = "工作台登录页" if "工作台" in text or "workspace" in url else None
+    page_hint = "登录页" if "登录" in text or "login" in url.lower() else None
     return ConversationIntakeTarget(url=url, site_origin=origin, page_hint=page_hint)
 
 
@@ -664,8 +664,8 @@ def _missing_login_fields(
 def _looks_like_login_goal(text: str, url: str | None) -> bool:
     url_value = (url or "").lower()
     return (
-        "工作台" in text
-        or "workspace" in url_value
+        "登录" in text
+        or "login" in url_value
         or any(token in text for token in ("账号", "密码", "口令"))
     )
 
@@ -682,9 +682,6 @@ def _infer_action(text: str, *, url: str | None) -> ConversationIntakeAction:
 
 def _canonical_goal(text: str, *, url: str | None) -> str | None:
     url_value = url or ""
-    lowered = text.lower()
-    if "工作台" in text or "workspace" in url_value:
-        return "进入工作台"
     if "登录" in text or "login" in url_value:
         return "登录"
     if "打开" in text:
@@ -700,8 +697,6 @@ def _goal_text(text: str, canonical: str | None) -> str | None:
 
 
 def _aliases_for(canonical: str | None) -> list[str]:
-    if canonical == "进入工作台":
-        return ["进入工作台", "登录", "打开工作台", "帮我进入工作台", "进一下工作台"]
     if canonical == "登录":
         return ["登录", "帮我登录", "登录一下", "进入页面"]
     return [canonical] if canonical else []

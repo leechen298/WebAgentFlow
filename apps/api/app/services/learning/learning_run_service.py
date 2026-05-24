@@ -509,15 +509,8 @@ def _utterances_for(request: LearningRunRequest) -> list[str]:
 
 
 def _product_action_label_for(request: LearningRunRequest) -> str:
-    if path_template(request.url).rstrip("/") == "/workspace-login":
-        return "进入工作台"
-
     goal = _strip_product_learning_noise(request.goal or "")
     goal = _strip_named_value_clauses(goal)
-    if "进入工作台" in goal:
-        return "进入工作台"
-    if "登录" in goal and "工作台" in goal:
-        return "进入工作台"
     if "登录" in goal:
         return "登录"
 

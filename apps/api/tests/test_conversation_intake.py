@@ -16,12 +16,12 @@ from app.services.conversation.intake import (
     "utterance",
     [
         (
-            "学习一下这个工作台登录页怎么进入，地址是 "
-            "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+            "学习一下这个登录页怎么登录，地址是 "
+            "http://localhost:8080/login，操作员账号是 demo，访问口令是 123456"
         ),
-        "学习这个登录页：http://localhost:5176/workspace-login，用户名 demo，密码 123456",
-        "学习这个页面怎么登录，http://localhost:5176/workspace-login，账号 demo，口令 123456",
-        "学习这个入口：http://localhost:5176/workspace-login，demo / 123456",
+        "学习这个登录页：http://localhost:8080/login，用户名 demo，密码 123456",
+        "学习这个页面怎么登录，http://localhost:8080/login，账号 demo，口令 123456",
+        "学习这个入口：http://localhost:8080/login，demo / 123456",
     ],
 )
 def test_deterministic_intake_extracts_product_login_learning_slots(
@@ -30,10 +30,10 @@ def test_deterministic_intake_extracts_product_login_learning_slots(
     result = ConversationIntakeService().analyze(utterance)
 
     assert result.intent == "learn_operation"
-    assert result.target.url == "http://localhost:5176/workspace-login"
-    assert result.target.site_origin == "http://localhost:5176"
+    assert result.target.url == "http://localhost:8080/login"
+    assert result.target.site_origin == "http://localhost:8080"
     assert result.action.goal
-    assert result.action.canonical_goal == "进入工作台"
+    assert result.action.canonical_goal == "登录"
     assert result.should_ask_user is False
     assert result.missing_fields == []
 
@@ -46,11 +46,11 @@ def test_deterministic_intake_extracts_product_login_learning_slots(
 
 def test_deterministic_intake_marks_missing_login_fields() -> None:
     result = ConversationIntakeService().analyze(
-        "学习一下这个登录页：http://localhost:5176/workspace-login"
+        "学习一下这个登录页：http://localhost:8080/login"
     )
 
     assert result.intent == "learn_operation"
-    assert result.target.url == "http://localhost:5176/workspace-login"
+    assert result.target.url == "http://localhost:8080/login"
     assert result.should_ask_user is True
     assert {field.semantic_type for field in result.missing_fields} == {
         "username",
@@ -81,7 +81,7 @@ def test_deterministic_intake_extracts_item_name_execute_slot() -> None:
 
 def test_deterministic_intake_does_not_extract_item_name_from_username() -> None:
     result = ConversationIntakeService().analyze(
-        "学习这个登录页：http://localhost:5176/workspace-login，username 是 demo，密码 123456"
+        "学习这个登录页：http://localhost:8080/login，username 是 demo，密码 123456"
     )
 
     slots = {slot.semantic_type: slot.value for slot in result.slots}
@@ -110,11 +110,11 @@ def test_provider_unavailable_falls_back_to_deterministic_intake() -> None:
         raise RuntimeError("provider down")
 
     result = ConversationIntakeService(provider=provider_down).analyze(
-        "学习这个入口：http://localhost:5176/workspace-login，demo / 123456"
+        "学习这个入口：http://localhost:8080/login，demo / 123456"
     )
 
     assert result.intent == "learn_operation"
-    assert result.target.url == "http://localhost:5176/workspace-login"
+    assert result.target.url == "http://localhost:8080/login"
     assert {slot.semantic_type: slot.value for slot in result.slots} == {
         "username": "demo",
         "password": "123456",
@@ -326,8 +326,8 @@ def test_provider_success_without_source_is_marked_llm_when_trace_exists() -> No
         return {
             "intake": {
                 "intent": "learn_operation",
-                "target": {"url": "http://localhost:5176/workspace-login"},
-                "action": {"goal": "进入工作台"},
+                "target": {"url": "http://localhost:8080/login"},
+                "action": {"goal": "登录"},
                 "confidence": 0.88,
                 "should_ask_user": True,
                 "ask_user_message_hint": "请提供登录用的用户名和密码。",
@@ -346,7 +346,7 @@ def test_provider_success_without_source_is_marked_llm_when_trace_exists() -> No
         }
 
     service = ConversationIntakeService(provider=provider)
-    result = service.analyze("学习这个工作台入口：http://localhost:5176/workspace-login")
+    result = service.analyze("学习这个登录入口：http://localhost:8080/login")
 
     assert result.source == "llm"
     trace = service.consume_last_trace_payload()
@@ -359,11 +359,11 @@ def test_schema_rejects_learned_path_or_browser_action_authorization() -> None:
         ConversationIntakeResult.model_validate(
             {
                 "intent": "execute_operation",
-                "target": {"url": "http://localhost:5176/workspace-login"},
+                "target": {"url": "http://localhost:8080/login"},
                 "action": {
-                    "goal": "进入工作台",
-                    "canonical_goal": "进入工作台",
-                    "aliases": ["进入工作台"],
+                    "goal": "登录",
+                    "canonical_goal": "登录",
+                    "aliases": ["登录"],
                 },
                 "slots": [],
                 "missing_fields": [],
@@ -376,7 +376,7 @@ def test_schema_rejects_learned_path_or_browser_action_authorization() -> None:
 
 def test_redact_sensitive_payload_recursively_redacts_slot_values_and_text() -> None:
     payload = {
-        "raw": "学习这个登录页：http://localhost:5176/workspace-login，用户名 demo，密码 123456",
+        "raw": "学习这个登录页：http://localhost:8080/login，用户名 demo，密码 123456",
         "slots": [
             {
                 "semantic_type": "username",
@@ -401,7 +401,7 @@ def test_redact_sensitive_payload_recursively_redacts_slot_values_and_text() -> 
 
 
 def test_redact_sensitive_payload_redacts_positional_product_credentials() -> None:
-    text = "学习这个入口：http://localhost:5176/workspace-login，demo / 123456"
+    text = "学习这个入口：http://localhost:8080/login，demo / 123456"
 
     redacted = redact_sensitive_payload(text)
 
