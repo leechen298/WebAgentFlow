@@ -71,7 +71,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 - [11.3.6.4-planner-backed-choice-eval](./11.3.6.4-planner-backed-choice-eval/) —— Planner-backed Choice Eval：扩展 runner 覆盖 vague goal、TaskPathPlanner-backed choices 和 single-path bypass Planner 回归。状态：implementation_complete_verified（planner-backed choice and single-path bypass pass）。
 - [11.3.6.5-runtime-eval-program-closeout](./11.3.6.5-runtime-eval-program-closeout/) —— Runtime Eval Program Closeout：核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 11.3.6 program 状态。状态：completed_after_fix_rerun（final closeout rerun pass）。
 - [11.3.6.6-runtime-eval-gate-failure-fixes](./11.3.6.6-runtime-eval-gate-failure-fixes/) —— Runtime Eval Gate Failure Fixes：修复 11.3.6.5 service-available rerun 暴露的 pending choice public payload leak、planner-backed choice selection no-execution 和 raw artifact redaction failures。状态：implementation_complete_verified（fixes implemented，final eval rerun pass）。
-- [11.3.7-user-facing-wagent-behavior-eval](./11.3.7-user-facing-wagent-behavior-eval/) —— User-facing WAgent Behavior Eval：下一阶段用户视角验收，覆盖 URL-only、execute-known、execute-unknown、learn-explicit / vague-input 等入口行为，并加入测试页面细节不得进入功能代码或产品 prompt 的 hard gate。状态：ready_for_implementation（design review passed，runtime blocker cleanup required before pass）。
+- [11.3.7-user-facing-wagent-behavior-eval](./11.3.7-user-facing-wagent-behavior-eval/) —— User-facing WAgent Behavior Eval：下一阶段用户视角验收，覆盖 URL-only、execute-known、execute-unknown、learn-explicit / vague-input 等入口行为，并加入测试页面细节不得进入功能代码或产品 prompt 的 hard gate。状态：pass（first-wave user-facing behavior gates passed，full learn-then-execute remains follow-up）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -184,6 +184,10 @@ choice selection、failure recovery 和受控 page capability learning。该包�
 operation aliases 不得进入功能代码或产品 prompt，只能存在于 fixture、eval spec、测试、
 docs 和 artifact 中；当前已有 product-test-site runtime 特判也必须清理，未清理则 11.3.7
 只能 blocked，不能 pass。
+该包已通过 first-wave user-facing behavior eval：latest artifact 记录 commit `e91c0f5`，并在
+`79156d8` 中刷新 artifacts / review / testing result。通过范围只覆盖第一批用户入口行为、
+known / unknown isolation、forbidden-target scan、public redaction 和 Conversation API 边界；
+不声明完整页面全量自动能力发现、批量学习所有操作或任意任务自动执行能力。
 
 11.2 后续 backlog：
 

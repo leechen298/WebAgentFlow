@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：ready_for_implementation（design review passed）
+状态：pass（first-wave user-facing behavior gates passed；full learn-then-execute remains follow-up）
 
 ## 概念 / 边界契约
 

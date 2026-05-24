@@ -1714,7 +1714,7 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 
 ## 11.3.7 · User-facing WAgent Behavior Eval
 
-状态：ready_for_implementation（design review passed，runtime blocker cleanup required before pass）。
+状态：pass（first-wave user-facing behavior gates passed，full learn-then-execute remains follow-up）。
 
 11.3.7 是 11.3.6 之后的用户视角产品行为验收包。它不再重复测试 `value_slot`、
 `slot_overrides`、Reporter adapter、pending choice private map 等底层零件，而是验证
@@ -1763,6 +1763,20 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
   包含测试目标细节，11.3.7 必须 fail。
 - 当前已有 product-test-site runtime 特判必须改成 generic runtime 或移入 eval spec /
   test-only layer；不能 grandfather。未清理时 11.3.7 必须 blocked，不能 pass。
+
+Closeout evidence:
+
+- `pnpm run eval:wagent:user-behavior -- --timeout 300` 已在本地 API + product-test-site 服务可用时
+  跑完，exit `0`，top-level `status=pass`。
+- Latest stable artifacts:
+  - `artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json`
+  - `docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md`
+- Latest artifacts 记录被验 runtime commit 为 `e91c0f5`，artifact / review refresh commit 为
+  `79156d8`。
+- `eval_result_gate_check` 对 latest JSON 返回 `decision=PASS`；artifact redaction check 返回
+  `status=pass` / `match_count=0`；forbidden target scan 返回 `status=pass` / `match_count=0`。
+- Caveat：`full_learn_then_execute` 仍是 non-required `follow_up`；本 pass 不声明完整页面全量
+  自动能力发现、批量学习所有操作或任意任务自动执行能力。
 
 迭代文档：
 

@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：ready_for_implementation（design review passed）
+状态：pass（first-wave user-facing behavior gates passed；full learn-then-execute remains follow-up）
 
 ## 适用条件
 
@@ -25,8 +25,8 @@ artifact 和 AI 外部测试操作员边界，因此必须维护 `test-plan.md`�
 
 | Layer | Scenario | Command / Surface | Expected | Required? | Notes |
 |---|---|---|---|---|---|
-| Static | STATIC-1 forbidden target details absent from runtime | future `pnpm run eval:wagent:user-behavior` preflight | No test target URL / route / fixture text / DOM test id appears in feature code or product prompts | Yes | Hard fail before behavior cases |
-| Static | STATIC-2 existing target special-case blocker scan | future `pnpm run eval:wagent:user-behavior` preflight | Existing route / selector / button text / field label / fixture item / operation alias constants are absent from product runtime and prompts | Yes | No grandfather exception; unresolved matches block 11.3.7 |
+| Static | STATIC-1 forbidden target details absent from runtime | `pnpm run eval:wagent:user-behavior` preflight | No test target URL / route / fixture text / DOM test id appears in feature code or product prompts | Yes | Hard fail before behavior cases |
+| Static | STATIC-2 existing target special-case blocker scan | `pnpm run eval:wagent:user-behavior` preflight | Existing route / selector / button text / field label / fixture item / operation alias constants are absent from product runtime and prompts | Yes | No grandfather exception; unresolved matches block 11.3.7 |
 | Integration | ISOLATION-1 known / unknown state isolation | Conversation API via eval runner | Known cases see only current eval session / scope learned actions; unknown cases use fresh session / isolated scope / explicit filtered catalog | Yes | Old global LearnedPath rows cannot affect unknown cases |
 | Integration | CASE-1 `url_only_known_page` | Conversation API via eval runner | WAgent lists learned operations, offers learn-new option, exposes no private id | Yes | Setup must record how learned actions were created |
 | Integration | CASE-2 `url_only_unknown_page` | Conversation API via eval runner | WAgent says page is not learned and asks whether to learn / inspect / cancel | Yes | Must not pretend it can execute |
@@ -35,7 +35,7 @@ artifact 和 AI 外部测试操作员边界，因此必须维护 `test-plan.md`�
 | Integration | CASE-4 `execute_unknown_action` | Conversation API via eval runner | WAgent asks whether to learn and execute, only learn, or cancel | Yes | No hidden learn-then-execute |
 | Integration | CASE-4A `execute_unknown_choose_learn_then_execute_or_learning_flow` | Conversation API via eval runner | Choosing learn-and-execute either completes learn -> execute -> verify if supported, or starts learning and records full learn-then-execute as follow-up | Yes | Cannot mark full learn-then-execute pass if unsupported |
 | Integration | CASE-5 `vague_input_no_execution` | Conversation API via eval runner | WAgent asks for page / operation clarification and does not execute | Yes | Any replay / browser side effect is fail |
-| Static | CASE-6 `forbidden_test_target_not_in_runtime_code_or_prompts` | future `pnpm run eval:wagent:user-behavior` preflight | No forbidden target detail is present in product runtime or product prompt assets | Yes | Same hard gate as STATIC-1, listed as required scenario |
+| Static | CASE-6 `forbidden_test_target_not_in_runtime_code_or_prompts` | `pnpm run eval:wagent:user-behavior` preflight | No forbidden target detail is present in product runtime or product prompt assets | Yes | Same hard gate as STATIC-1, listed as required scenario |
 | Integration | CASE-6 explicit learn action | Conversation API via eval runner | WAgent learns requested operation and stores replaceable parameters | Later | Follow-up after first wave |
 | Integration | CASE-7 pending continuation | Conversation API via eval runner | User answer fills previous missing slot and continues same task | Later | Must preserve target URL |
 | Integration | CASE-8 choice selection | Conversation API via eval runner | A / 1 / first choice resolves public choice to private path and clears pending choice | Later | No private map in public payload |
@@ -151,9 +151,9 @@ asks for live UI smoke or autonomous validation, the report must follow AGENTS.m
 
 | Item | Reason | Risk |
 |---|---|---|
-| `pnpm run eval:wagent:user-behavior` | Runner not implemented in this docs draft | 11.3.7 behavior remains unverified |
-| Full learn-then-execute after execute-unknown | Current support must be verified during implementation | If unsupported, record as follow-up and do not claim full pass |
-| Existing product-test-site runtime special-case cleanup | Code cleanup not part of this docs-only revision | 11.3.7 implementation must fix these blockers before pass |
-| Console UI smoke | Not requested and not part of first-wave docs draft | UI-specific regressions would require separate approval |
+| Full learn-then-execute after execute-unknown | Latest artifact records staged learning-flow gates only | Remains non-required follow-up; do not claim full learn-then-execute pass |
+| Full page-wide automatic capability discovery | Out of first-wave scope | Requires a later page capability learning eval |
+| Bulk learning of all operations on a page | Out of first-wave scope | Requires a later page capability learning eval |
+| Console UI smoke | Not requested and not part of first-wave closeout | UI-specific regressions would require separate approval |
 | `verify-scenario` | Out of scope for this eval package | No Supervisor pass_gate evidence is claimed |
 | autonomous run endpoints | Prohibited unless product UI or approved skill explicitly triggers them | Direct calls would invalidate evidence |

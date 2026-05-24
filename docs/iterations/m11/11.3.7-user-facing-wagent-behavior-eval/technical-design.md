@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：ready_for_implementation（design review passed）
+状态：pass（first-wave user-facing behavior gates passed；full learn-then-execute remains follow-up）
 
 ## 当前状态（Current State）
 
@@ -269,11 +269,23 @@ Overall status priority:
 
 ## 验证命令入口（Validation Commands）
 
-The exact command will be added during implementation. The intended validation shape is:
+Implemented eval command:
 
 ```bash
 pnpm run eval:wagent:user-behavior
 ```
 
-Until the command exists and passes, the 11.3.7 runtime behavior remains unverified. The package is
-ready for implementation, not already implemented.
+Latest closeout evidence:
+
+- `pnpm run eval:wagent:user-behavior -- --timeout 300` exited `0` with top-level `status=pass`.
+- Stable JSON artifact:
+  `artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json`.
+- Stable Markdown artifact:
+  `docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md`.
+- `eval_result_gate_check` returned `decision=PASS`.
+- `eval_artifact_redaction_check` returned `status=pass`, `match_count=0`.
+- Forbidden-target scan returned `status=pass`, `match_count=0`.
+
+This pass is scoped to first-wave user-facing behavior gates. Full learn-then-execute remains a
+non-required follow-up, and this package does not claim complete page-wide automatic capability
+discovery or automatic learning of all operations on a page.

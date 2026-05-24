@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：ready_for_implementation（design review passed）
+状态：pass（first-wave user-facing behavior gates passed；full learn-then-execute remains follow-up）
 
 ## 输入
 
@@ -13,12 +13,15 @@
 
 ## 文件 / 模块
 
-- `scripts/evals/wagent_user_behavior_eval.py` 或等价 runner - 后续新增用户行为 eval runner。
-- `scripts/evals/specs/` 或等价 test-only path - 后续存放目标页面、用户话术、expected gates
-  和 forbidden-token 列表。
-- `docs/testing/wagent-user-facing-behavior-eval.md` - 后续新增运行说明和 artifact 解释。
-- `apps/api/tests/` - 后续补 target-agnostic unit / integration tests。
-- Product prompt assets - 后续只允许通用策略，不允许测试目标内容。
+- `scripts/evals/wagent_user_behavior_eval.py` - user-facing behavior eval runner。
+- `scripts/evals/specs/` 或等价 test-only path - 目标页面、用户话术、expected gates
+  和 forbidden-token 列表仅能存在于 eval / test layer。
+- `docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md` - stable latest
+  Markdown result。
+- `artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json` - stable latest JSON
+  artifact。
+- `apps/api/tests/` - target-agnostic unit / integration tests。
+- Product prompt assets - 只允许通用策略，不允许测试目标内容。
 - `docs/iterations/m11/11.3.7-user-facing-wagent-behavior-eval/review.md` - 记录实际实现和证据。
 
 ## 步骤
@@ -63,28 +66,31 @@
 ## 验证
 
 验证计划来自 `technical-design.md` 的高层 Test Matrix 和 `test-plan.md` 的详细测试矩阵。
-当前文档阶段不运行未来 runner。
+本包已实现 runner，并完成 first-wave closeout。后续修改 runtime、eval runner、target spec 或
+product-test-site 后需要重新运行本表中的 eval / integrity checks。
 
 | Command | Expected proof | Live autonomous verification excluded? | Notes |
 |---|---|---|---|
 | `find docs/iterations/m11/11.3.7-user-facing-wagent-behavior-eval -maxdepth 1 -type f | sort` | 七件套存在 | Yes | Docs-only creation check |
 | `rg -n "11\\.3\\.7|User-facing WAgent Behavior Eval|测试页面" docs/iterations/m11 docs/testing/results/m11-11.3.6-runtime-eval-program-closeout-20260523T135028Z.md` | 索引和 scope correction 已写入 | Yes | Docs grep only |
-| `pnpm run eval:wagent:user-behavior` | Future behavior eval pass / fail / blocked artifact | Yes by default | Command does not exist until implementation |
+| `pnpm run eval:wagent:user-behavior -- --timeout 300` | First-wave behavior eval pass / fail / blocked artifact | Yes by default | Latest closeout artifact status is `pass` |
+| `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_result_gate_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json` | Latest artifact gate decision | Yes | Latest closeout result is `decision=PASS` |
+| `python3 .agents/skills/webagentflow-eval-integrity/scripts/eval_artifact_redaction_check.py artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md` | Public artifact redaction | Yes | Latest closeout result is `status=pass`, `match_count=0` |
 
 ## 复核清单（Review Checklist）
 
-- [ ] 11.3.6 结论没有被写成完整产品能力通过。
-- [ ] 11.3.7 明确验证用户视角行为，而不是重复底层零件测试。
-- [ ] forbidden-token hard gate 覆盖功能代码和产品 prompt。
-- [ ] 现有测试站点特判已改成 generic runtime、移入 eval spec / test-only layer，或将
+- [x] 11.3.6 结论没有被写成完整产品能力通过。
+- [x] 11.3.7 明确验证用户视角行为，而不是重复底层零件测试。
+- [x] forbidden-token hard gate 覆盖功能代码和产品 prompt。
+- [x] 现有测试站点特判已改成 generic runtime、移入 eval spec / test-only layer，或将
   11.3.7 标为 blocked 并开 cleanup follow-up。
-- [ ] 如果当前 runtime 中发现 product-test-site 特判，已实际清理；cleanup issue 不能让
+- [x] 如果当前 runtime 中发现 product-test-site 特判，已实际清理；cleanup issue 不能让
   11.3.7 pass。
-- [ ] known / unknown 页面状态使用 current eval session / eval scope 或 explicit filtered
+- [x] known / unknown 页面状态使用 current eval session / eval scope 或 explicit filtered
   catalog 隔离，不受 global old LearnedPath 污染。
-- [ ] `url_only_unknown_choose_learn_starts_learning` 进入真实 learning flow，或以具体服务 /
+- [x] `url_only_unknown_choose_learn_starts_learning` 进入真实 learning flow，或以具体服务 /
   browser blocker 标为 blocked；没有证据不得 pass。
-- [ ] 测试目标细节只允许出现在 eval spec、fixture、tests、docs 和 artifact。
-- [ ] eval spec、docs、review、testing results、artifacts 不被 product runtime import。
-- [ ] 第一批 case 不依赖登录页。
-- [ ] 没有触发 `verify-scenario`、autonomous run 或 Console UI smoke。
+- [x] 测试目标细节只允许出现在 eval spec、fixture、tests、docs 和 artifact。
+- [x] eval spec、docs、review、testing results、artifacts 不被 product runtime import。
+- [x] 第一批 case 不依赖登录页。
+- [x] 没有触发 `verify-scenario`、autonomous run 或 Console UI smoke。

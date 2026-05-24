@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：ready_for_implementation（design review passed）
+状态：pass（first-wave user-facing behavior gates passed；full learn-then-execute remains follow-up）
 
 ## 目标
 
