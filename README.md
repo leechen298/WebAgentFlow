@@ -3,7 +3,8 @@
 WebAgentFlow is a monorepo for an agent-driven web workflow engine. It learns
 reusable web-operation paths, stores them as LearnedPaths, replays them
 deterministically, and exposes the workflow through a Vue operator console,
-FastAPI backend, Python CLI, validation fixtures, and Playwright runtime.
+FastAPI backend, Python CLI, external fixture configuration, and Playwright
+runtime.
 
 ## Version Status
 
@@ -21,8 +22,12 @@ FastAPI backend, Python CLI, validation fixtures, and Playwright runtime.
   previous autonomous runs.
 - **LearnedPath catalog** — asset-level view of learned paths, actions, source
   runs, and trust state.
-- **Validation-site fixtures** — self-hosted pages and authored specs used for
-  controlled learning / verification scenarios.
+- **External Fixture-Site contract** — deterministic regression fixtures run
+  outside this repository and connect through `WAF_FIXTURE_SITE_URL` and
+  `WAF_PAGE_SPEC_ROOT`.
+- **External black-box validation plan** — product-like validation targets are
+  supplied as user-provided URLs to `wagent`; the validation-site source is not
+  part of this workspace.
 - **`wagent` verify-scenario backend** — Python CLI support used by the
   `verify-scenario` skill for auditable development verification.
 - **`wagent conversation` runtime conversation CLI** — non-interactive CLI for
@@ -37,7 +42,8 @@ FastAPI backend, Python CLI, validation fixtures, and Playwright runtime.
 - **Backend**: FastAPI + SQLAlchemy 2.x + Alembic
 - **Worker**: Python polling runner scaffold
 - **CLI**: Python package (`wagent`)
-- **Validation site**: Vue fixtures for controlled scenario runs
+- **Fixture contract**: external WebAgentFlow Fixture-Site via
+  `WAF_FIXTURE_SITE_URL` / `WAF_PAGE_SPEC_ROOT`
 - **Browser runtime**: Playwright Chromium
 - **AST pipeline**: Server-side HTML -> Full AST (`lxml`) -> verification /
   learning consumers
@@ -53,7 +59,6 @@ web-agent-flow/
 │  ├─ cli/
 │  ├─ console/
 │  ├─ data/
-│  ├─ validation-site/
 │  └─ worker/
 ├─ docs/
 ├─ examples/
@@ -183,11 +188,20 @@ CORS_ALLOWED_ORIGINS=http://<your-current-lan-ip>:5174,http://localhost:5174,htt
   pnpm run dev:worker
   ```
 
-- Validation site:
+- External Fixture-Site (outside this repository, optional for fixture-backed
+  verification):
 
   ```bash
-  pnpm run dev:validation
+  cd /Users/leechen/projects/WebAgentFlow-Fixture-Site
+  pnpm dev
+
+  export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+  export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
   ```
+
+  Product-like black-box validation uses an external target URL provided to
+  `wagent`; see
+  [external-black-box-validation-plan.md](./docs/testing/external-black-box-validation-plan.md).
 
 - All services together:
 
