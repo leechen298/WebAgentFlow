@@ -150,9 +150,9 @@ def test_product_learning_strips_generic_named_value_from_action_label(
 ) -> None:
     def explorer(**kwargs):
         return _exploration_result(
-            url="http://localhost:5176/records",
+            url="http://example.test/records",
             title="记录",
-            final_url="http://localhost:5176/records",
+            final_url="http://example.test/records",
             final_title="记录",
         )
 
@@ -164,7 +164,7 @@ def test_product_learning_strips_generic_named_value_from_action_label(
 
     result = service.run(
         LearningRunRequest(
-            url="http://localhost:5176/records",
+            url="http://example.test/records",
             goal="学习创建记录，名称叫 Alpha-1",
             fill_values={"entity_name": "Alpha-1"},
             product_level=True,
@@ -181,9 +181,9 @@ def test_product_learning_saves_path_when_visible_text_confirms_user_value(
 ) -> None:
     def explorer(**kwargs):
         return _exploration_result(
-            url="http://localhost:5176/records",
+            url="http://example.test/records",
             title="记录",
-            final_url="http://localhost:5176/records",
+            final_url="http://example.test/records",
             final_title="记录",
             verdict="failure",
             success=False,
@@ -216,7 +216,7 @@ def test_product_learning_saves_path_when_visible_text_confirms_user_value(
 
     result = service.run(
         LearningRunRequest(
-            url="http://localhost:5176/records",
+            url="http://example.test/records",
             goal="学习创建记录，名称叫 Alpha",
             fill_values={"entity_name": "Alpha"},
             product_level=True,
@@ -231,27 +231,27 @@ def test_product_learning_saves_path_when_visible_text_confirms_user_value(
     assert path.actions[0]["value_slot"] == "entity_name"
 
 
-def test_product_learning_parameterizes_item_name_fill_action(
+def test_product_learning_parameterizes_record_name_fill_action(
     db_session: Session,
 ) -> None:
     def explorer(**kwargs):
         return _exploration_result(
-            url="http://localhost:5176/items",
-            title="项目列表",
-            final_url="http://localhost:5176/items",
-            final_title="项目列表",
+            url="http://example.test/records",
+            title="Records",
+            final_url="http://example.test/records",
+            final_title="Records",
             steps=[
                 {
                     "step": 1,
                     "action_type": "fill",
-                    "target_selector": "[data-testid='item-name-input']",
-                    "target_description": "项目名称",
-                    "value": "测试项目A",
+                    "target_selector": "[data-testid='record-name-input']",
+                    "target_description": "记录名称",
+                    "value": "Alpha Record",
                 },
                 {
                     "step": 2,
                     "action_type": "click",
-                    "target_selector": "[data-testid='item-create-submit']",
+                    "target_selector": "[data-testid='record-create-submit']",
                 },
             ],
         )
@@ -264,9 +264,9 @@ def test_product_learning_parameterizes_item_name_fill_action(
 
     result = service.run(
         LearningRunRequest(
-            url="http://localhost:5176/items",
-            goal="学习新增项目，名称叫测试项目A",
-            fill_values={"item_name": "测试项目A"},
+            url="http://example.test/records",
+            goal="学习创建记录，名称叫Alpha Record",
+            fill_values={"record_name": "Alpha Record"},
             product_level=True,
         )
     )
@@ -275,8 +275,8 @@ def test_product_learning_parameterizes_item_name_fill_action(
     assert result.learned_path_id is not None
     path = db_session.get(LearnedPath, result.learned_path_id)
     assert path is not None
-    assert path.actions[0]["value_slot"] == "item_name"
-    assert path.actions[0]["value"] == "测试项目A"
+    assert path.actions[0]["value_slot"] == "record_name"
+    assert path.actions[0]["value"] == "Alpha Record"
 
 
 def test_product_learning_accepts_llm_supervisor_save_path_when_url_is_static(
@@ -284,10 +284,10 @@ def test_product_learning_accepts_llm_supervisor_save_path_when_url_is_static(
 ) -> None:
     def explorer(**kwargs):
         return _exploration_result(
-            url="http://localhost:5176/items",
-            title="项目列表",
-            final_url="http://localhost:5176/items",
-            final_title="项目列表",
+            url="http://example.test/records",
+            title="Records",
+            final_url="http://example.test/records",
+            final_title="Records",
             verdict="failure",
             success=False,
             supervisor={
@@ -300,14 +300,14 @@ def test_product_learning_accepts_llm_supervisor_save_path_when_url_is_static(
                 {
                     "step": 1,
                     "action_type": "fill",
-                    "target_selector": "[data-testid='item-name-input']",
-                    "target_description": "项目名称",
-                    "value": "测试项目A",
+                    "target_selector": "[data-testid='record-name-input']",
+                    "target_description": "记录名称",
+                    "value": "Alpha Record",
                 },
                 {
                     "step": 2,
                     "action_type": "click",
-                    "target_selector": "[data-testid='item-create-submit']",
+                    "target_selector": "[data-testid='record-create-submit']",
                 },
             ],
         )
@@ -320,9 +320,9 @@ def test_product_learning_accepts_llm_supervisor_save_path_when_url_is_static(
 
     result = service.run(
         LearningRunRequest(
-            url="http://localhost:5176/items",
-            goal="学习新增项目，名称叫测试项目A",
-            fill_values={"item_name": "测试项目A"},
+            url="http://example.test/records",
+            goal="学习创建记录，名称叫Alpha Record",
+            fill_values={"record_name": "Alpha Record"},
             product_level=True,
         )
     )
@@ -331,7 +331,7 @@ def test_product_learning_accepts_llm_supervisor_save_path_when_url_is_static(
     assert result.learned_path_id is not None
     path = db_session.get(LearnedPath, result.learned_path_id)
     assert path is not None
-    assert path.actions[0]["value_slot"] == "item_name"
+    assert path.actions[0]["value_slot"] == "record_name"
 
 
 def test_product_learning_parameterizes_matching_fill_values_without_route_gate(
@@ -371,7 +371,7 @@ def test_product_learning_parameterizes_matching_fill_values_without_route_gate(
         LearningRunRequest(
             url="http://localhost:8080/login",
             goal="学习登录",
-            fill_values={"item_name": "demo", "password": "123456"},
+            fill_values={"account_name": "demo", "password": "123456"},
             product_level=True,
         )
     )
@@ -380,7 +380,7 @@ def test_product_learning_parameterizes_matching_fill_values_without_route_gate(
     assert result.learned_path_id is not None
     path = db_session.get(LearnedPath, result.learned_path_id)
     assert path is not None
-    assert path.actions[0]["value_slot"] == "item_name"
+    assert path.actions[0]["value_slot"] == "account_name"
     assert path.actions[1]["value_slot"] == "password"
 
 
@@ -389,17 +389,17 @@ def test_product_learning_dedup_metadata_merge_adds_missing_value_slot(
 ) -> None:
     def explorer(**kwargs):
         return _exploration_result(
-            url="http://localhost:5176/items",
-            title="项目列表",
-            final_url="http://localhost:5176/items",
-            final_title="项目列表",
+            url="http://example.test/records",
+            title="Records",
+            final_url="http://example.test/records",
+            final_title="Records",
             steps=[
                 {
                     "step": 1,
                     "action_type": "fill",
-                    "target_selector": "[data-testid='item-name-input']",
-                    "target_description": "项目名称",
-                    "value": "测试项目A",
+                    "target_selector": "[data-testid='record-name-input']",
+                    "target_description": "记录名称",
+                    "value": "Alpha Record",
                 }
             ],
         )
@@ -412,17 +412,17 @@ def test_product_learning_dedup_metadata_merge_adds_missing_value_slot(
 
     first = service.run(
         LearningRunRequest(
-            url="http://localhost:5176/items",
-            goal="学习新增项目，名称叫测试项目A",
+            url="http://example.test/records",
+            goal="学习创建记录，名称叫Alpha Record",
             fill_values={},
             product_level=True,
         )
     )
     second = service.run(
         LearningRunRequest(
-            url="http://localhost:5176/items",
-            goal="学习新增项目，名称叫测试项目A",
-            fill_values={"item_name": "测试项目A"},
+            url="http://example.test/records",
+            goal="学习创建记录，名称叫Alpha Record",
+            fill_values={"record_name": "Alpha Record"},
             product_level=True,
         )
     )
@@ -432,4 +432,4 @@ def test_product_learning_dedup_metadata_merge_adds_missing_value_slot(
     path = db_session.get(LearnedPath, second.learned_path_id)
     assert path is not None
     assert path.hit_count == 2
-    assert path.actions[0]["value_slot"] == "item_name"
+    assert path.actions[0]["value_slot"] == "record_name"
