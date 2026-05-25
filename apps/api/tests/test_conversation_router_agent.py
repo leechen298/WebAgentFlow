@@ -29,6 +29,11 @@ from app.services.conversation.prompt_assets import (
 from app.services.conversation.router_agent import CustomerFacingAgentRouterService
 
 
+GENERIC_WORKFLOW_URL = "http://example.test/workflow"
+GENERIC_RECORDS_URL = "http://example.test/records"
+GENERIC_SITE_ORIGIN = "http://example.test"
+
+
 def test_route_decision_schema_rejects_execution_authorization() -> None:
     with pytest.raises(ValidationError):
         RouteDecision.model_validate(
@@ -78,24 +83,22 @@ def test_router_bare_url_asks_user_without_skill_invocation() -> None:
     intake = ConversationIntakeResult(
         intent="execute_operation",
         target={
-            "url": "http://localhost:5176/workspace-login",
-            "site_origin": "http://localhost:5176",
+            "url": GENERIC_WORKFLOW_URL,
+            "site_origin": GENERIC_SITE_ORIGIN,
         },
-        action={"goal": "http://localhost:5176/workspace-login"},
+        action={"goal": GENERIC_WORKFLOW_URL},
         confidence=0.75,
     )
 
     decision = router.route(
-        raw_message="http://localhost:5176/workspace-login",
+        raw_message=GENERIC_WORKFLOW_URL,
         intake=intake,
-        context=ConversationContextBundle(
-            current_message_url="http://localhost:5176/workspace-login"
-        ),
+        context=ConversationContextBundle(current_message_url=GENERIC_WORKFLOW_URL),
     )
 
     assert decision.route_decision == RouteDecisionKind.ASK_USER
     assert decision.recommended_skill == ApplicationSkillName.ASK_USER_FOR_MISSING_INFO
-    assert decision.target.url == "http://localhost:5176/workspace-login"
+    assert decision.target.url == GENERIC_WORKFLOW_URL
     assert decision.missing_fields[0].semantic_type == "operation_goal"
 
 
@@ -104,10 +107,10 @@ def test_router_short_learn_uses_pending_target() -> None:
     intake = ConversationIntakeResult(
         intent="learn_operation",
         target={
-            "url": "http://localhost:5176/workspace-login",
-            "site_origin": "http://localhost:5176",
+            "url": GENERIC_WORKFLOW_URL,
+            "site_origin": GENERIC_SITE_ORIGIN,
         },
-        action={"goal": "进入工作台", "canonical_goal": "进入工作台"},
+        action={"goal": "打开目标页面", "canonical_goal": "打开目标页面"},
         missing_fields=[
             {"semantic_type": "username", "display_name": "用户名或账号"},
             {"semantic_type": "password", "display_name": "密码或口令"},
@@ -120,9 +123,7 @@ def test_router_short_learn_uses_pending_target() -> None:
         raw_message="学习",
         intake=intake,
         context=ConversationContextBundle(
-            pending_target=make_pending_target(
-                "http://localhost:5176/workspace-login"
-            )
+            pending_target=make_pending_target(GENERIC_WORKFLOW_URL)
         ),
     )
 
@@ -144,12 +145,12 @@ def test_router_provider_payload_does_not_include_private_choice_map_or_path_ids
     router = CustomerFacingAgentRouterService(provider=provider)
     intake = ConversationIntakeResult(
         intent="execute_operation",
-        action={"goal": "新增项目", "canonical_goal": "新增项目"},
+        action={"goal": "创建记录", "canonical_goal": "创建记录"},
         confidence=0.8,
     )
 
     router.route(
-        raw_message="帮我新增项目",
+        raw_message="帮我创建记录",
         intake=intake,
         context=ConversationContextBundle(
             pending_choice={
@@ -159,7 +160,7 @@ def test_router_provider_payload_does_not_include_private_choice_map_or_path_ids
                 "choices": [
                     {
                         "choice_id": "A",
-                        "label": "新增项目",
+                        "label": "创建记录",
                         "intent": "execute_operation",
                     }
                 ],
@@ -168,10 +169,10 @@ def test_router_provider_payload_does_not_include_private_choice_map_or_path_ids
             },
             learned_actions=[
                 {
-                    "alias": "新增项目",
-                    "utterances": ["帮我新增项目"],
+                    "alias": "创建记录",
+                    "utterances": ["帮我创建记录"],
                     "learned_path_id": "lp-secret",
-                    "target_url": "http://localhost:5176/items",
+                    "target_url": GENERIC_RECORDS_URL,
                 }
             ],
         ),
@@ -224,19 +225,17 @@ def test_llm_router_parse_error_safe_fails_without_deterministic_fallback(
     router = CustomerFacingAgentRouterService(provider=router_agent._llm_router_provider)
 
     decision = router.route(
-        raw_message="学习 http://localhost:5176/workspace-login 上的登录操作",
+        raw_message=f"学习 {GENERIC_WORKFLOW_URL} 上的登录操作",
         intake=ConversationIntakeResult(
             intent="learn_operation",
             target={
-                "url": "http://localhost:5176/workspace-login",
-                "site_origin": "http://localhost:5176",
+                "url": GENERIC_WORKFLOW_URL,
+                "site_origin": GENERIC_SITE_ORIGIN,
             },
             action={"goal": "登录"},
             confidence=0.9,
         ),
-        context=ConversationContextBundle(
-            current_message_url="http://localhost:5176/workspace-login"
-        ),
+        context=ConversationContextBundle(current_message_url=GENERIC_WORKFLOW_URL),
     )
 
     assert decision.route_decision == RouteDecisionKind.ASK_USER
