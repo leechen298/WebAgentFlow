@@ -58,44 +58,44 @@ def test_deterministic_intake_marks_missing_login_fields() -> None:
     }
 
 
-def test_deterministic_intake_extracts_item_name_learning_slot() -> None:
-    result = ConversationIntakeService().analyze("学习新增项目，名称叫测试项目A")
+def test_deterministic_intake_extracts_record_name_learning_slot() -> None:
+    result = ConversationIntakeService().analyze("学习创建记录，名称叫AlphaRecord")
 
     assert result.intent == "learn_operation"
-    assert result.action.goal == "学习新增项目，名称叫测试项目A"
+    assert result.action.goal == "学习创建记录，名称叫AlphaRecord"
     assert result.action.canonical_goal is None
     slots = {slot.semantic_type: slot for slot in result.slots}
-    assert slots["entity_name"].value == "测试项目A"
+    assert slots["entity_name"].value == "AlphaRecord"
     assert slots["entity_name"].sensitive is False
 
 
-def test_deterministic_intake_extracts_item_name_execute_slot() -> None:
-    result = ConversationIntakeService().analyze("帮我新增项目，名称叫测试项目B")
+def test_deterministic_intake_extracts_record_name_execute_slot() -> None:
+    result = ConversationIntakeService().analyze("帮我创建记录，名称叫BetaRecord")
 
     assert result.intent == "execute_operation"
-    assert result.action.goal == "帮我新增项目，名称叫测试项目B"
+    assert result.action.goal == "帮我创建记录，名称叫BetaRecord"
     assert result.action.canonical_goal is None
     slots = {slot.semantic_type: slot.value for slot in result.slots}
-    assert slots["entity_name"] == "测试项目B"
+    assert slots["entity_name"] == "BetaRecord"
 
 
-def test_deterministic_intake_does_not_extract_item_name_from_username() -> None:
+def test_deterministic_intake_does_not_extract_record_name_from_username() -> None:
     result = ConversationIntakeService().analyze(
         "学习这个登录页：http://localhost:8080/login，username 是 demo，密码 123456"
     )
 
     slots = {slot.semantic_type: slot.value for slot in result.slots}
-    assert "item_name" not in slots
+    assert "record_name" not in slots
 
 
 @pytest.mark.parametrize(
-        ("utterance", "expected"),
-        [
-            ("name 是测试项目A", "测试项目A"),
-            ("名称是测试项目A", "测试项目A"),
-        ],
+    ("utterance", "expected"),
+    [
+        ("name 是AlphaRecord", "AlphaRecord"),
+        ("名称是AlphaRecord", "AlphaRecord"),
+    ],
 )
-def test_deterministic_intake_normalizes_item_name_aliases(
+def test_deterministic_intake_normalizes_record_name_aliases(
     utterance: str,
     expected: str,
 ) -> None:
@@ -151,22 +151,22 @@ def test_provider_parse_error_falls_back_to_deterministic_pending_target() -> No
     service = ConversationIntakeService(provider=provider_parse_error)
 
     result = service.analyze(
-        "学习新增项目，名称叫测试项目A",
+        "学习创建记录，名称叫AlphaRecord",
         session_metadata={
             "pending_target": {
-                "url": "http://localhost:5176/items",
-                "site_origin": "http://localhost:5176",
-                "page_hint": "/items",
+                "url": "http://example.test/records",
+                "site_origin": "http://example.test",
+                "page_hint": "/records",
             }
         },
     )
 
     assert service.provider_fallback is True
     assert result.intent == "learn_operation"
-    assert result.target.url == "http://localhost:5176/items"
+    assert result.target.url == "http://example.test/records"
     assert result.action.canonical_goal is None
     assert {slot.semantic_type: slot.value for slot in result.slots} == {
-        "entity_name": "测试项目A"
+        "entity_name": "AlphaRecord"
     }
     trace = service.consume_last_trace_payload()
     assert trace is not None
@@ -183,33 +183,33 @@ def test_provider_result_drops_missing_field_when_slot_value_is_present() -> Non
             "intake": {
                 "intent": "learn_operation",
                 "target": {
-                    "url": "http://localhost:5176/items",
-                    "site_origin": "http://localhost:5176",
-                    "page_hint": "/items",
+                    "url": "http://example.test/records",
+                    "site_origin": "http://example.test",
+                    "page_hint": "/records",
                 },
                 "action": {
-                    "goal": "新增项目",
-                    "canonical_goal": "add_item",
-                    "aliases": ["新增项目", "添加项目", "创建项目"],
+                    "goal": "创建记录",
+                    "canonical_goal": "add_record",
+                    "aliases": ["创建记录", "添加记录", "录入记录"],
                 },
                 "slots": [
                     {
-                        "name": "project_name",
-                        "semantic_type": "project_name",
-                        "value": "测试项目A",
+                        "name": "record_name",
+                        "semantic_type": "record_name",
+                        "value": "AlphaRecord",
                         "sensitive": False,
                         "source": "user_message",
                     }
                 ],
                 "missing_fields": [
                     {
-                        "semantic_type": "project_name",
-                        "display_name": "项目名称",
+                        "semantic_type": "record_name",
+                        "display_name": "记录名称",
                     }
                 ],
                 "confidence": 0.85,
                 "should_ask_user": True,
-                "ask_user_message_hint": "我需要项目名称。",
+                "ask_user_message_hint": "我需要记录名称。",
             },
             "llm_trace": {
                 "trace_id": "trace-provider-slot-conflict",
@@ -224,13 +224,13 @@ def test_provider_result_drops_missing_field_when_slot_value_is_present() -> Non
             },
         }
 
-    result = ConversationIntakeService(provider=provider).analyze("学习新增项目，名称叫测试项目A")
+    result = ConversationIntakeService(provider=provider).analyze("学习创建记录，名称叫AlphaRecord")
 
     assert result.missing_fields == []
     assert result.should_ask_user is False
     assert result.ask_user_message_hint is None
     assert {slot.semantic_type: slot.value for slot in result.slots} == {
-        "project_name": "测试项目A"
+        "record_name": "AlphaRecord"
     }
 
 
@@ -242,21 +242,21 @@ def test_provider_result_clears_spurious_ask_when_item_learning_is_complete() ->
         return {
             "intent": "learn_operation",
             "target": {
-                "url": "http://localhost:5176/items",
-                "site_origin": "http://localhost:5176",
-                "page_hint": "/items",
+                "url": "http://example.test/records",
+                "site_origin": "http://example.test",
+                "page_hint": "/records",
             },
             "action": {
-                "goal": "新增项目",
-                "canonical_goal": "新增项目",
-                "aliases": ["添加项目", "创建项目"],
+                "goal": "创建记录",
+                "canonical_goal": "创建记录",
+                "aliases": ["添加记录", "创建记录"],
             },
             "slots": [
                 {
-                    "name": "project_name",
-                    "semantic_type": "project_name",
+                    "name": "record_name",
+                    "semantic_type": "record_name",
                     "label_seen": "名称",
-                    "value": "测试项目A",
+                    "value": "AlphaRecord",
                     "sensitive": False,
                     "source": "user_message",
                 }
@@ -264,22 +264,22 @@ def test_provider_result_clears_spurious_ask_when_item_learning_is_complete() ->
             "missing_fields": [],
             "confidence": 0.95,
             "should_ask_user": True,
-            "ask_user_message_hint": "好的，请开始执行新增项目操作，我将学习您的操作步骤。",
+            "ask_user_message_hint": "好的，请开始执行创建记录操作，我将学习您的操作步骤。",
         }
 
-    result = ConversationIntakeService(provider=provider).analyze("学习新增项目，名称叫 测试项目A")
+    result = ConversationIntakeService(provider=provider).analyze("学习创建记录，名称叫 AlphaRecord")
 
     assert result.intent == "learn_operation"
     assert result.missing_fields == []
     assert result.should_ask_user is False
     assert result.ask_user_message_hint is None
     assert {slot.semantic_type: slot.value for slot in result.slots} == {
-        "project_name": "测试项目A"
+        "record_name": "AlphaRecord"
     }
 
 
 @pytest.mark.parametrize("semantic_type", ["entity_name", "name"])
-def test_provider_result_maps_generic_items_name_slot_to_item_name(
+def test_provider_result_maps_generic_records_name_slot_to_record_name(
     semantic_type: str,
 ) -> None:
     def provider(
@@ -289,20 +289,20 @@ def test_provider_result_maps_generic_items_name_slot_to_item_name(
         return {
             "intent": "execute_operation",
             "target": {
-                "url": "http://localhost:5176/items",
-                "site_origin": "http://localhost:5176",
-                "page_hint": "/items",
+                "url": "http://example.test/records",
+                "site_origin": "http://example.test",
+                "page_hint": "/records",
             },
             "action": {
-                "goal": "创建项目",
-                "canonical_goal": "create_item",
-                "aliases": ["新增项目", "添加项目", "录入项目"],
+                "goal": "创建记录",
+                "canonical_goal": "create_record",
+                "aliases": ["创建记录", "添加记录", "录入记录"],
             },
             "slots": [
                 {
                     "name": "name",
                     "semantic_type": semantic_type,
-                    "value": "测试项目ChoiceA",
+                    "value": "ChoiceRecord",
                     "sensitive": False,
                     "source": "user_message",
                 }
@@ -313,11 +313,11 @@ def test_provider_result_maps_generic_items_name_slot_to_item_name(
         }
 
     result = ConversationIntakeService(provider=provider).analyze(
-        "帮我处理一下这个页面，名称叫 测试项目ChoiceA"
+        "帮我处理一下这个页面，名称叫 ChoiceRecord"
     )
 
     assert {slot.semantic_type: slot.value for slot in result.slots} == {
-        semantic_type: "测试项目ChoiceA"
+        semantic_type: "ChoiceRecord"
     }
 
 
