@@ -48,6 +48,20 @@ Ready for documentation review. This status means the umbrella planning package 
 it does not authorize runtime implementation. Child packages must still create their own full seven-document
 sets and pass documentation/design review before any code, test, or validation implementation begins.
 
+## Assumptions
+
+- The 2026-05-25 external black-box validation result and PV-CLI-003 triage are the current failure baseline.
+- `11.3.8` remains an M11.3 post-closeout recovery follow-up; it does not reopen M11 final closeout or start M12 recovery.
+- Future child packages can add repo-local synthetic tests without copying external Validation-Site source, selectors, seed data, or answer keys.
+- External revalidation will be run only by a later approved validation child package through an auditable WAgent product surface.
+
+## Open Risks
+
+- The current runtime may not expose intake business goal metadata at the exact learning-result boundary expected by `11.3.8.1`.
+- A matcher fix could overmatch generic verbs unless negative tests cover different actions, shared objects, and ambiguous candidates.
+- Repo-local tests may pass while external product-like validation still fails; `11.3.8.5` must keep the latest result honest.
+- External revalidation may be blocked by local services, browser availability, LLM provider availability, or stale database state.
+
 站点迁移已经完成：
 
 - `WebAgentFlow-Fixture-Site` 是外部 deterministic fixture site，通过
