@@ -2,6 +2,19 @@
 
 状态：in_progress
 
+## FINAL_STATUS
+
+status: <PACKAGE_COMPLETE / REVIEW_READY / BLOCKED / FOLLOW_UP_REQUIRED / NEEDS_USER_INPUT / in_progress>
+next_action: <exact next action>
+parent_authorizes_runtime_implementation: <yes / no / N/A>
+active_child_package: <child package id or N/A>
+implementation_authorized: <yes / no / N/A>
+do_not_start_next_package: <true / false / N/A>
+blocking_findings: <none or list>
+last_verified_at: <YYYY-MM-DD HH:MM TZ or N/A>
+commands_run: <summary>
+commands_not_run: <summary>
+
 ## <YYYY-MM-DD HH:MM> 设计评审（Design Review）
 
 - Reviewer：

@@ -90,6 +90,8 @@ Console UI smoke、外部黑盒站点验证或 M12 recovery / retry / abort 已�
 - [11.3.7-user-facing-wagent-behavior-eval](./11.3.7-user-facing-wagent-behavior-eval/) —— User-facing WAgent Behavior Eval：下一阶段用户视角验收，覆盖 URL-only、execute-known、execute-unknown、learn-explicit / vague-input 等入口行为，并加入测试页面细节不得进入功能代码或产品 prompt 的 hard gate。状态：pass（first-wave user-facing behavior gates passed，full learn-then-execute remains follow-up）。
 - [11.3.8-external-black-box-validation-recovery](./11.3.8-external-black-box-validation-recovery/) —— External Black-box Validation Recovery：M11.3 post-closeout recovery follow-up / umbrella planning package，用于把外部黑盒验证失败拆成 11.3.8.x child packages；不是 implementation package。父包状态：ready for review / umbrella planning；父包只定义计划和边界。
 - [11.3.8.1-learning-action-goal-preservation](./11.3.8.1-learning-action-goal-preservation/) —— Learning Action Goal Preservation：保留 learning intake 中的 business goal、canonical goal、business object / match terms 和 useful aliases，避免 learned action identity 退化为 `Learn how to create`。状态：implementation_complete_pending_followup（metadata preservation implemented in HEAD；suggested utterances、matcher consumption、external black-box revalidation remain follow-up）。
+- [11.3.8.2-suggested-utterance-generation](./11.3.8.2-suggested-utterance-generation/) —— Suggested Utterance Generation：基于已保留的 business goal / canonical goal / useful aliases 生成可复用 utterances，避免只保存教学 wrapper 变体。状态：PACKAGE_COMPLETE（deterministic utterance generation implemented；11 learning service tests and 89 chat runtime tests passed；external black-box validation not run）。
+- 11.3.8.3-learned-action-matching-improvement —— Learned Action Matching Improvement：下一 eligible child package；full campaign mode 可在 source-conflict / out-of-scope diff 检查后创建并 review 七件套。状态：planned_after_11.3.8.2_PACKAGE_COMPLETE（不得跳过 child design / test / review gates）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -216,8 +218,10 @@ post-closeout recovery follow-up / umbrella planning package。它承接
 代码修改。`11.3.8.1-learning-action-goal-preservation/` 是第一个 child code package；
 当前状态为 `implementation_complete_pending_followup`，HEAD 已包含学习完成后 session
 learned action metadata 保存 `business_goal`、`canonical_goal`、business object /
-`match_terms` 和 useful aliases 的 scoped implementation。它不修 matcher、不改 utterance
-generation、不跑外部黑盒重验。
+`match_terms` 和 useful aliases 的 scoped implementation。`11.3.8.2-suggested-utterance-generation/`
+当前已完成 deterministic reusable utterances，覆盖 full business phrase、slot-value
+exclusion、truncated-wrapper repair 和 clean utterance preservation。它不修 matcher、
+不跑外部黑盒重验。
 
 11.2 后续 backlog：
 

@@ -154,6 +154,16 @@ expected deliverables, expected tests / verification, compatibility
 constraints, scope guardrails, exit criteria, and handoff to the next package.
 A one-line package summary is not enough for implementation routing.
 
+For Codex App `/goal` work that should run a whole campaign, the campaign
+must provide a Campaign Goal Runner contract under the owning iteration
+package. The runner must name the current state file, checkpoint fields, allowed child
+package lifecycle, final status vocabulary, and live-run hard stops. Full
+campaign goals may continue across child packages only after each child reaches
+its documented checkpoint; stop immediately on P0 / P1 findings, insufficient
+evidence, status conflicts, out-of-scope file changes, or missing live
+validation approval. Keep the detailed standard in `docs/iterations/AGENTS.md`
+and `docs/iterations/AGENTS.zh.md` rather than duplicating it here.
+
 ## AI Coding Agent — Execution Boundary (HARD RULE)
 
 WebAgentFlow IS an autonomous web-operation engine with its own internal

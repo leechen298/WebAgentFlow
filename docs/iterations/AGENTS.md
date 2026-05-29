@@ -30,6 +30,45 @@ These rules apply to:
 - post-closeout validation documents;
 - review and evidence records.
 
+## Plan-Compatible Documentation Generation Standard
+
+When an agent is asked to create or revise iteration documents, the
+documentation-generation phase should behave like a compact `/plan` run before
+any runtime implementation starts. The output must be decision-complete enough
+that a later implementation agent can follow the generated docs without
+guessing package type, scope, gates, or stop conditions.
+
+Before writing or changing iteration documents, identify and then encode these
+decisions in the generated package docs, usually in `plan.md` and `review.md`:
+
+```text
+target package path
+package type: docs | code | mixed | validation | umbrella / campaign
+parent / child relationship, if any
+required document set
+source-of-truth inputs already read
+contract / concept / status / evidence changes
+design-review gate
+test-plan trigger decision
+implementation authorization boundary
+expected verification evidence
+stop conditions
+next handoff or campaign checkpoint
+```
+
+For code or mixed packages, generated docs must not authorize implementation
+by implication. `technical-design.md` must be reviewed and
+`implementation_authorized: yes` must be recorded before code work starts.
+
+For umbrella or campaign packages, the documentation-generation plan must also
+decide whether `GOAL_RUNNER.md` and `CURRENT_STATE.md` are required. If they
+are required, create them from the templates or explicitly record why an
+existing pair remains authoritative.
+
+If the target package, package type, required file set, parent / child route,
+or implementation boundary is ambiguous and cannot be resolved from repository
+state, stop as `NEEDS_USER_INPUT` instead of generating speculative docs.
+
 ## Planned Package Standard
 
 Any milestone plan or umbrella package plan that contains multiple planned
@@ -106,6 +145,93 @@ Review checklist:
 - Check status / type match across package `README.md`, milestone
   `README.md`, and plan.
 - Check child-package gate before implementation.
+
+## Campaign Goal Runner Standard
+
+A campaign is any umbrella package or milestone sequence intended to be run by
+Codex App `/goal` across more than one child package.
+
+Campaigns that may be consumed by `/goal` must provide:
+
+```text
+GOAL_RUNNER.md
+CURRENT_STATE.md
+```
+
+`GOAL_RUNNER.md` is the stable automation contract. It must define:
+
+```text
+authoritative inputs
+default execution mode
+full campaign mode
+child package lifecycle
+runtime authorization rules
+hard stops
+final status vocabulary
+live validation approval requirements
+closeout consistency gate
+required child closeout fields
+```
+
+`CURRENT_STATE.md` is the short mutable routing snapshot. It must define:
+
+```text
+current_mode
+parent_package
+parent_status
+parent_authorizes_runtime_implementation
+active_child_package
+route_status
+route_type
+next_action
+do_not_reimplement
+handoff_source
+package queue
+conflict rule
+live validation rule, when applicable
+```
+
+Default `/goal` campaign behavior is `full_campaign_mode`: Codex may continue
+from one child package to the next without a new user prompt only when the
+current child reaches `PACKAGE_COMPLETE` and the next child is explicitly
+listed as eligible in `CURRENT_STATE.md` or the parent plan. A campaign may
+choose a stricter default such as one child per goal, but it must say so in
+`GOAL_RUNNER.md`.
+
+Each child package checkpoint must record, at minimum:
+
+```text
+child package id
+route status
+changed files
+commands run
+commands not run
+test results
+review findings by priority
+compatibility review
+scope review
+next action
+```
+
+Full campaign mode does not bypass gates. Stop the campaign immediately as
+`BLOCKED`, `NEEDS_USER_INPUT`, or the campaign's equivalent final status when
+any of these occur:
+
+- unresolved P0 / P1 design, code, evidence, or scope finding;
+- missing required child documents;
+- missing reviewed `technical-design.md` for code or mixed work;
+- missing `implementation_authorized: yes` before implementation;
+- insufficient evidence for the requested status;
+- `CURRENT_STATE.md` conflicts with child docs, parent plan, review records,
+  or actual git state;
+- out-of-scope runtime, test, eval, external result, fixture, schema, API,
+  worker, frontend, or documentation file appears in the diff;
+- live validation is needed but the current thread does not explicitly provide
+  the required target, API, state, scenario, and result-doc update approvals.
+
+Do not encode stale child package ids as the authoritative route inside
+`GOAL_RUNNER.md`. The current route must come from `CURRENT_STATE.md` or the
+parent plan so completed children do not keep attracting new `/goal` runs.
 
 ## Iteration Package File Standard
 
@@ -230,6 +356,7 @@ Must include:
 Ordered execution steps
 Phase boundaries
 Stop conditions
+Checkpoint update step
 Review update step
 ```
 
@@ -238,6 +365,7 @@ Review update step
 Must include:
 
 ```text
+FINAL_STATUS block for current routing state
 Changed files
 Commands run
 Test results

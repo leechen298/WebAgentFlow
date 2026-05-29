@@ -66,10 +66,13 @@ Codex App `/goal` 执行时还必须先读：
 
 ## Codex Goal Runner Routing
 
-默认 `/goal` 模式为 one child package per goal：只处理 `CURRENT_STATE.md`
-指定的 active child package，达到 final status 后停止。
+默认 `/goal` 模式为 full campaign mode：按 `CURRENT_STATE.md` 和本 parent plan
+一次只处理一个 active child package，但在 child 达到 `PACKAGE_COMPLETE` 后，可以继续
+下一个 eligible child package。
 
-只有用户明确要求 full campaign mode 时，才可在同一个 `/goal` 内继续下一包；即便如此，也必须在每个 child package 后 checkpoint，且只有当前包状态为 `PACKAGE_COMPLETE` 时才能继续。
+每个 child package 后都必须 checkpoint；只有当前包状态为 `PACKAGE_COMPLETE`，
+且下一包在 `CURRENT_STATE.md` 或本 plan 中明确 eligible 时，才可继续。若用户明确要求
+one child package mode，达到当前 child final status 后必须停止。
 
 `CURRENT_STATE.md` 与 child `review.md`、`technical-design.md`、`plan.md` 或实际 git state 冲突时，必须停为 `NEEDS_USER_INPUT`，不得静默选择其中一个来源。
 
@@ -178,7 +181,7 @@ Handoff to next package: `11.3.8.2` may use the preserved business identity as i
 
 Package name: `11.3.8.2-suggested-utterance-generation`
 
-Status: planned after `11.3.8.1`
+Status: PACKAGE_COMPLETE
 
 Type: code
 

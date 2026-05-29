@@ -4,15 +4,220 @@ Status: active / in progress
 
 ## FINAL_STATUS
 
-status: REVIEW_READY
-next_action: create / review 11.3.8.2-suggested-utterance-generation child seven-doc package
+status: PACKAGE_COMPLETE for 11.3.8.2; parent campaign still active
+next_action: full campaign mode may create / review 11.3.8.3-learned-action-matching-improvement child seven-doc package after source-conflict checks
 parent_authorizes_runtime_implementation: no
 active_child_package: 11.3.8.2-suggested-utterance-generation
 do_not_reimplement: true
-blocking_findings: none for 11.3.8.1 closeout; parent 11.3.8 campaign remains incomplete
-last_verified_at: 2026-05-29 15:32 CST
-commands_run: 11.3.8.1 closeout git/diff checks; focused pytest; ruff; target-constant scan; git diff --check
+blocking_findings: none for 11.3.8.2 closeout; parent 11.3.8 campaign remains incomplete
+last_verified_at: 2026-05-29 19:50 CST
+commands_run: Campaign Goal Runner docs consistency checks; plan-compatible documentation generation checks; template completeness checks; 11.3.8 route regression checks; safety-boundary scan; git diff --check; prior 11.3.8.2 documentation checks; read-only spec/design review; TDD red tests; focused pytest; focused ruff; target-constant scan; read-only code/test/evidence review and code re-review
 commands_not_run: wagent chat; verify-scenario; browser smoke; external black-box validation; direct autonomous-run endpoint
+
+## 2026-05-29 Campaign Goal Runner Standardization
+
+- Author: Codex, docs / process maintenance agent.
+- Decision: docs-only maintenance complete; parent campaign still active.
+- Scope: docs-only standardization of Codex App `/goal` full-campaign routing,
+  checkpoints, templates, and root agent instructions. No product runtime,
+  schema, API, frontend, fixture, migration, worker, eval-runner, or external
+  validation result file was edited by this maintenance task.
+
+Changed files for this docs-only maintenance task:
+
+- `AGENTS.md`
+- `CLAUDE.md`
+- `CLAUDE.zh.md`
+- `docs/iterations/AGENTS.md`
+- `docs/iterations/AGENTS.zh.md`
+- `docs/iterations/README.md`
+- `docs/iterations/templates/GOAL_RUNNER.md`
+- `docs/iterations/templates/CURRENT_STATE.md`
+- `docs/iterations/templates/README.md`
+- `docs/iterations/templates/plan.md`
+- `docs/iterations/templates/review.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/GOAL_RUNNER.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+- `docs/iterations/m11/11.3.8.2-suggested-utterance-generation/review.md`
+- `docs/iterations/m11/README.md`
+- `docs/iterations/m11/m11-plan.md`
+
+Pre-existing modified runtime / test files from the `11.3.8.2` worktree were
+preserved and not edited by this docs-only maintenance task.
+
+Rule changes:
+
+- Added a plan-compatible documentation generation standard: generating or
+  revising iteration docs must first identify target package path, package
+  type, required document set, source inputs, contract / status / evidence
+  changes, review gates, test-plan trigger, implementation authorization
+  boundary, stop conditions, and handoff / checkpoint.
+- Added a `/plan`-style documentation-generation checklist to the iteration
+  template README and a `Documentation Generation Plan` section to the plan
+  template.
+- Generalized `GOAL_RUNNER.md` / `CURRENT_STATE.md` into the repository
+  Campaign Goal Runner standard.
+- Default campaign behavior is now `full_campaign_mode`, with one child package
+  processed at a time and a required checkpoint before continuing.
+- Added templates for `GOAL_RUNNER.md` and `CURRENT_STATE.md`.
+- Added `FINAL_STATUS` and checkpoint requirements to templates.
+- Re-routed `11.3.8` away from stale child ids: `CURRENT_STATE.md` records
+  `11.3.8.2` as `PACKAGE_COMPLETE` and `11.3.8.3` as the next eligible child.
+
+Verification summary:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `rg -n -e "Plan-Compatible Documentation Generation Standard" -e "decision-complete" -e "implementation_authorized: yes" -e "NEEDS_USER_INPUT" docs/iterations/AGENTS.md docs/iterations/AGENTS.zh.md` | Plan-compatible generation standard, implementation boundary, and hard-stop vocabulary found | 0 | `/plan`-style docs generation standard |
+| `rg -n -e "/plan 风格文档生成入口" -e "文档生成计划" -e "implementation authorization boundary" -e "GOAL_RUNNER.md" -e "CURRENT_STATE.md" docs/iterations/templates/README.md docs/iterations/templates/plan.md` | Template entry checklist and plan fields found | 0 | Template support for future doc generation |
+| `rg -n -e "Campaign Goal Runner" -e "CURRENT_STATE" -e "GOAL_RUNNER" -e "FINAL_STATUS" -e "Checkpoint" docs/iterations/AGENTS.md docs/iterations/AGENTS.zh.md docs/iterations/templates/README.md docs/iterations/templates/plan.md docs/iterations/templates/review.md` | Campaign / checkpoint fields found after adding plan-compatible docs generation rules | 0 | Confirms the new rules did not remove campaign routing fields |
+| `rg -n "Campaign Goal Runner\|live-run hard stops\|PACKAGE_COMPLETE\|NEEDS_USER_INPUT\|BLOCKED" AGENTS.md CLAUDE.md CLAUDE.zh.md docs/iterations/AGENTS.md docs/iterations/AGENTS.zh.md` | Required root / iteration standard terms found | 0 | Docs consistency |
+| `rg -n "CURRENT_STATE\|GOAL_RUNNER\|FINAL_STATUS\|Checkpoint\|Stop condition\|Stop conditions\|stop condition" docs/iterations/templates docs/iterations/AGENTS.md docs/iterations/AGENTS.zh.md` | Template and standard fields found | 0 | Template completeness |
+| `rg -n "current_mode: full_campaign_mode\|active_child_package: 11\\.3\\.8\\.2\|route_status: PACKAGE_COMPLETE\|11\\.3\\.8\\.3\|full campaign mode\|do_not_reimplement" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/GOAL_RUNNER.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8.2-suggested-utterance-generation/review.md` | Full-campaign routing, 11.3.8.2 complete state, 11.3.8.3 next route, and do-not-reimplement guard found | 0 | Route regression |
+| `rg -n "direct autonomous-run endpoint\|direct replay API\|target-specific\|No unverified test claims\|No conversion of FAIL\|pass_gate.status" AGENTS.md docs/iterations/AGENTS.md docs/iterations/AGENTS.zh.md docs/iterations/templates docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Safety boundary terms found | 0 | Evidence integrity |
+| `rg -n "[ \t]+$" AGENTS.md CLAUDE.md CLAUDE.zh.md docs/iterations/AGENTS.md docs/iterations/AGENTS.zh.md docs/iterations/README.md docs/iterations/templates/README.md docs/iterations/templates/plan.md docs/iterations/templates/review.md docs/iterations/templates/CURRENT_STATE.md docs/iterations/templates/GOAL_RUNNER.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/GOAL_RUNNER.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8.2-suggested-utterance-generation/review.md` | No trailing whitespace matches | 1 | Covers untracked template files that `git diff --check` cannot inspect |
+| `wc -c AGENTS.md CLAUDE.md CLAUDE.zh.md` | Root agent docs remain under 32 KiB each | 0 | `AGENTS.md` 24919 bytes; `CLAUDE.md` 24955 bytes; `CLAUDE.zh.md` 24890 bytes |
+| `find docs/iterations/templates -maxdepth 1 -type f \| sort` | Lists `CURRENT_STATE.md`, `GOAL_RUNNER.md`, and existing seven templates | 0 | Template file-set check |
+| `git diff --check` | Clean | 0 | Whitespace check |
+
+Not run:
+
+- Runtime tests, `wagent chat`, `verify-scenario`, browser/UI smoke, autonomous
+  runs, direct autonomous-run endpoint calls, and external black-box validation
+  were not run. This task only changed documentation and process contracts.
+
+## 2026-05-29 11.3.8.2 Full Child-Package Cycle Closeout
+
+- Author: Codex.
+- Decision: `PACKAGE_COMPLETE` for `11.3.8.2-suggested-utterance-generation` only.
+- Scope: created / reviewed the child seven-doc package, implemented deterministic suggested utterance generation, ran focused verification, completed subagent code/test/evidence review, fixed P0/P1 findings, and updated `CURRENT_STATE.md`.
+- Stop rule: do not start `11.3.8.3` in this goal.
+
+Changed files:
+
+- `apps/api/app/services/learning/learning_run_service.py`
+- `apps/api/app/services/conversation/chat_runtime.py`
+- `apps/api/tests/test_learning_run_service.py`
+- `apps/api/tests/test_conversation_chat_runtime.py`
+- `docs/iterations/m11/11.3.8.2-suggested-utterance-generation/README.md`
+- `docs/iterations/m11/11.3.8.2-suggested-utterance-generation/intent.md`
+- `docs/iterations/m11/11.3.8.2-suggested-utterance-generation/contract.md`
+- `docs/iterations/m11/11.3.8.2-suggested-utterance-generation/technical-design.md`
+- `docs/iterations/m11/11.3.8.2-suggested-utterance-generation/test-plan.md`
+- `docs/iterations/m11/11.3.8.2-suggested-utterance-generation/plan.md`
+- `docs/iterations/m11/11.3.8.2-suggested-utterance-generation/review.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+- `docs/iterations/m11/README.md`
+- `docs/iterations/m11/m11-plan.md`
+
+Pre-existing modified file preserved:
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/GOAL_RUNNER.md`
+
+Verification summary:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `find docs/iterations/m11/11.3.8.2-suggested-utterance-generation -maxdepth 1 -type f \| sort` | Listed all seven child docs | 0 | Documentation package existence |
+| `rg -n "Suggested Utterance Generation\|implementation_authorized\|slot values\|sensitive\|external black-box" docs/iterations/m11/11.3.8.2-suggested-utterance-generation` | Required terms found | 0 | Documentation content check |
+| read-only spec/design subagent review | Approved after P1 design revision | N/A | No live validation run |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q` | `11 passed in 0.09s` | 0 | Focused learning service tests |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | `89 passed in 0.80s` | 0 | Focused chat runtime tests |
+| `cd apps/api && ../../.venv/bin/python -m ruff check app/services/learning/learning_run_service.py app/services/conversation/chat_runtime.py tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py` | `All checks passed!` | 0 | Focused lint |
+| `rg -n "5177\|/inventory\|inventory item\|WebAgentFlow-Validation-Site" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | No output | 1 | No target constants in touched runtime/tests |
+| `git diff --check` | Clean | 0 | Whitespace check |
+| read-only code/test/evidence subagent review | Code/test re-review approved after P1 fix; stale review finding addressed in child closeout | N/A | No live validation run |
+
+Not run:
+
+- `wagent chat`, `verify-scenario`, browser smoke, autonomous runs, direct
+  autonomous-run endpoints, and external black-box validation were not run.
+- `docs/testing/results/external-black-box-validation-*` files were not
+  modified. Latest external black-box result remains `FAIL`.
+
+Handoff:
+
+- `11.3.8.3-learned-action-matching-improvement` may now create / review its
+  own seven-doc child package in a separate goal.
+- `11.3.8.3` must not compensate for future matcher failures with target
+  constants or broad threshold loosening.
+
+## 2026-05-29 Full Child-Package Cycle Rule Update
+
+- Author: Codex, Goal Runner maintenance agent.
+- Decision: `REVIEW_READY`.
+- Scope: docs-only permanent Goal Runner execution-mode rule; no runtime,
+  schema, API, frontend, fixture, migration, worker, eval-runner, external
+  result, or test implementation files modified.
+
+Changed files:
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/GOAL_RUNNER.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+
+Rule added:
+
+- A user may explicitly request `full child-package cycle` for one child
+  package.
+- In that mode, Codex may run the child docs, read-only design review,
+  `implementation_authorized: yes` recording, implementation, verification,
+  subagent code review, P0 / P1 fix, and closeout gates inside one goal.
+- The mode does not skip gates and does not authorize full campaign execution
+  or advancing into the next child package.
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `git status --short` | Shows only `GOAL_RUNNER.md` and parent `review.md` modified | 0 | Closeout consistency gate status check |
+| `git diff --name-only` | Shows only `GOAL_RUNNER.md` and parent `review.md` | 0 | Both files are listed above |
+| `git diff --check` | Clean | 0 | Whitespace check |
+
+Not run:
+
+- Runtime tests, `wagent chat`, `verify-scenario`, browser smoke, autonomous
+  runs, and external black-box validation were not run. This update only
+  changes docs-only Goal Runner routing rules.
+
+## 2026-05-29 Closeout Consistency Gate Update
+
+- Author: Codex, Goal Runner maintenance agent.
+- Decision: `REVIEW_READY`.
+- Scope: docs-only permanent Goal Runner closeout rule; no runtime, schema,
+  API, frontend, fixture, migration, worker, eval-runner, external result, or
+  test implementation files modified.
+
+Changed files:
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/GOAL_RUNNER.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+
+Rule added:
+
+- Before any child goal writes a final status, it must compare
+  `git status --short`, `git diff --name-only`, and `git diff --check` against
+  the relevant `review.md` changed-files section.
+- In-scope docs-only changed-file omissions must be repaired in the same goal.
+- Unlisted runtime, test, eval, external result, fixture, schema, API, worker,
+  frontend, or out-of-scope files require `NEEDS_USER_INPUT`.
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `git status --short` | Shows only `GOAL_RUNNER.md` and parent `review.md` modified | 0 | Closeout consistency gate status check |
+| `git diff --name-only` | Shows only `GOAL_RUNNER.md` and parent `review.md` | 0 | Both files are listed above |
+| `git diff --check` | Clean | 0 | Whitespace check |
+
+Not run:
+
+- Runtime tests, `wagent chat`, `verify-scenario`, browser smoke, autonomous
+  runs, and external black-box validation were not run. This update only
+  changes docs-only Goal Runner routing rules.
 
 ## 2026-05-29 11.3.8.1 Review Closeout Routing Update
 

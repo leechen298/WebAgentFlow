@@ -934,6 +934,11 @@ def test_product_learning_stores_business_identity_from_intake(
     assert session is not None
     action = session.metadata_json["learned_actions"][0]
     assert action["alias"] == "Create purchase order"
+    assert action["utterances"] == [
+        "Create purchase order",
+        "Help me create purchase order",
+        "add purchase order",
+    ]
     assert action["business_goal"] == "Create purchase order"
     assert action["canonical_goal"] == "create_purchase_order"
     assert action["action_aliases"] == ["add purchase order"]
@@ -1018,6 +1023,11 @@ def test_product_learning_keeps_clean_canonical_when_intake_goal_contains_slot_v
     assert session is not None
     action = session.metadata_json["learned_actions"][0]
     assert action["alias"] == "create purchase order"
+    assert action["utterances"] == [
+        "create purchase order",
+        "Help me create purchase order",
+        "add purchase order",
+    ]
     assert action["business_goal"] == "create purchase order"
     assert action["canonical_goal"] == "create_purchase_order"
     assert action["action_aliases"] == ["add purchase order"]
@@ -1029,8 +1039,242 @@ def test_product_learning_keeps_clean_canonical_when_intake_goal_contains_slot_v
         "purchase order",
     ]
     assert "Alpha-1" not in action["alias"]
+    assert all("Alpha-1" not in utterance for utterance in action["utterances"])
     assert "Alpha-1" not in action["business_goal"]
     assert "Alpha-1" not in action["match_terms"]
+
+
+def test_product_learning_repairs_truncated_wrapper_utterances_from_identity(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+
+    class BusinessIdentityIntake:
+        provider_fallback = False
+
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            return ConversationIntakeResult(
+                intent="learn_operation",
+                target=ConversationIntakeTarget(url=GENERIC_RECORDS_URL),
+                action=ConversationIntakeAction(
+                    goal="Create purchase order",
+                    canonical_goal="create_purchase_order",
+                    aliases=["add purchase order"],
+                ),
+                slots=[
+                    ConversationIntakeSlot(
+                        name="order_name",
+                        semantic_type="record_name",
+                        value="Alpha-1",
+                    )
+                ],
+                confidence=0.9,
+            )
+
+        def consume_last_trace_payload(self) -> dict[str, Any] | None:
+            return None
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        learned_path_id = _ingest_record_path(
+            db_session,
+            source_run_id="run-truncated-utterance-repair",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-truncated-utterance-repair",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/records",
+            scenario="product_level",
+            action_label="Create purchase orde",
+            suggested_utterances=[
+                "帮我Create purchase orde",
+                "Create purchase orde一下",
+            ],
+            business_goal="Create purchase order",
+            canonical_goal="create_purchase_order",
+            action_aliases=["add purchase order"],
+            business_object="purchase order",
+            match_terms=[
+                "Create purchase order",
+                "create_purchase_order",
+                "add purchase order",
+                "purchase order",
+            ],
+        )
+
+    orch = ConversationOrchestrator(
+        repo,
+        learning_handler=learning_handler,
+        intake_service=BusinessIdentityIntake(),
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        f"Learn how to create purchase order at {GENERIC_RECORDS_URL} named Alpha-1",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    session = repo.get_session(session_id)
+    assert session is not None
+    action = session.metadata_json["learned_actions"][0]
+    assert action["alias"] == "Create purchase order"
+    assert action["utterances"] == [
+        "Create purchase order",
+        "Help me create purchase order",
+        "add purchase order",
+    ]
+    assert all("Alpha-1" not in utterance for utterance in action["utterances"])
+
+
+def test_product_learning_filters_slot_values_when_identity_utterance_generation_absent(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+
+    class SlotOnlyIntake:
+        provider_fallback = False
+
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            return ConversationIntakeResult(
+                intent="learn_operation",
+                target=ConversationIntakeTarget(url=GENERIC_RECORDS_URL),
+                action=ConversationIntakeAction(
+                    goal="Alpha-1",
+                    canonical_goal=None,
+                    aliases=[],
+                ),
+                slots=[
+                    ConversationIntakeSlot(
+                        name="record_name",
+                        semantic_type="record_name",
+                        value="Alpha-1",
+                    )
+                ],
+                confidence=0.9,
+            )
+
+        def consume_last_trace_payload(self) -> dict[str, Any] | None:
+            return None
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        learned_path_id = _ingest_record_path(
+            db_session,
+            source_run_id="run-slot-utterance-filter",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-slot-utterance-filter",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/records",
+            scenario="product_level",
+            action_label="执行操作",
+            suggested_utterances=["帮我创建 Alpha-1"],
+        )
+
+    orch = ConversationOrchestrator(
+        repo,
+        learning_handler=learning_handler,
+        intake_service=SlotOnlyIntake(),
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        f"Learn this page at {GENERIC_RECORDS_URL} with Alpha-1",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    session = repo.get_session(session_id)
+    assert session is not None
+    action = session.metadata_json["learned_actions"][0]
+    assert action["utterances"] == []
+    assert all("Alpha-1" not in utterance for utterance in action["utterances"])
+
+
+def test_product_learning_preserves_existing_clean_business_utterances(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+
+    class BusinessIdentityIntake:
+        provider_fallback = False
+
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            return ConversationIntakeResult(
+                intent="learn_operation",
+                target=ConversationIntakeTarget(url=GENERIC_RECORDS_URL),
+                action=ConversationIntakeAction(
+                    goal="Create purchase order",
+                    canonical_goal="create_purchase_order",
+                    aliases=["add purchase order"],
+                ),
+                slots=[],
+                confidence=0.9,
+            )
+
+        def consume_last_trace_payload(self) -> dict[str, Any] | None:
+            return None
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        learned_path_id = _ingest_record_path(
+            db_session,
+            source_run_id="run-clean-utterance-preserved",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-clean-utterance-preserved",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/records",
+            scenario="product_level",
+            action_label="Create purchase order",
+            suggested_utterances=["Submit purchase order"],
+            business_goal="Create purchase order",
+            canonical_goal="create_purchase_order",
+            action_aliases=["add purchase order"],
+            business_object="purchase order",
+        )
+
+    orch = ConversationOrchestrator(
+        repo,
+        learning_handler=learning_handler,
+        intake_service=BusinessIdentityIntake(),
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        f"Learn how to create purchase order at {GENERIC_RECORDS_URL}",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    session = repo.get_session(session_id)
+    assert session is not None
+    action = session.metadata_json["learned_actions"][0]
+    assert action["utterances"] == [
+        "Submit purchase order",
+        "Create purchase order",
+        "Help me create purchase order",
+        "add purchase order",
+    ]
 
 
 def test_interactive_chat_missing_learning_info_saves_pending_intake(

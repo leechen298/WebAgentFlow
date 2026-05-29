@@ -25,35 +25,53 @@ Do not silently reconcile conflicting status, scope, or evidence claims.
 
 ## Execution Modes
 
-Default mode: one child package per `/goal`.
+Default mode: full campaign mode.
+
+- Work on one child package at a time.
+- Continue only when the current child status is `PACKAGE_COMPLETE`.
+- Stop the entire goal on `BLOCKED`, `FOLLOW_UP_REQUIRED`,
+  `NEEDS_USER_INPUT`, evidence insufficiency, unresolved P0 / P1 finding,
+  out-of-scope diff, missing live validation approval, or any source conflict.
+
+One child package mode: only when the user explicitly asks for one package or
+when `CURRENT_STATE.md` says the next action must stop.
 
 - Work on exactly one child package.
 - Stop after the package reaches a final status.
-- Do not continue to the next child package unless the prompt explicitly asks
-  for full campaign mode.
+- Do not continue to the next child package.
 
-Full campaign mode: only when the user explicitly asks for full 11.3.8
-campaign execution.
+Full child-package cycle mode: only when the user explicitly requests
+`full child-package cycle` for the current or named child package.
 
-- Still work on one child package at a time.
-- Continue only when the current child status is `PACKAGE_COMPLETE`.
-- Stop the entire goal on `BLOCKED`, `FOLLOW_UP_REQUIRED`,
-  `NEEDS_USER_INPUT`, evidence insufficiency, or any source conflict.
+- Work on exactly that child package; this does not authorize full campaign
+  execution or moving into the next child package.
+- Codex may create or repair the child seven-document set, run internal
+  read-only subagent review, record `implementation_authorized: yes` when the
+  child design review passes, implement the child-scoped changes, run required
+  verification, run subagent code review, fix P0 / P1 findings, and close out
+  the child package in one goal.
+- This mode does not skip gates. It executes the documentation, design,
+  authorization, implementation, verification, code-review, fix, and closeout
+  gates inside the same goal instead of requiring separate user-driven prompts.
+- If any required gate cannot run, lacks evidence, fails, finds unresolved P0 /
+  P1 issues, or conflicts with actual git state, stop with the appropriate
+  final status instead of continuing.
 
 ## Package Selection
 
 Use `CURRENT_STATE.md` first to identify the active child package and next
 action.
 
-Current default route:
+Current default route: read `active_child_package`, `route_status`,
+`route_type`, `next_action`, and `do_not_reimplement` from
+`CURRENT_STATE.md`. Do not treat a package id in this file as authoritative
+once `CURRENT_STATE.md` has advanced.
 
-```text
-11.3.8.1 review-closeout-existing-implementation
-```
-
-This is a review / closeout route for existing HEAD state. It is not a fresh
-implementation route. Do not reimplement `11.3.8.1` unless the child package
-review finds a P0 / P1 blocker that requires a minimal in-scope fix.
+If the current child is already `PACKAGE_COMPLETE`, follow `next_action` from
+`CURRENT_STATE.md`: either stop the goal, or, when full campaign mode remains
+eligible, create / review the next child package from the parent plan. Do not
+reimplement a completed child unless review finds a P0 / P1 blocker that
+requires a minimal in-scope fix.
 
 ## Child Package Lifecycle Routes
 
@@ -93,7 +111,10 @@ when the child `review.md` or `FINAL_STATUS` explicitly contains
 `implementation_authorized: yes`, or an equivalent human /
 reviewer-approved marker required by the repository iteration rules. Codex must
 not self-authorize implementation in the same goal run that first creates the
-child technical design unless the user explicitly asks for that.
+child technical design unless the user explicitly asks for that. A user request
+for `full child-package cycle` is such an explicit request, but only when the
+same goal actually runs and records the required read-only child design review
+before implementation starts.
 
 ## Hard Stops
 
@@ -139,6 +160,27 @@ explicitly provides all of:
 
 If any field is absent, record the package as `NEEDS_USER_INPUT` instead of
 running live validation or updating latest result docs.
+
+## Closeout Consistency Gate
+
+Before any child goal may write a final status, compare actual changed files
+with the changed-files list in the relevant `review.md`.
+
+Required checks:
+
+- `git status --short`
+- `git diff --name-only`
+- `git diff --check`
+
+Rules:
+
+- Every created, modified, or deleted in-scope file must be listed in the
+  relevant `review.md` changed-files section.
+- If an in-scope docs-only support file is missing from `review.md`, update
+  `review.md` in the same goal and continue.
+- If an unlisted runtime, test, eval, external result, fixture, schema, API,
+  worker, frontend, or out-of-scope file appears, stop as `NEEDS_USER_INPUT`.
+- Do not ask the user to manually repair docs-only changed-file omissions.
 
 ## Required Closeout Per Child Package
 

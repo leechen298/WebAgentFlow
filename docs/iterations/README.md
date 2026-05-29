@@ -46,6 +46,8 @@ docs/iterations/
     │   ├── test-plan.md                 # （强触发时必填）详细测试方案、E2E / live run 边界
     │   ├── plan.md                      # 改哪些文件 + 分步实施 + 验证入口
     │   ├── review.md                    # codex-review / 用户反馈 / 最终差异 / 实际验证证据
+    │   ├── GOAL_RUNNER.md               # （campaign / umbrella）Codex `/goal` 路由契约
+    │   ├── CURRENT_STATE.md             # （campaign / umbrella）当前 checkpoint / 下一步路由
     │   ├── summary.md                   # （可选）收尾摘要：关键决策 + 主要交付 + commit 序列
     │   └── changes.txt                  # （可选）`git diff --name-status <base>..HEAD` 输出
     ├── 02-<slug>/
@@ -100,6 +102,9 @@ review.md
   哪些 live run 明确不跑。
 - `plan.md` 定义“改哪些文件、按什么顺序改、验证入口是什么”。
 - `review.md` 记录“实际做成什么、和原设计有什么偏差、实际跑了什么、哪些没跑以及原因”。
+- `GOAL_RUNNER.md` 和 `CURRENT_STATE.md` 只在 campaign / umbrella package 需要
+  Codex App `/goal` 跨 child packages 连续执行时使用，分别记录稳定路由契约和当前
+  checkpoint。
 
 ## 两阶段工作规则
 

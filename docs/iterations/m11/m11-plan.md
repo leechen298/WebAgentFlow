@@ -1883,7 +1883,7 @@ Confirmed root causes：
 | Package | Type / status | Goal | Required gate | Handoff summary |
 |---|---|---|---|---|
 | `11.3.8.1-learning-action-goal-preservation` | code / implementation_complete_pending_followup | 保留 learning intake 中的 business goal、canonical goal、business object 和 useful aliases，避免 action identity 退化为 `Learn how to create`。 | 当前 HEAD 已包含 scoped metadata preservation implementation 和 focused tests；本包不做 external black-box revalidation。 | 交给 11.3.8.2 作为 reusable utterances 的业务语义输入；11.3.8.3 仍负责 matcher consumption。 |
-| `11.3.8.2-suggested-utterance-generation` | code / planned after 11.3.8.1 | 基于已保留业务目标生成可复用 utterances，不再只生成教学 wrapper 变体。 | 依赖 11.3.8.1 review 和 metadata contract；创建并 review 完整七件套。 | 交给 11.3.8.3 作为 matcher match terms；若 utterances 仍缺业务对象，不能靠放宽 matcher 补偿。 |
+| `11.3.8.2-suggested-utterance-generation` | code / PACKAGE_COMPLETE | 基于已保留业务目标生成可复用 utterances，不再只生成教学 wrapper 变体。 | Deterministic utterance generation implemented; focused learning service / chat runtime tests passed; no external black-box validation run. | 交给 11.3.8.3 作为 matcher match terms；若后续 matcher 仍失败，不能靠目标站点常量补偿。 |
 | `11.3.8.3-learned-action-matching-improvement` | code / planned after 11.3.8.1 and 11.3.8.2 | 让执行阶段基于 canonical goal、business goal、business object、aliases 和 reusable utterances 匹配已学 action，同时保护 ambiguous / low-confidence 场景。 | 依赖 11.3.8.1 / 11.3.8.2 reviews；创建并 review 完整七件套。 | 交给 11.3.8.4 组合成 automated regression；若仍依赖 target-specific constants，11.3.8.4 必须 blocked。 |
 | `11.3.8.4-regression-tests` | code / planned after 11.3.8.1-11.3.8.3 | 把 learn create inventory item -> execute same business action with new values 固化成 target-agnostic regression，不依赖外部站点运行或源码。 | 依赖前三包 review；创建并 review 完整七件套；不得把 `5177/inventory` 作为 hard dependency。 | 交给 11.3.8.5 做真实 external black-box revalidation；若 automated regression 未通过，revalidation 不应开始。 |
 | `11.3.8.5-external-black-box-revalidation-closeout` | validation / planned after implementation and regression packages | 重跑 `PV-CLI-002`、`PV-CLI-003`、`PV-CLI-004`、`PV-INTEGRITY-001`、`PV-INTEGRITY-002`，并如实更新 dated / latest reports。 | 依赖 11.3.8.1-11.3.8.4 reviews 和 focused tests；创建并 review 完整七件套或 validation package gate。 | 若 PASS，记录 closeout；若仍 FAIL / FOLLOW_UP / BLOCKED / UNVERIFIED，保持 honest latest 并开后续 follow-up。 |
@@ -1891,7 +1891,7 @@ Confirmed root causes：
 Next executable package：
 
 ```text
-11.3.8.1-learning-action-goal-preservation
+11.3.8.3-learned-action-matching-improvement
 ```
 
 截至当前，`11.3.8.1-learning-action-goal-preservation/` 状态为
@@ -1899,6 +1899,14 @@ Next executable package：
 goal preservation runtime shape；后续路由应 review 已提交 implementation，而不是再次把
 同一 metadata path 作为 future work 实现。本状态不表示 CLI smoke、UI smoke 或 external
 black-box validation 已通过。
+
+`11.3.8.2-suggested-utterance-generation/` 当前状态为 `PACKAGE_COMPLETE`。
+该包已生成完整七件套，通过 spec / design review，并实现 deterministic reusable
+utterances。Focused verification：`test_learning_run_service.py` 11 passed，
+`test_conversation_chat_runtime.py` 89 passed，focused ruff passed，target-constant
+scan 无命中。Full campaign mode 可在 source-conflict / out-of-scope diff 检查后
+创建并 review `11.3.8.3` child 七件套；仍不得跳过 child design、implementation、
+test、review 和 evidence gates。
 
 ## Later M11.x · Page Context Bridge Decision Point
 

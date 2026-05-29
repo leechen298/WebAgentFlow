@@ -27,6 +27,42 @@ constraints 或 closeout 状态。
 - post-closeout validation 文档；
 - review 和 evidence 记录。
 
+## Plan-Compatible Documentation Generation Standard
+
+当 agent 被要求创建或修改 iteration 文档时，文档生成阶段应该先像一个精简版
+`/plan` run 一样工作，然后才允许进入任何 runtime implementation。生成结果必须
+decision-complete，让后续 implementation agent 可以直接按文档执行，不需要再猜
+package type、scope、gates 或 stop conditions。
+
+写入或修改 iteration 文档前，必须先识别并把这些决策写进生成后的 package docs；
+通常写在 `plan.md` 和 `review.md`：
+
+```text
+target package path
+package type: docs | code | mixed | validation | umbrella / campaign
+parent / child relationship, if any
+required document set
+source-of-truth inputs already read
+contract / concept / status / evidence changes
+design-review gate
+test-plan trigger decision
+implementation authorization boundary
+expected verification evidence
+stop conditions
+next handoff or campaign checkpoint
+```
+
+对 code 或 mixed package，生成文档不能默认授权 implementation。必须先审核
+`technical-design.md`，并记录 `implementation_authorized: yes`，才能开始 code work。
+
+对 umbrella 或 campaign package，documentation-generation plan 还必须判断是否需要
+`GOAL_RUNNER.md` 和 `CURRENT_STATE.md`。如果需要，必须从模板创建；或明确记录现有
+这两个文件为什么仍然是 authoritative。
+
+如果 target package、package type、required file set、parent / child route 或
+implementation boundary 无法从仓库状态安全判断，必须停为 `NEEDS_USER_INPUT`，不得生成
+speculative docs。
+
 ## Planned Package Standard
 
 任何包含多个 planned sub-iterations 的 milestone plan 或 umbrella package plan，都必须把每个 planned package
@@ -93,6 +129,88 @@ Review checklist：
 - 检查 milestone plan 或 parent umbrella plan 是否包含执行级 planned-package fields。
 - 检查 package `README.md`、milestone `README.md` 和 plan 中的 status / type 是否一致。
 - 检查 implementation 前的 child-package gate。
+
+## Campaign Goal Runner Standard
+
+Campaign 指任何计划让 Codex App `/goal` 跨多个 child package 连续执行的 umbrella
+package 或 milestone sequence。
+
+可能被 `/goal` 消费的 campaign 必须提供：
+
+```text
+GOAL_RUNNER.md
+CURRENT_STATE.md
+```
+
+`GOAL_RUNNER.md` 是稳定的自动化契约，必须定义：
+
+```text
+authoritative inputs
+default execution mode
+full campaign mode
+child package lifecycle
+runtime authorization rules
+hard stops
+final status vocabulary
+live validation approval requirements
+closeout consistency gate
+required child closeout fields
+```
+
+`CURRENT_STATE.md` 是短小、可更新的路由快照，必须定义：
+
+```text
+current_mode
+parent_package
+parent_status
+parent_authorizes_runtime_implementation
+active_child_package
+route_status
+route_type
+next_action
+do_not_reimplement
+handoff_source
+package queue
+conflict rule
+live validation rule, when applicable
+```
+
+默认 `/goal` campaign 行为是 `full_campaign_mode`：只有当前 child package 已达到
+`PACKAGE_COMPLETE`，且 `CURRENT_STATE.md` 或 parent plan 明确列出下一包 eligible
+时，Codex 才可以不等新的用户提示继续下一包。Campaign 可以选择更严格的默认策略，
+例如 one child per goal，但必须在 `GOAL_RUNNER.md` 中明确写出。
+
+每个 child package checkpoint 至少必须记录：
+
+```text
+child package id
+route status
+changed files
+commands run
+commands not run
+test results
+review findings by priority
+compatibility review
+scope review
+next action
+```
+
+Full campaign mode 不跳过门禁。出现以下任一情况时，必须立即把 campaign 停为
+`BLOCKED`、`NEEDS_USER_INPUT` 或该 campaign 定义的等价 final status：
+
+- 存在未解决的 P0 / P1 design、code、evidence 或 scope finding；
+- 缺少必需的 child documents；
+- code / mixed work 缺少已审核的 `technical-design.md`；
+- implementation 前缺少 `implementation_authorized: yes`；
+- 目标状态缺少足够证据；
+- `CURRENT_STATE.md` 与 child docs、parent plan、review records 或实际 git state 冲突；
+- diff 中出现越界的 runtime、test、eval、external result、fixture、schema、API、
+  worker、frontend 或 documentation file；
+- 需要 live validation，但当前 thread 没有明确提供 target、API、state、scenario
+  和 result-doc update 授权。
+
+不要把过期 child package id 写成 `GOAL_RUNNER.md` 里的权威 route。当前 route 必须来自
+`CURRENT_STATE.md` 或 parent plan，避免已完成 child 继续吸引新的 `/goal` run。
 
 ## Iteration Package File Standard
 
@@ -215,6 +333,7 @@ No unverified claims rule
 Ordered execution steps
 Phase boundaries
 Stop conditions
+Checkpoint update step
 Review update step
 ```
 
@@ -223,6 +342,7 @@ Review update step
 必须包含：
 
 ```text
+FINAL_STATUS block for current routing state
 Changed files
 Commands run
 Test results

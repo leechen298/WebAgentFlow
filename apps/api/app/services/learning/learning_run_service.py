@@ -530,8 +530,55 @@ def _action_label_for(request: LearningRunRequest) -> str:
 def _utterances_for(request: LearningRunRequest) -> list[str]:
     if request.spec_id == "login":
         return ["帮我登录", "登录一下"]
+    if request.product_level:
+        return _product_utterances_for(request)
     label = _action_label_for(request)
     return [f"帮我{label}", f"{label}一下"]
+
+
+def _product_utterances_for(request: LearningRunRequest) -> list[str]:
+    identity = _action_identity_for(request)
+    fill_values = request.fill_values or {}
+    label = _action_label_for(request)
+    if label == "登录":
+        return ["帮我登录", "登录一下"]
+    candidates = [
+        identity["business_goal"],
+        _readable_canonical_goal(identity["canonical_goal"]),
+        *identity["action_aliases"],
+    ]
+    phrases = [
+        phrase
+        for phrase in (_clean_utterance_phrase(candidate) for candidate in candidates)
+        if phrase
+        and not _contains_fill_value(phrase, fill_values)
+        and not _is_verb_only_term(phrase)
+    ]
+    phrases = _dedupe_terms(phrases)
+    if not phrases:
+        fallback = _clean_utterance_phrase(label)
+        if (
+            fallback
+            and not _contains_fill_value(fallback, fill_values)
+            and not _is_verb_only_term(fallback)
+        ):
+            phrases = [fallback]
+    if not phrases:
+        return [f"帮我{label}", f"{label}一下"]
+
+    primary = phrases[0]
+    if _contains_cjk(primary):
+        utterances = [f"帮我{primary}", f"{primary}一下"]
+    else:
+        utterances = [primary, f"Help me {_lower_initial_ascii(primary)}", *phrases[1:]]
+    return _dedupe_terms(
+        [
+            utterance
+            for utterance in utterances
+            if not _contains_fill_value(utterance, fill_values)
+            and not _is_verb_only_term(utterance)
+        ]
+    )
 
 
 def _product_action_label_for(request: LearningRunRequest) -> str:
@@ -606,6 +653,12 @@ def _clean_business_goal(text: str) -> str:
     return _strip_named_value_clauses(_strip_product_learning_noise(text or ""))
 
 
+def _clean_utterance_phrase(text: str) -> str:
+    return _strip_named_value_clauses(_strip_product_learning_noise(text or "")).strip(
+        " ，,。.!！?？"
+    )
+
+
 def _readable_canonical_goal(canonical_goal: str | None) -> str:
     value = (canonical_goal or "").strip()
     if not value:
@@ -667,6 +720,38 @@ def _dedupe_terms(terms: list[str]) -> list[str]:
         seen.add(key)
         result.append(value)
     return result
+
+
+def _contains_cjk(text: str) -> bool:
+    return bool(re.search(r"[\u3400-\u9fff]", text or ""))
+
+
+def _lower_initial_ascii(text: str) -> str:
+    if not text:
+        return ""
+    first = text[0]
+    if "A" <= first <= "Z":
+        return first.lower() + text[1:]
+    return text
+
+
+def _is_verb_only_term(text: str) -> bool:
+    value = re.sub(r"[_-]+", " ", str(text or "").strip().lower())
+    value = re.sub(r"[\s，。,.；;!！?？:：\"'“”‘’（）()\[\]{}]+", " ", value).strip()
+    return value in {
+        "create",
+        "add",
+        "open",
+        "update",
+        "edit",
+        "delete",
+        "remove",
+        "search",
+        "find",
+        "submit",
+        "complete",
+        "view",
+    }
 
 
 def _contains_fill_value(term: str, fill_values: dict[str, str]) -> bool:

@@ -20,6 +20,22 @@
 - `test-plan.md` - 强触发时必填，定义当前迭代的详细测试方案。
 - `plan.md` - 实施步骤和验证命令。
 - `review.md` - 评审记录、用户反馈、最终差异、实际验证证据。
+- `GOAL_RUNNER.md` - campaign / umbrella `/goal` 自动路由契约。
+- `CURRENT_STATE.md` - campaign / umbrella 当前 checkpoint 和下一步路由快照。
+
+## /plan 风格文档生成入口
+
+生成或修改迭代文档前，先完成这些决策；无法判断时停为 `NEEDS_USER_INPUT`：
+
+- [ ] 目标 package path 和 package type 已确定。
+- [ ] parent / child 关系和下一步 route 已确定，或明确 N/A。
+- [ ] 必需文件集合已确定。
+- [ ] source-of-truth 输入已阅读并记录。
+- [ ] contract / concept / status / evidence 变化已识别。
+- [ ] design-review gate 和 `test-plan.md` 触发状态已识别。
+- [ ] code / mixed package 的 implementation authorization boundary 已写明。
+- [ ] umbrella / campaign package 已判断是否需要 `GOAL_RUNNER.md` 和 `CURRENT_STATE.md`。
+- [ ] stop conditions 和 handoff / checkpoint 已写明。
 
 ## 文档型迭代门禁
 
@@ -61,3 +77,11 @@ E2E、UI smoke、CLI、`verify-scenario` 或 autonomous-run 测试；必须写�
 ## 当前状态
 
 <给下一位 Agent 的短交接说明。>
+
+## Campaign / Goal Runner（如适用）
+
+当本迭代是 umbrella package 或需要 Codex App `/goal` 连续跑多个 child package 时：
+
+- [ ] `GOAL_RUNNER.md` 已存在，并定义 execution modes、child lifecycle、hard stops 和 final status vocabulary。
+- [ ] `CURRENT_STATE.md` 已存在，并定义 active child package、route status、next action 和 package queue。
+- [ ] 每个 child package closeout 后都会更新 parent checkpoint。

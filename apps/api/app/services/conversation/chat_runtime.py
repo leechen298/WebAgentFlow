@@ -4633,20 +4633,28 @@ def _action_from_learning_result(
         alias = business_goal
     elif business_goal and not _is_reusable_identity_term(alias, slot_values):
         alias = business_goal
+    business_object = result.business_object or _business_object_from_identity(
+        business_goal=business_goal,
+        canonical_goal=canonical_goal,
+        action_aliases=action_aliases,
+    )
+    utterances = _utterances_from_action_identity(
+        existing_utterances=result.suggested_utterances,
+        business_goal=business_goal,
+        canonical_goal=canonical_goal,
+        action_aliases=action_aliases,
+        business_object=business_object,
+        slot_values=slot_values,
+    )
     action = {
         "alias": alias,
-        "utterances": result.suggested_utterances,
+        "utterances": utterances,
         "learned_path_id": result.learned_path_id,
         "target_url": result.target_url,
         "site_origin": f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme else parsed.netloc,
         "page_template": result.page_template,
         "scenario": result.scenario,
     }
-    business_object = result.business_object or _business_object_from_identity(
-        business_goal=business_goal,
-        canonical_goal=canonical_goal,
-        action_aliases=action_aliases,
-    )
     match_terms = result.match_terms or _identity_match_terms(
         business_goal=business_goal,
         canonical_goal=canonical_goal,
@@ -4714,6 +4722,239 @@ def _identity_match_terms(
         seen.add(key)
         result.append(value)
     return result
+
+
+def _utterances_from_action_identity(
+    *,
+    existing_utterances: list[str],
+    business_goal: str,
+    canonical_goal: str | None,
+    action_aliases: list[str],
+    business_object: str | None,
+    slot_values: list[str],
+) -> list[str]:
+    generated = _generated_identity_utterances(
+        business_goal=business_goal,
+        canonical_goal=canonical_goal,
+        action_aliases=action_aliases,
+        business_object=business_object,
+        slot_values=slot_values,
+    )
+    identity_phrases = _identity_source_phrases(
+        business_goal=business_goal,
+        canonical_goal=canonical_goal,
+        action_aliases=action_aliases,
+        business_object=business_object,
+        slot_values=slot_values,
+    )
+    existing = _clean_existing_identity_utterances(
+        existing_utterances=existing_utterances,
+        identity_phrases=identity_phrases,
+        slot_values=slot_values,
+    )
+    if existing:
+        return _dedupe_identity_phrases([*existing, *generated])
+    if generated:
+        return generated
+    return existing
+
+
+def _identity_source_phrases(
+    *,
+    business_goal: str,
+    canonical_goal: str | None,
+    action_aliases: list[str],
+    business_object: str | None,
+    slot_values: list[str],
+) -> list[str]:
+    candidates = [
+        business_goal,
+        re.sub(r"[_-]+", " ", canonical_goal or "").strip(),
+        *action_aliases,
+        business_object or "",
+    ]
+    return _dedupe_identity_phrases(
+        [
+            phrase
+            for phrase in (_clean_identity_utterance_phrase(candidate) for candidate in candidates)
+            if phrase
+            and _is_reusable_identity_term(phrase, slot_values)
+            and not _is_verb_only_identity_phrase(phrase)
+        ]
+    )
+
+
+def _clean_existing_identity_utterances(
+    *,
+    existing_utterances: list[str],
+    identity_phrases: list[str],
+    slot_values: list[str],
+) -> list[str]:
+    clean: list[str] = []
+    for utterance in existing_utterances or []:
+        value = _clean_identity_utterance_phrase(utterance)
+        unwrapped = _strip_existing_utterance_wrapper(value)
+        if not value or not unwrapped:
+            continue
+        if not _is_reusable_identity_term(value, slot_values):
+            continue
+        if not _is_reusable_identity_term(unwrapped, slot_values):
+            continue
+        if _is_verb_only_identity_phrase(value) or _is_verb_only_identity_phrase(unwrapped):
+            continue
+        if _is_learning_wrapper_label(unwrapped):
+            continue
+        if _is_truncated_identity_phrase(unwrapped, identity_phrases):
+            continue
+        if identity_phrases and not (
+            _utterance_matches_identity(value, identity_phrases)
+            or _utterance_matches_identity(unwrapped, identity_phrases)
+        ):
+            continue
+        clean.append(value)
+    return _dedupe_identity_phrases(clean)
+
+
+def _strip_existing_utterance_wrapper(text: str) -> str:
+    value = str(text or "").strip(" ，,。.!！?？")
+    for prefix in ("请帮我", "你帮我", "帮我", "帮忙", "请"):
+        if value.startswith(prefix):
+            value = value[len(prefix) :].strip(" ，,。.!！?？")
+            break
+    lowered = value.lower()
+    for prefix in ("help me ", "please ", "can you "):
+        if lowered.startswith(prefix):
+            value = value[len(prefix) :].strip(" ，,。.!！?？")
+            lowered = value.lower()
+            break
+    if value.endswith("一下"):
+        value = value[: -len("一下")].strip(" ，,。.!！?？")
+    return value
+
+
+def _utterance_matches_identity(text: str, identity_phrases: list[str]) -> bool:
+    normalized = _normalize_action_match_phrase(text)
+    if not normalized:
+        return False
+    for phrase in identity_phrases:
+        normalized_phrase = _normalize_action_match_phrase(phrase)
+        if normalized_phrase and (
+            normalized_phrase in normalized or normalized in normalized_phrase
+        ):
+            return True
+    return False
+
+
+def _is_truncated_identity_phrase(text: str, identity_phrases: list[str]) -> bool:
+    normalized = _normalize_action_match_phrase(text)
+    if not normalized:
+        return False
+    for phrase in identity_phrases:
+        normalized_phrase = _normalize_action_match_phrase(phrase)
+        if (
+            normalized_phrase
+            and normalized_phrase.startswith(normalized)
+            and normalized_phrase != normalized
+        ):
+            return True
+    return False
+
+
+def _generated_identity_utterances(
+    *,
+    business_goal: str,
+    canonical_goal: str | None,
+    action_aliases: list[str],
+    business_object: str | None,
+    slot_values: list[str],
+) -> list[str]:
+    candidates = [
+        business_goal,
+        re.sub(r"[_-]+", " ", canonical_goal or "").strip(),
+        *action_aliases,
+    ]
+    phrases = [
+        phrase
+        for phrase in (_clean_identity_utterance_phrase(candidate) for candidate in candidates)
+        if phrase
+        and _is_reusable_identity_term(phrase, slot_values)
+        and not _is_verb_only_identity_phrase(phrase)
+    ]
+    phrases = _dedupe_identity_phrases(phrases)
+    if not phrases and business_object:
+        object_phrase = _clean_identity_utterance_phrase(business_object)
+        if (
+            object_phrase
+            and _is_reusable_identity_term(object_phrase, slot_values)
+            and not _is_verb_only_identity_phrase(object_phrase)
+        ):
+            phrases = [object_phrase]
+    if not phrases:
+        return []
+    primary = phrases[0]
+    if _contains_cjk(primary):
+        utterances = [f"帮我{primary}", f"{primary}一下"]
+    else:
+        utterances = [primary, f"Help me {_lower_initial_ascii(primary)}", *phrases[1:]]
+    return _dedupe_identity_phrases(
+        [
+            utterance
+            for utterance in utterances
+            if _is_reusable_identity_term(utterance, slot_values)
+            and not _is_verb_only_identity_phrase(utterance)
+        ]
+    )
+
+
+def _clean_identity_utterance_phrase(text: str) -> str:
+    return str(text or "").strip(" ，,。.!！?？")
+
+
+def _dedupe_identity_phrases(phrases: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for phrase in phrases:
+        value = str(phrase or "").strip(" ，,。.!！?？")
+        if not value:
+            continue
+        key = value.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(value)
+    return result
+
+
+def _contains_cjk(text: str) -> bool:
+    return bool(re.search(r"[\u3400-\u9fff]", text or ""))
+
+
+def _lower_initial_ascii(text: str) -> str:
+    if not text:
+        return ""
+    first = text[0]
+    if "A" <= first <= "Z":
+        return first.lower() + text[1:]
+    return text
+
+
+def _is_verb_only_identity_phrase(text: str) -> bool:
+    value = re.sub(r"[_-]+", " ", str(text or "").strip().lower())
+    value = re.sub(r"[\s，。,.；;!！?？:：\"'“”‘’（）()\[\]{}]+", " ", value).strip()
+    return value in {
+        "create",
+        "add",
+        "open",
+        "update",
+        "edit",
+        "delete",
+        "remove",
+        "search",
+        "find",
+        "submit",
+        "complete",
+        "view",
+    }
 
 
 def _business_object_from_identity(

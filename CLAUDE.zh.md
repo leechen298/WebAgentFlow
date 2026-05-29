@@ -139,6 +139,14 @@ allowed changes、forbidden changes、expected deliverables、expected tests /
 verification、compatibility constraints、scope guardrails、exit criteria 和
 handoff to next package。只写一行 package summary 不足以指导后续实现。
 
+当 Codex App `/goal` 需要跑完整个 campaign 时，该 campaign 必须在所属迭代包
+中提供 Campaign Goal Runner 契约。runner 必须写清 current state 文件、checkpoint 字段、
+child package lifecycle、final status vocabulary 和 live-run hard stop。Full
+campaign goal 只有在每个 child package 到达已记录 checkpoint 后才可以继续下一包；
+遇到 P0 / P1 finding、证据不足、状态冲突、越界文件变更或缺少 live validation
+授权时必须立即停止。详细标准放在 `docs/iterations/AGENTS.md` 和
+`docs/iterations/AGENTS.zh.md`，不要在根级文档重复大段流程。
+
 ## AI 编码 Agent —— 执行边界（硬约束）
 
 WebAgentFlow **本身就是**一个自主 web 操作引擎，内置有项目自己的

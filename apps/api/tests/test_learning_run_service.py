@@ -207,6 +207,11 @@ def test_product_learning_preserves_structured_business_identity(
 
     assert result.status == "learned"
     assert result.action_label == "Create purchase orde"
+    assert result.suggested_utterances == [
+        "Create purchase order",
+        "Help me create purchase order",
+        "add purchase order",
+    ]
     assert result.business_goal == "Create purchase order"
     assert result.canonical_goal == "create_purchase_order"
     assert result.action_aliases == ["add purchase order", "Create purchase order"]
@@ -251,6 +256,11 @@ def test_product_learning_uses_clean_canonical_when_action_goal_contains_slot_va
 
     assert result.status == "learned"
     assert result.action_label == "create purchase orde"
+    assert result.suggested_utterances == [
+        "create purchase order",
+        "Help me create purchase order",
+        "add purchase order",
+    ]
     assert result.business_goal == "create purchase order"
     assert result.canonical_goal == "create_purchase_order"
     assert result.action_aliases == ["add purchase order"]
@@ -262,8 +272,48 @@ def test_product_learning_uses_clean_canonical_when_action_goal_contains_slot_va
         "purchase order",
     ]
     assert "Alpha-1" not in result.action_label
+    assert all("Alpha-1" not in utterance for utterance in result.suggested_utterances)
     assert "Alpha-1" not in result.business_goal
     assert "Alpha-1" not in result.match_terms
+
+
+def test_product_learning_excludes_verb_only_alias_from_suggested_utterances(
+    db_session: Session,
+) -> None:
+    def explorer(**kwargs):
+        return _exploration_result(
+            url="http://example.test/orders",
+            title="Orders",
+            final_url="http://example.test/orders",
+            final_title="Orders",
+        )
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=_DummyRuntimeFactory(),
+        explorer=explorer,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url="http://example.test/orders",
+            goal="Learn how to create purchase order named Alpha-1",
+            fill_values={"order_name": "Alpha-1"},
+            product_level=True,
+            action_goal="Create purchase order",
+            canonical_goal="create_purchase_order",
+            action_aliases=["create", "submit purchase order"],
+        )
+    )
+
+    assert result.status == "learned"
+    assert result.suggested_utterances == [
+        "Create purchase order",
+        "Help me create purchase order",
+        "submit purchase order",
+    ]
+    assert "create" not in result.suggested_utterances
+    assert all("Alpha-1" not in utterance for utterance in result.suggested_utterances)
 
 
 def test_product_learning_saves_path_when_visible_text_confirms_user_value(
