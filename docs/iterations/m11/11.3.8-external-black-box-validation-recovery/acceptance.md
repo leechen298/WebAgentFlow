@@ -1,6 +1,6 @@
 # 验收标准（Acceptance）
 
-状态：proposed
+状态：ready for review
 
 ## Functional Acceptance
 

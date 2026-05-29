@@ -1,6 +1,6 @@
 # 11.3.8 · External Black-box Validation Recovery
 
-状态：proposed
+状态：ready for review
 里程碑：M11
 类型：umbrella planning docs
 父迭代：[`11.3-interactive-chat-closed-loop`](../11.3-interactive-chat-closed-loop/)
@@ -12,6 +12,40 @@
 
 `11.3.8 External Black-box Validation Recovery` 是 M11.3 chat runtime /
 product validation closure 的收口补强，不是 M12 recovery，也不是测试站点迁移。
+
+## Scope
+
+本包只交付 umbrella planning documentation。它定义外部黑盒验证失败后的修复拆包、
+验收要求、验证边界和 child package gates；它不实现代码、不改测试、不执行 live
+validation，也不改变任何 runtime contract。
+
+允许改动范围：
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/*`
+- `docs/iterations/m11/README.md` 中的 11.3.8 索引状态
+
+禁止改动范围：
+
+- runtime、schema、API、frontend、fixture、migration 或 test implementation files
+- `WebAgentFlow-Validation-Site` / `WebAgentFlow-Fixture-Site`
+- external black-box latest result，除非后续 child package 真实重验
+
+## Deliverables
+
+- `README.md` - umbrella package index, status, child package sequence, and scope.
+- `intent.md` - product problem, why now, non-goals, and success definition.
+- `contract.md` - planning, evidence, compatibility, forbidden-change, and handoff contract.
+- `technical-design.md` - documentation structure, affected files, anti-drift strategy, and validation shape.
+- `test-plan.md` - docs-only verification commands and no-unverified-claims rules.
+- `plan.md` - execution-grade planned-package specs for 11.3.8.1 through 11.3.8.5.
+- `acceptance.md` - functional, safety, test, and documentation acceptance criteria.
+- `review.md` - documentation authoring record, commands run, not-run items, and final assessment.
+
+## Final Assessment State
+
+Ready for documentation review. This status means the umbrella planning package is complete enough to review;
+it does not authorize runtime implementation. Child packages must still create their own full seven-document
+sets and pass documentation/design review before any code, test, or validation implementation begins.
 
 站点迁移已经完成：
 

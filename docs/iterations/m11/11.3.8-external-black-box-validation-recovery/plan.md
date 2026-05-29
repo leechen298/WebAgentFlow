@@ -1,6 +1,6 @@
 # 实施计划（Plan）
 
-状态：proposed
+状态：ready for review
 
 ## 总体说明
 

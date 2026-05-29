@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：proposed
+状态：ready for review
 
 ## Problem Statement
 
