@@ -28,7 +28,6 @@ from app.services.conversation.prompt_assets import (
 )
 from app.services.conversation.router_agent import CustomerFacingAgentRouterService
 
-
 GENERIC_WORKFLOW_URL = "http://example.test/workflow"
 GENERIC_RECORDS_URL = "http://example.test/records"
 GENERIC_SITE_ORIGIN = "http://example.test"
@@ -182,6 +181,210 @@ def test_router_provider_payload_does_not_include_private_choice_map_or_path_ids
     assert "lp-secret" not in payload_text
     assert "learned_path_id" not in payload_text
     assert "pending_choice_private_map" not in payload_text
+
+
+def test_router_counts_business_identity_metadata_as_matching_learned_action() -> None:
+    router = CustomerFacingAgentRouterService()
+    intake = ConversationIntakeResult(
+        intent="execute_operation",
+        target={"url": GENERIC_RECORDS_URL},
+        action={
+            "goal": "Create purchase order",
+            "canonical_goal": "create_purchase_order",
+            "aliases": ["add purchase order"],
+        },
+        slots=[
+            {
+                "name": "order_name",
+                "semantic_type": "record_name",
+                "value": "Beta",
+            }
+        ],
+        confidence=0.9,
+    )
+
+    decision = router.route(
+        raw_message=f"Create purchase order named Beta at {GENERIC_RECORDS_URL}",
+        intake=intake,
+        context=ConversationContextBundle(
+            learned_actions=[
+                {
+                    "alias": "Learn how to create",
+                    "utterances": ["帮我Learn how to create"],
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": GENERIC_SITE_ORIGIN,
+                    "business_goal": "Create purchase order",
+                    "canonical_goal": "create_purchase_order",
+                    "action_aliases": ["add purchase order"],
+                    "business_object": "purchase order",
+                    "match_terms": [
+                        "Create purchase order",
+                        "create_purchase_order",
+                        "add purchase order",
+                        "purchase order",
+                    ],
+                }
+            ]
+        ),
+    )
+
+    assert decision.route_decision == RouteDecisionKind.DELEGATE_TO_WEB_OPERATION_AGENT
+    assert decision.recommended_skill == ApplicationSkillName.START_REPLAY
+    assert decision.known_context.has_learned_action is True
+
+
+@pytest.mark.parametrize(
+    ("goal", "canonical_goal", "alias", "raw_message"),
+    [
+        (
+            "Search purchase order",
+            "search_purchase_order",
+            "find purchase order",
+            f"Search purchase order at {GENERIC_RECORDS_URL}",
+        ),
+        (
+            "Delete purchase order",
+            "delete_purchase_order",
+            "remove purchase order",
+            f"Delete purchase order at {GENERIC_RECORDS_URL}",
+        ),
+    ],
+)
+def test_router_does_not_count_different_action_on_same_object_as_learned(
+    goal: str,
+    canonical_goal: str,
+    alias: str,
+    raw_message: str,
+) -> None:
+    router = CustomerFacingAgentRouterService()
+    intake = ConversationIntakeResult(
+        intent="execute_operation",
+        target={"url": GENERIC_RECORDS_URL},
+        action={
+            "goal": goal,
+            "canonical_goal": canonical_goal,
+            "aliases": [alias],
+        },
+        slots=[
+            {
+                "name": "order_name",
+                "semantic_type": "record_name",
+                "value": "Beta",
+            }
+        ],
+        confidence=0.9,
+    )
+
+    decision = router.route(
+        raw_message=raw_message,
+        intake=intake,
+        context=ConversationContextBundle(
+            learned_actions=[
+                {
+                    "alias": "Learn how to create",
+                    "utterances": ["帮我Learn how to create"],
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": GENERIC_SITE_ORIGIN,
+                    "business_goal": "Create purchase order",
+                    "canonical_goal": "create_purchase_order",
+                    "action_aliases": ["add purchase order"],
+                    "business_object": "purchase order",
+                    "match_terms": [
+                        "Create purchase order",
+                        "create_purchase_order",
+                        "add purchase order",
+                        "purchase order",
+                    ],
+                }
+            ]
+        ),
+    )
+
+    assert decision.recommended_skill != ApplicationSkillName.START_REPLAY
+    assert decision.known_context.has_learned_action is False
+
+
+def test_router_does_not_count_generic_verb_only_action_as_learned() -> None:
+    router = CustomerFacingAgentRouterService()
+    intake = ConversationIntakeResult(
+        intent="execute_operation",
+        target={"url": GENERIC_RECORDS_URL},
+        action={
+            "goal": "Create purchase order",
+            "canonical_goal": "create_purchase_order",
+            "aliases": ["add purchase order"],
+        },
+        slots=[
+            {
+                "name": "order_name",
+                "semantic_type": "record_name",
+                "value": "Beta",
+            }
+        ],
+        confidence=0.9,
+    )
+
+    decision = router.route(
+        raw_message=f"Create purchase order named Beta at {GENERIC_RECORDS_URL}",
+        intake=intake,
+        context=ConversationContextBundle(
+            learned_actions=[
+                {
+                    "alias": "Create",
+                    "utterances": ["Create"],
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": GENERIC_SITE_ORIGIN,
+                }
+            ]
+        ),
+    )
+
+    assert decision.recommended_skill != ApplicationSkillName.START_REPLAY
+    assert decision.known_context.has_learned_action is False
+
+
+def test_router_object_phrase_does_not_match_substring_object() -> None:
+    router = CustomerFacingAgentRouterService()
+    intake = ConversationIntakeResult(
+        intent="execute_operation",
+        target={"url": GENERIC_RECORDS_URL},
+        action={
+            "goal": "Create border",
+            "canonical_goal": "create_border",
+            "aliases": ["add border"],
+        },
+        slots=[
+            {
+                "name": "order_name",
+                "semantic_type": "record_name",
+                "value": "Beta",
+            }
+        ],
+        confidence=0.9,
+    )
+
+    decision = router.route(
+        raw_message=f"Create border named Beta at {GENERIC_RECORDS_URL}",
+        intake=intake,
+        context=ConversationContextBundle(
+            learned_actions=[
+                {
+                    "alias": "Learn how to create",
+                    "utterances": ["帮我Learn how to create"],
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": GENERIC_SITE_ORIGIN,
+                    "business_goal": "Create order",
+                    "canonical_goal": "create_order",
+                    "action_aliases": ["add order"],
+                    "business_object": "order",
+                    "match_terms": ["Create order", "create_order", "add order", "order"],
+                }
+            ]
+        ),
+    )
+
+    assert decision.recommended_skill != ApplicationSkillName.START_REPLAY
+    assert decision.known_context.has_learned_action is False
 
 
 def test_router_provider_invalid_json_safe_fails_to_ask_user() -> None:

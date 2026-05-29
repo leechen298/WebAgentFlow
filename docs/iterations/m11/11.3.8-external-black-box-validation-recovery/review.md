@@ -4,15 +4,262 @@ Status: active / in progress
 
 ## FINAL_STATUS
 
-status: PACKAGE_COMPLETE for 11.3.8.2; parent campaign still active
-next_action: full campaign mode may create / review 11.3.8.3-learned-action-matching-improvement child seven-doc package after source-conflict checks
+status: 11.3.8.5 NEEDS_USER_INPUT; parent campaign awaiting live validation approval
+next_action: wait for API base URL, target URL, DB state policy, approved scenario list, and latest-result-doc update approval
 parent_authorizes_runtime_implementation: no
-active_child_package: 11.3.8.2-suggested-utterance-generation
+active_child_package: 11.3.8.5-external-black-box-revalidation-closeout
 do_not_reimplement: true
-blocking_findings: none for 11.3.8.2 closeout; parent 11.3.8 campaign remains incomplete
-last_verified_at: 2026-05-29 19:50 CST
-commands_run: Campaign Goal Runner docs consistency checks; plan-compatible documentation generation checks; template completeness checks; 11.3.8 route regression checks; safety-boundary scan; git diff --check; prior 11.3.8.2 documentation checks; read-only spec/design review; TDD red tests; focused pytest; focused ruff; target-constant scan; read-only code/test/evidence review and code re-review
-commands_not_run: wagent chat; verify-scenario; browser smoke; external black-box validation; direct autonomous-run endpoint
+blocking_findings: live validation approval fields missing
+last_verified_at: 2026-05-29 11.3.8.5 documentation gate
+commands_run: 11.3.8.3 documentation checks; TDD red focused pytest; focused runtime/router pytest; focused ruff; forbidden target scan; read-only spec/contract/safety/code/evidence subagent reviews; 11.3.8.4 documentation checks; read-only spec/regression review and re-review; read-only safety/evidence review; post-fix regression pytest baseline; focused regression pytest; focused ruff; expanded target scan; closeout subagent reviews; 11.3.8.5 documentation checks; 11.3.8.5 read-only gate/evidence subagent reviews; git diff --check
+commands_not_run: wagent chat; verify-scenario; browser smoke; external black-box validation; direct autonomous-run endpoint; direct replay product validation
+
+## 2026-05-29 11.3.8.5 Documentation Gate
+
+- Author: Codex.
+- Decision: `NEEDS_USER_INPUT` for
+  `11.3.8.5-external-black-box-revalidation-closeout`; parent campaign remains
+  active and blocked at the live validation approval gate.
+- Scope: created and reviewed the validation / closeout seven-document package,
+  tightened raw-evidence requirements, and synchronized parent routing. No
+  runtime, tests, schema, API, frontend, worker, eval-runner, external site
+  source, dated result, or latest result file was modified.
+- Required approval fields missing: API base URL, target URL, DB state policy,
+  approved scenario list, and latest-result-doc update approval.
+
+Subagents:
+
+- Validation package gate reviewer: Boole
+  (`019e73e3-df11-7850-ba21-94b4f20ef81c`) requested P1 / P2 documentation
+  fixes for `do_not_reimplement`, stale handoff source, and stale pending
+  wording; findings addressed.
+- Evidence / scope reviewer: Harvey
+  (`019e73e4-0ada-71d2-aead-a8db550e0911`) requested P1 evidence-bundle
+  wording and P2 handoff-source cleanup; findings addressed.
+
+Not run:
+
+- Live external black-box validation, live `wagent chat`, `verify-scenario`,
+  browser/UI smoke, direct autonomous-run endpoint calls, direct replay product
+  validation, and latest result docs update were not run / not modified.
+
+## 2026-05-29 11.3.8.4 Full Child-Package Cycle Closeout
+
+- Author: Codex.
+- Decision: `PACKAGE_COMPLETE` for `11.3.8.4-regression-tests`; parent campaign
+  still active.
+- Scope: created / reviewed the seven-doc child package, added target-agnostic
+  repo-local regression coverage, ran focused verification, completed subagent
+  test / evidence review, and updated route to `11.3.8.5`.
+- Evidence boundary: this is repo-local regression closeout only. It does not
+  claim `PV-CLI-003` pass and does not update
+  `docs/testing/results/external-black-box-validation-*`.
+
+Changed files for this child cycle:
+
+- `apps/api/tests/test_conversation_chat_runtime.py`
+- `docs/iterations/m11/11.3.8.4-regression-tests/README.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/intent.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/contract.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/technical-design.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/test-plan.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/plan.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/review.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+- `docs/iterations/m11/README.md`
+- `docs/iterations/m11/m11-plan.md`
+
+Verification summary:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `find docs/iterations/m11/11.3.8.4-regression-tests -maxdepth 1 -type f \| sort` | Listed all seven child docs | 0 | Package existence |
+| `rg -n "Regression Tests\|external site\|synthetic\|Forbidden Changes\|Exit Criteria" docs/iterations/m11/11.3.8.4-regression-tests` | Required terms found | 0 | Documentation term check |
+| single regression pytest | `1 passed, 95 deselected` | 0 | Post-fix baseline |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py -q` | `122 passed in 0.83s` | 0 | Combined focused suite |
+| `cd apps/api && ../../.venv/bin/python -m ruff check tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py` | `All checks passed!` | 0 | Focused lint |
+| expanded forbidden target scan over focused tests, `services/conversation`, `services/learning`, `services/task_planning`, and `prompts` | No output | 1 | No forbidden target constants |
+| `git diff --check` | Clean | 0 | Patch sanity |
+
+Subagents:
+
+- Test / coverage reviewer: Noether (`019e73da-c90b-7990-8539-31ca9aba696e`)
+  approved; no P0 / P1 / P2 / P3.
+- Evidence / scope reviewer: Raman (`019e73da-f65e-7d22-8410-5d42939a28a8`)
+  approved; no P0 / P1 / P2 / P3.
+
+Not run:
+
+- `wagent chat`, `verify-scenario`, browser/UI smoke, autonomous runs, direct
+  autonomous-run endpoint calls, direct replay product validation, and external
+  black-box validation were not run.
+- `docs/testing/results/external-black-box-validation-*` files were not
+  modified. Latest external black-box result remains `FAIL`.
+
+Handoff:
+
+- `11.3.8.5-external-black-box-revalidation-closeout` is now the next eligible
+  child package.
+- Create the validation / closeout package, but stop before any live validation
+  until the user provides API base URL, target URL, DB state policy, approved
+  scenario list, and latest-result-doc update approval.
+
+## 2026-05-29 11.3.8.4 Documentation Authoring
+
+- Author: Codex.
+- Decision: `ready_for_design_review` for `11.3.8.4-regression-tests`.
+- Scope: created the child seven-document package and updated parent / milestone
+  routing to make `11.3.8.4` the active design-review child. No runtime, schema,
+  API, frontend, fixture, migration, worker, eval-runner, replay, reporter,
+  recovery, abort, external result, or external site source files were modified
+  during this documentation authoring step.
+
+Changed files for this documentation step:
+
+- `docs/iterations/m11/11.3.8.4-regression-tests/README.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/intent.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/contract.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/technical-design.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/test-plan.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/plan.md`
+- `docs/iterations/m11/11.3.8.4-regression-tests/review.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+- `docs/iterations/m11/README.md`
+- `docs/iterations/m11/m11-plan.md`
+
+Verification summary:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `find docs/iterations/m11/11.3.8.4-regression-tests -maxdepth 1 -type f \| sort` | Listed all seven child docs | 0 | Package existence |
+| `rg -n "Regression Tests\|external site\|synthetic\|Forbidden Changes\|Exit Criteria" docs/iterations/m11/11.3.8.4-regression-tests` | Required terms found | 0 | Documentation term check |
+| `git diff --check` | Clean | 0 | Patch sanity |
+
+Subagents planned:
+
+- Spec / regression reviewer.
+- Safety / evidence reviewer.
+
+Not run:
+
+- Focused regression tests, focused ruff, `wagent chat`, `verify-scenario`,
+  browser/UI smoke, autonomous runs, direct autonomous-run endpoint calls, and
+  external black-box validation were not run during documentation authoring.
+
+Handoff:
+
+- `11.3.8.4` implementation is authorized for scoped target-agnostic regression
+  tests only.
+- Do not start `11.3.8.5` until `11.3.8.4` reaches `PACKAGE_COMPLETE`.
+
+## 2026-05-29 11.3.8.3 Full Child-Package Cycle Closeout
+
+- Author: Codex.
+- Decision: `PACKAGE_COMPLETE` for
+  `11.3.8.3-learned-action-matching-improvement`; parent campaign still active.
+- Scope: child package created, design / safety reviewed, TDD implementation
+  completed, focused runtime / router tests passed, code / evidence subagent
+  review passed after P2 fixes, and parent route advanced to `11.3.8.4`.
+- Evidence boundary: this is repo-local matcher closeout only. It does not
+  claim `PV-CLI-003` pass and does not update
+  `docs/testing/results/external-black-box-validation-*`.
+
+Changed files for this child cycle:
+
+- `apps/api/app/services/conversation/chat_runtime.py`
+- `apps/api/app/services/conversation/router_agent.py`
+- `apps/api/tests/test_conversation_chat_runtime.py`
+- `apps/api/tests/test_conversation_router_agent.py`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/README.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/intent.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/contract.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/technical-design.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/test-plan.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/plan.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/review.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+- `docs/iterations/m11/README.md`
+- `docs/iterations/m11/m11-plan.md`
+
+Verification summary:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `find docs/iterations/m11/11.3.8.3-learned-action-matching-improvement -maxdepth 1 -type f \| sort` | Listed all seven child docs | 0 | Package existence |
+| `rg -n "Learned Action Matching Improvement\|implementation_authorized\|ambiguous\|low-confidence\|Forbidden Changes\|Exit Criteria\|Out-of-scope Follow-ups" docs/iterations/m11/11.3.8.3-learned-action-matching-improvement` | Required terms found | 0 | Documentation term check |
+| TDD red focused runtime pytest | `3 failed, 2 passed, 89 deselected` | 1 | Expected red before matcher implementation |
+| TDD red router metadata pytest | `1 failed, 10 deselected` | 1 | Expected red before router sync |
+| TDD red object-boundary pytest | `2 failed, 3 passed, 105 deselected` | 1 | Expected red before token-boundary fix |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | `95 passed in 0.79s` | 0 | Focused runtime tests |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_router_agent.py -q` | `15 passed in 0.07s` | 0 | Focused router tests |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py -q` | `110 passed in 0.77s` | 0 | Combined focused suite |
+| `cd apps/api && ../../.venv/bin/python -m ruff check app/services/conversation/chat_runtime.py app/services/conversation/router_agent.py tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py` | `All checks passed!` | 0 | Focused lint |
+| `rg -n "5177\|/inventory\|inventory item\|WebAgentFlow-Validation-Site" apps/api/app/services/conversation/chat_runtime.py apps/api/app/services/conversation/router_agent.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py` | No output | 1 | No forbidden target constants in touched runtime/tests |
+| `git diff --check` | Clean | 0 | Patch sanity |
+
+Subagents:
+
+- Code / test reviewer: Mendel (`019e73c2-a501-75a3-8e0a-8e29c58340a3`) initially
+  requested P2 fixes for router negative coverage and object substring matching;
+  re-review approved after tests and token-boundary fix.
+- Evidence / scope reviewer: Lovelace (`019e73c2-ce6f-7e70-b21a-2ddc1424aeab`)
+  approved; no evidence-boundary or scope findings.
+
+Not run:
+
+- `wagent chat`, `verify-scenario`, browser/UI smoke, autonomous runs, direct
+  autonomous-run endpoint calls, direct replay product validation, and external
+  black-box validation were not run.
+- `docs/testing/results/external-black-box-validation-*` files were not
+  modified. Latest external black-box result remains `FAIL`.
+
+Handoff:
+
+- `11.3.8.4-regression-tests` is now the next eligible child package.
+- `11.3.8.4` must create and review a full seven-document child package before
+  implementation.
+- `11.3.8.5` live external validation remains blocked until `11.3.8.4` closes
+  and the thread explicitly provides the required live validation approval
+  fields.
+
+## 2026-05-29 11.3.8.3 Design-Gate Start
+
+- Author: Codex.
+- Decision: `ready_for_implementation` for `11.3.8.3-learned-action-matching-improvement`.
+- Scope: created the child seven-document package, launched required read-only
+  subagent design / safety reviews, fixed requested P0 / P1-free documentation
+  findings, recorded child `implementation_authorized: yes`, and updated parent
+  routing to make `11.3.8.3` the active implementation child. Runtime, schema, API, frontend, fixture,
+  migration, worker, eval-runner, external result, replay, reporter, recovery,
+  and abort files were not modified during documentation authoring.
+
+Changed files so far:
+
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/README.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/intent.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/contract.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/technical-design.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/test-plan.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/plan.md`
+- `docs/iterations/m11/11.3.8.3-learned-action-matching-improvement/review.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+- `docs/iterations/m11/README.md`
+- `docs/iterations/m11/m11-plan.md`
+
+Subagents:
+
+- Spec / contract reviewer: Wegener (`019e73b0-8944-7520-bc59-8d88aff69be9`) returned `CHANGES_REQUESTED`; P1/P2/P3 findings were addressed in child docs and parent routing; re-review returned `APPROVE`.
+- Safety / evidence reviewer: Pasteur (`019e73b0-b539-7871-b9a3-e0f9675f672a`) returned `APPROVE`; optional target-scan hardening wording was added; re-review returned `APPROVE`.
+
+Not run:
+
+- Runtime tests, `wagent chat`, `verify-scenario`, browser/UI smoke, autonomous
+  runs, direct autonomous-run endpoint calls, and external black-box validation
+  were not run during this design-gate start.
 
 ## 2026-05-29 Campaign Goal Runner Standardization
 

@@ -271,6 +271,79 @@ def _ingest_record_path(
     return str(path.id)
 
 
+class _StaticIntakeService:
+    provider_fallback = False
+    confidence_threshold = 0.6
+
+    def __init__(
+        self,
+        *,
+        intent: str = "execute_operation",
+        target_url: str = GENERIC_RECORDS_URL,
+        goal: str = "Create purchase order",
+        canonical_goal: str | None = "create_purchase_order",
+        aliases: list[str] | None = None,
+        slots: list[ConversationIntakeSlot] | None = None,
+        confidence: float = 0.9,
+    ) -> None:
+        self._result = ConversationIntakeResult(
+            intent=intent,
+            target=ConversationIntakeTarget(url=target_url),
+            action=ConversationIntakeAction(
+                goal=goal,
+                canonical_goal=canonical_goal,
+                aliases=aliases or ["add purchase order"],
+            ),
+            slots=slots or [],
+            confidence=confidence,
+        )
+
+    def analyze(
+        self,
+        raw_message: str,
+        *,
+        session_metadata: dict[str, Any] | None = None,
+    ) -> ConversationIntakeResult:
+        return self._result
+
+    def consume_last_trace_payload(self) -> dict[str, Any] | None:
+        return None
+
+
+def _business_identity_learned_action(
+    learned_path_id: str,
+    *,
+    alias: str = "Learn how to create",
+    utterances: list[str] | None = None,
+    target_url: str = GENERIC_RECORDS_URL,
+    business_goal: str = "Create purchase order",
+    canonical_goal: str = "create_purchase_order",
+    action_aliases: list[str] | None = None,
+    business_object: str = "purchase order",
+    match_terms: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "alias": alias,
+        "utterances": utterances if utterances is not None else ["帮我Learn how to create"],
+        "learned_path_id": learned_path_id,
+        "target_url": target_url,
+        "site_origin": "http://example.test",
+        "page_template": "/records",
+        "scenario": None,
+        "business_goal": business_goal,
+        "canonical_goal": canonical_goal,
+        "action_aliases": action_aliases or ["add purchase order"],
+        "business_object": business_object,
+        "match_terms": match_terms
+        or [
+            business_goal,
+            canonical_goal,
+            *(action_aliases or ["add purchase order"]),
+            business_object,
+        ],
+    }
+
+
 def test_parse_chat_intent_learn_page_extracts_url() -> None:
     intent = parse_chat_intent("学习一下这个登录页怎么登录，地址是 http://localhost:5175/login")
 
@@ -1275,6 +1348,156 @@ def test_product_learning_preserves_existing_clean_business_utterances(
         "Help me create purchase order",
         "add purchase order",
     ]
+
+
+def test_regression_learn_business_action_then_execute_same_action_new_values(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    learned_path_id = _ingest_record_path(
+        db_session,
+        source_run_id="run-regression-learn-execute-business-action",
+        value_slot="order_name",
+    )
+    intake_results = [
+        ConversationIntakeResult(
+            intent="learn_operation",
+            target=ConversationIntakeTarget(url=GENERIC_RECORDS_URL),
+            action=ConversationIntakeAction(
+                goal="Create purchase order",
+                canonical_goal="create_purchase_order",
+                aliases=["add purchase order"],
+            ),
+            slots=[
+                ConversationIntakeSlot(
+                    name="order_name",
+                    semantic_type="record_name",
+                    value="Alpha-1",
+                )
+            ],
+            confidence=0.9,
+        ),
+        ConversationIntakeResult(
+            intent="execute_operation",
+            target=ConversationIntakeTarget(url=GENERIC_RECORDS_URL),
+            action=ConversationIntakeAction(
+                goal="Create purchase order",
+                canonical_goal="create_purchase_order",
+                aliases=["add purchase order"],
+            ),
+            slots=[
+                ConversationIntakeSlot(
+                    name="order_name",
+                    semantic_type="record_name",
+                    value="Beta-2",
+                )
+            ],
+            confidence=0.9,
+        ),
+    ]
+
+    class LearnThenExecuteIntake:
+        provider_fallback = False
+        confidence_threshold = 0.6
+
+        def analyze(
+            self,
+            raw_message: str,
+            *,
+            session_metadata: dict[str, Any] | None = None,
+        ) -> ConversationIntakeResult:
+            return intake_results.pop(0)
+
+        def consume_last_trace_payload(self) -> dict[str, Any] | None:
+            return None
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        assert kwargs["action_goal"] == "Create purchase order"
+        assert kwargs["canonical_goal"] == "create_purchase_order"
+        assert kwargs["action_aliases"] == ["add purchase order"]
+        return LearningRunResult(
+            status="learned",
+            run_id="run-regression-learn-execute-business-action",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/records",
+            scenario="product_level",
+            action_label="Learn how to create",
+            suggested_utterances=["帮我Learn how to create"],
+        )
+
+    replay_calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        replay_calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+            execution_evidence=[
+                {
+                    "kind": "dom_text_present",
+                    "target": "Beta-2",
+                    "status": "verified",
+                    "confidence": 0.95,
+                    "summary": "Synthetic page state includes Beta-2.",
+                }
+            ],
+        )
+
+    orch = ConversationOrchestrator(
+        repo,
+        learning_handler=learning_handler,
+        replay_handler=replay_handler,
+        intake_service=LearnThenExecuteIntake(),
+    )
+
+    learn_result = orch.dispatch_user_input(
+        session_id,
+        f"Learn how to create purchase order at {GENERIC_RECORDS_URL} named Alpha-1",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert learn_result.allowed is True
+    session = repo.get_session(session_id)
+    assert session is not None
+    learned_action = session.metadata_json["learned_actions"][0]
+    assert learned_action["learned_path_id"] == learned_path_id
+    assert learned_action["alias"] == "Create purchase order"
+    assert learned_action["utterances"] == [
+        "Create purchase order",
+        "Help me create purchase order",
+        "add purchase order",
+    ]
+    assert learned_action["match_terms"] == [
+        "Create purchase order",
+        "create_purchase_order",
+        "add purchase order",
+        "purchase order",
+    ]
+    assert all("Alpha-1" not in term for term in learned_action["utterances"])
+    assert all("Alpha-1" not in term for term in learned_action["match_terms"])
+
+    execute_result = orch.dispatch_user_input(
+        session_id,
+        f"Create purchase order named Beta-2 at {GENERIC_RECORDS_URL}",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert execute_result.allowed is True
+    assert "页面证据已确认目标值“Beta-2”" in execute_result.user_response
+    assert len(replay_calls) == 1
+    assert replay_calls[0][0] == learned_action["learned_path_id"]
+    assert replay_calls[0][1] == GENERIC_RECORDS_URL
+    assert replay_calls[0][2]["slot_overrides"] == {"order_name": "Beta-2"}
+    evidence_targets = replay_calls[0][2]["evidence_targets"]
+    assert len(evidence_targets) == 1
+    assert evidence_targets[0].text == "Beta-2"
+    events = repo.list_events(session_id)
+    assert any(e.type == "chat_learning_completed" for e in events)
+    assert any(e.type == "chat_execution_started" for e in events)
 
 
 def test_interactive_chat_missing_learning_info_saves_pending_intake(
@@ -5001,6 +5224,312 @@ def test_interactive_chat_execute_matches_value_specific_learned_alias_generical
         and e.payload_json.get("verification_outcome") == "verified"
         for e in events
     )
+
+
+def test_interactive_chat_execute_matches_business_identity_when_alias_is_wrapper(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_record_path(
+        db_session,
+        source_run_id="run-business-identity-wrapper-match",
+        value_slot="order_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                _business_identity_learned_action(learned_path_id)
+            ]
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    intake_service = _StaticIntakeService(
+        slots=[
+            ConversationIntakeSlot(
+                name="order_name",
+                semantic_type="record_name",
+                value="Beta",
+            )
+        ]
+    )
+    orch = ConversationOrchestrator(
+        repo,
+        replay_handler=replay_handler,
+        intake_service=intake_service,
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        f"Create purchase order named Beta at {GENERIC_RECORDS_URL}",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert len(calls) == 1
+    assert calls[0][0] == learned_path_id
+    assert calls[0][1] == GENERIC_RECORDS_URL
+    assert calls[0][2]["slot_overrides"] == {"order_name": "Beta"}
+    events = repo.list_events(session_id)
+    assert any(e.type == "chat_execution_started" for e in events)
+
+
+@pytest.mark.parametrize(
+    ("goal", "canonical_goal", "alias", "raw_message"),
+    [
+        (
+            "Search purchase order",
+            "search_purchase_order",
+            "find purchase order",
+            f"Search purchase order at {GENERIC_RECORDS_URL}",
+        ),
+        (
+            "Delete purchase order",
+            "delete_purchase_order",
+            "remove purchase order",
+            f"Delete purchase order at {GENERIC_RECORDS_URL}",
+        ),
+    ],
+)
+def test_interactive_chat_execute_does_not_match_different_action_on_same_object(
+    db_session: Session,
+    repo: ConversationRepository,
+    goal: str,
+    canonical_goal: str,
+    alias: str,
+    raw_message: str,
+) -> None:
+    learned_path_id = _ingest_record_path(
+        db_session,
+        source_run_id=f"run-business-identity-no-{canonical_goal}",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                _business_identity_learned_action(learned_path_id)
+            ]
+        },
+    )
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("different action on the same object must not replay")
+
+    orch = ConversationOrchestrator(
+        repo,
+        replay_handler=replay_handler,
+        intake_service=_StaticIntakeService(
+            goal=goal,
+            canonical_goal=canonical_goal,
+            aliases=[alias],
+        ),
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        raw_message,
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert "学过这个页面的一些操作" in result.user_response
+    assert "还没学过你要做的这个操作" in result.user_response
+
+
+def test_interactive_chat_execute_business_identity_ambiguity_requires_choice(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    primary_path_id = _ingest_record_path(
+        db_session,
+        source_run_id="run-business-identity-ambiguous-primary",
+        value_slot="order_name",
+    )
+    secondary_path_id = _ingest_record_path(
+        db_session,
+        source_run_id="run-business-identity-ambiguous-secondary",
+        value_slot="order_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                _business_identity_learned_action(
+                    primary_path_id,
+                    alias="Learn create flow A",
+                    action_aliases=["add purchase order"],
+                ),
+                _business_identity_learned_action(
+                    secondary_path_id,
+                    alias="Learn create flow B",
+                    action_aliases=["submit purchase order"],
+                ),
+            ]
+        },
+    )
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("ambiguous business identity must ask before replay")
+
+    orch = ConversationOrchestrator(
+        repo,
+        replay_handler=replay_handler,
+        intake_service=_StaticIntakeService(
+            slots=[
+                ConversationIntakeSlot(
+                    name="order_name",
+                    semantic_type="record_name",
+                    value="Beta",
+                )
+            ]
+        ),
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        f"Create purchase order named Beta at {GENERIC_RECORDS_URL}",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert result.command_kind == "pending_choice"
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_choice" in session.metadata_json
+    assert "pending_choice_private_map" in session.metadata_json
+    events = repo.list_events(session_id)
+    assert any(
+        e.payload_json.get("progress_kind")
+        in {"pending_choice_created", "planner_choice_created"}
+        for e in events
+    )
+
+
+def test_interactive_chat_execute_generic_verb_only_action_does_not_overmatch(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_record_path(
+        db_session,
+        source_run_id="run-generic-verb-only-action",
+        value_slot="order_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                {
+                    "alias": "Create",
+                    "utterances": ["Create"],
+                    "learned_path_id": learned_path_id,
+                    "target_url": GENERIC_RECORDS_URL,
+                    "site_origin": "http://example.test",
+                    "page_template": "/records",
+                    "scenario": None,
+                }
+            ]
+        },
+    )
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("generic verb-only action must not match richer request")
+
+    orch = ConversationOrchestrator(
+        repo,
+        replay_handler=replay_handler,
+        intake_service=_StaticIntakeService(
+            slots=[
+                ConversationIntakeSlot(
+                    name="order_name",
+                    semantic_type="record_name",
+                    value="Beta",
+                )
+            ]
+        ),
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        f"Create purchase order named Beta at {GENERIC_RECORDS_URL}",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert "学过这个页面的一些操作" in result.user_response
+    assert "还没学过你要做的这个操作" in result.user_response
+
+
+def test_interactive_chat_execute_object_phrase_does_not_match_substring_object(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_record_path(
+        db_session,
+        source_run_id="run-object-boundary-action",
+        value_slot="order_name",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                _business_identity_learned_action(
+                    learned_path_id,
+                    business_goal="Create order",
+                    canonical_goal="create_order",
+                    action_aliases=["add order"],
+                    business_object="order",
+                    match_terms=["Create order", "create_order", "add order", "order"],
+                )
+            ]
+        },
+    )
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("object term order must not match border by substring")
+
+    orch = ConversationOrchestrator(
+        repo,
+        replay_handler=replay_handler,
+        intake_service=_StaticIntakeService(
+            goal="Create border",
+            canonical_goal="create_border",
+            aliases=["add border"],
+            slots=[
+                ConversationIntakeSlot(
+                    name="order_name",
+                    semantic_type="record_name",
+                    value="Beta",
+                )
+            ],
+        ),
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        f"Create border named Beta at {GENERIC_RECORDS_URL}",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert "学过这个页面的一些操作" in result.user_response
+    assert "还没学过你要做的这个操作" in result.user_response
 
 
 def test_interactive_chat_single_candidate_conflicting_action_does_not_execute(

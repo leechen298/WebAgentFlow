@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import time
 import uuid
 from collections.abc import Callable
@@ -453,12 +454,274 @@ def _matching_action_count(
             and _normalize_url(action.target_url) != _normalize_url(target_url)
         ):
             continue
-        action_terms = {action.alias or "", *action.utterances}
-        if terms and action_terms.intersection(terms):
+        action_terms = _learned_action_match_terms(action)
+        object_terms = _learned_action_business_object_terms(action)
+        strong_action_terms = {
+            term for term in action_terms if _is_strong_action_term(term, object_terms)
+        }
+        normalized_terms = _normalized_action_match_terms(terms)
+        normalized_action_terms = _normalized_action_match_terms(strong_action_terms)
+        if terms and (
+            strong_action_terms.intersection(terms)
+            or normalized_terms.intersection(normalized_action_terms)
+            or _has_compatible_action_object_match(action, terms)
+        ):
             count += 1
         elif not terms and target_url and action.target_url:
             count += 1
     return count
+
+
+_ACTION_TERM_LIST_KEYS = ("utterances", "action_aliases", "match_terms")
+_ACTION_TERM_VALUE_KEYS = (
+    "alias",
+    "business_goal",
+    "canonical_goal",
+    "business_object",
+)
+_WEAK_ACTION_TERMS = {
+    "add",
+    "create",
+    "delete",
+    "execute",
+    "find",
+    "learn",
+    "open",
+    "remove",
+    "run",
+    "search",
+    "submit",
+    "update",
+    "view",
+    "创建",
+    "删除",
+    "打开",
+    "更新",
+    "搜索",
+    "查询",
+    "查看",
+    "提交",
+    "执行",
+    "新增",
+}
+
+
+def _learned_action_match_terms(action: Any) -> set[str]:
+    terms: set[str] = set()
+    for key in _ACTION_TERM_LIST_KEYS:
+        raw_values = _action_value(action, key) or []
+        if isinstance(raw_values, list):
+            terms.update(str(item) for item in raw_values if item)
+    for key in _ACTION_TERM_VALUE_KEYS:
+        value = _action_value(action, key)
+        if value:
+            terms.add(str(value))
+    return terms
+
+
+def _action_value(action: Any, key: str) -> Any:
+    if isinstance(action, dict):
+        return action.get(key)
+    value = getattr(action, key, None)
+    if value is not None:
+        return value
+    extra = getattr(action, "model_extra", None) or {}
+    return extra.get(key)
+
+
+def _normalized_action_match_terms(terms: set[str]) -> set[str]:
+    phrases: set[str] = set()
+    for term in terms:
+        phrases.update(_normalize_action_match_variants(term))
+    return {phrase for phrase in phrases if phrase}
+
+
+def _normalize_action_match_variants(text: str) -> set[str]:
+    variants = {text}
+    readable = re.sub(r"[_-]+", " ", text or "")
+    if readable != text:
+        variants.add(readable)
+    return {
+        phrase
+        for variant in variants
+        if (phrase := _normalize_action_match_phrase(variant))
+    }
+
+
+def _normalize_action_match_phrase(text: str) -> str:
+    value = (text or "").strip().lower()
+    if not value:
+        return ""
+    value = re.sub(r"https?://\S+", "", value)
+    value = re.sub(
+        r"(?:名称|(?<![a-z0-9_])name(?![a-z0-9_]))"
+        r"\s*(?:叫|是|为|=|:|：)\s*[^\s，。,.；;!！?？]+",
+        "",
+        value,
+        flags=re.I,
+    )
+    value = re.sub(r"\b(?:url|address)\b\s*[:：]?", "", value, flags=re.I)
+    for phrase in ("页面地址", "当前页面", "这个页面", "页面", "地址是", "地址"):
+        value = value.replace(phrase, "")
+    for prefix in (
+        "请帮我",
+        "你帮我",
+        "帮我",
+        "帮忙",
+        "请",
+        "我要",
+        "我想",
+        "执行一下",
+        "执行",
+        "学习一下",
+        "学一下",
+        "学习",
+        "please",
+        "can you",
+    ):
+        if value.startswith(prefix):
+            value = value[len(prefix):]
+            break
+    value = re.sub(r"[\s，。,.；;!！?？:：\"'“”‘’（）()\[\]{}]+", "", value)
+    return value
+
+
+def _learned_action_business_object_terms(action: Any) -> set[str]:
+    business_object = _action_value(action, "business_object")
+    if not business_object:
+        return set()
+    return _normalize_action_match_variants(str(business_object))
+
+
+def _is_strong_action_term(term: str, object_terms: set[str]) -> bool:
+    variants = _normalize_action_match_variants(term)
+    if not variants:
+        return False
+    return not all(
+        phrase in _WEAK_ACTION_TERMS or phrase in object_terms
+        for phrase in variants
+    )
+
+
+def _has_compatible_action_object_match(
+    action: Any,
+    input_terms: set[str],
+) -> bool:
+    object_token_sequences = _learned_action_business_object_token_sequences(action)
+    if not object_token_sequences:
+        return False
+    action_verbs = _learned_action_match_verbs(action)
+    if not action_verbs:
+        return False
+    return any(
+        tokens
+        and _tokens_contain_action_verb(tokens, action_verbs)
+        and any(
+            _contains_token_sequence(tokens, object_tokens)
+            for object_tokens in object_token_sequences
+        )
+        for term in input_terms
+        if (tokens := _action_term_tokens(term))
+    )
+
+
+def _learned_action_business_object_token_sequences(action: Any) -> list[tuple[str, ...]]:
+    business_object = _action_value(action, "business_object")
+    if not business_object:
+        return []
+    tokens = tuple(_action_term_tokens(str(business_object)))
+    return [tokens] if tokens else []
+
+
+def _action_term_tokens(text: str) -> list[str]:
+    value = (text or "").strip().lower()
+    if not value:
+        return []
+    value = re.sub(r"https?://\S+", "", value)
+    value = re.sub(
+        r"(?:名称|(?<![a-z0-9_])name(?![a-z0-9_]))"
+        r"\s*(?:叫|是|为|=|:|：)\s*[^\s，。,.；;!！?？]+",
+        "",
+        value,
+        flags=re.I,
+    )
+    value = re.sub(r"[_-]+", " ", value)
+    value = _strip_action_prefix(value)
+    return re.findall(r"[a-z0-9]+|[\u4e00-\u9fff]+", value)
+
+
+def _strip_action_prefix(value: str) -> str:
+    for prefix in (
+        "请帮我",
+        "你帮我",
+        "帮我",
+        "帮忙",
+        "请",
+        "我要",
+        "我想",
+        "执行一下",
+        "执行",
+        "学习一下",
+        "学一下",
+        "学习",
+        "please",
+        "can you",
+    ):
+        if value.startswith(prefix):
+            return value[len(prefix):].strip()
+    return value
+
+
+def _tokens_contain_action_verb(tokens: list[str], action_verbs: set[str]) -> bool:
+    return bool(tokens and tokens[0] in action_verbs)
+
+
+def _contains_token_sequence(tokens: list[str], sequence: tuple[str, ...]) -> bool:
+    if not sequence or len(sequence) > len(tokens):
+        return False
+    width = len(sequence)
+    return any(
+        tuple(tokens[index:index + width]) == sequence
+        for index in range(len(tokens) - width + 1)
+    )
+
+
+def _learned_action_match_verbs(action: Any) -> set[str]:
+    verbs: set[str] = set()
+    for term in _learned_action_match_terms(action):
+        token = _first_action_token(term)
+        if token in _WEAK_ACTION_TERMS:
+            verbs.add(token)
+    return verbs
+
+
+def _first_action_token(text: str) -> str:
+    value = (text or "").strip().lower()
+    if not value:
+        return ""
+    value = re.sub(r"https?://\S+", "", value)
+    value = re.sub(r"[_-]+", " ", value)
+    for prefix in (
+        "请帮我",
+        "你帮我",
+        "帮我",
+        "帮忙",
+        "请",
+        "我要",
+        "我想",
+        "执行一下",
+        "执行",
+        "学习一下",
+        "学一下",
+        "学习",
+        "please",
+        "can you",
+    ):
+        if value.startswith(prefix):
+            value = value[len(prefix):].strip()
+            break
+    match = re.search(r"[a-z0-9]+|[\u4e00-\u9fff]+", value)
+    return match.group(0) if match else ""
 
 
 def _normalize_url(url: str | None) -> str:

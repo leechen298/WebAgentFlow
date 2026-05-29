@@ -16,24 +16,28 @@ latest_external_black_box_result: FAIL
 
 ## Active Child Package
 
-active_child_package: 11.3.8.2-suggested-utterance-generation
-route_status: PACKAGE_COMPLETE
-route_type: child-package-complete
-next_action: full campaign mode may create / review 11.3.8.3 child seven-doc package; do not reimplement 11.3.8.2
+active_child_package: 11.3.8.5-external-black-box-revalidation-closeout
+route_status: NEEDS_USER_INPUT
+route_type: await-live-validation-approval
+next_action: wait for API base URL, target URL, DB state policy, approved scenario list, and latest-result-doc update approval; after all five are provided, resume 11.3.8.5 pre-live checks before any live run
 do_not_reimplement: true
-handoff_source: 11.3.8.2-suggested-utterance-generation PACKAGE_COMPLETE
+handoff_source: 11.3.8.4-regression-tests PACKAGE_COMPLETE
 
 Route meaning:
 
 - `11.3.8.1` review-closeout reached `PACKAGE_COMPLETE`.
 - `11.3.8.2` full child-package cycle reached `PACKAGE_COMPLETE`.
-- The next eligible package is `11.3.8.3`; full campaign mode may create /
-  review its own seven-document child package after confirming no source
-  conflict or out-of-scope diff.
-- Do not treat the parent `11.3.8` campaign as complete; suggested utterances,
-  matcher consumption, regression tests, and external black-box revalidation are
-  not all complete. Matcher consumption, regression tests, and external
-  black-box revalidation remain pending.
+- `11.3.8.3` full child-package cycle reached `PACKAGE_COMPLETE` with
+  repo-local matcher / router tests and no live external validation.
+- `11.3.8.4` seven-document child package has been created, read-only design /
+  safety review has passed, and child `review.md` records
+  `implementation_authorized: yes`.
+- `11.3.8.4` reached `PACKAGE_COMPLETE` with repo-local regression tests and no
+  live external validation.
+- `11.3.8.5` seven-document validation / closeout package has been created and
+  is stopped at the live validation approval gate.
+- Do not treat the parent `11.3.8` campaign as complete; external black-box
+  revalidation is still not run and remains pending.
 
 ## Package Queue
 
@@ -41,9 +45,9 @@ Route meaning:
 |---|---|---|
 | `11.3.8.1-learning-action-goal-preservation` | `PACKAGE_COMPLETE` | Done; stable metadata contract may be consumed by 11.3.8.2 |
 | `11.3.8.2-suggested-utterance-generation` | `PACKAGE_COMPLETE` | Done; reusable utterances may be consumed by 11.3.8.3 |
-| `11.3.8.3-learned-action-matching-improvement` | `ready_after_11.3.8.2_PACKAGE_COMPLETE` | Full campaign mode may create / review child seven-doc package after source-conflict checks |
-| `11.3.8.4-regression-tests` | `blocked_by_11.3.8.3_matching_contract` | Wait for matcher contract |
-| `11.3.8.5-external-black-box-revalidation-closeout` | `blocked_by_11.3.8.4_regression_tests` | Stop for live validation approval before any live run |
+| `11.3.8.3-learned-action-matching-improvement` | `PACKAGE_COMPLETE` | Done; matcher behavior may be consumed by 11.3.8.4 regression tests |
+| `11.3.8.4-regression-tests` | `PACKAGE_COMPLETE` | Done; repo-local regression passed and may be consumed by 11.3.8.5 |
+| `11.3.8.5-external-black-box-revalidation-closeout` | `NEEDS_USER_INPUT` | Seven-doc validation package exists; wait for all five live validation approval fields before pre-live checks or live run |
 
 ## Conflict Rule
 

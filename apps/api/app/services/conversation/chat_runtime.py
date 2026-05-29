@@ -5051,34 +5051,241 @@ def _matching_actions(
     intake: ConversationIntakeResult | None = None,
 ) -> list[dict[str, Any]]:
     intake_terms = _intake_match_terms(intake)
-    normalized_intake_terms = {
-        phrase for term in intake_terms if (phrase := _normalize_action_match_phrase(term))
-    }
+    normalized_intake_terms = _normalized_action_match_terms(intake_terms)
     normalized_user_phrase = _normalize_action_match_phrase(normalized_input)
     candidates: list[dict[str, Any]] = []
     for action in actions:
-        utterances = action.get("utterances") or []
-        alias = action.get("alias") or ""
-        action_terms = {str(item) for item in utterances if item}
-        if alias:
-            action_terms.add(str(alias))
-        normalized_action_terms = {
-            phrase
-            for term in action_terms
-            if (phrase := _normalize_action_match_phrase(term))
+        alias = str(action.get("alias") or "")
+        action_terms = _action_match_terms(action)
+        object_terms = _action_business_object_terms(action)
+        strong_action_terms = {
+            term for term in action_terms if _is_strong_action_term(term, object_terms)
         }
+        normalized_action_terms = _normalized_action_match_terms(strong_action_terms)
         if (
-            normalized_input in action_terms
-            or (alias and alias in normalized_input)
-            or (intake_terms and action_terms.intersection(intake_terms))
+            normalized_input in strong_action_terms
+            or (
+                alias
+                and alias in normalized_input
+                and _is_strong_action_term(alias, object_terms)
+            )
+            or (intake_terms and strong_action_terms.intersection(intake_terms))
             or (
                 normalized_user_phrase
                 and normalized_user_phrase in normalized_action_terms
             )
             or bool(normalized_intake_terms.intersection(normalized_action_terms))
+            or _has_compatible_action_object_match(
+                action,
+                {normalized_input, *intake_terms},
+            )
         ):
             candidates.append(action)
     return candidates
+
+
+_ACTION_TERM_LIST_KEYS = ("utterances", "action_aliases", "match_terms")
+_ACTION_TERM_VALUE_KEYS = (
+    "alias",
+    "business_goal",
+    "canonical_goal",
+    "business_object",
+)
+_WEAK_ACTION_TERMS = {
+    "add",
+    "create",
+    "delete",
+    "execute",
+    "find",
+    "learn",
+    "open",
+    "remove",
+    "run",
+    "search",
+    "submit",
+    "update",
+    "view",
+    "创建",
+    "删除",
+    "打开",
+    "更新",
+    "搜索",
+    "查询",
+    "查看",
+    "提交",
+    "执行",
+    "新增",
+}
+
+
+def _action_match_terms(action: dict[str, Any]) -> set[str]:
+    terms: set[str] = set()
+    for key in _ACTION_TERM_LIST_KEYS:
+        raw_values = action.get(key) or []
+        if isinstance(raw_values, list):
+            terms.update(str(item) for item in raw_values if item)
+    for key in _ACTION_TERM_VALUE_KEYS:
+        value = action.get(key)
+        if value:
+            terms.add(str(value))
+    return terms
+
+
+def _normalized_action_match_terms(terms: set[str]) -> set[str]:
+    phrases: set[str] = set()
+    for term in terms:
+        phrases.update(_normalize_action_match_variants(term))
+    return {phrase for phrase in phrases if phrase}
+
+
+def _normalize_action_match_variants(text: str) -> set[str]:
+    variants = {text}
+    readable = re.sub(r"[_-]+", " ", text or "")
+    if readable != text:
+        variants.add(readable)
+    return {
+        phrase
+        for variant in variants
+        if (phrase := _normalize_action_match_phrase(variant))
+    }
+
+
+def _action_business_object_terms(action: dict[str, Any]) -> set[str]:
+    business_object = action.get("business_object")
+    if not business_object:
+        return set()
+    return _normalize_action_match_variants(str(business_object))
+
+
+def _is_strong_action_term(term: str, object_terms: set[str]) -> bool:
+    variants = _normalize_action_match_variants(term)
+    if not variants:
+        return False
+    return not all(
+        phrase in _WEAK_ACTION_TERMS or phrase in object_terms
+        for phrase in variants
+    )
+
+
+def _has_compatible_action_object_match(
+    action: dict[str, Any],
+    input_terms: set[str],
+) -> bool:
+    object_token_sequences = _action_business_object_token_sequences(action)
+    if not object_token_sequences:
+        return False
+    action_verbs = _action_match_verbs(action)
+    if not action_verbs:
+        return False
+    return any(
+        tokens
+        and _tokens_contain_action_verb(tokens, action_verbs)
+        and any(
+            _contains_token_sequence(tokens, object_tokens)
+            for object_tokens in object_token_sequences
+        )
+        for term in input_terms
+        if (tokens := _action_term_tokens(term))
+    )
+
+
+def _action_business_object_token_sequences(action: dict[str, Any]) -> list[tuple[str, ...]]:
+    business_object = action.get("business_object")
+    if not business_object:
+        return []
+    tokens = tuple(_action_term_tokens(str(business_object)))
+    return [tokens] if tokens else []
+
+
+def _action_term_tokens(text: str) -> list[str]:
+    value = (text or "").strip().lower()
+    if not value:
+        return []
+    value = _URL_RE.sub("", value)
+    value = re.sub(
+        r"(?:名称|(?<![a-z0-9_])name(?![a-z0-9_]))"
+        r"\s*(?:叫|是|为|=|:|：)\s*[^\s，。,.；;!！?？]+",
+        "",
+        value,
+        flags=re.I,
+    )
+    value = re.sub(r"[_-]+", " ", value)
+    value = _strip_action_prefix(value)
+    return re.findall(r"[a-z0-9]+|[\u4e00-\u9fff]+", value)
+
+
+def _strip_action_prefix(value: str) -> str:
+    for prefix in (
+        "请帮我",
+        "你帮我",
+        "帮我",
+        "帮忙",
+        "请",
+        "我要",
+        "我想",
+        "执行一下",
+        "执行",
+        "学习一下",
+        "学一下",
+        "学习",
+        "please",
+        "can you",
+    ):
+        if value.startswith(prefix):
+            return value[len(prefix):].strip()
+    return value
+
+
+def _tokens_contain_action_verb(tokens: list[str], action_verbs: set[str]) -> bool:
+    return bool(tokens and tokens[0] in action_verbs)
+
+
+def _contains_token_sequence(tokens: list[str], sequence: tuple[str, ...]) -> bool:
+    if not sequence or len(sequence) > len(tokens):
+        return False
+    width = len(sequence)
+    return any(
+        tuple(tokens[index:index + width]) == sequence
+        for index in range(len(tokens) - width + 1)
+    )
+
+
+def _action_match_verbs(action: dict[str, Any]) -> set[str]:
+    verbs: set[str] = set()
+    for term in _action_match_terms(action):
+        token = _first_action_token(term)
+        if token in _WEAK_ACTION_TERMS:
+            verbs.add(token)
+    return verbs
+
+
+def _first_action_token(text: str) -> str:
+    value = (text or "").strip().lower()
+    if not value:
+        return ""
+    value = _URL_RE.sub("", value)
+    value = re.sub(r"[_-]+", " ", value)
+    for prefix in (
+        "请帮我",
+        "你帮我",
+        "帮我",
+        "帮忙",
+        "请",
+        "我要",
+        "我想",
+        "执行一下",
+        "执行",
+        "学习一下",
+        "学一下",
+        "学习",
+        "please",
+        "can you",
+    ):
+        if value.startswith(prefix):
+            value = value[len(prefix):].strip()
+            break
+    match = re.search(r"[a-z0-9]+|[\u4e00-\u9fff]+", value)
+    return match.group(0) if match else ""
 
 
 def _normalize_action_match_phrase(text: str) -> str:
