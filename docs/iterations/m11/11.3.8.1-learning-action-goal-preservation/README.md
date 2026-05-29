@@ -1,6 +1,6 @@
 # 11.3.8.1 · Learning Action Goal Preservation
 
-状态：implementation_complete_pending_followup
+状态：`review complete`
 里程碑：M11
 类型：code
 父迭代：[`11.3.8-external-black-box-validation-recovery`](../11.3.8-external-black-box-validation-recovery/)

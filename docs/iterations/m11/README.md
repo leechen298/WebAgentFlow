@@ -22,7 +22,7 @@ M11.0 也是 M11.1 Task-to-Path、M12 Recovery / Abort、M13 Guided Teaching
 
 ## M11 收口状态
 
-状态：`closed_with_caveats`（2026-05-24）。
+状态：`review complete`
 
 M11 runtime 已按当前 v0.1 范围收口：M11.0 conversation shell、M11.1
 task-to-path happy path、M11.2 scoped observation hardening、M11.3 interactive
