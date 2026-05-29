@@ -259,6 +259,46 @@ Blockers:
 - None for documentation review.
 - Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
 
+## 2026-05-28 Codex A Current Documentation Refresh
+
+- Author: Codex A, documentation author
+- Decision: ready for review remains correct
+- Scope: current-session documentation verification only; no runtime, schema, API, frontend, fixture, migration, or test implementation files changed
+
+Changed files:
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `rg --files -g 'AGENTS.md' -g 'CLAUDE.md' -g 'CLAUDE.zh.md' -g 'README.md' docs/iterations docs` | Located repository guidance, iteration standards, templates, M11 index, and existing 11.3.8 docs | 0 | Discovery |
+| `find docs/iterations -maxdepth 3 -type f \| sort` | Confirmed the target package exists and has an existing parent README | 0 | Discovery |
+| `git status --short` | Existing untracked `.agent-runs/` is outside this package | 0 | Left untouched |
+| `sed -n '1,240p' AGENTS.md` | Read repository-wide guidance and execution boundaries | 0 | Required reading |
+| `sed -n '1,260p' CLAUDE.md` | Read mirrored repository-wide guidance and M11 scope context | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/README.md` | Read iteration package standards | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/AGENTS.md` | Read planned-package, milestone index, file standard, and evidence rules | 0 | Required reading |
+| `find docs/iterations/templates -maxdepth 1 -type f -print -exec sed -n '1,220p' {} \\;` | Read package templates used for file expectations | 0 | Template check |
+| `sed -n '1,280p' docs/iterations/m11/README.md` | Confirmed milestone index lists 11.3.8 as `ready for review / umbrella planning` | 0 | Status sync check |
+| `sed -n '1760,1935p' docs/iterations/m11/m11-plan.md` | Confirmed milestone plan lists 11.3.8 as `ready for review / umbrella planning`, preserves evidence basis, and names `11.3.8.1` as the next gated child package | 0 | Status sync check |
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f -print -exec sed -n '1,260p' {} \\;` | Inspected parent package docs, including README, contract, technical-design, test-plan, acceptance, and review | 0 | Content inspection |
+| `sed -n '1,260p' docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Confirmed child-package specs include planned-package fields and gates | 0 | Planned package check |
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f \| sort` | Parent file set present: `README.md`, `acceptance.md`, `contract.md`, `intent.md`, `plan.md`, `review.md`, `technical-design.md`, and `test-plan.md` | 0 | Post-edit file completeness check |
+| `rg -n "11\\.3\\.8-external-black-box-validation-recovery\|状态：ready for review\|ready for review / umbrella planning" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | Package README, milestone index, and milestone plan expose `ready for review` | 0 | Post-edit status sync check |
+| `rg -n "Package name\|Status:\|Type:\|Goal:\|Why this exists\|Inputs / required reading\|Allowed changes\|Forbidden changes\|Expected deliverables\|Expected tests / verification\|Compatibility constraints\|Scope guardrails\|Exit criteria\|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Required planned-package field labels found for all five child package specs | 0 | Post-edit field-presence check; reviewer must still judge adequacy |
+| `rg -n "not run\|unverified\|PASS\|FAIL\|FOLLOW_UP\|BLOCKED\|PV-CLI-003\|external-black-box-validation-latest\|Assumptions\|Open Risks" docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Evidence-honesty wording, current failure-baseline guardrails, assumptions, and open risks found | 0 | No runtime pass claim made |
+
+Not run:
+
+- Runtime tests, build, lint, browser/UI smoke, `wagent chat`, `verify-scenario`, autonomous runs, and external black-box revalidation were not run. This task only refreshed umbrella planning documentation.
+
+Blockers:
+
+- None for documentation review.
+- Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` has its own complete, reviewed seven-document child package.
+
 ## 2026-05-28 Codex A Handoff Verification
 
 - Author: Codex A, documentation author
