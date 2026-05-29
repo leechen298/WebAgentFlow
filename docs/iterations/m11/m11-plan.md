@@ -1810,6 +1810,94 @@ M11 已按当前 v0.1 runtime 范围收口。收口范围包括：
 
 外部验证站点迁移不在本次 M11 收口范围内，后续独立处理。
 
+## 11.3.8 · External Black-box Validation Recovery
+
+状态：proposed / umbrella planning。
+
+类型：M11.3 post-closeout recovery follow-up；不是代码 implementation package。
+
+M11 closeout 仍保持 `closed_with_caveats`。11.3.8 不重写
+`docs/testing/results/m11-runtime-final-closeout-20260524.md` 的收口结论，也不把
+11.3.7 first-wave user-facing behavior eval 重新解释为 full learn-then-execute pass。
+它只是在 M11.3 名下记录外部黑盒验证暴露出的产品能力修复路线。
+
+本父包文档：
+
+- [`11.3.8-external-black-box-validation-recovery/`](./11.3.8-external-black-box-validation-recovery/)
+
+执行级规格来源：
+
+- 父包 `plan.md` 是 11.3.8 child-package sequence 的 execution-grade umbrella plan。
+- 每个 `11.3.8.x` child package 进入实现前，必须先创建并 review 完整七件套：
+  `README.md`、`intent.md`、`contract.md`、`technical-design.md`、`test-plan.md`、
+  `plan.md`、`review.md`。
+- 父包 `11.3.8` 不能作为 runtime 代码修改依据；实现只能从对应 child package
+  的七件套 gate 之后开始。
+
+### Evidence basis
+
+11.3.8 基于以下已记录结果，不新增或改写 validation result：
+
+- [`docs/testing/results/external-black-box-validation-latest.md`](../../testing/results/external-black-box-validation-latest.md)
+  记录外部黑盒产品验证整体为 `FAIL`。其中 `PV-CLI-002` 是 `FOLLOW_UP`：
+  learning completed，但 learned action label 是 `Learn how to create`；`PV-CLI-003`
+  是 `FAIL`：执行新值创建库存项时，WAgent 没有匹配到已学操作。
+- [`docs/testing/results/pv-cli-003-failure-triage-20260525.md`](../../testing/results/pv-cli-003-failure-triage-20260525.md)
+  是 read-only triage，确认 learning intake 和 execute intake 均识别
+  `Create inventory item` / `create_inventory_item`，但 session learned action metadata
+  没有保留业务对象，runtime matcher 最终进入 `target_operation_unmatched`。
+
+Confirmed root causes：
+
+- `learning_action_label_too_generic`：学习阶段 intake 已有业务目标，但 reusable
+  action alias 退化为 `Learn how to create`。
+- `business_object_not_preserved`：`inventory item` / `create_inventory_item` 出现在
+  intake 和 router 数据中，但没有进入可复用 session action metadata / match terms。
+- `execution_action_match_too_literal`：执行阶段主要比较 alias / utterances 与用户输入
+  / intake terms 的字面交集，无法把 `Create inventory item` 绑定到 learned action。
+
+### Forbidden boundaries
+
+所有 11.3.8.x child packages 继承这些边界：
+
+- 不修改 `WebAgentFlow-Validation-Site` 源码。
+- 不修改 `WebAgentFlow-Fixture-Site` 源码。
+- 不恢复内嵌 `apps/product-test-site`。
+- 不恢复内嵌 `apps/validation-site`。
+- 不把 `5177/inventory` 写入 runtime default、prompt answer key、eval default、
+  package dependency 或 active automated test hard dependency。
+- 不把 selector、`data-testid`、component、seed copy、field label、button text、
+  placeholder、operation alias 或 page source 写入 product runtime / prompts。
+- 不直接调用 `/exploration/autonomous-runs` 或 `/exploration/autonomous-runs/stream`
+  作为 product validation evidence。
+- 不用 direct replay API、internal service import、hidden HTTP client 或 ad hoc script
+  代替 WAgent chat runtime evidence。
+- 不把 `PV-CLI-003` 写成 fixed，除非后续实现、focused tests 和 external black-box
+  revalidation 已真实完成并更新 latest report。
+
+### Planned child packages
+
+父包 `plan.md` 保存每个 child package 的完整 planned-package 字段。本 milestone plan
+只保留 discovery / routing 所需信息，避免后续 agent 从错误 package 开始实现。
+
+| Package | Type / status | Goal | Required gate | Handoff summary |
+|---|---|---|---|---|
+| `11.3.8.1-learning-action-goal-preservation` | code / planned next executable package; directory not created yet | 保留 learning intake 中的 business goal、canonical goal、business object 和 useful aliases，避免 action identity 退化为 `Learn how to create`。 | 创建并 review 完整七件套；不得从父包直接改 runtime。 | 交给 11.3.8.2 作为 reusable utterances 的业务语义输入；若 metadata shape 未稳定，11.3.8.2 blocked。 |
+| `11.3.8.2-suggested-utterance-generation` | code / planned after 11.3.8.1 | 基于已保留业务目标生成可复用 utterances，不再只生成教学 wrapper 变体。 | 依赖 11.3.8.1 review 和 metadata contract；创建并 review 完整七件套。 | 交给 11.3.8.3 作为 matcher match terms；若 utterances 仍缺业务对象，不能靠放宽 matcher 补偿。 |
+| `11.3.8.3-learned-action-matching-improvement` | code / planned after 11.3.8.1 and 11.3.8.2 | 让执行阶段基于 canonical goal、business goal、business object、aliases 和 reusable utterances 匹配已学 action，同时保护 ambiguous / low-confidence 场景。 | 依赖 11.3.8.1 / 11.3.8.2 reviews；创建并 review 完整七件套。 | 交给 11.3.8.4 组合成 automated regression；若仍依赖 target-specific constants，11.3.8.4 必须 blocked。 |
+| `11.3.8.4-regression-tests` | code / planned after 11.3.8.1-11.3.8.3 | 把 learn create inventory item -> execute same business action with new values 固化成 target-agnostic regression，不依赖外部站点运行或源码。 | 依赖前三包 review；创建并 review 完整七件套；不得把 `5177/inventory` 作为 hard dependency。 | 交给 11.3.8.5 做真实 external black-box revalidation；若 automated regression 未通过，revalidation 不应开始。 |
+| `11.3.8.5-external-black-box-revalidation-closeout` | validation / planned after implementation and regression packages | 重跑 `PV-CLI-002`、`PV-CLI-003`、`PV-CLI-004`、`PV-INTEGRITY-001`、`PV-INTEGRITY-002`，并如实更新 dated / latest reports。 | 依赖 11.3.8.1-11.3.8.4 reviews 和 focused tests；创建并 review 完整七件套或 validation package gate。 | 若 PASS，记录 closeout；若仍 FAIL / FOLLOW_UP / BLOCKED / UNVERIFIED，保持 honest latest 并开后续 follow-up。 |
+
+Next executable package：
+
+```text
+11.3.8.1-learning-action-goal-preservation
+```
+
+截至当前，该 child 七件套目录尚不存在。因此 11.3.8 的实现仍处于 blocked-by-doc-gate：
+必须先创建并 review `11.3.8.1-learning-action-goal-preservation/` 的完整七件套，之后才能
+修改 `learning_run_service.py`、`chat_runtime.py` 或相关 focused tests。
+
 ## Later M11.x · Page Context Bridge Decision Point
 
 状态：候选决策点，不是已确定执行包。
