@@ -119,3 +119,48 @@ Ready for documentation / design review. Not ready for implementation until revi
 | UI smoke / browser validation | No UI changes | None for docs authoring |
 | `verify-scenario` / autonomous run | Prohibited for docs-only work unless explicitly requested | None |
 | External black-box validation | Later package responsibility | Latest result remains `FAIL` |
+
+## 2026-05-29 Implementation
+
+- Author: Codex C, implementation agent.
+- Decision: implementation complete for this child package scope; follow-up packages still own reusable utterance generation, matcher consumption, cross-chain regression, and external black-box revalidation.
+- Scope: preserved learning action business identity metadata in the learning result and session learned action record without changing matcher, replay, reporter, recovery, routes, frontend, migrations, worker code, fixture sites, or external validation result docs.
+
+## Implementation Changed Files
+
+- `apps/api/app/services/learning/learning_run_service.py`
+- `apps/api/app/services/conversation/chat_runtime.py`
+- `apps/api/tests/test_learning_run_service.py`
+- `apps/api/tests/test_conversation_chat_runtime.py`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
+
+## Implementation Summary
+
+- Added optional internal `LearningRunRequest` / `LearningRunResult` identity fields: `action_goal`, `canonical_goal`, `action_aliases`, `business_goal`, `business_object`, and `match_terms`.
+- Built deterministic, target-agnostic identity terms from structured action metadata, with de-duplication and slot-value exclusion.
+- Preserved intake-derived identity in `session.metadata_json.learned_actions[]` when learning handlers return only a generic learning wrapper label.
+- Kept `_matching_actions()` unchanged; this package only stores metadata for later matcher work.
+
+## Implementation Commands
+
+| Command | Result | Exit code | Notes |
+|---|---|---:|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q` | `9 passed in 0.08s` | 0 | Required T1 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | `85 passed in 0.81s` | 0 | Required T2 |
+| `cd apps/api && ../../.venv/bin/python -m ruff check app/services/learning/learning_run_service.py app/services/conversation/chat_runtime.py tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py` | `All checks passed!` | 0 | Required T5 |
+| `rg -n "5177\|inventory item\|data-testid\|WebAgentFlow-Validation-Site" apps/api/app apps/api/tests` | Found existing historical `data-testid` occurrences in tests and `autonomous_explorer.py`; no `5177`, `inventory item`, or `WebAgentFlow-Validation-Site` introduced by this package | 0 | Required T4 scope scan plus diff inspection |
+| `rg -n "5177\|inventory item\|data-testid\|WebAgentFlow-Validation-Site" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | Found pre-existing `data-testid` test fixture lines in the two changed test files; implementation diff added no forbidden target constants | 0 | Changed-file scope scan |
+| `git diff --check` | Clean | 0 | Required T6 |
+
+## Implementation Compatibility / Scope Review
+
+- Existing Chinese `登录` / `创建记录` learning expectations remain covered by the focused tests.
+- Existing learned action records without the new optional metadata remain valid.
+- No matcher confidence, candidate selection, replay execution, Task Result Reporter, recovery, abort, public route, DB schema, frontend, fixture, or worker behavior was changed.
+- No external black-box validation, `verify-scenario`, autonomous run, direct autonomous endpoint call, CLI product smoke, UI smoke, or browser validation was run.
+
+## Implementation Unresolved Limits
+
+- `PV-CLI-003` is not claimed fixed or verified by this package.
+- Suggested utterance quality remains unchanged and belongs to `11.3.8.2`.
+- Matcher consumption of `business_goal` / `canonical_goal` / `match_terms` remains for `11.3.8.3`.

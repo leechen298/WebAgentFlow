@@ -48,6 +48,9 @@ class LearningRunRequest:
     headless: bool = True
     language: str | None = None
     product_level: bool = False
+    action_goal: str | None = None
+    canonical_goal: str | None = None
+    action_aliases: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -60,6 +63,11 @@ class LearningRunResult:
     scenario: str | None = None
     action_label: str = ""
     suggested_utterances: list[str] = field(default_factory=list)
+    business_goal: str = ""
+    canonical_goal: str | None = None
+    action_aliases: list[str] = field(default_factory=list)
+    business_object: str | None = None
+    match_terms: list[str] = field(default_factory=list)
     error: str | None = None
 
 
@@ -93,6 +101,7 @@ class LearningRunService:
                 status=ExplorationRunStatus.COMPLETED,
             )
             if learned_path_id is None:
+                identity = _action_identity_for(request)
                 return LearningRunResult(
                     status="failed",
                     run_id=run_id,
@@ -102,8 +111,14 @@ class LearningRunService:
                     scenario=request.scenario,
                     action_label=_action_label_for(request),
                     suggested_utterances=_utterances_for(request),
+                    business_goal=identity["business_goal"],
+                    canonical_goal=identity["canonical_goal"],
+                    action_aliases=identity["action_aliases"],
+                    business_object=identity["business_object"],
+                    match_terms=identity["match_terms"],
                     error="Learning run did not produce a LearnedPath.",
                 )
+            identity = _action_identity_for(request)
             return LearningRunResult(
                 status="learned",
                 run_id=run_id,
@@ -113,15 +128,26 @@ class LearningRunService:
                 scenario=request.scenario,
                 action_label=_action_label_for(request),
                 suggested_utterances=_utterances_for(request),
+                business_goal=identity["business_goal"],
+                canonical_goal=identity["canonical_goal"],
+                action_aliases=identity["action_aliases"],
+                business_object=identity["business_object"],
+                match_terms=identity["match_terms"],
             )
         except Exception as exc:
             logger.exception("Learning run failed: %s", exc)
+            identity = _action_identity_for(request)
             return LearningRunResult(
                 status="failed",
                 target_url=request.url,
                 scenario=request.scenario,
                 action_label=_action_label_for(request),
                 suggested_utterances=_utterances_for(request),
+                business_goal=identity["business_goal"],
+                canonical_goal=identity["canonical_goal"],
+                action_aliases=identity["action_aliases"],
+                business_object=identity["business_object"],
+                match_terms=identity["match_terms"],
                 error=str(exc),
             )
 
@@ -509,7 +535,11 @@ def _utterances_for(request: LearningRunRequest) -> list[str]:
 
 
 def _product_action_label_for(request: LearningRunRequest) -> str:
-    goal = _strip_product_learning_noise(request.goal or "")
+    identity_goal = _clean_business_goal(request.action_goal or "")
+    goal = identity_goal or _readable_canonical_goal(request.canonical_goal)
+    if not goal:
+        goal = _strip_product_learning_noise(request.goal or "")
+        goal = _strip_named_value_clauses(goal)
     goal = _strip_named_value_clauses(goal)
     if "登录" in goal:
         return "登录"
@@ -521,12 +551,132 @@ def _product_action_label_for(request: LearningRunRequest) -> str:
     return (goal or "执行操作").strip(" ，,。.!！?？")[:20]
 
 
+def _action_identity_for(request: LearningRunRequest) -> dict[str, Any]:
+    business_goal = _clean_business_goal(request.action_goal or "")
+    if not business_goal and request.product_level:
+        business_goal = _clean_business_goal(_strip_product_learning_noise(request.goal or ""))
+    canonical_goal = (request.canonical_goal or "").strip() or None
+    action_aliases = _dedupe_terms(
+        [_clean_business_goal(alias) for alias in request.action_aliases]
+    )
+    business_object = _business_object_for(
+        business_goal=business_goal,
+        canonical_goal=canonical_goal,
+        aliases=action_aliases,
+    )
+    match_terms = _dedupe_terms(
+        [
+            business_goal,
+            canonical_goal or "",
+            _readable_canonical_goal(canonical_goal),
+            *action_aliases,
+            business_object or "",
+        ]
+    )
+    match_terms = _exclude_fill_value_terms(match_terms, request.fill_values or {})
+    return {
+        "business_goal": business_goal,
+        "canonical_goal": canonical_goal,
+        "action_aliases": action_aliases,
+        "business_object": business_object,
+        "match_terms": match_terms,
+    }
+
+
+def _clean_business_goal(text: str) -> str:
+    return _strip_named_value_clauses(_strip_product_learning_noise(text or ""))
+
+
+def _readable_canonical_goal(canonical_goal: str | None) -> str:
+    value = (canonical_goal or "").strip()
+    if not value:
+        return ""
+    return re.sub(r"[_-]+", " ", value).strip()
+
+
+def _business_object_for(
+    *,
+    business_goal: str,
+    canonical_goal: str | None,
+    aliases: list[str],
+) -> str | None:
+    candidates = [
+        _readable_canonical_goal(canonical_goal),
+        business_goal,
+        *aliases,
+    ]
+    for candidate in candidates:
+        value = _strip_leading_action_verb(candidate)
+        if value and value != candidate.strip():
+            return value
+    return None
+
+
+def _strip_leading_action_verb(text: str) -> str:
+    value = (text or "").strip(" ，,。.!！?？")
+    lowered = value.lower()
+    for verb in (
+        "create",
+        "add",
+        "open",
+        "update",
+        "edit",
+        "delete",
+        "remove",
+        "search",
+        "find",
+        "submit",
+        "complete",
+        "view",
+    ):
+        prefix = f"{verb} "
+        if lowered.startswith(prefix):
+            return value[len(prefix) :].strip(" ，,。.!！?？")
+    return value
+
+
+def _dedupe_terms(terms: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for term in terms:
+        value = (term or "").strip(" ，,。.!！?？")
+        if not value:
+            continue
+        key = value.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(value)
+    return result
+
+
+def _exclude_fill_value_terms(
+    terms: list[str],
+    fill_values: dict[str, str],
+) -> list[str]:
+    slot_values = [
+        str(value).strip().lower()
+        for value in fill_values.values()
+        if value is not None and str(value).strip()
+    ]
+    if not slot_values:
+        return terms
+    filtered: list[str] = []
+    for term in terms:
+        lowered = term.lower()
+        if any(slot_value and slot_value in lowered for slot_value in slot_values):
+            continue
+        filtered.append(term)
+    return filtered
+
+
 def _strip_product_learning_noise(text: str) -> str:
     cleaned = re.sub(r"https?://[^\s，。]+", "", text)
     cleaned = re.sub(r"操作员账号[是为]?\s*[:：]?[^\s，。,.；;!！?？]+", "", cleaned)
     cleaned = re.sub(r"访问口令[是为]?\s*[:：]?[^\s，。,.；;!！?？]+", "", cleaned)
     for phrase in ("学习一下", "学一下", "学习", "这个", "页面", "地址是"):
         cleaned = cleaned.replace(phrase, "")
+    cleaned = re.sub(r"^\s*(?:learn how to|learn to|teach me to)\s+", "", cleaned, flags=re.I)
     return cleaned.strip()
 
 

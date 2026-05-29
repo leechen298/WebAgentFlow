@@ -1763,7 +1763,7 @@ class InteractiveChatRuntime:
                 previous_status,
             )
 
-        action = _action_from_learning_result(learning_result)
+        action = _action_from_learning_result(learning_result, intake=intake)
         old_action = self._upsert_learned_action(session_id, action)
         self._record_skill_call(
             session_id,
@@ -1787,6 +1787,8 @@ class InteractiveChatRuntime:
                 "new_learned_path_id": learning_result.learned_path_id,
                 "alias": action["alias"],
                 "target_url": action["target_url"],
+                "business_goal": action.get("business_goal"),
+                "canonical_goal": action.get("canonical_goal"),
             },
             events,
         )
@@ -4551,10 +4553,22 @@ def _display_name_for_missing_field(semantic_type: str) -> str:
     return semantic_type
 
 
-def _action_from_learning_result(result: LearningRunResult) -> dict[str, Any]:
+def _action_from_learning_result(
+    result: LearningRunResult,
+    *,
+    intake: ConversationIntakeResult | None = None,
+) -> dict[str, Any]:
     parsed = urlparse(result.target_url or "")
-    return {
-        "alias": result.action_label,
+    business_goal = result.business_goal or (intake.action.goal if intake else "")
+    canonical_goal = result.canonical_goal or (intake.action.canonical_goal if intake else None)
+    action_aliases = result.action_aliases or (list(intake.action.aliases) if intake else [])
+    alias = result.action_label
+    if result.business_goal:
+        alias = result.business_goal
+    elif business_goal and _is_learning_wrapper_label(alias):
+        alias = business_goal
+    action = {
+        "alias": alias,
         "utterances": result.suggested_utterances,
         "learned_path_id": result.learned_path_id,
         "target_url": result.target_url,
@@ -4562,6 +4576,71 @@ def _action_from_learning_result(result: LearningRunResult) -> dict[str, Any]:
         "page_template": result.page_template,
         "scenario": result.scenario,
     }
+    business_object = result.business_object
+    match_terms = result.match_terms or _identity_match_terms(
+        business_goal=business_goal,
+        canonical_goal=canonical_goal,
+        action_aliases=action_aliases,
+        business_object=business_object,
+        slot_values=_intake_slot_values(intake),
+    )
+    if business_goal:
+        action["business_goal"] = business_goal
+    if canonical_goal:
+        action["canonical_goal"] = canonical_goal
+    if action_aliases:
+        action["action_aliases"] = action_aliases
+    if business_object:
+        action["business_object"] = business_object
+    if match_terms:
+        action["match_terms"] = match_terms
+    return action
+
+
+def _is_learning_wrapper_label(label: str) -> bool:
+    value = (label or "").strip().lower()
+    return value.startswith(("learn how to ", "learn to ", "学习如何", "学习怎么"))
+
+
+def _identity_match_terms(
+    *,
+    business_goal: str,
+    canonical_goal: str | None,
+    action_aliases: list[str],
+    business_object: str | None,
+    slot_values: list[str] | None = None,
+) -> list[str]:
+    terms = [
+        business_goal,
+        canonical_goal or "",
+        re.sub(r"[_-]+", " ", canonical_goal or "").strip(),
+        *action_aliases,
+        business_object or "",
+    ]
+    seen: set[str] = set()
+    result: list[str] = []
+    for term in terms:
+        value = str(term or "").strip()
+        if not value:
+            continue
+        key = value.lower()
+        if key in seen:
+            continue
+        if any(slot_value and slot_value in key for slot_value in (slot_values or [])):
+            continue
+        seen.add(key)
+        result.append(value)
+    return result
+
+
+def _intake_slot_values(intake: ConversationIntakeResult | None) -> list[str]:
+    if intake is None:
+        return []
+    return [
+        str(slot.value).strip().lower()
+        for slot in intake.slots
+        if slot.value is not None and str(slot.value).strip()
+    ]
 
 
 def _normalize_url(url: str | None) -> str:
