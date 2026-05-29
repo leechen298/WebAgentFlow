@@ -26,6 +26,14 @@ Files:
 - `acceptance.md` - acceptance gates spanning functional, safety, test, and docs criteria.
 - `plan.md` - execution-grade child package specifications.
 - `review.md` - current authoring result and verification record.
+- `GOAL_RUNNER.md` - Codex App `/goal` routing protocol for child package
+  selection, stop conditions, status vocabulary, and live-validation approval.
+- `CURRENT_STATE.md` - compact current-state snapshot for the next eligible
+  child route.
+
+The Goal Runner files intentionally duplicate only routing facts. Business
+design, implementation authority, and evidence rules remain in `plan.md`,
+`contract.md`, and the child package documents.
 
 ## Affected Files
 
@@ -39,6 +47,9 @@ Changed by this docs package:
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/acceptance.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/GOAL_RUNNER.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
 - `docs/iterations/m11/README.md`
 - `docs/iterations/m11/m11-plan.md`
 
@@ -58,11 +69,15 @@ Read-only inputs:
 
 Future work must follow this sequence:
 
-1. Review this parent umbrella package.
-2. Create the next child package `11.3.8.1-learning-action-goal-preservation` with full seven-doc set.
-3. Review the child contract, technical design, test plan, and plan.
-4. Only then implement the child package.
-5. Repeat for `11.3.8.2` through `11.3.8.5`.
+1. Read `GOAL_RUNNER.md` and `CURRENT_STATE.md`.
+2. Select exactly one active child package unless the user explicitly asks for
+   full campaign mode.
+3. For `11.3.8.1`, review-closeout the existing implementation instead of
+   reimplementing it.
+4. For later child packages, create / review the child seven-document set
+   before implementation.
+5. Stop on conflicts, missing gates, insufficient evidence, or unapproved live
+   validation.
 
 No implementation Agent may treat the parent `plan.md` as direct authorization to edit runtime or tests.
 
@@ -89,11 +104,13 @@ The parent docs preserve existing M11 closeout semantics: 11.3.7 remains passed 
 | Status sync | Package README, M11 index, and M11 plan say `ready for review` | `rg` checks |
 | Evidence honesty | Docs state runtime/live validation was not run | `review.md` and `test-plan.md` checks |
 | Boundary preservation | Runtime/test/fixture files are not modified | `git diff --name-only` inspection |
+| Goal routing | `/goal` has a stable current-state entrypoint and hard stops | `GOAL_RUNNER.md` / `CURRENT_STATE.md` checks |
 
 ## Validation Commands
 
 ```bash
 find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f | sort
-rg -n "Status: ready for review|状态：ready for review|ready for review / umbrella planning|Package name|Forbidden changes|Compatibility constraints|Scope guardrails|Exit criteria|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md
+rg -n "Status: ready for review|状态：ready for review|ready for review / umbrella planning|Package name|Forbidden changes|Compatibility constraints|Scope guardrails|Exit criteria|Handoff to next package|GOAL_RUNNER|CURRENT_STATE|FINAL_STATUS|NEEDS_USER_INPUT|PACKAGE_COMPLETE|do_not_reimplement" docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8.1-learning-action-goal-preservation
+git diff --name-only
 git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md
 ```

@@ -41,12 +41,20 @@ validation，也不改变任何 runtime contract。
 - `plan.md` - execution-grade planned-package specs for 11.3.8.1 through 11.3.8.5.
 - `acceptance.md` - functional, safety, test, and documentation acceptance criteria.
 - `review.md` - documentation authoring record, commands run, not-run items, and final assessment.
+- `GOAL_RUNNER.md` - Codex App `/goal` routing rules, package checkpoints,
+  hard stops, and live-validation approval requirements.
+- `CURRENT_STATE.md` - short current-state snapshot for selecting the next
+  eligible child package without re-reading historical review records as state.
 
 ## Final Assessment State
 
 Ready for documentation review. This status means the umbrella planning package is complete enough to review;
 it does not authorize runtime implementation. Child packages must still create their own full seven-document
 sets and pass documentation/design review before any code, test, or validation implementation begins.
+
+`GOAL_RUNNER.md` and `CURRENT_STATE.md` are routing aids only. They do not
+create product runtime authority, change the child package gates, or replace
+the package `plan.md` / child package documents as implementation contracts.
 
 ## Assumptions
 

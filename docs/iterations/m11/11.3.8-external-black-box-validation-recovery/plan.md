@@ -20,6 +20,14 @@ review.md
 
 后续实现 Agent 必须先读对应子迭代的 `contract.md`、已审核 `technical-design.md`、`test-plan.md` 和 `plan.md`，不得只凭本总包直接改 matcher、runtime、tests 或 eval runner。
 
+Codex App `/goal` 执行时还必须先读：
+
+- `GOAL_RUNNER.md`
+- `CURRENT_STATE.md`
+
+这两个文件只提供当前路由、checkpoint 和 hard-stop 规则，不替代本 `plan.md`
+或任何 child package 的七件套。
+
 ## Shared Required Reading
 
 所有 `11.3.8.x` child package 在生成七件套前必须先读：
@@ -54,6 +62,30 @@ review.md
 - 直接调用 `/exploration/autonomous-runs` 或 `/exploration/autonomous-runs/stream` 作为 product validation evidence。
 - 用 direct replay API、internal service import、hidden HTTP client 或 ad hoc script 代替 WAgent chat runtime evidence。
 - 把 `FAIL`、`BLOCKED`、`UNVERIFIED` 或 `FOLLOW_UP` 通过措辞改成 `PASS`。
+- 在 child package 执行过程中顺手修改 `GOAL_RUNNER.md`，除非用户明确要求维护 Goal Runner 规则。
+
+## Codex Goal Runner Routing
+
+默认 `/goal` 模式为 one child package per goal：只处理 `CURRENT_STATE.md`
+指定的 active child package，达到 final status 后停止。
+
+只有用户明确要求 full campaign mode 时，才可在同一个 `/goal` 内继续下一包；即便如此，也必须在每个 child package 后 checkpoint，且只有当前包状态为 `PACKAGE_COMPLETE` 时才能继续。
+
+`CURRENT_STATE.md` 与 child `review.md`、`technical-design.md`、`plan.md` 或实际 git state 冲突时，必须停为 `NEEDS_USER_INPUT`，不得静默选择其中一个来源。
+
+`FINAL_STATUS` 固定字段用于快速路由：
+
+```text
+status:
+next_action:
+parent_authorizes_runtime_implementation:
+active_child_package:
+do_not_reimplement:
+blocking_findings:
+last_verified_at:
+commands_run:
+commands_not_run:
+```
 
 ## Planned Packages
 
@@ -450,6 +482,10 @@ Compatibility constraints:
 Scope guardrails:
 
 - This package validates and closes out; it does not invent new runtime recovery behavior.
+- Before live validation, explicit approval must include API base URL, target URL,
+  whether DB state has been cleaned or intentionally preserved, approved
+  scenario list, and whether latest result docs may be updated after actual
+  evidence.
 - If live services are unavailable, record `BLOCKED` or `not_run` rather than simulating pass.
 - If PV-CLI-003 still fails, keep latest report failed and hand off a new follow-up; do not widen into unplanned matcher fixes inside closeout.
 - If integrity scan fails, stop and treat the package as blocked until target-specific leakage is removed or explicitly recorded.
@@ -476,9 +512,11 @@ Stop conditions:
 
 - 子包缺少七件套或缺少 reviewed technical design。
 - 子包缺少 required planned-package 字段。
+- `CURRENT_STATE.md` 与 child package review / technical design / plan 或实际 git state 冲突。
 - 设计需要修改 product model、Agent role、milestone boundary 或 live-run evidence semantics。
 - 实现需要引入 target-specific route、selector、seed、answer key 或 direct endpoint validation。
 - 当前证据不足以支撑 `PASS`。
+- `11.3.8.5` 需要 live validation，但当前线程没有提供 API base URL、target URL、DB state policy、approved scenario list 和 latest-result update approval。
 
 Review update step:
 

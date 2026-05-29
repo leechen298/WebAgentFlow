@@ -2,6 +2,53 @@
 
 Status: ready for review
 
+## FINAL_STATUS
+
+status: REVIEW_READY
+next_action: run 11.3.8.1 review-closeout-existing-implementation
+parent_authorizes_runtime_implementation: no
+active_child_package: 11.3.8.1-learning-action-goal-preservation
+do_not_reimplement: true
+blocking_findings: none for Goal Runner docs routing
+last_verified_at: 2026-05-29 14:47 CST
+commands_run: find package file set; rg Goal Runner routing guardrails; rg evidence-honesty guardrails; git diff --name-only; git status --short; git diff --check
+commands_not_run: runtime tests; wagent chat; verify-scenario; browser smoke; external black-box validation
+
+## 2026-05-29 Codex Goal Runner Docs Optimization
+
+- Author: Codex, documentation routing agent
+- Decision: REVIEW_READY
+- Scope: docs-only Goal Runner routing layer for Codex App `/goal`; no runtime,
+  schema, API, frontend, fixture, migration, worker, eval-runner, or test
+  implementation files modified.
+
+Changed files:
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/GOAL_RUNNER.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/contract.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/technical-design.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/test-plan.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f \| sort` | Listed existing `.DS_Store` plus expected package docs, including `CURRENT_STATE.md` and `GOAL_RUNNER.md` | 0 | File presence check; `.DS_Store` is existing local metadata |
+| `rg -n "GOAL_RUNNER\|CURRENT_STATE\|FINAL_STATUS\|NEEDS_USER_INPUT\|PACKAGE_COMPLETE\|do_not_reimplement" docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/11.3.8.1-learning-action-goal-preservation` | Found Goal Runner routing docs, fixed final-status blocks, conflict stops, full-campaign checkpointing, and do-not-reimplement routing | 0 | Goal Runner guardrail check |
+| `rg -n "parent authorizes runtime implementation: no\|parent_authorizes_runtime_implementation: no\|external-black-box-validation-latest\|PV-CLI-003\|not run\|BLOCKED\|UNVERIFIED\|FOLLOW_UP\|PASS" docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Found parent no-runtime authority, current latest-result failure baseline, PV-CLI-003 guardrails, not-run wording, and evidence vocabulary | 0 | Evidence-honesty check |
+| `git diff --name-only` | Tracked changed files are all docs under `11.3.8` / `11.3.8.1` iteration docs | 0 | New untracked routing docs are shown by `git status --short` |
+| `git status --short` | Shows modified docs plus untracked `CURRENT_STATE.md` and `GOAL_RUNNER.md`; no runtime / test / eval files changed | 0 | Runtime files changed: no; test/runtime/eval files changed: no; docs-only scope preserved: yes |
+| `git diff --check` | Clean | 0 | Whitespace check |
+
+Not run:
+
+- Runtime tests, `wagent chat`, `verify-scenario`, browser smoke, autonomous runs, and external black-box validation were not run. This task only updates docs-only Goal Runner routing.
+
 ## 2026-05-28 Documentation Authoring Record
 
 - Author: Codex A, documentation author

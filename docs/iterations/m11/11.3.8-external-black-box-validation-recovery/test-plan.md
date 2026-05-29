@@ -17,10 +17,12 @@ Status: ready for review
 
 | Layer | Scenario | Command / Surface | Expected | Required? | Notes |
 |---|---|---|---|---|---|
-| docs | Parent package file set exists | `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f | sort` | Shows README, intent, contract, technical-design, test-plan, acceptance, plan, review | Yes | Docs-only verification |
+| docs | Parent package file set exists | `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f | sort` | Includes README, intent, contract, technical-design, test-plan, acceptance, plan, review, GOAL_RUNNER, CURRENT_STATE; local metadata files may also appear | Yes | Docs-only verification |
 | docs | Parent package status sync | `rg -n "11\\.3\\.8-external-black-box-validation-recovery|状态：ready for review|ready for review / umbrella planning" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | Package README, milestone index, and milestone plan expose `ready for review` | Yes | User explicitly requested README/index sync; milestone plan is also kept aligned |
 | docs | Planned child package fields | `rg -n "Package name|Status:|Type:|Goal:|Why this exists|Inputs / required reading|Allowed changes|Forbidden changes|Expected deliverables|Expected tests / verification|Compatibility constraints|Scope guardrails|Exit criteria|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Required planned-package fields are present for child packages | Yes | Review must still inspect adequacy |
+| docs | Goal Runner routing guardrails | `rg -n "GOAL_RUNNER|CURRENT_STATE|FINAL_STATUS|NEEDS_USER_INPUT|PACKAGE_COMPLETE|do_not_reimplement" docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/11.3.8.1-learning-action-goal-preservation` | Goal Runner files, current-state route, and fixed final-status fields are present | Yes | Codex App `/goal` routing check |
 | docs | Acceptance and evidence wording | `rg -n "not run|unverified|PASS|FAIL|FOLLOW_UP|BLOCKED|PV-CLI-003|external-black-box-validation-latest" docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Docs preserve evidence honesty and current failure baseline | Yes | No runtime pass claims |
+| git | Docs-only diff listing | `git diff --name-only` | Changed files are documentation files only | Yes | Review must record: runtime files changed no; test/runtime/eval files changed no; docs-only scope preserved yes |
 | git | Scope guard | `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | Only docs under the package, M11 index, and M11 plan changed | Yes | Runtime/test/build files must not appear |
 
 ## Commands Not Run And Why
@@ -36,6 +38,12 @@ Status: ready for review
 ## Blocker Recording Rule
 
 If any required documentation check fails, keep package status below `ready for review` and record the failure in `review.md`. If runtime or test implementation files are modified, stop and revert only those changes made by this documentation task or ask for direction if unrelated changes are present.
+
+The review record must explicitly confirm:
+
+- Runtime files changed: no.
+- Test / runtime / eval files changed: no.
+- Docs-only scope preserved: yes.
 
 ## No Unverified Claims Rule
 

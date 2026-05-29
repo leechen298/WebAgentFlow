@@ -14,6 +14,15 @@ Status: ready for review
 
 The parent package is documentation-only. It is not a code implementation package, not a live validation package, and not a pass/fail evidence package for the external target.
 
+The parent package also includes Codex Goal Mode routing aids:
+
+- `GOAL_RUNNER.md` defines how a `/goal` run selects one child package,
+  checkpoints progress, and stops on blockers.
+- `CURRENT_STATE.md` records the short current routing snapshot.
+
+These files are not product contracts. They do not authorize runtime
+implementation and do not override `plan.md` or any child package documents.
+
 ## Allowed Changes
 
 This parent package may change only:
@@ -36,6 +45,7 @@ The parent package must not:
 - call `/exploration/autonomous-runs` or `/exploration/autonomous-runs/stream`;
 - use direct replay, service imports, hidden HTTP clients, or ad hoc scripts as product validation evidence;
 - introduce target-specific selectors, `data-testid`, seed copy, component details, route constants, or answer keys into product runtime, prompts, active eval defaults, or child-package implementation instructions.
+- modify `GOAL_RUNNER.md` during child package execution unless the user explicitly asks for Goal Runner maintenance.
 
 ## Evidence / Verification Contract
 
@@ -46,6 +56,9 @@ For this parent package:
 - documentation inspection may be marked complete when file existence and required text checks pass;
 - runtime/test/build/live validation must be marked `not run`;
 - `external-black-box-validation-latest.md` remains the authoritative current `FAIL` record until a later approved revalidation package updates it with current evidence.
+- `CURRENT_STATE.md` conflicts with child `review.md`, child
+  `technical-design.md`, child `plan.md`, or actual git state must stop the
+  goal as `NEEDS_USER_INPUT`.
 
 ## Compatibility Requirements
 
