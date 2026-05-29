@@ -259,6 +259,42 @@ Blockers:
 - None for documentation review.
 - Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
 
+## 2026-05-28 Codex A Handoff Verification
+
+- Author: Codex A, documentation author
+- Decision: ready for review remains correct
+- Scope: documentation-only completion verification; no runtime, schema, API, frontend, fixture, migration, or test implementation files changed
+
+Changed files:
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `git status --short --branch` | Current branch is `v0.1-local`; existing untracked `.agent-runs/` is outside this package | 0 | No push attempted; local-only branch rule observed |
+| `sed -n '1,220p' .agents/skills/webagentflow-iteration-dev/SKILL.md` | Read project skill boundary; confirmed this task is documentation authoring, not implementation | 0 | Boundary context only |
+| `sed -n '1,220p' docs/iterations/README.md` | Read iteration documentation standards | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/AGENTS.md` | Read planned-package, status sync, evidence, and review rules | 0 | Required reading |
+| `sed -n '1,220p' CLAUDE.md` | Read repository-wide mirror guidance and M11 scope context | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/m11/README.md` | Confirmed milestone index lists `11.3.8` as `ready for review / umbrella planning` and identifies `11.3.8.1` as the next gated child package | 0 | User-requested status sync check |
+| `sed -n '1,260p' docs/iterations/m11/m11-plan.md` and targeted `rg` checks | Confirmed milestone plan contains the `11.3.8` ready-for-review status, child sequence, evidence basis, and next executable package | 0 | Status sync check |
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f \| sort` | Parent file set present: `README.md`, `acceptance.md`, `contract.md`, `intent.md`, `plan.md`, `review.md`, `technical-design.md`, `test-plan.md` | 0 | Docs-only file completeness check |
+| `rg -n "11\\.3\\.8\|ready for review\|External Black-box" docs/iterations/m11/m11-plan.md docs/iterations/m11/README.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | Package README, milestone index, and milestone plan expose `ready for review` | 0 | Status sync check |
+| `rg -n "Package name\|Status:\|Type:\|Goal:\|Why this exists\|Inputs / required reading\|Allowed changes\|Forbidden changes\|Expected deliverables\|Expected tests / verification\|Compatibility constraints\|Scope guardrails\|Exit criteria\|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Required planned-package field labels found for all five child package specs | 0 | Field-presence check; reviewer must still judge adequacy |
+| `rg -n "not run\|unverified\|PASS\|FAIL\|FOLLOW_UP\|BLOCKED\|PV-CLI-003\|external-black-box-validation-latest\|Assumptions\|Open Risks" docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Evidence-honesty wording, current failure-baseline guardrails, assumptions, and open risks found | 0 | No runtime pass claim made |
+| `git diff --name-only -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | No scoped diff before this handoff note | 0 | Confirmed status was already synchronized before editing this review record |
+
+Not run:
+
+- Runtime tests, build, lint, browser/UI smoke, `wagent chat`, `verify-scenario`, autonomous runs, and external black-box revalidation were not run. This handoff only verified and refreshed the umbrella planning documentation.
+
+Blockers:
+
+- None for documentation review.
+- Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document child package and passes documentation/design review.
+
 ## 2026-05-28 Codex A Current Handoff Refresh
 
 - Author: Codex A, documentation author
