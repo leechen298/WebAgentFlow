@@ -294,6 +294,47 @@ Blockers:
 - None for documentation review.
 - Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
 
+## 2026-05-28 Codex A Current Session Verification Refresh
+
+- Author: Codex A, documentation author
+- Decision: ready for review remains correct
+- Scope: documentation-only verification and review-record update; no runtime, schema, API, frontend, fixture, migration, or test implementation files changed
+
+Changed files:
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `rg --files -g 'AGENTS.md' -g 'CLAUDE.md' -g 'CLAUDE.zh.md' -g 'docs/iterations/README.md' -g 'docs/iterations/AGENTS.md' -g 'docs/iterations/AGENTS.zh.md' -g 'docs/iterations/templates/**' -g 'docs/iterations/m11/**'` | Located repository guidance, iteration standards, package templates, M11 index / plan, and existing 11.3.8 docs | 0 | Discovery |
+| `git status --short` | Existing untracked `.agent-runs/` is outside this package | 0 | Left untouched |
+| `sed -n '1,220p' docs/iterations/README.md` | Read iteration package standards | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/AGENTS.md` | Read planned-package, milestone-index, file-standard, anti-drift, and evidence rules | 0 | Required reading |
+| `sed -n '1,220p' CLAUDE.md` | Read mirrored repository guidance and M11 closeout caveats | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/m11/README.md` | Confirmed milestone index lists 11.3.8 as `ready for review / umbrella planning` and keeps implementation blocked on `11.3.8.1` child docs | 0 | Status sync check |
+| `sed -n '1780,1945p' docs/iterations/m11/m11-plan.md` | Confirmed milestone plan lists 11.3.8 as `ready for review / umbrella planning`, preserves the failure baseline, and keeps parent package non-implementation | 0 | Status sync check |
+| `sed -n '1,520p' docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Reviewed all five planned child package specs and handoffs | 0 | Scope and acceptance inspection |
+| `sed -n '1,180p' docs/iterations/m11/11.3.8-external-black-box-validation-recovery/test-plan.md` | Confirmed exact docs-only verification commands and not-run rules are present | 0 | Evidence-honesty check |
+| `sed -n '1,140p' docs/iterations/m11/11.3.8-external-black-box-validation-recovery/technical-design.md` | Confirmed parent docs structure, affected files, anti-drift rules, and validation commands | 0 | Documentation design check |
+| `rg -n "proposed\|ready for implementation\|ready_for_implementation\|ready for review\|ready for review / umbrella planning\|11\\.3\\.8" docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | 11.3.8 surfaces expose `ready for review`; no scoped 11.3.8 `proposed` status remains. Unrelated older 11.3.5.x `ready_for_implementation` entries are outside this package | 0 | User-requested status check |
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f \| sort` | Parent file set present: `README.md`, `acceptance.md`, `contract.md`, `intent.md`, `plan.md`, `review.md`, `technical-design.md`, `test-plan.md` | 0 | Docs-only file completeness check |
+| `rg -n "11\\.3\\.8-external-black-box-validation-recovery\|状态：ready for review\|ready for review / umbrella planning" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | Package README, milestone index, and milestone plan expose `ready for review` | 0 | User-requested status sync check |
+| `rg -n "Package name\|Status:\|Type:\|Goal:\|Why this exists\|Inputs / required reading\|Allowed changes\|Forbidden changes\|Expected deliverables\|Expected tests / verification\|Compatibility constraints\|Scope guardrails\|Exit criteria\|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Required planned-package field labels found for all five child package specs | 0 | Field-presence check; reviewer must still judge adequacy |
+| `rg -n "not run\|unverified\|PASS\|FAIL\|FOLLOW_UP\|BLOCKED\|PV-CLI-003\|external-black-box-validation-latest\|Assumptions\|Open Risks" docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Evidence-honesty wording, current failure-baseline guardrails, assumptions, and open risks found | 0 | No runtime pass claim made |
+| `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | Scoped diff is limited to this review note | 0 | Scope guard |
+| `git diff --name-only -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | Only `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md` changed | 0 | Scope guard |
+
+Not run:
+
+- Runtime tests, build, lint, browser/UI smoke, `wagent chat`, `verify-scenario`, autonomous runs, and external black-box revalidation were not run. This task was limited to umbrella planning documentation.
+
+Blockers:
+
+- None for documentation review.
+- Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
+
 ## 2026-05-28 Codex A Package Completion Verification
 
 - Author: Codex A, documentation author
