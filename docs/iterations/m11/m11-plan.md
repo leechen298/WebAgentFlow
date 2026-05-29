@@ -1886,19 +1886,20 @@ Confirmed root causes：
 | `11.3.8.2-suggested-utterance-generation` | code / PACKAGE_COMPLETE | 基于已保留业务目标生成可复用 utterances，不再只生成教学 wrapper 变体。 | Deterministic utterance generation implemented; focused learning service / chat runtime tests passed; no external black-box validation run. | 交给 11.3.8.3 作为 matcher match terms；若后续 matcher 仍失败，不能靠目标站点常量补偿。 |
 | `11.3.8.3-learned-action-matching-improvement` | code / PACKAGE_COMPLETE | 让执行阶段基于 canonical goal、business goal、business object、aliases 和 reusable utterances 匹配已学 action，同时保护 ambiguous / low-confidence 场景。 | Matcher and router known-action counting implemented; TDD red/green recorded; focused chat runtime / router tests passed; no external black-box validation run. | 交给 11.3.8.4 组合成 automated regression；若仍依赖 target-specific constants，11.3.8.4 必须 blocked。 |
 | `11.3.8.4-regression-tests` | code / PACKAGE_COMPLETE | 把 learn create inventory item -> execute same business action with new values 固化成 target-agnostic regression，不依赖外部站点运行或源码。 | Target-agnostic repo-local regression implemented; focused tests / ruff / expanded target scan passed; no external black-box validation run. | 交给 11.3.8.5 做真实 external black-box revalidation；若 automated regression 未通过，revalidation 不应开始。 |
-| `11.3.8.5-external-black-box-revalidation-closeout` | validation / NEEDS_USER_INPUT | 重跑 `PV-CLI-002`、`PV-CLI-003`、`PV-CLI-004`、`PV-INTEGRITY-001`、`PV-INTEGRITY-002`，并如实更新 dated / latest reports。 | 七件套已创建；依赖 11.3.8.1-11.3.8.4 reviews 和 focused tests；live run 前必须拿到 API base URL、target URL、DB state policy、scenario list、latest-result-doc update approval。 | 当前停在 approval gate；若后续 PASS，记录 closeout；若仍 FAIL / FOLLOW_UP / BLOCKED / UNVERIFIED，保持 honest latest 并开后续 follow-up。 |
+| `11.3.8.5-external-black-box-revalidation-closeout` | validation / PASS | 重跑 `PV-CLI-002`、`PV-CLI-003`、`PV-CLI-004`、`PV-INTEGRITY-001`、`PV-INTEGRITY-002`，并如实更新 dated / latest reports。 | Final approved `wagent chat` rerun passed; `PV-CLI-003` completed with replay status `succeeded`, drift status `none`, and verification outcome `verified`. | Parent `11.3.8` can close as `PACKAGE_COMPLETE`. |
+| `11.3.8.6-slot-alias-and-form-binding-fix` | code / PACKAGE_COMPLETE | 修复 learning-time value_slot 和 execute-time slot alias 不兼容，以及 create-form multi-field binding 可能落到 search / shifted fields 的问题。 | Target-agnostic slot alias / field binding fix implemented; 184 focused tests passed; ruff / target scan / redaction / diff check passed; final live rerun passed. | Done. |
 
 Next executable package：
 
 ```text
-11.3.8.5-external-black-box-revalidation-closeout
+none; 11.3.8 is PACKAGE_COMPLETE
 ```
 
 `11.3.8.5-external-black-box-revalidation-closeout/` 当前状态为
-`NEEDS_USER_INPUT`。Validation / closeout 七件套已创建，但 live external validation
-尚未授权；必须等待 API base URL、target URL、DB state policy、approved scenario
-list 和 latest-result-doc update approval 后，才能进入 pre-live checks 和 approved
-`wagent chat` product-surface validation。
+`PASS`。Final approved live external validation rerun 已通过 approved
+`wagent chat` product surface 实跑；`PV-CLI-003` 已执行 learned action 并获得页面
+evidence verified。`docs/testing/results/external-black-box-validation-latest.md`
+已按真实 evidence 更新。
 
 截至当前，`11.3.8.1-learning-action-goal-preservation/` 状态为
 `implementation_complete_pending_followup`。HEAD 已包含该包范围内的 learning action

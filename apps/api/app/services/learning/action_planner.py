@@ -13,6 +13,7 @@ Planning heuristics (rule-based for MVP):
 from __future__ import annotations
 
 import logging
+import re
 
 from app.schemas.page_analysis import (
     DiscoveredElement,
@@ -34,6 +35,40 @@ _GENERIC_SUBMIT_VERBS = (
     "搜索", "提交", "查询", "确定", "确认",
     "検索", "送信",
 )
+
+_GENERIC_ROLE_ALIASES: dict[str, tuple[str, ...]] = {
+    "item name": ("name",),
+    "name": ("item name",),
+    "item category": ("category",),
+    "category": ("item category",),
+    "stock quantity": ("quantity",),
+    "quantity": ("stock quantity",),
+}
+
+
+def _normalize_signal(value: str | None) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", " ", str(value or "").lower())
+    return " ".join(normalized.split())
+
+
+def _signal_tokens(value: str | None) -> set[str]:
+    return set(_normalize_signal(value).split())
+
+
+def _compact_signal(value: str | None) -> str:
+    return _normalize_signal(value).replace(" ", "")
+
+
+def _role_signal_terms(role: str) -> tuple[set[str], set[str], set[str]]:
+    terms = {_normalize_signal(role)}
+    terms.update(
+        _normalize_signal(alias)
+        for alias in _GENERIC_ROLE_ALIASES.get(_normalize_signal(role), ())
+    )
+    terms = {term for term in terms if term}
+    tokens = {token for term in terms for token in term.split()}
+    compact = {_compact_signal(term) for term in terms if _compact_signal(term)}
+    return terms, tokens, compact
 
 
 def _score_fillable(el: DiscoveredElement) -> float:
@@ -260,6 +295,51 @@ def _match_fillable_for_role(
             candidates.sort(key=_score_fillable, reverse=True)
             return candidates[0]
 
+    role_terms, role_tokens, role_compact = _role_signal_terms(role_lower)
+
+    def signal_score(element: DiscoveredElement) -> float:
+        sources = (
+            ("semantic_role", element.semantic_role, 90.0),
+            ("label_text", element.label_text, 85.0),
+            ("name", element.name, 80.0),
+            ("id", element.id, 75.0),
+            ("aria_label", element.aria_label, 70.0),
+            ("placeholder", element.placeholder, 40.0),
+        )
+        best = 0.0
+        for source, raw_signal, base_score in sources:
+            normalized = _normalize_signal(raw_signal)
+            if not normalized:
+                continue
+            compact = _compact_signal(raw_signal)
+            tokens = _signal_tokens(raw_signal)
+            if normalized in role_terms or compact in role_compact:
+                best = max(best, base_score)
+                continue
+            if source != "placeholder" and role_tokens & tokens:
+                best = max(best, base_score - 10.0)
+                continue
+            if source == "placeholder":
+                if any(term and term in normalized for term in role_terms):
+                    best = max(best, base_score - 15.0)
+                    continue
+                if role_tokens & tokens:
+                    best = max(best, base_score - 20.0)
+        return best
+
+    signal_matches = [
+        (e, signal_score(e))
+        for e in fillables
+        if e.selector not in already_used
+    ]
+    signal_matches = [(e, score) for e, score in signal_matches if score > 0]
+    if signal_matches:
+        signal_matches.sort(
+            key=lambda pair: (pair[1], _score_fillable(pair[0])),
+            reverse=True,
+        )
+        return signal_matches[0][0]
+
     # Last resort: pick the highest-scored fillable that is NOT a type mismatch.
     # A 'username' slot should not fall back to a password input, etc.
     # Password is the only role with broad mismatch rules because
@@ -334,6 +414,8 @@ def plan_actions(
         # validation on blur in some SPAs).
         _ROLE_ORDER = [
             "username", "email",
+            "sku", "item_name", "item_category",
+            "quantity", "stock_quantity",
             "name", "role", "status",
             "search", "text",
             "password",

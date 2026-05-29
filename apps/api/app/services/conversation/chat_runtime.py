@@ -4433,6 +4433,58 @@ def _is_reusable_identity_term(term: str, slot_values: list[str]) -> bool:
     return not any(slot_value and slot_value in lowered for slot_value in slot_values)
 
 
+_GENERIC_SLOT_ALIAS_GROUPS: tuple[frozenset[str], ...] = (
+    frozenset(("name", "item_name")),
+    frozenset(("category", "item_category")),
+    frozenset(("stock_quantity", "quantity")),
+)
+
+
+def _generic_slot_alias_match(
+    source_key: str,
+    supported_slots: list[str],
+) -> str | None:
+    source = source_key.strip().lower()
+    supported = {slot.strip().lower(): slot for slot in supported_slots}
+    for group in _GENERIC_SLOT_ALIAS_GROUPS:
+        if source not in group:
+            continue
+        candidates = [
+            supported[slot]
+            for slot in group
+            if slot != source and slot in supported
+        ]
+        if len(candidates) == 1:
+            return candidates[0]
+    return None
+
+
+def _object_prefixed_slot_match(
+    source_key: str,
+    supported_slots: list[str],
+) -> str | None:
+    source = source_key.strip().lower()
+    parts = [part for part in source.split("_") if part]
+    if len(parts) < 2:
+        return None
+
+    supported = {slot.strip().lower(): slot for slot in supported_slots}
+    candidates: list[str] = []
+    for index in range(1, len(parts)):
+        suffix = "_".join(parts[index:])
+        if suffix in supported:
+            candidates.append(supported[suffix])
+            continue
+        alias_match = _generic_slot_alias_match(suffix, supported_slots)
+        if alias_match:
+            candidates.append(alias_match)
+
+    unique_candidates = list(dict.fromkeys(candidates))
+    if len(unique_candidates) == 1:
+        return unique_candidates[0]
+    return None
+
+
 def _slot_overrides_for_path(
     values: dict[str, str],
     learned_path: Any | None,
@@ -4441,16 +4493,29 @@ def _slot_overrides_for_path(
     if not values:
         return {}, []
 
-    slot_overrides = {
+    non_null_values = {
         key: value
         for key, value in values.items()
+        if key and value is not None
+    }
+    slot_overrides = {
+        key: value
+        for key, value in non_null_values.items()
         if key in supported_slots and value is not None
     }
-    unsupported = [
-        key
-        for key, value in values.items()
-        if key not in supported_slots and value is not None
-    ]
+    unsupported: list[str] = []
+    for key, value in non_null_values.items():
+        if key in supported_slots:
+            continue
+        alias_match = _generic_slot_alias_match(key, supported_slots)
+        if alias_match:
+            slot_overrides.setdefault(alias_match, value)
+            continue
+        object_prefixed_match = _object_prefixed_slot_match(key, supported_slots)
+        if object_prefixed_match:
+            slot_overrides.setdefault(object_prefixed_match, value)
+            continue
+        unsupported.append(key)
 
     if len(supported_slots) == 1 and not slot_overrides and len(unsupported) == 1:
         source_key = unsupported[0]

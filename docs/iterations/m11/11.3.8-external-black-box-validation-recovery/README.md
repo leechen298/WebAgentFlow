@@ -1,6 +1,6 @@
 # 11.3.8 · External Black-box Validation Recovery
 
-状态：ready for review
+状态：PACKAGE_COMPLETE
 里程碑：M11
 类型：umbrella planning docs
 父迭代：[`11.3-interactive-chat-closed-loop`](../11.3-interactive-chat-closed-loop/)
@@ -50,9 +50,10 @@ validation，也不改变任何 runtime contract。
 
 ## Final Assessment State
 
-Ready for documentation review. This status means the umbrella planning package is complete enough to review;
-it does not authorize runtime implementation. Child packages must still create their own full seven-document
-sets and pass documentation/design review before any code, test, or validation implementation begins.
+`PACKAGE_COMPLETE`. Child packages `11.3.8.1` through `11.3.8.6` have completed
+their required checkpoints, and the final approved external black-box validation
+rerun passed through the `wagent chat` product surface. The stable latest report
+is [`external-black-box-validation-latest.md`](../../../testing/results/external-black-box-validation-latest.md).
 
 `GOAL_RUNNER.md` and `CURRENT_STATE.md` are routing aids only. They do not
 create product runtime authority, change the child package gates, or replace

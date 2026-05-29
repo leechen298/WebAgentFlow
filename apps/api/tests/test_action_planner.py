@@ -8,7 +8,7 @@ _describe.
 
 from __future__ import annotations
 
-from app.schemas.page_analysis import DiscoveredElement, PageAnalysis, PlannedAction
+from app.schemas.page_analysis import DiscoveredElement, PageAnalysis
 from app.services.learning.action_planner import (
     _describe,
     _find_fallback_submit,
@@ -19,7 +19,6 @@ from app.services.learning.action_planner import (
     _score_submit,
     plan_actions,
 )
-
 
 # ───────────────────────────────────────────────────────────────────
 # Helpers
@@ -144,8 +143,16 @@ class TestScoreFillable:
 
 class TestScoreSubmit:
     def test_submit_type_bonus(self):
-        explicit = _el(tag="button", element_type="submit", rect={"x": 0, "y": 200, "w": 100, "h": 40})
-        regular = _el(tag="button", element_type="button", rect={"x": 0, "y": 200, "w": 100, "h": 40})
+        explicit = _el(
+            tag="button",
+            element_type="submit",
+            rect={"x": 0, "y": 200, "w": 100, "h": 40},
+        )
+        regular = _el(
+            tag="button",
+            element_type="button",
+            rect={"x": 0, "y": 200, "w": 100, "h": 40},
+        )
         assert _score_submit(explicit) > _score_submit(regular)
 
     def test_position_bonus(self):
@@ -187,20 +194,44 @@ class TestFallbackSubmit:
         assert _score_fallback_submit(close, fillable) > _score_fallback_submit(far, fillable)
 
     def test_button_tag_bonus(self):
-        button = _el(tag="button", category="clickable", rect={"x": 200, "y": 200, "w": 100, "h": 40})
+        button = _el(
+            tag="button",
+            category="clickable",
+            rect={"x": 200, "y": 200, "w": 100, "h": 40},
+        )
         div = _el(tag="div", category="clickable", rect={"x": 200, "y": 200, "w": 100, "h": 40})
         fillable = _el(rect={"x": 200, "y": 200, "w": 200, "h": 30})
         assert _score_fallback_submit(button, fillable) > _score_fallback_submit(div, fillable)
 
     def test_generic_verb_bonus(self):
-        search = _el(tag="div", category="clickable", text="Search", rect={"x": 200, "y": 200, "w": 100, "h": 40})
-        noop = _el(tag="div", category="clickable", text="Help", rect={"x": 200, "y": 200, "w": 100, "h": 40})
+        search = _el(
+            tag="div",
+            category="clickable",
+            text="Search",
+            rect={"x": 200, "y": 200, "w": 100, "h": 40},
+        )
+        noop = _el(
+            tag="div",
+            category="clickable",
+            text="Help",
+            rect={"x": 200, "y": 200, "w": 100, "h": 40},
+        )
         fillable = _el(rect={"x": 200, "y": 200, "w": 200, "h": 30})
         assert _score_fallback_submit(search, fillable) > _score_fallback_submit(noop, fillable)
 
     def test_find_fallback_submit_returns_best(self):
-        good = _el(tag="button", category="clickable", text="Search", rect={"x": 210, "y": 200, "w": 100, "h": 40})
-        bad = _el(tag="div", category="clickable", text="?", rect={"x": 800, "y": 800, "w": 10, "h": 10})
+        good = _el(
+            tag="button",
+            category="clickable",
+            text="Search",
+            rect={"x": 210, "y": 200, "w": 100, "h": 40},
+        )
+        bad = _el(
+            tag="div",
+            category="clickable",
+            text="?",
+            rect={"x": 800, "y": 800, "w": 10, "h": 10},
+        )
         fillable = _el(rect={"x": 200, "y": 200, "w": 200, "h": 30})
         result = _find_fallback_submit(fillable, [good, bad])
         assert result is not None
@@ -258,6 +289,63 @@ class TestMatchFillableForRole:
         used = _el(selector="#u", semantic_role="username")
         result = _match_fillable_for_role("username", [used], {"#u"})
         assert result is None
+
+    def test_generic_business_role_prefers_exact_field_signal_over_search(self):
+        search = _el(
+            selector="#global-search",
+            semantic_role="search",
+            role="searchbox",
+            placeholder="Search by SKU, name, or category",
+            label_text="Search",
+            rect={"x": 0, "y": 180, "w": 640, "h": 44},
+        )
+        sku = _el(
+            selector="#catalog-sku",
+            id="catalog-sku",
+            name="sku",
+            label_text="SKU",
+            rect={"x": 0, "y": 260, "w": 180, "h": 32},
+        )
+        name = _el(
+            selector="#catalog-name",
+            id="catalog-name",
+            name="name",
+            label_text="Name",
+            rect={"x": 0, "y": 300, "w": 180, "h": 32},
+        )
+        category = _el(
+            selector="#catalog-category",
+            id="catalog-category",
+            name="category",
+            label_text="Category",
+            rect={"x": 0, "y": 340, "w": 180, "h": 32},
+        )
+        quantity = _el(
+            selector="#catalog-quantity",
+            id="catalog-quantity",
+            name="quantity",
+            label_text="Stock quantity",
+            rect={"x": 0, "y": 380, "w": 180, "h": 32},
+        )
+
+        analysis = _analysis(fillable=[search, sku, name, category, quantity])
+        actions = plan_actions(
+            analysis,
+            fill_values={
+                "sku": "NB-ALP-001",
+                "item_name": "Alpine Notebook",
+                "item_category": "Stationery",
+                "quantity": "24",
+            },
+        )
+
+        fill_actions = [a for a in actions if a.action_type == "fill"]
+        assert [(a.target_selector, a.value) for a in fill_actions] == [
+            ("#catalog-sku", "NB-ALP-001"),
+            ("#catalog-name", "Alpine Notebook"),
+            ("#catalog-category", "Stationery"),
+            ("#catalog-quantity", "24"),
+        ]
 
 
 # ───────────────────────────────────────────────────────────────────

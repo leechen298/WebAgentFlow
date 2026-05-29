@@ -1,18 +1,33 @@
 # Review
 
-Status: active / in progress
+Status: PACKAGE_COMPLETE
 
 ## FINAL_STATUS
 
-status: 11.3.8.5 NEEDS_USER_INPUT; parent campaign awaiting live validation approval
-next_action: wait for API base URL, target URL, DB state policy, approved scenario list, and latest-result-doc update approval
+status: PACKAGE_COMPLETE
+next_action: none
 parent_authorizes_runtime_implementation: no
-active_child_package: 11.3.8.5-external-black-box-revalidation-closeout
+active_child_package: none
 do_not_reimplement: true
-blocking_findings: live validation approval fields missing
-last_verified_at: 2026-05-29 11.3.8.5 documentation gate
-commands_run: 11.3.8.3 documentation checks; TDD red focused pytest; focused runtime/router pytest; focused ruff; forbidden target scan; read-only spec/contract/safety/code/evidence subagent reviews; 11.3.8.4 documentation checks; read-only spec/regression review and re-review; read-only safety/evidence review; post-fix regression pytest baseline; focused regression pytest; focused ruff; expanded target scan; closeout subagent reviews; 11.3.8.5 documentation checks; 11.3.8.5 read-only gate/evidence subagent reviews; git diff --check
-commands_not_run: wagent chat; verify-scenario; browser smoke; external black-box validation; direct autonomous-run endpoint; direct replay product validation
+blocking_findings: none
+last_verified_at: 2026-05-29 passing live validation rerun
+commands_run: 11.3.8.3 documentation checks; TDD red focused pytest; focused runtime/router pytest; focused ruff; forbidden target scan; read-only spec/contract/safety/code/evidence subagent reviews; 11.3.8.4 documentation checks; read-only spec/regression review and re-review; read-only safety/evidence review; post-fix regression pytest baseline; focused regression pytest; focused ruff; expanded target scan; closeout subagent reviews; 11.3.8.5 documentation checks; 11.3.8.5 read-only gate/evidence subagent reviews; 11.3.8.6 design/safety/code reviews; 11.3.8.6 TDD tests; 184-test focused suite; ruff; artifact redaction check; PV-SITE-001 browser smoke; wagent chat external black-box validation rerun; latest result docs update; git diff --check
+commands_not_run: verify-scenario; direct autonomous-run endpoint; direct replay product validation
+
+## 2026-05-29 Campaign Closeout
+
+- Decision: `11.3.8` is `PACKAGE_COMPLETE`.
+- Final external validation: `PASS`.
+- Stable latest report:
+  `docs/testing/results/external-black-box-validation-latest.md`.
+- Final WAgent session: `44f660a1-b401-4750-add3-bf1d985a6329`.
+- Evidence artifacts:
+  - `artifacts/external-black-box-validation/11.3.8.5-20260529T143203Z-summary.json`
+  - `artifacts/external-black-box-validation/11.3.8.5-20260529T143203Z-messages.json`
+  - `artifacts/external-black-box-validation/11.3.8.5-20260529T143203Z-events.json`
+
+No direct autonomous-run endpoint, direct replay product validation, or
+`verify-scenario` run was used for the final external black-box pass.
 
 ## 2026-05-29 11.3.8.5 Documentation Gate
 

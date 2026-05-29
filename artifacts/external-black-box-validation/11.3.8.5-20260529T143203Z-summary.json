@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "timestamp_utc": "2026-05-29T14:32:03Z",
+  "operator": "Codex external test operator",
+  "api_base_url": "http://127.0.0.1:8001",
+  "target_url": "http://127.0.0.1:5177/inventory",
+  "db_state_policy": "clean database before live validation",
+  "wagent_session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+  "learning_run_id": "04238a54-7847-459d-9148-831ad2a9434c",
+  "surface": "wagent chat CLI",
+  "command": ".venv/bin/wagent chat --api-base http://127.0.0.1:8001 --timeout 300 --headless",
+  "scenario_results": {
+    "PV-SITE-001": {
+      "status": "PASS",
+      "evidence": "Browser smoke created QA-COD-529G, searched it, edited stock to 43 and status to paused, then verified no-match empty state.",
+      "screenshot": "/private/tmp/waf-11.3.8.5-site-smoke-rerun.png"
+    },
+    "PV-CLI-001": {
+      "status": "PASS",
+      "evidence": "URL-only input did not start learning or execution; WAgent asked for learning or operation details."
+    },
+    "PV-CLI-002": {
+      "status": "PASS",
+      "evidence": "Learning started and completed; chat_learning_completed recorded alias create inventory item and canonical_goal create_inventory_item."
+    },
+    "PV-CLI-003": {
+      "status": "PASS",
+      "evidence": "Execution started and completed; replay_status succeeded, drift_status none, verification_outcome verified, and page evidence confirmed MUG-SKY-014, Skyline Mug, 18, and Office."
+    },
+    "PV-CLI-004": {
+      "status": "PASS_WITH_CAVEAT",
+      "evidence": "Vague input did not start learning or execution; entry gate used deterministic fallback after timeout."
+    },
+    "PV-INTEGRITY-001": {
+      "status": "PASS",
+      "evidence": "Main repo still uses external Validation-Site only as a target; no external site source was restored."
+    },
+    "PV-INTEGRITY-002": {
+      "status": "PASS",
+      "evidence": "forbidden_target_scan returned status=pass, match_count=0, missing_forbidden_paths=[]."
+    }
+  },
+  "artifacts": [
+    "artifacts/external-black-box-validation/11.3.8.5-20260529T143203Z-messages.json",
+    "artifacts/external-black-box-validation/11.3.8.5-20260529T143203Z-events.json"
+  ],
+  "forbidden_operator_actions": {
+    "direct_autonomous_run_endpoint": "not run",
+    "direct_replay_api_product_validation": "not run",
+    "verify_scenario": "not run"
+  }
+}

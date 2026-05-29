@@ -1,6 +1,6 @@
 ---
 name: webagentflow-iteration-dev
-description: WebAgentFlow 迭代实现工作流。用于在 WebAgentFlow 仓库内按已审核 intent、contract、technical-design、test-plan、plan 实现和自测；不得创建、补写、改写或删除迭代文档；没有可复查证据时禁止声称完成 E2E、UI smoke、CLI、verify-scenario 或 autonomous-run 测试。
+description: WebAgentFlow 代码型/混合型迭代实现 checkpoint 工作流。用于在 WebAgentFlow 仓库内按已审核 intent、contract、technical-design、test-plan、plan 实现运行时代码、API、service、UI、CLI、测试、migration 或 fixture 并自测；也用于 Codex App /goal campaign 中 GOAL_RUNNER.md 或 CURRENT_STATE.md 将当前 checkpoint 路由到 code/mixed implementation 的场景。不得创建、补写、改写或删除迭代文档；没有可复查证据时禁止声称完成 E2E、UI smoke、CLI、verify-scenario 或 autonomous-run 测试。
 metadata:
   short-description: WebAgentFlow 按文档实现和自测门禁
 ---
@@ -27,6 +27,26 @@ metadata:
 - 生成或更新 `README.md`、`intent.md`、`contract.md`、`technical-design.md`、`test-plan.md`、`plan.md`、`review.md`；
 - 文档治理、roadmap、product model、scope、方案讨论；
 - 在缺少已审核设计时临时补文档后继续实现。
+
+## Goal Mode Integration
+
+在 Codex App `/goal` campaign 中，本 skill 是 checkpoint 级实现工作流，不是
+campaign runner 本身。
+
+实现前先读取存在的 `GOAL_RUNNER.md` 和 `CURRENT_STATE.md`，确认 active child
+package、route type、hard stops、required checkpoint fields、allowed validation
+surface，以及当前 checkpoint 是否真的路由到 code/mixed implementation。
+
+只有 active checkpoint 是代码型或混合型实现时才使用本 skill。不要用它处理文档治理、
+eval integrity review、evidence closeout、final status wording 或 campaign route
+updates。
+
+如果 active route 不清楚、必需迭代文档缺失、`technical-design.md` 未完成审核、
+route 指向 docs-only work、存在未关闭 P0/P1，或继续会违反 live-run、evidence、
+sandbox、Git safety 规则，停止并报告 blocker。
+
+实现结束后只报告真实代码/测试改动、实际执行的命令、产生的证据，以及 `not run` /
+`unverified` 项。不得仅凭自然语言信心推进 campaign。
 
 ## 角色边界
 

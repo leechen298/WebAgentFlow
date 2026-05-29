@@ -271,6 +271,77 @@ def _ingest_record_path(
     return str(path.id)
 
 
+def _ingest_catalog_entry_path(
+    db_session: Session,
+    *,
+    source_run_id: str | None = None,
+    sku_slot: str = "sku",
+    name_slot: str = "item_name",
+    category_slot: str = "item_category",
+    quantity_slot: str = "quantity",
+) -> str:
+    if source_run_id is not None and db_session.get(ExplorationRun, source_run_id) is None:
+        ExplorationRunRepository(db_session).create(
+            ExplorationRun(
+                id=source_run_id,
+                page_signature="/records",
+                status="completed",
+                summary="catalog entry test run",
+                result_snapshot_json={},
+            )
+        )
+
+    fingerprint = hashlib.sha256((source_run_id or "catalog-entry").encode()).hexdigest()
+    path, _created = LearnedPathRepository(db_session).ingest_run(
+        page_template="/records",
+        query_signature={},
+        dom_fingerprint=fingerprint,
+        scenario="product_level",
+        actions=[
+            {
+                "step": 1,
+                "action_type": "fill",
+                "target_selector": "#catalog-sku",
+                "target_description": "SKU",
+                "value": "NB-ALP-001",
+                "value_slot": sku_slot,
+            },
+            {
+                "step": 2,
+                "action_type": "fill",
+                "target_selector": "#catalog-name",
+                "target_description": "Name",
+                "value": "Alpine Notebook",
+                "value_slot": name_slot,
+            },
+            {
+                "step": 3,
+                "action_type": "fill",
+                "target_selector": "#catalog-category",
+                "target_description": "Category",
+                "value": "Stationery",
+                "value_slot": category_slot,
+            },
+            {
+                "step": 4,
+                "action_type": "fill",
+                "target_selector": "#catalog-quantity",
+                "target_description": "Stock quantity",
+                "value": "24",
+                "value_slot": quantity_slot,
+            },
+            {
+                "step": 5,
+                "action_type": "click",
+                "target_selector": "#catalog-submit",
+                "target_description": "Create",
+            },
+        ],
+        source_run_id=source_run_id,
+    )
+    return str(path.id)
+
+
 class _StaticIntakeService:
     provider_fallback = False
     confidence_threshold = 0.6
@@ -5281,6 +5352,231 @@ def test_interactive_chat_execute_matches_business_identity_when_alias_is_wrappe
     assert calls[0][2]["slot_overrides"] == {"order_name": "Beta"}
     events = repo.list_events(session_id)
     assert any(e.type == "chat_execution_started" for e in events)
+
+
+def test_interactive_chat_execute_maps_generic_slot_aliases_to_learned_slots(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_catalog_entry_path(
+        db_session,
+        source_run_id="run-catalog-slot-aliases",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                _business_identity_learned_action(
+                    learned_path_id,
+                    alias="Learn how to create",
+                    utterances=["Learn how to create catalog entry"],
+                    business_goal="Create catalog entry",
+                    canonical_goal="create_catalog_entry",
+                    action_aliases=["add catalog entry"],
+                    business_object="catalog entry",
+                )
+            ]
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    intake_service = _StaticIntakeService(
+        goal="Create catalog entry",
+        canonical_goal="create_catalog_entry",
+        aliases=["add catalog entry"],
+        slots=[
+            ConversationIntakeSlot(name="sku", semantic_type="sku", value="MUG-SKY-014"),
+            ConversationIntakeSlot(name="name", semantic_type="name", value="Skyline Mug"),
+            ConversationIntakeSlot(name="category", semantic_type="category", value="Office"),
+            ConversationIntakeSlot(
+                name="stock_quantity",
+                semantic_type="stock_quantity",
+                value="18",
+            ),
+        ],
+    )
+    orch = ConversationOrchestrator(
+        repo,
+        replay_handler=replay_handler,
+        intake_service=intake_service,
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        f"Create catalog entry at {GENERIC_RECORDS_URL}",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert len(calls) == 1
+    assert calls[0][2]["slot_overrides"] == {
+        "sku": "MUG-SKY-014",
+        "item_name": "Skyline Mug",
+        "item_category": "Office",
+        "quantity": "18",
+    }
+    events = repo.list_events(session_id)
+    assert any(e.type == "chat_execution_started" for e in events)
+    assert not any(
+        e.type == "chat_execution_failed"
+        and e.payload_json.get("reason") == "unsupported_value_slot"
+        for e in events
+    )
+
+
+def test_interactive_chat_execute_maps_object_prefixed_slots_by_supported_suffix(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_catalog_entry_path(
+        db_session,
+        source_run_id="run-catalog-object-prefixed-slots",
+        name_slot="name",
+        category_slot="category",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                _business_identity_learned_action(
+                    learned_path_id,
+                    alias="Create catalog entry",
+                    utterances=["Create catalog entry"],
+                    business_goal="Create catalog entry",
+                    canonical_goal="create_catalog_entry",
+                    action_aliases=["add catalog entry"],
+                    business_object="catalog entry",
+                )
+            ]
+        },
+    )
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        calls.append((lid, url, kwargs))
+        return ConversationReplaySummary(
+            learned_path_id=lid,
+            url=url,
+            replay_status="succeeded",
+            drift_status="none",
+        )
+
+    intake_service = _StaticIntakeService(
+        goal="Create catalog entry",
+        canonical_goal="create_catalog_entry",
+        aliases=["add catalog entry"],
+        slots=[
+            ConversationIntakeSlot(
+                name="catalog_sku",
+                semantic_type="catalog_sku",
+                value="MUG-SKY-014",
+            ),
+            ConversationIntakeSlot(
+                name="catalog_name",
+                semantic_type="catalog_name",
+                value="Skyline Mug",
+            ),
+            ConversationIntakeSlot(
+                name="catalog_category",
+                semantic_type="catalog_category",
+                value="Office",
+            ),
+            ConversationIntakeSlot(
+                name="catalog_quantity",
+                semantic_type="catalog_quantity",
+                value="18",
+            ),
+        ],
+    )
+    orch = ConversationOrchestrator(
+        repo,
+        replay_handler=replay_handler,
+        intake_service=intake_service,
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        f"Create catalog entry at {GENERIC_RECORDS_URL}",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert len(calls) == 1
+    assert calls[0][2]["slot_overrides"] == {
+        "sku": "MUG-SKY-014",
+        "name": "Skyline Mug",
+        "category": "Office",
+        "quantity": "18",
+    }
+
+
+def test_interactive_chat_execute_keeps_unrelated_slot_unsupported(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    learned_path_id = _ingest_catalog_entry_path(
+        db_session,
+        source_run_id="run-catalog-unrelated-slot",
+    )
+    session_id = _create_interactive_chat_session(
+        repo,
+        metadata={
+            "learned_actions": [
+                _business_identity_learned_action(
+                    learned_path_id,
+                    utterances=["Learn how to create catalog entry"],
+                    business_goal="Create catalog entry",
+                    canonical_goal="create_catalog_entry",
+                    action_aliases=["add catalog entry"],
+                    business_object="catalog entry",
+                )
+            ]
+        },
+    )
+    replay_called = False
+
+    def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("unsupported unrelated slot must not replay")
+
+    intake_service = _StaticIntakeService(
+        goal="Create catalog entry",
+        canonical_goal="create_catalog_entry",
+        aliases=["add catalog entry"],
+        slots=[
+            ConversationIntakeSlot(name="sku", semantic_type="sku", value="MUG-SKY-014"),
+            ConversationIntakeSlot(name="color", semantic_type="color", value="blue"),
+        ],
+    )
+    orch = ConversationOrchestrator(
+        repo,
+        replay_handler=replay_handler,
+        intake_service=intake_service,
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        f"Create catalog entry at {GENERIC_RECORDS_URL}",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert replay_called is False
+    assert result.allowed is False
+    events = repo.list_events(session_id)
+    failed = [
+        e
+        for e in events
+        if e.type == "chat_execution_failed"
+        and e.payload_json.get("reason") == "unsupported_value_slot"
+    ][-1]
+    assert failed.payload_json["unsupported_slots"] == ["color"]
 
 
 @pytest.mark.parametrize(

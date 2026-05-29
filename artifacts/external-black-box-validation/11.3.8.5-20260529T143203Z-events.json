@@ -1,0 +1,1213 @@
+[
+  {
+    "id": "f87a917e-6e85-4c08-96d7-b31a997bc908",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "entry_gate_recorded",
+    "payload": {
+      "entry_gate": {
+        "category": "web_task_candidate",
+        "requires_agent_runtime": true,
+        "confidence": 0.88,
+        "reply_hint": null,
+        "reason_summary": "message contains web task candidate signals",
+        "latency_ms": 0,
+        "provider": null,
+        "model": null,
+        "fallback": false,
+        "error_kind": null,
+        "timeout_ms": 1500,
+        "source": "deterministic"
+      },
+      "skipped_intake_router": false,
+      "provider": null,
+      "model": null,
+      "prompt_template_id": null,
+      "prompt_hash": null,
+      "latency_ms": 0,
+      "timeout_ms": 1500,
+      "fallback": false,
+      "error_kind": null,
+      "raw": {}
+    },
+    "created_at": "2026-05-29T14:30:57.052277Z"
+  },
+  {
+    "id": "6c78bf3c-47f3-465d-9462-d98318315871",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "llm_trace_recorded",
+    "payload": {
+      "trace_id": "trace-4dbd39ea-c7e8-4635-b1d1-36b99b1526cf",
+      "purpose": "conversation_intake",
+      "agent_role": "conversation_intake_agent",
+      "provider": "openai_compatible",
+      "model": "MiniMax-M2.7",
+      "request_id": "0668d621dfecb3e01e13236283b5d601",
+      "prompt_template_id": "conversation_intake_agent.v1",
+      "prompt_hash": "ad16d884c83a723355324c8a5c71f67cab6866ba195a401681a66f1b99080926",
+      "schema_name": "ConversationIntakeResult",
+      "schema_version": "m11.3.4",
+      "latency_ms": 3515,
+      "usage": {
+        "prompt": 1587,
+        "completion": 630,
+        "total": 2217
+      },
+      "redaction": {
+        "applied": true,
+        "strategy": "conversation_sensitive_payload_redaction"
+      }
+    },
+    "created_at": "2026-05-29T14:31:00.579664Z"
+  },
+  {
+    "id": "1c37fa84-5558-40af-a70e-310024757d8d",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "collect_conversation_context",
+      "status": "completed",
+      "executor_owner": "code",
+      "browser_access": false,
+      "changes_page": false,
+      "writes_learned_path": false,
+      "input_summary": {
+        "current_message_url": "http://127.0.0.1:5177/inventory"
+      },
+      "output_summary": {
+        "pending_target": null,
+        "pending_choice": null,
+        "active_task": null,
+        "learned_action_count": 0
+      }
+    },
+    "created_at": "2026-05-29T14:31:00.590753Z"
+  },
+  {
+    "id": "cade11ce-43f4-4881-8abd-b87ef3aae197",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "llm_trace_recorded",
+    "payload": {
+      "trace_id": "trace-a0f135fd-3301-48fb-92e8-9af3e849db7f",
+      "purpose": "customer_facing_agent_router",
+      "agent_role": "customer_facing_agent_router",
+      "provider": "openai_compatible",
+      "model": "MiniMax-M2.7",
+      "request_id": "0668d624642a41fedf94cac6b8e5046a",
+      "prompt_template_id": "customer_facing_agent_router.v1",
+      "prompt_hash": "22261b3ef223b2c07878d8651ffccc5a58163a0a459d195254f2910c7cf44583",
+      "schema_name": "RouteDecision",
+      "schema_version": "m11.3.5",
+      "latency_ms": 6630,
+      "validation": {
+        "status": "ok"
+      },
+      "usage": {
+        "prompt": 2193,
+        "completion": 590,
+        "total": 2783
+      },
+      "redaction": {
+        "applied": true,
+        "strategy": "conversation_sensitive_payload_redaction"
+      }
+    },
+    "created_at": "2026-05-29T14:31:07.229666Z"
+  },
+  {
+    "id": "efdbae55-53b9-4480-9f4a-23d06b475764",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "agent_trace_recorded",
+    "payload": {
+      "agent_role": "customer_facing_agent_router",
+      "trace_kind": "route_decision",
+      "route_decision": {
+        "route_decision": "delegate_to_web_operation_agent",
+        "next_agent": "web_operation_agent",
+        "recommended_skill": "inspect_target_page",
+        "target": {
+          "url": "http://127.0.0.1:5177/inventory",
+          "site_origin": "http://127.0.0.1:5177",
+          "source": "intake"
+        },
+        "user_goal": null,
+        "known_context": {
+          "has_learned_action": false,
+          "has_required_user_inputs": true,
+          "page_context_available": false
+        },
+        "missing_fields": [],
+        "confidence": 1.0,
+        "reason_summary": "Navigation request with complete URL; no learned actions available; inspect_target_page will perform actual browser navigation and capture initial page state.",
+        "source": "llm"
+      },
+      "llm_trace_ids": [
+        "trace-a0f135fd-3301-48fb-92e8-9af3e849db7f"
+      ],
+      "generated_from_event_ids": [
+        "cade11ce-43f4-4881-8abd-b87ef3aae197"
+      ]
+    },
+    "created_at": "2026-05-29T14:31:07.235431Z"
+  },
+  {
+    "id": "56f2a930-74a2-4149-a1d2-36c1398e560a",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "record_agent_trace",
+      "status": "completed",
+      "executor_owner": "code",
+      "browser_access": false,
+      "changes_page": false,
+      "writes_learned_path": false,
+      "input_summary": {
+        "agent_role": "customer_facing_agent_router"
+      },
+      "output_summary": {
+        "source_event_id": "efdbae55-53b9-4480-9f4a-23d06b475764"
+      }
+    },
+    "created_at": "2026-05-29T14:31:07.238569Z"
+  },
+  {
+    "id": "9e5615d3-8836-43e2-9b54-9286a50c154b",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "command_parsed",
+    "payload": {
+      "raw": "http://127.0.0.1:5177/inventory",
+      "command_kind": "ask_user",
+      "dispatch_metadata": {
+        "client": "wagent_chat",
+        "browser_visibility": "headless"
+      },
+      "mode": "interactive_chat",
+      "allowed": true,
+      "intake": {
+        "intent": "execute_operation",
+        "target": {
+          "url": "http://127.0.0.1:5177/inventory",
+          "site_origin": "http://127.0.0.1:5177",
+          "page_hint": "inventory"
+        },
+        "action": {
+          "goal": "navigate to inventory page",
+          "canonical_goal": "navigate",
+          "aliases": [
+            "go to",
+            "open",
+            "visit"
+          ]
+        },
+        "slots": [
+          {
+            "name": "url",
+            "semantic_type": "url",
+            "label_seen": null,
+            "value": "http://127.0.0.1:5177/inventory",
+            "sensitive": false,
+            "source": "user_message"
+          }
+        ],
+        "missing_fields": [],
+        "confidence": 1.0,
+        "should_ask_user": false,
+        "ask_user_message_hint": null,
+        "source": "llm"
+      }
+    },
+    "created_at": "2026-05-29T14:31:07.242953Z"
+  },
+  {
+    "id": "5961378f-983f-4a3c-9f91-5b4091c0efc6",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "message_received",
+    "payload": {
+      "mode": "interactive_chat",
+      "command_kind": "ask_user"
+    },
+    "created_at": "2026-05-29T14:31:07.245711Z"
+  },
+  {
+    "id": "f4a40659-0f6e-4b41-b55d-cda57bd83223",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_progress_recorded",
+    "payload": {
+      "progress_kind": "active_task_updated",
+      "active_task": {
+        "task_id": "task-7cb3941b-e365-4c72-86d7-eaa18a63f030",
+        "kind": "clarify",
+        "target_url": "http://127.0.0.1:5177/inventory",
+        "owner": "runtime",
+        "status": "waiting_for_user_input",
+        "created_at": "2026-05-29T14:31:07.252057+00:00",
+        "updated_at": "2026-05-29T14:31:07.252057+00:00"
+      }
+    },
+    "created_at": "2026-05-29T14:31:07.253943Z"
+  },
+  {
+    "id": "fbc991fe-5325-4aa8-ad72-4bacddde7f7b",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "ask_user_for_missing_info",
+      "status": "completed",
+      "executor_owner": "conversation_orchestrator",
+      "browser_access": false,
+      "changes_page": false,
+      "writes_learned_path": false,
+      "input_summary": {
+        "missing_fields": [
+          "operation_goal"
+        ]
+      },
+      "output_summary": {
+        "target_url": "http://127.0.0.1:5177/inventory"
+      }
+    },
+    "created_at": "2026-05-29T14:31:07.255246Z"
+  },
+  {
+    "id": "237a0414-e1e5-479a-827a-ceab5ddc5cd8",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_no_path",
+    "payload": {
+      "reason": "pending_target_missing_goal",
+      "target": {
+        "url": "http://127.0.0.1:5177/inventory",
+        "site_origin": "http://127.0.0.1:5177",
+        "page_hint": "/inventory",
+        "source": "user_message",
+        "turns_remaining": 3
+      },
+      "route_decision": {
+        "route_decision": "delegate_to_web_operation_agent",
+        "next_agent": "web_operation_agent",
+        "recommended_skill": "inspect_target_page",
+        "target": {
+          "url": "http://127.0.0.1:5177/inventory",
+          "site_origin": "http://127.0.0.1:5177",
+          "source": "intake"
+        },
+        "user_goal": null,
+        "known_context": {
+          "has_learned_action": false,
+          "has_required_user_inputs": true,
+          "page_context_available": false
+        },
+        "missing_fields": [],
+        "confidence": 1.0,
+        "reason_summary": "Navigation request with complete URL; no learned actions available; inspect_target_page will perform actual browser navigation and capture initial page state.",
+        "source": "llm"
+      }
+    },
+    "created_at": "2026-05-29T14:31:07.257803Z"
+  },
+  {
+    "id": "0f733197-5822-4f75-ba3d-a082b8634670",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "entry_gate_recorded",
+    "payload": {
+      "entry_gate": {
+        "category": "web_task_candidate",
+        "requires_agent_runtime": true,
+        "confidence": 0.84,
+        "reply_hint": null,
+        "reason_summary": "session has pending web task context",
+        "latency_ms": 0,
+        "provider": null,
+        "model": null,
+        "fallback": false,
+        "error_kind": null,
+        "timeout_ms": 1500,
+        "source": "deterministic"
+      },
+      "skipped_intake_router": false,
+      "provider": null,
+      "model": null,
+      "prompt_template_id": null,
+      "prompt_hash": null,
+      "latency_ms": 0,
+      "timeout_ms": 1500,
+      "fallback": false,
+      "error_kind": null,
+      "raw": {}
+    },
+    "created_at": "2026-05-29T14:31:07.267160Z"
+  },
+  {
+    "id": "84f5743e-d4ee-4b0c-9a5a-59a1e6586beb",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "llm_trace_recorded",
+    "payload": {
+      "trace_id": "trace-6fea182f-966a-451d-b348-00e83a1822f0",
+      "purpose": "conversation_intake",
+      "agent_role": "conversation_intake_agent",
+      "provider": "openai_compatible",
+      "model": "MiniMax-M2.7",
+      "request_id": "0668d62bcfccda8927206f821f55a2c7",
+      "prompt_template_id": "conversation_intake_agent.v1",
+      "prompt_hash": "ad16d884c83a723355324c8a5c71f67cab6866ba195a401681a66f1b99080926",
+      "schema_name": "ConversationIntakeResult",
+      "schema_version": "m11.3.4",
+      "latency_ms": 3161,
+      "usage": {
+        "prompt": 1659,
+        "completion": 719,
+        "total": 2378
+      },
+      "redaction": {
+        "applied": true,
+        "strategy": "conversation_sensitive_payload_redaction"
+      }
+    },
+    "created_at": "2026-05-29T14:31:10.435895Z"
+  },
+  {
+    "id": "2c5b8430-7a9a-450b-8607-0554f1fdec80",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "collect_conversation_context",
+      "status": "completed",
+      "executor_owner": "code",
+      "browser_access": false,
+      "changes_page": false,
+      "writes_learned_path": false,
+      "input_summary": {
+        "current_message_url": null
+      },
+      "output_summary": {
+        "pending_target": {
+          "url": "http://127.0.0.1:5177/inventory",
+          "site_origin": "http://127.0.0.1:5177",
+          "page_hint": "/inventory",
+          "source": "user_message",
+          "turns_remaining": 3
+        },
+        "pending_choice": null,
+        "active_task": {
+          "task_id": "task-7cb3941b-e365-4c72-86d7-eaa18a63f030",
+          "kind": "clarify",
+          "target_url": "http://127.0.0.1:5177/inventory",
+          "goal": null,
+          "owner": "runtime",
+          "status": "waiting_for_user_input",
+          "created_at": "2026-05-29T14:31:07.252057Z",
+          "updated_at": "2026-05-29T14:31:07.252057Z"
+        },
+        "learned_action_count": 0
+      }
+    },
+    "created_at": "2026-05-29T14:31:10.446796Z"
+  },
+  {
+    "id": "b6695a5f-6df6-45d9-80e2-f3cfe742fc26",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "llm_trace_recorded",
+    "payload": {
+      "trace_id": "trace-1d8c228f-9251-4d94-a842-9cbbed8b8fd0",
+      "purpose": "customer_facing_agent_router",
+      "agent_role": "customer_facing_agent_router",
+      "provider": "openai_compatible",
+      "model": "MiniMax-M2.7",
+      "request_id": "0668d62e8d0322a9e99c90d8f47a7f32",
+      "prompt_template_id": "customer_facing_agent_router.v1",
+      "prompt_hash": "22261b3ef223b2c07878d8651ffccc5a58163a0a459d195254f2910c7cf44583",
+      "schema_name": "RouteDecision",
+      "schema_version": "m11.3.5",
+      "latency_ms": 5722,
+      "validation": {
+        "status": "ok"
+      },
+      "usage": {
+        "prompt": 2612,
+        "completion": 621,
+        "total": 3233
+      },
+      "redaction": {
+        "applied": true,
+        "strategy": "conversation_sensitive_payload_redaction"
+      }
+    },
+    "created_at": "2026-05-29T14:31:16.181125Z"
+  },
+  {
+    "id": "ffe028da-ec92-4de2-80d6-fc77f5fb4f51",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "agent_trace_recorded",
+    "payload": {
+      "agent_role": "customer_facing_agent_router",
+      "trace_kind": "route_decision",
+      "route_decision": {
+        "route_decision": "delegate_to_learning_agent",
+        "next_agent": "learning_agent",
+        "recommended_skill": "start_learning",
+        "target": {
+          "url": "http://127.0.0.1:5177/inventory",
+          "site_origin": "http://127.0.0.1:5177",
+          "source": "user_message"
+        },
+        "user_goal": null,
+        "known_context": {
+          "has_learned_action": false,
+          "has_required_user_inputs": true,
+          "page_context_available": false
+        },
+        "missing_fields": [],
+        "confidence": 0.95,
+        "reason_summary": "User explicitly requested learning a new operation with all required data provided. No prior learned actions exist for this scope. Route to learning agent to capture the new operation from the target page.",
+        "source": "llm"
+      },
+      "llm_trace_ids": [
+        "trace-1d8c228f-9251-4d94-a842-9cbbed8b8fd0"
+      ],
+      "generated_from_event_ids": [
+        "b6695a5f-6df6-45d9-80e2-f3cfe742fc26"
+      ]
+    },
+    "created_at": "2026-05-29T14:31:16.189626Z"
+  },
+  {
+    "id": "5ef14d76-2f38-4b03-9851-93ae8e110cc5",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "record_agent_trace",
+      "status": "completed",
+      "executor_owner": "code",
+      "browser_access": false,
+      "changes_page": false,
+      "writes_learned_path": false,
+      "input_summary": {
+        "agent_role": "customer_facing_agent_router"
+      },
+      "output_summary": {
+        "source_event_id": "ffe028da-ec92-4de2-80d6-fc77f5fb4f51"
+      }
+    },
+    "created_at": "2026-05-29T14:31:16.194333Z"
+  },
+  {
+    "id": "787a7414-17da-4a24-b0f6-e87ac2edc363",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "command_parsed",
+    "payload": {
+      "raw": "Learn how to create an inventory item with SKU NB-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
+      "command_kind": "learn_page",
+      "dispatch_metadata": {
+        "client": "wagent_chat",
+        "browser_visibility": "headless"
+      },
+      "mode": "interactive_chat",
+      "allowed": true,
+      "intake": {
+        "intent": "learn_operation",
+        "target": {
+          "url": "http://127.0.0.1:5177/inventory",
+          "site_origin": "http://127.0.0.1:5177",
+          "page_hint": "/inventory"
+        },
+        "action": {
+          "goal": "create inventory item",
+          "canonical_goal": "create_inventory_item",
+          "aliases": [
+            "create inventory item",
+            "add inventory item"
+          ]
+        },
+        "slots": [
+          {
+            "name": "sku",
+            "semantic_type": "sku",
+            "label_seen": "SKU",
+            "value": "NB-ALP-001",
+            "sensitive": false,
+            "source": "user_message"
+          },
+          {
+            "name": "name",
+            "semantic_type": "item_name",
+            "label_seen": "name",
+            "value": "Alpine Notebook",
+            "sensitive": false,
+            "source": "user_message"
+          },
+          {
+            "name": "category",
+            "semantic_type": "category",
+            "label_seen": "category",
+            "value": "Stationery",
+            "sensitive": false,
+            "source": "user_message"
+          },
+          {
+            "name": "stock_quantity",
+            "semantic_type": "quantity",
+            "label_seen": "stock quantity",
+            "value": "24",
+            "sensitive": false,
+            "source": "user_message"
+          }
+        ],
+        "missing_fields": [],
+        "confidence": 0.95,
+        "should_ask_user": false,
+        "ask_user_message_hint": null,
+        "source": "llm"
+      }
+    },
+    "created_at": "2026-05-29T14:31:16.199154Z"
+  },
+  {
+    "id": "d93b5e0e-da9b-4a76-9b4f-e423b995342d",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "message_received",
+    "payload": {
+      "mode": "interactive_chat",
+      "command_kind": "learn_page"
+    },
+    "created_at": "2026-05-29T14:31:16.202405Z"
+  },
+  {
+    "id": "001ea0ef-fc8a-4389-8ef5-b60430d83669",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_progress_recorded",
+    "payload": {
+      "progress_kind": "active_task_updated",
+      "active_task": {
+        "task_id": "task-5f147f9b-95a0-4211-94fb-dda3c06d9cb8",
+        "kind": "learn_operation",
+        "target_url": "http://127.0.0.1:5177/inventory",
+        "goal": "create inventory item",
+        "owner": "learning_agent",
+        "status": "learning",
+        "created_at": "2026-05-29T14:31:16.205995+00:00",
+        "updated_at": "2026-05-29T14:31:16.205995+00:00"
+      }
+    },
+    "created_at": "2026-05-29T14:31:16.210338Z"
+  },
+  {
+    "id": "07825fc0-e179-4825-9962-03f2141c834b",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "start_learning",
+      "status": "started",
+      "executor_owner": "learning_service",
+      "browser_access": true,
+      "changes_page": true,
+      "writes_learned_path": true,
+      "input_summary": {
+        "target_url": "http://127.0.0.1:5177/inventory",
+        "user_goal": "create inventory item",
+        "route_decision": "delegate_to_learning_agent"
+      },
+      "output_summary": {}
+    },
+    "created_at": "2026-05-29T14:31:16.217079Z"
+  },
+  {
+    "id": "835a974b-58e8-498b-b74c-56dbe2b46b4c",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_learning_started",
+    "payload": {
+      "url": "http://127.0.0.1:5177/inventory",
+      "browser_visibility": "headless"
+    },
+    "created_at": "2026-05-29T14:31:16.220196Z"
+  },
+  {
+    "id": "a2c88851-7235-4c8b-b1bd-8892731e1964",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "start_learning",
+      "status": "completed",
+      "executor_owner": "learning_service",
+      "browser_access": true,
+      "changes_page": true,
+      "writes_learned_path": true,
+      "input_summary": {},
+      "output_summary": {
+        "run_id": "04238a54-7847-459d-9148-831ad2a9434c",
+        "target_url": "http://127.0.0.1:5177/inventory"
+      }
+    },
+    "created_at": "2026-05-29T14:31:30.949314Z"
+  },
+  {
+    "id": "cb22b03f-2c2b-4713-8d78-4c0ea2d37348",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_learning_completed",
+    "payload": {
+      "run_id": "04238a54-7847-459d-9148-831ad2a9434c",
+      "alias": "create inventory item",
+      "target_url": "http://127.0.0.1:5177/inventory",
+      "business_goal": "create inventory item",
+      "canonical_goal": "create_inventory_item"
+    },
+    "created_at": "2026-05-29T14:31:30.954468Z"
+  },
+  {
+    "id": "8ac9d0b0-338a-44af-b50d-c45e1121e7b1",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_progress_recorded",
+    "payload": {
+      "progress_kind": "active_task_cleared"
+    },
+    "created_at": "2026-05-29T14:31:30.957843Z"
+  },
+  {
+    "id": "27bf1c61-4f64-4691-8584-e05991b495b2",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "entry_gate_recorded",
+    "payload": {
+      "entry_gate": {
+        "category": "web_task_candidate",
+        "requires_agent_runtime": true,
+        "confidence": 0.88,
+        "reply_hint": null,
+        "reason_summary": "message contains web task candidate signals",
+        "latency_ms": 0,
+        "provider": null,
+        "model": null,
+        "fallback": false,
+        "error_kind": null,
+        "timeout_ms": 1500,
+        "source": "deterministic"
+      },
+      "skipped_intake_router": false,
+      "provider": null,
+      "model": null,
+      "prompt_template_id": null,
+      "prompt_hash": null,
+      "latency_ms": 0,
+      "timeout_ms": 1500,
+      "fallback": false,
+      "error_kind": null,
+      "raw": {}
+    },
+    "created_at": "2026-05-29T14:31:30.966273Z"
+  },
+  {
+    "id": "bc33c7b7-b826-41a2-890d-c851e602b557",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "llm_trace_recorded",
+    "payload": {
+      "trace_id": "trace-e319cb36-6cc4-472f-b624-5179e5d8a2a3",
+      "purpose": "conversation_intake",
+      "agent_role": "conversation_intake_agent",
+      "provider": "openai_compatible",
+      "model": "MiniMax-M2.7",
+      "request_id": "0668d6435b0d49a336f43e6a85153327",
+      "prompt_template_id": "conversation_intake_agent.v1",
+      "prompt_hash": "ad16d884c83a723355324c8a5c71f67cab6866ba195a401681a66f1b99080926",
+      "schema_name": "ConversationIntakeResult",
+      "schema_version": "m11.3.4",
+      "latency_ms": 3154,
+      "usage": {
+        "prompt": 1745,
+        "completion": 818,
+        "total": 2563
+      },
+      "redaction": {
+        "applied": true,
+        "strategy": "conversation_sensitive_payload_redaction"
+      }
+    },
+    "created_at": "2026-05-29T14:31:34.126191Z"
+  },
+  {
+    "id": "33596c66-e631-48b0-9164-657451928be3",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "collect_conversation_context",
+      "status": "completed",
+      "executor_owner": "code",
+      "browser_access": false,
+      "changes_page": false,
+      "writes_learned_path": false,
+      "input_summary": {
+        "current_message_url": null
+      },
+      "output_summary": {
+        "pending_target": null,
+        "pending_choice": null,
+        "active_task": null,
+        "learned_action_count": 1
+      }
+    },
+    "created_at": "2026-05-29T14:31:34.136043Z"
+  },
+  {
+    "id": "e4aaa80a-e776-41c1-805c-d4d4ed47d264",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "llm_trace_recorded",
+    "payload": {
+      "trace_id": "trace-2e856a6d-a970-431b-9e28-cbc7a0d723e3",
+      "purpose": "customer_facing_agent_router",
+      "agent_role": "customer_facing_agent_router",
+      "provider": "openai_compatible",
+      "model": "MiniMax-M2.7",
+      "request_id": "0668d6464ed9625fd8ed5420dd17715c",
+      "prompt_template_id": "customer_facing_agent_router.v1",
+      "prompt_hash": "22261b3ef223b2c07878d8651ffccc5a58163a0a459d195254f2910c7cf44583",
+      "schema_name": "RouteDecision",
+      "schema_version": "m11.3.5",
+      "latency_ms": 4081,
+      "validation": {
+        "status": "ok"
+      },
+      "usage": {
+        "prompt": 2917,
+        "completion": 679,
+        "total": 3596
+      },
+      "redaction": {
+        "applied": true,
+        "strategy": "conversation_sensitive_payload_redaction"
+      }
+    },
+    "created_at": "2026-05-29T14:31:38.227417Z"
+  },
+  {
+    "id": "b1804e26-1388-48ad-8f8e-9b49fad4d906",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "agent_trace_recorded",
+    "payload": {
+      "agent_role": "customer_facing_agent_router",
+      "trace_kind": "route_decision",
+      "route_decision": {
+        "route_decision": "delegate_to_learning_agent",
+        "next_agent": "learning_agent",
+        "recommended_skill": "start_replay",
+        "target": {
+          "url": "http://127.0.0.1:5177/inventory",
+          "site_origin": "http://127.0.0.1:5177",
+          "source": "intake"
+        },
+        "user_goal": "create inventory item",
+        "known_context": {
+          "has_learned_action": true,
+          "has_required_user_inputs": true,
+          "page_context_available": true
+        },
+        "missing_fields": [],
+        "confidence": 0.95,
+        "reason_summary": "The 'create inventory item' action has been learned at /inventory. All required slots are provided (sku, name, category, quantity). Route to replay the learned action with new parameters.",
+        "source": "llm"
+      },
+      "llm_trace_ids": [
+        "trace-2e856a6d-a970-431b-9e28-cbc7a0d723e3"
+      ],
+      "generated_from_event_ids": [
+        "e4aaa80a-e776-41c1-805c-d4d4ed47d264"
+      ]
+    },
+    "created_at": "2026-05-29T14:31:38.234376Z"
+  },
+  {
+    "id": "549ac794-257b-463a-9655-23e7fc38a3f8",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "record_agent_trace",
+      "status": "completed",
+      "executor_owner": "code",
+      "browser_access": false,
+      "changes_page": false,
+      "writes_learned_path": false,
+      "input_summary": {
+        "agent_role": "customer_facing_agent_router"
+      },
+      "output_summary": {
+        "source_event_id": "b1804e26-1388-48ad-8f8e-9b49fad4d906"
+      }
+    },
+    "created_at": "2026-05-29T14:31:38.238697Z"
+  },
+  {
+    "id": "a5b11629-dee1-4dbc-b8e3-2f447d2990a0",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "command_parsed",
+    "payload": {
+      "raw": "Create an inventory item with SKU MUG-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
+      "command_kind": "execute_task",
+      "dispatch_metadata": {
+        "client": "wagent_chat",
+        "browser_visibility": "headless"
+      },
+      "mode": "interactive_chat",
+      "allowed": true,
+      "intake": {
+        "intent": "execute_operation",
+        "target": {
+          "url": "http://127.0.0.1:5177/inventory",
+          "site_origin": "http://127.0.0.1:5177",
+          "page_hint": "/inventory"
+        },
+        "action": {
+          "goal": "create inventory item",
+          "canonical_goal": "create_inventory_item",
+          "aliases": [
+            "create inventory item",
+            "add inventory item"
+          ]
+        },
+        "slots": [
+          {
+            "name": "sku",
+            "semantic_type": "sku",
+            "label_seen": null,
+            "value": "MUG-SKY-014",
+            "sensitive": false,
+            "source": "user_message"
+          },
+          {
+            "name": "name",
+            "semantic_type": "item_name",
+            "label_seen": null,
+            "value": "Skyline Mug",
+            "sensitive": false,
+            "source": "user_message"
+          },
+          {
+            "name": "category",
+            "semantic_type": "item_category",
+            "label_seen": null,
+            "value": "Office",
+            "sensitive": false,
+            "source": "user_message"
+          },
+          {
+            "name": "quantity",
+            "semantic_type": "stock_quantity",
+            "label_seen": null,
+            "value": "18",
+            "sensitive": false,
+            "source": "user_message"
+          }
+        ],
+        "missing_fields": [],
+        "confidence": 0.95,
+        "should_ask_user": false,
+        "ask_user_message_hint": null,
+        "source": "llm"
+      }
+    },
+    "created_at": "2026-05-29T14:31:38.243163Z"
+  },
+  {
+    "id": "b0cebebf-f936-42a4-a05b-6ce99d357fc5",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "message_received",
+    "payload": {
+      "mode": "interactive_chat",
+      "command_kind": "execute_task"
+    },
+    "created_at": "2026-05-29T14:31:38.246252Z"
+  },
+  {
+    "id": "5bbe9a4d-eb3a-44ee-bd25-d9dc2565b641",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_progress_recorded",
+    "payload": {
+      "progress_kind": "active_task_updated",
+      "active_task": {
+        "task_id": "task-384a5d02-dfed-4fcb-8508-702d4e56a073",
+        "kind": "execute_operation",
+        "target_url": "http://127.0.0.1:5177/inventory",
+        "goal": "create inventory item",
+        "owner": "web_operation_agent",
+        "status": "executing",
+        "created_at": "2026-05-29T14:31:38.250343+00:00",
+        "updated_at": "2026-05-29T14:31:38.250343+00:00"
+      }
+    },
+    "created_at": "2026-05-29T14:31:38.252948Z"
+  },
+  {
+    "id": "89107e17-a5d3-4467-8e53-4105723c6b58",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "start_replay",
+      "status": "started",
+      "executor_owner": "replay_service",
+      "browser_access": true,
+      "changes_page": true,
+      "writes_learned_path": false,
+      "input_summary": {
+        "target_url": "http://127.0.0.1:5177/inventory",
+        "alias": "create inventory item"
+      },
+      "output_summary": {}
+    },
+    "created_at": "2026-05-29T14:31:38.256189Z"
+  },
+  {
+    "id": "9ad3ae0b-ca72-418e-9306-bc8d3348613a",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_execution_started",
+    "payload": {
+      "target_url": "http://127.0.0.1:5177/inventory",
+      "alias": "create inventory item",
+      "browser_visibility": "headless"
+    },
+    "created_at": "2026-05-29T14:31:38.257593Z"
+  },
+  {
+    "id": "ca7e40ff-52ce-454b-bdc1-8dfb9906d03e",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_progress_recorded",
+    "payload": {
+      "progress_kind": "active_task_cleared"
+    },
+    "created_at": "2026-05-29T14:31:45.547716Z"
+  },
+  {
+    "id": "84f4b381-960f-4b64-8b28-f10c4cd6d489",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "skill_call_recorded",
+    "payload": {
+      "skill": "start_replay",
+      "status": "completed",
+      "executor_owner": "replay_service",
+      "browser_access": true,
+      "changes_page": true,
+      "writes_learned_path": false,
+      "input_summary": {},
+      "output_summary": {
+        "replay_status": "succeeded",
+        "drift_status": "none",
+        "verification_outcome": "verified"
+      }
+    },
+    "created_at": "2026-05-29T14:31:45.550853Z"
+  },
+  {
+    "id": "51d447f4-50c6-4e70-a1a9-0ff4dc5f53df",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_execution_completed",
+    "payload": {
+      "target_url": "http://127.0.0.1:5177/inventory",
+      "alias": "create inventory item",
+      "replay": {
+        "url": "http://127.0.0.1:5177/inventory",
+        "replay_status": "succeeded",
+        "drift_status": "none",
+        "drift_reasons": [],
+        "warnings": [],
+        "final_url": "http://127.0.0.1:5177/inventory",
+        "final_title": "WebAgentFlow Validation Site",
+        "step_count": 6,
+        "error": null,
+        "execution_evidence": [
+          {
+            "kind": "dom_text_present",
+            "target": "MUG-SKY-014",
+            "status": "verified",
+            "confidence": 0.95,
+            "summary": "页面文本中出现了目标值“MUG-SKY-014”。"
+          },
+          {
+            "kind": "dom_text_present",
+            "target": "Skyline Mug",
+            "status": "verified",
+            "confidence": 0.95,
+            "summary": "页面文本中出现了目标值“Skyline Mug”。"
+          },
+          {
+            "kind": "dom_text_present",
+            "target": "18",
+            "status": "verified",
+            "confidence": 0.95,
+            "summary": "页面文本中出现了目标值“18”。"
+          },
+          {
+            "kind": "dom_text_present",
+            "target": "Office",
+            "status": "verified",
+            "confidence": 0.95,
+            "summary": "页面文本中出现了目标值“Office”。"
+          }
+        ]
+      }
+    },
+    "created_at": "2026-05-29T14:31:45.557319Z"
+  },
+  {
+    "id": "63a3daf3-aca2-4272-84d1-4ea9554feca4",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "task_result_reported",
+    "payload": {
+      "verification_outcome": "verified",
+      "evidence_summary": "Replay status: succeeded. Drift status: none. Final URL: http://127.0.0.1:5177/inventory. Final title: WebAgentFlow Validation Site.",
+      "missing_evidence_summary": "",
+      "task_verified": true,
+      "needs_review": false,
+      "no_recovery": true,
+      "no_autonomous": true,
+      "no_llm": true,
+      "execution_status": "completed",
+      "replay_status": "succeeded",
+      "drift_status": "none",
+      "error_summary": null,
+      "final_url": "http://127.0.0.1:5177/inventory",
+      "final_title": "WebAgentFlow Validation Site",
+      "execution_evidence": [
+        {
+          "kind": "dom_text_present",
+          "target": "MUG-SKY-014",
+          "status": "verified",
+          "confidence": 0.95,
+          "summary": "页面文本中出现了目标值“MUG-SKY-014”。"
+        },
+        {
+          "kind": "dom_text_present",
+          "target": "Skyline Mug",
+          "status": "verified",
+          "confidence": 0.95,
+          "summary": "页面文本中出现了目标值“Skyline Mug”。"
+        },
+        {
+          "kind": "dom_text_present",
+          "target": "18",
+          "status": "verified",
+          "confidence": 0.95,
+          "summary": "页面文本中出现了目标值“18”。"
+        },
+        {
+          "kind": "dom_text_present",
+          "target": "Office",
+          "status": "verified",
+          "confidence": 0.95,
+          "summary": "页面文本中出现了目标值“Office”。"
+        }
+      ]
+    },
+    "created_at": "2026-05-29T14:31:45.559712Z"
+  },
+  {
+    "id": "2eb0297c-fce3-4b5b-aff4-adea9fbcb2df",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "entry_gate_recorded",
+    "payload": {
+      "entry_gate": {
+        "category": "non_web_chat",
+        "requires_agent_runtime": false,
+        "confidence": 0.82,
+        "reply_hint": "友好回应，并引导用户提供目标 URL 和网页操作目标。",
+        "reason_summary": "message has no web task signal",
+        "latency_ms": 1502,
+        "provider": null,
+        "model": null,
+        "fallback": true,
+        "error_kind": "timeout",
+        "timeout_ms": 1500,
+        "source": "deterministic_fallback"
+      },
+      "skipped_intake_router": true,
+      "provider": null,
+      "model": null,
+      "prompt_template_id": null,
+      "prompt_hash": null,
+      "latency_ms": 1502,
+      "timeout_ms": 1500,
+      "fallback": true,
+      "error_kind": "timeout",
+      "raw": {
+        "trace_id": "trace-b197a9e6-bba3-49d5-9f75-1fbe88562e26",
+        "purpose": "conversation_entry_gate",
+        "agent_role": "conversation_entry_gate",
+        "provider": null,
+        "model": null,
+        "prompt_template_id": null,
+        "prompt_hash": null,
+        "schema_name": "ConversationEntryGateResult",
+        "schema_version": "m11.3.5.1",
+        "schema_validation": {
+          "ok": false,
+          "fallback_override": true,
+          "error_kind": "timeout"
+        },
+        "latency_ms": 1502,
+        "raw_request": {
+          "input_summary": {
+            "message_length": 6,
+            "has_url": false,
+            "context": {
+              "session_mode": "interactive_chat",
+              "pending_target_exists": false,
+              "pending_intake_exists": false,
+              "pending_choice_exists": false,
+              "active_task_exists": false,
+              "last_no_path_reason_exists": false
+            }
+          },
+          "error_kind": "timeout"
+        },
+        "raw_response": {},
+        "parsed_output": {
+          "category": "non_web_chat",
+          "requires_agent_runtime": false,
+          "confidence": 0.82,
+          "reply_hint": "友好回应，并引导用户提供目标 URL 和网页操作目标。",
+          "reason_summary": "message has no web task signal",
+          "latency_ms": 1502,
+          "provider": null,
+          "model": null,
+          "fallback": true,
+          "error_kind": "timeout",
+          "timeout_ms": 1500,
+          "source": "deterministic_fallback"
+        },
+        "redaction": {
+          "applied": true,
+          "strategy": "conversation_sensitive_and_thinking_redaction"
+        }
+      }
+    },
+    "created_at": "2026-05-29T14:31:47.077309Z"
+  },
+  {
+    "id": "b37bf956-8a4c-410d-b9b5-498a1d6242ef",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "command_parsed",
+    "payload": {
+      "raw": "随便处理一下",
+      "command_kind": "non_web_chat",
+      "dispatch_metadata": {
+        "client": "wagent_chat",
+        "browser_visibility": "headless"
+      },
+      "mode": "interactive_chat",
+      "allowed": true
+    },
+    "created_at": "2026-05-29T14:31:47.085191Z"
+  },
+  {
+    "id": "e121bee9-3f51-4fce-8667-96760c97db50",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "message_received",
+    "payload": {
+      "mode": "interactive_chat",
+      "command_kind": "non_web_chat"
+    },
+    "created_at": "2026-05-29T14:31:47.090577Z"
+  },
+  {
+    "id": "c4dca51d-a7e6-45f6-8d03-454f0744deb0",
+    "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
+    "type": "chat_no_path",
+    "payload": {
+      "reason": "entry_gate_skipped_runtime",
+      "category": "non_web_chat",
+      "error_kind": "timeout"
+    },
+    "created_at": "2026-05-29T14:31:47.097997Z"
+  }
+]

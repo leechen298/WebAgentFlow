@@ -1,6 +1,6 @@
 ---
 name: webagentflow-eval-integrity
-description: Use when validating WebAgentFlow runtime behavior, eval runners, user-facing behavior tests, closeout reviews, forbidden target scans, artifact redaction, and pass/fail/blocked/unverified decisions. This skill protects eval integrity and evidence boundaries, not feature implementation.
+description: Use for WebAgentFlow eval and evidence-integrity checkpoints when validating runtime behavior, eval runners, user-facing behavior tests, closeout reviews, forbidden target scans, artifact redaction, and PASS/FAIL/BLOCKED/UNVERIFIED decisions. Also use inside Codex App /goal campaigns when GOAL_RUNNER.md or CURRENT_STATE.md routes the active checkpoint to eval, evidence review, closeout, or final status gating. This skill protects evidence boundaries; it does not implement product behavior.
 ---
 
 # webagentflow-eval-integrity
@@ -27,6 +27,31 @@ Use this skill for:
 - scope isolation checks for known / unknown learned actions
 
 Do not use this skill as the primary workflow for implementing product behavior. Use `webagentflow-iteration-dev` for implementation work, then use this skill for integrity review and closeout gating.
+
+## Goal Mode Integration
+
+In Codex App `/goal` campaigns, this skill is the checkpoint-level integrity
+gate for eval, evidence, closeout, and final status decisions. It is not the
+campaign runner and it must not implement product behavior.
+
+Before reviewing evidence, read `GOAL_RUNNER.md` and `CURRENT_STATE.md` when
+present, then identify the active child package, required gates, allowed
+validation surface, hard stops, stable latest artifact requirements, and final
+status vocabulary.
+
+Use this skill when the active checkpoint asks whether a result is trustworthy,
+whether a campaign may advance, or whether evidence supports `PASS`, `FAIL`,
+`BLOCKED`, `UNVERIFIED`, `NON_LIVE_PASS`, or `PASS_WITH_CAVEATS`.
+
+If the evidence shows a product defect, forbidden runtime target detail, scope
+contamination, missing redaction, missing stable artifact, failed required gate,
+or unresolved P0/P1 finding, report the integrity decision and route the fix
+back to implementation work.
+
+A `/goal` campaign may advance only when the owning contract allows the
+resulting status. `UNVERIFIED`, `BLOCKED`, unresolved P0/P1 findings, missing
+reviewable evidence, or unapproved live-run requirements must stop campaign
+progress.
 
 ## Non-goals
 

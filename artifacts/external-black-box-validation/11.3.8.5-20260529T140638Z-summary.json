@@ -1,0 +1,108 @@
+{
+  "run_label": "11.3.8.5 external black-box validation attempt",
+  "timestamp_utc": "2026-05-29T14:06:38Z",
+  "commit": "70a050e",
+  "operator": "Codex external test operator",
+  "api_base_url": "http://127.0.0.1:8001",
+  "target_url": "http://127.0.0.1:5177/inventory",
+  "db_state_policy": "clean database before validation",
+  "db_clean_tables": [
+    "conversation_events",
+    "conversation_messages",
+    "conversation_sessions",
+    "learned_paths",
+    "exploration_runs"
+  ],
+  "operator_actions": [
+    {
+      "surface": "curl",
+      "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1",
+      "command": "curl -i http://127.0.0.1:8001/health",
+      "result": "HTTP/1.1 200 OK"
+    },
+    {
+      "surface": "curl",
+      "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1",
+      "command": "curl -i http://127.0.0.1:5177/inventory",
+      "result": "HTTP/1.1 200 OK when run with approved elevated local-network access"
+    },
+    {
+      "surface": "browser",
+      "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1",
+      "operation": "PV-SITE-001 standalone smoke against external Validation-Site",
+      "result": "PASS",
+      "screenshot": "/private/tmp/waf-11.3.8.5-site-smoke.png"
+    },
+    {
+      "surface": "wagent chat",
+      "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1",
+      "command": ".venv/bin/wagent chat --api-base http://127.0.0.1:8001 --timeout 300 --headless",
+      "stdin_sequence": [
+        "http://127.0.0.1:5177/inventory",
+        "Learn how to create an inventory item with SKU NB-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
+        "Create an inventory item with SKU MUG-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
+        "随便处理一下",
+        ":q"
+      ],
+      "session_id": "3f1d42c9-9c6a-4198-8e27-e59b1be2f270",
+      "result": "PV-CLI-003 failed"
+    }
+  ],
+  "cli_transcript": [
+    "WAgent > 本次会话 ID：3f1d42c9-9c6a-4198-8e27-e59b1be2f270。需要调试时可以在管理后台查看。",
+    "WAgent > 你好，我可以学习页面操作，也可以执行已经学会的操作。",
+    "Input PV-CLI-001: http://127.0.0.1:5177/inventory",
+    "WAgent > 还没学过这个页面。你可以先学习这个页面上的操作、查看页面，或取消。",
+    "Input PV-CLI-002: Learn how to create an inventory item with SKU NB-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
+    "WAgent > 开始学习页面操作。",
+    "WAgent > 学习完成：我学会了create inventory item操作。之后你可以说“帮我create inventory item”。",
+    "Input PV-CLI-003: Create an inventory item with SKU MUG-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
+    "WAgent > 我找到了已学习路径，但它还不支持这次输入里的参数替换。请重新学习一次该操作，或补充一个已支持的参数。",
+    "Input PV-CLI-004: 随便处理一下",
+    "WAgent > 你好，我主要处理网页操作任务。你可以发给我目标页面 URL，并说明要学习哪个操作，或让我执行已经学会的操作。"
+  ],
+  "scenario_results": [
+    {
+      "scenario": "PV-SITE-001",
+      "status": "PASS",
+      "evidence": "Created QA-COD-529B, searched it, edited stock to 37 and status to paused, then searched NO-MATCH-529B and observed empty state."
+    },
+    {
+      "scenario": "PV-CLI-001",
+      "status": "PASS",
+      "evidence": "URL-only input did not start learning or execution and asked user to learn or provide an operation."
+    },
+    {
+      "scenario": "PV-CLI-002",
+      "status": "FOLLOW_UP_REQUIRED",
+      "evidence": "Learning started and completed with alias create inventory item; learned_path run_id ce807dfd-614f-4d87-9e02-f6e13772ec07."
+    },
+    {
+      "scenario": "PV-CLI-003",
+      "status": "FAIL",
+      "evidence": "Execution did not start. Event chat_execution_failed reason=unsupported_value_slot; unsupported_slots=name, category, stock_quantity."
+    },
+    {
+      "scenario": "PV-CLI-004",
+      "status": "PASS_WITH_CAVEAT",
+      "evidence": "No learning or execution started, but entry gate used deterministic fallback after timeout."
+    },
+    {
+      "scenario": "PV-INTEGRITY-001",
+      "status": "PENDING",
+      "evidence": "Integrity scans not yet rerun after this attempt."
+    },
+    {
+      "scenario": "PV-INTEGRITY-002",
+      "status": "PENDING",
+      "evidence": "Forbidden target scan not yet rerun after this attempt."
+    }
+  ],
+  "artifacts": {
+    "messages": "artifacts/external-black-box-validation/11.3.8.5-20260529T140638Z-messages.json",
+    "events": "artifacts/external-black-box-validation/11.3.8.5-20260529T140638Z-events.json"
+  },
+  "decision": "FAIL",
+  "failure_summary": "PV-CLI-003 matched the learned create inventory item action, but replay was blocked by unsupported slot aliases instead of executing with new values.",
+  "next_required_work": "Create a follow-up child package to align learned action value_slot names with execute-turn slot aliases and verify create-form field binding."
+}
