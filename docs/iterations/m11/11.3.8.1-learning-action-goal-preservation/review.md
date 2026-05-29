@@ -1,6 +1,6 @@
 # 复盘 / 评审（Review）
 
-状态：ready for review
+状态：implementation_complete_pending_followup
 
 ## 2026-05-29 Documentation Authoring
 
@@ -164,3 +164,49 @@ Ready for documentation / design review. Not ready for implementation until revi
 - `PV-CLI-003` is not claimed fixed or verified by this package.
 - Suggested utterance quality remains unchanged and belongs to `11.3.8.2`.
 - Matcher consumption of `business_goal` / `canonical_goal` / `match_terms` remains for `11.3.8.3`.
+
+## 2026-05-29 P1 Fix
+
+- Author: Codex C, fix agent.
+- Trigger: code review at `.agent-runs/20260529-114056-m11-11.3.8.1-learning-action-goal-preservation/code-review.md`.
+- Scope: P1 findings only.
+- Decision: fixed the production learning metadata handoff, intake-derived business object persistence, and stale package README status. No matcher, replay, reporter, recovery, route surface, frontend, migration, fixture, worker, autonomous-run, or external validation behavior was broadened.
+
+## P1 Fix Changed Files
+
+- `apps/api/app/routers/conversation.py`
+- `apps/api/app/services/conversation/chat_runtime.py`
+- `apps/api/tests/test_conversation_chat_runtime.py`
+- `docs/iterations/m11/README.md`
+- `docs/iterations/m11/m11-plan.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/README.md`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/intent.md`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/contract.md`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/technical-design.md`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/test-plan.md`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/plan.md`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
+
+## P1 Fix Summary
+
+- Passed intake `action.goal`, `canonical_goal`, and aliases through the real Conversation API learning handler into `LearningRunRequest` so raw user text with slot values is not the only identity source.
+- Derived `business_object` and object-only `match_terms` in chat runtime when the learning result is enriched from intake metadata.
+- Updated the focused chat runtime test to assert internal handler kwargs and persisted `business_object: purchase order` / object-only match term.
+- Reconciled package and M11 routing statuses to `implementation_complete_pending_followup` while keeping CLI smoke, UI smoke, autonomous runs, and external black-box validation explicitly not run.
+
+## P1 Fix Commands
+
+| Command | Result | Exit code | Notes |
+|---|---|---:|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q` | `9 passed in 0.07s` | 0 | Required T1 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | `85 passed in 0.65s` | 0 | Required T2 |
+| `cd apps/api && ../../.venv/bin/python -m ruff check app/routers/conversation.py app/services/learning/learning_run_service.py app/services/conversation/chat_runtime.py tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py` | `All checks passed!` | 0 | Required T5; includes internal router handoff changed by this fix |
+| `rg -n "5177\|inventory item\|data-testid\|WebAgentFlow-Validation-Site" apps/api/app/routers/conversation.py apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | Found only pre-existing `data-testid` test fixture references; no `5177`, `inventory item`, or `WebAgentFlow-Validation-Site` in changed implementation | 0 | Required T4 changed-file scan plus diff inspection |
+| `rg -n '11\\.3\\.8\\.1-learning-action-goal-preservation.*ready for review\|not ready for implementation\|No code, runtime tests\|Status: ready for review' docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md docs/iterations/m11/11.3.8.1-learning-action-goal-preservation --glob '!review.md'` | No stale review-only status claims found | 1 | Exit 1 is expected for no matches |
+| `git diff --check` | Clean | 0 | Required T6 |
+
+## P1 Fix Remaining Risks
+
+- External black-box validation remains not run; 11.3.8.5 owns that evidence.
+- Suggested utterance quality and matcher consumption remain follow-up package responsibilities.

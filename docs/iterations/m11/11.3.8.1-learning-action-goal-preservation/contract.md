@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：ready for review
+状态：implementation_complete_pending_followup
 
 ## Public Concepts
 
@@ -112,4 +112,3 @@ Not allowed as pass evidence in this package:
 - The current `LearningRunResult` does not include intake metadata; the reviewed implementation may need to add optional internal fields.
 - Deriving `business_object` generically is easy to overfit; tests must verify target-agnostic examples and no target constants.
 - Keeping `alias` short may conflict with preserving enough business meaning; the implementation should prefer metadata richness over label truncation when both cannot fit in one string.
-

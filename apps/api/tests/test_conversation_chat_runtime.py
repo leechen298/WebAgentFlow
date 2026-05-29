@@ -900,6 +900,9 @@ def test_product_learning_stores_business_identity_from_intake(
             return None
 
     def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        assert kwargs["action_goal"] == "Create purchase order"
+        assert kwargs["canonical_goal"] == "create_purchase_order"
+        assert kwargs["action_aliases"] == ["add purchase order"]
         learned_path_id = _ingest_record_path(
             db_session,
             source_run_id="run-business-identity",
@@ -934,10 +937,12 @@ def test_product_learning_stores_business_identity_from_intake(
     assert action["business_goal"] == "Create purchase order"
     assert action["canonical_goal"] == "create_purchase_order"
     assert action["action_aliases"] == ["add purchase order"]
+    assert action["business_object"] == "purchase order"
     assert action["match_terms"] == [
         "Create purchase order",
         "create_purchase_order",
         "add purchase order",
+        "purchase order",
     ]
     assert "Alpha-1" not in action["match_terms"]
 

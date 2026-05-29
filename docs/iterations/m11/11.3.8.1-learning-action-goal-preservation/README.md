@@ -1,6 +1,6 @@
 # 11.3.8.1 · Learning Action Goal Preservation
 
-状态：ready for review
+状态：implementation_complete_pending_followup
 里程碑：M11
 类型：code
 父迭代：[`11.3.8-external-black-box-validation-recovery`](../11.3.8-external-black-box-validation-recovery/)
@@ -11,9 +11,10 @@
 - [x] 代码型迭代
 - [ ] 混合型迭代
 
-本包是 11.3.8 recovery sequence 的第一个可执行代码包，但当前状态只是
-`ready for review`。这表示七件套文档已可进入文档 / 设计 review；不表示可以开始实现。
-代码实现必须等 review 通过后由后续实现 Agent 明确推进。
+本包是 11.3.8 recovery sequence 的第一个可执行代码包。文档 / 设计 review 已完成；
+实现和 P1 review fix 已按本包范围完成。后续 reusable utterance generation、matcher
+consumption、cross-chain regression 和 external black-box revalidation 仍由后续
+11.3.8.x packages 负责。
 
 ## Goal
 
@@ -48,12 +49,13 @@
 - `technical-design.md` - implementation structure, affected files, data flow, anti-drift rules, and test entries.
 - `test-plan.md` - exact documentation and later implementation verification commands.
 - `plan.md` - ordered execution steps, phase boundaries, stop conditions, and review update step.
-- `review.md` - documentation authoring record; implementation evidence remains `not run`.
+- `review.md` - documentation, implementation, verification, and follow-up record.
 
 ## Final Assessment State
 
-Ready for documentation / design review. No code, runtime tests, CLI smoke, UI smoke,
-`verify-scenario`, autonomous run, or external black-box validation has been completed by this package.
+Implementation complete for this package scope, including focused runtime tests and P1 review fix.
+No CLI smoke, UI smoke, `verify-scenario`, autonomous run, or external black-box validation has been
+completed by this package. `PV-CLI-003` is not claimed fixed / passed / verified here.
 
 ## Assumptions
 
@@ -64,8 +66,7 @@ Ready for documentation / design review. No code, runtime tests, CLI smoke, UI s
 
 ## Open Risks
 
-- The current learning handler result does not carry intake action metadata today; implementation may need a minimal plumbing change in `chat_runtime.py`.
-- If only `LearningRunRequest.goal` is available, deriving business object from raw text may be too lossy; the implementation must stop rather than infer target-specific terms.
-- Adding metadata without updating all consumers may be harmless for storage but insufficient for later matching; 11.3.8.3 owns matcher consumption.
-- Existing Chinese product-level learning tests may depend on current short labels and need compatibility-preserving expectations.
-
+- Later packages must still consume the preserved metadata; 11.3.8.3 owns matcher consumption.
+- Suggested utterance quality remains unchanged and belongs to 11.3.8.2.
+- External black-box validation remains unverified until 11.3.8.5 reruns it through its own evidence path.
+- Existing sessions without the new optional metadata remain compatible, but they do not retroactively gain business identity fields.

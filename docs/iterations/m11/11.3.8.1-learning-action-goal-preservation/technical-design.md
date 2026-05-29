@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：ready for review
+状态：implementation_complete_pending_followup
 
 ## Current State
 
@@ -181,4 +181,3 @@ git diff --check
 ```
 
 Documentation-stage checks are listed in `test-plan.md` and recorded in `review.md`.
-

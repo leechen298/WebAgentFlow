@@ -1733,11 +1733,13 @@ class InteractiveChatRuntime:
             fill_values = _fill_values_from_intake(intake) or (
                 _parse_product_inputs(intent.raw_text) if intent.url else None
             )
+            identity_kwargs = _learning_identity_kwargs_from_intake(intake)
             learning_result: LearningRunResult = self._learning_handler(
                 intent.url,
                 intent.raw_text,
                 headless=headless,
                 fill_values=fill_values,
+                **identity_kwargs,
             )
         except Exception as exc:
             return self._learning_failed(
@@ -4390,6 +4392,40 @@ def _fill_values_from_intake(
     return values or None
 
 
+def _learning_identity_kwargs_from_intake(
+    intake: ConversationIntakeResult | None,
+) -> dict[str, Any]:
+    if intake is None:
+        return {}
+    slot_values = _intake_slot_values(intake)
+    action_goal = str(intake.action.goal or "").strip()
+    if not _is_reusable_identity_term(action_goal, slot_values):
+        return {}
+    aliases = [
+        alias
+        for alias in intake.action.aliases
+        if _is_reusable_identity_term(alias, slot_values)
+    ]
+    canonical_goal = str(intake.action.canonical_goal or "").strip() or None
+    if canonical_goal and not _is_reusable_identity_term(canonical_goal, slot_values):
+        canonical_goal = None
+    return {
+        "action_goal": action_goal,
+        "canonical_goal": canonical_goal,
+        "action_aliases": aliases,
+    }
+
+
+def _is_reusable_identity_term(term: str, slot_values: list[str]) -> bool:
+    value = str(term or "").strip()
+    if not value:
+        return False
+    lowered = value.lower()
+    if re.search(r"https?://|www\.", lowered):
+        return False
+    return not any(slot_value and slot_value in lowered for slot_value in slot_values)
+
+
 def _slot_overrides_for_path(
     values: dict[str, str],
     learned_path: Any | None,
@@ -4576,7 +4612,11 @@ def _action_from_learning_result(
         "page_template": result.page_template,
         "scenario": result.scenario,
     }
-    business_object = result.business_object
+    business_object = result.business_object or _business_object_from_identity(
+        business_goal=business_goal,
+        canonical_goal=canonical_goal,
+        action_aliases=action_aliases,
+    )
     match_terms = result.match_terms or _identity_match_terms(
         business_goal=business_goal,
         canonical_goal=canonical_goal,
@@ -4631,6 +4671,47 @@ def _identity_match_terms(
         seen.add(key)
         result.append(value)
     return result
+
+
+def _business_object_from_identity(
+    *,
+    business_goal: str,
+    canonical_goal: str | None,
+    action_aliases: list[str],
+) -> str | None:
+    candidates = [
+        re.sub(r"[_-]+", " ", canonical_goal or "").strip(),
+        business_goal,
+        *action_aliases,
+    ]
+    for candidate in candidates:
+        value = _strip_leading_action_verb(candidate)
+        if value and value != str(candidate or "").strip():
+            return value
+    return None
+
+
+def _strip_leading_action_verb(text: str) -> str:
+    value = str(text or "").strip(" ，,。.!！?？")
+    lowered = value.lower()
+    for verb in (
+        "create",
+        "add",
+        "open",
+        "update",
+        "edit",
+        "delete",
+        "remove",
+        "search",
+        "find",
+        "submit",
+        "complete",
+        "view",
+    ):
+        prefix = f"{verb} "
+        if lowered.startswith(prefix):
+            return value[len(prefix) :].strip(" ，,。.!！?？")
+    return value
 
 
 def _intake_slot_values(intake: ConversationIntakeResult | None) -> list[str]:

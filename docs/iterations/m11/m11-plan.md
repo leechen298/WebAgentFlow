@@ -1882,7 +1882,7 @@ Confirmed root causes：
 
 | Package | Type / status | Goal | Required gate | Handoff summary |
 |---|---|---|---|---|
-| `11.3.8.1-learning-action-goal-preservation` | code / ready for review; child seven-doc package created; not ready for implementation | 保留 learning intake 中的 business goal、canonical goal、business object 和 useful aliases，避免 action identity 退化为 `Learn how to create`。 | Review 完整七件套；review 通过前不得改 runtime。 | 交给 11.3.8.2 作为 reusable utterances 的业务语义输入；若 metadata shape 未稳定，11.3.8.2 blocked。 |
+| `11.3.8.1-learning-action-goal-preservation` | code / implementation_complete_pending_followup | 保留 learning intake 中的 business goal、canonical goal、business object 和 useful aliases，避免 action identity 退化为 `Learn how to create`。 | Focused tests passed; no external black-box revalidation in this package。 | 交给 11.3.8.2 作为 reusable utterances 的业务语义输入；11.3.8.3 仍负责 matcher consumption。 |
 | `11.3.8.2-suggested-utterance-generation` | code / planned after 11.3.8.1 | 基于已保留业务目标生成可复用 utterances，不再只生成教学 wrapper 变体。 | 依赖 11.3.8.1 review 和 metadata contract；创建并 review 完整七件套。 | 交给 11.3.8.3 作为 matcher match terms；若 utterances 仍缺业务对象，不能靠放宽 matcher 补偿。 |
 | `11.3.8.3-learned-action-matching-improvement` | code / planned after 11.3.8.1 and 11.3.8.2 | 让执行阶段基于 canonical goal、business goal、business object、aliases 和 reusable utterances 匹配已学 action，同时保护 ambiguous / low-confidence 场景。 | 依赖 11.3.8.1 / 11.3.8.2 reviews；创建并 review 完整七件套。 | 交给 11.3.8.4 组合成 automated regression；若仍依赖 target-specific constants，11.3.8.4 必须 blocked。 |
 | `11.3.8.4-regression-tests` | code / planned after 11.3.8.1-11.3.8.3 | 把 learn create inventory item -> execute same business action with new values 固化成 target-agnostic regression，不依赖外部站点运行或源码。 | 依赖前三包 review；创建并 review 完整七件套；不得把 `5177/inventory` 作为 hard dependency。 | 交给 11.3.8.5 做真实 external black-box revalidation；若 automated regression 未通过，revalidation 不应开始。 |
@@ -1894,10 +1894,9 @@ Next executable package：
 11.3.8.1-learning-action-goal-preservation
 ```
 
-截至当前，该 child 七件套目录已创建，状态为 `ready for review`。因此 11.3.8 的实现仍处于
-blocked-by-review-gate：必须先 review `11.3.8.1-learning-action-goal-preservation/` 的完整七件套，
-并在 review 通过后显式更新状态，之后才能修改 `learning_run_service.py`、`chat_runtime.py` 或相关
-focused tests。
+截至当前，`11.3.8.1-learning-action-goal-preservation/` 已完成本包 scoped implementation 和
+P1 fix，状态为 `implementation_complete_pending_followup`。11.3.8 后续实现继续按 planned child
+packages 推进；本状态不表示 external black-box validation 已通过。
 
 ## Later M11.x · Page Context Bridge Decision Point
 

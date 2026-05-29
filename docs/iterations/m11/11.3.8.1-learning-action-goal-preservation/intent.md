@@ -1,6 +1,6 @@
 # 意图（Intent）
 
-状态：ready for review
+状态：implementation_complete_pending_followup
 
 ## Problem / Purpose
 
@@ -44,4 +44,3 @@ learn-then-execute 的关键缺口。11.3.8 父包将修复拆为五个 child pa
 
 `11.3.8.2-suggested-utterance-generation` 可以读取本包定义和实现的 preserved business identity
 来生成可复用 utterances。如果本包不能稳定 metadata shape，11.3.8.2 必须保持 blocked。
-

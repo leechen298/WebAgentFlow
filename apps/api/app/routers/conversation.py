@@ -286,12 +286,18 @@ def dispatch_input(
         *,
         headless: bool = True,
         fill_values: dict[str, str] | None = None,
+        action_goal: str | None = None,
+        canonical_goal: str | None = None,
+        action_aliases: list[str] | None = None,
     ):
         return LearningRunService(db).run(
             LearningRunRequest(
                 url=url,
                 goal=raw_input,
                 fill_values=fill_values,
+                action_goal=action_goal,
+                canonical_goal=canonical_goal,
+                action_aliases=action_aliases or [],
                 language="zh",
                 headless=headless,
                 product_level=True,

@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：ready for review
+状态：implementation_complete_pending_followup
 
 ## Test Scope
 
@@ -64,4 +64,3 @@ Do not claim:
 - suggested utterance generation fixed.
 
 Those claims belong to later packages only after their own evidence exists.
-

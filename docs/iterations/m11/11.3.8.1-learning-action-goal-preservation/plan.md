@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：ready for review
+状态：implementation_complete_pending_followup
 
 ## Inputs
 
@@ -106,4 +106,3 @@ Stop condition: if implementation needs target-specific strings or looser matche
 If implementation succeeds, `11.3.8.2-suggested-utterance-generation` should consume
 `business_goal`, `canonical_goal`, `action_aliases`, `business_object`, and/or `match_terms`
 to generate reusable utterances. If these fields are absent or unstable, 11.3.8.2 remains blocked.
-
