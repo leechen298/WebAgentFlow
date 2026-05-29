@@ -165,6 +165,8 @@ authoritative inputs
 default execution mode
 full campaign mode
 child package lifecycle
+subagent delegation policy
+subagent ownership and evidence requirements
 runtime authorization rules
 hard stops
 final status vocabulary
@@ -187,6 +189,7 @@ next_action
 do_not_reimplement
 handoff_source
 package queue
+active subagent work, when applicable
 conflict rule
 live validation rule, when applicable
 ```
@@ -198,11 +201,35 @@ listed as eligible in `CURRENT_STATE.md` or the parent plan. A campaign may
 choose a stricter default such as one child per goal, but it must say so in
 `GOAL_RUNNER.md`.
 
+Because `/goal` campaigns are long-running development mode, subagents are
+required by default at each checkpoint. The parent agent keeps authority over
+the campaign contract, route decisions, integration, verification, evidence
+quality, Git safety, and final status. Subagents are bounded execution or
+review workers.
+
+Before starting checkpoint work, the parent agent must decide which tasks can
+run in parallel. Use subagents for bounded work such as codebase exploration,
+impact mapping, independent implementation slices with disjoint file ownership,
+test / log / CI triage, documentation / contract / test-plan review, or
+independent correctness, security, compatibility, regression, and
+evidence-quality review axes.
+
+A checkpoint may remain single-threaded only when it is truly single-scope, no
+independent parallel work exists, or delegation would violate the iteration
+contract, sandbox, live-run boundary, evidence rules, or Git safety rules. The
+checkpoint record must state why subagents were not used.
+
+Subagent outputs are advisory until the parent agent reviews, verifies, and
+integrates them. Campaign progress must not advance only because a subagent
+reported success.
+
 Each child package checkpoint must record, at minimum:
 
 ```text
 child package id
 route status
+subagent tasks launched or single-thread reason
+subagent outputs reviewed
 changed files
 commands run
 commands not run
@@ -224,6 +251,10 @@ any of these occur:
 - insufficient evidence for the requested status;
 - `CURRENT_STATE.md` conflicts with child docs, parent plan, review records,
   or actual git state;
+- subagent work bypasses iteration documents, assigned file ownership,
+  live-run boundaries, evidence rules, or Git safety rules;
+- campaign routing relies on an unverified subagent report instead of parent
+  verification and integration;
 - out-of-scope runtime, test, eval, external result, fixture, schema, API,
   worker, frontend, or documentation file appears in the diff;
 - live validation is needed but the current thread does not explicitly provide

@@ -147,6 +147,14 @@ campaign goal 只有在每个 child package 到达已记录 checkpoint 后才可
 授权时必须立即停止。详细标准放在 `docs/iterations/AGENTS.md` 和
 `docs/iterations/AGENTS.zh.md`，不要在根级文档重复大段流程。
 
+对于 `/goal` campaign work，coding-agent subagents 默认是必需的。父 agent
+负责 campaign 契约、checkpoint 路由、集成、验证、证据质量、Git 安全和最终状态。
+Subagents 只是有边界的并行执行或审查 worker，可用于 codebase exploration、
+互不重叠的 implementation slices、test / log / CI triage、iteration-doc review
+或独立 review axes。只有当当前 checkpoint 确实没有可独立并行的工作，或 delegation
+会违反 iteration contract、sandbox、live-run boundary、evidence rules 或 Git
+safety rules 时，才可以保持单线程；必须在 checkpoint 中记录原因。
+
 ## AI 编码 Agent —— 执行边界（硬约束）
 
 WebAgentFlow **本身就是**一个自主 web 操作引擎，内置有项目自己的

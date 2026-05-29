@@ -164,6 +164,16 @@ evidence, status conflicts, out-of-scope file changes, or missing live
 validation approval. Keep the detailed standard in `docs/iterations/AGENTS.md`
 and `docs/iterations/AGENTS.zh.md` rather than duplicating it here.
 
+For `/goal` campaign work, coding-agent subagents are required by default.
+The parent agent owns the campaign contract, checkpoint routing, integration,
+verification, evidence quality, Git safety, and final status. Subagents are
+execution or review workers for bounded parallel work such as codebase
+exploration, disjoint implementation slices, test / log / CI triage,
+iteration-doc review, or independent review axes. A checkpoint may stay
+single-threaded only when there is no independent parallel work or delegation
+would violate the iteration contract, sandbox, live-run boundary, evidence
+rules, or Git safety rules; record that reason in the checkpoint.
+
 ## AI Coding Agent — Execution Boundary (HARD RULE)
 
 WebAgentFlow IS an autonomous web-operation engine with its own internal

@@ -149,6 +149,8 @@ authoritative inputs
 default execution mode
 full campaign mode
 child package lifecycle
+subagent delegation policy
+subagent ownership and evidence requirements
 runtime authorization rules
 hard stops
 final status vocabulary
@@ -171,6 +173,7 @@ next_action
 do_not_reimplement
 handoff_source
 package queue
+active subagent work, when applicable
 conflict rule
 live validation rule, when applicable
 ```
@@ -180,11 +183,31 @@ live validation rule, when applicable
 时，Codex 才可以不等新的用户提示继续下一包。Campaign 可以选择更严格的默认策略，
 例如 one child per goal，但必须在 `GOAL_RUNNER.md` 中明确写出。
 
+因为 `/goal` campaign 属于长程开发模式，每个 checkpoint 默认必须使用
+subagents。父 agent 保留 campaign 契约、路由决策、集成、验证、证据质量、
+Git 安全和最终状态的责任。Subagents 只是有边界的执行或审查 worker。
+
+开始 checkpoint work 前，父 agent 必须判断哪些任务可以并行。可以把 codebase
+exploration、impact mapping、互不重叠且有明确 file ownership 的 implementation
+slices、test / log / CI triage、documentation / contract / test-plan review，
+以及 correctness、security、compatibility、regression、evidence-quality 等独立
+review axes 交给 subagents。
+
+只有当 checkpoint 确实是 single-scope、没有可独立并行的工作，或 delegation
+会违反 iteration contract、sandbox、live-run boundary、evidence rules 或 Git
+safety rules 时，才可以保持单线程。checkpoint record 必须写明未使用 subagents
+的原因。
+
+Subagent 输出在父 agent review、verify、integrate 之前只属于 advisory。Campaign
+progress 不得仅因为 subagent 声称成功就前进。
+
 每个 child package checkpoint 至少必须记录：
 
 ```text
 child package id
 route status
+subagent tasks launched or single-thread reason
+subagent outputs reviewed
 changed files
 commands run
 commands not run
@@ -204,6 +227,9 @@ Full campaign mode 不跳过门禁。出现以下任一情况时，必须立即�
 - implementation 前缺少 `implementation_authorized: yes`；
 - 目标状态缺少足够证据；
 - `CURRENT_STATE.md` 与 child docs、parent plan、review records 或实际 git state 冲突；
+- subagent work 绕过 iteration documents、assigned file ownership、live-run
+  boundaries、evidence rules 或 Git safety rules；
+- campaign routing 依赖未经父 agent 验证和集成的 subagent report；
 - diff 中出现越界的 runtime、test、eval、external result、fixture、schema、API、
   worker、frontend 或 documentation file；
 - 需要 live validation，但当前 thread 没有明确提供 target、API、state、scenario
