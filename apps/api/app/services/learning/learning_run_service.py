@@ -535,11 +535,16 @@ def _utterances_for(request: LearningRunRequest) -> list[str]:
 
 
 def _product_action_label_for(request: LearningRunRequest) -> str:
-    identity_goal = _clean_business_goal(request.action_goal or "")
+    identity = _action_identity_for(request)
+    identity_goal = identity["business_goal"]
     goal = identity_goal or _readable_canonical_goal(request.canonical_goal)
+    if not goal and identity["action_aliases"]:
+        goal = identity["action_aliases"][0]
     if not goal:
         goal = _strip_product_learning_noise(request.goal or "")
         goal = _strip_named_value_clauses(goal)
+        if _contains_fill_value(goal, request.fill_values or {}):
+            goal = ""
     goal = _strip_named_value_clauses(goal)
     if "登录" in goal:
         return "登录"
@@ -553,12 +558,26 @@ def _product_action_label_for(request: LearningRunRequest) -> str:
 
 def _action_identity_for(request: LearningRunRequest) -> dict[str, Any]:
     business_goal = _clean_business_goal(request.action_goal or "")
+    if _contains_fill_value(business_goal, request.fill_values or {}):
+        business_goal = ""
     if not business_goal and request.product_level:
-        business_goal = _clean_business_goal(_strip_product_learning_noise(request.goal or ""))
+        fallback_goal = _clean_business_goal(_strip_product_learning_noise(request.goal or ""))
+        if not _contains_fill_value(fallback_goal, request.fill_values or {}):
+            business_goal = fallback_goal
     canonical_goal = (request.canonical_goal or "").strip() or None
+    if canonical_goal and _contains_fill_value(canonical_goal, request.fill_values or {}):
+        canonical_goal = None
     action_aliases = _dedupe_terms(
-        [_clean_business_goal(alias) for alias in request.action_aliases]
+        [
+            alias
+            for alias in (_clean_business_goal(alias) for alias in request.action_aliases)
+            if not _contains_fill_value(alias, request.fill_values or {})
+        ]
     )
+    if not business_goal:
+        business_goal = _readable_canonical_goal(canonical_goal) or (
+            action_aliases[0] if action_aliases else ""
+        )
     business_object = _business_object_for(
         business_goal=business_goal,
         canonical_goal=canonical_goal,
@@ -648,6 +667,17 @@ def _dedupe_terms(terms: list[str]) -> list[str]:
         seen.add(key)
         result.append(value)
     return result
+
+
+def _contains_fill_value(term: str, fill_values: dict[str, str]) -> bool:
+    lowered = str(term or "").strip().lower()
+    if not lowered:
+        return False
+    for value in fill_values.values():
+        slot_value = str(value).strip().lower() if value is not None else ""
+        if slot_value and slot_value in lowered:
+            return True
+    return False
 
 
 def _exclude_fill_value_terms(

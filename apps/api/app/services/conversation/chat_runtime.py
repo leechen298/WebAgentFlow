@@ -4399,8 +4399,10 @@ def _learning_identity_kwargs_from_intake(
         return {}
     slot_values = _intake_slot_values(intake)
     action_goal = str(intake.action.goal or "").strip()
-    if not _is_reusable_identity_term(action_goal, slot_values):
+    if not action_goal:
         return {}
+    if not _is_reusable_identity_term(action_goal, slot_values):
+        action_goal = ""
     aliases = [
         alias
         for alias in intake.action.aliases
@@ -4409,11 +4411,16 @@ def _learning_identity_kwargs_from_intake(
     canonical_goal = str(intake.action.canonical_goal or "").strip() or None
     if canonical_goal and not _is_reusable_identity_term(canonical_goal, slot_values):
         canonical_goal = None
-    return {
-        "action_goal": action_goal,
-        "canonical_goal": canonical_goal,
-        "action_aliases": aliases,
-    }
+    if not aliases and canonical_goal == "登录":
+        return {}
+    if not aliases and action_goal and canonical_goal == action_goal:
+        return {}
+    kwargs: dict[str, Any] = {"action_aliases": aliases}
+    if action_goal:
+        kwargs["action_goal"] = action_goal
+    if canonical_goal:
+        kwargs["canonical_goal"] = canonical_goal
+    return kwargs if action_goal or canonical_goal or aliases else {}
 
 
 def _is_reusable_identity_term(term: str, slot_values: list[str]) -> bool:
@@ -4595,13 +4602,36 @@ def _action_from_learning_result(
     intake: ConversationIntakeResult | None = None,
 ) -> dict[str, Any]:
     parsed = urlparse(result.target_url or "")
-    business_goal = result.business_goal or (intake.action.goal if intake else "")
-    canonical_goal = result.canonical_goal or (intake.action.canonical_goal if intake else None)
-    action_aliases = result.action_aliases or (list(intake.action.aliases) if intake else [])
+    slot_values = _intake_slot_values(intake)
+    intake_business_goal = (
+        str(intake.action.goal or "").strip()
+        if intake and _is_reusable_identity_term(intake.action.goal, slot_values)
+        else ""
+    )
+    intake_canonical_goal = str(intake.action.canonical_goal or "").strip() if intake else ""
+    if intake_canonical_goal and not _is_reusable_identity_term(
+        intake_canonical_goal, slot_values
+    ):
+        intake_canonical_goal = ""
+    intake_aliases = [
+        alias
+        for alias in (list(intake.action.aliases) if intake else [])
+        if _is_reusable_identity_term(alias, slot_values)
+    ]
+    business_goal = result.business_goal or intake_business_goal
+    canonical_goal = result.canonical_goal or intake_canonical_goal or None
+    action_aliases = result.action_aliases or intake_aliases
+    if not business_goal:
+        business_goal = _first_reusable_business_goal(
+            canonical_goal=canonical_goal,
+            action_aliases=action_aliases,
+        )
     alias = result.action_label
     if result.business_goal:
         alias = result.business_goal
     elif business_goal and _is_learning_wrapper_label(alias):
+        alias = business_goal
+    elif business_goal and not _is_reusable_identity_term(alias, slot_values):
         alias = business_goal
     action = {
         "alias": alias,
@@ -4622,7 +4652,7 @@ def _action_from_learning_result(
         canonical_goal=canonical_goal,
         action_aliases=action_aliases,
         business_object=business_object,
-        slot_values=_intake_slot_values(intake),
+        slot_values=slot_values,
     )
     if business_goal:
         action["business_goal"] = business_goal
@@ -4635,6 +4665,19 @@ def _action_from_learning_result(
     if match_terms:
         action["match_terms"] = match_terms
     return action
+
+
+def _first_reusable_business_goal(
+    *,
+    canonical_goal: str | None,
+    action_aliases: list[str],
+) -> str:
+    readable_canonical = re.sub(r"[_-]+", " ", canonical_goal or "").strip()
+    for candidate in (readable_canonical, *action_aliases):
+        value = str(candidate or "").strip()
+        if value:
+            return value
+    return ""
 
 
 def _is_learning_wrapper_label(label: str) -> bool:
