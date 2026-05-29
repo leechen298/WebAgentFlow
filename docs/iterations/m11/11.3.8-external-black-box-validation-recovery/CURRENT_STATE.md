@@ -17,7 +17,8 @@ latest_external_black_box_result: FAIL
 ## Active Child Package
 
 active_child_package: 11.3.8.1-learning-action-goal-preservation
-status: implementation_complete_pending_followup
+route_status: implementation_complete_pending_followup
+route_type: review-closeout-existing-implementation
 next_action: review-closeout-existing-implementation
 do_not_reimplement: true
 handoff_target: 11.3.8.2-suggested-utterance-generation
@@ -34,7 +35,7 @@ Route meaning:
 | Package | Current route status | Next action |
 |---|---|---|
 | `11.3.8.1-learning-action-goal-preservation` | `implementation_complete_pending_followup` | Review and close out existing implementation |
-| `11.3.8.2-suggested-utterance-generation` | `blocked_by_11.3.8.1_metadata_contract` | Create / review child seven-doc package after 11.3.8.1 closes |
+| `11.3.8.2-suggested-utterance-generation` | `blocked_by_11.3.8.1_metadata_contract` | Create / review child seven-doc package after 11.3.8.1 closes; route type `create-review-seven-doc-package` |
 | `11.3.8.3-learned-action-matching-improvement` | `blocked_by_11.3.8.2_utterance_contract` | Wait for utterance contract |
 | `11.3.8.4-regression-tests` | `blocked_by_11.3.8.3_matching_contract` | Wait for matcher contract |
 | `11.3.8.5-external-black-box-revalidation-closeout` | `blocked_by_11.3.8.4_regression_tests` | Stop for live validation approval before any live run |

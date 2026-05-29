@@ -55,6 +55,22 @@ This is a review / closeout route for existing HEAD state. It is not a fresh
 implementation route. Do not reimplement `11.3.8.1` unless the child package
 review finds a P0 / P1 blocker that requires a minimal in-scope fix.
 
+## Child Package Lifecycle Routes
+
+A child package may use one of these route types:
+
+- `review-closeout-existing-implementation`
+- `create-review-seven-doc-package`
+- `implementation-after-reviewed-design`
+- `external-validation-closeout`
+
+If the route is `create-review-seven-doc-package`, missing child docs are the
+task, not a blocker. Create the seven-document set, update the child
+`review.md`, and stop as `REVIEW_READY`.
+
+If the route is `implementation-after-reviewed-design`, missing child docs or
+missing reviewed `technical-design.md` are blockers.
+
 ## Runtime Authorization
 
 The parent `11.3.8` package never directly authorizes runtime, matcher, test,
@@ -72,11 +88,19 @@ after that child package has:
 During child package execution, do not modify `GOAL_RUNNER.md` unless the user
 explicitly asks for Goal Runner maintenance.
 
+For code or mixed implementation, `technical-design.md` counts as reviewed only
+when the child `review.md` or `FINAL_STATUS` explicitly contains
+`implementation_authorized: yes`, or an equivalent human /
+reviewer-approved marker required by the repository iteration rules. Codex must
+not self-authorize implementation in the same goal run that first creates the
+child technical design unless the user explicitly asks for that.
+
 ## Hard Stops
 
 Stop as `NEEDS_USER_INPUT` or `BLOCKED` when any of these occur:
 
-- the selected child package is missing its required documents;
+- the selected child package is missing its required documents and the current
+  route is not `create-review-seven-doc-package`;
 - the child package lacks reviewed technical design for code / mixed work;
 - `CURRENT_STATE.md` conflicts with a child `review.md`,
   `technical-design.md`, `plan.md`, or actual git state;

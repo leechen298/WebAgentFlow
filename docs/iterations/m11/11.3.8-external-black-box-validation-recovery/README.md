@@ -22,6 +22,8 @@ validation，也不改变任何 runtime contract。
 允许改动范围：
 
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/*`
+- routing-only `FINAL_STATUS` annotations in the active child package
+  `review.md`
 - `docs/iterations/m11/README.md` 中的 11.3.8 索引状态
 - `docs/iterations/m11/m11-plan.md` 中的 11.3.8 计划状态
 

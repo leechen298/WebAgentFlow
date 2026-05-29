@@ -23,7 +23,7 @@ Status: ready for review
 | docs | Goal Runner routing guardrails | `rg -n "GOAL_RUNNER|CURRENT_STATE|FINAL_STATUS|NEEDS_USER_INPUT|PACKAGE_COMPLETE|do_not_reimplement" docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/11.3.8.1-learning-action-goal-preservation` | Goal Runner files, current-state route, and fixed final-status fields are present | Yes | Codex App `/goal` routing check |
 | docs | Acceptance and evidence wording | `rg -n "not run|unverified|PASS|FAIL|FOLLOW_UP|BLOCKED|PV-CLI-003|external-black-box-validation-latest" docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Docs preserve evidence honesty and current failure baseline | Yes | No runtime pass claims |
 | git | Docs-only diff listing | `git diff --name-only` | Changed files are documentation files only | Yes | Review must record: runtime files changed no; test/runtime/eval files changed no; docs-only scope preserved yes |
-| git | Scope guard | `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | Only docs under the package, M11 index, and M11 plan changed | Yes | Runtime/test/build files must not appear |
+| git | Scope guard | `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | Only parent Goal Runner docs, approved routing-only active child review metadata, M11 index, and M11 plan docs changed | Yes | Runtime/test/build files must not appear |
 
 ## Commands Not Run And Why
 

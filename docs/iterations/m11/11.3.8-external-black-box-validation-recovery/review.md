@@ -10,9 +10,55 @@ parent_authorizes_runtime_implementation: no
 active_child_package: 11.3.8.1-learning-action-goal-preservation
 do_not_reimplement: true
 blocking_findings: none for Goal Runner docs routing
-last_verified_at: 2026-05-29 14:47 CST
-commands_run: find package file set; rg Goal Runner routing guardrails; rg evidence-honesty guardrails; git diff --name-only; git status --short; git diff --check
+last_verified_at: 2026-05-29 15:08 CST
+commands_run: find package file set; rg Goal Runner routing guardrails; rg evidence-honesty guardrails; rg follow-up route guards; git diff --name-only; git status --short; git diff --check
 commands_not_run: runtime tests; wagent chat; verify-scenario; browser smoke; external black-box validation
+
+## 2026-05-29 Goal Runner Review Follow-up
+
+- Author: Codex, documentation routing agent
+- Decision: REVIEW_READY
+- Scope: addressed review findings for Goal Runner routing only; no runtime,
+  schema, API, frontend, fixture, migration, worker, eval-runner, or test
+  implementation files modified.
+
+Changed files:
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/GOAL_RUNNER.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/contract.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/test-plan.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+
+Follow-up fixes:
+
+- Allowed routing-only `FINAL_STATUS` metadata in the active child
+  `review.md`.
+- Split child package route types so `create-review-seven-doc-package` can
+  create missing child docs, while implementation routes still block on missing
+  docs or reviewed design.
+- Renamed current active child `status` to `route_status` and added
+  `route_type`.
+- Extended the scope guard to include the active child `review.md` routing
+  metadata.
+- Defined reviewed technical-design authorization with
+  `implementation_authorized: yes` or equivalent human / reviewer marker.
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `rg -n 'routing-only.*FINAL_STATUS|active child package|active-child|11\.3\.8\.1-learning-action-goal-preservation/review\.md' docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/contract.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/test-plan.md` | Found parent README / contract / scope guard coverage for active-child routing metadata | 0 | Verifies parent contract / README / scope guard cover active-child routing metadata |
+| `rg -n "Child Package Lifecycle Routes|create-review-seven-doc-package|implementation-after-reviewed-design|missing child docs are the task|implementation_authorized: yes|self-authorize" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/GOAL_RUNNER.md` | Found doc-authoring route, implementation route, hard-stop exception, and implementation authorization marker | 0 | Verifies doc-authoring route, implementation route, and reviewed-design authorization marker |
+| `rg -n "route_status|route_type|status: implementation_complete_pending_followup" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md` | Found `CURRENT_STATE.md` route fields and child `FINAL_STATUS` status field separately | 0 | Verifies current-state route status is distinct from final status |
+| `git diff --name-only` | Shows only six parent Goal Runner docs changed | 0 | Docs-only diff listing |
+| `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | Shows only parent Goal Runner docs modified; active child review path included in scope guard and unchanged by this follow-up | 0 | Scope guard includes active child review path |
+| `git diff --check` | Clean | 0 | Whitespace check |
+
+Not run:
+
+- Runtime tests, `wagent chat`, `verify-scenario`, browser smoke, autonomous runs, and external black-box validation were not run. This follow-up only tightens docs-only Goal Runner routing guards.
 
 ## 2026-05-29 Codex Goal Runner Docs Optimization
 

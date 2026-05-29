@@ -28,8 +28,14 @@ implementation and do not override `plan.md` or any child package documents.
 This parent package may change only:
 
 - umbrella planning docs under `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/`;
+- routing-only `FINAL_STATUS` metadata in
+  `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`;
 - the M11 milestone index entry for this package in `docs/iterations/m11/README.md`;
 - the M11 milestone plan status for this package in `docs/iterations/m11/m11-plan.md`.
+
+The active-child `review.md` exception is only for current-state routing. It
+does not authorize runtime, test, matcher, validation, or child implementation
+changes.
 
 Child packages may later propose runtime, test, or validation changes only after they create their own full seven-document package and complete review.
 
