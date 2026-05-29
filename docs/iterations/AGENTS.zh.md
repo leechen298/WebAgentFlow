@@ -62,6 +62,38 @@ Handoff to next package
 - 如果缺少 `Forbidden changes`、`Compatibility constraints` 或 `Scope guardrails`
   可能导致 runtime、API、schema、prompt、eval 或 evidence 越界，review 必须记录 P1。
 
+## Milestone Index Synchronization
+
+任何新增的 concrete package directory、umbrella package、validation package
+或 planned child-package sequence，都必须同步到所属 milestone 的 `README.md`；
+适用时也必须同步到 milestone plan。
+
+milestone `README.md` 必须暴露足够信息，让后续 agent 能发现：
+
+- package id / directory；
+- package type；
+- current status；
+- umbrella package 的 parent / child relationship；
+- 当父级 package 只定义计划时，下一个可执行 child package。
+
+milestone plan 或 umbrella plan 仍然是执行级规格，但 milestone `README.md`
+不能完全遗漏该 package。package directory 已存在但 milestone `README.md`
+没有记录，是 review finding。如果该遗漏可能导致 implementation agent 从错误
+package 开始，按 P1 处理；否则至少按 P2 处理。
+
+当父级 umbrella package 的文档要求 child packages 先创建完整七件套时，该父级
+umbrella package 不得被当作 code implementation package。umbrella plan 中规划的
+child packages 必须列入 milestone index；或者 milestone index 必须指向父级 package，
+并清楚说明下一个可执行 child package。
+
+Review checklist：
+
+- 检查 package directory 是否存在。
+- 检查 milestone `README.md` entry 是否存在。
+- 检查 milestone plan 或 parent umbrella plan 是否包含执行级 planned-package fields。
+- 检查 package `README.md`、milestone `README.md` 和 plan 中的 status / type 是否一致。
+- 检查 implementation 前的 child-package gate。
+
 ## Iteration Package File Standard
 
 Code 和 mixed package 必须包含：

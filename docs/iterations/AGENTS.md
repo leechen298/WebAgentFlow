@@ -69,6 +69,44 @@ Hard rules:
   `Scope guardrails` could let runtime, API, schema, prompt, eval, or evidence
   work exceed scope, review must record a P1 finding.
 
+## Milestone Index Synchronization
+
+Any new concrete package directory, umbrella package, validation package, or
+planned child-package sequence must be reflected in the owning milestone
+`README.md` and, when applicable, the milestone plan.
+
+The milestone `README.md` must expose enough information for future agents to
+discover:
+
+- package id / directory;
+- package type;
+- current status;
+- parent / child relationship for umbrella packages;
+- next executable child package when a parent only defines a plan.
+
+The milestone plan or umbrella plan remains the execution-grade
+specification, but the milestone `README.md` must not omit the package
+entirely. A package directory that exists but is missing from the milestone
+`README.md` is a review finding. If the omission can cause an implementation
+agent to start from the wrong package, treat it as P1; otherwise treat it as
+at least P2.
+
+Parent umbrella packages must not be treated as code implementation packages
+when their docs require child packages to create full seven-document sets
+first. Child packages planned inside an umbrella plan must either be listed in
+the milestone index or the milestone index must point to the parent package and
+clearly state the next executable child package.
+
+Review checklist:
+
+- Check package directory exists.
+- Check milestone `README.md` entry exists.
+- Check milestone plan or parent umbrella plan has execution-grade
+  planned-package fields.
+- Check status / type match across package `README.md`, milestone
+  `README.md`, and plan.
+- Check child-package gate before implementation.
+
 ## Iteration Package File Standard
 
 Code and mixed packages must include:
