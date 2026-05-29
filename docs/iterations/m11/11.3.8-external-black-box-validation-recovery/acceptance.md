@@ -96,6 +96,7 @@
 3. Child iteration requirement is explicit。
    - Any code implementation under 11.3.8.x must first create the complete seven-document package required by `docs/iterations/README.md`。
    - This umbrella package does not replace child `contract.md`、`technical-design.md`、`test-plan.md` or `review.md`。
+   - Parent `plan.md` must describe each 11.3.8.x child package using the planned-package fields required by `docs/iterations/AGENTS.md` / `AGENTS.zh.md`。
 
 4. External validation reports remain honest。
    - `PASS`、`FAIL`、`FOLLOW_UP`、`UNVERIFIED` and `BLOCKED` must reflect evidence。

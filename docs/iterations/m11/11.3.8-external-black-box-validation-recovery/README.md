@@ -74,6 +74,10 @@ review.md
 ```
 
 本 11.3.8 总包只提供 umbrella plan 和边界，不替代子迭代的 implementation gate。
+但父级 `plan.md` 必须按 `docs/iterations/AGENTS.md` / `AGENTS.zh.md` 的 Planned
+Package Standard 把每个子迭代写成准迭代包规格，明确 package name、status、type、
+required reading、allowed / forbidden changes、expected deliverables、verification、
+compatibility constraints、scope guardrails、exit criteria 和 handoff。
 
 ### 11.3.8.1 Learning Action Goal Preservation
 
