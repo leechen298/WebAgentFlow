@@ -259,6 +259,44 @@ Blockers:
 - None for documentation review.
 - Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
 
+## 2026-05-28 Codex A Documentation Author Handoff
+
+- Author: Codex A, documentation author
+- Decision: ready for review remains correct
+- Scope: documentation-only verification and review refresh for the 11.3.8 umbrella planning package; no runtime, schema, API, frontend, fixture, migration, or test implementation files changed
+
+Changed files:
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `rg --files -g 'CLAUDE.md' -g 'CLAUDE.zh.md' -g 'docs/iterations/**' -g 'docs/product-model.md'` | Located repository guidance, iteration standards, templates, M11 docs, and existing 11.3.8 package docs | 0 | Discovery |
+| `find docs/iterations -maxdepth 3 -type f | sort | sed -n '1,220p'` | Inspected iteration package inventory and confirmed 11.3.8 package exists | 0 | Discovery |
+| `git status --short` | Existing untracked `.agent-runs/` is outside this package | 0 | Left untouched |
+| `sed -n '1,260p' docs/iterations/README.md` | Read iteration documentation standard | 0 | Required reading |
+| `sed -n '1,320p' docs/iterations/AGENTS.md` | Read planned-package, milestone-index, anti-drift, validation, evidence, and review rules | 0 | Required reading |
+| `sed -n '1,180p' CLAUDE.md` | Read mirrored repository guidance and M11 closeout caveats | 0 | Required reading |
+| `sed -n '1,360p' docs/iterations/m11/README.md` | Confirmed milestone index lists 11.3.8 as `ready for review / umbrella planning` and gates implementation through `11.3.8.1` | 0 | Status sync check |
+| `sed -n '1810,1905p' docs/iterations/m11/m11-plan.md` | Confirmed milestone plan lists 11.3.8 as `ready for review / umbrella planning`, preserves the external black-box `FAIL` baseline, and identifies the next executable child package | 0 | Status sync check |
+| `find docs/iterations/templates -maxdepth 1 -type f -name '*.md' -print | sort | xargs -n1 basename` | Template set contains README, intent, contract, technical-design, test-plan, plan, and review templates | 0 | Template check |
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f | sort` | Parent file set present: `README.md`, `acceptance.md`, `contract.md`, `intent.md`, `plan.md`, `review.md`, `technical-design.md`, and `test-plan.md` | 0 | Docs-only file completeness check |
+| `rg -n "11\\.3\\.8-external-black-box-validation-recovery\|状态：ready for review\|ready for review / umbrella planning" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | Package README, milestone index, and milestone plan expose `ready for review` | 0 | User-requested status sync check |
+| `rg -n "Package name\|Status:\|Type:\|Goal:\|Why this exists\|Inputs / required reading\|Allowed changes\|Forbidden changes\|Expected deliverables\|Expected tests / verification\|Compatibility constraints\|Scope guardrails\|Exit criteria\|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Required planned-package field labels found for all five child package specs | 0 | Field-presence check; reviewer must still judge adequacy |
+| `rg -n "not run\|unverified\|PASS\|FAIL\|FOLLOW_UP\|BLOCKED\|PV-CLI-003\|external-black-box-validation-latest\|Assumptions\|Open Risks" docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Evidence-honesty wording, current failure-baseline guardrails, assumptions, and open risks found | 0 | No runtime pass claim made |
+| `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | No scoped diff before this review-note edit | 0 | Scope guard before edit |
+
+Not run:
+
+- Runtime tests, build, lint, browser/UI smoke, `wagent chat`, `verify-scenario`, autonomous runs, and external black-box revalidation were not run. This task was documentation-only and does not claim `PV-CLI-003` is fixed.
+
+Blockers:
+
+- None for documentation review.
+- Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
+
 ## 2026-05-28 Codex A Current Documentation Refresh
 
 - Author: Codex A, documentation author
