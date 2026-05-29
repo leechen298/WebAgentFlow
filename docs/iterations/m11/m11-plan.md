@@ -1812,7 +1812,7 @@ M11 已按当前 v0.1 runtime 范围收口。收口范围包括：
 
 ## 11.3.8 · External Black-box Validation Recovery
 
-状态：proposed / umbrella planning。
+状态：ready for review / umbrella planning。
 
 类型：M11.3 post-closeout recovery follow-up；不是代码 implementation package。
 

@@ -19,7 +19,8 @@ The parent package is documentation-only. It is not a code implementation packag
 This parent package may change only:
 
 - umbrella planning docs under `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/`;
-- the M11 milestone index entry for this package in `docs/iterations/m11/README.md`.
+- the M11 milestone index entry for this package in `docs/iterations/m11/README.md`;
+- the M11 milestone plan status for this package in `docs/iterations/m11/m11-plan.md`.
 
 Child packages may later propose runtime, test, or validation changes only after they create their own full seven-document package and complete review.
 

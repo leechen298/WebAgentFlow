@@ -10,7 +10,7 @@ The recorded baseline is:
 
 - `docs/testing/results/external-black-box-validation-latest.md` reports overall `FAIL`.
 - `docs/testing/results/pv-cli-003-failure-triage-20260525.md` classifies the failure as generic learning action label, lost business object, and literal matching.
-- `docs/iterations/m11/README.md` already lists 11.3.8 as proposed umbrella planning.
+- `docs/iterations/m11/README.md` already lists 11.3.8 as `ready for review / umbrella planning`.
 
 ## Documentation Structure
 
@@ -37,6 +37,7 @@ Changed by this docs package:
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/test-plan.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
 - `docs/iterations/m11/README.md`
+- `docs/iterations/m11/m11-plan.md`
 
 Read-only inputs:
 
@@ -82,7 +83,7 @@ The parent docs preserve existing M11 closeout semantics: 11.3.7 remains passed 
 |---|---|---|
 | File completeness | Parent package has required docs for a sequencing/evidence planning package | `test-plan.md` documentation checks |
 | Planned package fields | Each child package has execution-grade planned-package fields | `rg` checks plus review inspection |
-| Status sync | Package README and M11 index both say `ready for review` | `rg` checks |
+| Status sync | Package README, M11 index, and M11 plan say `ready for review` | `rg` checks |
 | Evidence honesty | Docs state runtime/live validation was not run | `review.md` and `test-plan.md` checks |
 | Boundary preservation | Runtime/test/fixture files are not modified | `git diff --name-only` inspection |
 
@@ -90,6 +91,6 @@ The parent docs preserve existing M11 closeout semantics: 11.3.7 remains passed 
 
 ```bash
 find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f | sort
-rg -n "Status: ready for review|状态：ready for review|Package name|Forbidden changes|Compatibility constraints|Scope guardrails|Exit criteria|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md
-git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md
+rg -n "Status: ready for review|状态：ready for review|ready for review / umbrella planning|Package name|Forbidden changes|Compatibility constraints|Scope guardrails|Exit criteria|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md
+git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md
 ```

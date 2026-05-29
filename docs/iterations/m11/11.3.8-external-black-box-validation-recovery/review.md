@@ -16,6 +16,7 @@ Status: ready for review
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/test-plan.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
 - `docs/iterations/m11/README.md`
+- `docs/iterations/m11/m11-plan.md`
 
 ## Test Results
 
@@ -79,3 +80,52 @@ Blockers:
 
 - None for documentation review.
 - Implementation remains blocked until the next child package, `11.3.8.1-learning-action-goal-preservation`, creates its own full seven-document package and passes documentation/design review.
+
+## 2026-05-28 Status Synchronization Refresh
+
+- Author: Codex A, documentation author
+- Decision: ready for review remains correct
+- Scope: synchronized 11.3.8 status across package README, milestone index, and milestone plan; no runtime, schema, API, frontend, fixture, migration, or test implementation files changed
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `rg -n "11\\.3\\.8\|external-black-box" docs/iterations/m11/m11-plan.md docs/iterations/m11/README.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Found 11.3.8 package, plan, child sequence, evidence boundaries, and current status references | 0 | Discovery/status inspection before edit |
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f \| sort` | Parent file set present: `README.md`, `acceptance.md`, `contract.md`, `intent.md`, `plan.md`, `review.md`, `technical-design.md`, `test-plan.md` | 0 | Docs-only existence check |
+| `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | Clean before status-sync edit | 0 | Confirmed no scoped pending changes before this update |
+| `rg -n "Package name\|Status:\|Type:\|Goal:\|Why this exists\|Inputs / required reading\|Allowed changes\|Forbidden changes\|Expected deliverables\|Expected tests / verification\|Compatibility constraints\|Scope guardrails\|Exit criteria\|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Required planned-package field labels found for all five child specs | 0 | Field-presence check; adequacy remains for reviewer judgment |
+
+Not run:
+
+- Runtime tests, build, lint, browser/UI smoke, `wagent chat`, `verify-scenario`, autonomous runs, and external black-box revalidation were not run. They remain outside this parent docs-only package.
+
+Blockers:
+
+- None for documentation review.
+- Implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
+
+## 2026-05-28 Final Docs Verification
+
+- Author: Codex A, documentation author
+- Decision: ready for review
+- Scope: documentation verification only
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f \| sort` | Parent file set present: `README.md`, `acceptance.md`, `contract.md`, `intent.md`, `plan.md`, `review.md`, `technical-design.md`, `test-plan.md` | 0 | Docs-only file completeness check |
+| `rg -n "11\\.3\\.8-external-black-box-validation-recovery\|状态：ready for review\|ready for review / umbrella planning" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | Package README, milestone index, and milestone plan expose `ready for review` | 0 | Status sync check |
+| `rg -n "Package name\|Status:\|Type:\|Goal:\|Why this exists\|Inputs / required reading\|Allowed changes\|Forbidden changes\|Expected deliverables\|Expected tests / verification\|Compatibility constraints\|Scope guardrails\|Exit criteria\|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Required planned-package field labels found for all five child specs | 0 | Field-presence check; adequacy remains for reviewer judgment |
+| `rg -n "not run\|unverified\|PASS\|FAIL\|FOLLOW_UP\|BLOCKED\|PV-CLI-003\|external-black-box-validation-latest" docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Evidence-honesty wording and current failure-baseline guardrails found | 0 | No runtime pass claim made |
+| `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | Modified files are limited to 11.3.8 docs and `docs/iterations/m11/m11-plan.md`; `docs/iterations/m11/README.md` is status-synced and currently has no scoped diff | 0 | Scope guard |
+
+Not run:
+
+- Runtime tests, build, lint, browser/UI smoke, `wagent chat`, `verify-scenario`, autonomous runs, and external black-box revalidation were not run. This parent package changes planning documentation only.
+
+Blockers:
+
+- None for documentation review.
+- Runtime implementation remains blocked until child package `11.3.8.1-learning-action-goal-preservation` has its own reviewed seven-document package.

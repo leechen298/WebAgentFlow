@@ -23,6 +23,7 @@ validation，也不改变任何 runtime contract。
 
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/*`
 - `docs/iterations/m11/README.md` 中的 11.3.8 索引状态
+- `docs/iterations/m11/m11-plan.md` 中的 11.3.8 计划状态
 
 禁止改动范围：
 

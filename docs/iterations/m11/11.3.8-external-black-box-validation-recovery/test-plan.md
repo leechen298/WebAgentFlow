@@ -18,10 +18,10 @@ Status: ready for review
 | Layer | Scenario | Command / Surface | Expected | Required? | Notes |
 |---|---|---|---|---|---|
 | docs | Parent package file set exists | `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f | sort` | Shows README, intent, contract, technical-design, test-plan, acceptance, plan, review | Yes | Docs-only verification |
-| docs | Parent package status sync | `rg -n "11\\.3\\.8-external-black-box-validation-recovery|状态：ready for review" docs/iterations/m11/README.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | README and milestone index expose `ready for review` | Yes | User explicitly requested this |
+| docs | Parent package status sync | `rg -n "11\\.3\\.8-external-black-box-validation-recovery|状态：ready for review|ready for review / umbrella planning" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | Package README, milestone index, and milestone plan expose `ready for review` | Yes | User explicitly requested README/index sync; milestone plan is also kept aligned |
 | docs | Planned child package fields | `rg -n "Package name|Status:|Type:|Goal:|Why this exists|Inputs / required reading|Allowed changes|Forbidden changes|Expected deliverables|Expected tests / verification|Compatibility constraints|Scope guardrails|Exit criteria|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Required planned-package fields are present for child packages | Yes | Review must still inspect adequacy |
 | docs | Acceptance and evidence wording | `rg -n "not run|unverified|PASS|FAIL|FOLLOW_UP|BLOCKED|PV-CLI-003|external-black-box-validation-latest" docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Docs preserve evidence honesty and current failure baseline | Yes | No runtime pass claims |
-| git | Scope guard | `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md` | Only docs under the package and M11 index changed | Yes | Runtime/test/build files must not appear |
+| git | Scope guard | `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | Only docs under the package, M11 index, and M11 plan changed | Yes | Runtime/test/build files must not appear |
 
 ## Commands Not Run And Why
 
