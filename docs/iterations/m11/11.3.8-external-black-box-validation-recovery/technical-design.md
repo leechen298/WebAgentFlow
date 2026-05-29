@@ -32,9 +32,12 @@ Files:
 Changed by this docs package:
 
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/intent.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/contract.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/technical-design.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/test-plan.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/acceptance.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
 - `docs/iterations/m11/README.md`
 - `docs/iterations/m11/m11-plan.md`

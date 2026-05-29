@@ -11,9 +11,12 @@ Status: ready for review
 ## Changed Files
 
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/intent.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/contract.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/technical-design.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/test-plan.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/acceptance.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
 - `docs/iterations/m11/README.md`
 - `docs/iterations/m11/m11-plan.md`
@@ -129,3 +132,33 @@ Blockers:
 
 - None for documentation review.
 - Runtime implementation remains blocked until child package `11.3.8.1-learning-action-goal-preservation` has its own reviewed seven-document package.
+
+## 2026-05-28 Codex A Documentation Completion Refresh
+
+- Author: Codex A, documentation author
+- Decision: ready for review
+- Scope: umbrella planning docs only
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `git status --short --branch` | Current branch is `v0.1-local`; existing untracked `.agent-runs/` is outside this package | 0 | No push attempted; branch is local-only |
+| `sed -n '1,220p' .agents/skills/webagentflow-iteration-dev/SKILL.md` | Confirmed implementation workflow is a boundary reference and does not authorize docs creation as implementation work | 0 | Used only for repository boundary context |
+| `sed -n '1,240p' docs/iterations/README.md` | Read iteration package standards | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/AGENTS.md` | Read planned-package and status-sync rules | 0 | Required reading |
+| `sed -n '1,280p' docs/iterations/m11/README.md` | Confirmed milestone index includes 11.3.8 as `ready for review / umbrella planning` | 0 | Status sync check |
+| `sed -n '1780,1905p' docs/iterations/m11/m11-plan.md` | Confirmed milestone plan includes 11.3.8 status, evidence basis, child sequence, and next executable package | 0 | Status sync check |
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f \| sort` | Parent file set present: `README.md`, `acceptance.md`, `contract.md`, `intent.md`, `plan.md`, `review.md`, `technical-design.md`, `test-plan.md` | 0 | Docs-only file completeness check |
+| `rg -n "11\\.3\\.8-external-black-box-validation-recovery\|状态：ready for review\|ready for review / umbrella planning" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | Package README, milestone index, and milestone plan expose `ready for review` | 0 | User-requested status sync check |
+| `rg -n "Package name\|Status:\|Type:\|Goal:\|Why this exists\|Inputs / required reading\|Allowed changes\|Forbidden changes\|Expected deliverables\|Expected tests / verification\|Compatibility constraints\|Scope guardrails\|Exit criteria\|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Required planned-package field labels found for all five planned child packages | 0 | Field-presence check; reviewer must still judge content adequacy |
+| `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | Scoped docs now show this refresh only under the parent package | 0 | Scope guard after edits |
+
+Not run:
+
+- Runtime tests, build, lint, browser/UI smoke, `wagent chat`, `verify-scenario`, autonomous runs, and external black-box revalidation were not run. This task was documentation-only and does not claim runtime behavior is fixed.
+
+Blockers:
+
+- None for documentation review.
+- Code implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
