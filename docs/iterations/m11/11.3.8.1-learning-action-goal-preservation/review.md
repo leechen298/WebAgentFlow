@@ -61,6 +61,45 @@ Documentation checks passed. Runtime tests are not run because this task is docu
 
 Ready for documentation / design review. Not ready for implementation until review explicitly approves the package and updates status.
 
+## 2026-05-29 Documentation Revision
+
+- Author: Codex A, documentation revision agent.
+- Trigger: docs review at `.agent-runs/20260529-112710-m11-11.3.8.1-learning-action-goal-preservation/docs-review.md`.
+- Scope: P0/P1 review findings only.
+- Decision: addressed the P1 procedural blocker by adding `.agent-runs/` to `.gitignore` so local agent-run coordination / review artifacts no longer appear as untracked worktree changes during future documentation reviews.
+
+### Revision Changed Files
+
+- `.gitignore`
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
+
+### Review Finding Response
+
+| Finding | Priority | Response | Status |
+|---|---|---|---|
+| Untracked `.agent-runs/` made the worktree unclean before review | P1 | Added `.agent-runs/` to `.gitignore`; after the edit, `git status --short --branch` reports only tracked revision changes and no untracked `.agent-runs/` entry | Addressed |
+
+### Revision Commands
+
+| Command | Result | Exit code | Notes |
+|---|---|---|---|
+| `git status --short --branch` | Before revision: branch `v0.1-local` with untracked `.agent-runs/`; after revision: only tracked `.gitignore` and package `review.md` edits | 0 | Worktree hygiene check |
+| `git check-ignore -v .agent-runs .agent-runs/20260529-112710-m11-11.3.8.1-learning-action-goal-preservation/docs-review.md` | `.gitignore` now ignores `.agent-runs/` and nested review artifacts | 0 | Procedural P1 check |
+| `git diff --check` | Clean | 0 | Whitespace check |
+
+### Revision Compatibility / Scope Review
+
+- No runtime, schema, API, frontend, fixture, migration, worker, prompt, or test implementation files were modified.
+- No package scope was broadened.
+- No status was promoted to `ready_for_implementation`; the package remains `ready for review` until documentation / design review explicitly passes.
+- No `verify-scenario`, autonomous run, direct autonomous endpoint call, browser smoke, CLI product validation, or external black-box validation was run.
+
+### Remaining Findings / Risks
+
+- P0: None known.
+- P1: None known after ignoring `.agent-runs/`.
+- P2/P3: Deferred unless raised by the next documentation / design review.
+
 ## Validation Evidence
 
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |

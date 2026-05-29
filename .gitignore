@@ -33,5 +33,6 @@ apps/worker/.coverage
 !.claude/skills/**
 .playwright-cli/
 .dev-logs/
+.agent-runs/
 /data/
 .coverage
