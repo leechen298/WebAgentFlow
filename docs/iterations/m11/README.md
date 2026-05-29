@@ -88,7 +88,8 @@ Console UI smoke、外部黑盒站点验证或 M12 recovery / retry / abort 已�
 - [11.3.6.5-runtime-eval-program-closeout](./11.3.6.5-runtime-eval-program-closeout/) —— Runtime Eval Program Closeout：核对 11.3.6.3 / 11.3.6.4 implementation、artifact、review closeout，并同步 11.3.6 program 状态。状态：completed_after_fix_rerun（final closeout rerun pass）。
 - [11.3.6.6-runtime-eval-gate-failure-fixes](./11.3.6.6-runtime-eval-gate-failure-fixes/) —— Runtime Eval Gate Failure Fixes：修复 11.3.6.5 service-available rerun 暴露的 pending choice public payload leak、planner-backed choice selection no-execution 和 raw artifact redaction failures。状态：implementation_complete_verified（fixes implemented，final eval rerun pass）。
 - [11.3.7-user-facing-wagent-behavior-eval](./11.3.7-user-facing-wagent-behavior-eval/) —— User-facing WAgent Behavior Eval：下一阶段用户视角验收，覆盖 URL-only、execute-known、execute-unknown、learn-explicit / vague-input 等入口行为，并加入测试页面细节不得进入功能代码或产品 prompt 的 hard gate。状态：pass（first-wave user-facing behavior gates passed，full learn-then-execute remains follow-up）。
-- [11.3.8-external-black-box-validation-recovery](./11.3.8-external-black-box-validation-recovery/) —— External Black-box Validation Recovery：M11.3 post-closeout recovery follow-up / umbrella planning package，用于把外部黑盒验证失败拆成 11.3.8.x child packages；不是 implementation package。状态：ready for review / umbrella planning。父包只定义计划和边界；下一个可执行包是 `11.3.8.1-learning-action-goal-preservation`，但该 child 七件套目录尚不存在，必须先创建并 review 后才能开始实现。
+- [11.3.8-external-black-box-validation-recovery](./11.3.8-external-black-box-validation-recovery/) —— External Black-box Validation Recovery：M11.3 post-closeout recovery follow-up / umbrella planning package，用于把外部黑盒验证失败拆成 11.3.8.x child packages；不是 implementation package。状态：ready for review / umbrella planning。父包只定义计划和边界；下一个可执行包是 `11.3.8.1-learning-action-goal-preservation`，该 child 七件套已创建，状态：ready for review；review 通过前不得实现代码。
+- [11.3.8.1-learning-action-goal-preservation](./11.3.8.1-learning-action-goal-preservation/) —— Learning Action Goal Preservation：保留 learning intake 中的 business goal、canonical goal、business object / match terms 和 useful aliases，避免 learned action identity 退化为 `Learn how to create`。状态：ready for review（code package docs complete；not ready for implementation）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -212,8 +213,11 @@ post-closeout recovery follow-up / umbrella planning package。它承接
 失败：`PV-CLI-002` 学习完成但 action label 过于泛化，`PV-CLI-003` 尚未修复，
 执行新值时没有匹配到已学 create inventory item action。该父包把修复拆成
 `11.3.8.1` 到 `11.3.8.5` 的 child package sequence，但父包本身不授权 runtime
-代码修改。下一个可执行包是 `11.3.8.1-learning-action-goal-preservation`；截至当前，
-该 child package 的完整七件套目录尚不存在，必须先创建并 review 后才能进入实现。
+代码修改。下一个可执行包是 `11.3.8.1-learning-action-goal-preservation`；该 child package
+完整七件套已创建并进入 `ready for review`，必须通过 documentation / design review 后才能进入实现。
+`11.3.8.1-learning-action-goal-preservation/` 是第一个 child code package。它只规划学习完成后
+session learned action metadata 保存 `business_goal`、`canonical_goal`、business object /
+`match_terms` 和 useful aliases 的实现边界；它不修 matcher、不改 utterance generation、不跑外部黑盒重验。
 
 11.2 后续 backlog：
 

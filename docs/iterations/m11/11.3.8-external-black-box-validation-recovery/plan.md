@@ -61,7 +61,7 @@ review.md
 
 Package name: `11.3.8.1-learning-action-goal-preservation`
 
-Status: planned
+Status: ready for review
 
 Type: code
 
@@ -82,7 +82,7 @@ Inputs / required reading:
 
 Allowed changes:
 
-- Add a child iteration package under `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/`.
+- Review the child iteration package under `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/` before implementation.
 - Update product-level learning result construction so it can prefer `ConversationIntakeResult.action.goal`, `canonical_goal`, useful aliases, and business object over raw `Learn how to ...` wrappers.
 - Extend session learned action metadata only as needed to preserve reusable business identity.
 - Add focused unit/service tests for business-goal preservation.
