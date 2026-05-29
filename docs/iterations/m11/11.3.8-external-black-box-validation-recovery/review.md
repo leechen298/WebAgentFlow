@@ -162,3 +162,32 @@ Blockers:
 
 - None for documentation review.
 - Code implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
+
+## 2026-05-28 Codex A Current-Session Audit
+
+- Author: Codex A, documentation author
+- Decision: ready for review remains correct
+- Scope: documentation-only audit and status verification; no runtime, schema, API, frontend, fixture, migration, or test implementation files changed
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `git status --short --branch` | Current branch is `v0.1-local`; existing untracked `.agent-runs/` is outside this package | 0 | No push attempted; branch is local-only |
+| `sed -n '1,220p' .agents/skills/webagentflow-iteration-dev/SKILL.md` | Confirmed the implementation workflow is boundary context only and does not authorize docs creation as implementation work | 0 | Used to avoid treating this docs package as implementation |
+| `sed -n '1,240p' docs/iterations/README.md` | Read iteration package standards | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/AGENTS.md` | Read planned-package, milestone index, file standard, and evidence rules | 0 | Required reading |
+| `sed -n '1,120p' CLAUDE.md` | Read repository-wide mirror guidance and M11 scope context | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/m11/README.md` | Confirmed milestone index lists 11.3.8 as `ready for review / umbrella planning` | 0 | Status sync check |
+| `sed -n '1780,1910p' docs/iterations/m11/m11-plan.md` | Confirmed milestone plan lists 11.3.8 as `ready for review / umbrella planning`, records the evidence basis, child sequence, and next executable package | 0 | Status sync check |
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f \| sort` | Parent file set present: `README.md`, `acceptance.md`, `contract.md`, `intent.md`, `plan.md`, `review.md`, `technical-design.md`, `test-plan.md` | 0 | Docs-only file completeness check |
+| `git diff --name-only -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | No scoped diff before this audit note | 0 | Confirmed status was already synchronized before editing this review record |
+
+Not run:
+
+- Runtime tests, build, lint, browser/UI smoke, `wagent chat`, `verify-scenario`, autonomous runs, and external black-box revalidation were not run. This task only audited and refreshed umbrella planning documentation.
+
+Blockers:
+
+- None for documentation review.
+- Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` has its own reviewed seven-document child package.
