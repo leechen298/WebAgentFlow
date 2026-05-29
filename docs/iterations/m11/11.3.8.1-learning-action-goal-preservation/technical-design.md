@@ -1,19 +1,27 @@
 # 技术设计（Technical Design）
 
-状态：ready for review
+状态：implementation_complete_pending_followup
 
 ## Current State
 
 Relevant current code:
 
 - `apps/api/app/services/learning/learning_run_service.py`
-  - `LearningRunRequest` carries `goal`, `fill_values`, `product_level`, but no structured intake action.
-  - `LearningRunResult` returns `action_label` and `suggested_utterances`, but no business goal metadata.
-  - `_product_action_label_for()` strips learning noise and named values, then truncates label to 20 chars.
+  - `LearningRunRequest` carries `goal`, `fill_values`, `product_level`, and optional structured identity inputs:
+    `action_goal`, `canonical_goal`, and `action_aliases`.
+  - `LearningRunResult` returns `action_label`, `suggested_utterances`, and optional identity metadata:
+    `business_goal`, `canonical_goal`, `action_aliases`, `business_object`, and `match_terms`.
+  - `_product_action_label_for()` now prefers structured business identity before falling back to stripped
+    learning-wrapper text.
 - `apps/api/app/services/conversation/chat_runtime.py`
-  - `_action_from_learning_result()` stores session learned actions with `alias`, `utterances`, `learned_path_id`,
-    `target_url`, `site_origin`, `page_template`, and `scenario`.
-  - `_matching_actions()` currently compares raw input / intake terms against action `alias` and `utterances`.
+  - Learning dispatch passes reusable intake action metadata into the learning handler when available.
+  - `_action_from_learning_result()` accepts the intake result and stores optional business identity metadata
+    alongside `alias`, `utterances`, `learned_path_id`, `target_url`, `site_origin`, `page_template`, and
+    `scenario`.
+  - `_matching_actions()` / session action matching behavior remains outside this package's scope.
+- `apps/api/app/routers/conversation.py`
+  - The internal learning handler handoff passes optional action identity kwargs into `LearningRunRequest`;
+    this does not add or change a public route contract.
 - `apps/api/app/schemas/conversation_intake.py`
   - `ConversationIntakeAction` already exposes `goal`, `canonical_goal`, and `aliases`.
 
@@ -32,26 +40,24 @@ Failure baseline:
 | Do not update external validation result | Review records live validation as not run | `review.md` | 11.3.8.5 owns revalidation |
 | Avoid slot values as identity | Metadata builder excludes `fill_values` / slot values from match terms unless they are structural action names | focused unit tests | SKU / names / quantities are parameters |
 
-## Proposed Implementation
+## Implemented Approach
 
-After documentation / design review passes, the implementation should use a minimal internal metadata path:
+The committed implementation uses a minimal internal metadata path:
 
-1. Capture the structured intake action near the existing learning dispatch path.
-   - Preferred: pass an optional action identity payload into `LearningRunRequest`, such as
-     `action_goal`, `canonical_goal`, and `action_aliases`, or equivalent fields approved in review.
-   - Alternative: build session metadata in `chat_runtime.py` by combining `LearningRunResult` with the intake object already available during learning.
-2. Extend `LearningRunResult` or `_action_from_learning_result()` to preserve optional metadata:
+1. Capture the structured intake action near the existing learning dispatch path and pass optional
+   `action_goal`, `canonical_goal`, and `action_aliases` fields into the learning request.
+2. Preserve optional metadata in `LearningRunResult` and `_action_from_learning_result()`:
    - `business_goal`
    - `canonical_goal`
    - `action_aliases`
    - `business_object` or equivalent extracted match term
    - `match_terms`
-3. Improve label source order for product-level learning:
+3. Use business-first label source order for product-level learning:
    - Prefer structured business goal when present.
    - Fall back to canonical goal converted to a readable phrase when business goal is missing.
    - Fall back to current `_product_action_label_for(request)` behavior.
    - Keep existing login special case.
-4. Ensure match terms are target-agnostic:
+4. Keep match terms target-agnostic:
    - Include business goal, canonical goal, aliases, and normalized object terms.
    - Exclude URLs, credentials, SKU / item names / quantities, selectors, field labels, and page-source details.
 5. Keep `suggested_utterances` behavior compatible in this package.
@@ -61,7 +67,7 @@ After documentation / design review passes, the implementation should use a mini
 
 | Surface | Changed? | Description | Compatibility notes |
 |---|---|---|---|
-| API routes | No | No route changes | N/A |
+| API routes | Internal only | Existing conversation route learning handler passes optional identity kwargs; no public endpoint or response contract change | Existing clients unaffected |
 | API response schema | No | No public response contract change planned | Internal metadata may appear in session metadata only if existing serializers expose it safely |
 | Database schema / migration | No | Session metadata JSON may gain optional keys | Existing rows remain valid |
 | CLI | No | No CLI command changes | CLI behavior improvement is indirect after later matcher package |
@@ -77,7 +83,7 @@ After documentation / design review passes, the implementation should use a mini
 
 No DB migration or public schema change is planned.
 
-Internal dataclass options are acceptable if review approves:
+Internal dataclass fields present in HEAD:
 
 ```text
 LearningRunRequest.action_goal: str | None
@@ -91,16 +97,15 @@ LearningRunResult.business_object: str | None
 LearningRunResult.match_terms: list[str]
 ```
 
-Exact names may change during implementation, but the semantic contract must remain:
-preserve business identity separately from `alias` / `utterances`, keep fields optional,
-and do not require migration.
+The semantic contract remains: preserve business identity separately from `alias` / `utterances`,
+keep fields optional, and do not require migration.
 
 ## Service / Module Design
 
-Planned module responsibilities:
+Implemented module responsibilities:
 
 - `conversation/chat_runtime.py`
-  - Pass structured intake action metadata into learning result construction, or enrich `_action_from_learning_result()`.
+  - Pass structured intake action metadata into learning result construction and enrich `_action_from_learning_result()`.
   - Save optional metadata into session `learned_actions`.
   - Keep `_scope_action_key()` compatible; do not change dedupe semantics unless review explicitly approves a metadata-aware key.
 - `learning/learning_run_service.py`

@@ -57,7 +57,7 @@ sets and pass documentation/design review before any code, test, or validation i
 
 ## Open Risks
 
-- The current runtime may not expose intake business goal metadata at the exact learning-result boundary expected by `11.3.8.1`.
+- `11.3.8.1` now preserves intake business goal metadata in HEAD, but later packages still need to consume it for utterances, matching, regression, and external revalidation.
 - A matcher fix could overmatch generic verbs unless negative tests cover different actions, shared objects, and ambiguous candidates.
 - Repo-local tests may pass while external product-like validation still fails; `11.3.8.5` must keep the latest result honest.
 - External revalidation may be blocked by local services, browser availability, LLM provider availability, or stale database state.
@@ -134,7 +134,7 @@ Goal：让学习完成后的 session learned action metadata 保留 intake 中�
 
 Why：当前 learning intake 知道 `Create inventory item`，但可复用 action alias 退化为 `Learn how to create`，导致后续执行无法复用。
 
-Expected output：学习结果优先保存 normalized business goal、canonical goal、business object 和有价值 aliases；教学包装词不再成为主要 action identity。
+Expected output：学习结果优先保存 normalized business goal、canonical goal、business object 和有价值 aliases；教学包装词不再成为主要 action identity。当前 HEAD 已包含该 scoped preservation work，后续包负责消费这些 metadata。
 
 Non-goals：不硬编码 `inventory item`、不硬编码 `5177/inventory`、不读取或复制外部 Validation-Site 源码。
 
@@ -193,5 +193,6 @@ Non-goals：不通过直接调用 autonomous-run endpoint、service import、hid
 
 ## 当前状态
 
-本包是修复计划，不是修复结果。`PV-CLI-003` 尚未修复，`external-black-box-validation-latest.md`
+本包是修复计划总包，不是 external black-box 修复结果。`11.3.8.1` 已完成 metadata preservation
+scoped work，但 `PV-CLI-003` 尚未通过外部黑盒重验，`external-black-box-validation-latest.md`
 仍应保留当前真实 `FAIL` 结论，直到后续子迭代实现、测试和外部黑盒重验完成。

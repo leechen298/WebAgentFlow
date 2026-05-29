@@ -61,7 +61,7 @@ review.md
 
 Package name: `11.3.8.1-learning-action-goal-preservation`
 
-Status: ready for review
+Status: implementation_complete_pending_followup
 
 Type: code
 
@@ -82,11 +82,11 @@ Inputs / required reading:
 
 Allowed changes:
 
-- Review the child iteration package under `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/` before implementation.
-- Update product-level learning result construction so it can prefer `ConversationIntakeResult.action.goal`, `canonical_goal`, useful aliases, and business object over raw `Learn how to ...` wrappers.
-- Extend session learned action metadata only as needed to preserve reusable business identity.
-- Add focused unit/service tests for business-goal preservation.
-- Add narrowly scoped docs/review updates inside the child package.
+- Review the implemented child iteration package under `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/`.
+- Product-level learning result construction in HEAD can prefer `ConversationIntakeResult.action.goal`, `canonical_goal`, useful aliases, and business object over raw `Learn how to ...` wrappers.
+- Session learned action metadata in HEAD preserves reusable business identity.
+- Focused unit/service tests for business-goal preservation exist in HEAD.
+- Add narrowly scoped docs/review updates inside the child package when review findings require them.
 
 Forbidden changes:
 
@@ -106,8 +106,8 @@ Expected deliverables:
 - `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/test-plan.md`
 - `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/plan.md`
 - `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
-- Focused implementation in `learning_run_service.py` / `chat_runtime.py` if approved by the child design.
-- Focused tests in `test_learning_run_service.py` and/or `test_conversation_chat_runtime.py`.
+- Focused implementation in `learning_run_service.py`, `chat_runtime.py`, and internal conversation route handoff.
+- Focused tests in `test_learning_run_service.py` and `test_conversation_chat_runtime.py`.
 
 Expected tests / verification:
 
@@ -130,17 +130,17 @@ Compatibility constraints:
 Scope guardrails:
 
 - This package preserves action identity; it does not solve utterance generation, matching policy, or external revalidation.
-- If preserving metadata requires broader schema/API changes, stop and update the child contract/design before implementation.
-- If current code cannot access intake action data at the expected boundary, record that as a design blocker rather than guessing from raw text.
+- If implementation/code review finds metadata preservation requires broader schema/API changes, stop and update the child contract/design before further code work.
+- If current code cannot access intake action data safely at the expected boundary, record that as a blocker rather than guessing from raw text.
 
 Exit criteria:
 
-- Child seven-doc package exists and is review-ready before code changes.
+- Child package docs and committed implementation remain aligned before follow-up packages consume the metadata.
 - Focused tests prove `Learn how to create an inventory item...` produces learned action metadata that preserves `Create inventory item` / `create_inventory_item` or equivalent business identity.
 - No target-specific runtime or prompt constants are introduced.
 - `review.md` records changed files, commands run, not-run live validation, compatibility review, scope review, unresolved findings, and final assessment.
 
-Handoff to next package: `11.3.8.2` may use the preserved business identity as input for reusable suggested utterances only after `11.3.8.1` passes documentation / design review and implementation. If `11.3.8.1` does not establish a stable metadata shape, `11.3.8.2` must remain blocked.
+Handoff to next package: `11.3.8.2` may use the preserved business identity as input for reusable suggested utterances after implementation/code review confirms the `11.3.8.1` metadata shape in HEAD. If review finds the metadata shape unstable, `11.3.8.2` must remain blocked.
 
 ### 11.3.8.2 Suggested Utterance Generation
 
@@ -466,7 +466,7 @@ Handoff to next package: If all required gates pass, hand off to M11.3 / M11 run
 
 ## 实施顺序
 
-1. 生成并审核 `11.3.8.1-learning-action-goal-preservation` 七件套，再实现 goal preservation。
+1. Review `11.3.8.1-learning-action-goal-preservation` 的已提交 goal preservation implementation 和文档记录。
 2. 生成并审核 `11.3.8.2-suggested-utterance-generation` 七件套，再实现 reusable utterances。
 3. 生成并审核 `11.3.8.3-learned-action-matching-improvement` 七件套，再实现 safe matching。
 4. 生成并审核 `11.3.8.4-regression-tests` 七件套，再补非 live 回归。

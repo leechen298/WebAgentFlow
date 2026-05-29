@@ -1,6 +1,6 @@
 # 11.3.8.1 · Learning Action Goal Preservation
 
-状态：`ready for review`
+状态：`implementation_complete_pending_followup`
 里程碑：M11
 类型：code
 父迭代：[`11.3.8-external-black-box-validation-recovery`](../11.3.8-external-black-box-validation-recovery/)
@@ -11,10 +11,11 @@
 - [x] 代码型迭代
 - [ ] 混合型迭代
 
-本包是 11.3.8 recovery sequence 的第一个可执行代码包。当前状态只表示七件套
-开发文档已准备好进入 documentation / design review；不得在 review 通过前实现代码。
-后续 reusable utterance generation、matcher consumption、cross-chain regression 和
-external black-box revalidation 仍由后续 11.3.8.x packages 负责。
+本包是 11.3.8 recovery sequence 的第一个可执行代码包。当前 HEAD 已包含本包范围内的
+learning action goal preservation 实现和 focused tests；本文档修订只把迭代包描述
+重新对齐到已提交代码，不再把已存在的 metadata path 写成 future work。后续 reusable
+utterance generation、matcher consumption、cross-chain regression 和 external black-box
+revalidation 仍由后续 11.3.8.x packages 负责。
 
 ## Goal
 
@@ -24,12 +25,11 @@ external black-box revalidation 仍由后续 11.3.8.x packages 负责。
 
 ## Scope
 
-文档 review 通过后，允许后续实现触及：
+本包实现已触及：
 
 - `apps/api/app/services/learning/learning_run_service.py`
 - `apps/api/app/services/conversation/chat_runtime.py`
-- `apps/api/app/services/conversation/intake.py` only if a small helper is needed to reuse existing intake action terms
-- `apps/api/app/schemas/conversation_intake.py` only if the reviewed design requires an optional backward-compatible field
+- `apps/api/app/routers/conversation.py` for internal learning handler metadata handoff only; no public route contract change
 - focused tests in `apps/api/tests/test_learning_run_service.py` and `apps/api/tests/test_conversation_chat_runtime.py`
 - this package's `review.md`
 
@@ -53,10 +53,9 @@ external black-box revalidation 仍由后续 11.3.8.x packages 负责。
 
 ## Final Assessment State
 
-Ready for documentation / design review. This package is not ready for implementation until review
-explicitly approves the contract, technical design, and test plan. No runtime tests, CLI smoke, UI
-smoke, `verify-scenario`, autonomous run, or external black-box validation has been run in this
-documentation-authoring session. `PV-CLI-003` is not claimed fixed / passed / verified here.
+Implementation complete for this package scope in committed HEAD, pending implementation/code review
+routing. No CLI smoke, UI smoke, `verify-scenario`, autonomous run, or external black-box validation
+is claimed by this documentation revision. `PV-CLI-003` is not claimed fixed / passed / verified here.
 
 ## Assumptions
 

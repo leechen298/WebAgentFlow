@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：ready for review
+状态：implementation_complete_pending_followup
 
 ## Test Scope
 
@@ -19,7 +19,7 @@
 |---|---|---|---|---|---|---|
 | D1 | docs | Seven-doc package exists | `find docs/iterations/m11/11.3.8.1-learning-action-goal-preservation -maxdepth 1 -type f | sort` | Shows README, intent, contract, technical-design, test-plan, plan, review | Yes | Documentation stage |
 | D2 | docs | Required terms and gates present | `rg -n "Learning Action Goal Preservation|business_goal|canonical_goal|business_object|match_terms|Forbidden Changes|Exit Criteria" docs/iterations/m11/11.3.8.1-learning-action-goal-preservation` | Finds contract/design/testable gate terms | Yes | Documentation stage |
-| D3 | docs | Milestone index sync | `rg -n "11\\.3\\.8\\.1-learning-action-goal-preservation|ready for review" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | M11 index and 11.3.8 plan show child package review-ready status | Yes | Documentation stage |
+| D3 | docs | Milestone index sync | `rg -n "11\\.3\\.8\\.1-learning-action-goal-preservation|implementation_complete_pending_followup" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | M11 index and 11.3.8 plan show child package implemented-with-followup status | Yes | Documentation stage |
 | T1 | unit | Product learning preserves English business identity | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q` | Added / existing tests pass; result metadata preserves business goal / canonical goal / aliases and excludes slot values | Yes after implementation | No external site dependency |
 | T2 | service | Chat runtime stores preserved identity in session action | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | Added / existing tests pass; `metadata_json.learned_actions[]` contains optional business identity fields | Yes after implementation | Matching behavior not required here |
 | T3 | regression | Existing intake behavior remains compatible if touched | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_intake.py -q` | Existing tests pass | Conditional | Required only if intake files change |
