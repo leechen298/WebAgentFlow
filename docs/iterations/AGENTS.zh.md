@@ -1,0 +1,282 @@
+# Iteration Documentation Agent Rules
+
+状态：process standard
+
+英文版本：`AGENTS.md`。
+
+本文件约束 `docs/iterations/` 下的文档工作。仓库根目录的 `AGENTS.md`、
+`CLAUDE.md` 和 `CLAUDE.zh.md` 仍然约束全仓行为。本文件定义 milestone plan、
+umbrella recovery plan、planned package、具体 iteration package、validation
+plan、evidence 和 review 文档必须达到的详细程度。
+
+本文件不实现、也不定义外部自动化控制器。
+
+## Purpose
+
+创建或修改 `docs/iterations/` 下文件时使用本文件。它把 iteration 文档应有的详细程度
+写成明确规则，避免后续 agent 只能从示例中猜 scope、evidence 要求、compatibility
+constraints 或 closeout 状态。
+
+这些规则适用于：
+
+- `m<N>-plan.md` 这类 milestone plan；
+- 把工作拆成多个 child package 的父级 umbrella package `plan.md`；
+- 这些计划里的 planned package 条目；
+- 具体 iteration package；
+- validation plan；
+- post-closeout validation 文档；
+- review 和 evidence 记录。
+
+## Planned Package Standard
+
+任何包含多个 planned sub-iterations 的 milestone plan 或 umbrella package plan，都必须把每个 planned package
+写成准迭代包规格（quasi-package specification）。
+
+每个 planned package 必须包含这些字段：
+
+```text
+Package name
+Status
+Type
+Goal
+Why this exists
+Inputs / required reading
+Allowed changes
+Forbidden changes
+Expected deliverables
+Expected tests / verification
+Compatibility constraints
+Scope guardrails
+Exit criteria
+Handoff to next package
+```
+
+硬规则：
+
+- `README.md` 可以是 package index 或 summary。
+- 详细的 milestone 或 umbrella `plan.md` 必须是执行规格。
+- 只写一行 package summary 不够。
+- 后续 agent 不应该再靠猜测补 scope、allowed files、forbidden files、verification、
+  compatibility constraints 或 handoff state。
+- 如果缺少任一 required planned-package 字段，review 至少必须记录 P2。
+- 如果缺少 `Forbidden changes`、`Compatibility constraints` 或 `Scope guardrails`
+  可能导致 runtime、API、schema、prompt、eval 或 evidence 越界，review 必须记录 P1。
+
+## Iteration Package File Standard
+
+Code 和 mixed package 必须包含：
+
+```text
+README.md
+intent.md
+contract.md
+technical-design.md
+test-plan.md
+plan.md
+review.md
+```
+
+Documentation-only package 至少必须包含：
+
+```text
+README.md
+intent.md
+contract.md
+plan.md
+review.md
+```
+
+只有当 documentation-only package 不准备或改变 runtime、schema、API、UI、tests、
+fixtures、prompts、process rules、evidence rules、validation behavior、release
+status 或 automation-consumption behavior 时，才可以省略 `technical-design.md` 和
+`test-plan.md`。
+
+如果 documentation-only package 修改以下内容，则必须包含 `test-plan.md`，并建议包含
+`technical-design.md`：
+
+```text
+process rules
+milestone semantics
+product boundaries
+Agent boundaries
+evidence rules
+validation templates
+release status
+package sequencing
+automation consumption contracts
+```
+
+父级 umbrella planning package 可以有意使用更小的文件集合，但前提是它自己的文档明确说明：
+后续 child code / mixed package 进入实现前必须创建完整七件套。即便如此，umbrella plan
+也必须用上面的 Planned Package Standard 写清每个 child package 条目。
+
+## Required Content For Each Package File
+
+每个 package 文件都必须具体到可以 review。只有占位标题不够。
+
+### README.md
+
+必须包含：
+
+```text
+Status
+Type
+Goal
+Scope
+Deliverables
+Final assessment state, if applicable
+```
+
+### intent.md
+
+必须包含：
+
+```text
+Problem / purpose
+Why now
+Relationship to roadmap or milestone
+Non-goals
+Expected handoff
+```
+
+### contract.md
+
+必须包含：
+
+```text
+Public concepts
+Allowed changes
+Forbidden changes
+Compatibility requirements
+Out-of-scope follow-ups
+```
+
+### technical-design.md
+
+必须包含：
+
+```text
+Documentation or implementation structure
+Affected files
+Data / control flow, if relevant
+Compatibility strategy
+Anti-drift rules
+```
+
+### test-plan.md
+
+必须包含：
+
+```text
+Exact commands to run
+Expected results
+Commands not run and why
+Blocker recording rule
+No unverified claims rule
+```
+
+### plan.md
+
+必须包含：
+
+```text
+Ordered execution steps
+Phase boundaries
+Stop conditions
+Review update step
+```
+
+### review.md
+
+必须包含：
+
+```text
+Changed files
+Commands run
+Test results
+Compatibility review
+Scope review
+Unresolved P1/P2/P3
+Final assessment
+```
+
+## Anti-Drift Requirements
+
+任何 future milestone 或 package planning 都必须说明：
+
+```text
+where the work lives
+what files may change
+what files must not change
+which current behaviors are compatibility-sensitive
+which adjacent tempting features are explicitly out of scope
+which later milestone or package owns those tempting features
+how the next package receives handoff
+```
+
+禁止：
+
+- 用 external validation target 反向驱动 runtime abstractions；
+- 把 target-specific selectors、seed data、routes、answer keys 或 component details
+  复制进 product runtime 或 prompts；
+- 在 current package 中实现 future-milestone work；
+- 混合 documentation planning 和 implementation，除非当前 package contract 明确允许；
+- 在没有 current-session evidence 的情况下声称 tests passed。
+
+## Validation And Post-Closeout Documentation Standard
+
+post-closeout validation 文档必须区分这些状态：
+
+```text
+feature closeout complete
+independent validation not yet performed
+validation planned
+validation executed
+validation passed / blocked / failed / unverified
+```
+
+不能把 validation plan 写成 validation result。
+
+post-closeout validation 文档应该包含：
+
+```text
+intent
+contract
+test plan
+API / CLI smoke plan
+E2E / integration plan
+external-operator review plan
+execution plan
+report template
+review
+```
+
+硬规则：
+
+- E2E 没跑就记录 `not executed` 或 `not configured`。
+- AI-operated validation 没跑就不能写 passed。
+- 如果 E2E framework 或 service 不可用，要记录 fallback 和剩余风险。
+- Validation report 不能预填 `passed`。
+- 只有当前 session 真实运行过的命令才能记录为 passed。
+- 如果命令不可用，必须记录 blocker。
+- live autonomous 或 WAgent evidence 必须遵守根目录 `AGENTS.md` / `CLAUDE.md` 里的执行边界。
+
+## Evidence And Review Rules
+
+Evidence 和 review 记录必须遵守：
+
+```text
+No unverified test claims.
+No hidden blockers.
+No vague "tests passed".
+No claim that a live product path passed without the approved product surface.
+No conversion of FAIL / BLOCKED / UNVERIFIED into PASS by wording changes.
+```
+
+Review 必须保留这些状态差异：
+
+- planned but not implemented；
+- implemented but not tested；
+- non-live tests passed；
+- live product validation passed；
+- live product validation failed / blocked / unverified。

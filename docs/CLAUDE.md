@@ -20,9 +20,10 @@ Before changing iteration documents, read:
 1. `../CLAUDE.md`
 2. `product-model.md`
 3. `iterations/README.md`
-4. The relevant milestone index, for example `iterations/m10/README.md`
-5. The relevant milestone plan, for example `iterations/m10/m10-plan.md`
-6. The specific iteration documents, in order:
+4. `iterations/AGENTS.md` for detailed planned-package and review-depth rules
+5. The relevant milestone index, for example `iterations/m10/README.md`
+6. The relevant milestone plan, for example `iterations/m10/m10-plan.md`
+7. The specific iteration documents, in order:
    - `README.md`
    - `intent.md`
    - `contract.md`
@@ -32,6 +33,12 @@ Before changing iteration documents, read:
    - `review.md`
 
 Do not rely on an older chat summary when these files are cheap to read.
+
+If a milestone plan or umbrella package plan contains multiple planned
+sub-iterations, each planned package must be written as a quasi-package
+specification with package name, status, type, goal, required reading, allowed
+and forbidden changes, expected deliverables, verification, compatibility
+constraints, scope guardrails, exit criteria, and handoff.
 
 ## Iteration Docs Are A Package
 

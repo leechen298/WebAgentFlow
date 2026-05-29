@@ -121,6 +121,9 @@ Deep architecture / history: [`docs/architecture.md`](./docs/architecture.md).
 ## Iteration Documentation and Implementation Gate
 
 Use `docs/iterations/README.md` as the per-iteration documentation standard.
+For detailed package-planning and review-depth rules, also use
+`docs/iterations/AGENTS.md` and its Chinese mirror
+`docs/iterations/AGENTS.zh.md`.
 
 When generating development documentation for a code or mixed iteration, create
 the full iteration document set from `docs/iterations/templates/` before
@@ -142,6 +145,14 @@ Complex code iterations or live-run-related iterations must include
 `test-plan.md`; do not claim E2E, UI smoke, CLI, `verify-scenario`, or
 autonomous-run testing without reviewable evidence such as command output,
 `run_id`, screenshot, log, or recorded product surface.
+
+Milestone plans or umbrella package plans that contain multiple planned
+sub-iterations must describe each planned package as a quasi-package
+specification. Each planned package must state package name, status, type,
+goal, why it exists, required reading, allowed changes, forbidden changes,
+expected deliverables, expected tests / verification, compatibility
+constraints, scope guardrails, exit criteria, and handoff to the next package.
+A one-line package summary is not enough for implementation routing.
 
 ## AI Coding Agent — Execution Boundary (HARD RULE)
 

@@ -20,9 +20,10 @@
 1. `../CLAUDE.zh.md` 或 `../CLAUDE.md`
 2. `product-model.md`
 3. `iterations/README.md`
-4. 相关里程碑索引，例如 `iterations/m10/README.md`
-5. 相关里程碑计划，例如 `iterations/m10/m10-plan.md`
-6. 当前迭代文档，按顺序读：
+4. `iterations/AGENTS.md`，用于详细 planned-package 和 review-depth 规则
+5. 相关里程碑索引，例如 `iterations/m10/README.md`
+6. 相关里程碑计划，例如 `iterations/m10/m10-plan.md`
+7. 当前迭代文档，按顺序读：
    - `README.md`
    - `intent.md`
    - `contract.md`
@@ -32,6 +33,11 @@
    - `review.md`
 
 这些文件读取成本很低时，不要依赖旧聊天摘要。
+
+如果 milestone plan 或 umbrella package plan 包含多个 planned sub-iterations，
+每个 planned package 都必须写成准迭代包规格，包含 package name、status、type、
+goal、required reading、allowed / forbidden changes、expected deliverables、
+verification、compatibility constraints、scope guardrails、exit criteria 和 handoff。
 
 ## 迭代文档是一个包
 

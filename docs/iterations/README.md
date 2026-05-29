@@ -5,6 +5,11 @@
 > AI 编码 Agent（Claude Code / Codex / Kimi / MiMo / …）和下一次打开这个仓库的
 > 你自己，都能快速接上当前在做什么、为什么这么做、做到哪了。
 
+AI Agent 编写 / 审核迭代文档时，还必须遵守本目录下的
+[`AGENTS.md`](./AGENTS.md) / [`AGENTS.zh.md`](./AGENTS.zh.md)。这两份文件定义
+milestone plan、umbrella plan、planned package、validation plan、evidence 和 review
+的详细程度，尤其要求包含多个子包的计划把每个 planned package 写成可复核的准迭代包规格。
+
 ## 为什么要有这个目录
 
 - `docs/product-model.md`、`docs/architecture.md` 是**稳态文档**（回答“我们是谁、

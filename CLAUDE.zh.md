@@ -112,7 +112,9 @@ CLI 术语：
 
 ## 迭代文档与实现门禁
 
-以 `docs/iterations/README.md` 作为每轮迭代的文档标准。
+以 `docs/iterations/README.md` 作为每轮迭代的文档标准。详细的 package
+planning 和 review-depth 规则以 `docs/iterations/AGENTS.md` 及中文镜像
+`docs/iterations/AGENTS.zh.md` 为准。
 
 当任务是为代码型或混合型迭代生成开发文档时，必须先按
 `docs/iterations/templates/` 生成完整迭代文档包：`README.md`、`intent.md`、
@@ -129,6 +131,13 @@ CLI 术语：
 复杂代码迭代或涉及 live run 的迭代必须包含 `test-plan.md`；没有命令输出、
 `run_id`、截图、日志或已记录的产品界面证据时，不得声称完成 E2E、UI smoke、
 CLI、`verify-scenario` 或 autonomous-run 测试。
+
+包含多个 planned sub-iterations 的 milestone plan 或 umbrella package plan
+必须把每个 planned package 写成准迭代包规格。每个 planned package 必须写清
+package name、status、type、goal、why this exists、required reading、
+allowed changes、forbidden changes、expected deliverables、expected tests /
+verification、compatibility constraints、scope guardrails、exit criteria 和
+handoff to next package。只写一行 package summary 不足以指导后续实现。
 
 ## AI 编码 Agent —— 执行边界（硬约束）
 
