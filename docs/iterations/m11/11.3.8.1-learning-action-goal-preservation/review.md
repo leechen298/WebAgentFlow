@@ -1,12 +1,12 @@
 # 复盘 / 评审（Review）
 
-状态：implementation_complete_pending_followup
+状态：ready for review
 
 ## 2026-05-29 Documentation Authoring
 
 - Author: Codex A, documentation author.
 - Decision: ready for documentation / design review.
-- Scope: created the 11.3.8.1 child package seven-doc set and synchronized milestone routing status.
+- Scope: updated the `11.3.8.1-learning-action-goal-preservation` seven-doc package so it represents a planned code package ready for review, not an implementation-complete package.
 
 ## Changed Files
 
@@ -19,194 +19,81 @@
 - `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
 - `docs/iterations/m11/README.md`
 - `docs/iterations/m11/m11-plan.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md`
 - `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md`
 
 ## Commands Run
 
-- `find docs/iterations/m11/11.3.8.1-learning-action-goal-preservation -maxdepth 1 -type f | sort`
-  - Result: listed the expected seven files: `README.md`, `intent.md`, `contract.md`,
-    `technical-design.md`, `test-plan.md`, `plan.md`, `review.md`.
-- `rg -n "Learning Action Goal Preservation|business_goal|canonical_goal|business_object|match_terms|Forbidden Changes|Exit Criteria" docs/iterations/m11/11.3.8.1-learning-action-goal-preservation`
-  - Result: found required goal-preservation, metadata, forbidden-change, and exit-criteria terms.
-- `rg -n "11\\.3\\.8\\.1-learning-action-goal-preservation|ready for review" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md`
-  - Result: M11 index, M11 plan, and 11.3.8 parent plan expose the child package and `ready for review` status.
-- `git status --short`
-  - Result: only docs changed by this task plus pre-existing untracked `.agent-runs/`; no runtime / schema / API / frontend / fixture / migration / test implementation files changed.
-- `git diff --check`
-  - Result: clean.
+Commands actually run in this documentation-authoring session:
+
+| Command | Result | Exit code | Notes |
+|---|---|---:|---|
+| `sed -n '1,220p' .agents/skills/webagentflow-iteration-dev/SKILL.md && pwd && rg --files -g 'AGENTS.md' -g 'CLAUDE.md' -g 'CLAUDE.zh.md' -g 'docs/iterations/**' \| sort` | Read project skill boundary and listed iteration docs | 0 | The implementation skill excludes documentation authoring; repository iteration docs govern this task |
+| `git status --short --branch` | Clean worktree on `v0.1-local` before edits | 0 | Branch ends in `-local`; no push performed |
+| `sed -n '1,240p' docs/iterations/README.md` | Read iteration documentation standard | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/AGENTS.md` | Read English iteration agent rules | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/AGENTS.zh.md` | Read Chinese mirror rules | 0 | Required reading |
+| `sed -n '1,280p' docs/iterations/m11/README.md` | Read milestone index | 0 | Required reading |
+| `sed -n '1,320p' docs/iterations/m11/m11-plan.md` | Read milestone plan start | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | Read parent umbrella package summary | 0 | Required reading |
+| `sed -n '1,360p' docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Read parent umbrella planned-package spec | 0 | Required reading |
+| `sed -n '1,240p' docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/README.md` | Read child package README | 0 | Package review |
+| `sed -n '1,260p' docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/intent.md` | Read child intent | 0 | Package review |
+| `sed -n '1,280p' docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/contract.md` | Read child contract | 0 | Package review |
+| `sed -n '1,300p' docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/technical-design.md` | Read child technical design | 0 | Package review |
+| `sed -n '1,320p' docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/test-plan.md` | Read child test plan | 0 | Package review |
+| `sed -n '1,300p' docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/plan.md` | Read child implementation plan | 0 | Package review |
+| `sed -n '1,320p' docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md` | Read previous package review record | 0 | Found stale implementation-complete claims relative to current task |
+| `for f in docs/iterations/templates/{README.md,intent.md,contract.md,technical-design.md,test-plan.md,plan.md,review.md}; do ...` | Read package templates | 0 | Required package template check |
+| `find docs/iterations/m11/11.3.8.1-learning-action-goal-preservation -maxdepth 1 -type f \| sort` | Listed all seven expected package docs | 0 | Documentation package file check |
+| `rg -n "Learning Action Goal Preservation\|business_goal\|canonical_goal\|business_object\|match_terms\|Forbidden Changes\|Exit Criteria\|ready for review" docs/iterations/m11/11.3.8.1-learning-action-goal-preservation` | Found required package terms and review-ready status | 0 | Documentation content check |
+| `rg -n "11\\.3\\.8\\.1-learning-action-goal-preservation\|ready for review\|implementation_complete_pending_followup" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Confirmed milestone index, milestone plan, and parent plan expose `ready for review` for the child package, with no current `implementation_complete_pending_followup` status in those routing docs | 0 | Status sync check |
+| `git diff --check` | Clean | 0 | Whitespace check |
+| `git status --short --branch` | Shows only allowed documentation files modified on `v0.1-local` | 0 | Scope check |
 
 ## Test Results
 
-Documentation checks passed. Runtime tests are not run because this task is documentation-only and no runtime files are modified.
+Documentation authoring checks passed. Runtime tests are not run in this session because the user requested documentation-only package preparation and prohibited runtime / schema / API / frontend / fixture / migration / test implementation changes.
 
 ## Compatibility Review
 
-- No public API, DB schema, CLI command, frontend UI, replay status, reporter, recovery, abort, or Agent role changes were made.
-- The package contract requires optional, backward-compatible session metadata only after review.
-- Existing M11 closeout and external black-box latest `FAIL` result remain unchanged.
+- No public API, DB schema, CLI command, frontend UI, replay status, reporter, recovery, abort, autonomous-run, or Agent role change is authorized by this documentation update.
+- The package remains a code package, but status is `ready for review`; it is not `ready_for_implementation`.
+- Existing M11 closeout and external black-box latest result remain unchanged. This package does not claim `PV-CLI-003` fixed or external black-box validation passed.
+- Any later optional session metadata must remain backward-compatible and must be approved through this package's documentation / design review before implementation.
 
 ## Scope Review
 
-- Runtime, schema, API, frontend, fixture, migration, and test implementation files were not modified.
+- Runtime, schema, API, frontend, fixture, migration, worker, prompt, and test implementation files were not modified.
 - No external Validation-Site / Fixture-Site files were modified.
-- No `verify-scenario`, autonomous run, direct autonomous endpoint call, browser smoke, or WAgent product validation was run.
+- No `verify-scenario`, autonomous run, direct autonomous endpoint call, browser smoke, CLI product validation, or external black-box validation was run.
 
 ## Unresolved Findings
 
-- P1: None known.
-- P2: None known.
-- P3: Implementation may discover that intake action metadata is not available at the exact learning result boundary; the contract records this as a blocker condition.
+- P1: None known in the documentation package after status normalization.
+- P2: The parent umbrella and milestone docs previously described `11.3.8.1` as implementation-complete. This update treats the user-provided package status (`planned`) as authoritative for this documentation-authoring task and synchronizes those docs back to `ready for review`.
+- P3: Later implementation may discover that intake action metadata is not available at the expected learning result boundary; the contract records this as a blocker condition.
 
 ## Final Assessment
 
 Ready for documentation / design review. Not ready for implementation until review explicitly approves the package and updates status.
 
-## 2026-05-29 Documentation Revision
-
-- Author: Codex A, documentation revision agent.
-- Trigger: docs review at `.agent-runs/20260529-112710-m11-11.3.8.1-learning-action-goal-preservation/docs-review.md`.
-- Scope: P0/P1 review findings only.
-- Decision: addressed the P1 procedural blocker by adding `.agent-runs/` to `.gitignore` so local agent-run coordination / review artifacts no longer appear as untracked worktree changes during future documentation reviews.
-
-### Revision Changed Files
-
-- `.gitignore`
-- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
-
-### Review Finding Response
-
-| Finding | Priority | Response | Status |
-|---|---|---|---|
-| Untracked `.agent-runs/` made the worktree unclean before review | P1 | Added `.agent-runs/` to `.gitignore`; after the edit, `git status --short --branch` reports only tracked revision changes and no untracked `.agent-runs/` entry | Addressed |
-
-### Revision Commands
-
-| Command | Result | Exit code | Notes |
-|---|---|---|---|
-| `git status --short --branch` | Before revision: branch `v0.1-local` with untracked `.agent-runs/`; after revision: only tracked `.gitignore` and package `review.md` edits | 0 | Worktree hygiene check |
-| `git check-ignore -v .agent-runs .agent-runs/20260529-112710-m11-11.3.8.1-learning-action-goal-preservation/docs-review.md` | `.gitignore` now ignores `.agent-runs/` and nested review artifacts | 0 | Procedural P1 check |
-| `git diff --check` | Clean | 0 | Whitespace check |
-
-### Revision Compatibility / Scope Review
-
-- No runtime, schema, API, frontend, fixture, migration, worker, prompt, or test implementation files were modified.
-- No package scope was broadened.
-- No status was promoted to `ready_for_implementation`; the package remains `ready for review` until documentation / design review explicitly passes.
-- No `verify-scenario`, autonomous run, direct autonomous endpoint call, browser smoke, CLI product validation, or external black-box validation was run.
-
-### Remaining Findings / Risks
-
-- P0: None known.
-- P1: None known after ignoring `.agent-runs/`.
-- P2/P3: Deferred unless raised by the next documentation / design review.
-
 ## Validation Evidence
 
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
-|---|---|---|---|---|---|---|
-| `find docs/iterations/m11/11.3.8.1-learning-action-goal-preservation -maxdepth 1 -type f \| sort` | Seven package docs exist | Listed all seven expected package docs | 0 | Pass | terminal output | Documentation-only |
-| `rg -n "Learning Action Goal Preservation\|business_goal\|canonical_goal\|business_object\|match_terms\|Forbidden Changes\|Exit Criteria" docs/iterations/m11/11.3.8.1-learning-action-goal-preservation` | Required review terms present | Required terms found across README, contract, technical design, test plan, and plan | 0 | Pass | terminal output | Documentation-only |
-| `rg -n "11\\.3\\.8\\.1-learning-action-goal-preservation\|ready for review" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Milestone / parent status sync present | M11 index, M11 plan, and parent plan show child status `ready for review` | 0 | Pass | terminal output | Documentation-only |
-| `git status --short` | Only allowed docs changed | Shows package docs, M11 index, M11 plan, parent plan; pre-existing `.agent-runs/` remains untracked | 0 | Pass | terminal output | Scope check |
+|---|---|---|---:|---|---|---|
+| `find docs/iterations/m11/11.3.8.1-learning-action-goal-preservation -maxdepth 1 -type f \| sort` | Seven package docs exist | Listed README, intent, contract, technical-design, test-plan, plan, and review | 0 | Pass | terminal output | Documentation-only |
+| `rg -n "Learning Action Goal Preservation\|business_goal\|canonical_goal\|business_object\|match_terms\|Forbidden Changes\|Exit Criteria\|ready for review" docs/iterations/m11/11.3.8.1-learning-action-goal-preservation` | Required review terms present | Required terms found across package docs | 0 | Pass | terminal output | Documentation-only |
+| `rg -n "11\\.3\\.8\\.1-learning-action-goal-preservation\|ready for review\|implementation_complete_pending_followup" docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Status sync visible in milestone / parent docs | M11 index, M11 plan, and parent plan show `ready for review` for 11.3.8.1 | 0 | Pass | terminal output | No current implementation-complete child status remains in the routing docs |
 | `git diff --check` | No whitespace errors | Clean | 0 | Pass | terminal output | Docs check |
+| `git status --short --branch` | Only allowed docs changed | Shows modified package docs, M11 index, M11 plan, and parent plan only | 0 | Pass | terminal output | Scope check |
 
 ## Not Run / Unverified
 
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
-| API/unit tests | No runtime code changed in this documentation task | Implementation package must run focused tests |
+| API/unit tests | No runtime code changed in this documentation task | Implementation package must run focused tests after review approval |
 | CLI / `wagent chat` | No product validation requested or authorized | 11.3.8.5 owns external revalidation |
 | UI smoke / browser validation | No UI changes | None for docs authoring |
 | `verify-scenario` / autonomous run | Prohibited for docs-only work unless explicitly requested | None |
 | External black-box validation | Later package responsibility | Latest result remains `FAIL` |
-
-## 2026-05-29 Implementation
-
-- Author: Codex C, implementation agent.
-- Decision: implementation complete for this child package scope; follow-up packages still own reusable utterance generation, matcher consumption, cross-chain regression, and external black-box revalidation.
-- Scope: preserved learning action business identity metadata in the learning result and session learned action record without changing matcher, replay, reporter, recovery, routes, frontend, migrations, worker code, fixture sites, or external validation result docs.
-
-## Implementation Changed Files
-
-- `apps/api/app/services/learning/learning_run_service.py`
-- `apps/api/app/services/conversation/chat_runtime.py`
-- `apps/api/tests/test_learning_run_service.py`
-- `apps/api/tests/test_conversation_chat_runtime.py`
-- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
-
-## Implementation Summary
-
-- Added optional internal `LearningRunRequest` / `LearningRunResult` identity fields: `action_goal`, `canonical_goal`, `action_aliases`, `business_goal`, `business_object`, and `match_terms`.
-- Built deterministic, target-agnostic identity terms from structured action metadata, with de-duplication and slot-value exclusion.
-- Preserved intake-derived identity in `session.metadata_json.learned_actions[]` when learning handlers return only a generic learning wrapper label.
-- Kept `_matching_actions()` unchanged; this package only stores metadata for later matcher work.
-
-## Implementation Commands
-
-| Command | Result | Exit code | Notes |
-|---|---|---:|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q` | `9 passed in 0.08s` | 0 | Required T1 |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | `85 passed in 0.81s` | 0 | Required T2 |
-| `cd apps/api && ../../.venv/bin/python -m ruff check app/services/learning/learning_run_service.py app/services/conversation/chat_runtime.py tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py` | `All checks passed!` | 0 | Required T5 |
-| `rg -n "5177\|inventory item\|data-testid\|WebAgentFlow-Validation-Site" apps/api/app apps/api/tests` | Found existing historical `data-testid` occurrences in tests and `autonomous_explorer.py`; no `5177`, `inventory item`, or `WebAgentFlow-Validation-Site` introduced by this package | 0 | Required T4 scope scan plus diff inspection |
-| `rg -n "5177\|inventory item\|data-testid\|WebAgentFlow-Validation-Site" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | Found pre-existing `data-testid` test fixture lines in the two changed test files; implementation diff added no forbidden target constants | 0 | Changed-file scope scan |
-| `git diff --check` | Clean | 0 | Required T6 |
-
-## Implementation Compatibility / Scope Review
-
-- Existing Chinese `登录` / `创建记录` learning expectations remain covered by the focused tests.
-- Existing learned action records without the new optional metadata remain valid.
-- No matcher confidence, candidate selection, replay execution, Task Result Reporter, recovery, abort, public route, DB schema, frontend, fixture, or worker behavior was changed.
-- No external black-box validation, `verify-scenario`, autonomous run, direct autonomous endpoint call, CLI product smoke, UI smoke, or browser validation was run.
-
-## Implementation Unresolved Limits
-
-- `PV-CLI-003` is not claimed fixed or verified by this package.
-- Suggested utterance quality remains unchanged and belongs to `11.3.8.2`.
-- Matcher consumption of `business_goal` / `canonical_goal` / `match_terms` remains for `11.3.8.3`.
-
-## 2026-05-29 P1 Fix
-
-- Author: Codex C, fix agent.
-- Trigger: code review at `.agent-runs/20260529-114056-m11-11.3.8.1-learning-action-goal-preservation/code-review.md`.
-- Scope: P1 findings only.
-- Decision: fixed the production learning metadata handoff, intake-derived business object persistence, and stale package README status. No matcher, replay, reporter, recovery, route surface, frontend, migration, fixture, worker, autonomous-run, or external validation behavior was broadened.
-
-## P1 Fix Changed Files
-
-- `apps/api/app/routers/conversation.py`
-- `apps/api/app/services/conversation/chat_runtime.py`
-- `apps/api/tests/test_conversation_chat_runtime.py`
-- `docs/iterations/m11/README.md`
-- `docs/iterations/m11/m11-plan.md`
-- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md`
-- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/README.md`
-- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/intent.md`
-- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/contract.md`
-- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/technical-design.md`
-- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/test-plan.md`
-- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/plan.md`
-- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
-
-## P1 Fix Summary
-
-- Passed intake `action.goal`, `canonical_goal`, and aliases through the real Conversation API learning handler into `LearningRunRequest` so raw user text with slot values is not the only identity source.
-- Derived `business_object` and object-only `match_terms` in chat runtime when the learning result is enriched from intake metadata.
-- Updated the focused chat runtime test to assert internal handler kwargs and persisted `business_object: purchase order` / object-only match term.
-- Reconciled package and M11 routing statuses to `implementation_complete_pending_followup` while keeping CLI smoke, UI smoke, autonomous runs, and external black-box validation explicitly not run.
-
-## P1 Fix Commands
-
-| Command | Result | Exit code | Notes |
-|---|---|---:|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q` | `9 passed in 0.07s` | 0 | Required T1 |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | `85 passed in 0.65s` | 0 | Required T2 |
-| `cd apps/api && ../../.venv/bin/python -m ruff check app/routers/conversation.py app/services/learning/learning_run_service.py app/services/conversation/chat_runtime.py tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py` | `All checks passed!` | 0 | Required T5; includes internal router handoff changed by this fix |
-| `rg -n "5177\|inventory item\|data-testid\|WebAgentFlow-Validation-Site" apps/api/app/routers/conversation.py apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | Found only pre-existing `data-testid` test fixture references; no `5177`, `inventory item`, or `WebAgentFlow-Validation-Site` in changed implementation | 0 | Required T4 changed-file scan plus diff inspection |
-| `rg -n '11\\.3\\.8\\.1-learning-action-goal-preservation.*ready for review\|not ready for implementation\|No code, runtime tests\|Status: ready for review' docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md docs/iterations/m11/11.3.8.1-learning-action-goal-preservation --glob '!review.md'` | No stale review-only status claims found | 1 | Exit 1 is expected for no matches |
-| `git diff --check` | Clean | 0 | Required T6 |
-
-## P1 Fix Remaining Risks
-
-- External black-box validation remains not run; 11.3.8.5 owns that evidence.
-- Suggested utterance quality and matcher consumption remain follow-up package responsibilities.

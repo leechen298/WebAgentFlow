@@ -61,7 +61,7 @@ review.md
 
 Package name: `11.3.8.1-learning-action-goal-preservation`
 
-Status: implementation_complete_pending_followup
+Status: ready for review
 
 Type: code
 
@@ -140,7 +140,7 @@ Exit criteria:
 - No target-specific runtime or prompt constants are introduced.
 - `review.md` records changed files, commands run, not-run live validation, compatibility review, scope review, unresolved findings, and final assessment.
 
-Handoff to next package: `11.3.8.2` may use the preserved business identity as input for reusable suggested utterances. If `11.3.8.1` does not establish a stable metadata shape, `11.3.8.2` must remain blocked.
+Handoff to next package: `11.3.8.2` may use the preserved business identity as input for reusable suggested utterances only after `11.3.8.1` passes documentation / design review and implementation. If `11.3.8.1` does not establish a stable metadata shape, `11.3.8.2` must remain blocked.
 
 ### 11.3.8.2 Suggested Utterance Generation
 

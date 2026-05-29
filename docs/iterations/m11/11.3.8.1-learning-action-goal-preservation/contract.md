@@ -1,6 +1,6 @@
 # 契约（Contract）
 
-状态：implementation_complete_pending_followup
+状态：ready for review
 
 ## Public Concepts
 

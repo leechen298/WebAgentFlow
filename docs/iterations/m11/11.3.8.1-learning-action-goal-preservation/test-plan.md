@@ -1,6 +1,6 @@
 # 测试计划（Test Plan）
 
-状态：implementation_complete_pending_followup
+状态：ready for review
 
 ## Test Scope
 
@@ -10,7 +10,7 @@
 - Console UI: N/A; no UI changes.
 - E2E: N/A for this package.
 - Agent / Reporter / Recovery: no Agent verdict, reporter, recovery, abort, or retry behavior is executed.
-- Codex / AI External Operator: documentation author only for this package; implementation Agent may run shell commands and record outputs.
+- Codex / AI External Operator: documentation author only in this session; later implementation Agent may run shell commands and record outputs after review approval.
 - Live autonomous run: explicitly not run in this package.
 
 ## Test Matrix

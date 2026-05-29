@@ -1,6 +1,6 @@
 # 技术设计（Technical Design）
 
-状态：implementation_complete_pending_followup
+状态：ready for review
 
 ## Current State
 
@@ -34,7 +34,7 @@ Failure baseline:
 
 ## Proposed Implementation
 
-The reviewed implementation should use a minimal internal metadata path:
+After documentation / design review passes, the implementation should use a minimal internal metadata path:
 
 1. Capture the structured intake action near the existing learning dispatch path.
    - Preferred: pass an optional action identity payload into `LearningRunRequest`, such as

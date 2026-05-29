@@ -1,6 +1,6 @@
 # 实施计划（Implementation Plan）
 
-状态：implementation_complete_pending_followup
+状态：ready for review
 
 ## Inputs
 

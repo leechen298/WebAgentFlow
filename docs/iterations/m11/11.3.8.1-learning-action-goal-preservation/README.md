@@ -1,6 +1,6 @@
 # 11.3.8.1 · Learning Action Goal Preservation
 
-状态：`review complete`
+状态：`ready for review`
 里程碑：M11
 类型：code
 父迭代：[`11.3.8-external-black-box-validation-recovery`](../11.3.8-external-black-box-validation-recovery/)
@@ -11,10 +11,10 @@
 - [x] 代码型迭代
 - [ ] 混合型迭代
 
-本包是 11.3.8 recovery sequence 的第一个可执行代码包。文档 / 设计 review 已完成；
-实现和 P1 review fix 已按本包范围完成。后续 reusable utterance generation、matcher
-consumption、cross-chain regression 和 external black-box revalidation 仍由后续
-11.3.8.x packages 负责。
+本包是 11.3.8 recovery sequence 的第一个可执行代码包。当前状态只表示七件套
+开发文档已准备好进入 documentation / design review；不得在 review 通过前实现代码。
+后续 reusable utterance generation、matcher consumption、cross-chain regression 和
+external black-box revalidation 仍由后续 11.3.8.x packages 负责。
 
 ## Goal
 
@@ -24,7 +24,7 @@ consumption、cross-chain regression 和 external black-box revalidation 仍由�
 
 ## Scope
 
-允许后续实现触及：
+文档 review 通过后，允许后续实现触及：
 
 - `apps/api/app/services/learning/learning_run_service.py`
 - `apps/api/app/services/conversation/chat_runtime.py`
@@ -49,13 +49,14 @@ consumption、cross-chain regression 和 external black-box revalidation 仍由�
 - `technical-design.md` - implementation structure, affected files, data flow, anti-drift rules, and test entries.
 - `test-plan.md` - exact documentation and later implementation verification commands.
 - `plan.md` - ordered execution steps, phase boundaries, stop conditions, and review update step.
-- `review.md` - documentation, implementation, verification, and follow-up record.
+- `review.md` - documentation authoring record, verification record, and follow-up notes.
 
 ## Final Assessment State
 
-Implementation complete for this package scope, including focused runtime tests and P1 review fix.
-No CLI smoke, UI smoke, `verify-scenario`, autonomous run, or external black-box validation has been
-completed by this package. `PV-CLI-003` is not claimed fixed / passed / verified here.
+Ready for documentation / design review. This package is not ready for implementation until review
+explicitly approves the contract, technical design, and test plan. No runtime tests, CLI smoke, UI
+smoke, `verify-scenario`, autonomous run, or external black-box validation has been run in this
+documentation-authoring session. `PV-CLI-003` is not claimed fixed / passed / verified here.
 
 ## Assumptions
 
