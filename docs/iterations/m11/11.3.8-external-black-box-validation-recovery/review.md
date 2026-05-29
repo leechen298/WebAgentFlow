@@ -1,18 +1,39 @@
 # Review
 
-Status: ready for review
+Status: active / in progress
 
 ## FINAL_STATUS
 
 status: REVIEW_READY
-next_action: run 11.3.8.1 review-closeout-existing-implementation
+next_action: create / review 11.3.8.2-suggested-utterance-generation child seven-doc package
 parent_authorizes_runtime_implementation: no
-active_child_package: 11.3.8.1-learning-action-goal-preservation
+active_child_package: 11.3.8.2-suggested-utterance-generation
 do_not_reimplement: true
-blocking_findings: none for Goal Runner docs routing
-last_verified_at: 2026-05-29 15:08 CST
-commands_run: find package file set; rg Goal Runner routing guardrails; rg evidence-honesty guardrails; rg follow-up route guards; git diff --name-only; git status --short; git diff --check
-commands_not_run: runtime tests; wagent chat; verify-scenario; browser smoke; external black-box validation
+blocking_findings: none for 11.3.8.1 closeout; parent 11.3.8 campaign remains incomplete
+last_verified_at: 2026-05-29 15:32 CST
+commands_run: 11.3.8.1 closeout git/diff checks; focused pytest; ruff; target-constant scan; git diff --check
+commands_not_run: wagent chat; verify-scenario; browser smoke; external black-box validation; direct autonomous-run endpoint
+
+## 2026-05-29 11.3.8.1 Review Closeout Routing Update
+
+- Author: Codex, review-closeout agent.
+- Decision: `11.3.8.1-learning-action-goal-preservation` reached `PACKAGE_COMPLETE`.
+- Parent status: active / in progress. This does not close the parent `11.3.8` campaign.
+- Next action: create / review the `11.3.8.2-suggested-utterance-generation` seven-document child package in a separate goal.
+- Scope: parent routing record only; no `GOAL_RUNNER.md`, parent `plan.md`, runtime, schema, API, frontend, fixture, migration, worker, eval-runner, external result doc, or `11.3.8.2` file was changed.
+
+Evidence summary:
+
+- No API/runtime/test drift after the last code-review checkpoint: `git diff --name-status 86d3c5a..HEAD -- apps/api` returned no paths.
+- Scoped implementation diff `45ed70d^..86d3c5a` was reviewed for `learning_run_service.py`, `chat_runtime.py`, `conversation.py`, and focused tests.
+- Focused tests passed: `tests/test_learning_run_service.py` reported `10 passed in 0.10s`; `tests/test_conversation_chat_runtime.py` reported `86 passed in 0.76s`.
+- Focused ruff passed with `All checks passed!`.
+- Target-constant scan for `5177`, `/inventory`, `inventory item`, and `WebAgentFlow-Validation-Site` returned no matches in the scoped implementation/test files.
+- `git diff --check` was clean.
+
+Not run:
+
+- `wagent chat`, `verify-scenario`, browser/UI smoke, direct autonomous-run endpoint calls, and external black-box validation were not run. External revalidation remains owned by `11.3.8.5`.
 
 ## 2026-05-29 Goal Runner Review Follow-up
 

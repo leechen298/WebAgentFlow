@@ -10,32 +10,34 @@ milestone docs, and review records.
 
 current_mode: one_goal_per_child_package
 parent_package: 11.3.8-external-black-box-validation-recovery
-parent_status: ready for review / umbrella planning
+parent_status: active / in progress
 parent_authorizes_runtime_implementation: no
 latest_external_black_box_result: FAIL
 
 ## Active Child Package
 
-active_child_package: 11.3.8.1-learning-action-goal-preservation
-route_status: implementation_complete_pending_followup
-route_type: review-closeout-existing-implementation
-next_action: review-closeout-existing-implementation
+active_child_package: 11.3.8.2-suggested-utterance-generation
+route_status: ready_after_11.3.8.1_PACKAGE_COMPLETE
+route_type: create-review-seven-doc-package
+next_action: create / review 11.3.8.2 child seven-doc package
 do_not_reimplement: true
-handoff_target: 11.3.8.2-suggested-utterance-generation
+handoff_source: 11.3.8.1-learning-action-goal-preservation PACKAGE_COMPLETE
 
 Route meaning:
 
-- Review the existing `11.3.8.1` implementation and child docs.
-- Confirm whether the metadata contract is stable enough for `11.3.8.2`.
-- Do not start `11.3.8.2` from this goal unless explicitly requested and
-  `11.3.8.1` reaches `PACKAGE_COMPLETE`.
+- `11.3.8.1` review-closeout reached `PACKAGE_COMPLETE`.
+- The next eligible package is `11.3.8.2`, but it must start only by creating /
+  reviewing its own seven-document child package.
+- Do not treat the parent `11.3.8` campaign as complete; suggested utterances,
+  matcher consumption, regression tests, and external black-box revalidation
+  remain pending.
 
 ## Package Queue
 
 | Package | Current route status | Next action |
 |---|---|---|
-| `11.3.8.1-learning-action-goal-preservation` | `implementation_complete_pending_followup` | Review and close out existing implementation |
-| `11.3.8.2-suggested-utterance-generation` | `blocked_by_11.3.8.1_metadata_contract` | Create / review child seven-doc package after 11.3.8.1 closes; route type `create-review-seven-doc-package` |
+| `11.3.8.1-learning-action-goal-preservation` | `PACKAGE_COMPLETE` | Done; stable metadata contract may be consumed by 11.3.8.2 |
+| `11.3.8.2-suggested-utterance-generation` | `ready_after_11.3.8.1_PACKAGE_COMPLETE` | Create / review child seven-doc package; route type `create-review-seven-doc-package` |
 | `11.3.8.3-learned-action-matching-improvement` | `blocked_by_11.3.8.2_utterance_contract` | Wait for utterance contract |
 | `11.3.8.4-regression-tests` | `blocked_by_11.3.8.3_matching_contract` | Wait for matcher contract |
 | `11.3.8.5-external-black-box-revalidation-closeout` | `blocked_by_11.3.8.4_regression_tests` | Stop for live validation approval before any live run |

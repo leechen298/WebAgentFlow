@@ -1,19 +1,77 @@
 # 复盘 / 评审（Review）
 
-状态：implementation_complete_pending_followup
+状态：PACKAGE_COMPLETE
 
 ## FINAL_STATUS
 
-status: implementation_complete_pending_followup
-next_action: review-closeout-existing-implementation
+status: PACKAGE_COMPLETE
+next_action: create / review 11.3.8.2-suggested-utterance-generation child seven-doc package
 parent_authorizes_runtime_implementation: no
 active_child_package: 11.3.8.1-learning-action-goal-preservation
 do_not_reimplement: true
-blocking_findings: implementation/code review of existing HEAD still required before 11.3.8.2 consumes metadata contract
-last_verified_at: 2026-05-29 14:47 CST
-commands_run: parent Goal Runner docs verification only; no child runtime verification
-commands_not_run: runtime tests; wagent chat; verify-scenario; browser smoke; external black-box validation
-handoff: 11.3.8.2 may proceed only after 11.3.8.1 review confirms stable metadata contract
+blocking_findings: none
+last_verified_at: 2026-05-29 15:32 CST
+commands_run: git status -sb; git diff --name-status 86d3c5a..HEAD -- apps/api; git diff 45ed70d^..86d3c5a for scoped implementation files; focused pytest; ruff; target-constant scan; git diff --check
+commands_not_run: wagent chat; verify-scenario; browser smoke; external black-box validation; direct autonomous-run endpoint
+handoff: 11.3.8.2 may now create / review its child seven-doc package and consume the optional metadata contract; 11.3.8 parent remains active, not complete
+
+## 2026-05-29 Review Closeout
+
+- Author: Codex, review-closeout agent.
+- Decision: `PACKAGE_COMPLETE` for `11.3.8.1-learning-action-goal-preservation` only.
+- Scope: reviewed existing HEAD implementation and evidence. No runtime, schema, API, frontend, fixture, migration, worker, eval-runner, matcher, replay, reporter, recovery, abort, external validation result, `GOAL_RUNNER.md`, parent `plan.md`, or `11.3.8.2` files were modified.
+- Handoff: `11.3.8.2-suggested-utterance-generation` may now create / review its own seven-document child package using the stable metadata contract below.
+
+Stable metadata contract confirmed:
+
+- `LearningRunRequest` carries optional `action_goal`, `canonical_goal`, and `action_aliases`.
+- `LearningRunResult` carries optional `business_goal`, `canonical_goal`, `action_aliases`, `business_object`, and `match_terms`.
+- `session.metadata_json.learned_actions[]` preserves optional `business_goal`, `canonical_goal`, `action_aliases`, `business_object`, and `match_terms`.
+- Slot values remain execution parameters and are not reused as action identity.
+- `_matching_actions()` was not broadened to consume the new metadata in this package.
+- No target-specific route, selector, seed, answer key, or Validation-Site constant was introduced.
+
+Closeout changed files:
+
+- `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/review.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/CURRENT_STATE.md`
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+
+Commands run:
+
+| Command | Result | Exit code | Notes |
+|---|---|---:|---|
+| `git status -sb` | Branch `v0.1-local`; pre-existing untracked `docs/iterations/m11/11.3.8.1-learning-action-goal-preservation/GOAL_CLOSEOUT.md` visible | 0 | Current worktree state before closeout doc edits |
+| `git diff --name-status 86d3c5a..HEAD -- apps/api` | No output | 0 | No API/runtime/test drift after the last code-review checkpoint |
+| `git diff 45ed70d^..86d3c5a -- apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/app/routers/conversation.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | Reviewed scoped implementation diff | 0 | Diff limited to internal metadata fields, chat runtime handoff / storage, router handoff, and focused tests |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q` | `10 passed in 0.10s` | 0 | Confirms learning result metadata preservation and slot-value exclusion |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | `86 passed in 0.76s` | 0 | Confirms session learned action metadata persistence and existing chat runtime regressions |
+| `cd apps/api && ../../.venv/bin/python -m ruff check app/routers/conversation.py app/services/learning/learning_run_service.py app/services/conversation/chat_runtime.py tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py` | `All checks passed!` | 0 | Focused lint |
+| `rg -n "5177\|/inventory\|inventory item\|WebAgentFlow-Validation-Site" apps/api/app/routers/conversation.py apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | No matches | 1 | No target route / validation-site constants in changed implementation or focused tests |
+| `git diff --check` | Clean | 0 | Whitespace check |
+
+Compatibility review:
+
+- No public route contract changed; `apps/api/app/routers/conversation.py` only passes optional internal metadata into `LearningRunRequest`.
+- New metadata keys are optional JSON additions and remain backward-compatible with existing session learned actions.
+- Existing Chinese `登录` / `创建记录` learning behavior remains covered by the focused test files.
+- No DB migration, frontend, fixture, worker, CLI command, replay, reporter, recovery, abort, or autonomous-run behavior changed.
+
+Scope review:
+
+- This package preserves learned action identity only; it does not implement suggested utterance generation, matcher consumption, regression package coverage, or external black-box revalidation.
+- The external black-box latest result remains `FAIL`; `PV-CLI-003` is not claimed fixed / passed / verified here.
+- No `wagent chat`, `verify-scenario`, browser/UI smoke, direct autonomous-run endpoint, or external validation was run.
+
+Unresolved findings:
+
+- P1: None.
+- P2: None.
+- P3: Suggested utterance quality remains for `11.3.8.2`; matcher consumption remains for `11.3.8.3`; external black-box revalidation remains for `11.3.8.5`.
+
+Final assessment:
+
+`11.3.8.1-learning-action-goal-preservation` is `PACKAGE_COMPLETE`. Stop this goal here. The next eligible action is to create / review the `11.3.8.2-suggested-utterance-generation` seven-document child package in a separate goal.
 
 ## 2026-05-29 Documentation Authoring
 
