@@ -258,3 +258,43 @@ Blockers:
 
 - None for documentation review.
 - Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
+
+## 2026-05-28 Codex A Package Completion Verification
+
+- Author: Codex A, documentation author
+- Decision: ready for review remains correct
+- Scope: documentation-only verification and review-record update; no runtime, schema, API, frontend, fixture, migration, or test implementation files changed
+
+Changed files:
+
+- `docs/iterations/m11/11.3.8-external-black-box-validation-recovery/review.md`
+
+Commands run:
+
+| Command / Surface | Result | Exit code | Notes |
+|---|---|---:|---|
+| `git status --short --branch` | Current branch is `v0.1-local`; existing untracked `.agent-runs/` is outside this package | 0 | No push attempted; branch is local-only |
+| `sed -n '1,220p' .agents/skills/webagentflow-iteration-dev/SKILL.md` | Confirmed implementation workflow is boundary context only for this docs task | 0 | Avoided treating parent docs as runtime implementation |
+| `sed -n '1,220p' AGENTS.md` | Read repository-wide iteration and evidence rules | 0 | Required reading |
+| `sed -n '1,220p' CLAUDE.md` | Read mirrored repository guidance and M11 closeout caveats | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/README.md` | Read iteration package standards | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/AGENTS.md` | Read planned-package, milestone-index, anti-drift, and evidence rules | 0 | Required reading |
+| `find docs/iterations/templates -maxdepth 1 -type f -print \| sort` | Located package template documents | 0 | Template discovery |
+| `find docs/iterations/m11 -maxdepth 2 -type f -name '*.md' \| sort` | Located M11 package docs, including existing 11.3.8 package | 0 | Milestone/package discovery |
+| `sed -n '1,260p' docs/product-model.md` | Read product-model boundaries for lifecycle stages and internal Agent roles | 0 | Required reading |
+| `sed -n '1,260p' docs/iterations/m11/README.md` | Confirmed milestone index lists 11.3.8 as `ready for review / umbrella planning` and names `11.3.8.1` as the next gated child package | 0 | Status sync check |
+| `sed -n '1,320p' docs/iterations/m11/m11-plan.md` plus targeted `rg` inspection | Confirmed milestone plan includes 11.3.8 status, evidence baseline, child package sequence, and implementation gate | 0 | Status sync check |
+| `find docs/iterations/m11/11.3.8-external-black-box-validation-recovery -maxdepth 1 -type f \| sort` | Parent file set present: `README.md`, `acceptance.md`, `contract.md`, `intent.md`, `plan.md`, `review.md`, `technical-design.md`, `test-plan.md` | 0 | Docs-only file completeness check |
+| `rg -n "11\\.3\\.8\|external-black-box\|ready for review" docs/iterations/m11/m11-plan.md docs/iterations/m11/README.md docs/iterations/m11/11.3.8-external-black-box-validation-recovery/README.md` | Package README, milestone index, and milestone plan expose `ready for review` and the child-package gate | 0 | User-requested status sync check |
+| `rg -n "Package name\|Status:\|Type:\|Goal:\|Why this exists\|Inputs / required reading\|Allowed changes\|Forbidden changes\|Expected deliverables\|Expected tests / verification\|Compatibility constraints\|Scope guardrails\|Exit criteria\|Handoff to next package" docs/iterations/m11/11.3.8-external-black-box-validation-recovery/plan.md` | Required planned-package field labels found for all five child package specs | 0 | Field-presence check; reviewer must still judge adequacy |
+| `rg -n "not run\|unverified\|PASS\|FAIL\|FOLLOW_UP\|BLOCKED\|PV-CLI-003\|external-black-box-validation-latest\|Assumptions\|Open Risks" docs/iterations/m11/11.3.8-external-black-box-validation-recovery` | Evidence-honesty wording, current failure-baseline guardrails, assumptions, and open risks found | 0 | No runtime pass claim made |
+| `git status --short -- docs/iterations/m11/11.3.8-external-black-box-validation-recovery docs/iterations/m11/README.md docs/iterations/m11/m11-plan.md` | No scoped diff before this review-note edit | 0 | Confirmed status was already synchronized before this note |
+
+Not run:
+
+- Runtime tests, build, lint, browser/UI smoke, `wagent chat`, `verify-scenario`, autonomous runs, and external black-box revalidation were not run. This task only verified and refreshed the umbrella planning documentation.
+
+Blockers:
+
+- None for documentation review.
+- Runtime implementation remains blocked until `11.3.8.1-learning-action-goal-preservation` creates its own full seven-document package and passes documentation/design review.
