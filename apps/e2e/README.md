@@ -75,22 +75,27 @@ page verification specs 时需要；API 启动和 `/health` 不需要它。E2E t
 
 ## 写入 Replay 固定数据
 
-写入确定性 LearnedPath 固定数据：
+写入确定性 LearnedPath 固定数据属于本地 legacy E2E 集成 helper，不是外部
+provider 的脱敏结果摘要。该 helper 会把 raw fixture target 信息写入本地开发
+checkout 的 ignored `.tmp` 文件，必须显式 opt-in：
 
 ```bash
 cd /path/to/WebAgentFlow-Fixture-Site
 WAF_REPO_ROOT=/path/to/WebAgentFlow/v0.1 \
 WAF_FIXTURE_SITE_URL=<fixture-site-url> \
-python3 evals/seed-webagentflow-replay-fixtures.py
+python3 evals/seed-webagentflow-replay-fixtures.py --webagentflow-local-seed
 ```
 
 外部 seed 脚本会：
 
 - 只删除 `dedup_key` 以 `e2e:replay:` 开头的行。
 - 插入固定 LearnedPath replay 数据。
-- 将生成的 ID 和 opaque target URL 写入
+- 将生成的 ID 和 local-only target context 写入
   `apps/e2e/.tmp/replay-fixtures.json`。
 - 不调用 `/exploration/autonomous-runs`。
+
+外部 provider 的可提交验收结果应使用 Fixture-Site 生成的 redacted provider
+summary，而不是这个 `.tmp` raw fixture 文件。
 
 需要清理 E2E 数据时运行：
 

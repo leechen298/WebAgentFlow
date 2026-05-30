@@ -30,7 +30,8 @@
 - PASS 条件：JSON 存在，包含 8 个 fixtures：`happy`、`observational`、
   `pageMismatch`、`targetMissing`、`unsupportedAction`、`flaky`、`deprecated`、
   `signatureChanged`。
-- 禁止捷径：如果文件不存在，必须标记 `BLOCKED`，并提示先运行 seed。
+- 禁止捷径：如果文件不存在，必须标记 `BLOCKED`，并提示从外部 Fixture-Site
+  显式运行 local-only seed helper。该 raw 文件不是 provider redacted summary。
 
 ### CASE PRE-003: no autonomous endpoint in E2E source
 

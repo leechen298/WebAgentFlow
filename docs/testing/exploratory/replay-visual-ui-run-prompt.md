@@ -46,9 +46,11 @@ Headless Playwright E2E 属于 deterministic E2E。curl / Python / Node API 调�
 2. 确认 console 可访问。
 3. 确认外部 fixture provider 可访问。
 4. 确认 `apps/e2e/.tmp/replay-fixtures.json` 存在且包含 8 个 replay fixtures。
-5. 如果当前数据库没有 seeded LearnedPath，可运行
-   `.venv/bin/python apps/e2e/scripts/seed-replay-fixtures.py`。
-   该脚本不调用 autonomous run，也不依赖 LLM provider。
+5. 如果当前数据库没有 seeded LearnedPath，可从外部 Fixture-Site 仓库显式
+   opt-in 运行 local-only seed helper：
+   `python3 evals/seed-webagentflow-replay-fixtures.py --webagentflow-local-seed`。
+   该 helper 不调用 autonomous run，也不依赖 LLM provider，但会写入本地 raw
+   fixture context；它不是 provider redacted summary。
 
 ## 必跑 UI cases
 

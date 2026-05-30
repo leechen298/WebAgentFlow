@@ -56,13 +56,16 @@ Playwright config 暂时不使用 `webServer` 编排全部服务。等回归轨�
    `VITE_USE_DEV_PROXY=true API_PORT=8001 CONSOLE_PORT=5174 pnpm run dev:console`。
 6. 配置显式 spec root：
    `export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs`。
-7. 从外部 Fixture-Site provider 写入 replay 固定数据：
-   `python3 evals/seed-webagentflow-replay-fixtures.py`。
+7. 如需运行 legacy replay E2E，从外部 Fixture-Site provider 显式 opt-in
+   写入本地 raw replay 固定数据：
+   `python3 evals/seed-webagentflow-replay-fixtures.py --webagentflow-local-seed`。
 8. 运行 E2E：`pnpm run test:e2e`。
 
 `WAF_PAGE_SPEC_ROOT` 是 page verification 的显式 spec 来源。只有列出或加载
 page verification specs 时需要；API 启动和 `/health` 不需要它。E2E target URL
-来自外部 provider 生成的 `apps/e2e/.tmp/replay-fixtures.json`。
+来自外部 provider 生成的本地 ignored `apps/e2e/.tmp/replay-fixtures.json`。
+该 raw 文件不是 WebAgentFlow 可提交的 provider 验收摘要；可提交摘要应使用
+Fixture-Site 的 redacted provider summary。
 
 首次运行前，用 `pnpm run test:e2e:install` 安装 Playwright Test Chromium
 浏览器。如果该命令卡在 `playwright install chromium`，通常是浏览器下载或网络
