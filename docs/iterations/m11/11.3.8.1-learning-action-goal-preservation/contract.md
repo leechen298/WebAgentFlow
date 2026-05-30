@@ -34,8 +34,8 @@
 - 修改 matcher confidence、candidate selection、multi-candidate choice、replay execution 或 Task Result Reporter 行为。
 - 修改 suggested utterance policy beyond preserving existing compatibility; utterance quality belongs to 11.3.8.2。
 - 新增 public API endpoint、DB migration、frontend UI、fixture site、worker flow 或 autonomous-run flow。
-- 修改外部 Validation-Site / Fixture-Site，或恢复 `apps/product-test-site` / `apps/validation-site`。
-- 把 `inventory item`、`5177/inventory`、selector、`data-testid`、seed data、field label、button text、placeholder、operation alias 或 page source 写入 runtime / prompts / active eval defaults。
+- 修改外部 Fixture-Site / Fixture-Site，或恢复 `apps/fixture-site` / `apps/fixture-site`。
+- 把 `inventory item`、`<fixture-port>/target-page`、selector、`data-testid`、seed data、field label、button text、placeholder、operation alias 或 page source 写入 runtime / prompts / active eval defaults。
 - 把 focused unit tests 或 docs inspection 写成 external black-box validation pass。
 
 ## State / Result Contract

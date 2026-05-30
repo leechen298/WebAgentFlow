@@ -26,7 +26,7 @@
 - 不同业务动作不能因为共享对象或共享动词而误匹配。
 - 多个 plausible actions 时继续进入 choice / clarification，而不是静默执行。
 - 泛化动词如 `Create`、`Open`、`Update`、`Delete` 不单独授权执行。
-- 不引入外部 Validation-Site route、selector、seed data、button text、field label、
+- 不引入外部 Fixture-Site route、selector、seed data、button text、field label、
   placeholder、operation alias 或 page source。
 
 ## 非目标

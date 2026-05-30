@@ -7,7 +7,7 @@
 前置迭代：
 
 - [`11.3.5.5-execution-evidence-result-reporter-adapter`](../11.3.5.5-execution-evidence-result-reporter-adapter/)
-- [`11.3.5.6-wagent-chat-items-closed-loop-evaluation`](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/)
+- [`11.3.5.6-wagent-chat-records-closed-loop-evaluation`](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/)
 - [`11.3.5.7-pending-choice-active-task-ledger`](../11.3.5.7-pending-choice-active-task-ledger/)
 
 ## 迭代类型
@@ -27,7 +27,7 @@ C. 取消
 
 ## 迭代定位
 
-11.3.5.3 - 11.3.5.6 已跑通 `/items` P0 working loop：
+11.3.5.3 - 11.3.5.6 已跑通 `/records` P0 working loop：
 
 ```text
 学习新增项目 A
@@ -64,7 +64,7 @@ C. 取消
 - 不做多步修复计划。
 - 不接 TaskPathPlanner，多候选 planning 属于 11.3.5.9。
 - 不启用 `learn_then_execute`。
-- 不新增 `/items` 搜索 / 编辑 / 删除闭环。
+- 不新增 `/records` 搜索 / 编辑 / 删除闭环。
 - 不新增 DB migration。
 - 不调用 `verify-scenario` 或 autonomous run。
 

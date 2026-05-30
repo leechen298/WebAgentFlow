@@ -1,28 +1,28 @@
-# Validation-site 浏览器冒烟
+# Fixture-site 浏览器冒烟
 
 日期：2026-05-11
 Commit: `818c30a564e2c2d61039f5ceb13f780c8a18e3dc`
 工作区：本报告添加前为 clean（`git status --short` 无输出）
 工具：Browser Use / in-app browser
-范围：validation-site `/login` 和 `/users` 可视化浏览器冒烟
+范围：fixture-site `/entry` 和 `/records` 可视化浏览器冒烟
 
 ## 前置条件
 
 - API health: PASS
   - 命令：`curl -sS -i http://127.0.0.1:8001/health`
   - 结果：HTTP 200, `{"code":0,"data":{"status":"ok","database":"ok"},"msg":"ok"}`
-- validation-site `/login`: PASS
-  - 命令：`curl -sS -I http://127.0.0.1:5175/login`
+- fixture-site `/entry`: PASS
+  - 命令：`curl -sS -I https://example.invalid/entry`
   - 结果：HTTP 200, `Content-Type: text/html`
-- validation-site `/users`: PASS
-  - 命令：`curl -sS -I http://127.0.0.1:5175/users`
+- fixture-site `/records`: PASS
+  - 命令：`curl -sS -I https://example.invalid/records`
   - 结果：HTTP 200, `Content-Type: text/html`
 
 备注：
 
 - Initial default-sandbox localhost checks could not reach the services, and
   sandboxed dev-server startup failed with local bind permission errors.
-- Non-sandbox service checks then confirmed the API and validation-site were
+- Non-sandbox service checks then confirmed the API and fixture-site were
   already reachable on `127.0.0.1:8001` and `127.0.0.1:5175`.
 - No product code, E2E spec, package script, or iteration document was changed.
 
@@ -42,9 +42,9 @@ Commit: `818c30a564e2c2d61039f5ceb13f780c8a18e3dc`
 
 - 状态：PASS
 - 方法：Browser Use / in-app browser
-- 页面 URL：`http://127.0.0.1:5175/login`
+- 页面 URL：`https://example.invalid/entry`
 - 可见操作：
-  - Opened `/login`.
+  - Opened `/entry`.
   - Observed the login page in the in-app browser.
 - 可见观察：
   - Page title: `Sign in — Validation Site`.
@@ -60,7 +60,7 @@ Commit: `818c30a564e2c2d61039f5ceb13f780c8a18e3dc`
 
     ```json
     {
-      "url": "http://127.0.0.1:5175/login",
+      "url": "https://example.invalid/entry",
       "title": "Sign in — Validation Site",
       "usernameCount": 1,
       "usernameVisible": true,
@@ -81,20 +81,20 @@ Commit: `818c30a564e2c2d61039f5ceb13f780c8a18e3dc`
 
 - 状态：PASS
 - 方法：Browser Use / in-app browser
-- 页面 URL：`http://127.0.0.1:5175/login`
+- 页面 URL：`https://example.invalid/entry`
 - 可见操作：
   - Filled username `wrong`.
   - Filled password `wrong`.
   - Clicked the login submit button.
 - 可见观察：
-  - Page stayed on `/login`.
+  - Page stayed on `/entry`.
   - A user-visible red alert appeared above the form.
   - Alert text: `用户名或密码错误`.
 - 证据：
 
   ```json
   {
-    "url": "http://127.0.0.1:5175/login",
+    "url": "https://example.invalid/entry",
     "alertCount": 1,
     "alertVisible": true,
     "alertText": "用户名或密码错误"
@@ -108,9 +108,9 @@ Commit: `818c30a564e2c2d61039f5ceb13f780c8a18e3dc`
 
 - 状态：PASS
 - 方法：Browser Use / in-app browser
-- 页面 URL：`http://127.0.0.1:5175/users`
+- 页面 URL：`https://example.invalid/records`
 - 可见操作：
-  - Opened `/users`.
+  - Opened `/records`.
   - Waited for seeded users to render.
 - 可见观察：
   - Page title: `User Directory — Validation Site`.
@@ -126,7 +126,7 @@ Commit: `818c30a564e2c2d61039f5ceb13f780c8a18e3dc`
 
   ```json
   {
-    "url": "http://127.0.0.1:5175/users",
+    "url": "https://example.invalid/records",
     "title": "User Directory — Validation Site",
     "nameCount": 1,
     "nameVisible": true,
@@ -141,9 +141,9 @@ Commit: `818c30a564e2c2d61039f5ceb13f780c8a18e3dc`
   }
   ```
 
-  - A `/users` screenshot was displayed in the Browser Use output; no
+  - A `/records` screenshot was displayed in the Browser Use output; no
     screenshot file was committed.
-- 备注：页面通过 validation-site Vite server 加载，并代理
+- 备注：页面通过 fixture-site Vite server 加载，并代理
   `/validation-api/*` calls to the local API.
 - 后续：无。
 
@@ -151,19 +151,19 @@ Commit: `818c30a564e2c2d61039f5ceb13f780c8a18e3dc`
 
 - 状态：PASS
 - 方法：Browser Use / in-app browser
-- 页面 URL：`http://127.0.0.1:5175/users`
+- 页面 URL：`https://example.invalid/records`
 - 可见操作：
   - Filled the name input with `alice`.
   - Clicked `搜索`.
 - 可见观察：
-  - URL changed to `http://127.0.0.1:5175/users?name=alice`.
+  - URL changed to `https://example.invalid/records?name=alice`.
   - Result count changed to `1 位用户`.
   - Result row showed `alice`, `alice@example.com`, role `admin`, status `启用`.
 - 证据：
 
   ```json
   {
-    "url": "http://127.0.0.1:5175/users?name=alice",
+    "url": "https://example.invalid/records?name=alice",
     "countLabel": "1 位用户",
     "aliceEmailVisible": true,
     "rowText": "1\talice\talice@example.com\tadmin\t启用\t2024-03-15\tEngineering\t查看"
@@ -177,20 +177,20 @@ Commit: `818c30a564e2c2d61039f5ceb13f780c8a18e3dc`
 
 - 状态：PASS
 - 方法：Browser Use / in-app browser
-- 页面 URL：`http://127.0.0.1:5175/users`
+- 页面 URL：`https://example.invalid/records`
 - 可见操作：
   - Filled the name input with `zzzz-no-match-9999`.
   - Clicked `搜索`.
 - 可见观察：
   - URL changed to
-    `http://127.0.0.1:5175/users?name=zzzz-no-match-9999`.
+    `https://example.invalid/records?name=zzzz-no-match-9999`.
   - Result count changed to `0 位用户`.
   - Empty state text `未找到匹配的用户` was visible in the result table.
 - 证据：
 
   ```json
   {
-    "url": "http://127.0.0.1:5175/users?name=zzzz-no-match-9999",
+    "url": "https://example.invalid/records?name=zzzz-no-match-9999",
     "countLabel": "0 位用户",
     "emptyVisible": true,
     "emptyText": "未找到匹配的用户"
@@ -239,11 +239,11 @@ content-type: application/json
 
 {"code":0,"data":{"status":"ok","database":"ok"},"msg":"ok"}
 
-$ curl -sS -I http://127.0.0.1:5175/login
+$ curl -sS -I https://example.invalid/entry
 HTTP/1.1 200 OK
 Content-Type: text/html
 
-$ curl -sS -I http://127.0.0.1:5175/users
+$ curl -sS -I https://example.invalid/records
 HTTP/1.1 200 OK
 Content-Type: text/html
 ```

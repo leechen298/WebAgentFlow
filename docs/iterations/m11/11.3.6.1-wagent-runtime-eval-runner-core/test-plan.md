@@ -4,7 +4,7 @@
 
 ## 适用条件
 
-本包新增本地 eval runner，涉及 live Conversation API、product-test-site、browser-backed
+本包新增本地 eval runner，涉及 live Conversation API、fixture-site、browser-backed
 learning / replay、TaskResultReporter evidence、artifact 输出和 exit code，因此必须维护
 `test-plan.md`。
 
@@ -14,7 +14,7 @@ learning / replay、TaskResultReporter evidence、artifact 输出和 exit code�
   Markdown / JSON writer。
 - Integration：runner 对 Conversation API 的 create session / dispatch / evidence collection。
 - API：只读 session / messages / events / history / LearnedPath detail。
-- Product site：`apps/product-test-site` `/items` 页面。
+- Product site：`apps/fixture-site` `/records` 页面。
 - Console UI：N/A。
 - Live `wagent chat`：N/A，runner 直接调用 Conversation API。
 - Live autonomous run：N/A，明确禁止。
@@ -31,12 +31,12 @@ learning / replay、TaskResultReporter evidence、artifact 输出和 exit code�
 | Unit | UT-6 effective value unavailable warning | GateEvaluator | not_observable / warning | Yes | no guessing |
 | Unit | UT-7 evidence target selector unavailable warning | GateEvaluator | selector gate not_observable / warning, not guessed | Yes | `ExecutionEvidence` has no selector |
 | Unit | UT-8 single path no planner | GateEvaluator | no pending/planner choice pass | Yes | synthetic C turn |
-| Unit | UT-9 old global `/items` paths ignored | GateEvaluator | session-scoped single path passes despite global rows | Yes | contamination guard |
+| Unit | UT-9 old global `/records` paths ignored | GateEvaluator | session-scoped single path passes despite global rows | Yes | contamination guard |
 | Unit | UT-10 redaction | ArtifactWriter | sensitive keys redacted | Yes | artifact safety |
 | Unit | UT-11 exit reducer | status reducer | pass=0, fail=1, blocked=2, timeout=3 | Yes | deterministic |
 | Unit | UT-12 markdown from normalized result | writer | report matches gate statuses | Yes | no reparsing |
 | Integration | IN-1 API health | `GET /health` | reachable | Yes for live run | preflight |
-| Integration | IN-2 product `/items` reachable | `GET /items` | reachable | Yes for live run | preflight |
+| Integration | IN-2 product `/records` reachable | `GET /records` | reachable | Yes for live run | preflight |
 | Integration | IN-3 create session | Conversation API | session id exists | Yes for live run | no CLI chat |
 | Integration | IN-4 dispatch URL / learn A / execute B | Conversation API | responses returned | Yes for live run | timeout 300s |
 | Integration | IN-5 collect events/history/path | read-only APIs | evidence collected | Yes for live run | no direct replay |
@@ -92,7 +92,7 @@ Manual health checks:
 
 ```bash
 curl -sI "http://127.0.0.1:8001/health"
-curl -sI "http://127.0.0.1:5176/items"
+curl -sI "http://127.0.0.1:<fixture-port>/records"
 ```
 
 ### Live eval
@@ -157,7 +157,7 @@ runner can dispatch URL / learn A / execute B
 runner can collect evidence through read-only APIs
 runner can hard-check required gates
 runner can detect direct replay regression for C
-runner does not use global /items catalog row count to decide single path
+runner does not use global /records catalog row count to decide single path
 runner does not infer evidence target selector from ExecutionEvidence
 runner can write JSON + Markdown artifacts
 runner exit code matches gate outcome

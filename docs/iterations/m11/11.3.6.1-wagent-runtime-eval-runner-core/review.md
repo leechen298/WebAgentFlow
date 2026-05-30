@@ -86,13 +86,13 @@ Global summary:
 |---|---|
 | Session ID | `9af0e6e3-84c3-4771-b72c-25ddb6c2d85b` |
 | Current-session LearnedPath ID | `c4c86c45-3999-4850-ad46-02735f993f80` |
-| `learned_path_parameterized` | `LearnedPath c4c86c45-3999-4850-ad46-02735f993f80 has value_slot=item_name` |
-| `slot_override_B` | `slot_overrides.item_name=测试项目B-20260522162547` |
+| `learned_path_parameterized` | `LearnedPath c4c86c45-3999-4850-ad46-02735f993f80 has value_slot=record_name` |
+| `slot_override_B` | `slot_overrides.record_name=测试项目B-20260522162547` |
 | `dom_evidence_verified_B` | `dom_text_present verified target=测试项目B-20260522162547` |
 | B reporter | `verification_outcome=verified` |
 | `single_candidate_detected` | `one current-session learned action matched c4c86c45-3999-4850-ad46-02735f993f80` |
 | `execution_uses_current_learned_path` | `chat_execution_started.learned_path_id=c4c86c45-3999-4850-ad46-02735f993f80` |
-| `slot_override_C` | `slot_overrides.item_name=测试项目C-20260522162547` |
+| `slot_override_C` | `slot_overrides.record_name=测试项目C-20260522162547` |
 | `dom_evidence_verified_C` | `dom_text_present verified target=测试项目C-20260522162547` |
 | C reporter | `verification_outcome=verified` |
 
@@ -111,9 +111,9 @@ Global summary:
 | `pnpm run db:migrate:api` | failed with stale `.venv/bin/alembic` shebang | 126 | local env issue, not product eval result |
 | `.venv/bin/python -m alembic -c apps/api/alembic.ini upgrade head` | migration completed | 0 | used current root venv Python |
 | `.venv/bin/python -m uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 8001` | API started | N/A | foreground service for eval |
-| `pnpm run dev:product` | Vite product-test-site started on `127.0.0.1:5176` | N/A | foreground service for eval |
+| `pnpm run dev:product` | Vite fixture-site started on `127.0.0.1:<fixture-port>` | N/A | foreground service for eval |
 | `curl -i http://127.0.0.1:8001/health` | HTTP `200`, `database=ok` | 0 | preflight |
-| `curl -i http://127.0.0.1:5176/items` | HTTP `200` | 0 | required elevated shell because default sandbox could not connect to port 5176 |
+| `curl -i http://127.0.0.1:<fixture-port>/records` | HTTP `200` | 0 | required elevated shell because default sandbox could not connect to port <fixture-port> |
 
 ### Boundary
 
@@ -171,7 +171,7 @@ split between the scoped 11.3.6.1 subset and the full current dirty-tree result.
     有 selector，但 `ExecutionEvidence` 没有 selector，runner 不得从
     `execution_evidence` 猜 selector。
   - `single_path_direct_replay_regression` 需要明确以当前 eval session 的 learned path /
-    learned actions / runtime events 为准，不能用全局 `/items` LearnedPath catalog 数量判断。
+    learned actions / runtime events 为准，不能用全局 `/records` LearnedPath catalog 数量判断。
 
 ## 2026-05-22 文档修订
 
@@ -186,7 +186,7 @@ split between the scoped 11.3.6.1 subset and the full current dirty-tree result.
   - 明确 `single_path_direct_replay_regression` 以当前 eval session 的
     `new_learned_path_id`、session `learned_actions`、runtime route events 和
     `chat_execution_started` 为准。
-  - 明确全局旧 `/items` LearnedPath rows 不得污染 single-path 判定。
+  - 明确全局旧 `/records` LearnedPath rows 不得污染 single-path 判定。
   - `README.md`、`intent.md`、`contract.md`、`technical-design.md`、`test-plan.md`、
     `plan.md`、M11 README 和 `m11-plan.md` 状态切到
     `ready_for_implementation（design review passed，未实现代码）`。
@@ -309,7 +309,7 @@ service substitution 代替 Conversation dispatch。
 | autonomous-run endpoint direct call | AGENTS 边界禁止 | 不运行 |
 | Console UI smoke | 本包是 API-driven eval runner | 用户显式要求时另开 |
 | `wagent chat` interactive TTY | runner 直接调用 Conversation API | 不运行 |
-| non-`/items` cases | 第一版只覆盖 core `/items` closed loop 和 single-path regression | 后续 11.3.6.x 扩展 |
+| non-`/records` cases | 第一版只覆盖 core `/records` closed loop 和 single-path regression | 后续 11.3.6.x 扩展 |
 | `effective_value_B` direct step log | public history/events 当前未暴露 | 后续可补最小只读可观测性 |
 | `evidence_targets` selector direct read | public history/events 当前未暴露 | 后续可补最小只读可观测性 |
 

@@ -10,8 +10,8 @@ Status: implemented
 - technical-design。
 - test-plan。
 - implementation plan。
-- validation-site runtime observation route。
-- validation-site 首页 Runtime Observation 入口。
+- fixture-site runtime observation route。
+- fixture-site 首页 Runtime Observation 入口。
 - planned fixture cards。
 - stable anchor / reset convention 展示。
 
@@ -22,13 +22,13 @@ Status: implemented
 已运行：
 
 - `git diff --check`: PASS。
-- `pnpm --filter @web-agent-flow/validation-site build`: PASS。
+- `pnpm --filter @web-agent-flow/fixture-site build`: PASS。
 - package status check: PASS。
 - forbidden directory check: PASS
 
 未运行：
 
-- validation-site component tests：not run，原因是当前 package 未提供 `test` script。
+- fixture-site component tests：not run，原因是当前 package 未提供 `test` script。
 - route smoke / UI smoke：not run，原因是本轮按 scoped build 验证，不做浏览器 smoke。
 - E2E / `verify-scenario` / autonomous run：not run，原因是这些不属于 11.2.4.1 shell 实现范围。
 

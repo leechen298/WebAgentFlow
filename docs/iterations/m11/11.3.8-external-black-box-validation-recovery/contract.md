@@ -44,8 +44,8 @@ Child packages may later propose runtime, test, or validation changes only after
 The parent package must not:
 
 - modify runtime, schema, API, frontend, fixture, migration, or test implementation files;
-- modify `WebAgentFlow-Validation-Site` or `WebAgentFlow-Fixture-Site`;
-- restore `apps/product-test-site` or `apps/validation-site`;
+- modify `External-Fixture-Provider` or `WebAgentFlow-Fixture-Site`;
+- restore `apps/fixture-site` or `apps/fixture-site`;
 - update external black-box latest results as if validation has been rerun;
 - mark `PV-CLI-003` fixed, passed, or verified;
 - call `/exploration/autonomous-runs` or `/exploration/autonomous-runs/stream`;
@@ -74,7 +74,7 @@ The umbrella plan must preserve:
 - existing internal Agent roles and legacy aliases;
 - existing M11 closeout caveats;
 - current WAgent chat and Conversation API evidence boundaries;
-- separation between deterministic Fixture-Site, external Validation-Site, and product runtime;
+- separation between deterministic Fixture-Site, external Fixture-Site, and product runtime;
 - historical 11.3.6 / 11.3.7 eval results as historical evidence only.
 
 No public API, database schema, replay status semantics, reporter boundary, recovery boundary, or abort boundary changes are authorized by this parent package.
@@ -90,14 +90,14 @@ M12 recovery / retry / abort / interruption remains out of scope. If a child pac
 - Full page-wide automatic capability discovery.
 - Full learn-then-execute across arbitrary domains.
 - L2 guided teaching or Teaching Guide Agent work.
-- External validation-site automation as CI default.
+- External fixture-site automation as CI default.
 - Console UI smoke for this specific recovery package.
 - M12 recovery / retry / abort / interruption.
 
 ## Assumptions
 
 - The 2026-05-25 external validation report and PV-CLI-003 triage are accepted as the current failure baseline.
-- The external Validation-Site remains outside this repository and is operator-provided during revalidation.
+- The external Fixture-Site remains outside this repository and is operator-provided during revalidation.
 - Child packages can use synthetic repo-local tests for non-live regression without copying external site implementation details.
 
 ## Open Risks

@@ -145,7 +145,7 @@ export interface InitialFieldSnapshot {
   fieldType?: string;
   /** Whether the field is marked as required */
   required?: boolean;
-  /** Number of rows/items for table/list-like structures */
+  /** Number of rows/entries for table/list-like structures */
   itemCount?: number;
   /** Current visible value at recording start (before any user interaction) */
   defaultValueText?: string;

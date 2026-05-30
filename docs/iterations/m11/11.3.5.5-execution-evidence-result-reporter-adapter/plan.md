@@ -10,14 +10,14 @@
   - `ReplayAction.value_slot`
   - `run_replay(... slot_overrides=...)`
   - `execute_action()` 和 `wait_for_change_after_action()` 使用 `effective_action`
-- 确认 `/items` 页面有 `[data-testid='item-list']`。
+- 确认 `/records` 页面有 `[data-testid='record-list']`。
 
 验证：
 
 ```bash
 git status --short
 rg -n "slot_overrides|value_slot|effective_action" apps/api/app apps/api/tests
-rg -n "item-list" apps/product-test-site/src/pages/ItemsPage.vue
+rg -n "record-list" apps/fixture-site/src/pages/ItemsPage.vue
 ```
 
 ## 阶段 1：Schema 扩展
@@ -109,7 +109,7 @@ PYTHONPATH=. ../../.venv/bin/pytest \
   `execution_payload` 的 structured postcondition evidence。
 - 修改 `TaskResultReporter._check_postconditions()`，读取 structured evidence。
 - verified 只在 replay succeeded / observed、drift none、no error、`dom_text_present`
-  verified 且 target 匹配 `slot_overrides.item_name` 时成立。
+  verified 且 target 匹配 `slot_overrides.record_name` 时成立。
 - missing target 不得 verified。
 
 验证：
@@ -128,8 +128,8 @@ PYTHONPATH=. ../../.venv/bin/pytest tests/test_task_planning_result_reporter.py 
 
 任务：
 
-- execute branch 根据 `slot_overrides.item_name` 和 `/items` target 构造
-  `ExecutionEvidenceTarget(kind="dom_text_present", selector="[data-testid='item-list']")`。
+- execute branch 根据 `slot_overrides.record_name` 和 `/records` target 构造
+  `ExecutionEvidenceTarget(kind="dom_text_present", selector="[data-testid='record-list']")`。
 - 调 replay handler 时传入 `evidence_targets`。
 - replay 返回后构造 reporter input。
 - 用户回复优先使用 reporter outcome。
@@ -200,5 +200,5 @@ git diff --check
   - autonomous run
   - 11.3.5.6 closed-loop evaluation
 
-不得在本包 review 中声称完整 `/items` learn A / execute B live closed loop 已通过，除非
+不得在本包 review 中声称完整 `/records` learn A / execute B live closed loop 已通过，除非
 11.3.5.6 明确执行并记录对应证据。

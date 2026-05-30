@@ -39,11 +39,11 @@ Status: complete.
 Read:
 
 ```text
-apps/validation-site/src/pages/runtime-observation/RuntimeObservationIndex.vue
-apps/validation-site/src/pages/runtime-observation/basic/BasicBusinessFixturePage.vue
-apps/validation-site/src/pages/runtime-observation/basic/basicFixtures.ts
-apps/validation-site/src/router/index.ts
-apps/validation-site/package.json
+apps/fixture-site/src/pages/runtime-observation/RuntimeObservationIndex.vue
+apps/fixture-site/src/pages/runtime-observation/basic/BasicBusinessFixturePage.vue
+apps/fixture-site/src/pages/runtime-observation/basic/basicFixtures.ts
+apps/fixture-site/src/router/index.ts
+apps/fixture-site/package.json
 ```
 
 Confirm what can be reused and what must be replaced.
@@ -132,7 +132,7 @@ Run:
 
 ```bash
 git diff --check
-pnpm --filter @web-agent-flow/validation-site build
+pnpm --filter @web-agent-flow/fixture-site build
 git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```
@@ -153,4 +153,4 @@ Status: in progress; record final evidence in `review.md`.
 - [ ] Shell basic cards link only implemented routes.
 - [ ] Future signal labels are not current support.
 - [ ] No backend / API / replay / reporter changes.
-- [ ] validation-site build passes.
+- [ ] fixture-site build passes.

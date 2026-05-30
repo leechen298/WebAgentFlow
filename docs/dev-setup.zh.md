@@ -78,7 +78,7 @@
    配置 WebAgentFlow 使用这个外部 fixture URL 和 spec root：
 
    ```bash
-   export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+   export WAF_FIXTURE_SITE_URL=https://example.invalid
    export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
    # 本机示例：
    export WAF_PAGE_SPEC_ROOT=/Users/leechen/projects/WebAgentFlow-Fixture-Site/web/specs
@@ -118,9 +118,8 @@ Claude Code 从 `.claude/skills/` 发现项目级 skills，所以本仓库可以
 通过 HTTP API 跑一次自主探索并打印结果 JSON。API 必须在跑（`pnpm run dev:api`）。
 
 ```bash
-.venv/bin/wagent verify --spec-id login --scenario valid_credentials
-.venv/bin/wagent verify --url "${WAF_FIXTURE_SITE_URL:-http://127.0.0.1:5175}/users" \
-    --fill-values '{"name":"alice"}'
+.venv/bin/wagent verify --url "${WAF_FIXTURE_SITE_URL:-<fixture-site-url>}/<fixture-path>" \
+    --fill-values '{"<field>":"<value>"}'
 ```
 
 - stdout → 一个 JSON 对象（默认裁剪过的摘要；`--full` 输出完整快照、

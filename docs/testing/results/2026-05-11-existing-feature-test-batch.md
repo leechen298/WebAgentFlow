@@ -52,13 +52,13 @@ Q3 执行：按 `docs/testing/current-testing-backlog.md` 第一批实现测试�
 - **发现**：`test_patch_run_review_does_not_modify_learned_path`（`test_exploration_learned_paths_api.py` 第 253 行）已经覆盖 separation invariant：reject run review 后 learned path trust 仍为 `provisional`。
 - **结果**：**EXISTING** — 不需要新增测试；该 invariant 已覆盖。
 
-### 7. VS-SELECTOR: Validation-site selector stability smoke
+### 7. VS-SELECTOR: Fixture-site selector stability smoke
 
 - **动作**：新增测试。
-- **新增文件**：`apps/console/src/__tests__/validation-site/selector-stability.test.ts`
+- **新增文件**：`apps/console/src/__tests__/fixture-site/selector-stability.test.ts`
 - **覆盖**：3 个页面共 14 个测试：
   - LoginPage: #username, #password, role=alert, data-testid=login-error, submit button
-  - UserDirectoryPage: #search-name, #search-email, #search-role, #search-status, #btn-search, #btn-reset, #user-search-form, data-user-id, data-testid=user-detail
+  - UserDirectoryPage: #name-field, #search-email, #search-role, #search-status, #btn-apply, #btn-reset, #user-search-form, data-user-id, data-testid=user-detail
   - DashboardPage: data-testid=dashboard-welcome
 - **结果**：**PASS** — 14/14 tests pass
 
@@ -92,7 +92,7 @@ Improvement from Q1 baseline: 140 passed + 2 failed → 160 passed + 0 failed.
 | 文件 | 动作 |
 |---|---|
 | `apps/console/src/__tests__/components/AutonomousUseCasesPage.test.ts` | Modified (removed 2 broken abort tests) |
-| `apps/console/src/__tests__/validation-site/selector-stability.test.ts` | **New** (14 selector stability tests) |
+| `apps/console/src/__tests__/fixture-site/selector-stability.test.ts` | **New** (14 selector stability tests) |
 | `apps/console/src/__tests__/components/AutonomousWorkbenchPage.test.ts` | **New** (6 workbench smoke tests) |
 
 ## 摘要

@@ -155,7 +155,7 @@ def _render_skill_md(run_sh: Path, repo_root: Path, api_base: str) -> str:
         ## When to invoke
 
         Use this skill when the user's request implies a live run:
-        "跑一下 X", "verify scenario Y", "check the users fixture",
+        "跑一下 X", "verify scenario Y", "check the selected fixture",
         etc. Do NOT use this skill for tasks that don't need a real
         browser run:
 
@@ -176,11 +176,11 @@ def _render_skill_md(run_sh: Path, repo_root: Path, api_base: str) -> str:
 
         Useful arguments (full list via `{run_sh} --help`):
 
-        - `--spec-id login --scenario valid_credentials` — run a
+        - `--spec-id <spec-id> --scenario <scenario-id>` — run a
           persisted spec + scenario; URL and fill_values / toggle_values
           hydrate from the spec automatically.
-        - `--url http://localhost:5175/users` — ad-hoc run.
-        - `--fill-values '{{"username":"admin"}}'` — override text
+        - `--url <absolute-target-url>` — ad-hoc run.
+        - `--fill-values '{{"field":"value"}}'` — override text
           inputs (JSON object, or `@path.json`).
         - `--toggle-values '{{"status":"active"}}'` — override radio /
           checkbox (JSON object, or `@path.json`).

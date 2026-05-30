@@ -353,7 +353,7 @@ WAgent response: 已取消当前任务。
 - No existing session metadata key is removed.
 - Corrupt `pending_choice` should be ignored and cleared, not raise 500.
 - Missing private map for a visible choice should clear choice and ask the user to restate the operation.
-- Single-path `/items` happy path remains unchanged.
+- Single-path `/records` happy path remains unchanged.
 - Sensitive values remain redacted through existing `redact_sensitive_payload`.
 
 ## 失败 / 边界情况（Failure / Edge Cases）
@@ -386,7 +386,7 @@ WAgent response: 已取消当前任务。
 | Private map safety | no learned_path_id leaks to Router prompt / WAgent response / LLM trace | `test-plan.md` SEC-* |
 | ActiveTask | learning / execution / clarify writes and clears task state | `test-plan.md` AT-* |
 | Cancel / expiry | pending and active task cleanup | `test-plan.md` CAN-* / EXP-* |
-| Regression | P0 `/items` single path still works through targeted tests | `test-plan.md` REG-* |
+| Regression | P0 `/records` single path still works through targeted tests | `test-plan.md` REG-* |
 
 ## 验证命令入口（Validation Commands）
 

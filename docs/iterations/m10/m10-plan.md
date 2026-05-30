@@ -222,8 +222,8 @@ M10.2 已完成 LearnedPath 的确定性消费能力：它只消费已经存在�
 
 - `apps/api/app/services/learning/page_analyzer.py`
 - `apps/api/app/services/learning/action_planner.py`
-- `apps/validation-site/src/pages/UsersPage.vue`
-- `apps/validation-site/specs/users.assertions.json`
+- `apps/fixture-site/src/pages/UsersPage.vue`
+- `apps/fixture-site/specs/users.assertions.json`
 
 验收方向：
 

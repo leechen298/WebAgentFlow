@@ -31,8 +31,7 @@
   用 `lxml`）
 - Playwright chromium 生命周期封装
   （`services/execution/execution_runtime.py`）
-- 自建 validation-site（`apps/validation-site/`）+ mock
-  `/validation-api` 后端
+- 通过配置 URL / spec root 支持外部 fixture provider
 
 自主探索管线（端到端）：
 
@@ -269,15 +268,15 @@ M11.3 把 runtime conversation 底座收束成面向普通用户的 `wagent chat
   默认使用项目内置可见 Playwright Chromium，支持 `--headless` opt-out。
 - **11.3.2 Chat History & Debug Console**：implementation complete；补 conversation
   history / debug surface，以及 CLI resume / list / history 支持。
-- **11.3.3 Product-Level Chat Test Site Separation**：accepted；product-test-site
-  与 validation-site 分离，产品级 chat learning 不再依赖 validation specs / assertions。
+- **11.3.3 Product-Level Chat Test Target Separation**：accepted；产品级 chat
+  learning 保持 target-agnostic，不依赖仓库内置 validation specs / assertions。
 - **11.3.4 Conversation Intake Agent / 对话理解 Agent**：implementation complete；
   新增 schema-constrained 自然语言入口、deterministic fallback、guardrails、
   response provenance 和脱敏 LLM trace history。Scoped tests passed；真实
   LLM-backed smoke 仍 pending。
 - **11.3.5 Customer-Facing Agent Router & Skill Runtime / 面客 Agent 路由与应用技能运行时**：
   已通过聚焦的 11.3.5.x working-runtime slices 落地：entry gate / latency UX、
-  task-state reducer / learning preconditions、product-test-site fixture、
+  task-state reducer / learning preconditions、external fixture result intake、
   parameterized learning / replay slots、execution evidence adapter、closed-loop
   chat evaluation、pending choice、basic recovery 和 planner-backed choice integration。
 - **11.3.6 WAgent Runtime Eval Program**：以 `pass_with_caveats` 收口，覆盖受控

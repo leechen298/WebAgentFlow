@@ -57,7 +57,7 @@ confirm、pending after confirm、success status、secondary safe action / distr
 ## Secondary Actions / Distractors
 
 - View details reveals local details panel or hint。
-- It must not navigate outside validation-site。
+- It must not navigate outside fixture-site。
 - It must not call backend。
 
 ## Reset Behavior

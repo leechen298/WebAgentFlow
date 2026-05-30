@@ -8,7 +8,7 @@
 - `contract.md`
 - `technical-design.md`
 - `test-plan.md`
-- [`../11.3.5.6-wagent-chat-items-closed-loop-evaluation/review.md`](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/review.md)
+- [`../11.3.5.6-wagent-chat-records-closed-loop-evaluation/review.md`](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/review.md)
 - [`../11.3.5.7-pending-choice-active-task-ledger/review.md`](../11.3.5.7-pending-choice-active-task-ledger/review.md)
 - [`../11.3.5.8-basic-failure-recovery/review.md`](../11.3.5.8-basic-failure-recovery/review.md)
 - [`../11.3.5.9-taskpathplanner-multi-candidate-chat-integration/review.md`](../11.3.5.9-taskpathplanner-multi-candidate-chat-integration/review.md)
@@ -63,7 +63,7 @@ through existing read-only surfaces. In that case, update `contract.md` and `tec
 - Confirm no product runtime capability will be added.
 - Confirm `evidence_target_item_list` is conditional unless `evidence_targets` are observable.
 - Confirm `single_path_direct_replay_regression` is session-scoped and ignores old global
-  `/items` LearnedPaths.
+  `/records` LearnedPaths.
 
 ### Step 1 · Current-state preflight
 
@@ -73,7 +73,7 @@ Run read-only discovery:
 rg -n "conversation.*dispatch|/dispatch|history|events" apps/api/app/routers apps/api/app/services apps/cli/wagent
 rg -n "chat_learning_completed|chat_execution_started|chat_execution_completed|task_result_reported" apps/api/app apps/api/tests docs/testing docs/iterations/m11
 rg -n "ExecutionEvidenceTarget|class ExecutionEvidence|evidence_targets|execution_evidence" apps/api/app/schemas apps/api/app/services apps/api/tests
-rg -n "eval:wagent|dev:product|product-test-site|5176" package.json apps/product-test-site/package.json docs
+rg -n "eval:wagent|dev:product|fixture-site|<fixture-port>" package.json apps/fixture-site/package.json docs
 ```
 
 Expected:
@@ -81,7 +81,7 @@ Expected:
 - Conversation session / dispatch / events / history endpoints exist.
 - Runtime emits or persists learning / execution / reporter events.
 - Selector observability is confirmed from `evidence_targets`, not `ExecutionEvidence`.
-- Product-test-site `/items` is available under port 5176 by default.
+- Fixture-site `/records` is available under port <fixture-port> by default.
 
 ### Step 2 · Add runner skeleton
 
@@ -173,7 +173,7 @@ verify DOM evidence and reporter outcome
 
 Do not seed data through direct replay or DB writes.
 
-Do not use global `/exploration/learned-paths?page_template=/items` row count to decide whether this is
+Do not use global `/exploration/learned-paths?page_template=/records` row count to decide whether this is
 single path. Use this eval session's learned path id, session learned actions and execution events.
 
 ### Step 8 · Implement artifact writers

@@ -255,35 +255,35 @@ Recommended next cases：
 - 保留 API + CLI smoke，保护 session create/send/status/transcript/events。
 - keep-running：conversation runtime E2E。
 
-### 5. validation-site
+### 5. external fixture provider
 
 Current status：
 
-- validation-site 是 deterministic fixture host。
-- 它支撑 replay E2E、page analysis、未来确定性 UI smoke。
+- 外部 fixture provider 是 deterministic fixture host。
+- WebAgentFlow E2E 只消费 provider 输出的 fixture manifest 和结果摘要。
 
 Key risks：
 
 - selector / fixture 数据漂移会导致 replay、page analysis 和 E2E 误报。
-- login/sessionStorage、users filter 等基础 fixtures 必须稳定。
+- provider 自身的页面行为和 selector 稳定性必须由 provider 仓库验证。
 
 Existing coverage summary：
 
 - 部分 API、page analyzer、signature helper 已有覆盖。
-- replay E2E 间接依赖 `/users` fixture。
+- replay E2E 依赖外部 manifest 提供 target URL、mismatch URL 和 actions。
 
 Top gaps：
 
 | Case | Status | 说明 |
 | --- | --- | --- |
-| selector stability smoke | proposed | 可做轻量 unit/API/DOM smoke |
-| validation API seed data smoke | proposed | 适合 API integration，不需要浏览器 |
-| fixture visual layout checks | deferred | 只做 Agent-operated UI exploratory，不进常规 CI |
+| fixture manifest ingestion | keep-running | WebAgentFlow 只验证 manifest ingestion 和 replay wiring |
+| provider selector stability smoke | moved out | 属于 provider 仓库，不在 WebAgentFlow 仓库保存 selector |
+| fixture visual layout checks | moved out | 属于 provider 仓库或外部证据，不进 WebAgentFlow 常规 CI |
 
 Recommended next cases：
 
-- 补最小 selector stability smoke，避免 fixture 漂移破坏 replay。
-- 不把 validation-site 页面全量升级成 E2E。
+- 保留 manifest ingestion 和 replay wiring。
+- 不在 WebAgentFlow 仓库保留 provider 页面级用例。
 
 ### 6. console-operator-ui
 
@@ -350,7 +350,7 @@ Deferred：
 
 - AE 全量 60 case 展开。
 - live autonomous learning -> replay smoke。
-- validation-site 全页面 E2E。
+- external fixture provider 全页面 E2E。
 - console 全页面 visual exploratory。
 - additional conversation E2E variants，等 M11.1 或更多 runtime behavior 进入施工后再定。
 - replay DOM obstruction failure，等 fixture 设计稳定后再补。

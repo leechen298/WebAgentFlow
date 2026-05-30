@@ -35,7 +35,7 @@ def test_chat_is_top_level_command_and_creates_interactive_session() -> None:
     with patch.object(chat_module.httpx, "Client", return_value=client), patch(
         "builtins.input",
         side_effect=[
-            "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login",
+            "学习一下这个登录页怎么登录，地址是 https://example.invalid/entry",
             "帮我登录",
             "exit",
         ],
@@ -134,7 +134,7 @@ def test_chat_tty_waiting_indicator_is_transient() -> None:
     assert "WAgent > 处理完成。" in output
 
 
-def test_chat_product_workspace_progress_labels() -> None:
+def test_chat_virtual_target_progress_labels() -> None:
     client = _mock_client()
     client.post.side_effect = [
         _mock_response({"id": "sess-1", "status": "idle"}),
@@ -145,10 +145,10 @@ def test_chat_product_workspace_progress_labels() -> None:
         "builtins.input",
         side_effect=[
             (
-                "学习一下这个工作台登录页怎么进入，地址是 "
-                "http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456"
+                "学习一下这个虚拟页面怎么提交表单，地址是 "
+                "https://example.invalid/form，字段 A 是 alpha，字段 B 是 beta"
             ),
-            "帮我进入工作台",
+            "帮我提交表单",
             "exit",
         ],
     ):

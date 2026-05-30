@@ -34,7 +34,7 @@ M11.3 chat happy path。`dispatch.metadata.client == "wagent_chat"` 只作为审
 - 文本包含 URL；
 - 判定为 `learn_page`。
 
-第一版只支持 `/login` happy path。`http://localhost:5175/login` 映射到：
+第一版只支持 `/entry` happy path。`https://example.invalid/entry` 映射到：
 
 - `spec_id=login`
 - `scenario=valid_credentials`
@@ -51,8 +51,8 @@ M11.3 chat happy path。`dispatch.metadata.client == "wagent_chat"` 只作为审
       "alias": "登录",
       "utterances": ["帮我登录", "登录一下"],
       "learned_path_id": "...",
-      "target_url": "http://localhost:5175/login",
-      "page_template": "/login",
+      "target_url": "https://example.invalid/entry",
+      "page_template": "/entry",
       "scenario": "valid_credentials"
     }
   ]
@@ -147,7 +147,7 @@ CLI 契约：
 - 不做 global LearnedPath fallback。
 - 不做多 Path 歧义处理。
 - 不做 streaming conversation。
-- 不做 `/users` 或真实业务页面。
+- 不做 `/records` 或真实业务页面。
 - 不做自动猜测页面、追问、推荐页面或失败恢复。
 
 ## 未决问题

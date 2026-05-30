@@ -80,7 +80,7 @@ commands_not_run: live external validation; wagent chat live validation; verify-
 | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_router_agent.py -q` | Focused router tests pass | `15 passed in 0.07s` | 0 | Pass | terminal output | Router known-action counting coverage |
 | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py -q` | Combined focused suite passes | `110 passed in 0.77s` | 0 | Pass | terminal output | Combined focused regression |
 | `cd apps/api && ../../.venv/bin/python -m ruff check app/services/conversation/chat_runtime.py app/services/conversation/router_agent.py tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py` | Ruff passes | `All checks passed!` | 0 | Pass | terminal output | Focused lint |
-| `rg -n "5177\|/inventory\|inventory item\|WebAgentFlow-Validation-Site" apps/api/app/services/conversation/chat_runtime.py apps/api/app/services/conversation/router_agent.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py` | No target constants in touched runtime/tests | No output | 1 | Pass | terminal output | Minimum target-token scan |
+| `rg -n "<fixture-port>\|/target-page\|inventory item\|External-Fixture-Provider" apps/api/app/services/conversation/chat_runtime.py apps/api/app/services/conversation/router_agent.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py` | No target constants in touched runtime/tests | No output | 1 | Pass | terminal output | Minimum target-token scan |
 | `git diff --check` | No whitespace errors | Clean | 0 | Pass | terminal output | Patch sanity |
 | `git diff --name-only` | Only in-scope files listed | Runtime, router, focused tests, child docs, and parent routing docs listed | 0 | Pass | terminal output | Scope check |
 | `git status --short` | Only in-scope files dirty/untracked | Runtime, router, focused tests, child docs, and parent routing docs listed | 0 | Pass | terminal output | Scope check |
@@ -197,7 +197,7 @@ Finding responses:
 | `contract.md` missing `Out-of-scope Follow-ups` | P2 | Added explicit follow-up section for 11.3.8.4, 11.3.8.5, and out-of-scope runtime areas | Addressed; spec re-review approved |
 | Required docs term check could match command text instead of a real Exit Criteria section | P3 | Added explicit `Exit Criteria` sections and tightened test-plan wording | Addressed; spec re-review approved |
 | Red / green requirement overstated negative tests that may already pass today | P3 | Reworded positive matcher-consumption tests as required red; negative / ambiguity / generic guards may be recorded as red failures or already-green baselines | Addressed; spec re-review approved |
-| Target scan should make clear it is only a minimum scan | P3 | Added reviewer inspection requirement for selectors, field labels, button text, placeholders, seed copy, operation aliases, page source, and Validation-Site answer keys | Addressed; safety re-review approved |
+| Target scan should make clear it is only a minimum scan | P3 | Added reviewer inspection requirement for selectors, field labels, button text, placeholders, seed copy, operation aliases, page source, and Fixture-Site answer keys | Addressed; safety re-review approved |
 
 ### Validation Evidence
 

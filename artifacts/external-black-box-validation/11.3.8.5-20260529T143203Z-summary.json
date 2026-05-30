@@ -3,7 +3,7 @@
   "timestamp_utc": "2026-05-29T14:32:03Z",
   "operator": "Codex external test operator",
   "api_base_url": "http://127.0.0.1:8001",
-  "target_url": "http://127.0.0.1:5177/inventory",
+  "target_url": "http://127.0.0.1:<fixture-port>/target-page",
   "db_state_policy": "clean database before live validation",
   "wagent_session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
   "learning_run_id": "04238a54-7847-459d-9148-831ad2a9434c",
@@ -25,7 +25,7 @@
     },
     "PV-CLI-003": {
       "status": "PASS",
-      "evidence": "Execution started and completed; replay_status succeeded, drift_status none, verification_outcome verified, and page evidence confirmed MUG-SKY-014, Skyline Mug, 18, and Office."
+      "evidence": "Execution started and completed; replay_status succeeded, drift_status none, verification_outcome verified, and page evidence confirmed REC-SKY-014, Skyline Mug, 18, and Office."
     },
     "PV-CLI-004": {
       "status": "PASS_WITH_CAVEAT",
@@ -33,7 +33,7 @@
     },
     "PV-INTEGRITY-001": {
       "status": "PASS",
-      "evidence": "Main repo still uses external Validation-Site only as a target; no external site source was restored."
+      "evidence": "Main repo still uses external Fixture-Site only as a target; no external site source was restored."
     },
     "PV-INTEGRITY-002": {
       "status": "PASS",

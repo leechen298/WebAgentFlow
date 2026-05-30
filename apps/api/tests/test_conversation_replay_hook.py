@@ -34,7 +34,7 @@ def _make_summary(
 ) -> ConversationReplaySummary:
     return ConversationReplaySummary(
         learned_path_id="path-1",
-        url="http://127.0.0.1:5175/users",
+        url="https://example.invalid/records",
         replay_status=status,
         drift_status=drift,
         error=error,
@@ -48,7 +48,7 @@ def _create_session(repo: ConversationRepository, status: str = "idle") -> str:
 
 def _create_learned_path(db_session: Session, *, trust: TrustStatus) -> str:
     row, _ = LearnedPathRepository(db_session).ingest_run(
-        page_template="/users",
+        page_template="/records",
         query_signature={},
         dom_fingerprint="a" * 64,
         scenario="filter_by_status",
@@ -78,11 +78,11 @@ def test_replay_command_calls_handler_and_completes(repo: ConversationRepository
     session_id = _create_session(repo, status="idle")
 
     result = orch.dispatch_user_input(
-        session_id, "/replay path-1 http://127.0.0.1:5175/users"
+        session_id, "/replay path-1 https://example.invalid/records"
     )
 
     assert len(calls) == 1
-    assert calls[0] == ("path-1", "http://127.0.0.1:5175/users")
+    assert calls[0] == ("path-1", "https://example.invalid/records")
     assert result.allowed is True
     assert result.next_status == "completed"
     assert result.command_kind == "replay"
@@ -108,7 +108,7 @@ def test_replay_observed_also_completes(repo: ConversationRepository) -> None:
     session_id = _create_session(repo, status="idle")
 
     result = orch.dispatch_user_input(
-        session_id, "/replay path-1 http://127.0.0.1:5175/users"
+        session_id, "/replay path-1 https://example.invalid/records"
     )
 
     assert result.next_status == "completed"
@@ -128,7 +128,7 @@ def test_replay_drifted_fails_session(repo: ConversationRepository) -> None:
     session_id = _create_session(repo, status="idle")
 
     result = orch.dispatch_user_input(
-        session_id, "/replay path-1 http://127.0.0.1:5175/users"
+        session_id, "/replay path-1 https://example.invalid/records"
     )
 
     assert result.next_status == "failed"
@@ -160,7 +160,7 @@ def test_replay_bad_status_fails_session(
     session_id = _create_session(repo, status="idle")
 
     result = orch.dispatch_user_input(
-        session_id, "/replay path-1 http://127.0.0.1:5175/users"
+        session_id, "/replay path-1 https://example.invalid/records"
     )
 
     assert result.next_status == "failed"
@@ -184,7 +184,7 @@ def test_deprecated_learned_path_does_not_call_run_replay(
         result = run_explicit_replay(
             db_session,
             path_id,
-            "http://127.0.0.1:5175/users",
+            "https://example.invalid/records",
         )
 
     assert result.learned_path_id == path_id
@@ -201,7 +201,7 @@ def test_replay_handler_exception_maps_to_failed(repo: ConversationRepository) -
     session_id = _create_session(repo, status="idle")
 
     result = orch.dispatch_user_input(
-        session_id, "/replay path-1 http://127.0.0.1:5175/users"
+        session_id, "/replay path-1 https://example.invalid/records"
     )
 
     assert result.next_status == "failed"
@@ -295,7 +295,7 @@ def test_replay_without_handler_stops_at_replay_requested(
     session_id = _create_session(repo, status="idle")
 
     result = orch.dispatch_user_input(
-        session_id, "/replay path-1 http://127.0.0.1:5175/users"
+        session_id, "/replay path-1 https://example.invalid/records"
     )
 
     assert result.allowed is True
@@ -318,7 +318,7 @@ def test_replay_lifecycle_events_in_correct_order(repo: ConversationRepository) 
     session_id = _create_session(repo, status="idle")
 
     result = orch.dispatch_user_input(
-        session_id, "/replay path-1 http://127.0.0.1:5175/users"
+        session_id, "/replay path-1 https://example.invalid/records"
     )
 
     events = repo.list_events(session_id)
@@ -343,7 +343,7 @@ def test_replay_event_payload_contains_summary(repo: ConversationRepository) -> 
     session_id = _create_session(repo, status="idle")
 
     orch.dispatch_user_input(
-        session_id, "/replay path-1 http://127.0.0.1:5175/users"
+        session_id, "/replay path-1 https://example.invalid/records"
     )
 
     events = repo.list_events(session_id)
@@ -354,7 +354,7 @@ def test_replay_event_payload_contains_summary(repo: ConversationRepository) -> 
     assert len(replay_events) == 1
     payload = replay_events[0].payload_json
     assert payload["learned_path_id"] == "path-1"
-    assert payload["url"] == "http://127.0.0.1:5175/users"
+    assert payload["url"] == "https://example.invalid/records"
     assert payload["replay_status"] == "succeeded"
 
 
@@ -371,7 +371,7 @@ def test_replay_status_goes_idle_to_replay_running_to_completed(
     session_id = _create_session(repo, status="idle")
 
     orch.dispatch_user_input(
-        session_id, "/replay path-1 http://127.0.0.1:5175/users"
+        session_id, "/replay path-1 https://example.invalid/records"
     )
 
     state_changes = [
@@ -401,7 +401,7 @@ def test_replay_uses_exact_path_id_no_selection(repo: ConversationRepository) ->
     session_id = _create_session(repo, status="idle")
 
     orch.dispatch_user_input(
-        session_id, "/replay exact-id http://127.0.0.1:5175/users"
+        session_id, "/replay exact-id https://example.invalid/records"
     )
 
     assert calls == ["exact-id"]
@@ -437,7 +437,7 @@ def test_run_explicit_replay_default_headless_remains_true(
     from app.services.conversation.replay_hook import run_explicit_replay
 
     row, _ = LearnedPathRepository(db_session).ingest_run(
-        page_template="/users",
+        page_template="/records",
         query_signature={},
         dom_fingerprint="a" * 64,
         scenario="filter_by_status",
@@ -457,11 +457,11 @@ def test_run_explicit_replay_default_headless_remains_true(
             drift_status="none",
             drift_reasons=[],
             warnings=[],
-            final_url="http://127.0.0.1:5175/users",
+            final_url="https://example.invalid/records",
             final_title="Users",
             steps=[],
         )
-        run_explicit_replay(db_session, str(row.id), "http://127.0.0.1:5175/users")
+        run_explicit_replay(db_session, str(row.id), "https://example.invalid/records")
 
     assert mock_run_replay.call_args.kwargs.get("headless") is True
 
@@ -474,12 +474,12 @@ def test_run_explicit_replay_default_headless_remains_true(
             drift_status="none",
             drift_reasons=[],
             warnings=[],
-            final_url="http://127.0.0.1:5175/users",
+            final_url="https://example.invalid/records",
             final_title="Users",
             steps=[],
         )
         run_explicit_replay(
-            db_session, str(row.id), "http://127.0.0.1:5175/users", headless=False
+            db_session, str(row.id), "https://example.invalid/records", headless=False
         )
 
     assert mock_run_replay.call_args.kwargs.get("headless") is False

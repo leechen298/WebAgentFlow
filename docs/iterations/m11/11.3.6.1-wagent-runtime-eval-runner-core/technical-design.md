@@ -10,9 +10,9 @@
 |---|---|
 | Conversation API | 已支持 session create、dispatch、messages、events、history |
 | `wagent conversation send` | 已有 session-targeted dispatch 能力 |
-| `/items` product-test-site | 已作为 11.3.5.6 closed-loop validation 的产品级页面 |
-| LearnedPath parameterization | `/items` add-item path 使用 `value_slot=item_name` 和 `slot_overrides` |
-| ExecutionEvidence | 支持 `dom_text_present`、`[data-testid='item-list']`、verified target |
+| `/records` fixture-site | 已作为 11.3.5.6 closed-loop validation 的产品级页面 |
+| LearnedPath parameterization | `/records` add-item path 使用 `value_slot=record_name` 和 `slot_overrides` |
+| ExecutionEvidence | 支持 `dom_text_present`、`[data-testid='record-list']`、verified target |
 | TaskResultReporter adapter | 已能基于 replay result + DOM evidence 输出 `verification_outcome=verified` |
 | Pending choice / planner choice | 已有 11.3.5.7 / 11.3.5.9 targeted coverage |
 | Manual closed-loop result | 11.3.5.6 已有 Markdown 结果和 clean-slate evidence |
@@ -61,7 +61,7 @@ scripts/evals/lib/
 ```
 
 第一版优先单文件 runner，使用 internal classes / dataclasses 保持结构清晰。不要把 runner
-放进 `apps/api/tests`，因为它跨 API、product-test-site、Conversation runtime、artifacts
+放进 `apps/api/tests`，因为它跨 API、fixture-site、Conversation runtime、artifacts
 和 result docs。
 
 ### 2. Runner modules
@@ -253,9 +253,9 @@ chat_execution_started.learned_path_id for C
 absence of pending_choice / planner_choice events after C turn
 ```
 
-不要用全局 catalog 的 `/items` row count 判定 single path。全局 catalog 可以用来读取
+不要用全局 catalog 的 `/records` row count 判定 single path。全局 catalog 可以用来读取
 已知 `learned_path_id` 的 detail，但不能决定 case 是否有唯一候选。这样 runner 可以在
-有历史 `/items` LearnedPath 的开发数据库上反复运行。
+有历史 `/records` LearnedPath 的开发数据库上反复运行。
 
 ### 6. Gate extraction details
 
@@ -265,7 +265,7 @@ Recommended event extraction:
 |---|---|
 | new learned path id | `chat_learning_completed.payload.new_learned_path_id` |
 | execution start | `chat_execution_started` |
-| slot override | `chat_execution_started.payload.slot_overrides.item_name` |
+| slot override | `chat_execution_started.payload.slot_overrides.record_name` |
 | evidence target selector | request-side / history-side `evidence_targets`; not `ExecutionEvidence` |
 | execution evidence | `chat_execution_completed.payload.execution_evidence` or history replay summary |
 | reporter outcome | `task_result_reported.payload.verification_outcome` |
@@ -324,7 +324,7 @@ SENSITIVE_KEYS = {
 }
 ```
 
-For `/items`, `item_name` values may remain visible because they are test-generated evidence. If later
+For `/records`, `record_name` values may remain visible because they are test-generated evidence. If later
 cases include credentials or login, the case must define slot-specific redaction before joining this runner.
 
 ### 9. Markdown report
@@ -383,7 +383,7 @@ Implementation tests should verify:
 - gate evaluator fails when required evidence is missing.
 - `effective_value` missing becomes warning / not_observable, not guessed pass.
 - `evidence_targets` missing becomes warning / not_observable, not guessed from `ExecutionEvidence`.
-- global old `/items` LearnedPaths do not break session-scoped single-path regression.
+- global old `/records` LearnedPaths do not break session-scoped single-path regression.
 - redaction removes sensitive keys from artifacts.
 - exit reducer maps statuses to codes.
 - Markdown report and JSON artifact derive from same result object.

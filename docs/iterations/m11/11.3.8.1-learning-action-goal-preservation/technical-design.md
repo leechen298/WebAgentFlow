@@ -38,7 +38,7 @@ Failure baseline:
 | Keep old session actions compatible | New session action keys are optional; existing `alias` / `utterances` consumers keep working | focused chat runtime regression | No DB migration |
 | Do not change matcher policy | Do not update `_matching_actions()` criteria except tests may assert metadata exists for later package | review diff scope, no matcher behavior tests required here | Matching belongs to 11.3.8.3 |
 | Do not update external validation result | Review records live validation as not run | `review.md` | 11.3.8.5 owns revalidation |
-| Avoid slot values as identity | Metadata builder excludes `fill_values` / slot values from match terms unless they are structural action names | focused unit tests | SKU / names / quantities are parameters |
+| Avoid slot values as identity | Metadata builder excludes `fill_values` / slot values from match terms unless they are structural action names | focused unit tests | record_code / names / quantities are parameters |
 
 ## Implemented Approach
 
@@ -59,7 +59,7 @@ The committed implementation uses a minimal internal metadata path:
    - Keep existing login special case.
 4. Keep match terms target-agnostic:
    - Include business goal, canonical goal, aliases, and normalized object terms.
-   - Exclude URLs, credentials, SKU / item names / quantities, selectors, field labels, and page-source details.
+   - Exclude URLs, credentials, record_code / item names / quantities, selectors, field labels, and page-source details.
 5. Keep `suggested_utterances` behavior compatible in this package.
    - 11.3.8.2 may improve utterance generation after metadata shape is stable.
 
@@ -141,8 +141,8 @@ This package stops at metadata persistence. Execution-time matching still follow
 
 ## Anti-drift Rules
 
-- Do not add strings from `WebAgentFlow-Validation-Site` implementation.
-- Do not mention `5177/inventory` outside docs or test comments that describe the historical failure.
+- Do not add strings from `External-Fixture-Provider` implementation.
+- Do not mention `<fixture-port>/target-page` outside docs or test comments that describe the historical failure.
 - Do not make `inventory item` a branch condition.
 - Do not loosen `_matching_actions()` in this package.
 - Do not update `external-black-box-validation-latest.md`.

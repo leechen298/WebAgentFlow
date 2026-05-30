@@ -10,7 +10,7 @@
 - `test-plan.md`
 - [`../11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-iteration-plan.md`](../11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-iteration-plan.md)
 - [`../11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-construction.md`](../11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-construction.md)
-- [`../11.3.5.6-wagent-chat-items-closed-loop-evaluation/review.md`](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/review.md)
+- [`../11.3.5.6-wagent-chat-records-closed-loop-evaluation/review.md`](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/review.md)
 
 ## 文件 / 模块
 
@@ -150,7 +150,7 @@ Run targeted tests and scoped lint. Update `review.md` with:
 - [ ] `pending_choice` 过期会清理。
 - [ ] `active_task` learning / execution / clarify 写入和清理符合 contract。
 - [ ] `/cancel` 和中文取消清理 pending / active state。
-- [ ] 单候选 `/items` happy path 不受影响。
+- [ ] 单候选 `/records` happy path 不受影响。
 - [ ] 未接 TaskPathPlanner。
 - [ ] 未实现 failure recovery 菜单。
 - [ ] 未运行 `verify-scenario` 或 autonomous run。

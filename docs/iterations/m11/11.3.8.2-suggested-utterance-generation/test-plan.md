@@ -79,7 +79,7 @@ Expected: exit `0`, `All checks passed!`.
 ### T4 - Forbidden target constants scan
 
 ```bash
-rg -n "5177|/inventory|inventory item|WebAgentFlow-Validation-Site" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py
+rg -n "<fixture-port>|/target-page|inventory item|External-Fixture-Provider" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py
 ```
 
 Expected: exit `1`, no output.
@@ -105,7 +105,7 @@ Expected:
 
 - in-scope child docs, touched implementation files, touched tests, `CURRENT_STATE.md`, and discoverability docs are listed in child `review.md`;
 - no external result docs are listed;
-- no external Validation-Site / Fixture-Site source is listed.
+- no external Fixture-Site / Fixture-Site source is listed.
 
 ## Red / Green Requirement
 

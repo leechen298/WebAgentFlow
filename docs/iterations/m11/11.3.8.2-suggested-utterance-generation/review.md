@@ -21,7 +21,7 @@ commands_not_run: live external validation; wagent chat live validation; verify-
 - Decision: ready_for_design_review, later approved for implementation.
 - Scope: created the full seven-document child package for `11.3.8.2`.
 - Runtime, schema, API, frontend, fixture, migration, worker, eval-runner,
-  matcher policy, replay, reporter, external Validation-Site, Fixture-Site,
+  matcher policy, replay, reporter, external Fixture-Site, Fixture-Site,
   and external black-box result docs were not modified during documentation authoring.
 
 ### Documentation Changed Files
@@ -135,7 +135,7 @@ Finding responses:
 | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q` | Focused learning service tests pass | `11 passed in 0.09s` | 0 | Pass | terminal output | Includes new business utterance and verb-only alias tests |
 | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | Focused chat runtime tests pass | `89 passed in 0.80s` | 0 | Pass | terminal output | Includes stale wrapper, truncated wrapper, slot filtering, preservation tests |
 | `cd apps/api && ../../.venv/bin/python -m ruff check app/services/learning/learning_run_service.py app/services/conversation/chat_runtime.py tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py` | Focused lint passes | `All checks passed!` | 0 | Pass | terminal output | Focused touched files |
-| `rg -n "5177\|/inventory\|inventory item\|WebAgentFlow-Validation-Site" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | No target constants in touched runtime/tests | No output | 1 | Pass | terminal output | `rg` exit 1 means no matches |
+| `rg -n "<fixture-port>\|/target-page\|inventory item\|External-Fixture-Provider" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | No target constants in touched runtime/tests | No output | 1 | Pass | terminal output | `rg` exit 1 means no matches |
 | `git diff --check` | No whitespace errors | Clean | 0 | Pass | terminal output | Patch sanity |
 | read-only code/test/evidence subagent review | No unresolved P0/P1 after fixes | Code/test re-review approved; evidence/scope re-review approved with P3 routing-text caveat | N/A | Pass | subagent output + this review | No live validation run |
 
@@ -165,7 +165,7 @@ Finding responses:
 - Scope stayed inside deterministic suggested utterance generation and focused tests.
 - No LLM utterance-generation dependency was introduced.
 - No full multilingual translation system was introduced.
-- No target-specific route, selector, seed data, field label, button text, placeholder, operation alias, page source, or Validation-Site answer key was added to runtime/tests.
+- No target-specific route, selector, seed data, field label, button text, placeholder, operation alias, page source, or Fixture-Site answer key was added to runtime/tests.
 - No `docs/testing/results/external-black-box-validation-*` file was modified.
 - No `11.3.8.3` files were created or modified.
 

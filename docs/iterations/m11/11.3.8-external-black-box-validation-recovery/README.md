@@ -30,7 +30,7 @@ validation，也不改变任何 runtime contract。
 禁止改动范围：
 
 - runtime、schema、API、frontend、fixture、migration 或 test implementation files
-- `WebAgentFlow-Validation-Site` / `WebAgentFlow-Fixture-Site`
+- `External-Fixture-Provider` / `WebAgentFlow-Fixture-Site`
 - external black-box latest result，除非后续 child package 真实重验
 
 ## Deliverables
@@ -63,7 +63,7 @@ the package `plan.md` / child package documents as implementation contracts.
 
 - The 2026-05-25 external black-box validation result and PV-CLI-003 triage are the current failure baseline.
 - `11.3.8` remains an M11.3 post-closeout recovery follow-up; it does not reopen M11 final closeout or start M12 recovery.
-- Future child packages can add repo-local synthetic tests without copying external Validation-Site source, selectors, seed data, or answer keys.
+- Future child packages can add repo-local synthetic tests without copying external Fixture-Site source, selectors, seed data, or answer keys.
 - External revalidation will be run only by a later approved validation child package through an auditable WAgent product surface.
 
 ## Open Risks
@@ -77,8 +77,8 @@ the package `plan.md` / child package documents as implementation contracts.
 
 - `WebAgentFlow-Fixture-Site` 是外部 deterministic fixture site，通过
   `WAF_FIXTURE_SITE_URL` / `WAF_PAGE_SPEC_ROOT` 供主仓库验证使用。
-- `WebAgentFlow-Validation-Site` 是外部 product-like black-box validation target。
-- 主仓库已移除 `apps/product-test-site` 和 `apps/validation-site`，外部 Validation-Site
+- `External-Fixture-Provider` 是外部 product-like black-box validation target。
+- 主仓库已移除 `apps/fixture-site` 和 `apps/fixture-site`，外部 Fixture-Site
   不作为 workspace、submodule、dependency 或 runtime default。
 
 本包承接 2026-05-25 外部黑盒产品验证的 `FAIL` 结果。它要修复的不是站点归属，而是外部黑盒验证暴露出的 runtime chat 产品能力缺口：
@@ -99,7 +99,7 @@ the package `plan.md` / child package documents as implementation contracts.
 
 `PV-CLI-003 Execute learned create with new values`：
 
-- 用户输入 `Create an inventory item with SKU MUG-SKY-014...`。
+- 用户输入 `Create an inventory item with record_code REC-SKY-014...`。
 - intake 和 router 都识别出执行意图和已学 action context。
 - runtime matcher 无法把执行请求绑定到具体 session learned action。
 - WAgent 回复“还没学过你要做的这个操作”，没有启动执行，也没有产生可见 execution evidence。
@@ -147,7 +147,7 @@ Why：当前 learning intake 知道 `Create inventory item`，但可复用 actio
 
 Expected output：学习结果优先保存 normalized business goal、canonical goal、business object 和有价值 aliases；教学包装词不再成为主要 action identity。当前 HEAD 已包含该 scoped preservation work，后续包负责消费这些 metadata。
 
-Non-goals：不硬编码 `inventory item`、不硬编码 `5177/inventory`、不读取或复制外部 Validation-Site 源码。
+Non-goals：不硬编码 `inventory item`、不硬编码 `<fixture-port>/target-page`、不读取或复制外部 Fixture-Site 源码。
 
 ### 11.3.8.2 Suggested Utterance Generation
 
@@ -177,7 +177,7 @@ Why：只修一次 matcher 容易变成“当前输入能过”，但无法防�
 
 Expected output：覆盖 learning label preservation、suggested utterances、match term normalization、chat runtime action matching、router known-action counting，以及 learn-create-inventory -> execute-new-values 的 synthetic integration-ish path。
 
-Non-goals：不要求 `WebAgentFlow-Validation-Site` 运行，不依赖外部站点源码、selector、`data-testid`、seed copy 或 `5177/inventory`。
+Non-goals：不要求 `External-Fixture-Provider` 运行，不依赖外部站点源码、selector、`data-testid`、seed copy 或 `<fixture-port>/target-page`。
 
 ### 11.3.8.5 External Black-box Revalidation / Closeout
 
@@ -191,13 +191,13 @@ Non-goals：不通过直接调用 autonomous-run endpoint、service import、hid
 
 ## 总体禁止事项
 
-- 不修改 `WebAgentFlow-Validation-Site` 源码。
+- 不修改 `External-Fixture-Provider` 源码。
 - 不修改 `WebAgentFlow-Fixture-Site` 源码。
-- 不恢复 `apps/product-test-site`。
-- 不恢复 `apps/validation-site`。
-- 不把 `5177/inventory` 写入 runtime 默认值、prompt answer key、eval default 或 package dependency。
+- 不恢复 `apps/fixture-site`。
+- 不恢复 `apps/fixture-site`。
+- 不把 `<fixture-port>/target-page` 写入 runtime 默认值、prompt answer key、eval default 或 package dependency。
 - 不把 selector、`data-testid`、component、seed copy、页面源码、字段标签或内部状态复制进主仓库 runtime / prompt。
-- 不把 archived `5176/items` eval 恢复成 active 默认 eval。
+- 不把 archived `<fixture-port>/records` eval 恢复成 active 默认 eval。
 - 不通过直接调用 `/exploration/autonomous-runs` 或 `/exploration/autonomous-runs/stream` 来伪造产品验证 `PASS`。
 - 不把 direct replay API 或内部 service import 的结果当作 WAgent chat runtime pass evidence。
 - 不在后续 matcher 修复中用目标站点 answer key 代替通用业务语义匹配。

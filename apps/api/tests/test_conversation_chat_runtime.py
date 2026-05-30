@@ -73,10 +73,15 @@ def _create_interactive_chat_session(
 
 
 GENERIC_WORKFLOW_URL = "http://example.test/workflow"
-GENERIC_LOGIN_URL = "http://example.test/login"
+GENERIC_LOGIN_URL = "https://example.invalid/entry"
+GENERIC_PENDING_LOGIN_URL = "https://example.invalid/login"
 GENERIC_RECORDS_URL = "http://example.test/records"
 GENERIC_ALT_WORKFLOW_URL = "http://alt.example.test/workflow"
 GENERIC_ALT_RECORDS_URL = "http://alt.example.test/records"
+GENERIC_ENTRY_LEARNING_WITH_CREDENTIALS = (
+    "学习一下这个登录页怎么登录，地址是 "
+    "https://example.invalid/entry，用户名 admin，密码 123456"
+)
 
 
 def _ingest_login_path(db_session: Session, *, source_run_id: str | None = None) -> str:
@@ -84,7 +89,7 @@ def _ingest_login_path(db_session: Session, *, source_run_id: str | None = None)
         ExplorationRunRepository(db_session).create(
             ExplorationRun(
                 id=source_run_id,
-                page_signature="/login",
+                page_signature="/entry",
                 status="completed",
                 summary="test run",
                 result_snapshot_json={},
@@ -93,10 +98,10 @@ def _ingest_login_path(db_session: Session, *, source_run_id: str | None = None)
 
     fingerprint = hashlib.sha256((source_run_id or "default").encode()).hexdigest()
     path, _created = LearnedPathRepository(db_session).ingest_run(
-        page_template="/login",
+        page_template="/entry",
         query_signature={},
         dom_fingerprint=fingerprint,
-        scenario="valid_credentials",
+        scenario="sample_flow",
         actions=[
             {
                 "step": 1,
@@ -271,13 +276,13 @@ def _ingest_record_path(
     return str(path.id)
 
 
-def _ingest_catalog_entry_path(
+def _ingest_multi_field_record_path(
     db_session: Session,
     *,
     source_run_id: str | None = None,
-    sku_slot: str = "sku",
-    name_slot: str = "item_name",
-    category_slot: str = "item_category",
+    code_slot: str = "record_code",
+    title_slot: str = "title",
+    category_slot: str = "category",
     quantity_slot: str = "quantity",
 ) -> str:
     if source_run_id is not None and db_session.get(ExplorationRun, source_run_id) is None:
@@ -286,12 +291,12 @@ def _ingest_catalog_entry_path(
                 id=source_run_id,
                 page_signature="/records",
                 status="completed",
-                summary="catalog entry test run",
+                summary="multi-field record test run",
                 result_snapshot_json={},
             )
         )
 
-    fingerprint = hashlib.sha256((source_run_id or "catalog-entry").encode()).hexdigest()
+    fingerprint = hashlib.sha256((source_run_id or "multi-field-record").encode()).hexdigest()
     path, _created = LearnedPathRepository(db_session).ingest_run(
         page_template="/records",
         query_signature={},
@@ -301,39 +306,39 @@ def _ingest_catalog_entry_path(
             {
                 "step": 1,
                 "action_type": "fill",
-                "target_selector": "#catalog-sku",
-                "target_description": "SKU",
-                "value": "NB-ALP-001",
-                "value_slot": sku_slot,
+                "target_selector": "#record-code",
+                "target_description": "Reference code",
+                "value": "REF-001",
+                "value_slot": code_slot,
             },
             {
                 "step": 2,
                 "action_type": "fill",
-                "target_selector": "#catalog-name",
-                "target_description": "Name",
-                "value": "Alpine Notebook",
-                "value_slot": name_slot,
+                "target_selector": "#record-title",
+                "target_description": "Title",
+                "value": "Alpha Record",
+                "value_slot": title_slot,
             },
             {
                 "step": 3,
                 "action_type": "fill",
-                "target_selector": "#catalog-category",
+                "target_selector": "#record-category",
                 "target_description": "Category",
-                "value": "Stationery",
+                "value": "General",
                 "value_slot": category_slot,
             },
             {
                 "step": 4,
                 "action_type": "fill",
-                "target_selector": "#catalog-quantity",
-                "target_description": "Stock quantity",
+                "target_selector": "#record-quantity",
+                "target_description": "Quantity",
                 "value": "24",
                 "value_slot": quantity_slot,
             },
             {
                 "step": 5,
                 "action_type": "click",
-                "target_selector": "#catalog-submit",
+                "target_selector": "#record-submit",
                 "target_description": "Create",
             },
         ],
@@ -416,10 +421,10 @@ def _business_identity_learned_action(
 
 
 def test_parse_chat_intent_learn_page_extracts_url() -> None:
-    intent = parse_chat_intent("学习一下这个登录页怎么登录，地址是 http://localhost:5175/login")
+    intent = parse_chat_intent("学习一下这个登录页怎么登录，地址是 https://example.invalid/entry")
 
     assert intent.kind == "learn_page"
-    assert intent.url == "http://localhost:5175/login"
+    assert intent.url == "https://example.invalid/entry"
 
 
 def test_parse_chat_intent_execute_task_for_regular_text() -> None:
@@ -550,8 +555,8 @@ def test_interactive_chat_learns_login_and_writes_session_action(
             run_id="run-001",
             learned_path_id=learned_path_id,
             target_url=url,
-            page_template="/login",
-            scenario="valid_credentials",
+            page_template="/entry",
+            scenario="sample_flow",
             action_label="登录",
             suggested_utterances=["帮我登录", "登录一下"],
         )
@@ -560,7 +565,7 @@ def test_interactive_chat_learns_login_and_writes_session_action(
 
     result = orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login，用户名 admin，密码 123456",
+        GENERIC_ENTRY_LEARNING_WITH_CREDENTIALS,
         metadata={"client": "wagent_chat"},
     )
 
@@ -579,7 +584,7 @@ def test_interactive_chat_learns_login_and_writes_session_action(
     assert len(actions) == 1
     assert actions[0]["alias"] == "登录"
     assert actions[0]["utterances"] == ["帮我登录", "登录一下"]
-    assert actions[0]["target_url"] == "http://localhost:5175/login"
+    assert actions[0]["target_url"] == "https://example.invalid/entry"
 
     messages = repo.list_messages(session_id)
     agent_messages = [m.content for m in messages if m.role == "agent"]
@@ -2151,7 +2156,7 @@ def test_interactive_chat_short_learn_uses_pending_target_and_asks_slots(
 
     orch.dispatch_user_input(
         session_id,
-        GENERIC_LOGIN_URL,
+        GENERIC_PENDING_LOGIN_URL,
         metadata={"client": "wagent_chat"},
     )
     result = orch.dispatch_user_input(
@@ -2166,7 +2171,7 @@ def test_interactive_chat_short_learn_uses_pending_target_and_asks_slots(
     session = repo.get_session(session_id)
     assert session is not None
     pending = session.metadata_json["pending_intake"]
-    assert pending["target"]["url"] == GENERIC_LOGIN_URL
+    assert pending["target"]["url"] == GENERIC_PENDING_LOGIN_URL
     assert pending["missing_fields"] == ["username", "password"]
 
 
@@ -2564,8 +2569,8 @@ def test_learning_does_not_claim_success_when_path_is_not_queryable(
             run_id="run-001",
             learned_path_id="missing-path",
             target_url=url,
-            page_template="/login",
-            scenario="valid_credentials",
+            page_template="/entry",
+            scenario="sample_flow",
             action_label="登录",
             suggested_utterances=["帮我登录"],
         )
@@ -2574,7 +2579,7 @@ def test_learning_does_not_claim_success_when_path_is_not_queryable(
 
     result = orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login，用户名 admin，密码 123456",
+        GENERIC_ENTRY_LEARNING_WITH_CREDENTIALS,
         metadata={"client": "wagent_chat"},
     )
 
@@ -2597,9 +2602,9 @@ def test_same_alias_learning_overwrites_session_action(
                     "alias": "登录",
                     "utterances": ["帮我登录"],
                     "learned_path_id": old_path_id,
-                    "target_url": "http://localhost:5175/login",
-                    "page_template": "/login",
-                    "scenario": "valid_credentials",
+                    "target_url": "https://example.invalid/entry",
+                    "page_template": "/entry",
+                    "scenario": "sample_flow",
                 }
             ]
         },
@@ -2612,8 +2617,8 @@ def test_same_alias_learning_overwrites_session_action(
             run_id="run-new",
             learned_path_id=new_path_id,
             target_url=url,
-            page_template="/login",
-            scenario="valid_credentials",
+            page_template="/entry",
+            scenario="sample_flow",
             action_label="登录",
             suggested_utterances=["帮我登录", "登录一下"],
         )
@@ -2621,7 +2626,7 @@ def test_same_alias_learning_overwrites_session_action(
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login，用户名 admin，密码 123456",
+        GENERIC_ENTRY_LEARNING_WITH_CREDENTIALS,
         metadata={"client": "wagent_chat"},
     )
 
@@ -2721,9 +2726,9 @@ def test_interactive_chat_executes_current_session_action_without_confirmation(
                     "alias": "登录",
                     "utterances": ["帮我登录", "登录一下"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5175/login",
-                    "page_template": "/login",
-                    "scenario": "valid_credentials",
+                    "target_url": "https://example.invalid/entry",
+                    "page_template": "/entry",
+                    "scenario": "sample_flow",
                 }
             ]
         },
@@ -2737,7 +2742,7 @@ def test_interactive_chat_executes_current_session_action_without_confirmation(
             url=url,
             replay_status="succeeded",
             drift_status="none",
-            final_url="http://localhost:5175/dashboard",
+            final_url="https://example.invalid/dashboard",
             final_title="Dashboard",
         )
 
@@ -2753,7 +2758,7 @@ def test_interactive_chat_executes_current_session_action_without_confirmation(
     assert result.previous_status == "idle"
     assert result.next_status == "task_intake"
     assert result.user_response == "执行中。\n登录完成。"
-    assert calls == [(learned_path_id, "http://localhost:5175/login")]
+    assert calls == [(learned_path_id, "https://example.invalid/entry")]
 
     session = repo.get_session(session_id)
     assert session is not None
@@ -5354,13 +5359,13 @@ def test_interactive_chat_execute_matches_business_identity_when_alias_is_wrappe
     assert any(e.type == "chat_execution_started" for e in events)
 
 
-def test_interactive_chat_execute_maps_generic_slot_aliases_to_learned_slots(
+def test_interactive_chat_execute_keeps_plain_slot_mismatch_unsupported(
     db_session: Session,
     repo: ConversationRepository,
 ) -> None:
-    learned_path_id = _ingest_catalog_entry_path(
+    learned_path_id = _ingest_multi_field_record_path(
         db_session,
-        source_run_id="run-catalog-slot-aliases",
+        source_run_id="run-record-plain-slot-mismatch",
     )
     session_id = _create_interactive_chat_session(
         repo,
@@ -5369,39 +5374,28 @@ def test_interactive_chat_execute_maps_generic_slot_aliases_to_learned_slots(
                 _business_identity_learned_action(
                     learned_path_id,
                     alias="Learn how to create",
-                    utterances=["Learn how to create catalog entry"],
-                    business_goal="Create catalog entry",
-                    canonical_goal="create_catalog_entry",
-                    action_aliases=["add catalog entry"],
-                    business_object="catalog entry",
+                    utterances=["Learn how to create record"],
+                    business_goal="Create record",
+                    canonical_goal="create_record",
+                    action_aliases=["add record"],
+                    business_object="record",
                 )
             ]
         },
     )
-    calls: list[tuple[str, str, dict[str, Any]]] = []
+    replay_called = False
 
     def replay_handler(lid: str, url: str, **kwargs: Any) -> ConversationReplaySummary:
-        calls.append((lid, url, kwargs))
-        return ConversationReplaySummary(
-            learned_path_id=lid,
-            url=url,
-            replay_status="succeeded",
-            drift_status="none",
-        )
+        nonlocal replay_called
+        replay_called = True
+        raise AssertionError("unsupported plain slot mismatch must not replay")
 
     intake_service = _StaticIntakeService(
-        goal="Create catalog entry",
-        canonical_goal="create_catalog_entry",
-        aliases=["add catalog entry"],
+        goal="Create record",
+        canonical_goal="create_record",
+        aliases=["add record"],
         slots=[
-            ConversationIntakeSlot(name="sku", semantic_type="sku", value="MUG-SKY-014"),
-            ConversationIntakeSlot(name="name", semantic_type="name", value="Skyline Mug"),
-            ConversationIntakeSlot(name="category", semantic_type="category", value="Office"),
-            ConversationIntakeSlot(
-                name="stock_quantity",
-                semantic_type="stock_quantity",
-                value="18",
-            ),
+            ConversationIntakeSlot(name="name", semantic_type="name", value="Plain Name"),
         ],
     )
     orch = ConversationOrchestrator(
@@ -5411,35 +5405,31 @@ def test_interactive_chat_execute_maps_generic_slot_aliases_to_learned_slots(
     )
     result = orch.dispatch_user_input(
         session_id,
-        f"Create catalog entry at {GENERIC_RECORDS_URL}",
+        f"Create record at {GENERIC_RECORDS_URL}",
         metadata={"client": "wagent_chat"},
     )
 
-    assert result.allowed is True
-    assert len(calls) == 1
-    assert calls[0][2]["slot_overrides"] == {
-        "sku": "MUG-SKY-014",
-        "item_name": "Skyline Mug",
-        "item_category": "Office",
-        "quantity": "18",
-    }
+    assert replay_called is False
+    assert result.allowed is False
     events = repo.list_events(session_id)
-    assert any(e.type == "chat_execution_started" for e in events)
-    assert not any(
-        e.type == "chat_execution_failed"
-        and e.payload_json.get("reason") == "unsupported_value_slot"
+    failed = [
+        e
         for e in events
-    )
+        if e.type == "chat_execution_failed"
+        and e.payload_json.get("reason") == "unsupported_value_slot"
+    ][-1]
+    assert failed.payload_json["unsupported_slots"] == ["name"]
 
 
 def test_interactive_chat_execute_maps_object_prefixed_slots_by_supported_suffix(
     db_session: Session,
     repo: ConversationRepository,
 ) -> None:
-    learned_path_id = _ingest_catalog_entry_path(
+    learned_path_id = _ingest_multi_field_record_path(
         db_session,
-        source_run_id="run-catalog-object-prefixed-slots",
-        name_slot="name",
+        source_run_id="run-record-object-prefixed-slots",
+        code_slot="code",
+        title_slot="title",
         category_slot="category",
     )
     session_id = _create_interactive_chat_session(
@@ -5448,12 +5438,12 @@ def test_interactive_chat_execute_maps_object_prefixed_slots_by_supported_suffix
             "learned_actions": [
                 _business_identity_learned_action(
                     learned_path_id,
-                    alias="Create catalog entry",
-                    utterances=["Create catalog entry"],
-                    business_goal="Create catalog entry",
-                    canonical_goal="create_catalog_entry",
-                    action_aliases=["add catalog entry"],
-                    business_object="catalog entry",
+                    alias="Create record",
+                    utterances=["Create record"],
+                    business_goal="Create record",
+                    canonical_goal="create_record",
+                    action_aliases=["add record"],
+                    business_object="record",
                 )
             ]
         },
@@ -5470,28 +5460,28 @@ def test_interactive_chat_execute_maps_object_prefixed_slots_by_supported_suffix
         )
 
     intake_service = _StaticIntakeService(
-        goal="Create catalog entry",
-        canonical_goal="create_catalog_entry",
-        aliases=["add catalog entry"],
+        goal="Create record",
+        canonical_goal="create_record",
+        aliases=["add record"],
         slots=[
             ConversationIntakeSlot(
-                name="catalog_sku",
-                semantic_type="catalog_sku",
-                value="MUG-SKY-014",
+                name="record_code",
+                semantic_type="record_code",
+                value="REF-014",
             ),
             ConversationIntakeSlot(
-                name="catalog_name",
-                semantic_type="catalog_name",
-                value="Skyline Mug",
+                name="record_title",
+                semantic_type="record_title",
+                value="Beta Record",
             ),
             ConversationIntakeSlot(
-                name="catalog_category",
-                semantic_type="catalog_category",
-                value="Office",
+                name="record_category",
+                semantic_type="record_category",
+                value="General",
             ),
             ConversationIntakeSlot(
-                name="catalog_quantity",
-                semantic_type="catalog_quantity",
+                name="record_quantity",
+                semantic_type="record_quantity",
                 value="18",
             ),
         ],
@@ -5503,16 +5493,16 @@ def test_interactive_chat_execute_maps_object_prefixed_slots_by_supported_suffix
     )
     result = orch.dispatch_user_input(
         session_id,
-        f"Create catalog entry at {GENERIC_RECORDS_URL}",
+        f"Create record at {GENERIC_RECORDS_URL}",
         metadata={"client": "wagent_chat"},
     )
 
     assert result.allowed is True
     assert len(calls) == 1
     assert calls[0][2]["slot_overrides"] == {
-        "sku": "MUG-SKY-014",
-        "name": "Skyline Mug",
-        "category": "Office",
+        "code": "REF-014",
+        "title": "Beta Record",
+        "category": "General",
         "quantity": "18",
     }
 
@@ -5521,9 +5511,9 @@ def test_interactive_chat_execute_keeps_unrelated_slot_unsupported(
     db_session: Session,
     repo: ConversationRepository,
 ) -> None:
-    learned_path_id = _ingest_catalog_entry_path(
+    learned_path_id = _ingest_multi_field_record_path(
         db_session,
-        source_run_id="run-catalog-unrelated-slot",
+        source_run_id="run-record-unrelated-slot",
     )
     session_id = _create_interactive_chat_session(
         repo,
@@ -5531,11 +5521,11 @@ def test_interactive_chat_execute_keeps_unrelated_slot_unsupported(
             "learned_actions": [
                 _business_identity_learned_action(
                     learned_path_id,
-                    utterances=["Learn how to create catalog entry"],
-                    business_goal="Create catalog entry",
-                    canonical_goal="create_catalog_entry",
-                    action_aliases=["add catalog entry"],
-                    business_object="catalog entry",
+                    utterances=["Learn how to create record"],
+                    business_goal="Create record",
+                    canonical_goal="create_record",
+                    action_aliases=["add record"],
+                    business_object="record",
                 )
             ]
         },
@@ -5548,11 +5538,15 @@ def test_interactive_chat_execute_keeps_unrelated_slot_unsupported(
         raise AssertionError("unsupported unrelated slot must not replay")
 
     intake_service = _StaticIntakeService(
-        goal="Create catalog entry",
-        canonical_goal="create_catalog_entry",
-        aliases=["add catalog entry"],
+        goal="Create record",
+        canonical_goal="create_record",
+        aliases=["add record"],
         slots=[
-            ConversationIntakeSlot(name="sku", semantic_type="sku", value="MUG-SKY-014"),
+            ConversationIntakeSlot(
+                name="record_code",
+                semantic_type="record_code",
+                value="REF-014",
+            ),
             ConversationIntakeSlot(name="color", semantic_type="color", value="blue"),
         ],
     )
@@ -5563,7 +5557,7 @@ def test_interactive_chat_execute_keeps_unrelated_slot_unsupported(
     )
     result = orch.dispatch_user_input(
         session_id,
-        f"Create catalog entry at {GENERIC_RECORDS_URL}",
+        f"Create record at {GENERIC_RECORDS_URL}",
         metadata={"client": "wagent_chat"},
     )
 
@@ -6007,7 +6001,7 @@ def test_non_interactive_chat_session_keeps_existing_confirmation_flow(
 
     result = orch.dispatch_user_input(
         session.id,
-        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login",
+        "学习一下这个登录页怎么登录，地址是 https://example.invalid/entry",
         metadata={"client": "wagent_chat"},
     )
 
@@ -6035,8 +6029,8 @@ def test_visible_session_passes_headless_false_to_learning_handler(
             run_id="run-vis",
             learned_path_id=learned_path_id,
             target_url=url,
-            page_template="/login",
-            scenario="valid_credentials",
+            page_template="/entry",
+            scenario="sample_flow",
             action_label="登录",
             suggested_utterances=["帮我登录"],
         )
@@ -6044,7 +6038,7 @@ def test_visible_session_passes_headless_false_to_learning_handler(
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     result = orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login，用户名 admin，密码 123456",
+        GENERIC_ENTRY_LEARNING_WITH_CREDENTIALS,
         metadata={"client": "wagent_chat"},
     )
 
@@ -6068,9 +6062,9 @@ def test_visible_session_passes_headless_false_to_replay_handler(
                     "alias": "登录",
                     "utterances": ["帮我登录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5175/login",
-                    "page_template": "/login",
-                    "scenario": "valid_credentials",
+                    "target_url": "https://example.invalid/entry",
+                    "page_template": "/entry",
+                    "scenario": "sample_flow",
                 }
             ],
         },
@@ -6114,8 +6108,8 @@ def test_headless_session_passes_headless_true_to_handlers(
             run_id="run-hl",
             learned_path_id=learned_path_id,
             target_url=url,
-            page_template="/login",
-            scenario="valid_credentials",
+            page_template="/entry",
+            scenario="sample_flow",
             action_label="登录",
             suggested_utterances=["帮我登录"],
         )
@@ -6123,7 +6117,7 @@ def test_headless_session_passes_headless_true_to_handlers(
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login，用户名 admin，密码 123456",
+        GENERIC_ENTRY_LEARNING_WITH_CREDENTIALS,
         metadata={"client": "wagent_chat"},
     )
 
@@ -6155,9 +6149,9 @@ def test_headless_session_passes_headless_true_to_handlers(
                     "alias": "登录",
                     "utterances": ["帮我登录"],
                     "learned_path_id": path_id,
-                    "target_url": "http://localhost:5175/login",
-                    "page_template": "/login",
-                    "scenario": "valid_credentials",
+                    "target_url": "https://example.invalid/entry",
+                    "page_template": "/entry",
+                    "scenario": "sample_flow",
                 }
             ]
         },
@@ -6190,8 +6184,8 @@ def test_missing_browser_visibility_defaults_to_visible(
             run_id="run-def",
             learned_path_id=learned_path_id,
             target_url=url,
-            page_template="/login",
-            scenario="valid_credentials",
+            page_template="/entry",
+            scenario="sample_flow",
             action_label="登录",
             suggested_utterances=["帮我登录"],
         )
@@ -6199,7 +6193,7 @@ def test_missing_browser_visibility_defaults_to_visible(
     orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
     orch.dispatch_user_input(
         session_id,
-        "学习一下这个登录页怎么登录，地址是 http://localhost:5175/login，用户名 admin，密码 123456",
+        GENERIC_ENTRY_LEARNING_WITH_CREDENTIALS,
         metadata={"client": "wagent_chat"},
     )
 
@@ -6221,9 +6215,9 @@ def test_missing_replay_handler_emits_execution_failed_event(
                     "alias": "登录",
                     "utterances": ["帮我登录"],
                     "learned_path_id": learned_path_id,
-                    "target_url": "http://localhost:5175/login",
-                    "page_template": "/login",
-                    "scenario": "valid_credentials",
+                    "target_url": "https://example.invalid/entry",
+                    "page_template": "/entry",
+                    "scenario": "sample_flow",
                 }
             ]
         },

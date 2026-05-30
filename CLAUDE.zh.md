@@ -53,14 +53,12 @@ Fixture-Site。
   11.2.4.x 已补 realistic fixture planning / fixture shell / basic business
   fixture pages。
 - **M11.3 Interactive Chat Productization / 交互式 chat 产品化** 已收口到
-  11.3.7：`wagent chat` working runtime slices、11.3.6 runtime eval program
-  `pass_with_caveats`、11.3.7 first-wave user-facing behavior eval `pass`。
-- M11 runtime final closeout 记录在
-  `docs/testing/results/m11-runtime-final-closeout-20260524.md`。
+  11.3.7：`wagent chat` working runtime slices 和 target-agnostic behavior
+  coverage。
 - M12 recovery / retry / abort / interruption 尚未开始。
-- full learn-then-execute、page-wide automatic capability discovery、外部黑盒
-  validation-site migration、L2 guided teaching、Teaching Guide Agent / 教学引导器
-  （legacy: Agent H）仍属后续规划，除非里程碑文档另有说明。
+- full learn-then-execute、page-wide automatic capability discovery、L2 guided
+  teaching、Teaching Guide Agent / 教学引导器（legacy: Agent H）仍属后续规划，
+  除非里程碑文档另有说明。
 
 内部 Agent 命名规则：
 
@@ -231,11 +229,9 @@ Workbench 的 `Run` 或 Use Cases 的 `Run selected`。这种情况下，
   员操作产品 Console UI。如果因此触发 `/exploration/autonomous-runs[/stream]`，
   报告时要说明这是产品 UI 触发的流量；能看到 `run_id` / run status 时要
   记录；不得重写或美化产品返回的结果。
-- 当请求的校验属于项目 CLI 表面时，可以运行项目提供的 eval CLI，例如
-  `pnpm run eval:wagent:*` 或 `wagent` 命令。CLI 必须写入
-  `operator_actions`、原始 product-client request 记录、已脱敏 JSON /
-  Markdown artifact，以及稳定的 `latest` 副本；否则不能把结果当作可复核的
-  Agent-operated evidence。
+- 当请求的校验属于项目 CLI 表面时，可以运行项目提供的 target-agnostic
+  check，例如 `pnpm run eval:wagent` 或 `wagent` 命令。具体 scenario runner
+  和 artifact 由外部 fixture provider 拥有；本仓库只消费脱敏结果摘要。
 - 当 skill 和外部 UI 操作都不适合时（服务未启动、缺少凭据、需要人工判断
   等），请用户去 workbench 亲自跑。
 
@@ -260,7 +256,7 @@ AI 编码 Agent 是**外部测试操作员 / 中转**，不是产品内部验证
 干净通过：
 
 > "跑了 `verify-scenario` skill
-> （`wagent verify --spec-id login --scenario valid_credentials`）。
+> （`wagent verify --spec-id <spec-id> --scenario <scenario-id>`）。
 > pass_gate：`pass`。Supervisor 裁决：`success`（置信度 `high`，
 > 来源 `llm`）。Scorecard 5/5：……。Supervisor summary：……引用原文……。
 > run_id：`<uuid>`。"
@@ -275,11 +271,10 @@ AI 编码 Agent 是**外部测试操作员 / 中转**，不是产品内部验证
 
 未完成验证（LLM 低置信度）：
 
-> "跑了 `wagent verify --spec-id login --scenario invalid_credentials`。
+> "跑了 `wagent verify --spec-id <spec-id> --scenario <scenario-id>`。
 > **pass_gate：`unverified`**。pass_gate.reasons：'supervisor
 > confidence=medium — scenario requires high-confidence LLM
-> agreement'。Supervisor 没法确认 role=alert 是否真展示，提示 prompt
-> 信号不够。……"
+> agreement'。Supervisor 没法确认预期页面证据，提示 prompt 信号不够。……"
 
 硬失败（偏离规格）：
 
@@ -329,7 +324,7 @@ pnpm run dev:worker             # Python 文件改动自动 reload（走 watchfi
 # 外部 Fixture-Site（本 workspace 外）
 cd /Users/leechen/projects/WebAgentFlow-Fixture-Site
 pnpm dev
-export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+export WAF_FIXTURE_SITE_URL=https://example.invalid
 export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
 ```
 

@@ -2,21 +2,21 @@
 
 本 workspace 存放 WebAgentFlow 的确定性 Playwright Test E2E 覆盖。
 当前套件覆盖 M10.2 LearnedPath replay API / catalog UI、M11.0
-conversation runtime replay smoke / CLI-driven replay smoke，以及
-fixture-site deterministic browser smoke。
+conversation runtime replay smoke / CLI-driven replay smoke。
 
 它不依赖 LLM 服务，不调用 autonomous-run 接口，也不创建 live autonomous run。
 
 `apps/e2e/tests/` 下的测试按产品能力域组织。Replay 覆盖放在
 `apps/e2e/tests/replay/`，conversation 覆盖放在
-`apps/e2e/tests/conversation/`，fixture-site 覆盖放在
-`apps/e2e/tests/fixture-site/`。这些是跨 console、API、数据库、
-外部 Fixture-Site 和后端 Playwright replay 的 E2E 测试，不是
-`apps/console/src/__tests__/` 下的 console 单元测试。
+`apps/e2e/tests/conversation/`。这些是跨 console、API、数据库和后端
+Playwright replay 的 E2E 测试，不是 `apps/console/src/__tests__/` 下的
+console 单元测试。
 Conversation E2E 同时覆盖 API-request runtime flow 和真实 `wagent conversation`
 CLI subprocess flow。
-Fixture-site browser smoke 直接打开 fixture 页面，保护 `/login` 和 `/users`
-的稳定浏览器交互地基。
+
+Fixture-specific browser smoke、selector、seed values 和页面路径由独立的
+WebAgentFlow-Fixture-Site 仓库维护。主仓 E2E 只读取该 provider 生成的
+`apps/e2e/.tmp/replay-fixtures.json`，不内置 fixture 页面、selector 或 URL。
 
 ## 一次性设置
 
@@ -61,20 +61,15 @@ cd /Users/leechen/projects/WebAgentFlow-Fixture-Site
 pnpm dev
 ```
 
-配置 WebAgentFlow E2E 使用外部 fixture URL 和显式 spec root：
+配置 WebAgentFlow 使用外部 Fixture-Site spec root：
 
 ```bash
-export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
 export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
-# 本机示例：
-export WAF_PAGE_SPEC_ROOT=/Users/leechen/projects/WebAgentFlow-Fixture-Site/web/specs
 ```
 
 `WAF_PAGE_SPEC_ROOT` 是 page verification 的显式 spec 来源。只有列出或加载
-page verification specs 时需要；API 启动和 `/health` 不需要它。E2E fixture
-URL 的优先级固定为 `WAF_FIXTURE_SITE_URL` >
-`E2E_VALIDATION_BASE_URL` > `http://127.0.0.1:5175`；`E2E_VALIDATION_BASE_URL`
-只是临时兼容 fallback。
+page verification specs 时需要；API 启动和 `/health` 不需要它。E2E target URL
+由外部 provider 生成的 replay fixture 文件提供。
 
 第一版 E2E 默认这些服务已经运行，不使用 Playwright `webServer` 自动编排。
 
@@ -83,15 +78,18 @@ URL 的优先级固定为 `WAF_FIXTURE_SITE_URL` >
 写入确定性 LearnedPath 固定数据：
 
 ```bash
-.venv/bin/python apps/e2e/scripts/seed-replay-fixtures.py
+cd /path/to/WebAgentFlow-Fixture-Site
+WAF_REPO_ROOT=/path/to/WebAgentFlow/v0.1 \
+WAF_FIXTURE_SITE_URL=<fixture-site-url> \
+python3 evals/seed-webagentflow-replay-fixtures.py
 ```
 
-seed 脚本会：
+外部 seed 脚本会：
 
 - 只删除 `dedup_key` 以 `e2e:replay:` 开头的行。
 - 插入固定 LearnedPath replay 数据。
-- 将生成的 ID 写入 `apps/e2e/.tmp/replay-fixtures.json`。
-- 使用 API 侧 page analyzer 计算当前 `/users` 签名。
+- 将生成的 ID 和 opaque target URL 写入
+  `apps/e2e/.tmp/replay-fixtures.json`。
 - 不调用 `/exploration/autonomous-runs`。
 
 需要清理 E2E 数据时运行：
@@ -112,14 +110,13 @@ pnpm run test:e2e:ui
 
 - API：`http://127.0.0.1:8001`
 - Console：`http://127.0.0.1:5174`
-- Fixture site：`http://127.0.0.1:5175`
+- Fixture site：由外部 provider 启动并写入 replay fixture 文件
 
 可以通过环境变量覆盖：
 
 ```bash
 E2E_API_BASE_URL=http://127.0.0.1:8001 \
 E2E_CONSOLE_BASE_URL=http://127.0.0.1:5174 \
-WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175 \
 WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs \
 pnpm run test:e2e
 ```

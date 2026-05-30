@@ -57,7 +57,7 @@ local warning、saving、saved state、reset changes 和 stable anchors。
 ## Secondary Actions / Distractors
 
 - Preview settings reveals local preview hint。
-- It must not call backend and must not navigate outside validation-site。
+- It must not call backend and must not navigate outside fixture-site。
 
 ## Reset Behavior
 

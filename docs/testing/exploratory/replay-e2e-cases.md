@@ -60,7 +60,7 @@
 - 目标：验证显式 happy path replay。
 - 执行方法：从 fixture JSON 读取 `happy` id，POST
   `/exploration/learned-paths/{id}/replay`，body 为
-  `{ "url": "<validation>/users" }`。
+  `{ "url": "<fixture-provider>/records" }`。
 - 预期证据：命令、退出码、HTTP status、响应关键字段。
 - PASS 条件：HTTP 200，`code=0`，`status=succeeded`，
   `drift_status=none`，`steps.length > 0`。
@@ -86,7 +86,7 @@
 ### CASE API-004: signature changed with query
 
 - 目标：确认 query signature drift 可执行。
-- 执行方法：`happy` id replay `<validation>/users?name=alice`。
+- 执行方法：`happy` id replay `<fixture-provider>/records?name=alice`。
 - 预期证据：命令、退出码、HTTP status、响应关键字段。
 - PASS 条件：HTTP 200，`status=succeeded` 或 `observed`，
   `drift_status=signature_changed`，warnings 非空。
@@ -95,7 +95,7 @@
 ### CASE API-005: deprecated path blocked
 
 - 目标：确认 deprecated path 不执行。
-- 执行方法：`deprecated` id replay `<validation>/users`。
+- 执行方法：`deprecated` id replay `<fixture-provider>/records`。
 - 预期证据：命令、退出码、HTTP status。
 - PASS 条件：HTTP 422。
 - 禁止捷径：不得把 422 写成失败，它是预期行为。
@@ -103,7 +103,7 @@
 ### CASE API-006: unsupported action remains structured
 
 - 目标：确认 unsupported action 返回结构化 replay 结果，不是 500。
-- 执行方法：`unsupportedAction` id replay `<validation>/users`。
+- 执行方法：`unsupportedAction` id replay `<fixture-provider>/records`。
 - 预期证据：命令、退出码、HTTP status、响应关键字段。
 - PASS 条件：HTTP 200，`status=unsupported`，
   `drift_status=unsupported_action`。
@@ -128,7 +128,7 @@ deterministic E2E 证据；API-only 调用不能作为本组 PASS 证据。
 ### CASE UI-002: happy replay renders result
 
 - 目标：确认 catalog UI 展示 happy replay 结果。
-- 执行方法：打开 happy path drawer，输入 `<validation>/users`，点击 Replay。
+- 执行方法：打开 happy path drawer，输入 `<fixture-provider>/records`，点击 Replay。
 - 预期证据：Agent-operated browser / headed Playwright 的可见页面
   操作记录、截图/trace/video 或 browser observation 摘录。
 - PASS 条件：UI 展示 `Succeeded`、`No drift`、final URL 或 step log；
@@ -139,7 +139,7 @@ deterministic E2E 证据；API-only 调用不能作为本组 PASS 证据。
 ### CASE UI-003: flaky replay warning renders
 
 - 目标：确认 flaky/trust warning 在 UI 中可见。
-- 执行方法：打开 flaky path drawer，输入 `<validation>/users`，点击 Replay。
+- 执行方法：打开 flaky path drawer，输入 `<fixture-provider>/records`，点击 Replay。
 - 预期证据：Agent-operated browser / headed Playwright 的可见页面
   操作记录、截图/trace/video 或 browser observation 摘录。
 - PASS 条件：UI 展示 replay 结果，并展示 flaky/trust warning。
@@ -149,7 +149,7 @@ deterministic E2E 证据；API-only 调用不能作为本组 PASS 证据。
 ### CASE UI-004: target missing drift renders
 
 - 目标：确认 target missing drift 在 UI 中可见。
-- 执行方法：打开 targetMissing path drawer，输入 `<validation>/users`，点击 Replay。
+- 执行方法：打开 targetMissing path drawer，输入 `<fixture-provider>/records`，点击 Replay。
 - 预期证据：Agent-operated browser / headed Playwright 的可见页面
   操作记录、截图/trace/video 或 browser observation 摘录。
 - PASS 条件：UI 展示 `drifted` / `target_missing` 或 drift reason。
@@ -158,7 +158,7 @@ deterministic E2E 证据；API-only 调用不能作为本组 PASS 证据。
 ### CASE UI-005: deprecated replay error renders
 
 - 目标：确认 deprecated replay 的 422 错误能在 UI 中展示。
-- 执行方法：打开 deprecated path drawer，输入 `<validation>/users`，点击 Replay。
+- 执行方法：打开 deprecated path drawer，输入 `<fixture-provider>/records`，点击 Replay。
 - 预期证据：Agent-operated browser / headed Playwright 的可见页面
   操作记录、截图/trace/video 或 browser observation 摘录。
 - PASS 条件：UI 展示 error alert，错误来自 HTTP 422。

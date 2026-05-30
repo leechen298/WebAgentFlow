@@ -54,7 +54,7 @@ setup evidence。
 
 ### Candidate Setup Practicality
 
-当前 `/items` P0 页面主要稳定支持“新增项目”闭环；第一版实现不得假设 live UI 一定能稳定学习出
+当前 `/records` P0 页面主要稳定支持“新增项目”闭环；第一版实现不得假设 live UI 一定能稳定学习出
 三个 distinct product actions。如果 `live_same_session_distinct_paths` /
 `live_setup_session_distinct_paths` 不稳定，11.3.6.3 第一版允许使用
 `setup_type=eval_only_candidate_binding`，但必须满足：
@@ -67,7 +67,7 @@ setup evidence。
 - 该 setup 只能证明 pending choice evaluator、public / private payload safety 和 choice selection
   control flow；不得声称产品已具备完整 live multi-action capability。
 - 若没有 eval-only binding 或 fixture，且 live setup 无法稳定产生三个候选，本 case 应输出
-  `blocked` / `not_run`，直到 product-test-site 有更多稳定 actions。
+  `blocked` / `not_run`，直到 fixture-site 有更多稳定 actions。
 
 如果实现 eval-only setup hook，必须满足：
 
@@ -92,7 +92,7 @@ setup evidence。
 | `select_A_dispatched` | yes | turn record / messages | 用户选择 A 的 dispatch 成功返回 |
 | `choice_A_execution_started` | yes | `chat_execution_started` after A turn | A turn 后进入 execution |
 | `execution_uses_choice_A_path` | yes | setup manifest + execution event | runner 内部用 raw `learned_path_id` 比较 A turn execution path；公开 evidence 只输出 hash / alias / match |
-| `slot_override_after_choice` | conditional | execution event | 如果 A turn 带业务 slot，则 `slot_overrides.item_name` 等于执行阶段目标值 |
+| `slot_override_after_choice` | conditional | execution event | 如果 A turn 带业务 slot，则 `slot_overrides.record_name` 等于执行阶段目标值 |
 | `pending_choice_cleared` | yes | session public payload / history | 选择 A 后 public session 不再有 `pending_choice` |
 | `private_map_not_public_after_selection` | yes | session / history / messages / events | 选择 A 后 public surface 不出现 private map |
 | `execution_verified` | yes | execution evidence / reporter event | A 对应执行结果 verified |

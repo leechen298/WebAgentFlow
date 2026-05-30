@@ -109,7 +109,7 @@ Application Skill Registry，并把工作 Agent 的职责边界写清楚。
 
 - 11.3.5.2 目录已经存在，继续作为 Chat Task State Reducer、learning preconditions、
   working runtime 总设计和测试入口的锚点，暂不为了改名而迁移目录。
-- `product-test-site /items`、参数化 replay、ExecutionEvidence、Reporter 接入、
+- `fixture-site /records`、参数化 replay、ExecutionEvidence、Reporter 接入、
   `pending_choice`、`active_task`、基础恢复和 TaskPathPlanner chat 接入不得塞进一个
   大迭代。
 - 第一条 P0 闭环必须证明“学习新增项目 A -> 执行新增项目 B”真的填入 B，而不是复用
@@ -125,10 +125,10 @@ Application Skill Registry，并把工作 Agent 的职责边界写清楚。
 | Package | 目标 | 先做 |
 |---|---|---|
 | 11.3.5.2 | 文档同步 + working runtime 总设计 + task state reducer / learning preconditions | 是 |
-| [11.3.5.3](../11.3.5.3-product-test-site-items-fixture/) | `apps/product-test-site` 新增 `/items` 列表测试页 | 是 |
-| [11.3.5.4](../11.3.5.4-parameterized-learning-replay-slots/) | `item_name` slot + `value_slot` / `slot_overrides` 参数化 learning / replay | ready_for_implementation（design review passed） |
+| [11.3.5.3](../11.3.5.3-fixture-site-items-fixture/) | `apps/fixture-site` 新增 `/records` 列表测试页 | 是 |
+| [11.3.5.4](../11.3.5.4-parameterized-learning-replay-slots/) | `record_name` slot + `value_slot` / `slot_overrides` 参数化 learning / replay | ready_for_implementation（design review passed） |
 | [11.3.5.5](../11.3.5.5-execution-evidence-result-reporter-adapter/) | ExecutionEvidence + TaskResultReporter adapter，runtime stop 前采集 DOM evidence | ready_for_implementation（design review passed） |
-| [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | `wagent chat` `/items` 学习 / 执行闭环测试方案与结果记录 | ready_for_implementation（design review passed） |
+| [11.3.5.6](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/) | `wagent chat` `/records` 学习 / 执行闭环测试方案与结果记录 | ready_for_implementation（design review passed） |
 | [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) | `pending_choice` + 最小 `active_task` ledger | ready_for_implementation（design review passed） |
 | [11.3.5.8](../11.3.5.8-basic-failure-recovery/) | 基础失败恢复 | implementation complete（code review passed，targeted tests passed） |
 | [11.3.5.9](../11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) | TaskPathPlanner 多候选 chat 接入 | ready_for_implementation（design review passed，未开始实现） |

@@ -22,15 +22,15 @@
 
 | Package | 目标 |
 |---|---|
-| 11.3.5.3 | `apps/product-test-site` 新增 `/items` 列表测试页 |
-| 11.3.5.4 | `item_name` slot + `value_slot` / `slot_overrides` 参数化 learning / replay |
+| 11.3.5.3 | `apps/fixture-site` 新增 `/records` 列表测试页 |
+| 11.3.5.4 | `record_name` slot + `value_slot` / `slot_overrides` 参数化 learning / replay |
 | 11.3.5.5 | ExecutionEvidence + TaskResultReporter adapter，runtime stop 前采集 DOM evidence |
-| 11.3.5.6 | `wagent chat` `/items` 学习 / 执行闭环测试方案与结果记录 |
+| 11.3.5.6 | `wagent chat` `/records` 学习 / 执行闭环测试方案与结果记录 |
 | 11.3.5.7 | `pending_choice` + 最小 `active_task` ledger |
 | [11.3.5.8](../11.3.5.8-basic-failure-recovery/) | 基础失败恢复 |
 | 11.3.5.9 | TaskPathPlanner 多候选 chat 接入 |
 
-第一条 P0 闭环是 `/items` 新增项目：学习新增项目、按新输入参数化执行新增项目、
+第一条 P0 闭环是 `/records` 新增项目：学习新增项目、按新输入参数化执行新增项目、
 采集页面证据，并由 TaskResultReporter 保守回复。该闭环必须证明 replay 实际填入
 执行阶段用户提供的 `测试项目B`，不能复用学习阶段录制值 `测试项目A`。
 
@@ -380,7 +380,7 @@ URL 后系统会打开页面学习，结果必须包含“正在查询已学记�
   metadata。
 - 工作过程中的反馈通过结构化日志 / conversation events / progress timeline 最终校验，且必须
   能用 `session_id`、`message_id`、`event_id` 或 `run_id` 关联到本轮输入。
-- `http://localhost:5176/workspace-login` 这类 URL 输入需要先查询当前应用是否已有相关
+- `http://localhost:<fixture-port>/target-login` 这类 URL 输入需要先查询当前应用是否已有相关
   LearnedPath / learned action。
 - 如果已有记录，应询问用户要执行、复习还是重新学习什么。
 - 如果没有记录，可以自动开始学习，并在学习完成后根据网页理解和操作记录报告学会了什么。

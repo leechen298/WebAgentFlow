@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
-import { apiUrl, validationUrl } from '../../fixtures/config';
+import { apiUrl } from '../../fixtures/config';
 import { loadReplayFixtures, type ReplayFixtureFile } from '../../fixtures/learnedPaths';
 
 interface ApiEnvelope<T> {
@@ -65,7 +65,7 @@ test.describe('Conversation runtime E2E', () => {
   test('dispatches explicit replay and records transcript and events', async ({ request }) => {
     const session = await createSession(request);
     const fixture = seeded.fixtures.happy;
-    const targetUrl = validationUrl('/users');
+    const targetUrl = fixture.target_url;
     const command = `/replay ${fixture.id} ${targetUrl}`;
 
     const dispatchResponse = await request.post(

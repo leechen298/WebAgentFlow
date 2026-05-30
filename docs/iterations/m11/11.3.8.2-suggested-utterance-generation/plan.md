@@ -117,7 +117,7 @@ Stop as `BLOCKED` if:
 
 - implementation needs LLM utterance generation;
 - implementation needs matcher policy changes;
-- tests require external Validation-Site source or live target;
+- tests require external Fixture-Site source or live target;
 - target-specific constants would enter runtime / prompts;
 - required verification cannot produce reviewable evidence.
 

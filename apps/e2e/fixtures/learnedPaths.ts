@@ -17,11 +17,17 @@ export interface ReplayFixture {
   scenario: string;
   trust: string;
   purpose: string;
+  target_url: string;
+  mismatch_url?: string;
+  expected_final_url_contains?: string;
 }
 
 export interface ReplayFixtureFile {
   generated_at: string;
-  validation_base_url: string;
+  provider: {
+    kind: string;
+    name?: string;
+  };
   fixtures: Record<ReplayFixtureName, ReplayFixture>;
 }
 
@@ -35,7 +41,7 @@ export async function loadReplayFixtures(): Promise<ReplayFixtureFile> {
   } catch (error) {
     throw new Error(
       `Missing E2E replay fixtures at ${fixtureFile}. ` +
-        'Run `.venv/bin/python apps/e2e/scripts/seed-replay-fixtures.py` first. ' +
+        'Generate it from the external Fixture-Site provider first. ' +
         `Original error: ${(error as Error).message}`,
     );
   }

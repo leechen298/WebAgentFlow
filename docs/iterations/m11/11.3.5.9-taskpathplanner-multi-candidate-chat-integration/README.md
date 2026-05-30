@@ -6,7 +6,7 @@
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
 前置迭代：
 
-- [`11.3.5.6-wagent-chat-items-closed-loop-evaluation`](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/)
+- [`11.3.5.6-wagent-chat-records-closed-loop-evaluation`](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/)
 - [`11.3.5.7-pending-choice-active-task-ledger`](../11.3.5.7-pending-choice-active-task-ledger/)
 - [`11.3.5.8-basic-failure-recovery`](../11.3.5.8-basic-failure-recovery/)
 
@@ -22,7 +22,7 @@ deterministic `TaskPathPlanner` 接入 `wagent chat` 的多候选 / 模糊目标
 
 ## 迭代定位
 
-11.3.5.3 - 11.3.5.6 已跑通 `/items` P0 working loop。11.3.5.7 提供
+11.3.5.3 - 11.3.5.6 已跑通 `/records` P0 working loop。11.3.5.7 提供
 `pending_choice` / `active_task`，11.3.5.8 提供基础失败恢复。11.3.5.9 只处理
 “有多个可能执行路径或用户目标模糊时，如何让 Runtime 基于 ranked session candidates
 展示选择，并利用 Planner 对 top candidate 给出 route plan / warning / uncertainty 信号”。
@@ -61,7 +61,7 @@ deterministic `TaskPathPlanner` 接入 `wagent chat` 的多候选 / 模糊目标
 
 ## 本包不做
 
-- 不改变 `/items` 单路径 happy path。
+- 不改变 `/records` 单路径 happy path。
 - 不让所有 execute_operation 都经过 TaskPathPlanner。
 - 不使用 `PlanningPreviewService` 的原始用户文案，因为它会显示 selected path id。
 - 不让 Router 输出 `learned_path_id`、selector、browser action 或 planner private payload。

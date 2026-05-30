@@ -149,7 +149,7 @@ Skipped 测试均为外部服务依赖（LLM provider、autonomous run、browser
 - `tests/conversation/cli-runtime.spec.ts` — CLI-driven replay
 - `tests/conversation/task-execution.spec.ts` — 11.1.6 scoped execution
 - `tests/conversation/task-result-reporter.spec.ts` — 11.1.7 reporter (uncertain/failed/blocked)
-- `tests/validation-site/browser-smoke.spec.ts` — fixture page controls
+- `tests/fixture-site/browser-smoke.spec.ts` — fixture page controls
 
 ## Event / State Evidence
 
@@ -250,7 +250,7 @@ E2E 已断言这些字段在 completed / failed / blocked 场景下的正确值�
 ## Environment Caveats
 
 - 测试在本地开发环境运行（macOS，PostgreSQL 16 via Docker，Redis，MinIO）。
-- Full E2E 使用 Playwright Chromium headless，依赖 validation-site 和 API backend。
+- Full E2E 使用 Playwright Chromium headless，依赖 fixture-site 和 API backend。
 - 65 个 skipped 测试均为外部依赖（LLM provider、browser sandbox、autonomous run），非 M11.1 业务缺陷。
 - 无 environment-blocked 的 E2E 失败。
 

@@ -208,7 +208,7 @@ public action alias
 ## 兼容性契约
 
 - 没有 pending recovery choice 的旧 session 必须继续正常运行。
-- 11.3.5.6 `/items` verified happy path 不应展示 recovery menu。
+- 11.3.5.6 `/records` verified happy path 不应展示 recovery menu。
 - 11.3.5.7 普通多候选 choice 行为不应被 recovery choice 破坏。
 - `learn_then_execute` 继续保持保守阻断。
 - TaskPathPlanner 不进入本包。

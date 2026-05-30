@@ -46,7 +46,7 @@ def _insert_run(
 
 def _ingest_sample(db_session: Session, **overrides) -> str:
     kwargs = dict(
-        page_template="/users",
+        page_template="/records",
         query_signature={"status": "active"},
         dom_fingerprint="a" * 64,
         scenario="filter_by_status",
@@ -387,7 +387,7 @@ def test_get_autonomous_run_shows_learned_path_relation_dedup_hit(
     )
 
     payload = AutonomousExplorePayload(
-        url="https://example.com/users?status=active",
+        url="https://example.com/records?status=active",
         scenario="filter_by_status",
     )
     final_data = {
@@ -529,7 +529,7 @@ def test_ingest_hook_writes_on_pass_gate_pass(
     final_data = _final_data_with_pass_gate("pass")
     # Analyzer ended up on the same URL the operator requested — the
     # no-redirect case. Identity is computed from page_analysis.url.
-    final_data["page_analysis"]["url"] = "https://example.com/users?status=active"
+    final_data["page_analysis"]["url"] = "https://example.com/records?status=active"
 
     with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
         run_id = _persist_autonomous_run(
@@ -545,7 +545,7 @@ def test_ingest_hook_writes_on_pass_gate_pass(
     row = rows[0]
     assert row.source_run_id == run_id
     assert row.scenario == "filter_by_status"
-    assert row.page_template == "/users"
+    assert row.page_template == "/records"
     assert row.query_signature == {"status": "active"}
     # screenshot_ref must have been stripped from actions.
     assert "screenshot_ref" not in row.actions[0]
@@ -572,11 +572,11 @@ def test_get_autonomous_run_links_repeated_pass_to_deduped_learned_path(
     )
 
     payload = AutonomousExplorePayload(
-        url="https://example.com/users?status=active",
+        url="https://example.com/records?status=active",
         scenario="filter_by_status",
     )
     final_data = _final_data_with_pass_gate("pass")
-    final_data["page_analysis"]["url"] = "https://example.com/users?status=active"
+    final_data["page_analysis"]["url"] = "https://example.com/records?status=active"
 
     with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
         first_run_id = _persist_autonomous_run(
@@ -627,14 +627,14 @@ def test_ingest_hook_identity_tracks_analyzer_url_on_redirect(
         expire_on_commit=False,
     )
 
-    # Operator asked for /users (no query); analyzer ended up on
-    # /users/?status=active after a server redirect.
+    # Operator asked for /records (no query); analyzer ended up on
+    # /records/?status=active after a server redirect.
     payload = AutonomousExplorePayload(
-        url="https://example.com/users",
+        url="https://example.com/records",
         scenario="filter_by_status",
     )
     final_data = _final_data_with_pass_gate("pass")
-    final_data["page_analysis"]["url"] = "https://example.com/users/?status=active"
+    final_data["page_analysis"]["url"] = "https://example.com/records/?status=active"
 
     with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
         _persist_autonomous_run(
@@ -650,7 +650,7 @@ def test_ingest_hook_identity_tracks_analyzer_url_on_redirect(
     # page_template should reflect the redirect target (trailing slash
     # normalised by path_template); query_signature should contain the
     # status flag that only exists in the analyzer URL.
-    assert row.page_template == "/users"
+    assert row.page_template == "/records"
     assert row.query_signature == {"status": "active"}
 
 
@@ -775,7 +775,7 @@ def test_old_autonomous_run_stream_singular_returns_404(client: TestClient) -> N
 def test_replay_unknown_path_is_404(client: TestClient) -> None:
     resp = client.post(
         "/exploration/learned-paths/not-a-real-id/replay",
-        json={"url": "http://127.0.0.1:5175/users"},
+        json={"url": "https://example.invalid/records"},
     )
     assert resp.status_code == 404
 
@@ -789,7 +789,7 @@ def test_replay_deprecated_path_is_422(
     )
     resp = client.post(
         f"/exploration/learned-paths/{path_id}/replay",
-        json={"url": "http://127.0.0.1:5175/users"},
+        json={"url": "https://example.invalid/records"},
     )
     assert resp.status_code == 422
 
@@ -828,7 +828,7 @@ def test_replay_flaky_path_includes_warning(
         stored_signature={},
         current_signature={},
         steps=[],
-        final_url="http://127.0.0.1:5175/users",
+        final_url="https://example.invalid/records",
         final_title="Users",
     )
 
@@ -838,7 +838,7 @@ def test_replay_flaky_path_includes_warning(
     ):
         resp = client.post(
             f"/exploration/learned-paths/{path_id}/replay",
-            json={"url": "http://127.0.0.1:5175/users"},
+            json={"url": "https://example.invalid/records"},
         )
     assert resp.status_code == 200
     data = resp.json()["data"]
@@ -861,8 +861,8 @@ def test_replay_valid_path_returns_result(
         drift_status="none",
         drift_reasons=[],
         warnings=[],
-        stored_signature={"page_template": "/users"},
-        current_signature={"page_template": "/users"},
+        stored_signature={"page_template": "/records"},
+        current_signature={"page_template": "/records"},
         steps=[
             ReplayStepLog(
                 step=1,
@@ -871,7 +871,7 @@ def test_replay_valid_path_returns_result(
                 ok=True,
             )
         ],
-        final_url="http://127.0.0.1:5175/users",
+        final_url="https://example.invalid/records",
         final_title="Users",
     )
 
@@ -881,7 +881,7 @@ def test_replay_valid_path_returns_result(
     ):
         resp = client.post(
             f"/exploration/learned-paths/{path_id}/replay",
-            json={"url": "http://127.0.0.1:5175/users"},
+            json={"url": "https://example.invalid/records"},
         )
     assert resp.status_code == 200
     data = resp.json()["data"]

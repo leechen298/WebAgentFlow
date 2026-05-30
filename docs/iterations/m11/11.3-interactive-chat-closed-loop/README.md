@@ -37,8 +37,8 @@ M11.0 / M11.1 已经提供 conversation API、non-interactive
 execution via replay 和 result reporter。当前缺口是普通用户不能只通过一个持续
 聊天入口完成“学习页面 -> 沉淀 LearnedPath -> 再用自然语言执行”的闭环。
 
-本包新增 `wagent chat` 作为人工自测主入口。第一阶段只验证 validation-site
-`/login` happy path，不扩大到 `/users`、真实业务页、M12 recovery / retry /
+本包新增 `wagent chat` 作为人工自测主入口。第一阶段只验证 fixture-site
+`/entry` happy path，不扩大到 `/records`、真实业务页、M12 recovery / retry /
 takeover 或复杂 LLM 意图理解。
 
 当前代码实现和 scoped regression 已通过审查；M11.3 已通过真实
@@ -49,10 +49,10 @@ takeover 或复杂 LLM 意图理解。
 
 后续 “working runtime” 收口不另开 11.4，统一挂在 11.3.5.x：
 
-- `product-test-site /items` 测试页。
-- 参数化 learning / replay，覆盖 `item_name`、`value_slot` 和 `slot_overrides`。
+- `fixture-site /records` 测试页。
+- 参数化 learning / replay，覆盖 `record_name`、`value_slot` 和 `slot_overrides`。
 - ExecutionEvidence 与 TaskResultReporter adapter，要求 runtime stop 前采集页面证据。
-- `wagent chat` `/items` 闭环测试结果记录。
+- `wagent chat` `/records` 闭环测试结果记录。
 - `pending_choice`、最小 `active_task`、基础失败恢复和 TaskPathPlanner 多候选 chat 接入。
 
 这些能力属于 11.3 Interactive Chat 的产品化后续，但具体施工、设计和验收锚点放在

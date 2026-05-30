@@ -253,7 +253,7 @@ git diff --check
    find their input data.
 
 3. **E2E ran successfully**: All 9 replay E2E tests passed. Services (API,
-   validation-site, console, PostgreSQL) were running. Replay seed fixtures
+   fixture-site, console, PostgreSQL) were running. Replay seed fixtures
    were already in place.
 
 4. **No conversation E2E**: No `apps/e2e/tests/conversation/` spec exists.
@@ -272,5 +272,5 @@ git diff --check
 | FU-04 | Conversation CLI smoke as keep-running baseline | P0 | already passing |
 | FU-05 | LearnedPath trust / run-review separation smoke | P1 | new test needed |
 | FU-06 | Console operator UI basic smoke | P1 | new test needed |
-| FU-07 | Validation-site selector stability smoke | P1 | new test needed |
+| FU-07 | Fixture-site selector stability smoke | P1 | new test needed |
 | FU-08 | AutonomousWorkbenchPage component test | P1 | 1001-line gap |

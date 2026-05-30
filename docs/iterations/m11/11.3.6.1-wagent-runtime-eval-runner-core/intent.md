@@ -33,14 +33,14 @@ required gates 全 pass 才 exit 0
 
 ## 动机
 
-11.3.5.6 已经证明 `/items` P0 working loop 可以通过真实 runtime 完成，但它仍是一次
+11.3.5.6 已经证明 `/records` P0 working loop 可以通过真实 runtime 完成，但它仍是一次
 人工执行和人工整理结果。随着 11.3.5.7 pending choice、11.3.5.8 failure recovery、
 11.3.5.9 planner choice 接入后，继续靠人工逐项聊天会有几个问题：
 
 - Codex 容易变成“手动试一下再主观总结”，无法稳定复现。
 - pass / fail 需要 hard gate，而不是自然语言判断。
 - 每次运行都需要保留 raw record，方便用户和后续 Agent 审核。
-- `/items` 闭环和单路径 direct replay 应该成为后续 runtime 改动的默认回归门槛。
+- `/records` 闭环和单路径 direct replay 应该成为后续 runtime 改动的默认回归门槛。
 - CLI `wagent conversation send` 已经具备 session-targeted dispatch 能力，但 eval 需要
   自己控制 timeout、artifact 和 gate，所以更适合直接调用 Conversation API。
 
@@ -58,7 +58,7 @@ Codex = 审计员：检查报告和 raw artifact 是否一致、是否越界、�
 
 - Conversation API 可以创建 session、dispatch、读取 messages / events / history。
 - `wagent conversation send` 已经证明 session-targeted dispatch 路径存在。
-- `/items` product-test-site 已经作为稳定产品级测试页使用。
+- `/records` fixture-site 已经作为稳定产品级测试页使用。
 - 11.3.5.6 的 clean-slate pass chain 已经定义了可硬校验 gates。
 - 11.3.5.9 引入 planner choice 后，必须保护“单路径明确目标直接 replay”不被回归。
 
@@ -83,9 +83,9 @@ case 自动化，能降低后续迭代的人工验证成本。
 - `pnpm run eval:wagent:items` 能运行第一版用例。
 - `items_closed_loop` 能创建 session、学习 A、执行 B，并按 hard gates 判定：
   - LearnedPath created。
-  - LearnedPath fill action has `value_slot=item_name`。
-  - execution has `slot_overrides.item_name=B`。
-  - DOM evidence target selector is `[data-testid='item-list']`。
+  - LearnedPath fill action has `value_slot=record_name`。
+  - execution has `slot_overrides.record_name=B`。
+  - DOM evidence target selector is `[data-testid='record-list']`。
   - DOM evidence verifies B。
   - TaskResultReporter outcome is `verified`。
   - final WAgent response is evidence-based and mentions B。
@@ -93,7 +93,7 @@ case 自动化，能降低后续迭代的人工验证成本。
   pending choice / planner choice。
 - runner 输出 JSON raw artifact 和 Markdown result。
 - required gates 全 pass 时 exit `0`；required gate fail 时 exit `1`。
-- API 或 product-test-site 不可用时 exit `2` 并写 blocked result。
+- API 或 fixture-site 不可用时 exit `2` 并写 blocked result。
 - timeout 时 exit `3` 并保留已采集 raw record。
 - artifact 写入失败和 runner 自身异常有独立 exit code。
 - public reply / session public payload / events 不泄露 private payload。

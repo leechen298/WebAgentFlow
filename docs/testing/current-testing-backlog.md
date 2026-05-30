@@ -67,7 +67,7 @@ Q1 关键发现：
 |---|---|---|
 | GAP-01 | AutonomousWorkbenchPage component test | 1001-line component, zero tests |
 | GAP-02 | 2 broken AutonomousUseCasesPage tests | FIX-01 的根因：组件重构后测试未同步 |
-| GAP-03 | Validation-site selector stability smoke | fixture 漂移会破坏 replay E2E，无预警测试 |
+| GAP-03 | External fixture selector stability smoke | fixture 漂移会破坏 replay E2E，无预警测试 |
 
 ### proposed — 合理建议，等对应能力进入施工
 
@@ -83,7 +83,7 @@ Q1 关键发现：
 |---|---|---|
 | DEF-01 | AE 全量 60 case 展开 | 范围过大，偏离当前测试专项 |
 | DEF-02 | live autonomous learning → replay smoke | live smoke，不进常规 CI |
-| DEF-03 | validation-site 全页面 E2E | 过度 E2E 化 |
+| DEF-03 | external fixture provider 全页面 E2E | 过度 E2E 化，应由 fixture provider 自己维护 |
 | DEF-04 | console 全页面 visual exploratory | 范围过大 |
 | DEF-05 | replay DOM obstruction failure | 等 fixture 设计稳定后补 |
 | DEF-06 | replay audit persistence | 等实现 replay audit 时补 |
@@ -216,18 +216,18 @@ Q1 关键发现：
 - **What not to do**: Don't add live autonomous run tests. Don't test orchestrator integration.
 - **Status**: **DONE** (2026-05-11) — gap review complete. `test_patch_run_review_does_not_modify_learned_path` (line 253 in test_exploration_learned_paths_api.py) already tests the separation invariant: rejecting a run review does NOT change path trust. No new test needed.
 
-### 9. VS-SELECTOR: Validation-site selector stability smoke
+### 9. EXT-FIXTURE-SELECTOR: External fixture selector stability smoke
 
 - **Case ID**: NEW (from full-test-matrix.md domain 5 gap)
-- **Reason**: Replay E2E depends on stable CSS selectors in validation-site pages (`#username`, `#password`, `#search-name`, `#btn-search`, etc.). If selectors drift, replay E2E will fail silently or with confusing errors. A lightweight smoke can catch drift early.
+- **Reason**: Replay E2E depends on stable selectors owned by the external fixture provider. If selectors drift, replay E2E will fail silently or with confusing errors. The selector smoke belongs with the provider, not in this repository.
 - **Layer**: Unit / API integration
 - **Priority**: P1
 - **CI**: yes
-- **Evidence required**: test output confirming selectors exist in fixture HTML
-- **Implementation target**: new file `apps/api/tests/test_validation_site_selectors.py` or `apps/e2e/tests/validation-site/selectors.spec.ts`
-- **Why now**: Protects replay E2E from fixture drift. Low cost, high signal.
-- **What not to do**: Don't build full validation-site E2E. Don't test login/sessionStorage behavior. Don't add Agent-operated UI exploratory here.
-- **Status**: **DONE** (2026-05-11) — new test at `apps/console/src/__tests__/validation-site/selector-stability.test.ts`. 14 tests covering LoginPage, UserDirectoryPage, DashboardPage selectors. Reads Vue source files directly, no running server needed. 14/14 pass.
+- **Evidence required**: provider-side test output plus a redacted manifest/result consumed by WebAgentFlow.
+- **Implementation target**: external fixture provider repository.
+- **Why now**: Protects replay E2E from fixture drift while keeping WebAgentFlow target-agnostic.
+- **What not to do**: Don't keep provider page selectors, page names, or browser-smoke tests in this repository. Don't add Agent-operated UI exploratory here.
+- **Status**: **MOVED OUT** (2026-05-30) — WebAgentFlow now consumes external replay fixture manifests instead of maintaining provider-page selector smoke.
 
 ### 10. CONSOLE-SMOKE: Console operator UI basic smoke
 

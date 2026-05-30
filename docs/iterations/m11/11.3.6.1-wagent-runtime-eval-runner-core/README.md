@@ -7,7 +7,7 @@
 前置迭代：
 
 - [`11.3.6-wagent-runtime-eval-program`](../11.3.6-wagent-runtime-eval-program/)
-- [`11.3.5.6-wagent-chat-items-closed-loop-evaluation`](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/)
+- [`11.3.5.6-wagent-chat-records-closed-loop-evaluation`](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/)
 - [`11.3.5.7-pending-choice-active-task-ledger`](../11.3.5.7-pending-choice-active-task-ledger/)
 - [`11.3.5.8-basic-failure-recovery`](../11.3.5.8-basic-failure-recovery/)
 - [`11.3.5.9-taskpathplanner-multi-candidate-chat-integration`](../11.3.5.9-taskpathplanner-multi-candidate-chat-integration/)
@@ -24,22 +24,22 @@ evaluation 平台；它是 11.3.6 eval program 的第一条可执行 runner 包�
 
 ## 迭代定位
 
-11.3.5.6 已经用人工方式证明 `/items` 可以完成：
+11.3.5.6 已经用人工方式证明 `/records` 可以完成：
 
 ```text
 创建 session
--> 提供 /items URL
+-> 提供 /records URL
 -> 学习新增项目 A
 -> 执行新增项目 B
--> LearnedPath value_slot=item_name
--> slot_overrides.item_name=B
+-> LearnedPath value_slot=record_name
+-> slot_overrides.record_name=B
 -> DOM evidence verified B
 -> TaskResultReporter outcome=verified
 -> WAgent evidence-based final response
 ```
 
 11.3.6 总体规划把 runtime eval 拆成可逐步扩展的 11.3.6.x 子包。11.3.6.1 只负责
-先把 `/items` 闭环和单路径 direct replay regression 变成可由开发者或 Codex 外部测试
+先把 `/records` 闭环和单路径 direct replay regression 变成可由开发者或 Codex 外部测试
 操作员反复执行的 eval runner：
 
 ```text

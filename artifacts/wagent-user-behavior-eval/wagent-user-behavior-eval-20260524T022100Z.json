@@ -6,9 +6,9 @@
     "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1"
   },
   "spec": {
-    "target_name": "product-test-site-items",
+    "target_name": "fixture-site-items",
     "target_label": "Product test items page",
-    "product_url": "http://127.0.0.1:5176/items"
+    "product_url": "http://127.0.0.1:<fixture-port>/records"
   },
   "config": {
     "api_base": "http://127.0.0.1:8001",

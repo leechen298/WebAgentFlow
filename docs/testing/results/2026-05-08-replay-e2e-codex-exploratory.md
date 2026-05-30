@@ -178,7 +178,7 @@ Running 9 tests using 2 workers
 
 - 状态：PASS
 - 命令或方法：Python stdlib `urllib` 用 happy id replay
-  `http://127.0.0.1:5175/users?name=alice`。
+  `https://example.invalid/records?name=alice`。
 - 退出码：0
 - 证据摘录：
 
@@ -192,7 +192,7 @@ Running 9 tests using 2 workers
 ### CASE API-005: deprecated path blocked
 
 - 状态：PASS
-- 命令或方法：Python stdlib `urllib` 用 deprecated id replay `/users`。
+- 命令或方法：Python stdlib `urllib` 用 deprecated id replay `/records`。
 - 退出码：0
 - 证据摘录：
 
@@ -206,7 +206,7 @@ Running 9 tests using 2 workers
 ### CASE API-006: unsupported action remains structured
 
 - 状态：PASS
-- 命令或方法：Python stdlib `urllib` 用 unsupportedAction id replay `/users`。
+- 命令或方法：Python stdlib `urllib` 用 unsupportedAction id replay `/records`。
 - 退出码：0
 - 证据摘录：
 
@@ -237,7 +237,7 @@ Running 9 tests using 2 workers
 ✓ tests/replay/catalog-ui.spec.ts:12 LearnedPath catalog can replay a seeded happy path (5.4s)
 ```
 
-- 备注：该 deterministic UI E2E 实际打开 catalog、打开 happy path drawer、输入 `/users`、点击 Replay，并断言 `Succeeded`、`No drift`、final URL 和 `Step 0`；同一 spec 内监听 forbidden requests。
+- 备注：该 deterministic UI E2E 实际打开 catalog、打开 happy path drawer、输入 `/records`、点击 Replay，并断言 `Succeeded`、`No drift`、final URL 和 `Step 0`；同一 spec 内监听 forbidden requests。
 - 后续处理：无。
 
 ### CASE UI-003: flaky replay warning renders

@@ -67,4 +67,4 @@ required gates `15/15`。证据：
 `docs/testing/results/m11-11.3.6.3-pending-choice-multi-candidate-eval-20260523T134741Z.md`。
 
 Caveat：当前 setup 为 `eval_only_candidate_binding`，
-`live_multi_action_capability=false`，不证明 `/items` 已有三个真实 distinct product actions。
+`live_multi_action_capability=false`，不证明 `/records` 已有三个真实 distinct product actions。

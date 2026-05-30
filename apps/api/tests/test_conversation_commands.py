@@ -37,15 +37,15 @@ def test_parse_basic_slash_commands() -> None:
 
 def test_parse_replay_command_with_path_id_and_url() -> None:
     command = parse_command(
-        "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users"
+        "/replay 11111111-1111-1111-1111-111111111111 https://example.invalid/records"
     )
 
     assert command.kind == ConversationCommandKind.REPLAY
     assert command.learned_path_id == "11111111-1111-1111-1111-111111111111"
-    assert command.url == "http://127.0.0.1:5175/users"
+    assert command.url == "https://example.invalid/records"
     assert command.args == [
         "11111111-1111-1111-1111-111111111111",
-        "http://127.0.0.1:5175/users",
+        "https://example.invalid/records",
     ]
     assert command.error is None
 
@@ -54,7 +54,7 @@ def test_parse_replay_missing_path_id_or_url_returns_error_command() -> None:
     missing_all = parse_command("/replay")
     missing_url = parse_command("/replay 11111111-1111-1111-1111-111111111111")
     too_many = parse_command(
-        "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users extra"
+        "/replay 11111111-1111-1111-1111-111111111111 https://example.invalid/records extra"
     )
 
     for command in (missing_all, missing_url, too_many):

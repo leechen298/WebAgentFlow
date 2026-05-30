@@ -126,7 +126,7 @@
 - Decision：blocked / implementation_review_failed
 - Commit：`eceeaff`
 - Evidence：
-  - API `/health` returned HTTP 200 with `database=ok`; product `/items` returned HTTP 200.
+  - API `/health` returned HTTP 200 with `database=ok`; product `/records` returned HTTP 200.
   - `pnpm run eval:wagent:pending-choice` -> exit `1`, `status=fail`,
     session `71182c21-efdc-4aab-b0e4-3d432c28fc4e`.
   - `pnpm run eval:wagent:planner-choice` -> exit `1`, `status=fail`,
@@ -189,7 +189,7 @@
     `artifacts/wagent-eval/wagent-runtime-eval-planner-choice-latest.json`
 - Caveats：
   - pending-choice / planner-choice use eval-only candidate binding and do not prove three
-    live distinct product actions on `/items`.
+    live distinct product actions on `/records`.
   - `planner_top_choice_observable` remains a non-required `not_observable` warning.
   - Failure recovery uses an eval-only hook; retry execution after choosing A remains out of scope.
   - No autonomous run, `verify-scenario`, Console UI smoke, or direct replay substitution was used.

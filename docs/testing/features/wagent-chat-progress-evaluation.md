@@ -99,7 +99,7 @@ docs/testing/results/YYYY-MM-DD-wagent-chat-progress-evaluation.md
 ## C04 unknown URL auto learn
 
 - Entry: resume-send
-- Message: `http://localhost:5176/workspace-login`
+- Message: `https://example.invalid/app-entry`
 - Session: `<session_id>`
 - Message id: `<message_id or N/A>`
 - Final response: ...
@@ -131,12 +131,12 @@ Notes:
 |---|---|---|---|---|---|---|
 | C01 greeting | first-run | `你好` | 友好回复，说明 WAgent 可以学习网页操作、执行已学操作，并引导用户发页面地址或说明要做什么。 | “学习网页操作”或“执行已学操作”；“页面地址”或“要做什么” | 内部 Agent 名、schema、provider、`Learning run did not produce a LearnedPath` | 创建 `interactive_chat` session；不触发 browser / learning / replay；不创建 `active_task`。 |
 | C02 capability | first-run or resume-send | `你能做什么？` | 说明产品边界：学习网页操作、执行已学操作、辅助查看/调试会话；引导用户提供 URL 和目标。 | “学习网页操作”；“执行已学操作”或“执行已经学会的操作”；“页面地址” | 通用聊天承诺；开放式闲聊续聊；provider raw error | 不触发 browser / learning / replay；不创建 `active_task`。 |
-| C03 known URL | resume-send with existing learned action for URL | `http://localhost:5176/workspace-login` | 先查询应用是否已有该 URL / site scope 相关学习记录；如果已有，说明已学过相关操作，并询问用户想执行、复习还是重新学习什么。 | “我查到/找到已学过”；“你想让我做什么”或“要执行哪个操作” | 自动重复学习；直接执行；内部 `learned_path_id` | 不触发 replay，除非用户明确要求执行；可创建 `active_task.stage=learned_ready` 或保持轻量候选上下文。 |
-| C04 unknown URL auto learn | first-run or resume-send with no learned action for URL | `http://localhost:5176/workspace-login` | 先查询记录；如果没有学过，应说明将尝试学习该页面，并开始学习。学习完成后，根据页面理解和操作记录报告学会了什么。 | “还没学过/没有找到已学记录”；“开始学习/我来学习”；学习成功时包含“学会了”以及页面/操作摘要 | 冷冰冰 no-path；只追问“要做什么”；内部错误 | 可进入 `learning`；学习成功后沉淀 LearnedPath，并回复 learned summary；不自动执行。 |
-| C05 unknown URL needs user input | first-run or resume-send with no learned action for URL and page needs credentials | `http://localhost:5176/workspace-login` | 如果学习过程中发现需要账号、密码、验证码或用户判断，应说明需要用户协助，并明确要补充什么；这不是应用无法学习。 | “需要你提供/协助”；“账号/密码/验证码/必要信息”之一；“继续学习”或“取消” | `Learning run did not produce a LearnedPath`；“无法学习”；崩溃式错误 | 进入 `need_required_inputs` 或 recoverable `learning_failed`；保留 `active_task`；不把缺信息当最终失败。 |
-| C06 learning failed recoverable | resume-send | `学习 http://localhost:5176/workspace-login` | 如果学习未生成 LearnedPath，应根据页面理解和操作记录解释卡在哪里，并询问用户补充信息或确认下一步。 | “没有学成可复用路径/还没学成”；“可能需要”；“你可以补充/确认” | 直接展示 raw error；直接清空任务；笼统“失败”无下一步 | 记录 raw failure 到 history/debug；普通回复为可继续说明；保留或更新 `active_task.last_failure_reason`。 |
-| C07 execute known action | resume-send with existing learned login action | `帮我执行 workspace-login 的登录` | 查询到已学操作后，可以说明将执行已学路径，或在需要确认时询问用户是否执行。 | “已学过/找到已学操作”；“执行”或“是否执行” | 跨 URL 误命中；重新学习；内部 `learned_path_id` | 可进入 `executing` 或 `awaiting_execution_confirmation`；不得跨 target URL / site origin 命中。 |
-| C08 execute unknown action | resume-send with no learned action | `帮我执行 workspace-login 的登录` | 如果没有学过，应说明还没学过，并自动进入学习或询问是否先学习；不得直接 no-path 结束。 | “还没学过”；“先学习/现在学习” | 冷冰冰 no-path；直接执行；内部错误 | 进入 `learning` 或 `awaiting_learning_confirmation`；不触发 replay。 |
+| C03 known URL | resume-send with existing learned action for URL | `https://example.invalid/app-entry` | 先查询应用是否已有该 URL / site scope 相关学习记录；如果已有，说明已学过相关操作，并询问用户想执行、复习还是重新学习什么。 | “我查到/找到已学过”；“你想让我做什么”或“要执行哪个操作” | 自动重复学习；直接执行；内部 `learned_path_id` | 不触发 replay，除非用户明确要求执行；可创建 `active_task.stage=learned_ready` 或保持轻量候选上下文。 |
+| C04 unknown URL auto learn | first-run or resume-send with no learned action for URL | `https://example.invalid/app-entry` | 先查询记录；如果没有学过，应说明将尝试学习该页面，并开始学习。学习完成后，根据页面理解和操作记录报告学会了什么。 | “还没学过/没有找到已学记录”；“开始学习/我来学习”；学习成功时包含“学会了”以及页面/操作摘要 | 冷冰冰 no-path；只追问“要做什么”；内部错误 | 可进入 `learning`；学习成功后沉淀 LearnedPath，并回复 learned summary；不自动执行。 |
+| C05 unknown URL needs user input | first-run or resume-send with no learned action for URL and page needs credentials | `https://example.invalid/app-entry` | 如果学习过程中发现需要账号、密码、验证码或用户判断，应说明需要用户协助，并明确要补充什么；这不是应用无法学习。 | “需要你提供/协助”；“账号/密码/验证码/必要信息”之一；“继续学习”或“取消” | `Learning run did not produce a LearnedPath`；“无法学习”；崩溃式错误 | 进入 `need_required_inputs` 或 recoverable `learning_failed`；保留 `active_task`；不把缺信息当最终失败。 |
+| C06 learning failed recoverable | resume-send | `学习 https://example.invalid/app-entry` | 如果学习未生成 LearnedPath，应根据页面理解和操作记录解释卡在哪里，并询问用户补充信息或确认下一步。 | “没有学成可复用路径/还没学成”；“可能需要”；“你可以补充/确认” | 直接展示 raw error；直接清空任务；笼统“失败”无下一步 | 记录 raw failure 到 history/debug；普通回复为可继续说明；保留或更新 `active_task.last_failure_reason`。 |
+| C07 execute known action | resume-send with existing learned login action | `帮我执行 sample-operation 的登录` | 查询到已学操作后，可以说明将执行已学路径，或在需要确认时询问用户是否执行。 | “已学过/找到已学操作”；“执行”或“是否执行” | 跨 URL 误命中；重新学习；内部 `learned_path_id` | 可进入 `executing` 或 `awaiting_execution_confirmation`；不得跨 target URL / site origin 命中。 |
+| C08 execute unknown action | resume-send with no learned action | `帮我执行 sample-operation 的登录` | 如果没有学过，应说明还没学过，并自动进入学习或询问是否先学习；不得直接 no-path 结束。 | “还没学过”；“先学习/现在学习” | 冷冰冰 no-path；直接执行；内部错误 | 进入 `learning` 或 `awaiting_learning_confirmation`；不触发 replay。 |
 | C09 confirmation without task | first-run or empty session | `是` | 说明当前还不知道页面和操作目标，请用户先提供页面地址和要学习/执行的操作。 | “需要页面地址”或“还不知道要做什么”；“学习或执行的操作” | “开始学习”；“执行中”；browser action | 不触发 learning / replay；不创建可执行任务。 |
 | C10 cancel without task | first-run or empty session | `取消` | 说明当前没有正在进行的网页任务，用户可以发页面地址重新开始。 | “没有正在进行”或“没有需要取消”；“页面地址” | 报错；内部 trace；browser action | 不触发 learning / replay；保持 `active_task` 为空。 |
 | C11 unsupported non-web | first-run or resume-send | `帮我写一首诗` | 友好说明当前产品主要用于学习和执行网页操作，并引导回网页任务。 | “主要用于学习/执行网页操作”；“页面地址” | 长篇诗歌正文；开放式闲聊续聊；browser action | 不触发 browser / learning / replay；不创建 `active_task`。 |
@@ -153,7 +153,7 @@ Notes:
 
 ## URL 输入的判定分支
 
-对于 `http://localhost:5176/workspace-login` 这类单独 URL 输入，检查以下分支：
+对于 `https://example.invalid/app-entry` 这类单独 URL 输入，检查以下分支：
 
 1. 系统是否先查询当前 session / target scope 下的已学记录。
 2. 如果已有记录：

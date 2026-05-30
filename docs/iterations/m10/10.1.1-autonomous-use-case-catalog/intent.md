@@ -48,7 +48,7 @@ scenario、全选可运行 scenario，并从目录页批量运行选中的用例
   判定逻辑。
 - 不替代历史页：history 仍然展示 run 结果；本页只展示“可启动的
   authored use cases”。
-- 不把 validation-site 的 fixture catalogue 复制到 console；以
+- 不把 fixture-site 的 fixture catalogue 复制到 console；以
   `/exploration/specs` 为唯一数据源。
 
 ## 成功标准
@@ -58,7 +58,7 @@ scenario、全选可运行 scenario，并从目录页批量运行选中的用例
 2. 页面从 `listSpecs()` 加载 authored specs，能展示每个 spec 下的
    scenarios、输入值、选择值、期望 verdict 信息。
 3. 每个 scenario 都能跳转到 `/exploration/autonomous`，并携带：
-   - `url=<validation-site-origin + spec.url_pattern>`
+   - `url=<fixture-site-origin + spec.url_pattern>`
    - `spec_id=<spec.spec_id>`
    - `scenario=<scenario.key>`
    - `goal=<scenario.description 或 spec.description>`
@@ -68,7 +68,7 @@ scenario、全选可运行 scenario，并从目录页批量运行选中的用例
    中能构造 URL 的 scenario。
 6. 页面提供“批量运行选中用例”按钮；无选择或正在运行时禁用。
 7. 批量运行复用 `streamAutonomousRun`，为每个选中 scenario 构造：
-   - `url=<validation-site-origin + spec.url_pattern>`
+   - `url=<fixture-site-origin + spec.url_pattern>`
    - `goal=<scenario.description 或 spec.description>`
    - `fill_values=<scenario.inputs>`
    - `toggle_values=<scenario.selections>`
@@ -79,8 +79,8 @@ scenario、全选可运行 scenario，并从目录页批量运行选中的用例
    completed / failed / aborted；可中止仍在运行的任务。
 9. 默认并发上限为 3，避免一次性打开过多 SSE 连接；全量选择时按队列
    推进。
-10. validation-site origin 可配置；默认本地值为
-   `http://localhost:5175`。
+10. fixture-site origin 可配置；默认本地值为
+   `https://example.invalid`。
 11. 页面有 loading / error / empty 状态，不因 API 不可用导致白屏。
 12. i18n 至少补齐 zh / en / ja 的导航和页面文案，现有 i18n 测试不
    失败。

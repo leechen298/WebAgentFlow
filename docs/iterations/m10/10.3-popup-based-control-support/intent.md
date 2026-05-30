@@ -8,7 +8,7 @@
 和 `plan.md`。
 
 状态：Draft only，不可直接施工。开工前必须重新核对当前
-`page_analyzer`、`action_planner`、validation-site users fixture 和
+`page_analyzer`、`action_planner`、fixture-site users fixture 和
 `10.2` 结果。
 
 ## 目标

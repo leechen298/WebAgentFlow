@@ -90,7 +90,7 @@ export default {
     clickToZoom: '点击查看大图',
     // 表单字段
     urlLabel: 'URL',
-    urlPlaceholder: 'http://127.0.0.1:5175/login',
+    urlPlaceholder: 'https://target.example.test/path',
     goalLabel: '目标描述（可选）',
     goalPlaceholder: '例如：以 admin 身份登录',
     specMatched: '已匹配规范：{id} · {count} 个测试用例',

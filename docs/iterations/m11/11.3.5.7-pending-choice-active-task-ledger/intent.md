@@ -46,7 +46,7 @@ A
 - 不实现复杂 planning preview；11.3.5.9 再接 Planner。
 - 不做 retry / relearn / cancel failure menu；11.3.5.8 再做。
 - 不启用 `learn_then_execute`。
-- 不实现搜索 / 编辑 / 删除 `/items` 业务闭环。
+- 不实现搜索 / 编辑 / 删除 `/records` 业务闭环。
 - 不新增数据库列；P0/P1 状态继续放在 conversation session metadata。
 - 不让 Router 或 LLM 看见真实 `learned_path_id`。
 - 不让 Router 推荐 internal runtime adapters。
@@ -62,4 +62,4 @@ A
 - `pending_choice` 过期后不会污染后续任务。
 - 学习 / 执行 / clarify 开始、完成、失败时，`active_task` 有最小状态记录。
 - Router prompt、LLM trace、用户可见回复和 progress event 不暴露真实 `learned_path_id`。
-- 既有 `/items` 单路径 happy path 仍不经过 TaskPathPlanner，且 targeted tests 仍通过。
+- 既有 `/records` 单路径 happy path 仍不经过 TaskPathPlanner，且 targeted tests 仍通过。

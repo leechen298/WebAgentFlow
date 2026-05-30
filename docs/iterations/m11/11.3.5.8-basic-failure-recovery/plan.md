@@ -113,7 +113,7 @@ learned_action -> existing 11.3.5.7 behavior
 - No automatic retry loop.
 - Every user choice A triggers at most one replay retry.
 - For evidence missing / uncertain / needs_review, user-facing text must say retry executes the operation again and may repeat side effects.
-- Add tests proving `slot_overrides.item_name` is preserved.
+- Add tests proving `slot_overrides.record_name` is preserved.
 
 ### Step 7 · Implement relearn
 

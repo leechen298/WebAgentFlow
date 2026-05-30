@@ -38,9 +38,9 @@
 | documentation | complexity ladder | inspect docs | simple / medium / complex / very complex present | Yes | docs-only validation |
 | documentation | current vs future observation | inspect docs | MVP signals separated from future signals | Yes | no false implementation claims |
 | documentation | network delay and errors | inspect docs | slow response / HTTP errors / upload-export failures covered | Yes | 11.2.4.5 planning |
-| future route smoke | each fixture route opens | validation-site route | route loads with stable heading | Yes later | not run in this docs package |
-| future route smoke | trigger visible | validation-site page | trigger action visible and stable | Yes later | stable selector required |
-| future route smoke | deterministic initial state | validation-site page | reset restores baseline | Yes later | no state bleed |
+| future route smoke | each fixture route opens | fixture-site route | route loads with stable heading | Yes later | not run in this docs package |
+| future route smoke | trigger visible | fixture-site page | trigger action visible and stable | Yes later | stable selector required |
+| future route smoke | deterministic initial state | fixture-site page | reset restores baseline | Yes later | no state bleed |
 | future route smoke | deterministic post-action state | click trigger | expected visible result appears | Yes later | timer durations fixed |
 | future replay | URL/title change fixture | replay run | current MVP observed | Yes later | current MVP path |
 | future replay | toast/modal/loading/list refresh | replay run | current MVP does not falsely claim unsupported signal | Yes later | future signal only |

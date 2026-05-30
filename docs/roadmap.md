@@ -35,8 +35,7 @@ Foundation:
   `ast_simplifier.py`)
 - Playwright chromium lifecycle wrapper
   (`services/execution/execution_runtime.py`)
-- Self-hosted validation-site (`apps/validation-site/`) with mock
-  `/validation-api` backend
+- External fixture provider support through configured URLs/spec roots
 
 Autonomous exploration pipeline (end-to-end):
 
@@ -311,17 +310,17 @@ Delivered packages:
   with `--headless` opt-out.
 - **11.3.2 Chat History & Debug Console** — implementation complete; conversation
   history/debug surfaces and CLI resume/list/history support.
-- **11.3.3 Product-Level Chat Test Site Separation** — accepted; product-test-site
-  is separate from validation-site, and product-level chat learning no longer
-  depends on validation specs / assertions.
+- **11.3.3 Product-Level Chat Test Target Separation** — accepted; product-level
+  chat learning is target-agnostic and does not depend on bundled validation
+  specs / assertions.
 - **11.3.4 Conversation Intake Agent** — implementation complete; adds a
   schema-constrained natural-language intake role, deterministic fallback,
   guardrails, response provenance, and redacted LLM trace history. Scoped tests
   passed; real LLM-backed smoke remains pending.
 - **11.3.5 Customer-Facing Agent Router & Skill Runtime** — planning refined and
   implemented through focused 11.3.5.x working-runtime slices: entry gate /
-  latency UX, task-state reducer / learning preconditions, product-test-site
-  fixture, parameterized learning / replay slots, execution evidence adapter,
+  latency UX, task-state reducer / learning preconditions, external fixture
+  result intake, parameterized learning / replay slots, execution evidence adapter,
   closed-loop chat evaluation, pending choice, basic recovery, and
   planner-backed choice integration.
 - **11.3.6 WAgent Runtime Eval Program** — closed as

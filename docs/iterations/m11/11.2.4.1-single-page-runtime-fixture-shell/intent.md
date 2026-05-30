@@ -10,8 +10,8 @@ convention。
 
 ## 动机
 
-当前 validation-site 已有 `apps/validation-site/src/pages/IndexPage.vue` 和
-`PAGES` catalog，现有入口包括 `/login`、`/users` 等页面。
+当前 fixture-site 已有 `apps/fixture-site/src/pages/IndexPage.vue` 和
+`PAGES` catalog，现有入口包括 `/entry`、`/records` 等页面。
 
 11.2.4.0 已将 scenario catalog 固化为：
 
@@ -24,7 +24,7 @@ runtime behavior
 ```
 
 后续 11.2.4.2 / 11.2.4.3 / 11.2.4.4 会逐步实现 basic、medium、complex
-business pages。为了避免这些 fixture 散落在 validation-site 中，11.2.4.1
+business pages。为了避免这些 fixture 散落在 fixture-site 中，11.2.4.1
 先落地统一 shell。
 
 ## 成功标准

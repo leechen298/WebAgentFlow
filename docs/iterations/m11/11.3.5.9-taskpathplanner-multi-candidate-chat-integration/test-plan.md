@@ -30,9 +30,9 @@ private map、安全 payload 和单路径回归，必须维护 `test-plan.md`。
 | Unit | MAP-4 planner does not supply alternatives | helper | choices come from ranked session candidates | Yes | planner output is top route only |
 | Integration | PL-1 multi-candidate invokes planner | chat runtime | planner called once, pending_choice created | Yes | mocked planner |
 | Integration | PL-2 vague request invokes planner | chat runtime | “处理一下这个页面” enters planner choice | Yes | no direct guess |
-| Integration | PL-3 single candidate skips planner | chat runtime | direct replay, planner not called | Yes | `/items` regression |
+| Integration | PL-3 single candidate skips planner | chat runtime | direct replay, planner not called | Yes | `/records` regression |
 | Integration | PL-4 choice selection executes selected path | chat runtime | selecting A calls replay for private path | Yes | no Router |
-| Integration | PL-5 selection preserves slot_overrides | chat runtime | `item_name` retained through private map | Yes | 11.3.5.4 regression |
+| Integration | PL-5 selection preserves slot_overrides | chat runtime | `record_name` retained through private map | Yes | 11.3.5.4 regression |
 | Integration | PL-6 planner unable asks clarification | chat runtime | no replay, no executable private map | Yes | conservative |
 | Integration | PL-7 flaky / provisional warning shown safely | chat runtime | description has warning, no id | Yes | risk display |
 | Integration | PL-8 URL plus vague action invokes planner | chat runtime | URL is target hint, not skip condition | Yes | no `not user_url` gate |
@@ -42,7 +42,7 @@ private map、安全 payload 和单路径回归，必须维护 `test-plan.md`。
 | Security | SEC-3 progress events no private payload | events | no path id / slot overrides / route raw steps / slot values | Yes | event safety |
 | Security | SEC-4 planner fallback event sanitized | events | fallback records no private payload | Yes | reviewability |
 | Preflight | PF-1 11.3.5.7 / 11.3.5.8 tests pass | targeted tests | choice / recovery base is available | Yes | dependency gate |
-| Regression | REG-1 `/items` single path happy path | chat runtime | no planner, replay succeeds | Yes | P0 protection |
+| Regression | REG-1 `/records` single path happy path | chat runtime | no planner, replay succeeds | Yes | P0 protection |
 | Regression | REG-2 failure recovery choice unaffected | chat runtime | recovery A/B/C still works | Yes | 11.3.5.8 protection |
 | Regression | REG-3 pending choice parser unaffected | chat runtime | A / 1 / 第一个 still match | Yes | 11.3.5.7 protection |
 

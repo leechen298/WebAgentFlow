@@ -2,7 +2,7 @@
 
 ## 背景
 
-M11.3.3 证明了 product-test-site 与 validation-site 可以拆开，`wagent chat`
+M11.3.3 证明了 fixture-site 与 fixture-site 可以拆开，`wagent chat`
 可以在产品级测试站上学习并执行当前 session 中学过的操作。M11.3.4 引入
 Conversation Intake Agent，让 LLM / fallback 负责把用户话语理解成结构化 intent。
 

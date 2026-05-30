@@ -25,7 +25,7 @@ commands_not_run: verify-scenario; direct autonomous-run endpoint; direct replay
   - Learned run: `ce807dfd-614f-4d87-9e02-f6e13772ec07`
   - Event: `chat_execution_failed`
   - Reason: `unsupported_value_slot`
-  - Unsupported slots: `name`, `category`, `stock_quantity`
+  - Unsupported slots: `name`, `category`, `record_quantity`
 - Decision: create a new scoped repair package rather than changing
   `11.3.8.5` validation docs into runtime implementation.
 
@@ -48,7 +48,7 @@ Decision: implementation is authorized for the scoped 11.3.8.6 code / tests.
 - Session: `80a107a2-4c0b-49e7-ae3e-0f5b13faba07`.
 - Result: still `FAIL / FOLLOW_UP_REQUIRED`; `PV-CLI-003` reached
   `start_replay` but blocked with `unsupported_value_slot`.
-- New evidence: learned path stores `sku`, `quantity`, `name`, `category`, while
+- New evidence: learned path stores `record_code`, `quantity`, `name`, `category`, while
   execute intake emitted object-prefixed semantic types with the same suffixes.
 - Decision: update this package contract / design / tests to cover generic
   business-object-prefix slot compatibility. Prefix values are not enumerated
@@ -61,8 +61,8 @@ Decision: implementation is authorized for the scoped 11.3.8.6 code / tests.
   explicit semantic aliases and object-prefixed slot suffix matching.
 - Added RED/GREEN coverage for:
   - create-style field binding choosing exact form fields instead of search;
-  - `name` / `category` / `stock_quantity` execute aliases mapping to learned
-    `item_name` / `item_category` / `quantity`;
+  - `name` / `category` / `record_quantity` execute aliases mapping to learned
+    `record_name` / `record_category` / `quantity`;
   - object-prefixed execute semantic types mapping by exact supported suffix;
   - unrelated unsupported slots still blocking replay.
 
@@ -81,6 +81,6 @@ Verification:
 
 Code / test reviewer subagent: APPROVE, no P0 / P1 findings. P2 `stock` alias
 breadth note was addressed by narrowing field-role aliases to the documented
-`stock_quantity` / `quantity` compatibility.
+`record_quantity` / `quantity` compatibility.
 
 Decision: `11.3.8.6` is `PACKAGE_COMPLETE`.

@@ -97,7 +97,7 @@ def test_get_session_hides_pending_choice_private_map(client: TestClient) -> Non
                     "choices": [
                         {
                             "choice_id": "A",
-                            "label": "新增项目",
+                            "label": "提交表单",
                             "intent": "execute_operation",
                         }
                     ],
@@ -112,9 +112,9 @@ def test_get_session_hides_pending_choice_private_map(client: TestClient) -> Non
                 },
                 "learned_actions": [
                     {
-                        "alias": "新增项目",
+                        "alias": "提交表单",
                         "learned_path_id": "lp-learned-action",
-                        "target_url": "http://localhost:5176/items",
+                        "target_url": "https://example.invalid/form",
                     }
                 ],
             },
@@ -482,7 +482,7 @@ def test_dispatch_replay_with_missing_path_returns_candidate_not_found(
     session_id = _create_session(client)
     resp = client.post(
         f"/conversation/sessions/{session_id}/dispatch",
-        json={"input": "/replay non-existent-path http://127.0.0.1:5175/users"},
+        json={"input": "/replay non-existent-path https://example.invalid/records"},
     )
 
     assert resp.status_code == 200
@@ -526,7 +526,7 @@ def test_dispatch_replay_success_returns_replay_summary(
 
     resp = client.post(
         f"/conversation/sessions/{session_id}/dispatch",
-        json={"input": "/replay path-1 http://127.0.0.1:5175/users"},
+        json={"input": "/replay path-1 https://example.invalid/records"},
     )
 
     assert resp.status_code == 200
@@ -566,7 +566,7 @@ def test_dispatch_replay_drift_returns_failed_summary(
 
     resp = client.post(
         f"/conversation/sessions/{session_id}/dispatch",
-        json={"input": "/replay path-1 http://127.0.0.1:5175/users"},
+        json={"input": "/replay path-1 https://example.invalid/records"},
     )
 
     assert resp.status_code == 200
@@ -604,7 +604,7 @@ def test_dispatch_interactive_chat_uses_runtime_router_service(
                 route_decision=RouteDecisionKind.ASK_USER,
                 next_agent=RouterAgentRole.CONVERSATION_ORCHESTRATOR,
                 recommended_skill=ApplicationSkillName.ASK_USER_FOR_MISSING_INFO,
-                target={"url": "http://localhost:5176/workspace-login"},
+                target={"url": "https://example.invalid/entry"},
                 missing_fields=[
                     {
                         "semantic_type": "operation_goal",
@@ -631,11 +631,11 @@ def test_dispatch_interactive_chat_uses_runtime_router_service(
 
     resp = client.post(
         f"/conversation/sessions/{session_id}/dispatch",
-        json={"input": "http://localhost:5176/workspace-login"},
+        json={"input": "https://example.invalid/entry"},
     )
 
     assert resp.status_code == 200
-    assert calls == ["http://localhost:5176/workspace-login"]
+    assert calls == ["https://example.invalid/entry"]
     assert resp.json()["data"]["command_kind"] == "ask_user"
 
 
@@ -680,7 +680,7 @@ def test_dispatch_free_text_with_learned_path_proposes_plan_and_awaits_confirmat
     # Seed a confirmed learned path
     repo = LearnedPathRepository(db_session)
     lp, _ = repo.ingest_run(
-        page_template="/login",
+        page_template="/entry",
         query_signature={},
         dom_fingerprint="a" * 64,
         scenario="log in",
@@ -730,7 +730,7 @@ def test_dispatch_free_text_with_learned_path_proposes_plan_and_awaits_confirmat
 def test_dispatch_confirm_from_awaiting_confirmation(client: TestClient, db_session) -> None:
     repo = LearnedPathRepository(db_session)
     lp, _ = repo.ingest_run(
-        page_template="/login",
+        page_template="/entry",
         query_signature={},
         dom_fingerprint="a" * 64,
         scenario="log in",
@@ -768,7 +768,7 @@ def test_dispatch_confirm_from_awaiting_confirmation(client: TestClient, db_sess
 def test_dispatch_cancel_from_awaiting_confirmation(client: TestClient, db_session) -> None:
     repo = LearnedPathRepository(db_session)
     lp, _ = repo.ingest_run(
-        page_template="/login",
+        page_template="/entry",
         query_signature={},
         dom_fingerprint="a" * 64,
         scenario="log in",
@@ -806,7 +806,7 @@ def test_dispatch_slash_cancel_from_awaiting_confirmation_uses_confirmation_gate
 ) -> None:
     repo = LearnedPathRepository(db_session)
     lp, _ = repo.ingest_run(
-        page_template="/login",
+        page_template="/entry",
         query_signature={},
         dom_fingerprint="a" * 64,
         scenario="log in",
@@ -847,7 +847,7 @@ def test_dispatch_replay_blocked_while_awaiting_confirmation(
 ) -> None:
     repo = LearnedPathRepository(db_session)
     lp, _ = repo.ingest_run(
-        page_template="/login",
+        page_template="/entry",
         query_signature={},
         dom_fingerprint="a" * 64,
         scenario="log in",
@@ -866,7 +866,7 @@ def test_dispatch_replay_blocked_while_awaiting_confirmation(
 
     resp = client.post(
         f"/conversation/sessions/{session_id}/dispatch",
-        json={"input": "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users"},
+        json={"input": "/replay 11111111-1111-1111-1111-111111111111 https://example.invalid/records"},
     )
 
     assert resp.status_code == 200
@@ -889,7 +889,7 @@ def test_dispatch_execute_after_confirmed_plan_blocked_no_target_url(
     """Execution is blocked when confirmed plan lacks target_url."""
     repo = LearnedPathRepository(db_session)
     lp, _ = repo.ingest_run(
-        page_template="/login",
+        page_template="/entry",
         query_signature={},
         dom_fingerprint="a" * 64,
         scenario="log in",
@@ -950,7 +950,7 @@ def test_dispatch_execute_after_confirmed_plan_with_target_url(
                 "candidate_count": 1,
                 "selected_path_id": "lp-001",
                 "selected_purpose": "Test",
-                "target_url": "http://127.0.0.1:5175/users",
+                "target_url": "https://example.invalid/records",
                 "route_steps": [{"order": 1, "learned_path_id": "lp-001"}],
                 "confirmation_required": True,
             },
@@ -987,7 +987,7 @@ def test_dispatch_execute_after_confirmed_plan_with_target_url(
 
     repo = LearnedPathRepository(db_session)
     lp, _ = repo.ingest_run(
-        page_template="/login",
+        page_template="/entry",
         query_signature={},
         dom_fingerprint="a" * 64,
         scenario="log in",
@@ -1068,7 +1068,7 @@ def test_dispatch_explicit_replay_compatible_outside_awaiting_confirmation(
     session_id = _create_session(client)
     resp = client.post(
         f"/conversation/sessions/{session_id}/dispatch",
-        json={"input": "/replay lp-001 http://127.0.0.1:5175/users"},
+        json={"input": "/replay lp-001 https://example.invalid/records"},
     )
 
     assert resp.status_code == 200
@@ -1136,8 +1136,8 @@ def test_dispatch_interactive_chat_uses_runtime_intake_service(
                     "alias": "登录",
                     "utterances": ["帮我登录"],
                     "learned_path_id": "path-1",
-                    "target_url": "http://localhost:5176/workspace-login",
-                    "site_origin": "http://localhost:5176",
+                    "target_url": "https://example.invalid/entry",
+                    "site_origin": "https://example.invalid",
                 }
             ],
         },
@@ -1171,7 +1171,7 @@ def test_dispatch_execute_failed_replay_includes_task_result_reported(
                 "candidate_count": 1,
                 "selected_path_id": "lp-001",
                 "selected_purpose": "Test",
-                "target_url": "http://127.0.0.1:5175/users",
+                "target_url": "https://example.invalid/records",
                 "route_steps": [{"order": 1, "learned_path_id": "lp-001"}],
                 "confirmation_required": True,
             },
@@ -1208,7 +1208,7 @@ def test_dispatch_execute_failed_replay_includes_task_result_reported(
 
     repo = LearnedPathRepository(db_session)
     lp, _ = repo.ingest_run(
-        page_template="/login",
+        page_template="/entry",
         query_signature={},
         dom_fingerprint="a" * 64,
         scenario="log in",
@@ -1362,8 +1362,8 @@ def test_list_sessions_with_learned_actions(client: TestClient) -> None:
                     {
                         "alias": "登录",
                         "learned_path_id": "path-1",
-                        "target_url": "http://localhost:5175/login",
-                        "page_template": "/login",
+                        "target_url": "https://example.invalid/entry",
+                        "page_template": "/entry",
                         "scenario": "valid_credentials",
                     }
                 ]
@@ -1452,7 +1452,7 @@ def test_get_history_extracts_redacted_llm_traces(
                 {
                     "role": "user",
                     "content": (
-                        "学习这个入口：http://localhost:5176/workspace-login，demo / 123456"
+                        "学习这个入口：https://example.invalid/entry，demo / 123456"
                     ),
                 }
             ],
@@ -1668,7 +1668,7 @@ def test_get_history_redacts_positional_product_credentials(client: TestClient) 
         f"/conversation/sessions/{session_id}/messages",
         json={
             "role": "user",
-            "content": "学习这个入口：http://localhost:5176/workspace-login，demo / 123456",
+            "content": "学习这个入口：https://example.invalid/entry，demo / 123456",
         },
     )
 

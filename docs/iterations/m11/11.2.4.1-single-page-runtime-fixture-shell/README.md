@@ -6,13 +6,13 @@
 
 ## 迭代定位
 
-11.2.4.1 在 validation-site 中落地 runtime observation fixture 的基础壳。
+11.2.4.1 在 fixture-site 中落地 runtime observation fixture 的基础壳。
 
-本轮允许修改 validation-site 源码，目标是新增 runtime observation 入口、route
+本轮允许修改 fixture-site 源码，目标是新增 runtime observation 入口、route
 shell 和 index 页面。它仍然不实现具体业务 fixture 页面、不接 mock backend、不新增
 E2E，也不运行 `verify-scenario` / autonomous run。
 
-实现应在现有 `apps/validation-site/src/pages/IndexPage.vue` 的 `PAGES` catalog
+实现应在现有 `apps/fixture-site/src/pages/IndexPage.vue` 的 `PAGES` catalog
 上增加 Runtime Observation 分类入口，而不是重写首页架构。
 
 ## 目标

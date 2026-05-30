@@ -62,7 +62,7 @@ Status: redesign source of truth
 
 - Forgot password link opens or reveals a local help hint only。
 - Contact admin link opens or reveals local support hint only。
-- These actions must not navigate outside validation-site or call backend。
+- These actions must not navigate outside fixture-site or call backend。
 
 ## Reset Behavior
 
@@ -128,7 +128,7 @@ Reset must:
 - Use deterministic valid credentials。
 - Do not call auth API。
 - Do not route to dashboard on success; keep success visible on the page。
-- Keep secondary actions local and non-navigating unless they route within validation-site.
+- Keep secondary actions local and non-navigating unless they route within fixture-site.
 
 ## Business Density Checklist
 

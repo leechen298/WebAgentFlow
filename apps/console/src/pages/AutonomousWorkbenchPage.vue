@@ -358,8 +358,8 @@ interface FillRow { key: string; value: string }
 interface ToggleRow { key: string; value: string }
 
 // Form starts empty by design. The workbench expects callers to either
-// (a) deep-link into it with ?url=…&spec_id=…&scenario=… (e.g. the
-// "Run in workbench" buttons on the validation-site IndexPage), or
+// (a) deep-link into it with ?url=…&spec_id=…&scenario=… from an external
+// fixture provider, or
 // (b) pick a spec from the spec_id dropdown once specs are loaded.
 // There is no built-in default page, so opening the workbench fresh
 // won't silently point at login.
@@ -441,7 +441,7 @@ function matchSpecByUrl(rawUrl: string): SpecSummary | null {
   try {
     path = new URL(rawUrl).pathname;
   } catch {
-    // Allow bare paths like "/users" too, in case an operator types
+    // Allow bare paths too, in case an operator types
     // without a host.
     path = rawUrl.startsWith('/') ? rawUrl : '';
   }

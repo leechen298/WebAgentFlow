@@ -7,53 +7,34 @@
 
 `wagent chat` 是一个命令行聊天入口。你可以用自然语言告诉 WebAgentFlow：
 
-- 学习某个网页怎么操作。
-- 执行已经学会的网页操作。
+- 学习你提供的网页怎么操作。
+- 执行当前会话或历史记录里已经学会的网页操作。
 
-当前版本已经支持产品级工作台登录页 smoke，但自然语言理解仍在从规则匹配升级中。
-如果一句话里没有提供页面地址或必要输入，系统可能无法像真正的对话 Agent 一样继续追问和续接。
+WebAgentFlow 不内置人工测试目标。测试者需要在对话里提供目标页面 URL、
+操作描述和必要输入；不要把某个测试站点、测试页面或测试数据当成产品默认知识。
 
-M11.3.4 已新增 Conversation Intake Agent / 对话理解 Agent：它会把普通用户的话理解成
-结构化的操作意图、目标页面、输入槽位和缺失信息。这个能力不是让 LLM 控制浏览器，
-而是让 LLM 理解用户说的话；真正学习和执行仍由 WebAgentFlow 的 Learning / Replay 服务完成。
-真实 LLM-backed smoke 尚未作为验收证据记录，所以如果你在本地没有配置 LLM provider，
-系统仍可能走 deterministic fallback。
+当前版本建议一次说清楚页面地址、要学习或执行的操作，以及必要输入。如果一句话里
+没有提供页面地址或必要输入，系统可能无法像真正的对话 Agent 一样继续追问和续接。
 
-M11.3.4 同时增强聊天历史调试页：在
-`http://localhost:5174/conversation/history/<session_id>` 中显示每条 WAgent 回复是代码生成，
-还是由某个 WebAgentFlow 内部 Agent / LLM 生成，并提供脱敏后的 LLM provider / model /
-raw trace。Codex CLI 只是外部测试或调试操作者，不会被当成 WebAgentFlow 内部回复者。
+Conversation Intake Agent / 对话理解 Agent 会把普通用户的话理解成结构化的操作意图、
+目标页面、输入槽位和缺失信息。这个能力不是让 LLM 控制浏览器，而是让 LLM 理解用户
+说的话；真正学习和执行仍由 WebAgentFlow 的 Learning / Replay 服务完成。如果本地
+没有配置 LLM provider，系统可能走 deterministic fallback。
 
-已知限制：当前入门 smoke 仍建议一次说清楚页面地址和必要输入。裸 URL 后再说
-“学习”、未学过页面时主动引导学习、以及“我该先检查页面、学习还是执行”的面客
-Agent 路由体验，已进入 M11.3.5 规划。
+聊天历史调试页在
+`http://localhost:5174/conversation/history/<session_id>` 中显示消息、事件、已学操作、
+learning run、replay summary 和 raw JSON。Codex CLI 只是外部测试或调试操作者，
+不会被当成 WebAgentFlow 内部回复者。
 
-M11.3.5 计划新增 Customer-Facing Agent Router & Skill Runtime / 面客 Agent 路由与应用技能运行时。
-它不是让 LLM 直接操作浏览器，而是让 Router 基于聊天上下文、页面理解、已学操作和
-应用技能菜单建议下一步；代码侧 Orchestrator 再判断能不能执行，并通过注册 skill
-调用 Learning / Replay 服务。M11.3.5 实现前，不要把“只发 URL 后系统能自动续接学习”
-作为当前版本通过条件。
+## 测试目标边界
 
-当前入门指南只验产品级工作台登录页：
+`wagent chat` 只应该学习用户输入的页面地址，并只执行当前会话或历史记录里已经学过的
+站点 / 页面 / 操作。如果你要求它操作一个还没学过的站点或操作，它应该清楚告诉你需要
+先学习，或询问下一步，而不是猜测测试目标或跨站点复用别的 LearnedPath。
 
-```text
-http://localhost:5176/workspace-login
-```
-
-`/users` 属于后续扩展测试，不作为这份入门指南的通过条件。
-
-## 测试站点边界
-
-`http://localhost:5175` 是 validation-site。它是工程验证靶场，用来做 deterministic
-regression、spec / assertions、pass_gate、scorecard 和 `verify-scenario` 等基础能力验证。
-
-`http://localhost:5176` 是 product-test-site。它和 validation-site 分开，用于产品级
-`wagent chat` 人工验收：普通用户通过聊天提供页面地址和必要输入，系统再学习并执行网页操作。
-
-项目的一键启动 `pnpm run dev` 应同时启动 product-test-site。
-
-产品级聊天路径只学习用户输入的页面地址，只执行当前聊天里已经学过的站点或页面。如果你要求它操作
-一个还没学过的站点，它应该清楚告诉你需要先学习，而不是拿别的测试站点路径去执行。
+主仓库不再提供内置的产品测试站点。人工测试时，目标页面由测试操作者自行选择和启动，
+再通过聊天输入传给 `wagent chat`。工程验证用的 fixture、`verify-scenario`、
+专项验证计划和普通 `wagent chat` 入门使用是不同测试面，不要混在一起判断。
 
 ## 启动前准备
 
@@ -80,14 +61,9 @@ cd /Users/leechen/projects/WebAgentFlow/v0.1
 pnpm run dev
 ```
 
-看到类似下面的地址后，就可以开始测试：
-
-```text
-console: http://localhost:5174
-validation-site: http://127.0.0.1:5175
-product-test-site: http://127.0.0.1:5176
-api: http://0.0.0.0:8001
-```
+看到 console、api、worker 都正常启动后，就可以开始测试。CLI 调用的默认 API 地址是
+`http://localhost:8001`；如果 API 用了别的端口，启动 `wagent chat` 时传
+`--api-base`。
 
 如果 `pnpm run dev` 没有正常启动，先不要继续测试，先解决启动问题。
 
@@ -108,6 +84,7 @@ test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'
 你应该看到：
 
 ```text
+WAgent > 本次会话 ID：<session_id>。需要调试时可以在管理后台查看。
 WAgent > 你好，我可以学习页面操作，也可以执行已经学会的操作。
 You >
 ```
@@ -121,6 +98,12 @@ wagent chat
 
 但入门测试优先使用 `.venv/bin/wagent chat`，这样可以避免 shell `PATH` 没指向当前项目
 虚拟环境的问题。
+
+如果你不想看到浏览器窗口，可以使用后台运行：
+
+```bash
+.venv/bin/wagent chat --headless
+```
 
 ## 入口排障
 
@@ -148,47 +131,35 @@ CLI。重新安装 CLI 后再检查：
 
 `--help` 里应该能看到 `chat` 命令。
 
-当前版本默认会打开项目内置 Playwright Chromium，你可以看到页面加载、输入、点击和跳转。
+当前版本默认会打开 Playwright Chromium，你可以看到页面加载、输入、点击和跳转。
 
-如果你不想看到浏览器窗口，可以使用后台运行：
+## 输入模板
 
-```bash
-.venv/bin/wagent chat --headless
-```
+先选择一个你要测试的、当前机器能访问的页面。这个页面不应该来自 WebAgentFlow 的默认配置，
+而应该由测试操作者明确提供。
 
-## 入门测试样例
-
-在 `wagent chat` 中输入：
+在 `wagent chat` 中输入时，把占位符替换成测试操作者选择的目标和安全测试数据：
 
 ```text
-学习一下这个工作台登录页怎么进入，地址是 http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456
+学习这个页面上的“<操作名称>”操作，地址是 <目标页面 URL>，需要用到的输入是：<字段1>=<值1>，<字段2>=<值2>
 ```
 
-当前版本建议尽量一次说清楚页面地址和必要输入。M11.3.5 会继续处理裸 URL、
-短句学习意图、no-path 学习引导，以及先说明目标、后补充必要输入这类多轮说法。
-
-M11.3.5 也会把底层能力整理成应用能力菜单，包括检查目标页面、基于 HTML AST /
-Simplified AST / PageAnalysis 理解页面、查询当前会话已学操作、启动学习、执行已学路径、
-以及在 MVP 支持范围内、信息完整时先学再执行。第一版仍以聊天里提供的 URL 和上下文为主，不依赖
-用户当前浏览器的 active tab。
+当前版本建议尽量一次说清楚页面地址和必要输入。
 
 学习完成后继续输入：
 
 ```text
-帮我进入工作台
+帮我执行刚才学会的“<操作名称>”，这次使用：<字段1>=<新值1>，<字段2>=<新值2>
 ```
 
-如果你指定一个还没学过的页面，例如：
+如果要检查未知页面或未知操作边界，可以输入：
 
 ```text
-帮我在 http://localhost:5176/orders 导出订单
+帮我在 <另一个未学过的目标页面 URL> 上执行 <操作名称>
 ```
 
-系统应提示：
-
-```text
-还没学过这个站点或页面，需要先学习。
-```
+系统应提示还没学过，需要先学习或补充目标信息。它不应该猜测你的测试目标，也不应该拿别的
+页面路径去执行。
 
 ## 查看聊天历史和回复来源
 
@@ -198,9 +169,17 @@ Simplified AST / PageAnalysis 理解页面、查询当前会话已学操作、�
 http://localhost:5174/conversation/history/<session_id>
 ```
 
+也可以用 CLI 查看：
+
+```bash
+.venv/bin/wagent conversation history <session_id> --pretty
+.venv/bin/wagent conversation events <session_id> --pretty
+.venv/bin/wagent conversation messages <session_id> --pretty
+```
+
 当前 history 页面已经能查看消息、事件、已学操作、learning run、replay summary 和 raw JSON。
 
-M11.3.4 的 Conversation Intake Agent 已实现后，这个页面会展示：
+历史页面会展示：
 
 - 这条 WAgent 回复是代码生成、Agent 生成、混合生成还是未知来源。
 - 如果是代码生成，会标注代码路径，例如 Conversation Orchestrator 或 Interactive Chat Runtime。
@@ -210,55 +189,39 @@ M11.3.4 的 Conversation Intake Agent 已实现后，这个页面会展示：
 真实 LLM-backed smoke 尚未记录前，不要把“真实 provider trace 一定存在”作为当前入门指南的通过条件。
 如果本地没有配置 LLM provider，history 可能显示代码生成或 fallback。
 
-## 第一步：教它进入工作台
+## 第一步：教它一个操作
 
 在 `You >` 后输入：
 
 ```text
-学习一下这个工作台登录页怎么进入，地址是 http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456
+学习这个页面上的“<操作名称>”操作，地址是 <目标页面 URL>，需要用到的输入是：<字段1>=<值1>，<字段2>=<值2>
 ```
-
-期望看到类似：
-
-```text
-WAgent > 我会打开浏览器学习：在工作台登录页输入操作员账号和访问口令，并点击“进入工作台”按钮。
-WAgent > 学习完成：我学会了进入工作台操作。之后你可以说“帮我进入工作台”。
-```
-
-这里的意思是：系统已经知道要在工作台登录页输入操作员账号和访问口令，然后点击“进入工作台”按钮。
 
 使用时只看这两类信息：
 
 - 它有没有说明自己正在学习什么操作。
 - 它有没有明确告诉你已经学会，以及之后可以怎么说。
 
-## 第二步：让它进入工作台
+## 第二步：让它执行已学操作
 
 继续输入：
 
 ```text
-帮我进入工作台
+帮我执行刚才学会的“<操作名称>”，这次使用：<字段1>=<新值1>，<字段2>=<新值2>
 ```
 
-期望看到：
+判断重点是：系统应说明正在执行已学操作；执行结束后，应给出面向用户的完成说明，
+并能把结果和页面证据或目标值关联起来。
+
+正常情况下，不应该出现要求普通用户理解的代码 / 调试信息。例如：
 
 ```text
-WAgent > 我会打开浏览器执行：输入操作员账号和访问口令，并点击“进入工作台”按钮。
-WAgent > 进入工作台完成。
-```
-
-正常情况下，不应该出现要求你确认、输入编号，或看起来像代码 / 调试信息的内容。
-例如：
-
-```text
-请确认
-是否执行
-输入确认
 LearnedPath
-replay
-run_id
+replay_run_id
 selector
 className
+slot_overrides
+execution_evidence
 ```
 
 如果出现这些内容，说明普通用户体验还不够好，需要记录下来。
@@ -268,17 +231,11 @@ className
 继续输入：
 
 ```text
-帮我在 http://localhost:5176/orders 导出订单
-```
-
-期望看到：
-
-```text
-WAgent > 还没学过这个站点或页面，需要先学习。
+帮我在 <另一个未学过的目标页面 URL> 上执行 <操作名称>
 ```
 
 这里不需要系统猜页面，也不需要它跨站点拿其他 LearnedPath 执行。当前版本只需要清楚告诉用户：
-这个站点或页面还没有学过。
+这个站点、页面或操作还没有学过。
 
 ## 退出
 
@@ -297,27 +254,18 @@ quit
 这次只看你能不能完成下面几件事：
 
 1. 用户能进入 `wagent chat`。
-2. 用户能用一句话教会系统工作台登录页操作。
-3. 用户能用“帮我进入工作台”让系统执行刚学会的操作。
-4. 用户指定一个没学过的页面时，系统能清楚说明“需要先学习”。
+2. 用户能把测试操作者提供的页面 URL、操作描述和必要输入交给系统。
+3. 用户能用一句话教会系统一个页面操作。
+4. 用户能让系统执行刚学会的操作，且不会暴露内部调试细节。
+5. 用户指定一个没学过的页面或操作时，系统能清楚说明需要先学习或补充目标信息。
 
-通过示例：
-
-```text
-WAgent > 我会打开浏览器学习：在工作台登录页输入操作员账号和访问口令，并点击“进入工作台”按钮。
-WAgent > 学习完成：我学会了进入工作台操作。之后你可以说“帮我进入工作台”。
-WAgent > 我会打开浏览器执行：输入操作员账号和访问口令，并点击“进入工作台”按钮。
-WAgent > 进入工作台完成。
-WAgent > 还没学过这个站点或页面，需要先学习。
-```
-
-不通过示例：
+不通过信号：
 
 ```text
 WAgent > 找到 LearnedPath ...
 WAgent > replay_run_id=...
 WAgent > 点击 selector button.btn
-WAgent > 请确认是否执行
+WAgent > slot_overrides=...
 WAgent > 请输入 session id
 ```
 

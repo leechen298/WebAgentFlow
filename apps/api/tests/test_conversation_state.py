@@ -41,9 +41,9 @@ def test_free_text_from_idle_enters_task_intake() -> None:
 def test_replay_from_idle_or_task_intake_enters_replay_requested() -> None:
     command = ConversationCommand(
         kind=ConversationCommandKind.REPLAY,
-        raw="/replay path-1 http://127.0.0.1:5175/users",
+        raw="/replay path-1 https://example.invalid/records",
         learned_path_id="path-1",
-        url="http://127.0.0.1:5175/users",
+        url="https://example.invalid/records",
     )
 
     for status in (ConversationStatus.IDLE, ConversationStatus.TASK_INTAKE):

@@ -29,7 +29,7 @@ Stable metadata contract confirmed:
 - `session.metadata_json.learned_actions[]` preserves optional `business_goal`, `canonical_goal`, `action_aliases`, `business_object`, and `match_terms`.
 - Slot values remain execution parameters and are not reused as action identity.
 - `_matching_actions()` was not broadened to consume the new metadata in this package.
-- No target-specific route, selector, seed, answer key, or Validation-Site constant was introduced.
+- No target-specific route, selector, seed, answer key, or Fixture-Site constant was introduced.
 
 Closeout changed files:
 
@@ -47,7 +47,7 @@ Commands run:
 | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q` | `10 passed in 0.10s` | 0 | Confirms learning result metadata preservation and slot-value exclusion |
 | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | `86 passed in 0.76s` | 0 | Confirms session learned action metadata persistence and existing chat runtime regressions |
 | `cd apps/api && ../../.venv/bin/python -m ruff check app/routers/conversation.py app/services/learning/learning_run_service.py app/services/conversation/chat_runtime.py tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py` | `All checks passed!` | 0 | Focused lint |
-| `rg -n "5177\|/inventory\|inventory item\|WebAgentFlow-Validation-Site" apps/api/app/routers/conversation.py apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | No matches | 1 | No target route / validation-site constants in changed implementation or focused tests |
+| `rg -n "<fixture-port>\|/target-page\|inventory item\|External-Fixture-Provider" apps/api/app/routers/conversation.py apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | No matches | 1 | No target route / fixture-site constants in changed implementation or focused tests |
 | `git diff --check` | Clean | 0 | Whitespace check |
 
 Compatibility review:
@@ -138,7 +138,7 @@ committed implementation records and current HEAD.
 ## Scope Review
 
 - Runtime, schema, API, frontend, fixture, migration, worker, prompt, and test implementation files were not modified.
-- No external Validation-Site / Fixture-Site files were modified.
+- No external Fixture-Site / Fixture-Site files were modified.
 - No `verify-scenario`, autonomous run, direct autonomous endpoint call, browser smoke, CLI product validation, or external black-box validation was run.
 
 ## Unresolved Findings

@@ -247,8 +247,7 @@ interface BatchTask {
 
 const batchTasks = ref<Record<string, BatchTask>>({});
 
-const validationOrigin =
-  import.meta.env.VITE_VALIDATION_SITE_ORIGIN || 'http://localhost:5175';
+const fixtureOrigin = (import.meta.env.VITE_FIXTURE_SITE_ORIGIN || '').replace(/\/$/, '');
 
 // ─── Computed ──────────────────────────────────────────────
 
@@ -372,7 +371,7 @@ async function loadSpecs(): Promise<void> {
 
 function workbenchQuery(spec: SpecSummary, scenarioKey: string, description: string): string {
   const params = new URLSearchParams();
-  params.set('url', `${validationOrigin}${spec.url_pattern}`);
+  params.set('url', targetUrlForSpec(spec));
   params.set('spec_id', spec.spec_id);
   params.set('scenario', scenarioKey);
   if (description || spec.description) {
@@ -393,7 +392,7 @@ function goToWorkbench(): void {
 
 function batchPayload(spec: SpecSummary, scenario: SpecScenarioSummary): AutonomousStreamPayload {
   return {
-    url: `${validationOrigin}${spec.url_pattern}`,
+    url: targetUrlForSpec(spec),
     goal: scenario.description || spec.description || undefined,
     fill_values:
       Object.keys(scenario.inputs ?? {}).length > 0 ? scenario.inputs : undefined,
@@ -405,6 +404,14 @@ function batchPayload(spec: SpecSummary, scenario: SpecScenarioSummary): Autonom
     spec_id: spec.spec_id,
     scenario: scenario.key,
   };
+}
+
+function targetUrlForSpec(spec: SpecSummary): string {
+  const pattern = spec.url_pattern || '';
+  if (pattern.startsWith('http://') || pattern.startsWith('https://')) {
+    return pattern;
+  }
+  return fixtureOrigin ? `${fixtureOrigin}${pattern}` : pattern;
 }
 
 function startBatchRun(): void {

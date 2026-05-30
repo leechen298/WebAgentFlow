@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
-import { apiUrl, validationUrl } from '../../fixtures/config';
+import { apiUrl } from '../../fixtures/config';
 import { loadReplayFixtures, type ReplayFixtureFile } from '../../fixtures/learnedPaths';
 
 interface ApiEnvelope<T> {
@@ -180,7 +180,7 @@ test.describe('Conversation 11.1.6 task execution E2E', () => {
   }) => {
     const { session } = await enterNaturalPlanConfirmed(request);
     const fixture = seeded.fixtures.happy;
-    const targetUrl = validationUrl('/users');
+    const targetUrl = fixture.target_url;
 
     await appendEvent(request, session.id, 'plan_preview_proposed', {
       task_intent_raw_text: 'seeded confirmed execution context',
@@ -368,7 +368,7 @@ test.describe('Conversation 11.1.6 task execution E2E', () => {
     request,
   }) => {
     const fixture = seeded.fixtures.happy;
-    const replayCommand = `/replay ${fixture.id} ${validationUrl('/users')}`;
+    const replayCommand = `/replay ${fixture.id} ${fixture.target_url}`;
 
     const pendingSession = await createSession(request);
     const pendingPreview = await dispatch(request, pendingSession.id, 'e2e replay happy users');

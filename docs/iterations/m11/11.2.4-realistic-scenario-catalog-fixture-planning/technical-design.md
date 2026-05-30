@@ -4,8 +4,8 @@
 
 ## 当前状态（Current State）
 
-- `apps/validation-site/` 已有 fixture 基础，包括 login、users、dashboard 等页面。
-- `apps/validation-site/specs/` 已有 validation-site spec 基础。
+- `apps/fixture-site/` 已有 fixture 基础，包括 login、users、dashboard 等页面。
+- `apps/fixture-site/specs/` 已有 fixture-site spec 基础。
 - 11.2.2 已实现 step-level `wait_result`。
 - 11.2.3 已实现 replay-level `observation_summary`。
 - 当前实际 observation MVP 只支持 `url_changed`、`title_changed` 和
@@ -53,7 +53,7 @@ medium, complex, and very complex pages, and must not be treated as page types.
 | 运行条件是横向变体 | Runtime Condition Matrix 可叠加到所有 business complexity。 | documentation validation | 弱网、错误、空结果不是页面类型。 |
 | very complex 只记录 | very_complex_business_page 只进入 catalog，不进入近期 fixture 实现。 | documentation validation | 后续单独拆包。 |
 | scenario catalog 不改变产品模型 | 只在 M11.2 文档中规划 fixture，不修改 product model。 | documentation validation | 不新增 Agent / lifecycle。 |
-| fixture 不依赖外部网站 | 后续 fixture 放在 validation-site 和 mock backend。 | future fixture smoke | 外部网站只可作为研究参考，不作为验证依赖。 |
+| fixture 不依赖外部网站 | 后续 fixture 放在 fixture-site 和 mock backend。 | future fixture smoke | 外部网站只可作为研究参考，不作为验证依赖。 |
 | fixture 必须 deterministic | 每个 fixture 记录 initial state、trigger、reset behavior。 | future route smoke | 11.2.4.2 - 11.2.4.4 可用固定 timer。 |
 | fixture 可 reset | 每个 fixture contract 包含 reset behavior。 | future route smoke | 避免状态污染。 |
 | fixture 不接 reporter | 11.2.4 只规划 runtime observation fixture。 | boundary tests | 11.2.5 才接 reporter。 |
@@ -68,13 +68,13 @@ medium, complex, and very complex pages, and must not be treated as page types.
 本轮不实现代码。后续实现可采用以下结构：
 
 ```text
-apps/validation-site/src/pages/runtime-observation/
-apps/validation-site/src/pages/runtime-observation/RuntimeObservationIndex.vue
-apps/validation-site/src/pages/runtime-observation/SinglePageBasicBusiness.vue
-apps/validation-site/src/pages/runtime-observation/SinglePageMediumBusiness.vue
-apps/validation-site/src/pages/runtime-observation/SinglePageComplexBusiness.vue
-apps/validation-site/src/pages/runtime-observation/MobileRuntimePatterns.vue
-apps/validation-site/specs/runtime-observation/
+apps/fixture-site/src/pages/runtime-observation/
+apps/fixture-site/src/pages/runtime-observation/RuntimeObservationIndex.vue
+apps/fixture-site/src/pages/runtime-observation/SinglePageBasicBusiness.vue
+apps/fixture-site/src/pages/runtime-observation/SinglePageMediumBusiness.vue
+apps/fixture-site/src/pages/runtime-observation/SinglePageComplexBusiness.vue
+apps/fixture-site/src/pages/runtime-observation/MobileRuntimePatterns.vue
+apps/fixture-site/specs/runtime-observation/
 apps/e2e/tests/runtime-observation/
 ```
 
@@ -97,8 +97,8 @@ apps/api/app/routers/validation_api.py
 | Surface | Changed? | Description | Compatibility notes |
 |---|---|---|---|
 | `docs/testing/scenarios` | Yes | 本轮扩展 scenario catalog。 | 文档级变化。 |
-| validation-site pages | Planned | 后续实现 runtime observation fixture pages。 | 本轮不改源码。 |
-| validation-site specs | Planned | 后续增加 fixture specs。 | 本轮不改源码。 |
+| fixture-site pages | Planned | 后续实现 runtime observation fixture pages。 | 本轮不改源码。 |
+| fixture-site specs | Planned | 后续增加 fixture specs。 | 本轮不改源码。 |
 | validation API mock backend | Planned | 11.2.4.5 后续实现 mock API。 | 本轮不改源码。 |
 | E2E tests | Planned | 后续补 scoped E2E。 | 本轮不新增测试。 |
 | API routes | No | 不新增运行时 API route。 | N/A |
@@ -233,7 +233,7 @@ exit code，不得把未运行项写成通过。
 
 本轮不新增 runtime schema，不修改 API request / response，不修改 database schema。
 
-后续 fixture 实现阶段可以新增 validation-site spec metadata，但必须作为 fixture /
+后续 fixture 实现阶段可以新增 fixture-site spec metadata，但必须作为 fixture /
 test artifact，而不是 WebAgentFlow runtime API contract。
 
 未来 fixture spec 可包含：
@@ -254,7 +254,7 @@ current_mvp_expected_observation
 future_expected_observation
 ```
 
-该 spec 只用于 validation-site / E2E，不进入 public API 或 DB schema。
+该 spec 只用于 fixture-site / E2E，不进入 public API 或 DB schema。
 
 ## 服务 / 模块设计（Service / Module Design）
 
@@ -262,7 +262,7 @@ future_expected_observation
 
 后续实现阶段可按职责拆分：
 
-- validation-site route index：展示 runtime observation fixture 入口。
+- fixture-site route index：展示 runtime observation fixture 入口。
 - single-page basic business pages：login、register、sms_login、simple_search、
   simple_detail、simple_settings、simple_confirm。
 - single-page medium business pages：user_list、order_list、product_list、
@@ -315,8 +315,8 @@ signal 分开写：
 
 ## 兼容性（Compatibility）
 
-- 旧 validation-site 页面继续有效。
-- 旧 validation-site specs 继续有效。
+- 旧 fixture-site 页面继续有效。
+- 旧 fixture-site specs 继续有效。
 - 11.2.2 `wait_result` 语义不变。
 - 11.2.3 `observation_summary` 语义不变。
 - 当前 replay status 不因 fixture planning 改变。

@@ -20,15 +20,15 @@ from app.services.learning.page_signature import (
     ("input_", "expected"),
     [
         ("/", "/"),
-        ("/users", "/users"),
-        ("/users/", "/users"),
+        ("/records", "/records"),
+        ("/users/", "/records"),
         ("/detail/1", "/detail/:num"),
         ("/detail/2", "/detail/:num"),
         ("/users/42/edit", "/users/:num/edit"),
         ("/users/42/edit/", "/users/:num/edit"),
         (
-            "/items/550e8400-e29b-41d4-a716-446655440000",
-            "/items/:uuid",
+            "/records/550e8400-e29b-41d4-a716-446655440000",
+            "/records/:uuid",
         ),
         ("https://example.com/users/7", "/users/:num"),
         ("http://a/b?q=1", "/b"),
@@ -222,7 +222,7 @@ def test_login_vs_users_page_collide_naturally() -> None:
     fingerprints because they have different forms / buttons.
 
     This is the "login redirect" case from conversation: hitting
-    ``/users`` without a session lands on the login DOM, which has
+    ``/records`` without a session lands on the login DOM, which has
     the login page's fingerprint, not the users page's.
     """
     login = _page(

@@ -438,10 +438,10 @@ fix commit 的主要目标达成。
 
 **调用**：`/Users/leechen/.claude/skills/verify-scenario/run.sh
 --spec-id login --scenario valid_credentials --url
-http://localhost:5175/login --pretty`
+https://example.invalid/entry --pretty`
 
 CLI 强制要求 `--url` 因为 `login` spec 的 `url_pattern` 是
-path-style（`/login`）；这是已有 CLI 行为，与本迭代无关。
+path-style（`/entry`）；这是已有 CLI 行为，与本迭代无关。
 
 ### 结果
 
@@ -451,7 +451,7 @@ path-style（`/login`）；这是已有 CLI 行为，与本迭代无关。
 - Scorecard 5/5：`element_recognition` 1.0 / `action_coverage` 1.0
   / `verdict_accuracy` 1.0 / `distraction_avoidance` 1.0 /
   `supervisor_agreement` 1.0
-- `final_url`: `http://localhost:5175/dashboard`，`final_title`:
+- `final_url`: `https://example.invalid/dashboard`，`final_title`:
   `Dashboard — Validation Site`
 - `elapsed_ms`: 7080，`total_steps`: 4
 
@@ -467,7 +467,7 @@ path-style（`/login`）；这是已有 CLI 行为，与本迭代无关。
 
 - **`run_id`**: `6c97c030-5aae-4f93-8abd-91c4446df9d7`
 - **`learned_path_id`**: `31d3cf58-65a8-4298-bafc-9feee1ed6a90`
-- **`page_template`**: `/login`
+- **`page_template`**: `/entry`
 - **`scenario`**: `valid_credentials`
 - **`trust`**: `provisional`（自动写回的初始态，符合预期）
 - **`source_run_id` 与 run_id 匹配** ✅

@@ -41,15 +41,15 @@
 - 修改 `_matching_actions()` policy、candidate threshold、多候选选择、pending choice、
   replay execution、Task Result Reporter、router decision policy 或 recovery / abort 行为。
 - 修改 public API endpoint、DB migration、frontend UI、worker flow、fixture site 或 eval runner。
-- 修改 `WebAgentFlow-Validation-Site` / `WebAgentFlow-Fixture-Site`。
-- 恢复 `apps/product-test-site` / `apps/validation-site`。
+- 修改 `External-Fixture-Provider` / `WebAgentFlow-Fixture-Site`。
+- 恢复 `apps/fixture-site` / `apps/fixture-site`。
 - 更新 external black-box result docs。
 - 运行 live external validation、`verify-scenario`、browser smoke 或 direct autonomous-run endpoint。
-- 在 runtime / prompts / active eval defaults 中写入 `5177/inventory`、external target selectors、
+- 在 runtime / prompts / active eval defaults 中写入 `<fixture-port>/target-page`、external target selectors、
   `data-testid`、component names、seed copy、field labels、button text、placeholder、
   operation aliases 或 page source。
 - 把 slot values、sensitive values、private ids、slot override payload、credentials、tokens、
-  cookies、SKU、商品名、数量或 page-specific values 写入 reusable utterances。
+  cookies、record_code、商品名、数量或 page-specific values 写入 reusable utterances。
 
 ## Input / Output Semantics
 

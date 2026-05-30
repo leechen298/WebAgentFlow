@@ -16,7 +16,7 @@
 - 新增路由 `/exploration/autonomous/cases`，注册到 `router/index.ts`。
 - 侧边栏新增 “自主探索用例” 菜单项（`MainLayout.vue`），使用
   `UnorderedListOutlined` 图标。
-- `env.d.ts` 新增 `VITE_VALIDATION_SITE_ORIGIN` 类型声明。
+- `env.d.ts` 新增 `VITE_FIXTURE_SITE_ORIGIN` 类型声明。
 - 补全 zh / en / ja 三语言的 `autonomousUseCases` 命名空间（15 个 key）。
 - `setup.ts` 全局 stubs 新增 `a-tooltip`。
 - 新增页面单元测试 `AutonomousUseCasesPage.test.ts`（4 个 case：加载渲染、

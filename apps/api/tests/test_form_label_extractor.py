@@ -29,7 +29,7 @@ ANT_FORM_ITEM_HTML = """
       <div class="ant-form-item-control-input-content">
         <span class="ant-input-affix-wrapper">
           <input type="text" class="ant-input" placeholder="例如 alice"
-                 id="search-name" value="alice">
+                 id="name-field" value="alice">
         </span>
       </div>
     </div>
@@ -39,7 +39,7 @@ ANT_FORM_ITEM_HTML = """
 
 
 def test_ant_design_extractor_matches_basic_form_item() -> None:
-    result = extract_label(ANT_FORM_ITEM_HTML, "search-name")
+    result = extract_label(ANT_FORM_ITEM_HTML, "name-field")
     assert result.source == "ant-design"
     assert result.text == "姓名"
 
@@ -50,7 +50,7 @@ def test_ant_design_extractor_matches_basic_form_item() -> None:
 # wrappers around the actual <input>. If the JS passes this outer
 # wrapper in, the extractor must still walk down to the row and
 # read the label. This was reported on 2026-04-19 as label_text=null
-# during an autonomous run on /users.
+# during an autonomous run on /records.
 ANT_FORM_ITEM_FULL_REAL_HTML = """
 <div class="ant-col ant-col-xs-24 ant-col-sm-12 ant-col-lg-8 css-dev-only-do-not-override-1p3hq3p"
      style="padding-left: 8px; padding-right: 8px;">
@@ -64,7 +64,7 @@ ANT_FORM_ITEM_FULL_REAL_HTML = """
           <div class="ant-form-item-control-input-content">
             <span class="ant-input-affix-wrapper css-dev-only-do-not-override-1p3hq3p">
               <input type="text" class="ant-input css-dev-only-do-not-override-1p3hq3p"
-                     placeholder="例如 alice" id="search-name" value="alice">
+                     placeholder="例如 alice" id="name-field" value="alice">
               <span class="ant-input-suffix"></span>
             </span>
           </div>
@@ -77,7 +77,7 @@ ANT_FORM_ITEM_FULL_REAL_HTML = """
 
 
 def test_ant_design_extractor_handles_real_deep_nesting() -> None:
-    result = extract_label(ANT_FORM_ITEM_FULL_REAL_HTML, "search-name")
+    result = extract_label(ANT_FORM_ITEM_FULL_REAL_HTML, "name-field")
     assert result.source == "ant-design"
     assert result.text == "姓名"
 
@@ -88,7 +88,7 @@ def test_ant_design_extractor_finds_label_when_wrapper_is_form_item_level() -> N
     inner = ANT_FORM_ITEM_FULL_REAL_HTML
     # Strip the outer ant-col grid cell so root = .ant-form-item
     stripped = inner[inner.index('<div class="ant-form-item '):]
-    result = extract_label(stripped, "search-name")
+    result = extract_label(stripped, "name-field")
     assert result.source == "ant-design"
     assert result.text == "姓名"
 
@@ -209,7 +209,7 @@ def test_ant_design_extractor_picks_correct_row_among_multiple() -> None:
     <div>
       <div class="ant-form-item-row">
         <div class="ant-form-item-label"><label>姓名</label></div>
-        <div class="ant-form-item-control"><input id="search-name"></div>
+        <div class="ant-form-item-control"><input id="name-field"></div>
       </div>
       <div class="ant-form-item-row">
         <div class="ant-form-item-label"><label>邮箱</label></div>
@@ -217,7 +217,7 @@ def test_ant_design_extractor_picks_correct_row_among_multiple() -> None:
       </div>
     </div>
     """
-    assert extract_label(html, "search-name").text == "姓名"
+    assert extract_label(html, "name-field").text == "姓名"
     assert extract_label(html, "search-email").text == "邮箱"
 
 

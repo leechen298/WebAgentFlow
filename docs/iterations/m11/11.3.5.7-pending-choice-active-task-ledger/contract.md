@@ -199,7 +199,7 @@ Deterministic matching 优先级：
 
 - 旧 session 没有 `pending_choice` / `active_task` 时必须继续按现有逻辑运行。
 - 既有 `pending_intake` / `pending_target` 行为保持兼容。
-- 既有 `/items` 单路径 happy path 不应被 choice mode 干扰。
+- 既有 `/records` 单路径 happy path 不应被 choice mode 干扰。
 - Existing learned actions summary 结构保持兼容。
 - `pending_choice` 过期或损坏时必须安全清理并追问，不抛 500。
 
@@ -222,7 +222,7 @@ Deterministic matching 优先级：
 - 不实现 retry / relearn failure menu。
 - 不让 LLM 直接调用 `start_replay` 或内部 adapter。
 - 不把 `learned_path_id` 放进 Router output。
-- 不新增 product-test-site 页面功能。
+- 不新增 fixture-site 页面功能。
 - 不运行 `verify-scenario` 或 autonomous run。
 
 ## 未决问题

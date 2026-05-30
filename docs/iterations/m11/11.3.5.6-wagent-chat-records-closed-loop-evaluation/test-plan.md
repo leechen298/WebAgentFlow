@@ -13,7 +13,7 @@ Codex / AI 外部测试操作员边界，必须维护 `test-plan.md`。
 - Integration：conversation runtime / replay hook / reporter targeted tests。
 - API：只读 conversation events / history / LearnedPath 查询用于取证。
 - Console UI：N/A，本包不依赖 Console。
-- E2E：`wagent chat` 到 `/items` product-test-site 的 closed-loop evaluation。
+- E2E：`wagent chat` 到 `/records` fixture-site 的 closed-loop evaluation。
 - Agent / Reporter / Recovery：只验证 TaskResultReporter outcome；不做 recovery。
 - Codex / AI External Operator：允许 Codex 操作 `wagent chat` 并记录真实输出。
 - Live autonomous run：N/A，明确禁止。
@@ -23,17 +23,17 @@ Codex / AI 外部测试操作员边界，必须维护 `test-plan.md`。
 | Layer | Scenario | Command / Surface | Expected | Required? | Notes |
 |---|---|---|---|---|---|
 | Preflight | PF-1 git state | `git status --short --branch` | 清楚记录当前 commit / dirty state | Yes | 执行前记录 |
-| Preflight | PF-2 product build | `pnpm --filter @web-agent-flow/product-test-site build` | build passed | Yes | 证明 `/items` 可构建 |
+| Preflight | PF-2 product build | `pnpm --filter @web-agent-flow/fixture-site build` | build passed | Yes | 证明 `/records` 可构建 |
 | Preflight | PF-3 targeted runtime tests | pytest targeted suite | 11.3.5.4 / 11.3.5.5 targeted tests passed | Yes | 不代替 live loop |
 | Preflight | PF-4 services reachable | API health + product URL | API 8001 / product URL 可访问 | Yes | 端口以实际为准 |
 | Chat | LOOP-1 create chat session | `wagent chat --headless` | 输出 session id | Yes | 记录 session id |
-| Chat | LOOP-2 target URL turn | 输入 `/items` URL | 系统记住或进入目标上下文 | Yes | 可接受追问 |
+| Chat | LOOP-2 target URL turn | 输入 `/records` URL | 系统记住或进入目标上下文 | Yes | 可接受追问 |
 | Chat | LOOP-3 learn A | 输入学习新增项目 A | 学习完成，生成 LearnedPath | Yes | A 必须唯一 |
 | Chat | LOOP-4 execute B | 输入执行新增项目 B | WAgent 执行并回复 evidence-based 结果 | Yes | B 必须唯一 |
-| Evidence | EV-1 LearnedPath binding | `GET /exploration/learned-paths/{id}` | actions JSON 含 `value_slot=item_name` | Yes | path id 来源需说明 |
-| Evidence | EV-2 slot override | events / history | `slot_overrides.item_name=B` | Yes | 若字段缺失需记录缺口 |
+| Evidence | EV-1 LearnedPath binding | `GET /exploration/learned-paths/{id}` | actions JSON 含 `value_slot=record_name` | Yes | path id 来源需说明 |
+| Evidence | EV-2 slot override | events / history | `slot_overrides.record_name=B` | Yes | 若字段缺失需记录缺口 |
 | Evidence | EV-3 effective value | step log / event / history | fill action effective value 是 B | Yes | 不得是 A |
-| Evidence | EV-4 DOM evidence | `execution_evidence` | `dom_text_present verified target=B` | Yes | selector 应为 item-list |
+| Evidence | EV-4 DOM evidence | `execution_evidence` | `dom_text_present verified target=B` | Yes | selector 应为 record-list |
 | Evidence | EV-5 Reporter | task result event | `verification_outcome=verified` 或 report outcome verified | Yes | replay succeeded 不够 |
 | Evidence | EV-6 final response | CLI transcript | 回复说明看到了 B 并确认新增成功 | Yes | 必须是保守证据话术 |
 | Negative | NR-1 no autonomous | process / command log | 未调用 `verify-scenario` 或 autonomous run | Yes | 记录 not run |
@@ -45,7 +45,7 @@ Codex / AI 外部测试操作员边界，必须维护 `test-plan.md`。
 
 ```bash
 git status --short --branch
-pnpm --filter @web-agent-flow/product-test-site build
+pnpm --filter @web-agent-flow/fixture-site build
 
 cd apps/api
 PYTHONPATH=. ../../.venv/bin/pytest \
@@ -77,15 +77,15 @@ Health / route checks：
 
 ```bash
 curl -sI "http://127.0.0.1:8001/health"
-curl -sI "http://127.0.0.1:5176/items"
+curl -sI "http://127.0.0.1:<fixture-port>/records"
 ```
 
 ### 3. 执行 `wagent chat` 闭环
 
-`5176` 只是示例端口。执行时按实际 product-test-site URL 设置 `ITEMS_URL`。
+`<fixture-port>` 只是示例端口。执行时按实际 fixture-site URL 设置 `ITEMS_URL`。
 
 ```bash
-export ITEMS_URL="http://127.0.0.1:5176/items"
+export ITEMS_URL="http://127.0.0.1:<fixture-port>/records"
 export RUN_STAMP="$(date +%Y%m%d%H%M%S)"
 export LEARN_NAME="测试项目A-${RUN_STAMP}"
 export EXEC_NAME="测试项目B-${RUN_STAMP}"
@@ -108,7 +108,7 @@ printf '%s\n' \
 ```bash
 curl -s "http://127.0.0.1:8001/conversation/sessions/${SESSION_ID}/events?limit=1000"
 curl -s "http://127.0.0.1:8001/conversation/sessions/${SESSION_ID}/history"
-curl -s "http://127.0.0.1:8001/exploration/learned-paths?page_template=/items&limit=10"
+curl -s "http://127.0.0.1:8001/exploration/learned-paths?page_template=/records&limit=10"
 ```
 
 如果拿到 `LEARNED_PATH_ID`：
@@ -153,13 +153,13 @@ Codex / AI 可以操作 `wagent chat`，但只能记录真实输出：
 执行完成后创建：
 
 ```text
-docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md
+docs/testing/results/m11-11.3.5.6-records-closed-loop-<YYYY-MM-DD>.md
 ```
 
 最低内容：
 
 ```markdown
-# 11.3.5.6 `/items` Closed-loop Result
+# 11.3.5.6 `/records` Closed-loop Result
 
 Date:
 Commit:

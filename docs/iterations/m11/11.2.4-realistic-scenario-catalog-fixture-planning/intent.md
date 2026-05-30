@@ -4,7 +4,7 @@
 
 ## 目标
 
-规划 WebAgentFlow 自建真实网页验证场景库，为后续 validation-site fixture 页面、
+规划 WebAgentFlow 自建真实网页验证场景库，为后续 fixture-site fixture 页面、
 mock backend 和 E2E 证据建设提供设计输入。
 
 ## 动机

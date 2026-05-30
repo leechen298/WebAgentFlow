@@ -60,4 +60,4 @@ C. 取消
 - 用户输入 `B` / `2` / `第二个` 后，Runtime 进入重新学习分支，必要信息不足时追问。
 - 用户输入 `C` / `3` / `第三个` 或“算了”后，清理 pending state 和 active task。
 - retry / relearn / cancel 的 private payload 不暴露 `learned_path_id` 给用户、Router prompt 或 LLM trace。
-- 既有 `/items` verified happy path 不受影响。
+- 既有 `/records` verified happy path 不受影响。

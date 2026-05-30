@@ -50,9 +50,9 @@ Suggested utterance generation 必须是 deterministic code path，不新增 LLM
 - 不改变 `_matching_actions()` threshold、confidence policy、多候选处理或 replay execution。
 - 不实现 external black-box revalidation。
 - 不更新 `docs/testing/results/external-black-box-validation-latest.md`。
-- 不把 `5177/inventory`、Validation-Site selector、field label、button text、
+- 不把 `<fixture-port>/target-page`、Fixture-Site selector、field label、button text、
   `data-testid`、seed copy、operation alias 或 page source 写入 runtime / prompts。
-- 不把 SKU、商品名、数量、用户名、密码、token 等 slot / sensitive values 写进 reusable utterances。
+- 不把 record_code、商品名、数量、用户名、密码、token 等 slot / sensitive values 写进 reusable utterances。
 
 ## Success Definition
 

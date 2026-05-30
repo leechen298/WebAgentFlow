@@ -49,7 +49,7 @@ find docs/iterations/m11/11.3.8.4-regression-tests -maxdepth 1 -type f | sort
 rg -n "Regression Tests|external site|synthetic|Forbidden Changes|Exit Criteria" docs/iterations/m11/11.3.8.4-regression-tests
 cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py -q
 cd apps/api && ../../.venv/bin/python -m ruff check tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py
-rg -n "5177|/inventory|inventory item|WebAgentFlow-Validation-Site" apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py apps/api/app/services/conversation apps/api/app/services/learning apps/api/app/services/task_planning apps/api/app/prompts
+rg -n "<fixture-port>|/target-page|inventory item|External-Fixture-Provider" apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py apps/api/app/services/conversation apps/api/app/services/learning apps/api/app/services/task_planning apps/api/app/prompts
 git diff --check
 git status --short
 git diff --name-only
@@ -71,7 +71,7 @@ git diff --name-only
 Stop as `BLOCKED` or `NEEDS_USER_INPUT` if:
 
 - tests require external site source or live browser operation;
-- tests require `5177/inventory` or external selectors / labels / seed copy;
+- tests require `<fixture-port>/target-page` or external selectors / labels / seed copy;
 - runtime changes appear necessary without design update;
 - subagent review reports unresolved P0 / P1;
 - live validation becomes necessary before `11.3.8.5`;

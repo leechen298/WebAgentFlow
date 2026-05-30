@@ -16,8 +16,8 @@
 
 ## 迭代定位
 
-11.3.5.5 是 working runtime P0 闭环的第三个子包。11.3.5.3 提供 `/items`
-页面基座；11.3.5.4 打通 `item_name -> value_slot -> slot_overrides ->
+11.3.5.5 是 working runtime P0 闭环的第三个子包。11.3.5.3 提供 `/records`
+页面基座；11.3.5.4 打通 `record_name -> value_slot -> slot_overrides ->
 effective_action`，让“学习 A 后执行 B”真正填入 B。
 
 本包只解决执行后的页面证据和保守汇报：
@@ -34,14 +34,14 @@ ReplayRequest.evidence_targets
 -> 用户可见保守回复
 ```
 
-关键目标是让 `TaskResultReporter` 在 replay succeeded 且 `/items` 列表中确认看到
+关键目标是让 `TaskResultReporter` 在 replay succeeded 且 `/records` 列表中确认看到
 执行阶段的新项目名时输出 `verified`。不能只把 `ExecutionEvidence` 塞进 event payload
 而让 Reporter 继续输出 `uncertain`。
 
 ## 本包不做
 
-- 不新增 `/items` 页面。
-- 不修改 `item_name` slot / `value_slot` / `slot_overrides` 参数化机制，除非为了传递 evidence target。
+- 不新增 `/records` 页面。
+- 不修改 `record_name` slot / `value_slot` / `slot_overrides` 参数化机制，除非为了传递 evidence target。
 - 不接 TaskPathPlanner。
 - 不做 `pending_choice`。
 - 不做 `active_task` / RuntimeLedger。
@@ -82,7 +82,7 @@ ReplayRequest.evidence_targets
 - `effective_action`。
 - step log 中的 `value_slot` / `override_applied` / `effective_value`。
 - P0 evidence 只要求 `dom_text_present` 和 `unknown`。
-- `/items` 新增项目的 evidence target 必须优先限定在 `[data-testid='item-list']`。
+- `/records` 新增项目的 evidence target 必须优先限定在 `[data-testid='record-list']`。
 - `ExecutionEvidence.target` 必须来自 `ExecutionEvidenceTarget.text`。
 - DOM evidence 必须在 Playwright runtime stop 前采集。
 - `TaskResultReporter` 原生 outcome 仍是 `verified / failed / uncertain / needs_review / blocked`。

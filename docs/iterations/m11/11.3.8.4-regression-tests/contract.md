@@ -37,9 +37,9 @@ stop and update this contract / technical design before implementation.
 
 - 修改 learning, matcher, router, replay, reporter, recovery, abort, frontend, worker,
   DB migration, public API, eval runner, or prompt behavior.
-- 修改 `WebAgentFlow-Validation-Site` / `WebAgentFlow-Fixture-Site`。
-- 恢复 `apps/product-test-site` / `apps/validation-site`。
-- 依赖 `5177/inventory`、external target URL、selector、`data-testid`、component name、
+- 修改 `External-Fixture-Provider` / `WebAgentFlow-Fixture-Site`。
+- 恢复 `apps/fixture-site` / `apps/fixture-site`。
+- 依赖 `<fixture-port>/target-page`、external target URL、selector、`data-testid`、component name、
   seed copy、field label、button text、placeholder、operation alias 或 page source。
 - 运行 live external validation、`wagent chat` live validation、`verify-scenario`、
   browser / UI smoke、direct autonomous-run endpoint 或 direct replay API product validation。

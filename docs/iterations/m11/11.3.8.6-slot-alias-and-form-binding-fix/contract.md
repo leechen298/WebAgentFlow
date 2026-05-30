@@ -29,14 +29,14 @@
 
 Allowed initial aliases:
 
-- `name` <-> `item_name`
-- `category` <-> `item_category`
-- `stock_quantity` <-> `quantity`
-- `sku` remains exact unless a future package documents generic SKU aliases.
+- `name` <-> `record_name`
+- `category` <-> `record_category`
+- `record_quantity` <-> `quantity`
+- `record_code` remains exact unless a future package documents generic record_code aliases.
 
 These are target-agnostic semantic slot-name compatibility pairs derived from
 learned-path `value_slot` names and execute-turn request slot names. They are
-not Validation-Site answer keys, field-label exceptions, operation aliases, or
+not Fixture-Site answer keys, field-label exceptions, operation aliases, or
 selector knowledge.
 
 Alias mapping is directional at replay handoff: preserve learned path

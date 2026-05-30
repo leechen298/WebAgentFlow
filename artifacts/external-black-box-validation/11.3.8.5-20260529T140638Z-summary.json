@@ -4,7 +4,7 @@
   "commit": "70a050e",
   "operator": "Codex external test operator",
   "api_base_url": "http://127.0.0.1:8001",
-  "target_url": "http://127.0.0.1:5177/inventory",
+  "target_url": "http://127.0.0.1:<fixture-port>/target-page",
   "db_state_policy": "clean database before validation",
   "db_clean_tables": [
     "conversation_events",
@@ -23,13 +23,13 @@
     {
       "surface": "curl",
       "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1",
-      "command": "curl -i http://127.0.0.1:5177/inventory",
+      "command": "curl -i http://127.0.0.1:<fixture-port>/target-page",
       "result": "HTTP/1.1 200 OK when run with approved elevated local-network access"
     },
     {
       "surface": "browser",
       "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1",
-      "operation": "PV-SITE-001 standalone smoke against external Validation-Site",
+      "operation": "PV-SITE-001 standalone smoke against external Fixture-Site",
       "result": "PASS",
       "screenshot": "/private/tmp/waf-11.3.8.5-site-smoke.png"
     },
@@ -38,9 +38,9 @@
       "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1",
       "command": ".venv/bin/wagent chat --api-base http://127.0.0.1:8001 --timeout 300 --headless",
       "stdin_sequence": [
-        "http://127.0.0.1:5177/inventory",
-        "Learn how to create an inventory item with SKU NB-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
-        "Create an inventory item with SKU MUG-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
+        "http://127.0.0.1:<fixture-port>/target-page",
+        "Learn how to create an inventory item with record_code REC-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
+        "Create an inventory item with record_code REC-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
         "随便处理一下",
         ":q"
       ],
@@ -51,12 +51,12 @@
   "cli_transcript": [
     "WAgent > 本次会话 ID：3f1d42c9-9c6a-4198-8e27-e59b1be2f270。需要调试时可以在管理后台查看。",
     "WAgent > 你好，我可以学习页面操作，也可以执行已经学会的操作。",
-    "Input PV-CLI-001: http://127.0.0.1:5177/inventory",
+    "Input PV-CLI-001: http://127.0.0.1:<fixture-port>/target-page",
     "WAgent > 还没学过这个页面。你可以先学习这个页面上的操作、查看页面，或取消。",
-    "Input PV-CLI-002: Learn how to create an inventory item with SKU NB-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
+    "Input PV-CLI-002: Learn how to create an inventory item with record_code REC-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
     "WAgent > 开始学习页面操作。",
     "WAgent > 学习完成：我学会了create inventory item操作。之后你可以说“帮我create inventory item”。",
-    "Input PV-CLI-003: Create an inventory item with SKU MUG-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
+    "Input PV-CLI-003: Create an inventory item with record_code REC-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
     "WAgent > 我找到了已学习路径，但它还不支持这次输入里的参数替换。请重新学习一次该操作，或补充一个已支持的参数。",
     "Input PV-CLI-004: 随便处理一下",
     "WAgent > 你好，我主要处理网页操作任务。你可以发给我目标页面 URL，并说明要学习哪个操作，或让我执行已经学会的操作。"
@@ -80,7 +80,7 @@
     {
       "scenario": "PV-CLI-003",
       "status": "FAIL",
-      "evidence": "Execution did not start. Event chat_execution_failed reason=unsupported_value_slot; unsupported_slots=name, category, stock_quantity."
+      "evidence": "Execution did not start. Event chat_execution_failed reason=unsupported_value_slot; unsupported_slots=name, category, record_quantity."
     },
     {
       "scenario": "PV-CLI-004",

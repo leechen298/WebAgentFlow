@@ -13,7 +13,7 @@ B. 重新学习
 C. 取消
 ```
 
-11.3.6.1 runner core 先覆盖 `/items` happy path 和 single-path direct replay regression。
+11.3.6.1 runner core 先覆盖 `/records` happy path 和 single-path direct replay regression。
 下一步需要把 failure recovery 纳入同一套 eval program，让它不是只靠 targeted unit tests
 和人工读事件，而是能通过 runner 产出可审计 artifact 和 hard gates。
 

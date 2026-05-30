@@ -21,7 +21,7 @@ from app.services.task_planning.planner import TaskPathPlanner
 def _candidate(
     learned_path_id: str = "lp-001",
     scenario: str = "login",
-    page_template: str = "/login",
+    page_template: str = "/entry",
     trust: str = "confirmed",
     hit_count: int = 5,
     match_reasons: list[str] | None = None,
@@ -109,7 +109,7 @@ def test_confirmed_produces_minimal_route_plan() -> None:
     candidate = _candidate(
         learned_path_id="lp-001",
         scenario="login",
-        page_template="/login",
+        page_template="/entry",
         trust="confirmed",
         match_reasons=["exact scenario match: login"],
     )
@@ -122,7 +122,7 @@ def test_confirmed_produces_minimal_route_plan() -> None:
     assert step.learned_path_id == "lp-001"
     assert step.order == 0
     assert "login" in step.purpose
-    assert "/login" in step.purpose
+    assert "/entry" in step.purpose
     assert "log in as admin" in step.purpose
     assert step.can_execute is True
     assert step.bound_slots == {}

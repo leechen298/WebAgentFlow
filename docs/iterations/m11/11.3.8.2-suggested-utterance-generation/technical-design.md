@@ -195,7 +195,7 @@ rg -n "Suggested Utterance Generation|implementation_authorized|slot values|sens
 cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q
 cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q
 cd apps/api && ../../.venv/bin/python -m ruff check app/services/learning/learning_run_service.py app/services/conversation/chat_runtime.py tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py
-rg -n "5177|/inventory|inventory item|WebAgentFlow-Validation-Site" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py
+rg -n "<fixture-port>|/target-page|inventory item|External-Fixture-Provider" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py
 git diff --check
 ```
 

@@ -64,7 +64,7 @@ function makeRun(overrides: Record<string, unknown> = {}) {
     scenario_matched: true,
     pass_gate_status: 'pass',
     status: 'succeeded',
-    url: 'http://localhost:5175/login',
+    url: 'https://example.invalid/entry',
     summary: 'All steps succeeded.',
     ...overrides,
   };

@@ -86,10 +86,10 @@ function buildDetail(overrides: Record<string, unknown> = {}) {
     created_at: '2026-04-25T10:00:00Z',
     updated_at: '2026-04-25T10:00:00Z',
     status: 'completed',
-    strategy: { url: 'https://example.com/users', headless: true },
+    strategy: { url: 'https://example.com/records', headless: true },
     summary: '',
     result: {
-      page_analysis: { url: 'https://example.com/users', title: 'Users' },
+      page_analysis: { url: 'https://example.com/records', title: 'Users' },
       steps: [],
       verdict: 'success',
       verification: { scorecard: { pass_gate: { status: 'pass' } } },

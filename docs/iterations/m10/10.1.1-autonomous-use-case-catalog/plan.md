@@ -41,7 +41,7 @@
 - `apps/console/src/i18n/locales/zh.ts` / `en.ts` / `ja.ts` ——
   新增导航和页面文案。
 - `apps/console/src/env.d.ts` —— 增加
-  `VITE_VALIDATION_SITE_ORIGIN?: string` 类型声明。
+  `VITE_FIXTURE_SITE_ORIGIN?: string` 类型声明。
 - `apps/console/src/__tests__/i18n/locales.test.ts` —— 如果测试对
   locale key 有显式断言，补对应断言。
 - 可选：`apps/console/src/__tests__/autonomousUseCases.spec.ts` ——
@@ -85,7 +85,7 @@ import { listSpecs, type SpecSummary } from '@/api/exploration';
 
 ```ts
 const validationOrigin =
-  import.meta.env.VITE_VALIDATION_SITE_ORIGIN || 'http://localhost:5175';
+  import.meta.env.VITE_FIXTURE_SITE_ORIGIN || 'https://example.invalid';
 ```
 
 构造 workbench URL：

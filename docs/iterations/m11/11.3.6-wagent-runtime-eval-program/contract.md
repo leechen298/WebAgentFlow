@@ -33,7 +33,7 @@ WAgent Runtime Eval Program 是 M11 working runtime 的本地验收体系。它�
 
 | Package | Type | Responsibility |
 |---|---|---|
-| 11.3.6.1 | code | runner core, `/items` closed loop, single-path direct replay regression |
+| 11.3.6.1 | code | runner core, `/records` closed loop, single-path direct replay regression |
 | [11.3.6.2](../11.3.6.2-failure-recovery-eval/) | code | failure recovery eval, private retry payload safety |
 | [11.3.6.3](../11.3.6.3-pending-choice-multi-candidate-eval/) | code | pending choice multi-candidate eval |
 | [11.3.6.4](../11.3.6.4-planner-backed-choice-eval/) | code | planner-backed choice eval |

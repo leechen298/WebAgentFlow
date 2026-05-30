@@ -47,18 +47,18 @@ git diff --check
 覆盖自然语言变体：
 
 ```text
-学习一下这个工作台登录页怎么进入，地址是 http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456
-学习这个登录页：http://localhost:5176/workspace-login，用户名 demo，密码 123456
-学习这个页面怎么登录，http://localhost:5176/workspace-login，账号 demo，口令 123456
-学习这个入口：http://localhost:5176/workspace-login，demo / 123456
+学习一下这个工作台登录页怎么进入，地址是 http://localhost:<fixture-port>/target-login，操作员账号是 demo，访问口令是 123456
+学习这个登录页：http://localhost:<fixture-port>/target-login，用户名 demo，密码 123456
+学习这个页面怎么登录，http://localhost:<fixture-port>/target-login，账号 demo，口令 123456
+学习这个入口：http://localhost:<fixture-port>/target-login，demo / 123456
 ```
 
 期望：
 
 ```text
 intent=learn_operation
-target.url=http://localhost:5176/workspace-login
-target.site_origin=http://localhost:5176
+target.url=http://localhost:<fixture-port>/target-login
+target.site_origin=http://localhost:<fixture-port>
 slots include username-like and password-like values
 password-like slot sensitive=true
 ```
@@ -68,7 +68,7 @@ password-like slot sensitive=true
 输入：
 
 ```text
-学习一下这个登录页：http://localhost:5176/workspace-login
+学习一下这个登录页：http://localhost:<fixture-port>/target-login
 ```
 
 期望：
@@ -117,7 +117,7 @@ user is asked to first say what to learn or execute
 
 ### 执行意图泛化
 
-当前 session 已学过 `http://localhost:5176/workspace-login` 后，以下输入应能命中同一 action：
+当前 session 已学过 `http://localhost:<fixture-port>/target-login` 后，以下输入应能命中同一 action：
 
 ```text
 帮我进入工作台

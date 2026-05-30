@@ -4,8 +4,8 @@
 
 ## 范围
 
-本包定义 `apps/product-test-site` 的 `/items` 页面 contract。它是产品级测试页，
-不是 validation-site spec fixture，也不是 `wagent chat` runtime contract。
+本包定义 `apps/fixture-site` 的 `/records` 页面 contract。它是产品级测试页，
+不是 fixture-site spec fixture，也不是 `wagent chat` runtime contract。
 
 ## Route Contract
 
@@ -13,13 +13,13 @@
 
 ```ts
 {
-  path: '/items',
+  path: '/records',
   name: 'items',
   component: ItemsPage,
 }
 ```
 
-当前 `5176` 只是 product-test-site 本地 dev / preview 示例端口，不属于 contract。
+当前 `<fixture-port>` 只是 fixture-site 本地 dev / preview 示例端口，不属于 contract。
 后续 runtime 必须使用用户提供或 session 中保存的 target URL，不得硬编码端口。
 
 ## Page Contract
@@ -33,7 +33,7 @@ ItemsPage.vue
 页面位置：
 
 ```text
-apps/product-test-site/src/pages/ItemsPage.vue
+apps/fixture-site/src/pages/ItemsPage.vue
 ```
 
 页面必须提供：
@@ -76,10 +76,10 @@ P0 不依赖 `createdAt` 作为 evidence。
 
 | 元素 | `data-testid` |
 |---|---|
-| 页面根节点 | `items-page` |
-| 项目名称输入框 | `item-name-input` |
-| 新增按钮 | `item-create-button` |
-| 列表容器 | `item-list` |
+| 页面根节点 | `records-page` |
+| 项目名称输入框 | `record-name-input` |
+| 新增按钮 | `record-create-button` |
+| 列表容器 | `record-list` |
 | 项目行 | `item-row` |
 | 项目名称 | `item-row-name` |
 | 操作状态 | `operation-status` |
@@ -94,10 +94,10 @@ P0 不依赖 `createdAt` 作为 evidence。
 后续 P0 evidence 会优先在以下区域查找文本：
 
 ```text
-[data-testid='item-list']
+[data-testid='record-list']
 ```
 
-因此新增成功后，目标项目名必须真实出现在 `item-list` 内的可见文本中。
+因此新增成功后，目标项目名必须真实出现在 `record-list` 内的可见文本中。
 `operation-status` 只能作为辅助提示，不能替代列表结果。
 
 P0 测试数据应使用唯一项目名，例如：
@@ -123,6 +123,6 @@ P0 测试数据应使用唯一项目名，例如：
 - 不新增 API route。
 - 不新增数据库表或字段。
 - 不改 conversation / learning / replay / task planning runtime。
-- 不把 `/items` 接入 validation-site spec / assertion oracle。
+- 不把 `/records` 接入 fixture-site spec / assertion oracle。
 - 不把 `operation-status` 文案设计成唯一成功证据。
 - 不引入搜索、编辑、删除或高风险操作。

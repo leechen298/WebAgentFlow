@@ -20,8 +20,8 @@ apps/api/app/services/execution/action_executor.py
 
 | 文件 | 当前行为 | 缺口 |
 |---|---|---|
-| `intake.py` | fallback 只抽 username / password | 不抽 `item_name` |
-| `chat_runtime.py` | `_fill_values_from_intake()` 只收 username / password | 执行阶段拿不到 `item_name` |
+| `intake.py` | fallback 只抽 username / password | 不抽 `record_name` |
+| `chat_runtime.py` | `_fill_values_from_intake()` 只收 username / password | 执行阶段拿不到 `record_name` |
 | `learning_run_service.py` | LearnedPath actions 只保留固定 `value` | 学习后无法绑定 `value_slot` |
 | `learned_path_replay.py` schema | `ReplayRequest` 只有 `url`；`ReplayAction` 没有 `value_slot` | 无法表达运行时覆盖 |
 | `learned_path_replay.py` service | `run_replay()` 固定执行 action.value | 学习 A 后会继续填 A |
@@ -31,10 +31,10 @@ apps/api/app/services/execution/action_executor.py
 
 | Contract | Design |
 |---|---|
-| `item_name` canonical slot | Intake fallback 增加 `/items` 新增项目名抽取；runtime fill values 接受 `item_name` |
-| `value_slot` action metadata | 学习完成后扫描 fill action，匹配学习时 `fill_values.item_name` 并写入 `value_slot=item_name` |
+| `record_name` canonical slot | Intake fallback 增加 `/records` 新增项目名抽取；runtime fill values 接受 `record_name` |
+| `value_slot` action metadata | 学习完成后扫描 fill action，匹配学习时 `fill_values.record_name` 并写入 `value_slot=record_name` |
 | `slot_overrides` request | 扩展 replay schema、hook 和 runtime execute branch |
-| fixed value replay 阻断 | 当用户给 `item_name` 但 matched path 没有 `value_slot=item_name` 时，runtime 阻断 |
+| fixed value replay 阻断 | 当用户给 `record_name` 但 matched path 没有 `value_slot=record_name` 时，runtime 阻断 |
 | effective action | replay 执行前生成 `effective_action`，执行和 wait-for-change 都使用它 |
 | step log evidence | replay step log / debug data 记录 `value_slot`、`override_applied`、`effective_value` |
 | 不接 evidence / reporter | 本包不引入 `ExecutionEvidence` 或 TaskResultReporter adapter |
@@ -69,7 +69,7 @@ apps/api/app/repos/learned_paths_repo.py
 apps/api/tests/test_learned_paths_repo.py
 ```
 
-## 设计 1：Intake `item_name`
+## 设计 1：Intake `record_name`
 
 ### LLM schema
 
@@ -78,8 +78,8 @@ Pydantic schema。Prompt / fallback 需要明确 canonical slot：
 
 ```json
 {
-  "name": "item_name",
-  "semantic_type": "item_name",
+  "name": "record_name",
+  "semantic_type": "record_name",
   "value": "测试项目A",
   "sensitive": false
 }
@@ -106,15 +106,15 @@ pattern 抽取尾部名称。
 扩展 `_fill_values_from_intake()`：
 
 ```python
-allowed_semantic_types = {"username", "password", "item_name"}
-allowed_names = {"username", "password", "item_name"}
+allowed_semantic_types = {"username", "password", "record_name"}
+allowed_names = {"username", "password", "record_name"}
 ```
 
 P0 canonical 输出：
 
 ```json
 {
-  "item_name": "测试项目A"
+  "record_name": "测试项目A"
 }
 ```
 
@@ -128,8 +128,8 @@ P0 canonical 输出：
 P0 规则：
 
 ```python
-if action["action_type"] == "fill" and action.get("value") == fill_values["item_name"]:
-    action["value_slot"] = "item_name"
+if action["action_type"] == "fill" and action.get("value") == fill_values["record_name"]:
+    action["value_slot"] = "record_name"
 ```
 
 建议函数：
@@ -147,7 +147,7 @@ def parameterize_learned_path_actions(
 ```json
 {
   "status": "bound",
-  "slots": ["item_name"],
+  "slots": ["record_name"],
   "warnings": []
 }
 ```
@@ -198,7 +198,7 @@ override_applied: bool = False
 effective_value: str | None = None
 ```
 
-P0 `/items` 的 `effective_value` 可以明文；未来敏感字段必须 redacted。
+P0 `/records` 的 `effective_value` 可以明文；未来敏感字段必须 redacted。
 
 ## 设计 5：Replay slot override adapter
 
@@ -258,13 +258,13 @@ action，否则等待、日志和诊断会继续引用录制值 A。
 
 执行分支需要：
 
-1. 从 intake slots 生成 `fill_values.item_name`。
+1. 从 intake slots 生成 `fill_values.record_name`。
 2. 找到唯一 matched learned action。
-3. 读取 LearnedPath actions 或 action summary，确认存在 `value_slot=item_name`。
-4. 构造 `slot_overrides={"item_name": "测试项目B"}`。
+3. 读取 LearnedPath actions 或 action summary，确认存在 `value_slot=record_name`。
+4. 构造 `slot_overrides={"record_name": "测试项目B"}`。
 5. 调 `_replay_handler(..., slot_overrides=slot_overrides)`。
 
-如果用户给了 `item_name` 但 LearnedPath 不支持 `value_slot=item_name`：
+如果用户给了 `record_name` 但 LearnedPath 不支持 `value_slot=record_name`：
 
 ```text
 Runtime 阻断
@@ -297,16 +297,16 @@ class ReplayHandler(Protocol):
 
 | Layer | Scenario | Expected |
 |---|---|---|
-| Intake | `学习新增项目，名称叫测试项目A` | slots 含 `item_name=测试项目A` |
-| Intake | `帮我新增项目，名称叫测试项目B` | execute intent + `item_name=测试项目B` |
-| Runtime | `_fill_values_from_intake()` | 输出 `item_name` |
-| Learning | fill action value 等于学习值 | actions JSON 写入 `value_slot=item_name` |
+| Intake | `学习新增项目，名称叫测试项目A` | slots 含 `record_name=测试项目A` |
+| Intake | `帮我新增项目，名称叫测试项目B` | execute intent + `record_name=测试项目B` |
+| Runtime | `_fill_values_from_intake()` | 输出 `record_name` |
+| Learning | fill action value 等于学习值 | actions JSON 写入 `value_slot=record_name` |
 | Learning | 无匹配 fill action | parameterization status `not_bound` |
 | Replay schema | `ReplayRequest(slot_overrides=...)` | schema 接受并默认 `{}` |
 | Replay build | raw action 有 `value_slot` | `ReplayAction.value_slot` 被读取 |
 | Replay execute | A action + B override | `execute_action()` 收到 B |
 | Replay wait | A action + B override | `wait_for_change_after_action()` 收到 B |
-| Runtime execute | path 支持 `value_slot` | replay handler 收到 `slot_overrides.item_name=B` |
+| Runtime execute | path 支持 `value_slot` | replay handler 收到 `slot_overrides.record_name=B` |
 | Runtime block | path 不支持 `value_slot` | 不调用 replay，返回重新学习提示 |
 
 ## 风险与约束
@@ -317,4 +317,4 @@ class ReplayHandler(Protocol):
 | replay 执行 B，但 wait/log 仍使用 A | 强制 wait-for-change 使用 `effective_action` |
 | 把 internal adapter 暴露给 Router | 文档明确 adapter 不是 Application Skill |
 | 旧 LearnedPath 被误改 | 只允许 metadata-only merge，不覆盖原 action 行为 |
-| 敏感值进日志 | P0 只允许非敏感 `item_name` 明文，future credential slot 必须 redacted |
+| 敏感值进日志 | P0 只允许非敏感 `record_name` 明文，future credential slot 必须 redacted |

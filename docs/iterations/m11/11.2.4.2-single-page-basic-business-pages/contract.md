@@ -203,12 +203,12 @@ schemas, FastAPI routes, DB migrations, replay response fields, or reporter cont
 
 Implementation must preserve:
 
-- `/` validation-site index。
-- existing `/login` fixture。
-- existing `/users` fixture。
+- `/` fixture-site index。
+- existing `/entry` fixture。
+- existing `/records` fixture。
 - existing `/runtime-observation` shell。
 - existing Workbench deep link behavior from the validation index。
-- existing validation-site specs。
+- existing fixture-site specs。
 - `/runtime-observation/basic/*` route namespace。
 
 The rejected toy-like implementation is not the final acceptance standard. The current implementation may

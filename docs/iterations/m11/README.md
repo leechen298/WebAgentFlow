@@ -62,26 +62,26 @@ Console UI smoke、外部黑盒站点验证或 M12 recovery / retry / abort 已�
 - [11.2.2-wait-for-change-mvp](./11.2.2-wait-for-change-mvp/) —— Wait-for-change MVP。状态：最小代码实现完成，scoped review passed；后续 full API suite 已随 11.2.3 收口通过。
 - [11.2.3-replay-integration-with-observation](./11.2.3-replay-integration-with-observation/) —— Replay Integration with Observation。状态：implementation complete（56 scoped tests passed, 1168 full API tests passed, ruff clean）。
 - [11.2.4-realistic-scenario-catalog-fixture-planning](./11.2.4-realistic-scenario-catalog-fixture-planning/) —— Realistic Scenario Catalog & Fixture Planning。状态：文档生成完成，fixture 页面 / mock backend / E2E 尚未实现。
-- [11.2.4.1-single-page-runtime-fixture-shell](./11.2.4.1-single-page-runtime-fixture-shell/) —— Single-page Runtime Fixture Shell。状态：完成（validation-site runtime observation shell / route / index entry implemented）。
+- [11.2.4.1-single-page-runtime-fixture-shell](./11.2.4.1-single-page-runtime-fixture-shell/) —— Single-page Runtime Fixture Shell。状态：完成（fixture-site runtime observation shell / route / index entry implemented）。
 - [11.2.4.2-single-page-basic-business-pages](./11.2.4.2-single-page-basic-business-pages/) —— Single-page Basic Business Pages。状态：implementation complete, review pending；当前已按页面级 fixture designs 重做 7 个 PC basic fixtures。
 - 11.2.x · Common Component Runtime Semantics（常用组件库运行时语义兼容）—— later M11.2.x 候选增强；记录组件库生成的 runtime surface detection and relation，不属于 11.2.2 当前 MVP。
-- [11.3-interactive-chat-closed-loop](./11.3-interactive-chat-closed-loop/) —— Interactive Chat Closed Loop：`wagent chat` 小白用户闭环，当前只覆盖 `/login` happy path。状态：accepted（implementation review passed, manual smoke passed）。
+- [11.3-interactive-chat-closed-loop](./11.3-interactive-chat-closed-loop/) —— Interactive Chat Closed Loop：`wagent chat` 小白用户闭环，当前只覆盖 `/entry` happy path。状态：accepted（implementation review passed, manual smoke passed）。
 - [11.3.1-visible-chat-browser-operation](./11.3.1-visible-chat-browser-operation/) —— Visible Chat Browser Operation：`wagent chat` 默认以用户可见的项目内置 Playwright Chromium 学习和执行网页操作，支持 `--headless` opt-out。状态：implementation complete（scoped tests passed, manual visible-browser smoke pending）。
 - [11.3.2-chat-history-debug-console](./11.3.2-chat-history-debug-console/) —— Chat History & Debug Console：补 Conversation session list、aggregate history、Console history 页面、CLI list/history/resume，服务人工测试和 Codex CLI 调试复用。状态：implementation complete（implementation review passed, UI smoke pending）。
-- [11.3.3-product-chat-test-site-separation](./11.3.3-product-chat-test-site-separation/) —— Product-Level Chat Test Site Separation：拆分 validation-site 工程验证靶场与 product-test-site 产品级 chat 人工验收靶场，避免 validation spec / assertion oracle 污染 `wagent chat` 产品路径。状态：accepted（implementation review passed, product-level CLI smoke passed）。
+- [11.3.3-product-chat-test-site-separation](./11.3.3-product-chat-test-site-separation/) —— Product-Level Chat Test Site Separation：拆分 fixture-site 工程验证靶场与 fixture-site 产品级 chat 人工验收靶场，避免 validation spec / assertion oracle 污染 `wagent chat` 产品路径。状态：accepted（implementation review passed, product-level CLI smoke passed）。
 - [11.3.4-conversation-intake-agent](./11.3.4-conversation-intake-agent/) —— Conversation Intake Agent：为 `wagent chat` 定义并实现 schema-constrained 自然语言入口层，让 LLM 理解用户话语并输出结构化 intent / target / action / slots / missing fields，代码继续负责校验和执行；同时 Conversation History detail 展示 WAgent 回复来源和脱敏 LLM trace。状态：implementation complete（scoped tests passed, real LLM smoke pending）。
 - [11.3.5-customer-facing-agent-router-skill-runtime](./11.3.5-customer-facing-agent-router-skill-runtime/) —— Customer-Facing Agent Router & Skill Runtime：把 chat recovery 问题扩展为面客 Agent 路由与应用技能运行时，定义 Router / Orchestrator / Worker Agent / Application Skill Registry 边界，复用 AST、PageAnalysis、LearnedPath 和 replay evidence；完整 working runtime 施工稿见 [`working-runtime-construction.md`](./11.3.5-customer-facing-agent-router-skill-runtime/working-runtime-construction.md)。状态：planning_refined。
 - [11.3.5.1-conversation-entry-gate-latency-ux](./11.3.5.1-conversation-entry-gate-latency-ux/) —— Conversation Entry Gate & Chat Latency UX：作为 11.3.5 的 patch-level 优化，在 Intake / Router 前加入轻量入口门禁，避免非网页消息进入重型 Agent runtime，并把 `wagent chat` 等待体验从一次性文案升级为持续 working 状态。状态：ready_for_implementation（docs review passed, implementation in progress）。
 - [11.3.5.2-chat-task-state-reducer-learning-preconditions](./11.3.5.2-chat-task-state-reducer-learning-preconditions/) —— Chat Task State Reducer & Learning Preconditions：承接 11.3.5 working runtime 总设计、状态推进、learning preconditions 和测试入口；作为后续 11.3.5.x working runtime 拆包的规划锚点。状态：draft_requirements。
-- [11.3.5.3-product-test-site-items-fixture](./11.3.5.3-product-test-site-items-fixture/) —— Product Test Site `/items` Fixture：新增 `apps/product-test-site` 列表测试页，只提供第一条 working runtime happy path 的页面基座。状态：implementation complete（product-test-site build passed, `/items` smoke passed）。
-- [11.3.5.4-parameterized-learning-replay-slots](./11.3.5.4-parameterized-learning-replay-slots/) —— Parameterized Learning / Replay Slots：补 `item_name` 等业务 slot 抽取、学习填值、`value_slot` 参数绑定和 `slot_overrides`；解决“学习 A 后执行 B”的参数化执行缺口。状态：ready_for_implementation（design review passed）。
+- [11.3.5.3-fixture-site-items-fixture](./11.3.5.3-fixture-site-items-fixture/) —— Product Test Site `/records` Fixture：新增 `apps/fixture-site` 列表测试页，只提供第一条 working runtime happy path 的页面基座。状态：implementation complete（fixture-site build passed, `/records` smoke passed）。
+- [11.3.5.4-parameterized-learning-replay-slots](./11.3.5.4-parameterized-learning-replay-slots/) —— Parameterized Learning / Replay Slots：补 `record_name` 等业务 slot 抽取、学习填值、`value_slot` 参数绑定和 `slot_overrides`；解决“学习 A 后执行 B”的参数化执行缺口。状态：ready_for_implementation（design review passed）。
 - [11.3.5.5-execution-evidence-result-reporter-adapter](./11.3.5.5-execution-evidence-result-reporter-adapter/) —— ExecutionEvidence & TaskResultReporter Adapter：新增 / 扩展执行证据 contract，在 runtime stop 前采集 DOM evidence，并把 replay result + page evidence 适配到保守结果回复。状态：ready_for_implementation（design review passed）。
-- [11.3.5.6-wagent-chat-items-closed-loop-evaluation](./11.3.5.6-wagent-chat-items-closed-loop-evaluation/) —— WAgent Chat `/items` Closed-loop Evaluation：沉淀 `/items` 学习 / 执行闭环测试方案、实跑结果和日志复核记录。状态：implementation complete（closed-loop pass，result recorded）。
+- [11.3.5.6-wagent-chat-records-closed-loop-evaluation](./11.3.5.6-wagent-chat-records-closed-loop-evaluation/) —— WAgent Chat `/records` Closed-loop Evaluation：沉淀 `/records` 学习 / 执行闭环测试方案、实跑结果和日志复核记录。状态：implementation complete（closed-loop pass，result recorded）。
 - [11.3.5.7-pending-choice-active-task-ledger](./11.3.5.7-pending-choice-active-task-ledger/) —— Pending Choice & Minimal Active Task Ledger：补多候选澄清、choice 私有映射、最小 active task 状态账本、pending 清理 / 过期和 cancel cleanup。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.5.8-basic-failure-recovery](./11.3.5.8-basic-failure-recovery/) —— Basic Failure Recovery：补基础失败恢复菜单：重试、重新学习、取消；不做复杂自治恢复。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.5.9-taskpathplanner-multi-candidate-chat-integration](./11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) —— TaskPathPlanner Multi-candidate Chat Integration：只在多候选、模糊目标、planning path 中接入 TaskPathPlanner，不进入单路径 happy path。状态：implementation complete（code review passed，targeted tests passed）。
 - [11.3.6-wagent-runtime-eval-program](./11.3.6-wagent-runtime-eval-program/) —— WAgent Runtime Eval Program：runtime eval 总体测试规划，定义 11.3.6.x 子包、artifact、exit code、hard gates 和 Codex 审计边界。状态：closed_pass_with_caveats（final closeout rerun pass）。
-- [11.3.6.1-wagent-runtime-eval-runner-core](./11.3.6.1-wagent-runtime-eval-runner-core/) —— WAgent Runtime Eval Runner Core：实现 runner v1，覆盖 `/items` closed loop 和 single-path direct replay regression。状态：implemented_and_live_eval_passed。
+- [11.3.6.1-wagent-runtime-eval-runner-core](./11.3.6.1-wagent-runtime-eval-runner-core/) —— WAgent Runtime Eval Runner Core：实现 runner v1，覆盖 `/records` closed loop 和 single-path direct replay regression。状态：implemented_and_live_eval_passed。
 - [11.3.6.2-failure-recovery-eval](./11.3.6.2-failure-recovery-eval/) —— Failure Recovery Eval：扩展 runner 覆盖 recovery menu safety、retry / relearn / cancel 出口和 private payload safety。状态：implementation_complete_verified（live Conversation eval pass）。
 - [11.3.6.3-pending-choice-multi-candidate-eval](./11.3.6.3-pending-choice-multi-candidate-eval/) —— Pending Choice Multi-candidate Eval：扩展 runner 覆盖 A/B/C public choice、private map safety 和用户选择后执行正确 action。状态：implementation_complete_verified（pending-choice eval pass）。
 - [11.3.6.4-planner-backed-choice-eval](./11.3.6.4-planner-backed-choice-eval/) —— Planner-backed Choice Eval：扩展 runner 覆盖 vague goal、TaskPathPlanner-backed choices 和 single-path bypass Planner 回归。状态：implementation_complete_verified（planner-backed choice and single-path bypass pass）。
@@ -131,9 +131,9 @@ shared shell + per-fixture components，保持 frontend-local deterministic erro
 session metadata 产品化为 history list、aggregate history detail、Console 页面以及 CLI debug
 命令，方便人工测试和 Codex CLI 复用历史会话继续调试。
 `11.3.3-product-chat-test-site-separation/` 是 11.3 interactive chat 的产品级验收边界
-拆分包。它已新增 `apps/product-test-site`，端口 `5176`，并把 product-level
+拆分包。它已新增 `apps/fixture-site`，端口 `<fixture-port>`，并把 product-level
 `wagent chat` learning 从 validation specs / `spec_id` / `scenario` oracle 中拆出。
-根 `pnpm run dev` 已接入 product-test-site；product-level CLI smoke 已通过，session
+根 `pnpm run dev` 已接入 fixture-site；product-level CLI smoke 已通过，session
 `20602dde-1a64-4e81-8784-9b7949a9d866` 沉淀 LearnedPath
 `03fb1fa1-2589-45cf-8322-4ba3f2809077` 并成功 replay 到 `/workspace-home`。
 它不迁移 `11.2.4.2`，也不覆盖 `11.3.2`。
@@ -158,7 +158,7 @@ Conversation Entry Gate，并要求 CLI 在等待 API 返回期间显示持续 w
 非网页消息应快速友好回复并引导用户回到 WebAgentFlow 的网页操作能力；网页任务候选
 继续进入 11.3.5 runtime。
 `11.3.6-wagent-runtime-eval-program/` 是 11.3 working runtime 的本地验收体系总纲。
-它不实现 runner，而是定义 11.3.6.x 子包路线：11.3.6.1 做 runner core 和 `/items`
+它不实现 runner，而是定义 11.3.6.x 子包路线：11.3.6.1 做 runner core 和 `/records`
 两条核心回归，11.3.6.2 / 11.3.6.3 / 11.3.6.4 后续分别扩展 failure recovery、
 pending choice 和 planner-backed choice eval。Codex 在该体系中只做 artifact 审计员，
 不作为 pass / fail 裁判。11.3.6 closeout 的 `pass_with_caveats` 只表示受控 runtime
@@ -166,7 +166,7 @@ pending choice 和 planner-backed choice eval。Codex 在该体系中只做 arti
 choice 分支和 basic recovery menu；它不代表 WAgent 已经具备页面级自动能力发现、
 自动学习所有操作、自动生成完整操作库或面对任意新任务自动命中并执行的产品能力。
 `11.3.6.1-wagent-runtime-eval-runner-core/` 承接原 11.3.6 runner 设计，负责第一版
-可执行 runner。它通过 Conversation API 一次性运行 `/items` closed loop 和 single-path
+可执行 runner。它通过 Conversation API 一次性运行 `/records` closed loop 和 single-path
 direct replay regression，按 hard gates 写出 JSON / Markdown 证据，并用 exit code 表示
 验收结果。
 `11.3.6.2-failure-recovery-eval/` 是 11.3.6 program 的第二个执行包。它已在
@@ -179,7 +179,7 @@ runner core 上增加 `pending_choice_multi_candidate`，用当前 eval run 的�
 验证 11.3.5.7 pending choice public payload、private map safety 和选择 A 后执行正确 action；
 planner-backed choice 留到 11.3.6.4。最终 closeout rerun 已通过，状态：
 `implementation_complete_verified`。Caveat：当前 setup 为 eval-only candidate binding，
-不证明 `/items` 已有三个真实 distinct product actions。
+不证明 `/records` 已有三个真实 distinct product actions。
 `11.3.6.4-planner-backed-choice-eval/` 是 11.3.6 program 的第四个执行包。它计划在 runner
 core 上增加 `planner_backed_choice`，验证 11.3.5.9 TaskPathPlanner-backed choice path、
 sanitized planner events、private payload safety，以及单路径明确目标必须 bypass Planner 的回归。
@@ -205,7 +205,7 @@ vague-input 和 forbidden target scan；后续再扩展 explicit learn、pending
 choice selection、failure recovery 和受控 page capability learning。该包加入 hard gate：
 测试页面链接、route、页面文案、按钮名、字段名、DOM test id、fixture item names 和
 operation aliases 不得进入功能代码或产品 prompt，只能存在于 fixture、eval spec、测试、
-docs 和 artifact 中；当前已有 product-test-site runtime 特判也必须清理，未清理则 11.3.7
+docs 和 artifact 中；当前已有 fixture-site runtime 特判也必须清理，未清理则 11.3.7
 只能 blocked，不能 pass。
 该包已通过 first-wave user-facing behavior eval：latest artifact 记录 commit `e91c0f5`，并在
 `79156d8` 中刷新 artifacts / review / testing result。通过范围只覆盖第一批用户入口行为、

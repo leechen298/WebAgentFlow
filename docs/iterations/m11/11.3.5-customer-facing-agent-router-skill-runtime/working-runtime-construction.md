@@ -16,7 +16,7 @@
 学习新增项目 A -> 执行新增项目 B
 ```
 
-这不是普通 replay。系统必须在学习阶段识别出 `item_name` 是可替换参数，并在执行阶段
+这不是普通 replay。系统必须在学习阶段识别出 `record_name` 是可替换参数，并在执行阶段
 把用户新输入的 `测试项目B` 替换进 replay action。否则系统只是重复录制值
 `测试项目A`，不能算学会“新增项目”这个操作。
 
@@ -24,14 +24,14 @@
 
 | 事实 | 当前状态 | 本地路径 |
 |---|---|---|
-| `apps/product-test-site` 没有 `/items` 路由 | `/workspace-login`、`/workspace-home` 已有，`/items` 需要新增 | `apps/product-test-site/src/router/index.ts` |
+| `apps/fixture-site` 没有 `/records` 路由 | `/target-login`、`/workspace-home` 已有，`/records` 需要新增 | `apps/fixture-site/src/router/index.ts` |
 | `ReplayRequest` 只有 `url` | 没有 `slot_overrides` / `evidence_targets` | `apps/api/app/schemas/learned_path_replay.py` |
 | `ReplayAction` 有固定 `value` | 没有 `value_slot` | `apps/api/app/schemas/learned_path_replay.py` |
 | `run_replay()` 以 `learned_path + url` 为核心输入 | runtime 在 `finally` 中 stop，DOM evidence 要在 stop 前采集 | `apps/api/app/services/learning/learned_path_replay.py` |
 | `TaskResultReporter` 已存在 | outcome 是 `verified / failed / uncertain / needs_review / blocked`，且保守处理无 postcondition evidence 的情况 | `apps/api/app/services/task_planning/result_reporter.py` |
 | conversation runtime pieces 已存在 | 包括 `chat_runtime.py`、`entry_gate.py`、`intake.py`、`router_agent.py`、`skills.py`、`page_understanding.py`、`state.py` | `apps/api/app/services/conversation/` |
 | task planning services 已存在 | 包括 `planner.py`、`preview.py`、`result_reporter.py`、`retrieval.py` | `apps/api/app/services/task_planning/` |
-| `_fill_values_from_intake()` 只处理账号密码 | 当前不提取 `item_name` | `apps/api/app/services/conversation/chat_runtime.py` |
+| `_fill_values_from_intake()` 只处理账号密码 | 当前不提取 `record_name` | `apps/api/app/services/conversation/chat_runtime.py` |
 
 ## 1. 核心目标
 
@@ -57,12 +57,12 @@ WebAgentFlow 当前阶段的目标不是让 Agent 图看起来完整，而是稳
 P0 第一闭环必须是：
 
 ```text
-新增 product-test-site /items 列表页
+新增 fixture-site /records 列表页
   -> 用户：学习新增项目，名称叫测试项目A
   -> 系统学习新增项目操作
-  -> LearnedPath 中 fill action 绑定 value_slot=item_name
+  -> LearnedPath 中 fill action 绑定 value_slot=record_name
   -> 用户：帮我新增项目，名称叫测试项目B
-  -> 系统用 slot_overrides.item_name=测试项目B 执行 replay
+  -> 系统用 slot_overrides.record_name=测试项目B 执行 replay
   -> 页面列表出现测试项目B
   -> runtime 关闭前采集 ExecutionEvidence
   -> TaskResultReporter 输出 verified / uncertain / failed / needs_review / blocked
@@ -131,9 +131,9 @@ Reporter 没有 evidence 也说成功
 
 | 缺口 | 是否 P0 必做 | 原因 |
 |---|---:|---|
-| `/items` 列表测试页 | 是 | 当前没有稳定列表页闭环 |
-| `item_name` slot extraction | 是 | 没有它无法表达“新增 B” |
-| `_fill_values_from_intake()` 支持 `item_name` | 是 | 学习和执行都需要把用户 slot 变成 runtime fill values |
+| `/records` 列表测试页 | 是 | 当前没有稳定列表页闭环 |
+| `record_name` slot extraction | 是 | 没有它无法表达“新增 B” |
+| `_fill_values_from_intake()` 支持 `record_name` | 是 | 学习和执行都需要把用户 slot 变成 runtime fill values |
 | LearnedPath action 参数绑定 | 是 | 学习 A 后必须知道哪个 fill action 可替换 |
 | `ReplayRequest.slot_overrides` | 是 | 执行 B 时需要把 B 传给 replay |
 | `ReplayAction.value_slot` | 是 | action 需要知道哪个 slot 替换哪个 value |
@@ -166,18 +166,18 @@ Reporter 没有 evidence 也说成功
 | 标注 Router 只能建议 | P0 | 不能调用 skill，不能输出执行细节 |
 | 标注 TaskPathPlanner 已实现但不进 P0 | P0 | 防止简单单路径也绕 planner |
 | 标注 TaskResultReporter 已实现但需要 adapter | P0 | 不能假设它直接消费 `ExecutionEvidence[]` |
-| 标注 `/items` 是新增测试页 | P0 | 当前 product-test-site 没有该路由 |
+| 标注 `/records` 是新增测试页 | P0 | 当前 fixture-site 没有该路由 |
 | 标注 `pending_choice` / `active_task` 是新增能力 | P0 | 不能误写成当前行为 |
 
-### 4.2 包 1：`/items` 参数化新增闭环包
+### 4.2 包 1：`/records` 参数化新增闭环包
 
 这是当前第一施工包。
 
 范围只做：
 
 ```text
-新增 /items
-  -> item_name slot extraction
+新增 /records
+  -> record_name slot extraction
   -> 学习新增项目 A
   -> LearnedPath action value_slot 参数绑定
   -> 执行新增项目 B
@@ -297,11 +297,11 @@ Conversation Entry Gate
   |
   v
 Intake Agent
-识别 learn_operation + item_name=测试项目A
+识别 learn_operation + record_name=测试项目A
   |
   v
 Runtime
-生成 fill_values.item_name=测试项目A
+生成 fill_values.record_name=测试项目A
   |
   v
 Learning Agent Boundary
@@ -314,7 +314,7 @@ Learning Service
   v
 Runtime Parameterizer
 找到 fill value=测试项目A 的 action
-写入 value_slot=item_name
+写入 value_slot=record_name
   |
   v
 Response
@@ -325,16 +325,16 @@ Response
   |
   v
 Intake Agent
-识别 execute_operation + item_name=测试项目B
+识别 execute_operation + record_name=测试项目B
   |
   v
 Runtime
 找到唯一“新增项目” learned action
-检查 LearnedPath 支持 value_slot=item_name
+检查 LearnedPath 支持 value_slot=record_name
   |
   v
 ReplayRequest
-slot_overrides.item_name=测试项目B
+slot_overrides.record_name=测试项目B
 evidence_targets.dom_text_present=测试项目B
   |
   v
@@ -365,7 +365,7 @@ Response
 | Conversation Orchestrator / Dispatcher | 代码控制器 | 已有 | 外层总入口、会话状态、命令处理、事件落库、最终结果统一出口 | raw user input、session、command、metadata | DispatchResult、conversation events、最终回复 | 调 Interactive Chat Runtime、处理 cancel / abort / command | 不做自由 LLM 判断，不直接模拟网页操作 | 已有，包 0 文档同步 |
 | Interactive Chat Runtime | 代码编排核心 | 已有 | `wagent chat` 主链调度台 | session、message、metadata、runtime context | handler result、skill call、state update、response | Entry Gate、Intake、Context、Router、Learning、Execution | 不把最终控制权交给 Worker Agent | 已有，包 1 扩展 |
 | Conversation Entry Gate | 入口组件 | 已有 | 判断是否进入 heavy runtime | raw message、session metadata、pending 状态 | enter runtime / direct response | greeting、capability、unsupported、web task candidate | 不查 learned path，不执行浏览器 | 已有 |
-| Conversation Intake Agent | LLM + deterministic fallback | 已有 | 用户语义理解 | raw message、pending context、recent context | intent、target、action、slots、missing_fields、confidence | URL 提取、slot 提取、补充信息识别 | 不决定最终 next_agent，不调用 skill | 已有，包 1 扩展 `item_name` |
+| Conversation Intake Agent | LLM + deterministic fallback | 已有 | 用户语义理解 | raw message、pending context、recent context | intent、target、action、slots、missing_fields、confidence | URL 提取、slot 提取、补充信息识别 | 不决定最终 next_agent，不调用 skill | 已有，包 1 扩展 `record_name` |
 | Conversation Context Collector | 代码能力 | 已有 | 收集事实账本 | session、current message、metadata | recent messages、pending、learned_actions、last_no_path_reason | `collect_conversation_context` | 不生成业务决策 | 已有 |
 | Customer-Facing Agent Router | LLM + fallback | 已有 | 推荐下一步角色和 skill | raw message、intake、context、skill menu | route decision、next_agent、recommended_skill、reason、confidence | 推荐 ask / inspect / learning / web operation | 不直接执行，不输出 selector、browser action、learned_path_id | 已有 |
 | Runtime Adjudicator | 代码逻辑 | 已有 | 最终裁决与技能调用守门员 | intake、context、route decision、page context、learned actions | handler selection、skill call、state update、blocking reason | 调 registered application skills 和 internal adapters | 不把状态写入权交给 LLM | 已有，包 1 扩展参数化 |
@@ -418,20 +418,20 @@ Internal Runtime Adapters 不是 Application Skills。它们不得出现在 Rout
 | `capture_execution_evidence` | replay 后、runtime stop 前采集 DOM 证据 | replay runtime adapter | Playwright page、evidence_targets、slot_overrides | ExecutionEvidence[] | 是 |
 | `build_replay_reporter_input` | 把 replay result + evidence 转成 reporter 可消费输入 | reporter adapter | ReplayResult、ExecutionEvidence[]、user_goal、learned_action_alias | execution_payload、replay_summary、confirmed_plan_context | 是 |
 
-## 8. `/items` 列表测试页
+## 8. `/records` 列表测试页
 
 ### 8.1 新增位置
 
 ```text
-apps/product-test-site/src/pages/ItemsPage.vue
-apps/product-test-site/src/router/index.ts
+apps/fixture-site/src/pages/ItemsPage.vue
+apps/fixture-site/src/router/index.ts
 ```
 
 新增路由：
 
 ```ts
 {
-  path: '/items',
+  path: '/records',
   name: 'items',
   component: ItemsPage,
 }
@@ -471,10 +471,10 @@ type Item = {
 
 | 元素 | `data-testid` |
 |---|---|
-| 页面根节点 | `items-page` |
-| 项目名称输入框 | `item-name-input` |
-| 新增按钮 | `item-create-button` |
-| 列表容器 | `item-list` |
+| 页面根节点 | `records-page` |
+| 项目名称输入框 | `record-name-input` |
+| 新增按钮 | `record-create-button` |
+| 列表容器 | `record-list` |
 | 项目行 | `item-row` |
 | 项目名称 | `item-row-name` |
 | 操作状态 | `operation-status` |
@@ -493,14 +493,14 @@ P0 第一证据：
 {
   "kind": "dom_text_present",
   "target": "测试项目B",
-  "selector": "[data-testid='item-list']",
+  "selector": "[data-testid='record-list']",
   "status": "verified",
   "confidence": 0.95,
   "summary": "列表中出现了名称为“测试项目B”的项目行。"
 }
 ```
 
-## 9. `item_name` slot extraction
+## 9. `record_name` slot extraction
 
 ### 9.1 目标
 
@@ -517,7 +517,7 @@ Intake / Runtime 必须得到：
   "intent": "learn_operation",
   "action": "新增项目",
   "slots": {
-    "item_name": "测试项目A"
+    "record_name": "测试项目A"
   }
 }
 ```
@@ -535,7 +535,7 @@ Intake / Runtime 必须得到：
   "intent": "execute_operation",
   "action": "新增项目",
   "slots": {
-    "item_name": "测试项目B"
+    "record_name": "测试项目B"
   }
 }
 ```
@@ -545,25 +545,25 @@ Intake / Runtime 必须得到：
 统一使用：
 
 ```text
-item_name
+record_name
 ```
 
-可以兼容别名，但最终内部 contract 必须归一到 `item_name`。
+可以兼容别名，但最终内部 contract 必须归一到 `record_name`。
 
 | 用户说法 | 归一 slot |
 |---|---|
-| 名称叫测试项目A | `item_name=测试项目A` |
-| 项目名是测试项目A | `item_name=测试项目A` |
-| 新增测试项目A | `item_name=测试项目A` |
-| name 是测试项目A | `item_name=测试项目A` |
+| 名称叫测试项目A | `record_name=测试项目A` |
+| 项目名是测试项目A | `record_name=测试项目A` |
+| 新增测试项目A | `record_name=测试项目A` |
+| name 是测试项目A | `record_name=测试项目A` |
 
 ### 9.3 `_fill_values_from_intake()` 扩展
 
-P0 必须把 `item_name` 转成 fill values：
+P0 必须把 `record_name` 转成 fill values：
 
 ```json
 {
-  "item_name": "测试项目A"
+  "record_name": "测试项目A"
 }
 ```
 
@@ -571,13 +571,13 @@ P0 必须把 `item_name` 转成 fill values：
 
 ```json
 {
-  "item_name": "测试项目A",
+  "record_name": "测试项目A",
   "name": "测试项目A",
   "text": "测试项目A"
 }
 ```
 
-canonical key 仍然是 `item_name`。
+canonical key 仍然是 `record_name`。
 
 ## 10. 学习阶段参数绑定
 
@@ -595,7 +595,7 @@ Learning 录制出来的 fill action 可能是：
 {
   "step": 0,
   "action_type": "fill",
-  "target_selector": "[data-testid='item-name-input']",
+  "target_selector": "[data-testid='record-name-input']",
   "value": "测试项目A"
 }
 ```
@@ -618,7 +618,7 @@ Learning 录制出来的 fill action 可能是：
 {
   "step": 0,
   "action_type": "fill",
-  "target_selector": "[data-testid='item-name-input']",
+  "target_selector": "[data-testid='record-name-input']",
   "value": "测试项目A"
 }
 ```
@@ -629,9 +629,9 @@ Learning 录制出来的 fill action 可能是：
 {
   "step": 0,
   "action_type": "fill",
-  "target_selector": "[data-testid='item-name-input']",
+  "target_selector": "[data-testid='record-name-input']",
   "value": "测试项目A",
-  "value_slot": "item_name"
+  "value_slot": "record_name"
 }
 ```
 
@@ -641,8 +641,8 @@ Learning 录制出来的 fill action 可能是：
 
 ```text
 如果 action.action_type == "fill"
-并且 action.value == fill_values["item_name"]
-则 action.value_slot = "item_name"
+并且 action.value == fill_values["record_name"]
+则 action.value_slot = "record_name"
 ```
 
 ### 10.4 绑定结果
@@ -653,7 +653,7 @@ Learning 录制出来的 fill action 可能是：
 {
   "parameterization": {
     "status": "bound",
-    "slots": ["item_name"]
+    "slots": ["record_name"]
   }
 }
 ```
@@ -664,7 +664,7 @@ Learning 录制出来的 fill action 可能是：
 {
   "parameterization": {
     "status": "not_bound",
-    "reason": "No fill action matched item_name learning value"
+    "reason": "No fill action matched record_name learning value"
   }
 }
 ```
@@ -696,22 +696,22 @@ P0 请求示例：
 
 ```json
 {
-  "url": "http://localhost:5176/items",
+  "url": "http://localhost:<fixture-port>/records",
   "slot_overrides": {
-    "item_name": "测试项目B"
+    "record_name": "测试项目B"
   },
   "evidence_targets": [
     {
       "kind": "dom_text_present",
       "text": "测试项目B",
-      "source_slot": "item_name",
-      "selector": "[data-testid='item-list']"
+      "source_slot": "record_name",
+      "selector": "[data-testid='record-list']"
     }
   ]
 }
 ```
 
-`5176` 只是 product-test-site 本地示例端口。contract 中必须使用 runtime target URL，
+`<fixture-port>` 只是 fixture-site 本地示例端口。contract 中必须使用 runtime target URL，
 不能在代码里硬编码端口。
 
 ### 11.2 `ReplayAction` 扩展
@@ -756,9 +756,9 @@ def run_replay(
 
 P0 必须打通完整传播链，不能只改 schema 或只改 `run_replay()`：
 
-1. Intake Agent 提取 `slots.item_name`。
-2. Runtime `_fill_values_from_intake()` 生成 `fill_values.item_name`。
-3. execute branch 从 `fill_values` 构造 `slot_overrides.item_name`。
+1. Intake Agent 提取 `slots.record_name`。
+2. Runtime `_fill_values_from_intake()` 生成 `fill_values.record_name`。
+3. execute branch 从 `fill_values` 构造 `slot_overrides.record_name`。
 4. `start_replay` skill request 携带 `slot_overrides`。
 5. `ReplayRequest` 接收 `slot_overrides`。
 6. replay endpoint / service 把 `slot_overrides` 传给 `run_replay()`。
@@ -810,12 +810,12 @@ action。否则等待策略、日志和诊断仍可能引用学习阶段的旧�
 step log / debug trace 应记录：
 
 ```text
-value_slot=item_name
+value_slot=record_name
 override_applied=true
 effective_value=测试项目B
 ```
 
-`effective_value` 明文日志只允许用于 P0 `/items` 的非敏感测试字段。任何
+`effective_value` 明文日志只允许用于 P0 `/records` 的非敏感测试字段。任何
 credential / token / secret slot 必须记录为 `<redacted>`；后续涉及密码、token
 等敏感字段时，`effective_value` 必须脱敏。
 
@@ -823,9 +823,9 @@ credential / token / secret slot 必须记录为 `<redacted>`；后续涉及密�
 
 | 场景 | P0 处理 |
 |---|---|
-| action 有 `value_slot=item_name`，请求有 `slot_overrides.item_name` | 使用 override 值 |
-| action 有 `value_slot=item_name`，请求缺 `slot_overrides.item_name` | 阻断，提示缺少运行时参数 |
-| action 没有 `value_slot`，请求有 `slot_overrides.item_name` | 不替换 |
+| action 有 `value_slot=record_name`，请求有 `slot_overrides.record_name` | 使用 override 值 |
+| action 有 `value_slot=record_name`，请求缺 `slot_overrides.record_name` | 阻断，提示缺少运行时参数 |
+| action 没有 `value_slot`，请求有 `slot_overrides.record_name` | 不替换 |
 | 用户要求新增 B，但 path 没有参数绑定 | 阻断，不能执行固定值 replay |
 | 多个 fill action 匹配同一 slot | P0 可全部替换，但记录 warning |
 
@@ -862,14 +862,14 @@ class ExecutionEvidenceTarget(BaseModel):
     selector: str | None = None
 ```
 
-P0 的 `/items` evidence target 应优先限定在列表容器内：
+P0 的 `/records` evidence target 应优先限定在列表容器内：
 
 ```json
 {
   "kind": "dom_text_present",
   "text": "测试项目B",
-  "source_slot": "item_name",
-  "selector": "[data-testid='item-list']"
+  "source_slot": "record_name",
+  "selector": "[data-testid='record-list']"
 }
 ```
 
@@ -880,10 +880,10 @@ P0 的 `/items` evidence target 应优先限定在列表容器内：
 selector 缺失时才退化为全页面查找。
 采集 dom_text_present evidence 时，ExecutionEvidence.target 必须使用
 ExecutionEvidenceTarget.text，确保 Reporter verified 条件可以稳定匹配
-slot_overrides.item_name。
+slot_overrides.record_name。
 ```
 
-P0 测试数据的 `item_name` 必须唯一，例如 `测试项目B-${timestamp}`，避免页面其他区域
+P0 测试数据的 `record_name` 必须唯一，例如 `测试项目B-${timestamp}`，避免页面其他区域
 或历史状态里已有同名文本导致假阳性。
 
 ### 12.4 P0 evidence
@@ -1025,7 +1025,7 @@ replay_summary.error is empty
 execution_evidence 中存在：
   kind = "dom_text_present"
   status = "verified"
-  target = slot_overrides.item_name
+  target = slot_overrides.record_name
 ```
 
 不满足这些条件时，Reporter 不得输出 `verified`。例如 replay succeeded 但缺少
@@ -1091,7 +1091,7 @@ TaskPathPlanner 已实现，是 L3 deterministic service。
 | 用户目标模糊 | 是 |
 | planning preview API path | 是 |
 | 复杂组合任务 | 是 |
-| 包 1 `/items` 新增 happy path | 否 |
+| 包 1 `/records` 新增 happy path | 否 |
 
 ## 15. `pending_choice` 目标设计
 
@@ -1104,7 +1104,7 @@ TaskPathPlanner 已实现，是 L3 deterministic service。
 | 条件 | 示例 |
 |---|---|
 | 多个 learned actions 同时匹配 | “帮我处理一下这个页面” |
-| 用户只给 URL | `http://localhost:<product-test-site-port>/items` |
+| 用户只给 URL | `http://localhost:<fixture-site-port>/records` |
 | 低置信 intent | “搞一下” |
 | 用户目标冲突 | “学习一下然后删掉” |
 | 高风险操作 | 删除、提交、状态修改 |
@@ -1213,7 +1213,7 @@ type ActiveTask = {
 
 | 场景 | 用户输入 | Intake | Router | Runtime 裁决 | Skill / Worker | 状态写入 | 回复 |
 |---|---|---|---|---|---|---|---|
-| 只发 URL | `/items` URL | target 有，goal 缺 | ask_user | 保存 `pending_target` | `ask_user_for_missing_info` | `pending_target` | “我已记住页面地址，你想学习或执行哪个操作？” |
+| 只发 URL | `/records` URL | target 有，goal 缺 | ask_user | 保存 `pending_target` | `ask_user_for_missing_info` | `pending_target` | “我已记住页面地址，你想学习或执行哪个操作？” |
 | 要求看页面 | “看看这个页面能做什么” | inspect / understand | inspect / understand | 调页面理解 | `inspect_target_page` -> `understand_page` | page context trace | 页面摘要 + 追问目标 |
 | 页面不可访问 | URL 无法打开 | inspect | inspect | 阻断 | inspect failed | no-path reason | 说明无法检查页面 |
 | URL 中途变化 | pending A，用户给 B | provide new target | ask | 清旧 pending 或重建 | 无 | new pending | 要求重新确认目标 |
@@ -1230,14 +1230,14 @@ type ActiveTask = {
 |---:|---|---|
 | 1 | Entry Gate | 进入 heavy runtime |
 | 2 | Intake Agent | 识别 `learn_operation` |
-| 3 | Runtime | 提取 `item_name=测试项目A` |
-| 4 | Runtime | 生成 `fill_values.item_name=测试项目A` |
+| 3 | Runtime | 提取 `record_name=测试项目A` |
+| 4 | Runtime | 生成 `fill_values.record_name=测试项目A` |
 | 5 | Context Collector | 收集 target、pending、learned actions |
 | 6 | Router | 推荐 Learning Agent / `start_learning` |
 | 7 | Runtime Adjudicator | 校验信息完整 |
 | 8 | Learning Agent Boundary | 组织 learning request |
 | 9 | `start_learning` | 学习页面操作，生成 LearnedPath |
-| 10 | LearnedPath Parameterizer | 给匹配的 fill action 写 `value_slot=item_name` |
+| 10 | LearnedPath Parameterizer | 给匹配的 fill action 写 `value_slot=record_name` |
 | 11 | Runtime | 更新 learned_actions |
 | 12 | Response | 回复学习完成，说明项目名称可替换 |
 
@@ -1265,11 +1265,11 @@ type ActiveTask = {
 |---:|---|---|
 | 1 | Entry Gate | 进入 heavy runtime |
 | 2 | Intake Agent | 识别 `execute_operation` |
-| 3 | Runtime | 提取 `item_name=测试项目B` |
+| 3 | Runtime | 提取 `record_name=测试项目B` |
 | 4 | Context Collector | 找到唯一匹配的“新增项目” learned action |
-| 5 | Runtime Adjudicator | 检查 LearnedPath 有 `value_slot=item_name` |
-| 6 | Runtime | 构造 `slot_overrides.item_name=测试项目B` |
-| 7 | Runtime | 构造 `evidence_targets.dom_text_present=测试项目B`，并限定 `selector=[data-testid='item-list']` |
+| 5 | Runtime Adjudicator | 检查 LearnedPath 有 `value_slot=record_name` |
+| 6 | Runtime | 构造 `slot_overrides.record_name=测试项目B` |
+| 7 | Runtime | 构造 `evidence_targets.dom_text_present=测试项目B`，并限定 `selector=[data-testid='record-list']` |
 | 8 | Web Operation Agent Boundary | 组织 replay request |
 | 9 | run_replay | 对 fill action 应用 slot override |
 | 10 | run_replay | 实际填入 `测试项目B` |
@@ -1316,12 +1316,12 @@ type ActiveTask = {
 帮我新增项目，名称叫测试项目B
 ```
 
-有 learned path，但没有 `value_slot=item_name`。
+有 learned path，但没有 `value_slot=record_name`。
 
 | 步骤 | 组件 | 行为 |
 |---:|---|---|
 | 1 | Runtime | 找到 learned path |
-| 2 | Runtime | 检查发现无 `value_slot=item_name` |
+| 2 | Runtime | 检查发现无 `value_slot=record_name` |
 | 3 | Runtime | 阻断 replay |
 | 4 | Response | 要求重新学习 |
 
@@ -1379,11 +1379,11 @@ D. 学习一个新操作
 
 ## 18. P0 验收标准
 
-### 18.1 `/items` 页面验收
+### 18.1 `/records` 页面验收
 
 | 编号 | 测试 | 期望 |
 |---|---|---|
-| IT-1 | 打开 `/items` | 页面可访问 |
+| IT-1 | 打开 `/records` | 页面可访问 |
 | IT-2 | 输入项目名 | 可输入 |
 | IT-3 | 点击新增 | 列表出现新项目 |
 | IT-4 | 操作状态 | 显示新增成功或等价状态 |
@@ -1394,10 +1394,10 @@ D. 学习一个新操作
 | 编号 | 测试 | 期望 |
 |---|---|---|
 | LP-1 | 用户说“学习新增项目，名称叫测试项目A” | Intake 识别 `learn_operation` |
-| LP-2 | Runtime fill values | 有 `item_name=测试项目A` |
+| LP-2 | Runtime fill values | 有 `record_name=测试项目A` |
 | LP-3 | `start_learning` | 成功生成 LearnedPath |
 | LP-4 | LearnedPath actions | 至少一个 fill action 有 `value=测试项目A` |
-| LP-5 | 参数绑定 | 该 fill action 有 `value_slot=item_name` |
+| LP-5 | 参数绑定 | 该 fill action 有 `value_slot=record_name` |
 | LP-6 | 学习回复 | 说明项目名称是可替换参数 |
 | LP-7 | 绑定失败 | 不允许标成完整可参数化路径 |
 
@@ -1406,8 +1406,8 @@ D. 学习一个新操作
 | 编号 | 测试 | 期望 |
 |---|---|---|
 | EX-1 | 用户说“帮我新增项目，名称叫测试项目B” | Intake 识别 `execute_operation` |
-| EX-2 | Runtime slot | 有 `item_name=测试项目B` |
-| EX-3 | ReplayRequest | 有 `slot_overrides.item_name=测试项目B` |
+| EX-2 | Runtime slot | 有 `record_name=测试项目B` |
+| EX-3 | ReplayRequest | 有 `slot_overrides.record_name=测试项目B` |
 | EX-4 | Replay 执行 | fill action 实际使用 B，不是 A；step log / debug trace 可证明 effective value |
 | EX-5 | 页面结果 | 列表出现 `测试项目B` |
 | EX-6 | 反向保护 | 不新增录制值 `测试项目A` |
@@ -1418,7 +1418,7 @@ D. 学习一个新操作
 | 编号 | 测试 | 期望 |
 |---|---|---|
 | EV-1 | replay 完成后 | runtime stop 前采集 evidence |
-| EV-2 | 目标文本存在 | 优先在 `[data-testid='item-list']` 内查找，命中后 `ExecutionEvidence.status=verified` |
+| EV-2 | 目标文本存在 | 优先在 `[data-testid='record-list']` 内查找，命中后 `ExecutionEvidence.status=verified` |
 | EV-3 | 目标文本不存在 | `status=missing` 或 `unknown` |
 | EV-4 | 无法检查 DOM | `kind=unknown` |
 | EV-5 | Reporter 输入 | 包含 replay status + execution evidence |
@@ -1438,7 +1438,7 @@ D. 学习一个新操作
 | 编号 | 场景 | 期望 |
 |---|---|---|
 | S-1 | 无 learned action | 不执行，提示先学习 |
-| S-2 | path 无 `value_slot=item_name` | 不执行，提示重新学习参数化路径 |
+| S-2 | path 无 `value_slot=record_name` | 不执行，提示重新学习参数化路径 |
 | S-3 | replay 成功但 evidence 缺失 | 不说成功 |
 | S-4 | Router 输出执行细节 | schema / runtime reject |
 | S-5 | Router 推荐 `learn_then_execute` | runtime 保守阻断 |
@@ -1486,27 +1486,27 @@ D. 学习一个新操作
 1. 目标是做出真实可工作的 WebAgentFlow，不是机械遵守旧 M11 切分。
 2. 必要缺口可以提前加入，但必须拆成可验收施工包。
 3. 第一施工包只做：
-   新增 /items
-   -> item_name slot extraction
+   新增 /records
+   -> record_name slot extraction
    -> 学习新增项目 A
    -> LearnedPath action value_slot 参数绑定
    -> 执行新增项目 B
    -> replay slot_overrides 替换 A 为 B
    -> replay 结束前采集 ExecutionEvidence
    -> TaskResultReporter 保守回复。
-4. /items 是新增到 apps/product-test-site 的测试页，当前不是已有路由。
-5. _fill_values_from_intake 必须支持 item_name。
-6. 学习阶段必须把 item_name 学习值绑定到对应 fill action。
-7. ReplayRequest 必须新增 slot_overrides，至少支持 item_name。
+4. /records 是新增到 apps/fixture-site 的测试页，当前不是已有路由。
+5. _fill_values_from_intake 必须支持 record_name。
+6. 学习阶段必须把 record_name 学习值绑定到对应 fill action。
+7. ReplayRequest 必须新增 slot_overrides，至少支持 record_name。
 8. ReplayAction 必须新增 value_slot 或等价参数绑定字段。
 9. _build_replay_actions 必须读取 value_slot。
 10. run_replay 必须接受 slot_overrides，并在执行 fill action 前应用 override。
-11. 如果用户提供 item_name 但 LearnedPath 没有 item_name 参数绑定，Runtime 必须阻断，不能用固定录制值执行。
+11. 如果用户提供 record_name 但 LearnedPath 没有 record_name 参数绑定，Runtime 必须阻断，不能用固定录制值执行。
 12. ExecutionEvidence 是新增 / 扩展 contract，不要假设当前 TaskResultReporter 已经直接消费该结构。
 13. Internal Runtime Adapters 不是 Application Skills，不得出现在 Router skill menu，也不得由 LLM agents 直接请求。
 14. Evidence 必须在 Playwright runtime.stop() 前采集。
-15. P0 evidence 至少支持 dom_text_present 和 unknown；dom_text_present 优先限定在 [data-testid='item-list']。
-16. P0 测试 item_name 必须唯一，例如 测试项目B-${timestamp}。
+15. P0 evidence 至少支持 dom_text_present 和 unknown；dom_text_present 优先限定在 [data-testid='record-list']。
+16. P0 测试 record_name 必须唯一，例如 测试项目B-${timestamp}。
 17. TaskResultReporter 原生 outcome 使用 verified / failed / uncertain / needs_review / blocked。
 18. Reporter Adapter 必须让 TaskResultReporter._check_postconditions() 读到 structured postcondition evidence，否则 verified path 不算打通。
 19. 如果 UI 需要 success / partial_success，只能做 wrapper mapping，不要改写 reporter 原生语义。
@@ -1524,7 +1524,7 @@ D. 学习一个新操作
 31. ask_user_for_missing_info 必须写 pending，不允许只回复一句话就丢上下文。
 32. 敏感字段不得进入 agent trace、router trace、progress event。
 33. P0 验收必须证明 replay 实际填入的是“测试项目B”，不是学习时录制的“测试项目A”；step log / debug trace 必须能证明 effective value。
-34. 5176 只是示例端口，contract 使用 runtime target URL，不硬编码本地端口。
+34. <fixture-port> 只是示例端口，contract 使用 runtime target URL，不硬编码本地端口。
 35. 执行结果必须基于 evidence 保守报告。
 36. 文档状态要同步本地代码状态，避免 roadmap 与代码漂移。
 ```
@@ -1536,23 +1536,23 @@ D. 学习一个新操作
 ```text
 同步 docs / roadmap / M11 plan
 标清当前 conversation runtime pieces 已存在
-标清 /items 是新增页面
+标清 /records 是新增页面
 标清 TaskPathPlanner / TaskResultReporter 已实现
 标清 TaskPathPlanner 不进 P0
 标清 TaskResultReporter 需要 ExecutionEvidence adapter
 标清 pending_choice / active_task 是新增能力
 ```
 
-### 21.2 第二轮：`/items` 参数化闭环包
+### 21.2 第二轮：`/records` 参数化闭环包
 
 ```text
-新增 /items
+新增 /records
 实现新增项目 UI
-实现 item_name slot extraction
+实现 record_name slot extraction
 扩展 _fill_values_from_intake
 学习新增项目 A
 写 LearnedPath
-给 fill action 绑定 value_slot=item_name
+给 fill action 绑定 value_slot=record_name
 执行新增项目 B
 ReplayRequest.slot_overrides
 ReplayAction.value_slot
@@ -1596,20 +1596,20 @@ choice mode
 用户：学习新增项目，名称叫测试项目A
 
 系统：
-1. 提取 item_name = 测试项目A
+1. 提取 record_name = 测试项目A
 2. 学习新增项目操作
 3. LearnedPath 记录 fill value = 测试项目A
-4. Runtime 给该 fill action 加 value_slot = item_name
+4. Runtime 给该 fill action 加 value_slot = record_name
 5. 回复：已学会新增项目，项目名称可替换
 
 
 用户：帮我新增项目，名称叫测试项目B
 
 系统：
-1. 提取 item_name = 测试项目B
+1. 提取 record_name = 测试项目B
 2. 找到“新增项目”的 LearnedPath
-3. 检查 LearnedPath 支持 value_slot = item_name
-4. 构造 slot_overrides.item_name = 测试项目B
+3. 检查 LearnedPath 支持 value_slot = record_name
+4. 构造 slot_overrides.record_name = 测试项目B
 5. replay 时把 fill action value 替换为测试项目B
 6. 执行新增
 7. runtime 关闭前检查 DOM 是否出现测试项目B

@@ -9,7 +9,7 @@
 在 2026-05-25 外部黑盒验证中，用户教了：
 
 ```text
-Learn how to create an inventory item with SKU NB-ALP-001,
+Learn how to create an inventory item with record_code REC-ALP-001,
 name Alpine Notebook, category Stationery, and stock quantity 24.
 ```
 
@@ -31,7 +31,7 @@ utterances = 帮我Learn how to create / Learn how to create 一下
 随后用户用新值请求同一业务动作：
 
 ```text
-Create an inventory item with SKU MUG-SKY-014,
+Create an inventory item with record_code REC-SKY-014,
 name Skyline Mug, category Office, and stock quantity 18.
 ```
 
@@ -82,7 +82,7 @@ create inventory item
 - 不处理登录、删除、支付、权限、跨站授权等高风险业务域。
 - 不迁移或修改外部站点。
 - 不恢复主仓库内嵌 test site。
-- 不把旧 `5176/items` eval 重新作为 active 默认 eval。
+- 不把旧 `<fixture-port>/records` eval 重新作为 active 默认 eval。
 
 ## Success Definition
 

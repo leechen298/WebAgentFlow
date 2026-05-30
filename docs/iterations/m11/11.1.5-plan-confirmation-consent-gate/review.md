@@ -85,7 +85,7 @@ These decisions close the initial 11.1.5 open questions before implementation.
 **explicit_replay_blocked_by_pending_confirmation:**
 ```json
 {
-  "user_input": "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users",
+  "user_input": "/replay 11111111-1111-1111-1111-111111111111 https://example.invalid/records",
   "reason": "replay_blocked_by_pending_confirmation",
   "selected_path_id": "lp-001",
   "replay_executed": false

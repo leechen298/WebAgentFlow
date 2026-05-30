@@ -45,7 +45,7 @@
 5. Scope and target-constant scan:
    - Run:
      ```bash
-     rg -n "5177|/inventory|inventory item|WebAgentFlow-Validation-Site|data-testid" apps/api/app/routers/conversation.py apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py
+     rg -n "<fixture-port>|/target-page|inventory item|External-Fixture-Provider|data-testid" apps/api/app/routers/conversation.py apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py
      ```
    - Every match must be classified.
    - Target URL, route, selector, seed data, page-source, runtime default, prompt answer key, or eval-default references in changed runtime code are blockers.

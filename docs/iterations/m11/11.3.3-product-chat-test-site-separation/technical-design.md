@@ -6,10 +6,10 @@
 
 当前仓库已有：
 
-- `apps/validation-site`：工程验证靶场，包含 `/login`、`/users`、runtime observation fixtures
+- `apps/fixture-site`：工程验证靶场，包含 `/entry`、`/records`、runtime observation fixtures
   和 `specs/*.assertions.json`。
-- `wagent chat`：interactive chat 产品入口，已经能学习 `/login` 并执行已学操作。
-- 早期 M11.3 `/login` happy path：仍可能通过 `spec_id=login`、
+- `wagent chat`：interactive chat 产品入口，已经能学习 `/entry` 并执行已学操作。
+- 早期 M11.3 `/entry` happy path：仍可能通过 `spec_id=login`、
   `scenario=valid_credentials` 和 validation assertions 完成学习验证。
 - `11.3.2-chat-history-debug-console`：已占用 11.3.2 编号，本包不能覆盖。
 - `11.2.4.2-single-page-basic-business-pages`：属于 M11.2 validation fixture 体系，
@@ -19,9 +19,9 @@
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
-| product-test-site 独立 | 新增 `apps/product-test-site`，不放在 validation-site specs 体系里 | `test-plan.md` SITE-1 / SITE-2 | 后续代码阶段 |
+| fixture-site 独立 | 新增 `apps/fixture-site`，不放在 fixture-site specs 体系里 | `test-plan.md` SITE-1 / SITE-2 | 后续代码阶段 |
 | 产品级 chat learning 不读 assertions | learning mode 不传 `spec_id / scenario`，inputs 来自用户 utterance | `test-plan.md` CHAT-1 / CHAT-2 | acceptance blocker |
-| validation-site 保留 | 不删除 specs / routes / verify-scenario | `test-plan.md` REG-1 | 工程回归继续可用 |
+| fixture-site 保留 | 不删除 specs / routes / verify-scenario | `test-plan.md` REG-1 | 工程回归继续可用 |
 | 11.3.2 不动 | 新包编号 11.3.3，仅索引追加 | 文档 review | 避免编号冲突 |
 | CLI 入口修复不回退 | 用户指南继续以 `.venv/bin/wagent chat` 为主入口 | `test-plan.md` DOC-2 | 不只提示 source |
 
@@ -32,7 +32,7 @@
 实现阶段新增：
 
 ```text
-apps/product-test-site/
+apps/fixture-site/
   package.json
   index.html
   src/
@@ -47,17 +47,17 @@ apps/product-test-site/
 推荐 dev script：
 
 ```text
-vite --port 5176 --strictPort
+vite --port <fixture-port> --strictPort
 ```
 
 第一阶段只实现产品级登录闭环；订单查询页可先作为后续扩展页面规划。
 
 ### Page Semantics
 
-产品级登录页不复制 validation `/login`：
+产品级登录页不复制 validation `/entry`：
 
 ```text
-route: /workspace-login
+route: /target-login
 title: 工作台入口
 field: 操作员账号
 field: 访问口令
@@ -78,10 +78,10 @@ success: 工作台首页 / 已进入工作台
 
 实现阶段应：
 
-- 将 `@web-agent-flow/product-test-site` 加入 pnpm workspace。
-- 提供独立 `pnpm --filter @web-agent-flow/product-test-site dev`。
-- 在根 `pnpm run dev` 中增加 product-test-site，作为普通用户和人工验收的一键启动路径。
-- 固定端口 `5176`，不得和 console `5174`、validation-site `5175`、api `8001` 冲突。
+- 将 `@web-agent-flow/fixture-site` 加入 pnpm workspace。
+- 提供独立 `pnpm --filter @web-agent-flow/fixture-site dev`。
+- 在根 `pnpm run dev` 中增加 fixture-site，作为普通用户和人工验收的一键启动路径。
+- 固定端口 `<fixture-port>`，不得和 console `5174`、fixture-site `5175`、api `8001` 冲突。
 
 根目录一键启动的目标进程应变为：
 
@@ -89,8 +89,8 @@ success: 工作台首页 / 已进入工作台
 console      -> http://localhost:5174
 api          -> http://localhost:8001
 worker       -> async worker
-validation   -> http://localhost:5175
-product      -> http://localhost:5176
+validation   -> https://example.invalid
+product      -> http://localhost:<fixture-port>
 ```
 
 独立 filter dev 只作为开发调试入口，不作为 M11.3.3 人工验收主路径。
@@ -123,7 +123,7 @@ product-level learning:
 ```
 
 学习请求必须以用户输入的 URL 为唯一目标页面来源。实现阶段需要移除当前
-`/login` only gate，不能再对 product-level learning 返回“当前只支持学习登录页”。
+`/entry` only gate，不能再对 product-level learning 返回“当前只支持学习登录页”。
 
 不引入复杂 LLM 意图理解。
 
@@ -137,9 +137,9 @@ product-level learning:
   "alias": "进入工作台",
   "utterances": ["帮我进入工作台"],
   "learned_path_id": "...",
-  "target_url": "http://localhost:5176/workspace-login",
-  "site_origin": "http://localhost:5176",
-  "page_template": "/workspace-login"
+  "target_url": "http://localhost:<fixture-port>/target-login",
+  "site_origin": "http://localhost:<fixture-port>",
+  "page_template": "/target-login"
 }
 ```
 
@@ -154,7 +154,7 @@ product-level learning:
 - same alias across sites：同一 alias 在不同 target URL 上不能互相覆盖；需要按
   alias + target URL / site scope 区分。
 
-第一版不做全局 LearnedPath fallback，避免历史 validation-site path 污染 product-level smoke。
+第一版不做全局 LearnedPath fallback，避免历史 fixture-site path 污染 product-level smoke。
 
 ## 影响面（Affected Surfaces）
 
@@ -169,7 +169,7 @@ product-level learning:
 | Replay execution | No | 已学 path 的 replay 继续复用现有能力 | N/A |
 | Reporter | No | 不接 Task Result Reporter | N/A |
 | Worker / async jobs | No | 同步 dev site | N/A |
-| Tests / fixtures | Yes | 新 product-test-site 页面和 smoke | validation-site 保留 |
+| Tests / fixtures | Yes | 新 fixture-site 页面和 smoke | fixture-site 保留 |
 | Docs | Yes | 本轮生成文档包和索引 | 当前交付 |
 
 ## 数据模型 / Schema 变更（Data Model / Schema Changes）
@@ -187,7 +187,7 @@ product-level learning:
 - product-level：服务 `wagent chat` 普通用户路径，输入来自 utterance。
 
 不要让 product-level handler 调用 validation spec loader。
-不要让 product-level handler 检查 path 必须等于 `/login`。
+不要让 product-level handler 检查 path 必须等于 `/entry`。
 不要让 execute path 在未学习目标 URL 时 fallback 到其他站点的 LearnedPath。
 
 ## 数据流（Data Flow）
@@ -197,7 +197,7 @@ product-level learning:
 ```text
 wagent chat utterance
 -> parse target_url + credential-like inputs
--> open product-test-site URL
+-> open fixture-site URL
 -> autonomous learning with user-provided inputs
 -> persist LearnedPath
 -> session learned_actions with target_url / site_origin
@@ -218,8 +218,8 @@ no path -> task_intake
 
 ## 兼容性（Compatibility）
 
-- validation-site regression 不受 product-test-site 影响。
-- `pnpm run dev` 一键启动后 product-test-site 可访问。
+- fixture-site regression 不受 fixture-site 影响。
+- `pnpm run dev` 一键启动后 fixture-site 可访问。
 - `wagent verify` 继续使用 validation specs。
 - `wagent chat` 主入口继续使用 `.venv/bin/wagent chat`。
 - 11.3.2 history/debug console 可并行开发；它读取 conversation 历史，不依赖本包页面实现。
@@ -228,9 +228,9 @@ no path -> task_intake
 
 - 用户未提供必要输入：产品级 learning 不得回退去读 validation spec；应返回可理解的缺少输入提示或学习失败。
 - 用户未提供学习 URL：不默认跳到任何固定站点，提示需要提供页面地址。
-- product-test-site 未启动：CLI/API 返回目标页面不可访问的普通用户文案。
-- product-test-site 登录失败：不标记学习完成，不沉淀 LearnedPath。
-- validation assertions 被修改：不应影响 product-test-site 学习路径。
+- fixture-site 未启动：CLI/API 返回目标页面不可访问的普通用户文案。
+- fixture-site 登录失败：不标记学习完成，不沉淀 LearnedPath。
+- validation assertions 被修改：不应影响 fixture-site 学习路径。
 - 用户要求操作未学习过的 URL / site：返回 `还没学过这个站点或页面，需要先学习。`。
 - 同一 alias 在多个 target URL 上都存在：没有 URL 时不应跨站点猜测，需返回需要更明确目标的用户级反馈。
 - 用户执行已学 alias 但指定另一个 URL：不得用已学 URL 的 path 去操作指定 URL，除非该 URL 已在当前 session 学过。
@@ -248,10 +248,10 @@ no path -> task_intake
 | Test area | Coverage goal | Detailed plan |
 |---|---|---|
 | Docs | 文档包完整、索引一致、CLI 入口不回退 | `test-plan.md` DOC |
-| Product site build | product-test-site 可构建 | `test-plan.md` SITE |
-| Product page smoke | `/workspace-login` 页面可手动操作 | `test-plan.md` SITE |
+| Product site build | fixture-site 可构建 | `test-plan.md` SITE |
+| Product page smoke | `/target-login` 页面可手动操作 | `test-plan.md` SITE |
 | Chat product smoke | 不读 validation specs，也只学习 / 执行用户指定或已学习的目标站点 | `test-plan.md` CHAT |
-| Validation regression | validation-site build 和 verify/smoke 能力保留 | `test-plan.md` REG |
+| Validation regression | fixture-site build 和 verify/smoke 能力保留 | `test-plan.md` REG |
 
 ## 验证命令入口（Validation Commands）
 
@@ -264,7 +264,7 @@ git diff --check
 实现阶段：
 
 ```bash
-pnpm --filter @web-agent-flow/product-test-site build
-pnpm --filter @web-agent-flow/validation-site build
+pnpm --filter @web-agent-flow/fixture-site build
+pnpm --filter @web-agent-flow/fixture-site build
 pnpm run dev
 ```

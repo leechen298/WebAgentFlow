@@ -212,7 +212,7 @@ Verification summary:
 | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_router_agent.py -q` | `15 passed in 0.07s` | 0 | Focused router tests |
 | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py -q` | `110 passed in 0.77s` | 0 | Combined focused suite |
 | `cd apps/api && ../../.venv/bin/python -m ruff check app/services/conversation/chat_runtime.py app/services/conversation/router_agent.py tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py` | `All checks passed!` | 0 | Focused lint |
-| `rg -n "5177\|/inventory\|inventory item\|WebAgentFlow-Validation-Site" apps/api/app/services/conversation/chat_runtime.py apps/api/app/services/conversation/router_agent.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py` | No output | 1 | No forbidden target constants in touched runtime/tests |
+| `rg -n "<fixture-port>\|/target-page\|inventory item\|External-Fixture-Provider" apps/api/app/services/conversation/chat_runtime.py apps/api/app/services/conversation/router_agent.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py` | No output | 1 | No forbidden target constants in touched runtime/tests |
 | `git diff --check` | Clean | 0 | Patch sanity |
 
 Subagents:
@@ -390,7 +390,7 @@ Verification summary:
 | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_learning_run_service.py -q` | `11 passed in 0.09s` | 0 | Focused learning service tests |
 | `cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q` | `89 passed in 0.80s` | 0 | Focused chat runtime tests |
 | `cd apps/api && ../../.venv/bin/python -m ruff check app/services/learning/learning_run_service.py app/services/conversation/chat_runtime.py tests/test_learning_run_service.py tests/test_conversation_chat_runtime.py` | `All checks passed!` | 0 | Focused lint |
-| `rg -n "5177\|/inventory\|inventory item\|WebAgentFlow-Validation-Site" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | No output | 1 | No target constants in touched runtime/tests |
+| `rg -n "<fixture-port>\|/target-page\|inventory item\|External-Fixture-Provider" apps/api/app/services/learning/learning_run_service.py apps/api/app/services/conversation/chat_runtime.py apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py` | No output | 1 | No target constants in touched runtime/tests |
 | `git diff --check` | Clean | 0 | Whitespace check |
 | read-only code/test/evidence subagent review | Code/test re-review approved after P1 fix; stale review finding addressed in child closeout | N/A | No live validation run |
 
@@ -495,7 +495,7 @@ Evidence summary:
 - Scoped implementation diff `45ed70d^..86d3c5a` was reviewed for `learning_run_service.py`, `chat_runtime.py`, `conversation.py`, and focused tests.
 - Focused tests passed: `tests/test_learning_run_service.py` reported `10 passed in 0.10s`; `tests/test_conversation_chat_runtime.py` reported `86 passed in 0.76s`.
 - Focused ruff passed with `All checks passed!`.
-- Target-constant scan for `5177`, `/inventory`, `inventory item`, and `WebAgentFlow-Validation-Site` returned no matches in the scoped implementation/test files.
+- Target-constant scan for `<fixture-port>`, `/target-page`, `inventory item`, and `External-Fixture-Provider` returned no matches in the scoped implementation/test files.
 - `git diff --check` was clean.
 
 Not run:

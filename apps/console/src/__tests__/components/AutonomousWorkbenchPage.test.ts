@@ -106,7 +106,7 @@ function mockSpecs() {
     {
       spec_id: 'login',
       page_id: 'login',
-      url_pattern: '/login',
+      url_pattern: '/entry',
       description: 'Login page',
       scenarios: [
         {
@@ -163,7 +163,7 @@ describe('AutonomousWorkbenchPage', () => {
     await flushPromises();
 
     const vm = wrapper.vm as unknown as { form: { url: string } };
-    vm.form.url = '/login';
+    vm.form.url = '/entry';
     await flushPromises();
 
     expect(wrapper.text()).toContain('Spec matched');

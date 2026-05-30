@@ -364,7 +364,7 @@ describe('LearnedPathCatalogPage', () => {
       stored_signature: {},
       current_signature: {},
       steps: [],
-      final_url: 'http://127.0.0.1:5175/users',
+      final_url: 'https://example.invalid/records',
       final_title: 'Users',
     });
 
@@ -379,7 +379,7 @@ describe('LearnedPathCatalogPage', () => {
       await flushPromises();
 
       const input = wrapper.find('input');
-      await input.setValue('http://127.0.0.1:5175/users');
+      await input.setValue('https://example.invalid/records');
       await flushPromises();
 
       const replayBtn = wrapper.findAll('button').find((b) =>
@@ -390,7 +390,7 @@ describe('LearnedPathCatalogPage', () => {
         await flushPromises();
 
         expect(replayLearnedPath).toHaveBeenCalledWith('path-001', {
-          url: 'http://127.0.0.1:5175/users',
+          url: 'https://example.invalid/records',
         });
       }
     }

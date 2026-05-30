@@ -25,7 +25,7 @@
 - TaskPathPlanner 多候选。
 - Failure Recovery 菜单。
 
-完整 `/items` live closed-loop evidence 留给 11.3.5.6。
+完整 `/records` live closed-loop evidence 留给 11.3.5.6。
 
 ## Test Matrix
 
@@ -46,7 +46,7 @@
 | RTR-3 | Reporter | replay succeeded + missing target | outcome `needs_review` 或不为 `verified` |
 | RTR-4 | Reporter | replay failed | outcome `failed` |
 | RTR-5 | Reporter | drift != none | outcome `failed` / `blocked`，不 verified |
-| CHAT-1 | Runtime | execute `/items` with `slot_overrides.item_name` | 构造 `[data-testid='item-list']` evidence target |
+| CHAT-1 | Runtime | execute `/records` with `slot_overrides.record_name` | 构造 `[data-testid='record-list']` evidence target |
 | CHAT-2 | Runtime | reporter returns verified | user_response 说明看到目标项目 |
 | CHAT-3 | Runtime | no evidence | user_response 不说成功 |
 
@@ -67,8 +67,8 @@ def test_execution_evidence_target_text_maps_to_evidence_target() -> None:
     target = ExecutionEvidenceTarget(
         kind="dom_text_present",
         text="测试项目B-001",
-        source_slot="item_name",
-        selector="[data-testid='item-list']",
+        source_slot="record_name",
+        selector="[data-testid='record-list']",
     )
 
     evidence = _capture_dom_text_present(page_with_item_list, target)
@@ -90,15 +90,15 @@ assert mock_run_replay.call_args.kwargs["evidence_targets"] == [
     ExecutionEvidenceTarget(
         kind="dom_text_present",
         text="测试项目B-001",
-        source_slot="item_name",
-        selector="[data-testid='item-list']",
+        source_slot="record_name",
+        selector="[data-testid='record-list']",
     )
 ]
 ```
 
 ### `tests/test_task_planning_result_reporter.py`
 
-- `test_verified_when_structured_dom_text_evidence_matches_item_name`
+- `test_verified_when_structured_dom_text_evidence_matches_record_name`
 - `test_uncertain_when_replay_succeeded_without_postcondition_evidence`
 - `test_not_verified_when_dom_text_evidence_missing`
 
@@ -108,7 +108,7 @@ assert mock_run_replay.call_args.kwargs["evidence_targets"] == [
 report = reporter.build_report(
     execution_status="completed",
     execution_payload={
-        "slot_overrides": {"item_name": "测试项目B-001"},
+        "slot_overrides": {"record_name": "测试项目B-001"},
         "execution_evidence": [
             {
                 "kind": "dom_text_present",
@@ -121,13 +121,13 @@ report = reporter.build_report(
     },
     replay_summary=ConversationReplaySummary(
         learned_path_id="lp-001",
-        url="http://localhost:5176/items",
+        url="http://localhost:<fixture-port>/records",
         replay_status="succeeded",
         drift_status="none",
     ),
     confirmed_plan_context={
         "learned_path_id": "lp-001",
-        "slot_overrides": {"item_name": "测试项目B-001"},
+        "slot_overrides": {"record_name": "测试项目B-001"},
         "postcondition_evidence": [
             {
                 "kind": "dom_text_present",
@@ -154,7 +154,7 @@ assert report.event_payload["task_verified"] is True
 示例断言：
 
 ```python
-assert replay_call.kwargs["evidence_targets"][0].selector == "[data-testid='item-list']"
+assert replay_call.kwargs["evidence_targets"][0].selector == "[data-testid='record-list']"
 assert replay_call.kwargs["evidence_targets"][0].text == "测试项目B-001"
 assert "看到了“测试项目B-001”" in result.user_response
 ```
@@ -208,7 +208,7 @@ git diff --check
 - `verify-scenario`
 - autonomous exploration
 - live product UI smoke
-- full `/items` learn A / execute B closed loop
+- full `/records` learn A / execute B closed loop
 
 如果实现者临时做了本地浏览器 smoke，只能记录为辅助观察，不能替代本包 targeted tests，
 也不能写成 11.3.5.6 闭环证据。

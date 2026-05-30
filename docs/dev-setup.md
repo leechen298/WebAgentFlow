@@ -73,7 +73,7 @@
    Configure WebAgentFlow to use that external fixture URL and spec root:
 
    ```bash
-   export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+   export WAF_FIXTURE_SITE_URL=https://example.invalid
    export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
    # Local example:
    export WAF_PAGE_SPEC_ROOT=/Users/leechen/projects/WebAgentFlow-Fixture-Site/web/specs
@@ -119,9 +119,8 @@ Runs one autonomous exploration via the HTTP API and prints the
 result JSON. The API must be running (`pnpm run dev:api`).
 
 ```bash
-.venv/bin/wagent verify --spec-id login --scenario valid_credentials
-.venv/bin/wagent verify --url "${WAF_FIXTURE_SITE_URL:-http://127.0.0.1:5175}/users" \
-    --fill-values '{"name":"alice"}'
+.venv/bin/wagent verify --url "${WAF_FIXTURE_SITE_URL:-<fixture-site-url>}/<fixture-path>" \
+    --fill-values '{"<field>":"<value>"}'
 ```
 
 - stdout → one JSON object (trimmed; add `--full` for the complete

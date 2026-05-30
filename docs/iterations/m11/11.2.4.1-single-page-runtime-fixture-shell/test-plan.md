@@ -6,7 +6,7 @@
 
 11.2.4.1 实现完成后应覆盖：
 
-- validation-site index catalog。
+- fixture-site index catalog。
 - runtime observation route shell。
 - category navigation。
 - fixture card metadata rendering。
@@ -40,7 +40,7 @@
 
 ## Future Unit / Component Tests
 
-如果 validation-site 有组件测试基础，后续应覆盖：
+如果 fixture-site 有组件测试基础，后续应覆盖：
 
 - `RuntimeObservationIndex` renders category cards。
 - Fixture card renders `fixture_id`、platform、business complexity、phase、status。
@@ -56,7 +56,7 @@
 
 - `/runtime-observation` 可打开。
 - 首页 `/` 有 Runtime Observation 分类入口。
-- `/login`、`/users` 原入口不受影响。
+- `/entry`、`/records` 原入口不受影响。
 - category navigation 可见。
 - planned fixture cards 可见。
 - missing future fixture routes are not presented as implemented links。
@@ -78,12 +78,12 @@
 
 ```bash
 git diff --check
-pnpm --filter @web-agent-flow/validation-site build
+pnpm --filter @web-agent-flow/fixture-site build
 git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```
 
-validation-site 当前没有 `test` script；不得虚构 component test PASS。
+fixture-site 当前没有 `test` script；不得虚构 component test PASS。
 
 如后续新增 component tests 或 E2E，再补充真实命令和证据。当前 11.2.4.1 不运行 E2E /
 `verify-scenario` / autonomous run。

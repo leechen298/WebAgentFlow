@@ -24,9 +24,9 @@ class _DummyRuntimeFactory:
 
 def _exploration_result(
     *,
-    url: str = "http://localhost:5175/login",
+    url: str = "https://example.invalid/entry",
     title: str = "Sign in",
-    final_url: str = "http://localhost:5175/dashboard",
+    final_url: str = "https://example.invalid/dashboard",
     final_title: str = "Dashboard",
     verdict: str = "success",
     success: bool = True,
@@ -84,7 +84,7 @@ def test_learning_service_returns_run_id_and_queryable_learned_path_id(
 
     result = service.run(
         LearningRunRequest(
-            url="http://localhost:5175/login",
+            url="https://example.invalid/entry",
             spec_id="login",
             scenario="valid_credentials",
             goal="学习登录",

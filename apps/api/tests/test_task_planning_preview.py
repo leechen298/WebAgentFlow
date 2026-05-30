@@ -49,7 +49,7 @@ class _StubPlanner:
 def _candidate(
     learned_path_id: str = "lp-001",
     scenario: str = "login",
-    page_template: str = "/login",
+    page_template: str = "/entry",
     trust: str = "confirmed",
     match_reasons: list[str] | None = None,
     warnings: list[str] | None = None,

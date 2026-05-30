@@ -98,8 +98,8 @@ git diff --check
 - 输入：
 
 ```text
-You > http://localhost:5176/workspace-login
-WAgent > 我会打开浏览器执行：http://localhost:5176/workspace-login。
+You > http://localhost:<fixture-port>/target-login
+WAgent > 我会打开浏览器执行：http://localhost:<fixture-port>/target-login。
 WAgent > 还没学过这个站点或页面，需要先学习。
 You > 学习
 WAgent > 我会打开浏览器执行：学习。

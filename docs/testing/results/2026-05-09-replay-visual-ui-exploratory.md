@@ -61,14 +61,14 @@ HTTP/1.1 200 OK
 {"code":0,"data":{"status":"ok","database":"ok"},"msg":"ok"}
 ```
 
-### console / validation-site
+### console / fixture-site
 
 默认沙箱内直接访问 `5174` / `5175` 曾返回连接失败；确认已有本机 Node 进程监听后，
 升级权限访问通过：
 
 ```text
 http://127.0.0.1:5174/exploration/learned-paths -> HTTP/1.1 200 OK
-http://127.0.0.1:5175/users -> HTTP/1.1 200 OK
+https://example.invalid/records -> HTTP/1.1 200 OK
 ```
 
 ### E2E seed
@@ -121,7 +121,7 @@ http://127.0.0.1:5174/exploration/learned-paths
 重跑状态：成功
 页面变化：签名已变化
 警告：Signature changed: query_signature or dom_fingerprint differs from stored values
-最终 URL：http://127.0.0.1:5175/users?name=alice
+最终 URL：https://example.invalid/records?name=alice
 ```
 
 本次还通过 in-app browser 显示了该最终状态截图；截图未作为文件提交。
@@ -131,14 +131,14 @@ http://127.0.0.1:5174/exploration/learned-paths
 | Case | Scenario | 操作 URL | 状态 | 页面可见证据 |
 | --- | --- | --- | --- | --- |
 | UI-001 | `e2e:replay:happy` | empty | PASS | “重跑”按钮 disabled |
-| UI-002 | `e2e:replay:happy` | `http://127.0.0.1:5175/users` | PASS | `成功`、`无变化`、最终 URL、`Step 0` |
-| UI-OBS | `e2e:replay:observational` | `http://127.0.0.1:5175/users` | PASS | `这条路径没有动作，已完成页面观察`、`无变化`、`暂无步骤日志` |
-| UI-PAGE-MISMATCH | `e2e:replay:page-mismatch` | `http://127.0.0.1:5175/login` | PASS | `页面变化导致无法重跑`、`页面不匹配` |
-| UI-004 | `e2e:replay:target-missing` | `http://127.0.0.1:5175/users` | PASS | `页面变化导致无法重跑`、`找不到当初记录的按钮或输入框` |
-| UI-UNSUPPORTED | `e2e:replay:unsupported-action` | `http://127.0.0.1:5175/users` | PASS | `这类动作当前还不能重跑` |
-| UI-003 | `e2e:replay:flaky` | `http://127.0.0.1:5175/users` | PASS | `成功`、`Path trust is flaky` |
-| UI-005 | `e2e:replay:deprecated` | `http://127.0.0.1:5175/users` | PASS | `重跑失败`、`learned_path is deprecated` |
-| UI-SIGNATURE | `e2e:replay:signature-changed` | `http://127.0.0.1:5175/users` | PASS | `成功`、`签名已变化` |
+| UI-002 | `e2e:replay:happy` | `https://example.invalid/records` | PASS | `成功`、`无变化`、最终 URL、`Step 0` |
+| UI-OBS | `e2e:replay:observational` | `https://example.invalid/records` | PASS | `这条路径没有动作，已完成页面观察`、`无变化`、`暂无步骤日志` |
+| UI-PAGE-MISMATCH | `e2e:replay:page-mismatch` | `https://example.invalid/entry` | PASS | `页面变化导致无法重跑`、`页面不匹配` |
+| UI-004 | `e2e:replay:target-missing` | `https://example.invalid/records` | PASS | `页面变化导致无法重跑`、`找不到当初记录的按钮或输入框` |
+| UI-UNSUPPORTED | `e2e:replay:unsupported-action` | `https://example.invalid/records` | PASS | `这类动作当前还不能重跑` |
+| UI-003 | `e2e:replay:flaky` | `https://example.invalid/records` | PASS | `成功`、`Path trust is flaky` |
+| UI-005 | `e2e:replay:deprecated` | `https://example.invalid/records` | PASS | `重跑失败`、`learned_path is deprecated` |
+| UI-SIGNATURE | `e2e:replay:signature-changed` | `https://example.invalid/records` | PASS | `成功`、`签名已变化` |
 
 ## 原始 browser observation 摘录
 
@@ -157,19 +157,19 @@ http://127.0.0.1:5174/exploration/learned-paths
   {
     "id": "UI-002",
     "scenario": "e2e:replay:happy",
-    "url": "http://127.0.0.1:5175/users",
+    "url": "https://example.invalid/records",
     "status": "PASS",
     "checks": {
       "成功": true,
       "无变化": true,
-      "http://127.0.0.1:5175/users": true,
+      "https://example.invalid/records": true,
       "Step 0": true
     }
   },
   {
     "id": "UI-OBS",
     "scenario": "e2e:replay:observational",
-    "url": "http://127.0.0.1:5175/users",
+    "url": "https://example.invalid/records",
     "status": "PASS",
     "checks": {
       "这条路径没有动作，已完成页面观察": true,
@@ -180,7 +180,7 @@ http://127.0.0.1:5174/exploration/learned-paths
   {
     "id": "UI-PAGE-MISMATCH",
     "scenario": "e2e:replay:page-mismatch",
-    "url": "http://127.0.0.1:5175/login",
+    "url": "https://example.invalid/entry",
     "status": "PASS",
     "checks": {
       "页面变化导致无法重跑": true,
@@ -190,7 +190,7 @@ http://127.0.0.1:5174/exploration/learned-paths
   {
     "id": "UI-004",
     "scenario": "e2e:replay:target-missing",
-    "url": "http://127.0.0.1:5175/users",
+    "url": "https://example.invalid/records",
     "status": "PASS",
     "checks": {
       "页面变化导致无法重跑": true,
@@ -200,7 +200,7 @@ http://127.0.0.1:5174/exploration/learned-paths
   {
     "id": "UI-UNSUPPORTED",
     "scenario": "e2e:replay:unsupported-action",
-    "url": "http://127.0.0.1:5175/users",
+    "url": "https://example.invalid/records",
     "status": "PASS",
     "checks": {
       "这类动作当前还不能重跑": true
@@ -209,7 +209,7 @@ http://127.0.0.1:5174/exploration/learned-paths
   {
     "id": "UI-003",
     "scenario": "e2e:replay:flaky",
-    "url": "http://127.0.0.1:5175/users",
+    "url": "https://example.invalid/records",
     "status": "PASS",
     "checks": {
       "成功": true,
@@ -219,7 +219,7 @@ http://127.0.0.1:5174/exploration/learned-paths
   {
     "id": "UI-005",
     "scenario": "e2e:replay:deprecated",
-    "url": "http://127.0.0.1:5175/users",
+    "url": "https://example.invalid/records",
     "status": "PASS",
     "checks": {
       "重跑失败": true,
@@ -229,7 +229,7 @@ http://127.0.0.1:5174/exploration/learned-paths
   {
     "id": "UI-SIGNATURE",
     "scenario": "e2e:replay:signature-changed",
-    "url": "http://127.0.0.1:5175/users",
+    "url": "https://example.invalid/records",
     "status": "PASS",
     "checks": {
       "成功": true,

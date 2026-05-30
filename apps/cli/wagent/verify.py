@@ -410,7 +410,7 @@ def _resolve_url_from_spec(
 
     A spec's ``url_pattern`` is a *match pattern* used by the workbench
     to auto-pick a spec for an operator-typed URL — it can be a bare
-    path like ``/login``. Only absolute ``http(s)://`` values are safe
+    path. Only absolute ``http(s)://`` values are safe
     to navigate to; for path-style patterns this returns None and
     emits a stderr hint telling the caller to pass ``--url`` explicitly.
     """
@@ -429,7 +429,7 @@ def _resolve_url_from_spec(
     print(
         f"wagent verify: spec '{spec_id}' has a path-style url_pattern "
         f"('{raw}'); pass --url explicitly, e.g. "
-        f"--url http://localhost:5175{raw}",
+        f"--url <absolute-target-origin>{raw}",
         file=sys.stderr,
     )
     return None

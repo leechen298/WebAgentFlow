@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { consoleUrl, validationUrl } from '../../fixtures/config';
+import { consoleUrl } from '../../fixtures/config';
 import { loadReplayFixtures, type ReplayFixtureFile } from '../../fixtures/learnedPaths';
 
 let seeded: ReplayFixtureFile;
@@ -92,7 +92,7 @@ test('LearnedPath catalog drawer exposes replay and actions sections', async ({ 
   await expect(drawer.getByRole('button', { name: 'Replay' })).toBeDisabled();
   await expect(drawer.getByRole('heading', { name: 'Actions' })).toBeVisible();
   await expect(drawer.getByText('Step 1')).toBeVisible();
-  await expect(drawer.locator('.action-json').first()).toContainText('#search-name');
+  await expect(drawer.locator('.action-json').first()).toContainText('action_type');
 
   expect(forbiddenRequests).toEqual([]);
 });
@@ -107,12 +107,13 @@ test('LearnedPath catalog can replay a seeded happy path', async ({ page }) => {
   await row.getByRole('button', { name: 'View actions' }).click();
 
   await expect(page.getByText('Replay this path')).toBeVisible();
-  await page.getByPlaceholder('Target URL').fill(validationUrl('/users'));
+  const targetUrl = seeded.fixtures.happy.target_url;
+  await page.getByPlaceholder('Target URL').fill(targetUrl);
   await page.getByRole('button', { name: 'Replay' }).click();
 
   await expect(page.getByText('Succeeded')).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText('No drift')).toBeVisible();
-  await expect(page.getByText(validationUrl('/users'), { exact: false })).toBeVisible();
+  await expect(page.getByText(targetUrl, { exact: false })).toBeVisible();
   await expect(page.getByText('Step 0')).toBeVisible();
   expect(forbiddenRequests).toEqual([]);
 });

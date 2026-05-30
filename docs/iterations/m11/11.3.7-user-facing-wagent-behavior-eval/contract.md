@@ -63,7 +63,7 @@ Known / unknown isolation is required:
 
 允许出现这些内容的位置仅限：
 
-- 测试 fixture 自身，例如 product-test-site 页面源码；
+- 测试 fixture 自身，例如 fixture-site 页面源码；
 - eval spec / test data / test-only fixtures；
 - eval runner 的测试配置层，前提是它不被产品 runtime import；
 - unit / integration / E2E 测试文件；
@@ -86,7 +86,7 @@ LearnedPath metadata、用户消息和明确的 eval spec 输入，不能靠测�
 
 Existing target-specific runtime special cases are blockers. Examples include route checks such as
 the test page path, selector checks such as the test list selector, hard-coded fixture field names,
-or operation aliases that only exist to pass the product-test-site scenario. They must be removed,
+or operation aliases that only exist to pass the fixture-site scenario. They must be removed,
 made generic, or moved into eval spec / test-only code before 11.3.7 can pass.
 
 No grandfather exception is allowed. If cleanup cannot happen in the 11.3.7 implementation run, the

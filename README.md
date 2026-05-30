@@ -25,9 +25,9 @@ runtime.
 - **External Fixture-Site contract** — deterministic regression fixtures run
   outside this repository and connect through `WAF_FIXTURE_SITE_URL` and
   `WAF_PAGE_SPEC_ROOT`.
-- **External black-box validation plan** — product-like validation targets are
-  supplied as user-provided URLs to `wagent`; the validation-site source is not
-  part of this workspace.
+- **Target-agnostic runtime boundary** — product-like targets are supplied by
+  operators at runtime; this repository does not carry their source pages,
+  scenarios, or answer keys.
 - **`wagent` verify-scenario backend** — Python CLI support used by the
   `verify-scenario` skill for auditable development verification.
 - **`wagent conversation` runtime conversation CLI** — non-interactive CLI for
@@ -195,13 +195,12 @@ CORS_ALLOWED_ORIGINS=http://<your-current-lan-ip>:5174,http://localhost:5174,htt
   cd /Users/leechen/projects/WebAgentFlow-Fixture-Site
   pnpm dev
 
-  export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+  export WAF_FIXTURE_SITE_URL=https://example.invalid
   export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
   ```
 
-  Product-like black-box validation uses an external target URL provided to
-  `wagent`; see
-  [external-black-box-validation-plan.md](./docs/testing/external-black-box-validation-plan.md).
+  Product-like validation targets are provided to `wagent` at runtime. Keep
+  target source pages and scenario catalogs outside this repository.
 
 - All services together:
 

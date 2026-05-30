@@ -339,7 +339,7 @@ http://127.0.0.1:5174/exploration/autonomous/cases
 
 1. 打开 use-cases 页面。
 2. 确认 scenario list 或 empty state 可见。
-3. 如果存在 validation-site scenario，选择一个。
+3. 如果存在可运行 scenario，选择一个。
 4. 点击该 scenario 的 `Run in Workbench`。
 5. 确认跳转到 workbench，URL query 带有 url / scenario / goal 等参数。
 

@@ -75,7 +75,7 @@ describe('LearnedPath API', () => {
   it('getLearnedPath hits the detail route', async () => {
     const detail: LearnedPathDetail = {
       id: 'abc',
-      page_template: '/users',
+      page_template: '/records',
       query_signature: {},
       dom_fingerprint: 'x'.repeat(64),
       scenario: 'filter_by_status',
@@ -124,18 +124,18 @@ describe('LearnedPath API', () => {
       stored_signature: {},
       current_signature: {},
       steps: [],
-      final_url: 'http://127.0.0.1:5175/users',
+      final_url: 'https://example.invalid/records',
       final_title: 'Users',
     };
     post.mockResolvedValueOnce(result);
 
     await expect(
-      replayLearnedPath('abc', { url: 'http://127.0.0.1:5175/users' }),
+      replayLearnedPath('abc', { url: 'https://example.invalid/records' }),
     ).resolves.toEqual(result);
 
     expect(post).toHaveBeenCalledWith(
       '/exploration/learned-paths/abc/replay',
-      { url: 'http://127.0.0.1:5175/users' },
+      { url: 'https://example.invalid/records' },
     );
   });
 });
@@ -148,17 +148,17 @@ describe('Spec API', () => {
   });
 
   it('listSpecs fetches the spec list', async () => {
-    const specs = [{ spec_id: 'login', page_id: 'login', url_pattern: 'http://x/login', description: 'd', scenarios: [] }];
+    const specs = [{ spec_id: 'entry', page_id: 'entry', url_pattern: 'http://x/entry', description: 'd', scenarios: [] }];
     get.mockResolvedValueOnce(specs);
     await expect(listSpecs()).resolves.toEqual(specs);
     expect(get).toHaveBeenCalledWith('/exploration/specs');
   });
 
   it('getSpec fetches a single spec by id', async () => {
-    const spec = { spec_id: 'login', page_id: 'login', url_pattern: 'http://x/', description: 'd', scenarios: [] };
+    const spec = { spec_id: 'entry', page_id: 'entry', url_pattern: 'http://x/', description: 'd', scenarios: [] };
     get.mockResolvedValueOnce(spec);
-    await expect(getSpec('login')).resolves.toEqual(spec);
-    expect(get).toHaveBeenCalledWith('/exploration/specs/login');
+    await expect(getSpec('entry')).resolves.toEqual(spec);
+    expect(get).toHaveBeenCalledWith('/exploration/specs/entry');
   });
 });
 

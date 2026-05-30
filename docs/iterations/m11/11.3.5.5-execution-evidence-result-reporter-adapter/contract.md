@@ -17,24 +17,24 @@ class ExecutionEvidenceTarget(BaseModel):
     selector: str | None = None
 ```
 
-`/items` 新增项目的 P0 target：
+`/records` 新增项目的 P0 target：
 
 ```json
 {
   "kind": "dom_text_present",
   "text": "测试项目B-20260521-001",
-  "source_slot": "item_name",
-  "selector": "[data-testid='item-list']"
+  "source_slot": "record_name",
+  "selector": "[data-testid='record-list']"
 }
 ```
 
 规则：
 
 - `text` 是要查找的业务结果文本。
-- `source_slot` 记录该文本来自哪个 slot，P0 是 `item_name`。
+- `source_slot` 记录该文本来自哪个 slot，P0 是 `record_name`。
 - `selector` 存在时必须优先在 selector 指定区域内查找文本。
 - selector 缺失时才退化为全页面查找。
-- 不允许用 toast、debug log 或历史文本优先判断 `/items` 新增成功。
+- 不允许用 toast、debug log 或历史文本优先判断 `/records` 新增成功。
 
 ### ExecutionEvidence
 
@@ -60,7 +60,7 @@ ExecutionEvidence.target 必须使用 ExecutionEvidenceTarget.text。
 这保证 Reporter verified 条件可以稳定比较：
 
 ```text
-execution_evidence.target == slot_overrides.item_name
+execution_evidence.target == slot_overrides.record_name
 ```
 
 ### Internal Runtime Adapter 边界
@@ -210,7 +210,7 @@ replay_summary.error is empty
 execution_evidence 中存在：
   kind = "dom_text_present"
   status = "verified"
-  target = slot_overrides.item_name
+  target = slot_overrides.record_name
 ```
 
 不满足时不得输出 `verified`。
@@ -251,7 +251,7 @@ execution_evidence 中存在：
 
 ## 测试数据契约
 
-P0 测试 `item_name` 必须唯一，例如：
+P0 测试 `record_name` 必须唯一，例如：
 
 ```text
 测试项目B-20260521-001

@@ -20,12 +20,12 @@ existing failure. They are not treated as product pass / fail evidence.
 
 | Layer | Evidence |
 | --- | --- |
-| URL-only setup | User input was `http://127.0.0.1:5177/inventory`. The session saved a pending target for that URL and returned `还没学过这个页面。你可以先学习这个页面上的操作、查看页面，或取消。`. No learning or execution event started from the URL-only turn. |
-| Learning intake | The learn input was parsed as `intent=learn_operation`, `confidence=0.95`, `action.goal=Create inventory item`, `canonical_goal=create_inventory_item`, with aliases such as `add inventory item` / `new inventory item` / `create new item`, and with SKU, name, category, and quantity slots present. |
-| Learning request / run | The persisted exploration run was product-level, had target URL `http://127.0.0.1:5177/inventory`, and stored the full learning goal text. The run completed and persisted a LearnedPath hash `sha256:3eae41576d79`; the run verdict snapshot was still `failure` because the product-level save rule accepted supervisor-observed DOM mutation despite no URL/title change. |
+| URL-only setup | User input was `http://127.0.0.1:<fixture-port>/target-page`. The session saved a pending target for that URL and returned `还没学过这个页面。你可以先学习这个页面上的操作、查看页面，或取消。`. No learning or execution event started from the URL-only turn. |
+| Learning intake | The learn input was parsed as `intent=learn_operation`, `confidence=0.95`, `action.goal=Create inventory item`, `canonical_goal=create_inventory_item`, with aliases such as `add inventory item` / `new inventory item` / `create new item`, and with record_code, name, category, and quantity slots present. |
+| Learning request / run | The persisted exploration run was product-level, had target URL `http://127.0.0.1:<fixture-port>/target-page`, and stored the full learning goal text. The run completed and persisted a LearnedPath hash `sha256:3eae41576d79`; the run verdict snapshot was still `failure` because the product-level save rule accepted supervisor-observed DOM mutation despite no URL/title change. |
 | Learned action metadata | `chat_learning_completed` recorded alias `Learn how to create `. Session `learned_actions` stored alias `Learn how to create ` and utterances `帮我Learn how to create ` / `Learn how to create 一下`. The stored action did not retain `Create inventory item`, `create_inventory_item`, or the inventory business object as matchable terms. |
-| LearnedPath row | The LearnedPath row hash was `sha256:3eae41576d79`, page template `/inventory`, scenario `product_level`, trust `provisional`, provenance `system`, and action count `6`. It did not expose a useful business action label; the reusable session action label came from the runtime learning result, not from the page actions themselves. |
-| Execute intake | The execute input was parsed as `intent=execute_operation`, `confidence=0.95`, `action.goal=Create inventory item`, `canonical_goal=create_inventory_item`, and had SKU, name, category, and quantity slots present. The target URL resolved to the same `/inventory` page. |
+| LearnedPath row | The LearnedPath row hash was `sha256:3eae41576d79`, page template `/target-page`, scenario `product_level`, trust `provisional`, provenance `system`, and action count `6`. It did not expose a useful business action label; the reusable session action label came from the runtime learning result, not from the page actions themselves. |
+| Execute intake | The execute input was parsed as `intent=execute_operation`, `confidence=0.95`, `action.goal=Create inventory item`, `canonical_goal=create_inventory_item`, and had record_code, name, category, and quantity slots present. The target URL resolved to the same `/target-page` page. |
 | Router decision | The router LLM trace selected `recommended_skill=start_replay`, `user_goal=Create inventory item`, and `known_context.has_learned_action=true`. This showed the high-level router considered the action relevant, but it did not bind a concrete session action for runtime execution. |
 | Matcher outcome | Runtime `_matching_actions()` compared the execute input and intake terms against action alias / utterances. A pure-function replay of the same terms produced `matches_count=0`: normalized action terms were `learnhowtocreate` / `learnhowtocreate一下`, while execute terms were `Create inventory item` / `create_inventory_item`. |
 | Final WAgent response | Runtime entered `chat_no_path` with `reason=target_operation_unmatched`, `learned_action_count=1`, and learned action label `Learn how to create `. The visible response was `我学过这个页面的一些操作：Learn how to create。但还没学过你要做的这个操作。你可以先学习这个新操作，学会后再让我执行，或取消。` |
@@ -50,7 +50,7 @@ existing failure. They are not treated as product pass / fail evidence.
 - Preserve the intake business goal when creating product-level learning action labels.
 - Generate suggested utterances that include the business object, not only the raw "learn how to" phrase.
 - Let execution matching compare canonical goal / business object overlap, not only literal action alias and utterance terms.
-- Add regression coverage for English learn/create/inventory-item normalization, including learn input followed by execute input with new slot values.
+- Add regression coverage for English learn/create/target-page-item normalization, including learn input followed by execute input with new slot values.
 
 ## Triage Conclusion
 

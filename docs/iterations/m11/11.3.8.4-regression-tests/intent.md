@@ -25,7 +25,7 @@
 - 不运行 `wagent chat` live product validation。
 - 不调用 `verify-scenario`、browser smoke、direct autonomous-run endpoint 或 direct replay
   API product validation。
-- 不依赖 external Validation-Site / Fixture-Site source、route、selector、seed copy、
+- 不依赖 external Fixture-Site / Fixture-Site source、route、selector、seed copy、
   page source 或 service availability。
 - 不修改 runtime behavior，除非 design review 明确批准 test seam 修复。
 

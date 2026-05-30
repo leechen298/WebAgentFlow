@@ -35,7 +35,7 @@
 ## 设计自检
 
 - [x] 明确 `ExecutionEvidenceTarget.text -> ExecutionEvidence.target`。
-- [x] 明确 selector 优先 `[data-testid='item-list']`。
+- [x] 明确 selector 优先 `[data-testid='record-list']`。
 - [x] 明确 evidence capture 在 runtime stop 前。
 - [x] 明确 Reporter verified path 必须读取 structured postcondition evidence。
 - [x] 明确 outcome 保持 `verified / failed / uncertain / needs_review / blocked`。

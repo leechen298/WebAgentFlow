@@ -9,8 +9,8 @@
 - 人工 review 否决第一版 basic fixtures：页面业务密度不足，更像 toy UI demo。
 - 当前代码已按 `fixture-designs/*.md` 重做为 shared shell + per-fixture components。
 - 当前实现等待最终 review / evidence closure。
-- validation-site 当前没有 mock backend dependency。
-- validation-site 当前 package 有 `build` script，没有独立 `test` script。
+- fixture-site 当前没有 mock backend dependency。
+- fixture-site 当前 package 有 `build` script，没有独立 `test` script。
 
 ## 合约对齐 / 不变量（Contract Alignment / Invariants）
 
@@ -33,11 +33,11 @@
 | Surface | Changed? | Implementation impact | Compatibility notes |
 |---|---|---|---|
 | `fixture-designs/*.md` | Yes | 作为页面实现 source of truth | 新增文档 |
-| `apps/validation-site/src/pages/runtime-observation/basic/*` | Yes | shared shell + per-fixture components | 保留 route namespace |
-| validation-site router | Yes | existing basic routes point to the shared shell | 不新增全局 basic routes |
-| validation-site index `/` | No | 通常不需要改首页 | 已有 Runtime Observation 入口 |
-| validation-site i18n | Yes | en / zh / ja labels for richer fixtures | 三语同步 |
-| validation-site specs | No | 可后续补 route smoke/spec | 不跑 E2E 假通过 |
+| `apps/fixture-site/src/pages/runtime-observation/basic/*` | Yes | shared shell + per-fixture components | 保留 route namespace |
+| fixture-site router | Yes | existing basic routes point to the shared shell | 不新增全局 basic routes |
+| fixture-site index `/` | No | 通常不需要改首页 | 已有 Runtime Observation 入口 |
+| fixture-site i18n | Yes | en / zh / ja labels for richer fixtures | 三语同步 |
+| fixture-site specs | No | 可后续补 route smoke/spec | 不跑 E2E 假通过 |
 | API routes | No | 不新增 API | N/A |
 | DB schema | No | 不新增 migration | N/A |
 | Replay / wait service | No | 不改 observation runtime | N/A |
@@ -49,17 +49,17 @@
 当前实现采用 shared shell + per-fixture components：
 
 ```text
-apps/validation-site/src/pages/runtime-observation/basic/
-apps/validation-site/src/pages/runtime-observation/basic/BasicBusinessFixtureShell.vue
-apps/validation-site/src/pages/runtime-observation/basic/fixtures/
-apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicLoginFixture.vue
-apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicRegisterFixture.vue
-apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicSmsLoginFixture.vue
-apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicSearchFixture.vue
-apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicDetailFixture.vue
-apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicSettingsFixture.vue
-apps/validation-site/src/pages/runtime-observation/basic/fixtures/BasicConfirmFixture.vue
-apps/validation-site/src/pages/runtime-observation/basic/basicFixtures.ts
+apps/fixture-site/src/pages/runtime-observation/basic/
+apps/fixture-site/src/pages/runtime-observation/basic/BasicBusinessFixtureShell.vue
+apps/fixture-site/src/pages/runtime-observation/basic/fixtures/
+apps/fixture-site/src/pages/runtime-observation/basic/fixtures/BasicLoginFixture.vue
+apps/fixture-site/src/pages/runtime-observation/basic/fixtures/BasicRegisterFixture.vue
+apps/fixture-site/src/pages/runtime-observation/basic/fixtures/BasicSmsLoginFixture.vue
+apps/fixture-site/src/pages/runtime-observation/basic/fixtures/BasicSearchFixture.vue
+apps/fixture-site/src/pages/runtime-observation/basic/fixtures/BasicDetailFixture.vue
+apps/fixture-site/src/pages/runtime-observation/basic/fixtures/BasicSettingsFixture.vue
+apps/fixture-site/src/pages/runtime-observation/basic/fixtures/BasicConfirmFixture.vue
+apps/fixture-site/src/pages/runtime-observation/basic/basicFixtures.ts
 ```
 
 Design intent:
@@ -176,7 +176,7 @@ These states are fixture UI states only. They do not change `WaitResult.status`,
 
 ## Compatibility
 
-- Existing `/login` and `/users` remain unchanged.
+- Existing `/entry` and `/records` remain unchanged.
 - Existing `/runtime-observation` shell remains the entrypoint.
 - `/runtime-observation/basic/*` route namespace remains stable.
 - Planned medium / complex / mobile / mock-backend cards remain planned or deferred.
@@ -195,7 +195,7 @@ These states are fixture UI states only. They do not change `WaitResult.status`,
 
 ```bash
 git diff --check
-pnpm --filter @web-agent-flow/validation-site build
+pnpm --filter @web-agent-flow/fixture-site build
 git status --short
 git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print

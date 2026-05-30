@@ -27,11 +27,10 @@ WebAgentFlow 提供一个结构化平台：学习网页、复用已验证 Learne
   catalog、引导首页。未来可承载 teaching overlay、operator review surface、
   artifact display 和更丰富的 workbench 面板。
 - `apps/api` —— HTTP API、LLM provider 层、autonomous exploration、
-  LearnedPath persistence / replay、page verification、validation-api mock
-  后端、conversation domain / store / API。未来可承载 task planning schemas、
+  LearnedPath persistence / replay、page verification、conversation domain /
+  store / API。未来可承载 task planning schemas、
   Agent routing、artifact metadata 和 failure-evidence APIs。
 - `apps/worker` —— 异步执行骨架（当前是脚手架）。
-- `apps/validation-site` —— 自主探索的自建测试 fixture（login、users 等）。
 - `apps/cli` —— Python CLI（`wagent`）与 `verify-scenario` Claude Code
   skill。它也承载 M11.0 runtime conversation CLI（`wagent conversation`），
   当前通过 Conversation API 工作，不直接访问数据库。
@@ -96,11 +95,11 @@ Execution MVP 现在进入规划；当前包是
 - **Page analyzer**（`services/learning/page_analyzer.py`）—— 实时页面元素发现，纯结构分类（禁止关键词 / 站点启发式）。从 HTML type + 通用 name/placeholder 词素推断 fillable 的 `semantic_role`（username / password / email / search / text）。
 - **Action planner**（`services/learning/action_planner.py`）—— 规则式多字段规划器。`fill_values` 字典按语义角色匹配最合适的 fillable；没有结构化 submit 时用 fallback 按钮从附近 clickable 里挑。
 - **Autonomous explorer**（`services/learning/autonomous_explorer.py`）—— 编排器，通过 SSE 发出阶段事件。结果 verdict 是 `success | incomplete | no_progress | uncertain`。
-- **Page verification comparator**（`services/learning/page_verification.py`）—— 对照人工基线（`apps/validation-site/specs/<page>.assertions.json`），产出 5 项独立评分（element_recognition / action_coverage / verdict_accuracy / distraction_avoidance / supervisor_agreement）。**不做总分**。
+- **Page verification comparator**（`services/learning/page_verification.py`）—— 对照配置 spec root 加载的人工基线，产出 5 项独立评分（element_recognition / action_coverage / verdict_accuracy / distraction_avoidance / supervisor_agreement）。**不做总分**。
 - **Autonomous Workbench**（`pages/AutonomousWorkbenchPage.vue`）—— 用户驱动 UI，SSE 实时进度；**7 个区块**：运行配置、实时阶段状态、页面分析、执行时间线（每步截图支持 `<a-image>` 点击放大）、验证（self verdict + supervisor + 5 项评分）、SSE 原始事件审计（每条事件都记录，带复制按钮 + 全屏 modal）、来源标识。
 - **Supervisor 透明化** —— Supervisor Agent 的 `<think>...</think>` 推理轨迹保留在 `LlmResponse.thinking`，在 supervisor 卡片以折叠面板"思考过程"展示。旁边标注模型 ID（`_model`）。`llm_provider.py` 里的 `generate_structured` 通过 `_split_thinking()` 拆出 thinking 而不是静默丢弃。
 - **UI 语言感知的 Supervisor** —— UI locale（BCP-47，如 `zh` / `en` / `ja`）通过流式端点透传到 Supervisor prompt，以"用 {language} 写所有自然语言字段"覆盖默认的"跟随页面标题语言"规则。映射表在 `autonomous_explorer._LANGUAGE_NAMES`。
-- **Validation site**（`apps/validation-site`）—— 自建 Vue fixture（目前有 login + dashboard，将来更多），autonomous exploration 不依赖公网站点（避免 CAPTCHA / 限流噪声）。`/` 路由是 `IndexPage.vue`，目录化展示可用 fixture。
+- **外部 fixture provider** —— 确定性 fixture 位于本仓库外。WebAgentFlow 消费配置的 URL / spec root 并记录结果，但不携带 fixture 页面或答案 key。
 
 ---
 
@@ -132,7 +131,6 @@ Execution MVP 现在进入规划；当前包是
 - Page analysis schema：`apps/api/app/schemas/page_analysis.py`
 - Exploration router：`apps/api/app/routers/exploration.py`
 - Validation API router：`apps/api/app/routers/validation_api.py`
-- Validation specs：`apps/validation-site/specs/*.{md,assertions.json}`
 
 ### AST 双轨：客户端 vs 服务端职责
 
@@ -225,8 +223,7 @@ Execution MVP 现在进入规划；当前包是
 
 应用是纯引擎。**站点特定知识绝不硬编码在 Python 代码里。**
 
-- **Verification specs** 在 `apps/validation-site/specs/*.{md,assertions.json}`
-  —— 描述页面的人工基线，包含正向路径与负向路径两类场景。
+- **Verification specs** 是从配置 spec root 加载的外部输入，描述被测目标的人工基线。
 - **自主引擎**（`autonomous_explorer.py`）通用 —— 拿到 URL（可选配
   spec + scenario）后在运行时发现结构。
 - **切换目标站点**等于新增一份 spec，不改 Python 代码。

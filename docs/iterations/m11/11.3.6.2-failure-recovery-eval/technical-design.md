@@ -48,7 +48,7 @@ pnpm run eval:wagent:failure-recovery
 
 ```text
 create_session(metadata.client=wagent_eval)
-setup /items learned path if needed
+setup /records learned path if needed
 send execute turn with eval fault injection metadata
 collect messages / events / history
 evaluate recovery gates

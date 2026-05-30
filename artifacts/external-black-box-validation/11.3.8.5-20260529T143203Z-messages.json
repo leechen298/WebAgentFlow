@@ -3,7 +3,7 @@
     "id": "84f1ed8c-a203-4a82-bfd2-1e70d87b848d",
     "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
     "role": "user",
-    "content": "http://127.0.0.1:5177/inventory",
+    "content": "http://127.0.0.1:<fixture-port>/target-page",
     "metadata": {
       "client": "wagent_chat",
       "browser_visibility": "headless"
@@ -59,7 +59,7 @@
     "id": "85403b6b-1170-4fa8-89da-77c7460e42ce",
     "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
     "role": "user",
-    "content": "Learn how to create an inventory item with SKU NB-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
+    "content": "Learn how to create an inventory item with record_code REC-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
     "metadata": {
       "client": "wagent_chat",
       "browser_visibility": "headless"
@@ -139,7 +139,7 @@
     "id": "4a434ecc-2e36-4b46-9384-d955054e4c47",
     "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
     "role": "user",
-    "content": "Create an inventory item with SKU MUG-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
+    "content": "Create an inventory item with record_code REC-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
     "metadata": {
       "client": "wagent_chat",
       "browser_visibility": "headless"
@@ -185,7 +185,7 @@
     "id": "81c313fc-07c1-414a-8fb8-116ecdabf119",
     "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
     "role": "agent",
-    "content": "执行完成。页面证据已确认目标值“MUG-SKY-014”。",
+    "content": "执行完成。页面证据已确认目标值“REC-SKY-014”。",
     "metadata": {
       "source": "interactive_chat",
       "response_provenance": {

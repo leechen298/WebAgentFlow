@@ -10,7 +10,7 @@
 - Decision：docs_created
 - Notes：
   - 本包属于 P2 planning integration。
-  - 本包不改变 11.3.5.6 `/items` 单路径 happy path。
+  - 本包不改变 11.3.5.6 `/records` 单路径 happy path。
   - 本包复用 11.3.5.7 `pending_choice` / private map。
   - 本包依赖 11.3.5.8 failure recovery 的实现能力，但不扩展 recovery。
   - 进入实现前必须 preflight 确认 11.3.5.8 closeout 状态和 targeted tests。
@@ -64,7 +64,7 @@
 - Decision：pass
 - Notes：
   - 代码方向通过：Planner 已接入多候选 / 模糊目标路径，但未进入单路径
-    `/items` happy path。
+    `/records` happy path。
   - Planner 未被误用为 A/B/C 候选生成器；Runtime 仍负责生成 visible choices。
   - `pending_choice` visible payload 和 planner events 做了 sanitized 输出，不暴露
     `learned_path_id`、selector、raw slot values 或 private planner payload。

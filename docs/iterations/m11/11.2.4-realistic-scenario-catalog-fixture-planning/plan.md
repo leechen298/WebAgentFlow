@@ -49,10 +49,10 @@ runtime behavior catalog、PC / mobile business page catalog、fixture phase map
 
 本轮只整理 catalog：
 
-- 不创建 validation-site 页面。
+- 不创建 fixture-site 页面。
 - 不创建 mock backend。
 - 不新增 E2E。
-- 不改 validation-site routes。
+- 不改 fixture-site routes。
 
 11.2.4.0 完成后，下一步建议进入 11.2.4.1 Single-page Runtime Fixture Shell。
 

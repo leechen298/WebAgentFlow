@@ -4,20 +4,20 @@
 
 ## 概念 / 边界契约
 
-### `item_name`
+### `record_name`
 
-`item_name` 是本包唯一 P0 canonical business slot，用于 `/items` 新增项目名称。
+`record_name` 是本包唯一 P0 canonical business slot，用于 `/records` 新增项目名称。
 
 允许用户说法：
 
 | 用户说法 | canonical slot |
 |---|---|
-| 名称叫测试项目A | `item_name=测试项目A` |
-| 项目名是测试项目A | `item_name=测试项目A` |
-| 新增测试项目A | `item_name=测试项目A` |
-| name 是测试项目A | `item_name=测试项目A` |
+| 名称叫测试项目A | `record_name=测试项目A` |
+| 项目名是测试项目A | `record_name=测试项目A` |
+| 新增测试项目A | `record_name=测试项目A` |
+| name 是测试项目A | `record_name=测试项目A` |
 
-Intake 可以兼容别名，但 runtime 内部必须归一到 `item_name`。
+Intake 可以兼容别名，但 runtime 内部必须归一到 `record_name`。
 
 ### `value_slot`
 
@@ -27,7 +27,7 @@ Intake 可以兼容别名，但 runtime 内部必须归一到 `item_name`。
 {
   "action_type": "fill",
   "value": "测试项目A",
-  "value_slot": "item_name"
+  "value_slot": "record_name"
 }
 ```
 
@@ -39,12 +39,12 @@ P0 不新增数据库列；`value_slot` 写在 LearnedPath `actions` JSON 内。
 
 ```json
 {
-  "item_name": "测试项目B"
+  "record_name": "测试项目B"
 }
 ```
 
-当 action 存在 `value_slot=item_name` 且 request 存在
-`slot_overrides.item_name` 时，replay 必须使用 override 后的 B。
+当 action 存在 `value_slot=record_name` 且 request 存在
+`slot_overrides.record_name` 时，replay 必须使用 override 后的 B。
 
 ### Internal Runtime Adapter 边界
 
@@ -65,9 +65,9 @@ P0 不新增数据库列；`value_slot` 写在 LearnedPath `actions` JSON 内。
 
 | status | 含义 |
 ---|---|
-| `bound` | 至少一个 fill action 成功绑定 `value_slot=item_name` |
+| `bound` | 至少一个 fill action 成功绑定 `value_slot=record_name` |
 | `not_bound` | 未找到可绑定 action，不能标记为可参数化路径 |
-| `skipped` | 本轮没有 `item_name`，不做本包参数化 |
+| `skipped` | 本轮没有 `record_name`，不做本包参数化 |
 
 ### Replay override 结果
 
@@ -75,11 +75,11 @@ step log / debug trace 必须能表达：
 
 | 字段 | 含义 |
 ---|---|
-| `value_slot` | 当前 fill action 的参数槽，例如 `item_name` |
+| `value_slot` | 当前 fill action 的参数槽，例如 `record_name` |
 | `override_applied` | 是否应用了 runtime override |
-| `effective_value` | 实际传给 `execute_action()` 的值，P0 `/items` 可明文 |
+| `effective_value` | 实际传给 `execute_action()` 的值，P0 `/records` 可明文 |
 
-`effective_value` 明文日志只允许用于 P0 `/items` 非敏感测试字段。任何 credential /
+`effective_value` 明文日志只允许用于 P0 `/records` 非敏感测试字段。任何 credential /
 token / secret slot 必须记录为 `<redacted>`。
 
 ## Schema / API 契约
@@ -139,11 +139,11 @@ runtime 传到 `run_replay()`。
 
 P0 必须打通完整传播链：
 
-1. Intake Agent 提取 `slots.item_name`。
-2. Runtime `_fill_values_from_intake()` 生成 `fill_values.item_name`。
+1. Intake Agent 提取 `slots.record_name`。
+2. Runtime `_fill_values_from_intake()` 生成 `fill_values.record_name`。
 3. Learning branch 把 `fill_values` 传给 learning service。
-4. Learning 后把匹配 fill action 写成 `value_slot=item_name`。
-5. Execute branch 从本轮 `fill_values` 构造 `slot_overrides.item_name`。
+4. Learning 后把匹配 fill action 写成 `value_slot=record_name`。
+5. Execute branch 从本轮 `fill_values` 构造 `slot_overrides.record_name`。
 6. `start_replay` / replay handler request 携带 `slot_overrides`。
 7. `ReplayRequest` / replay service 接收 `slot_overrides`。
 8. `run_replay()` 调 `_build_replay_actions()` 读取 `value_slot`。
@@ -156,10 +156,10 @@ P0 必须打通完整传播链：
 
 | 场景 | P0 处理 |
 |---|---|
-| action 有 `value_slot=item_name`，请求有 `slot_overrides.item_name` | 使用 override 值 |
-| action 有 `value_slot=item_name`，请求缺 `slot_overrides.item_name` | 阻断，不使用固定录制值 |
-| action 没有 `value_slot`，请求有 `slot_overrides.item_name` | 不替换 |
-| 用户要求新增 B，但 path 没有 `value_slot=item_name` | Runtime 阻断，不调用 replay |
+| action 有 `value_slot=record_name`，请求有 `slot_overrides.record_name` | 使用 override 值 |
+| action 有 `value_slot=record_name`，请求缺 `slot_overrides.record_name` | 阻断，不使用固定录制值 |
+| action 没有 `value_slot`，请求有 `slot_overrides.record_name` | 不替换 |
+| 用户要求新增 B，但 path 没有 `value_slot=record_name` | Runtime 阻断，不调用 replay |
 | 多个 fill action 匹配同一 slot | P0 可全部替换，但记录 warning |
 
 阻断回复建议：
@@ -192,7 +192,7 @@ P0 必须打通完整传播链：
 
 - 旧 `ReplayRequest(url=...)` 仍然有效，`slot_overrides` 默认为 `{}`。
 - 旧 LearnedPath actions 没有 `value_slot` 仍可用于不需要 runtime 参数的 replay。
-- 当用户提供 `item_name` 且旧 path 没有参数绑定时，chat runtime 必须阻断，不能静默回放固定值。
+- 当用户提供 `record_name` 且旧 path 没有参数绑定时，chat runtime 必须阻断，不能静默回放固定值。
 - 不新增 DB migration，不改变 LearnedPath 表结构。
 - 不改变 ReplayResult status 枚举。
 

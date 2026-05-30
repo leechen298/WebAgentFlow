@@ -15,7 +15,7 @@ Planner Chat Integration 是 `wagent chat` 中的多候选 planning path。它�
 |---|---|
 | 多个 learned actions 匹配 | 同一用户目标命中多个候选 |
 | 用户目标模糊 | “帮我处理一下这个页面”、“搞一下” |
-| 用户给了 URL 但 action 仍模糊 | `http://localhost:<port>/items 帮我处理一下` |
+| 用户给了 URL 但 action 仍模糊 | `http://localhost:<port>/records 帮我处理一下` |
 | planning preview / confirmed execution path | 需要先展示候选再等用户选择 |
 | candidate trust / drift warning 需要展示 | Planner 生成 warning / risk hint |
 
@@ -24,7 +24,7 @@ Planner Chat Integration 是 `wagent chat` 中的多候选 planning path。它�
 | 场景 | 处理 |
 |---|---|
 | 单个 learned action 且目标明确 | 直接 replay |
-| `/items` 新增项目 happy path | 直接 replay |
+| `/records` 新增项目 happy path | 直接 replay |
 | 无 learned action | 走 no-path / learning guidance，不让 Planner 编造 |
 | Failure Recovery A/B/C | 归 11.3.5.8，不走 Planner |
 | learn_then_execute | 继续保守阻断 |
@@ -145,7 +145,7 @@ type PlannerPrivateChoice = {
 如果实现复用 11.3.5.7 的 `kind: "learned_action"` 也可以，但必须保存足够信息用于：
 
 - 用户选择后执行正确 path；
-- 保留 `slot_overrides.item_name` 等 runtime slot；
+- 保留 `slot_overrides.record_name` 等 runtime slot；
 - 记录 sanitized planning event；
 - 不向 LLM / user / public session payload 泄露 private map。
 
@@ -213,13 +213,13 @@ ReplayAction
 selector
 route_plan raw private steps
 runtime slot values
-item_name raw value
+record_name raw value
 credential / token / secret
 ```
 
 ### Compatibility Contract
 
-- 11.3.5.6 `/items` verified happy path 不能变慢或进入 Planner。
+- 11.3.5.6 `/records` verified happy path 不能变慢或进入 Planner。
 - 11.3.5.7 choice parser / private map / cancel cleanup 继续复用。
 - 11.3.5.8 recovery choice 不受 Planner 影响。
 - 进入实现前必须 preflight 确认 11.3.5.7 / 11.3.5.8 targeted tests 通过。

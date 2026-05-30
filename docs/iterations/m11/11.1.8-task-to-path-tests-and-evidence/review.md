@@ -77,7 +77,7 @@ find docs/iterations/m11 -maxdepth 1 -type d -name '11.1.9*' -print
 - **Full API regression**: 1104 passed, 65 skipped.
 - **Ruff**: clean for all touched Python files.
 - **Scoped E2E**: 3 passed (task-execution spec: happy path execution + blocked without target_url + replay bypass).
-- **Full E2E**: 25 passed (replay API, catalog UI, conversation runtime, CLI runtime, task execution, task result reporter, validation-site smoke).
+- **Full E2E**: 25 passed (replay API, catalog UI, conversation runtime, CLI runtime, task execution, task result reporter, fixture-site smoke).
 
 ### E2E result
 
@@ -112,7 +112,7 @@ Static review confirmed:
 
 - 本地开发环境（macOS, Docker PostgreSQL 16, Redis, MinIO）。
 - 65 skipped tests: 外部依赖（LLM provider, browser sandbox, autonomous run），非产品缺陷。
-- E2E 使用 Playwright Chromium headless + seeded fixtures + validation-site。
+- E2E 使用 Playwright Chromium headless + seeded fixtures + fixture-site。
 
 ### Unresolved P1/P2/P3
 

@@ -39,7 +39,7 @@ _COUNTER = 0
 def _make_path(
     repo: LearnedPathRepository,
     *,
-    page_template: str = "/users",
+    page_template: str = "/records",
     query_signature: dict[str, str] | None = None,
     dom_fingerprint: str | None = None,
     scenario: str = "users-export",
@@ -208,14 +208,14 @@ def test_exact_page_template_match_contributes_to_score(
     service: LearnedPathRetrievalService,
 ) -> None:
     exact = _make_path(
-        repo, scenario="x", page_template="/users", trust=TrustStatus.PROVISIONAL
+        repo, scenario="x", page_template="/records", trust=TrustStatus.PROVISIONAL
     )
     _make_path(
         repo, scenario="x", page_template="/orders", trust=TrustStatus.PROVISIONAL
     )
 
     intent = TaskIntent(
-        raw_text="do something", target_page_hint="/users", scenario_hint="x"
+        raw_text="do something", target_page_hint="/records", scenario_hint="x"
     )
     candidates = service.retrieve_candidates(intent)
     assert candidates[0].learned_path_id == str(exact.id)
@@ -248,7 +248,7 @@ def test_empty_page_hint_does_not_exclude_candidate(
     repo: LearnedPathRepository,
     service: LearnedPathRetrievalService,
 ) -> None:
-    _make_path(repo, scenario="export", page_template="/users")
+    _make_path(repo, scenario="export", page_template="/records")
     intent = TaskIntent(raw_text="export users")
     candidates = service.retrieve_candidates(intent)
     assert len(candidates) == 1
@@ -303,7 +303,7 @@ def test_keyword_overlap_contributes_deterministic_score(
     service: LearnedPathRetrievalService,
 ) -> None:
     matching = _make_path(
-        repo, scenario="users-export", page_template="/users", trust=TrustStatus.PROVISIONAL
+        repo, scenario="users-export", page_template="/records", trust=TrustStatus.PROVISIONAL
     )
     non_matching = _make_path(
         repo, scenario="orders-archive", page_template="/orders", trust=TrustStatus.PROVISIONAL
@@ -552,7 +552,7 @@ def test_chinese_task_text_matches_candidate_scenario(
     service: LearnedPathRetrievalService,
 ) -> None:
     matching = _make_path(
-        repo, scenario="用户登录流程", page_template="/login", trust=TrustStatus.PROVISIONAL
+        repo, scenario="用户登录流程", page_template="/entry", trust=TrustStatus.PROVISIONAL
     )
     non_matching = _make_path(
         repo, scenario="订单导出", page_template="/orders", trust=TrustStatus.PROVISIONAL
@@ -571,7 +571,7 @@ def test_chinese_query_substring_matches_shorter_scenario(
 ) -> None:
     """A shorter CJK query (e.g. '登录') should match a longer scenario ('登录用户')."""
     matching = _make_path(
-        repo, scenario="登录用户流程", page_template="/login", trust=TrustStatus.PROVISIONAL
+        repo, scenario="登录用户流程", page_template="/entry", trust=TrustStatus.PROVISIONAL
     )
     _make_path(
         repo, scenario="注册账号", page_template="/register", trust=TrustStatus.PROVISIONAL
@@ -587,7 +587,7 @@ def test_exact_cjk_overlap_is_not_double_counted_as_keyword_overlap(
     repo: LearnedPathRepository,
     service: LearnedPathRetrievalService,
 ) -> None:
-    _make_path(repo, scenario="登录", page_template="/login", trust=TrustStatus.PROVISIONAL)
+    _make_path(repo, scenario="登录", page_template="/entry", trust=TrustStatus.PROVISIONAL)
 
     intent = TaskIntent(raw_text="登录")
     candidates = service.retrieve_candidates(intent)

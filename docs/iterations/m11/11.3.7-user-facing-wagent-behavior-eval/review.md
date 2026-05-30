@@ -29,7 +29,7 @@
   写入 contract、technical design、test plan 和 review checklist。
 - “因为出现的话，可能会出现针对性的实现功能，影响整体产品。” -> accepted，作为
   forbidden-token hard gate 的动机。
-- “如果当前代码已有 `/items`、`[data-testid='item-list']` 等测试站点特判，11.3.7 应将其
+- “如果当前代码已有 `/records`、`[data-testid='record-list']` 等测试站点特判，11.3.7 应将其
   视为 blocker，必须改为 generic runtime 或移入 eval spec / test-only layer。” -> accepted，
   已写入 contract、technical design、test plan 和 plan。
 - “不允许用 grandfather exception 直接放过，除非明确开 cleanup issue 并将 11.3.7 标为
@@ -38,7 +38,7 @@
   `execute_unknown_choose_learn_then_execute_or_learning_flow`。” -> accepted。
 - “如果 `learn_then_execute` 当前不支持，则明确写为 follow-up，不能伪造 pass。” -> accepted。
 - “known / unknown 页面状态隔离策略必须明确，不能被全局旧 LearnedPath 污染。” -> accepted。
-- “测试页面细节只能存在于 product-test-site fixture source、eval spec、tests、docs / review /
+- “测试页面细节只能存在于 fixture-site fixture source、eval spec、tests、docs / review /
   testing results / artifacts，不能被 product runtime import。” -> accepted。
 - “没学过 -> 用户选择学习 -> 真进入学习流程” -> accepted，已明确为 first-wave required
   `url_only_unknown_choose_learn_starts_learning`；必须进入真实 learning flow，或以 evidence-backed
@@ -51,7 +51,7 @@
 - Author：Codex
 - Decision：docs_revised
 - Notes：
-  - Strengthened anti-hardcoding gate with product-test-site URL / route / button text / field label /
+  - Strengthened anti-hardcoding gate with fixture-site URL / route / button text / field label /
     DOM test id / fixture item names / operation aliases.
   - Added explicit blocker language for existing runtime / prompt target special cases, including route
     and DOM-locator checks. No grandfather exception is allowed.
@@ -65,7 +65,7 @@
   - Clarified that product runtime must not import eval spec, docs, review, testing results or artifacts
     to access target details.
   - Follow-up user clarification made unknown choose-learn a required real learning-flow gate.
-  - Follow-up user clarification made cleanup of existing product-test-site runtime special cases a
+  - Follow-up user clarification made cleanup of existing fixture-site runtime special cases a
     required implementation prerequisite before 11.3.7 can pass.
   - Read-only inspection found likely current runtime blockers in conversation intake, chat runtime and
     learning run service; test constants in `scripts/evals/` remain test-only and are not product runtime.
@@ -95,12 +95,12 @@
     `python3 .agents/skills/webagentflow-eval-integrity/scripts/forbidden_target_scan.py --manifest /private/tmp/waf-11.3.7-target-manifest.json --root /Users/leechen/projects/WebAgentFlow/v0.1`
   - Result: exit `1`, `status=fail`, `match_count=100`.
   - High-confidence blocker examples:
-    - `apps/api/app/services/conversation/chat_runtime.py:134` contains `/items`.
-    - `apps/api/app/services/conversation/chat_runtime.py:152` contains `[data-testid='item-list']`.
+    - `apps/api/app/services/conversation/chat_runtime.py:134` contains `/records`.
+    - `apps/api/app/services/conversation/chat_runtime.py:152` contains `[data-testid='record-list']`.
     - `apps/api/app/services/conversation/chat_runtime.py:193` contains target-specific `新增项目` result wording.
-    - `apps/api/app/services/conversation/intake.py:270` contains `/items`.
+    - `apps/api/app/services/conversation/intake.py:270` contains `/records`.
     - `apps/api/app/services/conversation/intake.py:770` returns `新增项目`.
-    - `apps/api/app/services/learning/learning_run_service.py:502` checks `/items`.
+    - `apps/api/app/services/learning/learning_run_service.py:502` checks `/records`.
     - `apps/api/app/services/learning/learning_run_service.py:504` checks `新增项目`.
   - Command: `pnpm run eval:wagent:user-behavior`
   - Result: exit `1`, `ERR_PNPM_NO_SCRIPT`, script not implemented.
@@ -153,15 +153,15 @@
 - Reviewed commit：`2f36fc6 fix: remove target-specific runtime constants`
 - Accepted scope：
   - Treat this commit as the `11.3.7.1 Target-Agnostic Runtime Cleanup` package.
-  - It clears the main anti-hardcoding blocker where product runtime carried product-test-site `/items`
-    answers such as route checks, `item_name`, list DOM locators and item-specific evidence wording.
+  - It clears the main anti-hardcoding blocker where product runtime carried fixture-site `/records`
+    answers such as route checks, `record_name`, list DOM locators and item-specific evidence wording.
   - It does not complete the 11.3.7 user-facing behavior eval.
 - Notes：
-  - `entry_gate.py` removed obvious product-test-site item vocabulary while retaining generic web-task terms.
-  - `intake.py` moved from test-page `item_name` semantics toward generic `entity_name` / named-value handling.
+  - `entry_gate.py` removed obvious fixture-site item vocabulary while retaining generic web-task terms.
+  - `intake.py` moved from test-page `record_name` semantics toward generic `entity_name` / named-value handling.
   - `learned_path_replay.py` and reporter-facing evidence wording now describe generic page text evidence.
   - The new target-agnostic regression test keeps product runtime / prompt paths free of the forbidden target tokens.
-  - Legacy `scripts/evals/wagent_runtime_eval.py` remains allowed to contain `/items` and `item_name` because it is
+  - Legacy `scripts/evals/wagent_runtime_eval.py` remains allowed to contain `/records` and `record_name` because it is
     test-only, but future use should either keep it clearly legacy / items-specific or migrate its gates to generic
     slot-aware assertions.
   - Login / workspace handling remains out of this cleanup scope and should be evaluated separately only if a later
@@ -236,7 +236,7 @@
 - Status：
   - This fixes eval-runner integrity only.
   - It does not change the committed behavior artifact decision: 11.3.7 remains not pass until live first-wave cases
-    run against available Conversation API and product-test-site services.
+    run against available Conversation API and fixture-site services.
 
 ## 2026-05-24 User-facing behavior gate fix closeout
 
@@ -246,7 +246,7 @@
   - Fixed only the current required gate failures:
     public `llm_trace_recorded` redaction, known action matching / execution,
     URL-only unknown guidance and execute-unknown guidance.
-  - Product runtime / prompts remain target-agnostic; no product-test-site route, DOM locator, fixture item,
+  - Product runtime / prompts remain target-agnostic; no fixture-site route, DOM locator, fixture item,
     field name or operation alias was added to runtime / prompts.
   - Eval was driven through `pnpm run eval:wagent:user-behavior`, which uses the Conversation API surface.
   - No `verify-scenario`, Console UI smoke, direct replay endpoint or direct autonomous-run endpoint was used.
@@ -262,7 +262,7 @@
   - Product-level learning can save a path when generic visible page text confirms a user-provided value, without
     relying on target-specific constants or external LLM supervisor success.
 - Live eval setup：
-  - Local API and product-test-site were started.
+  - Local API and fixture-site were started.
   - API was restarted with the LLM provider env var empty so intake / router / entry-gate use deterministic fallback and no
     external LLM provider receives local page / conversation data during this run.
 - Evidence：
@@ -340,7 +340,7 @@ through a direct autonomous-run endpoint by Codex.
 
 ### E2E / Codex 外部测试操作员证据（E2E / Codex Evidence）
 
-本轮已运行 11.3.7 eval runner against local API + product-test-site services. The latest artifact is `pass`;
+本轮已运行 11.3.7 eval runner against local API + fixture-site services. The latest artifact is `pass`;
 the pass claim is limited to first-wave required gates and does not include full learn-then-execute.
 
 ### 验证证据（Validation Evidence）

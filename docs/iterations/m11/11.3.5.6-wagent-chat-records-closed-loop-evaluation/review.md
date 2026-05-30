@@ -5,7 +5,7 @@
 ## 2026-05-21 设计文档生成
 
 - Author：Codex
-- Scope：生成 11.3.5.6 七件套，定义 `/items` `wagent chat` closed-loop evaluation。
+- Scope：生成 11.3.5.6 七件套，定义 `/records` `wagent chat` closed-loop evaluation。
 - Decision：docs_created
 - Notes：
   - 本包只定义测试方案和结果记录规则。
@@ -28,11 +28,11 @@
   11.3.5.6 fixes still uncommitted; those fixes were later committed as
   `18dcec1` (`fix: complete items chat closed-loop evaluation`)
 - API base：`http://127.0.0.1:8001`
-- Product URL：`http://127.0.0.1:5176/items`
+- Product URL：`http://127.0.0.1:<fixture-port>/records`
 - Session ID：`503a09ef-e609-4941-a82b-8f6e6be6061d`
 - LearnedPath ID：`8c1ea100-9093-4138-9212-b74ce8e4e90b`
 - Result file：
-  [`docs/testing/results/m11-11.3.5.6-items-closed-loop-2026-05-21.md`](../../../testing/results/m11-11.3.5.6-items-closed-loop-2026-05-21.md)
+  [`docs/testing/results/m11-11.3.5.6-records-closed-loop-2026-05-21.md`](../../../testing/results/m11-11.3.5.6-records-closed-loop-2026-05-21.md)
 - evaluation_status：`pass`
 
 ## 用户反馈
@@ -47,12 +47,12 @@
 
 ### 实际交付
 
-- `wagent chat` `/items` closed loop executed from the product chat entry.
+- `wagent chat` `/records` closed loop executed from the product chat entry.
 - Product-level static-page learning was fixed to accept LLM Supervisor
   `should_save_path=true` when the rule-side self verdict misses DOM-only
   success.
-- Intake `project_name` was mapped to runtime `item_name` so replay receives
-  `slot_overrides.item_name`.
+- Intake `project_name` was mapped to runtime `record_name` so replay receives
+  `slot_overrides.record_name`.
 - Result artifact recorded transcript, session, LearnedPath, replay, Reporter,
   not-run boundaries, and raw evidence excerpts.
 
@@ -60,10 +60,10 @@
 
 - Planned default output was evidence-only. During live execution, two blocking
   P0 wiring gaps were found and fixed narrowly:
-  - `/items` learning did not persist a LearnedPath because the rule-side
+  - `/records` learning did not persist a LearnedPath because the rule-side
     verdict required URL/title change even though the LLM Supervisor derived
     success from DOM state.
-  - replay did not receive `slot_overrides.item_name` when intake emitted
+  - replay did not receive `slot_overrides.record_name` when intake emitted
     `semantic_type=project_name`.
 - No schema, API, DB migration, CLI command, Console UI, recovery, TaskPathPlanner,
   `pending_choice`, or `active_task` scope was added.
@@ -82,18 +82,18 @@
 - stdout / stderr：captured in result file `Transcript`.
 - session id：`503a09ef-e609-4941-a82b-8f6e6be6061d`.
 - user input sequence：
-  - `http://127.0.0.1:5176/items`
+  - `http://127.0.0.1:<fixture-port>/records`
   - `学习新增项目，名称叫测试项目A-20260521223327`
   - `帮我新增项目，名称叫测试项目B-20260521223327`
 - WAgent response：
   - `学习完成：我学会了新增项目操作。之后你可以说“帮我新增项目”。`
   - `执行完成。我在列表中看到了“测试项目B-20260521223327”，所以可以确认新增项目成功。`
 - read-only evidence：
-  - `chat_execution_started.slot_overrides.item_name=测试项目B-20260521223327`
+  - `chat_execution_started.slot_overrides.record_name=测试项目B-20260521223327`
   - `chat_execution_completed.replay.replay_status=succeeded`
   - `chat_execution_completed.replay.execution_evidence[0].status=verified`
   - `task_result_reported.verification_outcome=verified`
-  - LearnedPath action includes `value_slot=item_name`
+  - LearnedPath action includes `value_slot=record_name`
 
 ### Required Gates
 
@@ -101,8 +101,8 @@
 |---|---|---|---|---|
 | Chat session | session id exists | `503a09ef-e609-4941-a82b-8f6e6be6061d` | pass | CLI stdout / history |
 | Learn A | LearnedPath generated | `chat_learning_completed`, LearnedPath `8c1ea100-9093-4138-9212-b74ce8e4e90b` | pass | conversation events |
-| Parameter binding | `value_slot=item_name` | LearnedPath fill action has `value_slot=item_name` | pass | LearnedPath detail |
-| Execute B | replay invoked with B | `slot_overrides.item_name=测试项目B-20260521223327` | pass | `chat_execution_started` |
+| Parameter binding | `value_slot=record_name` | LearnedPath fill action has `value_slot=record_name` | pass | LearnedPath detail |
+| Execute B | replay invoked with B | `slot_overrides.record_name=测试项目B-20260521223327` | pass | `chat_execution_started` |
 | Effective value | fill value is B, not A | replay used B slot override and verified B in item list | pass | event raw excerpts in result file |
 | DOM evidence | `dom_text_present verified target=B` | target `测试项目B-20260521223327`, status `verified`, confidence `0.95` | pass | `chat_execution_completed` |
 | Reporter | outcome `verified` | `verification_outcome=verified`, `task_verified=true` | pass | `task_result_reported` |
@@ -113,7 +113,7 @@
 | Command / Surface | Expected | Actual result | Exit code | Pass / Fail / Skip | Evidence | Notes |
 |---|---|---|---|---|---|---|
 | `git status --short --branch` | record baseline | branch `v0.1`; 11.3.5.6 code/tests/result docs were uncommitted during the run and later committed as `18dcec1` | 0 | Pass | terminal output | base commit `0ff305f` |
-| product-test-site build | build passed | Vite build passed, 34 modules transformed | 0 | Pass | terminal output | `/items` target build |
+| fixture-site build | build passed | Vite build passed, 34 modules transformed | 0 | Pass | terminal output | `/records` target build |
 | targeted API tests | passed | `143 passed` | 0 | Pass | pytest output | includes chat runtime, replay hook, reporter, learned replay, learning service |
 | learned-path replay API slice | passed | `6 passed, 36 deselected` | 0 | Pass | pytest output | `tests/test_exploration_learned_paths_api.py -k replay` |
 | scoped Ruff | clean | `All checks passed!` | 0 | Pass | terminal output | changed Python files |
@@ -162,8 +162,8 @@
   - Learning run ID：`444378d9-e26f-4d6e-a40d-a09631cb5981`.
   - LearnedPath ID：`c4c86c45-3999-4850-ad46-02735f993f80`.
   - LearnedPath action：fill value `测试项目A-20260521232328`,
-    `value_slot=item_name`.
-  - Replay：`slot_overrides.item_name=测试项目B-20260521232328`,
+    `value_slot=record_name`.
+  - Replay：`slot_overrides.record_name=测试项目B-20260521232328`,
     `replay_status=succeeded`, `drift_status=none`.
   - Evidence：`dom_text_present`, target
     `测试项目B-20260521232328`, `status=verified`, confidence `0.95`.
@@ -180,8 +180,8 @@
   `implementation complete（closed-loop pass，result recorded）`.
 - Notes：
   - The final empty-DB rerun is the authoritative closeout evidence.
-  - The run started with no `/items` LearnedPath, learned A, generated a new
-    parameterized LearnedPath, executed B through `slot_overrides.item_name`,
-    verified B in `[data-testid='item-list']`, and reported
+  - The run started with no `/records` LearnedPath, learned A, generated a new
+    parameterized LearnedPath, executed B through `slot_overrides.record_name`,
+    verified B in `[data-testid='record-list']`, and reported
     `verification_outcome=verified`.
   - `verify-scenario` and autonomous run remained intentionally not run.

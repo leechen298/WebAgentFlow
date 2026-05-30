@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://webagentflow.local/schemas/eval-result.v1.schema.json",
+  "title": "WebAgentFlow External Eval Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "generated_at",
+    "provider",
+    "case_results"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "waf.eval.result.v1"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "BLOCKED", "UNVERIFIED", "PASS_WITH_CAVEATS"]
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["fixture_site", "external_target", "local_harness"]
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_ref", "redacted"],
+      "properties": {
+        "target_ref": {
+          "type": "string"
+        },
+        "redacted": {
+          "const": true
+        }
+      }
+    },
+    "operator_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["surface", "action"],
+        "properties": {
+          "surface": {
+            "type": "string",
+            "enum": ["cli", "ui", "script", "external_provider"]
+          },
+          "action": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "case_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["case_id", "status"],
+        "properties": {
+          "case_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PASS", "FAIL", "BLOCKED", "UNVERIFIED", "PASS_WITH_CAVEATS"]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind"],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "redacted": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

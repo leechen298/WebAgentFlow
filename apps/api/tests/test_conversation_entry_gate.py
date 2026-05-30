@@ -28,7 +28,7 @@ def test_entry_gate_classifies_non_web_chat_without_execution_details() -> None:
 
 
 def test_entry_gate_classifies_web_task_candidate() -> None:
-    result = deterministic_entry_gate("学习 http://localhost:5176/login 怎么登录")
+    result = deterministic_entry_gate("学习 https://example.invalid/login 怎么登录")
 
     assert result.category == ConversationEntryGateCategory.WEB_TASK_CANDIDATE
     assert result.requires_agent_runtime is True
@@ -121,7 +121,7 @@ def test_entry_gate_preflight_allows_explicit_url_without_provider_call() -> Non
 
     service = ConversationEntryGateService(provider=provider, timeout_ms=100)
 
-    result = service.evaluate("http://localhost:5176/workspace-login 帮我登录")
+    result = service.evaluate("https://example.invalid/entry 帮我登录")
 
     assert result.requires_agent_runtime is True
     assert result.category == ConversationEntryGateCategory.WEB_TASK_CANDIDATE

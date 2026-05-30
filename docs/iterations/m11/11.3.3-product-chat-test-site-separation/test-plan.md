@@ -29,19 +29,19 @@
 | Docs | DOC-1 文档包完整 | `find docs/iterations/m11/11.3.3-product-chat-test-site-separation -maxdepth 1 -type f` | 七件套存在 | Yes | 文档阶段 |
 | Docs | DOC-2 CLI 入口不回退 | `docs/user-guide/wagent-chat.md` | 主入口仍是 `.venv/bin/wagent chat` | Yes | 不只提示 source |
 | Docs | DOC-3 whitespace | `git diff --check` | clean | Yes | 文档阶段唯一必跑命令 |
-| Product site | SITE-1 build | `pnpm --filter @web-agent-flow/product-test-site build` | build pass | Yes | 实现阶段已跑 |
-| Product site | SITE-2 one-click dev | `pnpm run dev` | 同时启动 console / api / worker / validation-site / product-test-site | Yes | product-test-site 必须包含在一键启动里 |
-| Product site | SITE-3 login page smoke | `http://localhost:5176/workspace-login` | 页面显示工作台入口 / 操作员账号 / 访问口令 / 进入工作台 | Implementation | 实现阶段 |
+| Product site | SITE-1 build | `pnpm --filter @web-agent-flow/fixture-site build` | build pass | Yes | 实现阶段已跑 |
+| Product site | SITE-2 one-click dev | `pnpm run dev` | 同时启动 console / api / worker / fixture-site / fixture-site | Yes | fixture-site 必须包含在一键启动里 |
+| Product site | SITE-3 login page smoke | `http://localhost:<fixture-port>/target-login` | 页面显示工作台入口 / 操作员账号 / 访问口令 / 进入工作台 | Implementation | 实现阶段 |
 | Product site | SITE-4 login behavior | browser manual smoke | demo / 123456 进入工作台首页；错误输入显示错误 | Implementation | 实现阶段 |
 | Chat | CHAT-1 product learning no spec | `wagent chat` | learning request 不读取 validation specs，不传 `spec_id / scenario` | Yes | accepted blocker 已通过 |
-| Chat | CHAT-2 user URL only | `wagent chat` | 学习时只打开用户输入 URL，不保留 `/login` only gate | Yes | accepted blocker 已通过 |
-| Chat | CHAT-3 product learning success | `wagent chat` | 学习 product-test-site 后沉淀 LearnedPath，metadata 保留 target_url / site scope | Yes | LearnedPath id 见 review |
+| Chat | CHAT-2 user URL only | `wagent chat` | 学习时只打开用户输入 URL，不保留 `/entry` only gate | Yes | accepted blocker 已通过 |
+| Chat | CHAT-3 product learning success | `wagent chat` | 学习 fixture-site 后沉淀 LearnedPath，metadata 保留 target_url / site scope | Yes | LearnedPath id 见 review |
 | Chat | CHAT-4 execute learned action | `wagent chat` | “帮我进入工作台”直接执行，返回成功结果 | Yes | 不要求确认 |
 | Chat | CHAT-5 unlearned target URL fallback | `wagent chat` | 指定未学习过的 URL 时返回“还没学过这个站点或页面，需要先学习。” | Yes | 不跨站点命中 |
 | Chat | CHAT-6 same alias different URL | `wagent chat` | 同 alias 不同 URL 不互相覆盖；无 URL 时不能跨站点猜测 | Yes | target scope |
 | Chat | CHAT-7 no path fallback | `wagent chat` | 未学过任务返回“还没学过这个操作，需要先学习。” | Implementation | 用户文案 |
-| Regression | REG-1 validation build | `pnpm --filter @web-agent-flow/validation-site build` | validation-site 不受影响 | Yes | 已跑 |
-| Regression | REG-2 assertions independence | modify/delete `login.assertions.json` in controlled test | product-test-site learning 不受影响 | Implementation | 不提交破坏性修改 |
+| Regression | REG-1 validation build | `pnpm --filter @web-agent-flow/fixture-site build` | fixture-site 不受影响 | Yes | 已跑 |
+| Regression | REG-2 assertions independence | modify/delete `login.assertions.json` in controlled test | fixture-site learning 不受影响 | Implementation | 不提交破坏性修改 |
 
 ## 人工验收样例（Manual Acceptance Sample）
 
@@ -52,16 +52,16 @@ pnpm run dev
 .venv/bin/wagent chat
 ```
 
-`pnpm run dev` 必须同时启动 product-test-site。人工验收前应能访问：
+`pnpm run dev` 必须同时启动 fixture-site。人工验收前应能访问：
 
 ```text
-http://localhost:5176/workspace-login
+http://localhost:<fixture-port>/target-login
 ```
 
 输入：
 
 ```text
-学习一下这个工作台登录页怎么进入，地址是 http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456
+学习一下这个工作台登录页怎么进入，地址是 http://localhost:<fixture-port>/target-login，操作员账号是 demo，访问口令是 123456
 ```
 
 期望：
@@ -99,7 +99,7 @@ WAgent > 还没学过这个操作，需要先学习。
 未学习过的站点或页面：
 
 ```text
-帮我在 http://localhost:5176/orders 导出订单
+帮我在 http://localhost:<fixture-port>/orders 导出订单
 ```
 
 期望：
@@ -110,27 +110,27 @@ WAgent > 还没学过这个站点或页面，需要先学习。
 
 ## E2E / UI Smoke 边界（E2E / UI Smoke Boundary）
 
-- 没有真实打开 product-test-site，不得声称产品级 smoke 通过。
-- 如果只打开 validation-site，不得声称 product-test-site 验收通过。
-- 如果 `pnpm run dev` 没有启动 product-test-site，不得声称 M11.3.3 人工验收通过。
+- 没有真实打开 fixture-site，不得声称产品级 smoke 通过。
+- 如果只打开 fixture-site，不得声称 fixture-site 验收通过。
+- 如果 `pnpm run dev` 没有启动 fixture-site，不得声称 M11.3.3 人工验收通过。
 - 如果学习路径仍使用 `spec_id / scenario`，不得 accepted。
-- 如果产品级学习仍限制为 `/login` 或固定站点，不得 accepted。
+- 如果产品级学习仍限制为 `/entry` 或固定站点，不得 accepted。
 - 如果未学习过的 target URL 跨站点命中历史 LearnedPath，不得 accepted。
 - 如果没有 LearnedPath id、CLI 输出或可复查 history，不得声称学习沉淀已验证。
 
 ## Codex / AI 外部测试操作员边界（Codex / AI External Operator Boundary）
 
 Codex / AI 只能记录自己真实执行过的 CLI 和浏览器结果。不得编造内部 Agent verdict，
-不得把 validation-site pass_gate 当成 product-test-site 产品验收结果。
+不得把 fixture-site pass_gate 当成 fixture-site 产品验收结果。
 
 ## Live Run 边界（Live Run Boundary）
 
 文档阶段不触发 live run。
 
-实现完成后，如果通过 `wagent chat` 学习 product-test-site 页面，必须记录：
+实现完成后，如果通过 `wagent chat` 学习 fixture-site 页面，必须记录：
 
 - CLI invocation。
-- product-test-site URL。
+- fixture-site URL。
 - 用户输入的 target URL 和实际打开 URL 是否一致。
 - 浏览器可见行为。
 - LearnedPath id。

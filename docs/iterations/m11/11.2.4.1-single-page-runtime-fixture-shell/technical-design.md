@@ -4,8 +4,8 @@
 
 ## 当前状态（Current State）
 
-- `apps/validation-site/src/pages/IndexPage.vue` 已有 `PAGES` catalog 和页面卡片。
-- 当前已有 `/login` 和 `/users` 页面入口。
+- `apps/fixture-site/src/pages/IndexPage.vue` 已有 `PAGES` catalog 和页面卡片。
+- 当前已有 `/entry` 和 `/records` 页面入口。
 - 当前没有 `/runtime-observation` 专用入口。
 - 当前没有 runtime observation fixture shell。
 - 11.2.4.0 已完成业务页面复杂度 catalog。
@@ -15,7 +15,7 @@
 
 | Contract requirement | Implementation mechanism | Test coverage entry | Notes |
 |---|---|---|---|
-| 不重写现有 IndexPage 架构 | 仅在 `PAGES` catalog 增加 Runtime Observation 分类入口 | route smoke / component test | 保留 `/login`、`/users` |
+| 不重写现有 IndexPage 架构 | 仅在 `PAGES` catalog 增加 Runtime Observation 分类入口 | route smoke / component test | 保留 `/entry`、`/records` |
 | route namespace 完整 | 使用 `/runtime-observation/*` 命名空间 | route smoke | 不创建 `/medium` 这类全局 route |
 | fixture metadata 与 11.2.4.0 catalog 对齐 | card metadata 使用 `business_complexity`、`runtime_conditions`、`runtime_behaviors` | component test | 不按 toast/modal/loading 定义业务复杂度 |
 | current MVP / future signal label 分离 | UI label 分成 current signals、evidence capabilities、future labels | component test / review | future labels 不得写成 implemented |
@@ -30,14 +30,14 @@
 实现阶段建议新增：
 
 ```text
-apps/validation-site/src/pages/runtime-observation/
-apps/validation-site/src/pages/runtime-observation/RuntimeObservationIndex.vue
-apps/validation-site/src/pages/runtime-observation/RuntimeObservationShell.vue
+apps/fixture-site/src/pages/runtime-observation/
+apps/fixture-site/src/pages/runtime-observation/RuntimeObservationIndex.vue
+apps/fixture-site/src/pages/runtime-observation/RuntimeObservationShell.vue
 ```
 
 实现应：
 
-1. 读取 `apps/validation-site/src/pages/IndexPage.vue` 的当前 `PAGES` catalog。
+1. 读取 `apps/fixture-site/src/pages/IndexPage.vue` 的当前 `PAGES` catalog。
 2. 在 `PAGES` catalog 中新增 Runtime Observation 分类入口。
 3. 新增 `/runtime-observation` route。
 4. 新增 runtime observation index 页面。
@@ -59,10 +59,10 @@ apps/validation-site/src/pages/runtime-observation/RuntimeObservationShell.vue
 
 | Surface | Changed? | Description | Compatibility notes |
 |---|---|---|---|
-| `apps/validation-site/src/pages/IndexPage.vue` | Yes | 增加 Runtime Observation catalog entry | 不重写首页架构 |
-| validation-site route config | Yes | 新增 `/runtime-observation` namespace | 保留现有 routes |
+| `apps/fixture-site/src/pages/IndexPage.vue` | Yes | 增加 Runtime Observation catalog entry | 不重写首页架构 |
+| fixture-site route config | Yes | 新增 `/runtime-observation` namespace | 保留现有 routes |
 | runtime observation fixture index page | Yes | 新增 shell index 页面 | 不实现具体业务 fixture |
-| validation-site specs | No | 本轮不改；后续可新增 runtime-observation specs | 不影响现有 specs |
+| fixture-site specs | No | 本轮不改；后续可新增 runtime-observation specs | 不影响现有 specs |
 | E2E tests | No | 本轮不新增 | 后续实现后再补 |
 | API routes | No | 不新增 API | N/A |
 | DB schema | No | 不新增 migration | N/A |
@@ -146,7 +146,7 @@ fixture card as `implemented` or `tested`.
 实现必须：
 
 - 不破坏现有 `/` 首页。
-- 不删除 `/login`、`/users`。
+- 不删除 `/entry`、`/records`。
 - 不改变已有 specs。
 - 不改变 workbench deep link 逻辑。
 - 不改变 API。
@@ -155,7 +155,7 @@ fixture card as `implemented` or `tested`.
 
 ## 失败 / 边界情况（Failure / Edge Cases）
 
-- validation-site 当前 router 结构和 test command 需要后续实现前确认。
+- fixture-site 当前 router 结构和 test command 需要后续实现前确认。
 - Future labels may render in the shell, but must be marked as future / planned.
 - Missing future fixture route should not be linked as an implemented route.
 - Reset convention is descriptive until concrete fixture pages exist.
@@ -184,7 +184,7 @@ fixture card as `implemented` or `tested`.
 
 ```bash
 git diff --check
-pnpm --filter @web-agent-flow/validation-site build
+pnpm --filter @web-agent-flow/fixture-site build
 git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
 ```

@@ -747,14 +747,14 @@ class TestCheckVerdict:
         assert "must not be" in check.notes
 
     def test_must_not_transition_to(self):
-        result = _result(final_url="http://test/login")
-        check = _check_verdict(result, self._scenario(must_not_transition_to="/login"))
+        result = _result(final_url="http://test/entry")
+        check = _check_verdict(result, self._scenario(must_not_transition_to="/entry"))
         assert check.matches_expectation is False
         assert "must not transition" in check.notes
 
     def test_must_not_transition_ok(self):
         result = _result(final_url="http://test/dashboard")
-        check = _check_verdict(result, self._scenario(must_not_transition_to="/login"))
+        check = _check_verdict(result, self._scenario(must_not_transition_to="/entry"))
         assert check.matches_expectation is True
 
     def test_success_signals_checked(self):

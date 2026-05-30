@@ -26,24 +26,24 @@
 
 ## Safety Acceptance
 
-1. No hardcoded `5177/inventory` in runtime。
-   - `5177/inventory` 只能作为 operator-provided URL 出现在 docs、result records、eval plan 或外部验证操作记录中。
+1. No hardcoded `<fixture-port>/target-page` in runtime。
+   - `<fixture-port>/target-page` 只能作为 operator-provided URL 出现在 docs、result records、eval plan 或外部验证操作记录中。
    - 它不得成为 runtime default、prompt answer key、eval default、package dependency 或 internal route constant。
 
-2. No Validation-Site answer key in runtime / prompt。
-   - 不允许把外部 Validation-Site selector、`data-testid`、component、seed copy、field label、button text、placeholder、operation alias 或 page source 写入 product runtime / prompts。
+2. No Fixture-Site answer key in runtime / prompt。
+   - 不允许把外部 Fixture-Site selector、`data-testid`、component、seed copy、field label、button text、placeholder、operation alias 或 page source 写入 product runtime / prompts。
 
 3. No external site source modification。
-   - 11.3.8 修复不得修改 `WebAgentFlow-Validation-Site` 或 `WebAgentFlow-Fixture-Site` 源码。
+   - 11.3.8 修复不得修改 `External-Fixture-Provider` 或 `WebAgentFlow-Fixture-Site` 源码。
    - 外部站点只作为 operator-provided validation target 或 deterministic fixture provider。
 
 4. Removed embedded sites stay removed。
-   - 不恢复 `apps/product-test-site`。
-   - 不恢复 `apps/validation-site`。
+   - 不恢复 `apps/fixture-site`。
+   - 不恢复 `apps/fixture-site`。
    - 不恢复内嵌 validation API。
 
-5. Archived `5176/items` eval remains archived。
-   - 旧 `5176/items` eval 可作为历史证据保留。
+5. Archived `<fixture-port>/records` eval remains archived。
+   - 旧 `<fixture-port>/records` eval 可作为历史证据保留。
    - 不得重新作为 active default eval 或新的产品能力 pass 依据。
 
 6. No direct autonomous-run endpoint for product validation。
@@ -63,9 +63,9 @@
    - router known learned action counting where applicable。
 
 2. Integration-ish regression passes without external site dependency。
-   - Automated regression must not require `WebAgentFlow-Validation-Site` running。
+   - Automated regression must not require `External-Fixture-Provider` running。
    - It should use synthetic URLs, fake replay handlers, or existing test helpers。
-   - It must not depend on external site selector, `data-testid`, component, seed copy, or `5177/inventory` as a hard dependency。
+   - It must not depend on external site selector, `data-testid`, component, seed copy, or `<fixture-port>/target-page` as a hard dependency。
 
 3. Negative matching tests pass。
    - same business action with new values matches。
@@ -79,7 +79,7 @@
    - The report records operator surface, preconditions, scenario outcomes, integrity checks, and any not-run / blocked / unverified items。
 
 5. Integrity checks remain pass。
-   - Forbidden target scan for product runtime / prompts returns pass for Validation-Site answer keys。
+   - Forbidden target scan for product runtime / prompts returns pass for Fixture-Site answer keys。
    - Public artifacts and result docs do not expose private ids, private maps, selectors, slot override internals, execution payloads, credentials, tokens, cookies, or secrets。
 
 ## Documentation Acceptance
@@ -90,7 +90,7 @@
    - `execution_action_match_too_literal`。
 
 2. 11.3.8 is not described as site migration。
-   - Docs must state that Fixture-Site and Validation-Site separation is already completed。
+   - Docs must state that Fixture-Site and Fixture-Site separation is already completed。
    - Docs must state that this package fixes runtime chat product capability exposed by external black-box validation。
 
 3. Child iteration requirement is explicit。

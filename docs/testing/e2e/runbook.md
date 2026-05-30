@@ -17,7 +17,7 @@ console、API、数据库、外部 Fixture-Site 和后端 Playwright replay 的�
 - M10.2 LearnedPath catalog list / trust filter / drawer / replay section presence。
 - M11.0 conversation runtime explicit replay smoke。
 - M11.0 `wagent conversation` CLI-driven explicit replay smoke。
-- Fixture-site deterministic browser smoke：覆盖 `/login` 和 `/users`。
+- External fixture manifest ingestion for replay-backed product E2E.
 
 这不会新增产品行为，也不会扩大 M10.2 范围。
 
@@ -54,35 +54,28 @@ Playwright config 暂时不使用 `webServer` 编排全部服务。等回归轨�
    `cd /Users/leechen/projects/WebAgentFlow-Fixture-Site && pnpm dev`。
 5. 启动 console：
    `VITE_USE_DEV_PROXY=true API_PORT=8001 CONSOLE_PORT=5174 pnpm run dev:console`。
-6. 配置 fixture URL 和显式 spec root：
-   `export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175`；
+6. 配置显式 spec root：
    `export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs`。
-   本机示例：
-   `export WAF_PAGE_SPEC_ROOT=/Users/leechen/projects/WebAgentFlow-Fixture-Site/web/specs`。
-7. 写入 replay 固定数据：
-   `.venv/bin/python apps/e2e/scripts/seed-replay-fixtures.py`。
+7. 从外部 Fixture-Site provider 写入 replay 固定数据：
+   `python3 evals/seed-webagentflow-replay-fixtures.py`。
 8. 运行 E2E：`pnpm run test:e2e`。
 
 `WAF_PAGE_SPEC_ROOT` 是 page verification 的显式 spec 来源。只有列出或加载
-page verification specs 时需要；API 启动和 `/health` 不需要它。E2E fixture
-URL 的优先级固定为 `WAF_FIXTURE_SITE_URL` >
-`E2E_VALIDATION_BASE_URL` > `http://127.0.0.1:5175`；`E2E_VALIDATION_BASE_URL`
-只是临时兼容 fallback。
+page verification specs 时需要；API 启动和 `/health` 不需要它。E2E target URL
+来自外部 provider 生成的 `apps/e2e/.tmp/replay-fixtures.json`。
 
 首次运行前，用 `pnpm run test:e2e:install` 安装 Playwright Test Chromium
 浏览器。如果该命令卡在 `playwright install chromium`，通常是浏览器下载或网络
 环境问题。可以稍后重试；如果本机已经有 Chromium 缓存，确定性 E2E 仍可能正常运行。
 
 查看 [`../results/2026-05-11-replay-e2e-rerun.md`](../results/2026-05-11-replay-e2e-rerun.md)
-了解最新 replay E2E fresh rerun 证据；查看
+了解历史 replay E2E rerun 证据；查看
 [`../results/2026-05-11-learned-path-catalog-deterministic-e2e.md`](../results/2026-05-11-learned-path-catalog-deterministic-e2e.md)
 了解 LearnedPath catalog deterministic E2E 扩展结果；查看
 [`../results/2026-05-11-conversation-runtime-e2e.md`](../results/2026-05-11-conversation-runtime-e2e.md)
 了解 M11 conversation runtime E2E 首次 smoke 结果；查看
 [`../results/2026-05-11-conversation-cli-e2e.md`](../results/2026-05-11-conversation-cli-e2e.md)
-了解 `wagent conversation` CLI-driven E2E 结果；查看
-[`../results/2026-05-11-validation-site-deterministic-e2e.md`](../results/2026-05-11-validation-site-deterministic-e2e.md)
-了解历史 validation-site browser smoke 结果。
+了解 `wagent conversation` CLI-driven E2E 结果。
 
 `apps/e2e/test-results/` 和 `apps/e2e/playwright-report/` 是 Playwright
 原始输出，保持 gitignore。人类可读的测试运行摘要放在
@@ -96,10 +89,12 @@ E2E 固定数据直接写入 `learned_paths`。
 - 不调用 `/exploration/autonomous-runs`。
 - 不依赖 LLM 服务。
 - 使用 `dedup_key` 前缀 `e2e:replay:`，方便清理且不影响其他数据。
-- 生成的 fixture ID 写入 `apps/e2e/.tmp/replay-fixtures.json`。
-
-seed 脚本通过 API 侧 page analyzer 和 execution runtime 计算当前 `/users`
-页面签名。这是确定性页面分析，不是 autonomous run。
+- 外部 fixture provider 先生成 `apps/e2e/.tmp/replay-fixture-input.json`
+  或通过 `E2E_REPLAY_FIXTURE_INPUT` 指定 manifest 路径。
+- 生成的 fixture ID、target URL 和 mismatch URL 写入
+  `apps/e2e/.tmp/replay-fixtures.json`。
+- seed 脚本通过 API 侧 page analyzer 和 execution runtime 计算 manifest 中
+  `target_url` 指向页面的签名。这是确定性页面分析，不是 autonomous run。
 
 ## 当前用例矩阵
 
@@ -119,11 +114,7 @@ seed 脚本通过 API 侧 page analyzer 和 execution runtime 计算当前 `/use
 | signature changed but executable | `drift_status=signature_changed`，存在 warning，且 replay 仍可执行 |
 | conversation runtime replay | session dispatch `/replay` 后完成，transcript/events 记录 replay 结果 |
 | conversation CLI runtime replay | `wagent conversation` 创建 session、发送 `/replay`、读取 transcript/events |
-| fixture-site login controls | `/login` 显示 username/password/submit，默认无 visible alert |
-| fixture-site invalid login | wrong/wrong 后显示可见错误提示并停留在 login |
-| fixture-site users controls | `/users` 显示 search controls、result card、seeded rows |
-| fixture-site users name search | name=alice 后 URL 和结果区反映筛选 |
-| fixture-site users empty search | no-match 搜索显示 empty state |
+| external fixture manifest ingestion | seed 脚本只读取外部 manifest，不内置页面路径、selector 或业务数据 |
 
 ## 暂缓项
 

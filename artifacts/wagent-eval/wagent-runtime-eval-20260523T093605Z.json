@@ -14,7 +14,7 @@
   },
   "config": {
     "api_base": "http://127.0.0.1:8001",
-    "product_url": "http://127.0.0.1:5176/items",
+    "product_url": "http://127.0.0.1:<fixture-port>/records",
     "cases": [
       "pending_choice_multi_candidate"
     ],

@@ -50,7 +50,7 @@ def _llm_ok(verdict: str = "success") -> LlmResponse:
     """
     atoms: dict[str, object] = {
         "did_navigate": verdict == "success",
-        "final_url_path": "/done" if verdict == "success" else "/login",
+        "final_url_path": "/done" if verdict == "success" else "/entry",
         "did_show_error": verdict == "failure",
         "error_texts": ["nope"] if verdict == "failure" else [],
         "form_state_after": "no_form",

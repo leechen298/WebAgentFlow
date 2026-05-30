@@ -83,12 +83,12 @@ def _insert_autonomous_run(
     strategy_verdict: str = "failure",
 ) -> str:
     run = ExplorationRun(
-        page_signature="http://localhost:5175/login",
+        page_signature="https://example.invalid/entry",
         mode=ExplorationMode.FORM,
         status=ExplorationRunStatus.COMPLETED,
         strategy_json={
             "kind": "autonomous",
-            "url": "http://localhost:5175/login",
+            "url": "https://example.invalid/entry",
             "spec_id": "login",
             "scenario": "invalid_credentials",
             "verdict": strategy_verdict,

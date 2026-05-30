@@ -26,13 +26,13 @@ from app.services.learning.supervisor_observations import (
 def test_parse_full_response_is_complete() -> None:
     raw = {
         "did_navigate": True,
-        "final_url_path": "/users",
+        "final_url_path": "/records",
         "did_show_error": False,
         "error_texts": [],
         "form_state_after": "no_form",
         "list_row_count": 7,
         "scenario_goal_observed": True,
-        "scenario_goal_evidence": "Reached /users.",
+        "scenario_goal_evidence": "Reached /records.",
         "anomalies": [],
         "suggestions": [],
         "summary": "Login succeeded.",
@@ -47,7 +47,7 @@ def test_parse_missing_critical_atom_flags_partial() -> None:
     # did_show_error omitted — critical atom missing, must flag partial.
     raw = {
         "did_navigate": True,
-        "final_url_path": "/users",
+        "final_url_path": "/records",
         "form_state_after": "no_form",
         "scenario_goal_observed": True,
         "summary": "…",
@@ -119,7 +119,7 @@ def test_derive_error_trumps_navigation() -> None:
 def test_derive_navigation_without_error_is_success() -> None:
     obs = SupervisorObservations(
         did_navigate=True,
-        final_url_path="/users",
+        final_url_path="/records",
     )
     verdict, _ = derive_verdict(obs)
     assert verdict == "success"
@@ -166,7 +166,7 @@ def test_build_output_exposes_legacy_top_level_fields() -> None:
     # derivation + observation fields.
     obs = SupervisorObservations(
         did_navigate=True,
-        final_url_path="/users",
+        final_url_path="/records",
         summary="Logged in.",
         anomalies=["captcha rendered but not interacted"],
         suggestions=["add captcha handling"],

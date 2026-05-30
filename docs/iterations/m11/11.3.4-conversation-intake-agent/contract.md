@@ -70,8 +70,8 @@ Conversation Intake Agent 输出必须通过 JSON / Pydantic schema 校验。
 {
   "intent": "learn_operation",
   "target": {
-    "url": "http://localhost:5176/workspace-login",
-    "site_origin": "http://localhost:5176",
+    "url": "http://localhost:<fixture-port>/target-login",
+    "site_origin": "http://localhost:<fixture-port>",
     "page_hint": "工作台登录页"
   },
   "action": {
@@ -110,7 +110,7 @@ Conversation Intake Agent 输出必须通过 JSON / Pydantic schema 校验。
 {
   "intent": "learn_operation",
   "target": {
-    "url": "http://localhost:5176/workspace-login"
+    "url": "http://localhost:<fixture-port>/target-login"
   },
   "action": {
     "goal": "登录",
@@ -143,8 +143,8 @@ Conversation Intake Agent 输出必须通过 JSON / Pydantic schema 校验。
   "pending_intake": {
     "intent": "learn_operation",
     "target": {
-      "url": "http://localhost:5176/workspace-login",
-      "site_origin": "http://localhost:5176"
+      "url": "http://localhost:<fixture-port>/target-login",
+      "site_origin": "http://localhost:<fixture-port>"
     },
     "action": {
       "goal": "登录",
@@ -363,7 +363,7 @@ LLM-backed 回复展开后应能看到 provider、model、schema、request id、
 - LLM prompt payload / request log / provider trace 不得长期保存明文 sensitive slot。
 - 如果为了 runtime 执行必须临时传入，必须限定为 runtime-only，不作为 debug evidence 长期保存。
 - 用户可见回复不得重复明文密码。
-- product-test-site 的 `demo / 123456` 是 fixture value，但通用设计仍按 sensitive 处理。
+- fixture-site 的 `demo / 123456` 是 fixture value，但通用设计仍按 sensitive 处理。
 
 ## LLM 输出失败契约
 

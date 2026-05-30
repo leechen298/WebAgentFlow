@@ -36,16 +36,6 @@ _GENERIC_SUBMIT_VERBS = (
     "検索", "送信",
 )
 
-_GENERIC_ROLE_ALIASES: dict[str, tuple[str, ...]] = {
-    "item name": ("name",),
-    "name": ("item name",),
-    "item category": ("category",),
-    "category": ("item category",),
-    "stock quantity": ("quantity",),
-    "quantity": ("stock quantity",),
-}
-
-
 def _normalize_signal(value: str | None) -> str:
     normalized = re.sub(r"[^a-z0-9]+", " ", str(value or "").lower())
     return " ".join(normalized.split())
@@ -61,10 +51,6 @@ def _compact_signal(value: str | None) -> str:
 
 def _role_signal_terms(role: str) -> tuple[set[str], set[str], set[str]]:
     terms = {_normalize_signal(role)}
-    terms.update(
-        _normalize_signal(alias)
-        for alias in _GENERIC_ROLE_ALIASES.get(_normalize_signal(role), ())
-    )
     terms = {term for term in terms if term}
     tokens = {token for term in terms for token in term.split()}
     compact = {_compact_signal(term) for term in terms if _compact_signal(term)}
@@ -407,15 +393,11 @@ def plan_actions(
     # --- Multi-field mode (preferred when fill_values is set) ---
     if fill_values and analysis.fillable:
         used: set[str] = set()
-        # Canonical fill order for typical login-like flows and admin
-        # filters: identity first (username/email), then admin table
-        # filters (name/role/status), then generic search/text, and
-        # password last (password fields often trigger additional
-        # validation on blur in some SPAs).
+        # Canonical fill order for common account/admin flows only. Domain
+        # fields not listed here still match by the page's own
+        # label/name/id/aria/placeholder signals in caller-provided order.
         _ROLE_ORDER = [
             "username", "email",
-            "sku", "item_name", "item_category",
-            "quantity", "stock_quantity",
             "name", "role", "status",
             "search", "text",
             "password",

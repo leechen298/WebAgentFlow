@@ -6,7 +6,7 @@
 
 本轮验证 11.2.4.2 production-like fixture implementation：
 
-- validation-site build。
+- fixture-site build。
 - `/runtime-observation/basic/*` route registration。
 - per-fixture happy path。
 - per-fixture local validation / deterministic business failure path。
@@ -78,7 +78,7 @@ Do not report browser smoke as E2E. Do not trigger `verify-scenario` or autonomo
 
 ```bash
 git diff --check
-pnpm --filter @web-agent-flow/validation-site build
+pnpm --filter @web-agent-flow/fixture-site build
 git status --short
 git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'
 find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print
@@ -87,7 +87,7 @@ find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name
 Expected:
 
 - `git diff --check`: no output。
-- validation-site build exits 0。
+- fixture-site build exits 0。
 - backend / package / lock status check: no output。
 - forbidden directory check: report output honestly; existing directories may be noted as not introduced by this package。
 

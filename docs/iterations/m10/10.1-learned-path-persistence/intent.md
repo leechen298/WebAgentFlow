@@ -39,7 +39,7 @@
    `path_template / query_signature / dom_fingerprint` 三个纯函数，
    单测覆盖下列**至少** case：
    - `path_template`：`/detail/1` 与 `/detail/2` 归到同一模板
-     `/detail/:num`；`/items/abc-uuid` 归一为 `/items/:uuid`；
+     `/detail/:num`；`/records/abc-uuid` 归一为 `/records/:uuid`；
      trailing slash 统一。
    - `query_signature`：`type=edit` 保留、`id=2` 归一 `*`、
      `mode=view` 保留、`token=abcdefghij`（>8）归一 `*`、

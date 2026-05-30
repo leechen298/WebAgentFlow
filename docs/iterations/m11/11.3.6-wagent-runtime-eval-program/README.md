@@ -68,7 +68,7 @@ Program closeout result:
 
 当前 program 状态：closed / pass with documented caveats。Caveats：
 
-- pending-choice / planner-choice 使用 eval-only candidate binding，不代表当前 `/items`
+- pending-choice / planner-choice 使用 eval-only candidate binding，不代表当前 `/records`
   已有三个真实 distinct product actions。
 - planner-backed choice 仍记录 `planner_top_choice_observable=not_observable` warning；
   当前 public read surface 不暴露 top choice id/hash。

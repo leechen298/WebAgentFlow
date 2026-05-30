@@ -71,7 +71,7 @@
       "changes_page": false,
       "writes_learned_path": false,
       "input_summary": {
-        "current_message_url": "http://127.0.0.1:5177/inventory"
+        "current_message_url": "http://127.0.0.1:<fixture-port>/target-page"
       },
       "output_summary": {
         "pending_target": null,
@@ -125,8 +125,8 @@
         "next_agent": "web_operation_agent",
         "recommended_skill": "inspect_target_page",
         "target": {
-          "url": "http://127.0.0.1:5177/inventory",
-          "site_origin": "http://127.0.0.1:5177",
+          "url": "http://127.0.0.1:<fixture-port>/target-page",
+          "site_origin": "http://127.0.0.1:<fixture-port>",
           "source": "intake"
         },
         "user_goal": null,
@@ -174,7 +174,7 @@
     "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
     "type": "command_parsed",
     "payload": {
-      "raw": "http://127.0.0.1:5177/inventory",
+      "raw": "http://127.0.0.1:<fixture-port>/target-page",
       "command_kind": "ask_user",
       "dispatch_metadata": {
         "client": "wagent_chat",
@@ -185,8 +185,8 @@
       "intake": {
         "intent": "execute_operation",
         "target": {
-          "url": "http://127.0.0.1:5177/inventory",
-          "site_origin": "http://127.0.0.1:5177",
+          "url": "http://127.0.0.1:<fixture-port>/target-page",
+          "site_origin": "http://127.0.0.1:<fixture-port>",
           "page_hint": "inventory"
         },
         "action": {
@@ -203,7 +203,7 @@
             "name": "url",
             "semantic_type": "url",
             "label_seen": null,
-            "value": "http://127.0.0.1:5177/inventory",
+            "value": "http://127.0.0.1:<fixture-port>/target-page",
             "sensitive": false,
             "source": "user_message"
           }
@@ -236,7 +236,7 @@
       "active_task": {
         "task_id": "task-7cb3941b-e365-4c72-86d7-eaa18a63f030",
         "kind": "clarify",
-        "target_url": "http://127.0.0.1:5177/inventory",
+        "target_url": "http://127.0.0.1:<fixture-port>/target-page",
         "owner": "runtime",
         "status": "waiting_for_user_input",
         "created_at": "2026-05-29T14:31:07.252057+00:00",
@@ -262,7 +262,7 @@
         ]
       },
       "output_summary": {
-        "target_url": "http://127.0.0.1:5177/inventory"
+        "target_url": "http://127.0.0.1:<fixture-port>/target-page"
       }
     },
     "created_at": "2026-05-29T14:31:07.255246Z"
@@ -274,9 +274,9 @@
     "payload": {
       "reason": "pending_target_missing_goal",
       "target": {
-        "url": "http://127.0.0.1:5177/inventory",
-        "site_origin": "http://127.0.0.1:5177",
-        "page_hint": "/inventory",
+        "url": "http://127.0.0.1:<fixture-port>/target-page",
+        "site_origin": "http://127.0.0.1:<fixture-port>",
+        "page_hint": "/target-page",
         "source": "user_message",
         "turns_remaining": 3
       },
@@ -285,8 +285,8 @@
         "next_agent": "web_operation_agent",
         "recommended_skill": "inspect_target_page",
         "target": {
-          "url": "http://127.0.0.1:5177/inventory",
-          "site_origin": "http://127.0.0.1:5177",
+          "url": "http://127.0.0.1:<fixture-port>/target-page",
+          "site_origin": "http://127.0.0.1:<fixture-port>",
           "source": "intake"
         },
         "user_goal": null,
@@ -379,9 +379,9 @@
       },
       "output_summary": {
         "pending_target": {
-          "url": "http://127.0.0.1:5177/inventory",
-          "site_origin": "http://127.0.0.1:5177",
-          "page_hint": "/inventory",
+          "url": "http://127.0.0.1:<fixture-port>/target-page",
+          "site_origin": "http://127.0.0.1:<fixture-port>",
+          "page_hint": "/target-page",
           "source": "user_message",
           "turns_remaining": 3
         },
@@ -389,7 +389,7 @@
         "active_task": {
           "task_id": "task-7cb3941b-e365-4c72-86d7-eaa18a63f030",
           "kind": "clarify",
-          "target_url": "http://127.0.0.1:5177/inventory",
+          "target_url": "http://127.0.0.1:<fixture-port>/target-page",
           "goal": null,
           "owner": "runtime",
           "status": "waiting_for_user_input",
@@ -444,8 +444,8 @@
         "next_agent": "learning_agent",
         "recommended_skill": "start_learning",
         "target": {
-          "url": "http://127.0.0.1:5177/inventory",
-          "site_origin": "http://127.0.0.1:5177",
+          "url": "http://127.0.0.1:<fixture-port>/target-page",
+          "site_origin": "http://127.0.0.1:<fixture-port>",
           "source": "user_message"
         },
         "user_goal": null,
@@ -493,7 +493,7 @@
     "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
     "type": "command_parsed",
     "payload": {
-      "raw": "Learn how to create an inventory item with SKU NB-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
+      "raw": "Learn how to create an inventory item with record_code REC-ALP-001, name Alpine Notebook, category Stationery, and stock quantity 24.",
       "command_kind": "learn_page",
       "dispatch_metadata": {
         "client": "wagent_chat",
@@ -504,9 +504,9 @@
       "intake": {
         "intent": "learn_operation",
         "target": {
-          "url": "http://127.0.0.1:5177/inventory",
-          "site_origin": "http://127.0.0.1:5177",
-          "page_hint": "/inventory"
+          "url": "http://127.0.0.1:<fixture-port>/target-page",
+          "site_origin": "http://127.0.0.1:<fixture-port>",
+          "page_hint": "/target-page"
         },
         "action": {
           "goal": "create inventory item",
@@ -518,16 +518,16 @@
         },
         "slots": [
           {
-            "name": "sku",
-            "semantic_type": "sku",
-            "label_seen": "SKU",
-            "value": "NB-ALP-001",
+            "name": "record_code",
+            "semantic_type": "record_code",
+            "label_seen": "record_code",
+            "value": "REC-ALP-001",
             "sensitive": false,
             "source": "user_message"
           },
           {
             "name": "name",
-            "semantic_type": "item_name",
+            "semantic_type": "record_name",
             "label_seen": "name",
             "value": "Alpine Notebook",
             "sensitive": false,
@@ -542,7 +542,7 @@
             "source": "user_message"
           },
           {
-            "name": "stock_quantity",
+            "name": "record_quantity",
             "semantic_type": "quantity",
             "label_seen": "stock quantity",
             "value": "24",
@@ -578,7 +578,7 @@
       "active_task": {
         "task_id": "task-5f147f9b-95a0-4211-94fb-dda3c06d9cb8",
         "kind": "learn_operation",
-        "target_url": "http://127.0.0.1:5177/inventory",
+        "target_url": "http://127.0.0.1:<fixture-port>/target-page",
         "goal": "create inventory item",
         "owner": "learning_agent",
         "status": "learning",
@@ -600,7 +600,7 @@
       "changes_page": true,
       "writes_learned_path": true,
       "input_summary": {
-        "target_url": "http://127.0.0.1:5177/inventory",
+        "target_url": "http://127.0.0.1:<fixture-port>/target-page",
         "user_goal": "create inventory item",
         "route_decision": "delegate_to_learning_agent"
       },
@@ -613,7 +613,7 @@
     "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
     "type": "chat_learning_started",
     "payload": {
-      "url": "http://127.0.0.1:5177/inventory",
+      "url": "http://127.0.0.1:<fixture-port>/target-page",
       "browser_visibility": "headless"
     },
     "created_at": "2026-05-29T14:31:16.220196Z"
@@ -632,7 +632,7 @@
       "input_summary": {},
       "output_summary": {
         "run_id": "04238a54-7847-459d-9148-831ad2a9434c",
-        "target_url": "http://127.0.0.1:5177/inventory"
+        "target_url": "http://127.0.0.1:<fixture-port>/target-page"
       }
     },
     "created_at": "2026-05-29T14:31:30.949314Z"
@@ -644,7 +644,7 @@
     "payload": {
       "run_id": "04238a54-7847-459d-9148-831ad2a9434c",
       "alias": "create inventory item",
-      "target_url": "http://127.0.0.1:5177/inventory",
+      "target_url": "http://127.0.0.1:<fixture-port>/target-page",
       "business_goal": "create inventory item",
       "canonical_goal": "create_inventory_item"
     },
@@ -785,8 +785,8 @@
         "next_agent": "learning_agent",
         "recommended_skill": "start_replay",
         "target": {
-          "url": "http://127.0.0.1:5177/inventory",
-          "site_origin": "http://127.0.0.1:5177",
+          "url": "http://127.0.0.1:<fixture-port>/target-page",
+          "site_origin": "http://127.0.0.1:<fixture-port>",
           "source": "intake"
         },
         "user_goal": "create inventory item",
@@ -797,7 +797,7 @@
         },
         "missing_fields": [],
         "confidence": 0.95,
-        "reason_summary": "The 'create inventory item' action has been learned at /inventory. All required slots are provided (sku, name, category, quantity). Route to replay the learned action with new parameters.",
+        "reason_summary": "The 'create inventory item' action has been learned at /target-page. All required slots are provided (record_code, name, category, quantity). Route to replay the learned action with new parameters.",
         "source": "llm"
       },
       "llm_trace_ids": [
@@ -834,7 +834,7 @@
     "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
     "type": "command_parsed",
     "payload": {
-      "raw": "Create an inventory item with SKU MUG-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
+      "raw": "Create an inventory item with record_code REC-SKY-014, name Skyline Mug, category Office, and stock quantity 18.",
       "command_kind": "execute_task",
       "dispatch_metadata": {
         "client": "wagent_chat",
@@ -845,9 +845,9 @@
       "intake": {
         "intent": "execute_operation",
         "target": {
-          "url": "http://127.0.0.1:5177/inventory",
-          "site_origin": "http://127.0.0.1:5177",
-          "page_hint": "/inventory"
+          "url": "http://127.0.0.1:<fixture-port>/target-page",
+          "site_origin": "http://127.0.0.1:<fixture-port>",
+          "page_hint": "/target-page"
         },
         "action": {
           "goal": "create inventory item",
@@ -859,16 +859,16 @@
         },
         "slots": [
           {
-            "name": "sku",
-            "semantic_type": "sku",
+            "name": "record_code",
+            "semantic_type": "record_code",
             "label_seen": null,
-            "value": "MUG-SKY-014",
+            "value": "REC-SKY-014",
             "sensitive": false,
             "source": "user_message"
           },
           {
             "name": "name",
-            "semantic_type": "item_name",
+            "semantic_type": "record_name",
             "label_seen": null,
             "value": "Skyline Mug",
             "sensitive": false,
@@ -876,7 +876,7 @@
           },
           {
             "name": "category",
-            "semantic_type": "item_category",
+            "semantic_type": "record_category",
             "label_seen": null,
             "value": "Office",
             "sensitive": false,
@@ -884,7 +884,7 @@
           },
           {
             "name": "quantity",
-            "semantic_type": "stock_quantity",
+            "semantic_type": "record_quantity",
             "label_seen": null,
             "value": "18",
             "sensitive": false,
@@ -919,7 +919,7 @@
       "active_task": {
         "task_id": "task-384a5d02-dfed-4fcb-8508-702d4e56a073",
         "kind": "execute_operation",
-        "target_url": "http://127.0.0.1:5177/inventory",
+        "target_url": "http://127.0.0.1:<fixture-port>/target-page",
         "goal": "create inventory item",
         "owner": "web_operation_agent",
         "status": "executing",
@@ -941,7 +941,7 @@
       "changes_page": true,
       "writes_learned_path": false,
       "input_summary": {
-        "target_url": "http://127.0.0.1:5177/inventory",
+        "target_url": "http://127.0.0.1:<fixture-port>/target-page",
         "alias": "create inventory item"
       },
       "output_summary": {}
@@ -953,7 +953,7 @@
     "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
     "type": "chat_execution_started",
     "payload": {
-      "target_url": "http://127.0.0.1:5177/inventory",
+      "target_url": "http://127.0.0.1:<fixture-port>/target-page",
       "alias": "create inventory item",
       "browser_visibility": "headless"
     },
@@ -993,25 +993,25 @@
     "session_id": "44f660a1-b401-4750-add3-bf1d985a6329",
     "type": "chat_execution_completed",
     "payload": {
-      "target_url": "http://127.0.0.1:5177/inventory",
+      "target_url": "http://127.0.0.1:<fixture-port>/target-page",
       "alias": "create inventory item",
       "replay": {
-        "url": "http://127.0.0.1:5177/inventory",
+        "url": "http://127.0.0.1:<fixture-port>/target-page",
         "replay_status": "succeeded",
         "drift_status": "none",
         "drift_reasons": [],
         "warnings": [],
-        "final_url": "http://127.0.0.1:5177/inventory",
+        "final_url": "http://127.0.0.1:<fixture-port>/target-page",
         "final_title": "WebAgentFlow Validation Site",
         "step_count": 6,
         "error": null,
         "execution_evidence": [
           {
             "kind": "dom_text_present",
-            "target": "MUG-SKY-014",
+            "target": "REC-SKY-014",
             "status": "verified",
             "confidence": 0.95,
-            "summary": "页面文本中出现了目标值“MUG-SKY-014”。"
+            "summary": "页面文本中出现了目标值“REC-SKY-014”。"
           },
           {
             "kind": "dom_text_present",
@@ -1045,7 +1045,7 @@
     "type": "task_result_reported",
     "payload": {
       "verification_outcome": "verified",
-      "evidence_summary": "Replay status: succeeded. Drift status: none. Final URL: http://127.0.0.1:5177/inventory. Final title: WebAgentFlow Validation Site.",
+      "evidence_summary": "Replay status: succeeded. Drift status: none. Final URL: http://127.0.0.1:<fixture-port>/target-page. Final title: WebAgentFlow Validation Site.",
       "missing_evidence_summary": "",
       "task_verified": true,
       "needs_review": false,
@@ -1056,15 +1056,15 @@
       "replay_status": "succeeded",
       "drift_status": "none",
       "error_summary": null,
-      "final_url": "http://127.0.0.1:5177/inventory",
+      "final_url": "http://127.0.0.1:<fixture-port>/target-page",
       "final_title": "WebAgentFlow Validation Site",
       "execution_evidence": [
         {
           "kind": "dom_text_present",
-          "target": "MUG-SKY-014",
+          "target": "REC-SKY-014",
           "status": "verified",
           "confidence": 0.95,
-          "summary": "页面文本中出现了目标值“MUG-SKY-014”。"
+          "summary": "页面文本中出现了目标值“REC-SKY-014”。"
         },
         {
           "kind": "dom_text_present",

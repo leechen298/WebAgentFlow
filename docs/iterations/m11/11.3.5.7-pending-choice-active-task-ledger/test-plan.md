@@ -40,7 +40,7 @@ active task ledger，必须维护 `test-plan.md`。
 | Integration | AT-3 execution task | chat runtime | execution start writes active task, completion clears/completes | Yes | mocked replay |
 | Security | SEC-1 no id in WAgent reply | output text | no `learned_path_id` / UUID in A/B/C reply | Yes | private map stays internal |
 | Security | SEC-2 no id in Router payload | router trace / request payload | no private map / learned_path_id in LLM-facing payload | Yes | if router trace test exists |
-| Regression | REG-1 single `/items` action | targeted runtime tests | direct replay path unchanged | Yes | no TaskPathPlanner |
+| Regression | REG-1 single `/records` action | targeted runtime tests | direct replay path unchanged | Yes | no TaskPathPlanner |
 | Regression | REG-2 11.3.5.4/5 targeted suite | pytest | parameterized replay + evidence tests still pass | Yes | prevents P0 regression |
 
 ## 推荐验证命令
@@ -107,4 +107,4 @@ Codex / AI 可以运行 targeted tests、读事件 payload、检查 diff。没�
 | Console UI smoke | 本包不改 Console | Console choice UI 未来另做 |
 | TaskPathPlanner multi-candidate | 属于 11.3.5.9 | 本包只能用已有 learned_actions 构造 choice |
 | Failure Recovery menu | 属于 11.3.5.8 | 失败出口后续补 |
-| Full `/items` closed loop | 已由 11.3.5.6 验证 | 本包只做 targeted regression |
+| Full `/records` closed loop | 已由 11.3.5.6 验证 | 本包只做 targeted regression |

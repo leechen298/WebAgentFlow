@@ -13,7 +13,7 @@
   且 FREE_TEXT 时启用 happy path；非 chat session 继续走原 preview /
   confirmation / execution 逻辑。
 - 新增 M11.3 deterministic learn intent parse；第一版只支持
-  `http://localhost:5175/login` 的 `/login` happy path。
+  `https://example.invalid/entry` 的 `/entry` happy path。
 - 新增 learning run service，直接运行现有 autonomous learning pipeline，持久化
   `ExplorationRun`，并显式返回 `run_id` 与真实可查询的 `learned_path_id`。
   当前只有 `wagent chat` learning path 使用该 service；exploration router /
@@ -44,10 +44,10 @@
 - `git diff --check`
   - no output
 - 真实 `wagent chat` smoke：
-  - 先启动 validation-site：`pnpm run dev:validation`
+  - 先启动 fixture-site：`pnpm run dev:validation`
   - 先启动当前工作区 API 临时端口：`.venv/bin/python -m uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 8002`
   - 由于本机 `8001` 当时是旧 API 进程，本次 smoke 使用：
-    `printf '学习一下这个登录页怎么登录，地址是 http://localhost:5175/login\n帮我登录\n帮我导出报表\nexit\n' | .venv/bin/wagent chat --api-base http://127.0.0.1:8002 --timeout 240`
+    `printf '学习一下这个登录页怎么登录，地址是 https://example.invalid/entry\n帮我登录\n帮我导出报表\nexit\n' | .venv/bin/wagent chat --api-base http://127.0.0.1:8002 --timeout 240`
   - 输出：
     ```text
     WAgent > 你好，我可以学习页面操作，也可以执行已经学会的操作。
@@ -70,7 +70,7 @@
 
 ## 未运行项 / 风险
 
-- 第一版只支持 `/login` happy path，且 execution matching 仅使用当前 session
+- 第一版只支持 `/entry` happy path，且 execution matching 仅使用当前 session
   `learned_actions`；global LearnedPath fallback、复杂意图理解和 M12 recovery
   均未实现。
 - 本次人工 smoke 为了避开旧的 8001 API 进程，使用 `--api-base http://127.0.0.1:8002`。

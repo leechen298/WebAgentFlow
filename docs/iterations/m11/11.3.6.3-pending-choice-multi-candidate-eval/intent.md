@@ -8,7 +8,7 @@
 `pending_choice_private_map`：当用户输入对应多个候选 learned actions 时，Runtime 应给用户
 展示 A/B/C 等安全选项，下一轮由代码解析用户选择，并用私有映射执行正确 action。
 
-11.3.6.1 runner core 先覆盖 `/items` happy path 和 single-path direct replay regression。
+11.3.6.1 runner core 先覆盖 `/records` happy path 和 single-path direct replay regression。
 11.3.6.2 将 failure recovery 纳入 runner。11.3.6.3 的目标是把 pending choice
 多候选澄清也纳入同一套 hard-gate eval program。
 
@@ -38,6 +38,6 @@
 
 - `pending_choice_multi_candidate` case 可以由 runner 执行并写出 JSON / Markdown artifact。
 - required gates 由 events / messages / history / raw request log / current eval setup evidence 判定。
-- 旧全局 `/items` LearnedPath 不会污染候选数量和选择结果。
+- 旧全局 `/records` LearnedPath 不会污染候选数量和选择结果。
 - public artifact 和 Markdown result 不泄露 private map / path id / selector / sensitive payload。
 - 未运行 live eval 时，review 和 Markdown result 不声称 live pass。

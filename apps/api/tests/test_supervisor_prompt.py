@@ -96,10 +96,8 @@ def test_prompt_has_no_old_verdict_rubric() -> None:
 
 
 def test_prompt_covers_chinese_error_phrases() -> None:
-    # Validation-site fixtures surface role=alert with Chinese text
-    # ("用户名或密码错误"). Prompt must list at least one common
-    # Chinese error cue so the LLM flips did_show_error when it sees
-    # one.
+    # Prompt must list at least one common Chinese error cue so the LLM
+    # flips did_show_error when it sees one.
     text = _prompt()
     assert "错误" in text or "失败" in text or "无效" in text
 

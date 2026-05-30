@@ -84,7 +84,7 @@ setup_type =
 ```
 
 `live_same_session_distinct_paths` / `live_setup_session_distinct_paths` 是最高保真路径。
-如果 `/items` 当前 live UI 只能稳定提供一个真实 action，第一版可使用
+如果 `/records` 当前 live UI 只能稳定提供一个真实 action，第一版可使用
 `eval_only_candidate_binding` 稳定触发 pending choice evaluator：
 
 - 至少一个真实 LearnedPath 来自当前 eval run。
@@ -203,7 +203,7 @@ Redaction must cover:
 - `execution_payload`
 - credentials / tokens / cookies / authorization headers
 
-`item_name` can remain visible as deterministic `/items` test data.
+`record_name` can remain visible as deterministic `/records` test data.
 
 ## Compatibility
 

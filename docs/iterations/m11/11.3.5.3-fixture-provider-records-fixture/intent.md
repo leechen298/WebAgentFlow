@@ -4,10 +4,10 @@
 
 ## 目标
 
-在 `apps/product-test-site` 新增一个产品级列表测试页：
+在 `apps/fixture-site` 新增一个产品级列表测试页：
 
 ```text
-/items
+/records
 ```
 
 页面只做 P0 必需能力：
@@ -30,7 +30,7 @@
 
 ## 背景
 
-当前 `apps/product-test-site` 只有 `/workspace-login` 和 `/workspace-home`。
+当前 `apps/fixture-site` 只有 `/target-login` 和 `/workspace-home`。
 登录页适合验证账号、密码、跳转和登录态，但不适合作为第一条 working runtime
 happy path，因为它会把账号密码、cookie、重定向和权限等因素混到学习 / 执行 /
 验证链路里。
@@ -38,24 +38,24 @@ happy path，因为它会把账号密码、cookie、重定向和权限等因素�
 列表页更适合 P0：
 
 - 新增项目后能在页面上留下明确 DOM 结果。
-- 后续 ExecutionEvidence 可以限定在 `[data-testid='item-list']` 内查找目标文本。
+- 后续 ExecutionEvidence 可以限定在 `[data-testid='record-list']` 内查找目标文本。
 - 后续参数化 replay 可以明确证明“学习 A 后执行 B”没有复读录制值 A。
 
 ## 成功标准
 
-- `/items` route 可访问。
+- `/records` route 可访问。
 - 页面使用前端本地状态，不依赖后端 API。
 - 初始列表包含稳定示例数据。
 - 输入唯一项目名后点击新增，列表中出现该项目。
 - 新增成功后 `operation-status` 显示明确状态。
 - 空名称不会新增空行，并给出页面内状态反馈。
 - 页面提供稳定 `data-testid`，满足后续 learning / replay / evidence 定位。
-- `/workspace-login`、`/workspace-home` 和 `/` redirect 不被破坏。
+- `/target-login`、`/workspace-home` 和 `/` redirect 不被破坏。
 
 ## 非目标
 
 - 不接 `wagent chat`。
-- 不实现 `item_name` slot extraction。
+- 不实现 `record_name` slot extraction。
 - 不实现 `value_slot`、`slot_overrides` 或参数化 replay。
 - 不采集 `ExecutionEvidence`。
 - 不接 `TaskResultReporter`。

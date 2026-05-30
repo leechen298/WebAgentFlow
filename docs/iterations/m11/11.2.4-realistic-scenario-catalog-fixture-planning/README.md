@@ -16,7 +16,7 @@
 - `test-plan.md`
 - `plan.md`
 
-后续实现包再在 validation-site 中建设自有 fixture 页面、mock API、可复现状态变化
+后续实现包再在 fixture-site 中建设自有 fixture 页面、mock API、可复现状态变化
 和对应验证证据。
 
 ## 为什么先做场景目录

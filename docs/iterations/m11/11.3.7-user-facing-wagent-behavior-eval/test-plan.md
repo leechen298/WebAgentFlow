@@ -61,7 +61,7 @@ eval specs, test files and fixture source. A forbidden match in runtime code or 
 hard fail because it means the implementation may be targeting the test page instead of solving the
 general product behavior.
 
-If current code already contains product-test-site-specific runtime checks, selector construction,
+If current code already contains fixture-site-specific runtime checks, selector construction,
 button / field text matching, fixture item names, operation aliases, or prompt examples, 11.3.7 must
 classify them as blockers. They must be made generic or moved into eval spec / test-only layers. A
 cleanup issue may be opened, but that does not allow the eval to pass; the result remains `blocked`
@@ -74,7 +74,7 @@ fixture source and tests.
 
 Allowed target-detail locations:
 
-- product-test-site fixture source;
+- fixture-site fixture source;
 - eval spec;
 - tests;
 - docs / review / testing results / artifacts.

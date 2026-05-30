@@ -231,7 +231,7 @@ def _fillable(**overrides: object) -> DiscoveredElement:
         "category": "fillable",
         "tag": "input",
         "element_type": "text",
-        "selector": "#search-name",
+        "selector": "#name-field",
         "semantic_role": "name",
         "rect": {"x": 0, "y": 200, "w": 240, "h": 32},
         "visible": True,
@@ -240,7 +240,7 @@ def _fillable(**overrides: object) -> DiscoveredElement:
     return DiscoveredElement(**payload)
 
 
-def _submit(selector: str = "#btn-search") -> DiscoveredElement:
+def _submit(selector: str = "#btn-apply") -> DiscoveredElement:
     return DiscoveredElement(
         category="submit",
         tag="button",
@@ -269,7 +269,7 @@ def test_plan_actions_toggle_only_clicks_radio_then_submit() -> None:
     kinds = [(a.action_type, a.target_selector) for a in plan if a.action_type != "observe"]
     assert kinds == [
         ("click", "#r-active"),
-        ("click", "#btn-search"),
+        ("click", "#btn-apply"),
     ]
 
 
@@ -291,9 +291,9 @@ def test_plan_actions_fill_then_toggle_then_submit() -> None:
     )
     kinds = [(a.action_type, a.target_selector) for a in plan if a.action_type != "observe"]
     assert kinds == [
-        ("fill", "#search-name"),
+        ("fill", "#name-field"),
         ("click", "#r-active"),
-        ("click", "#btn-search"),
+        ("click", "#btn-apply"),
     ]
 
 
@@ -310,8 +310,8 @@ def test_plan_actions_without_toggle_values_is_unchanged() -> None:
     plan = plan_actions(analysis, fill_values={"name": "alice"})
     kinds = [(a.action_type, a.target_selector) for a in plan if a.action_type != "observe"]
     assert kinds == [
-        ("fill", "#search-name"),
-        ("click", "#btn-search"),
+        ("fill", "#name-field"),
+        ("click", "#btn-apply"),
     ]
 
 
@@ -373,14 +373,14 @@ def test_describe_fillable_unchanged_when_value_absent() -> None:
         category="fillable",
         tag="input",
         element_type="text",
-        id="search-name",
+        id="name-field",
         placeholder="e.g. alice",
-        selector="#search-name",
+        selector="#name-field",
         semantic_role="name",
         rect={"x": 0, "y": 0, "w": 10, "h": 10},
     )
     description = _describe(el)
-    assert "id=search-name" in description
+    assert "id=name-field" in description
     assert "placeholder='e.g. alice'" in description
     # element_value was not set → no stray value='' clause.
     assert "value=" not in description
@@ -401,4 +401,4 @@ def test_plan_actions_unmatched_toggle_is_skipped() -> None:
     )
     plan = plan_actions(analysis, toggle_values={"status": "pending"})
     kinds = [(a.action_type, a.target_selector) for a in plan if a.action_type != "observe"]
-    assert kinds == [("click", "#btn-search")]
+    assert kinds == [("click", "#btn-apply")]

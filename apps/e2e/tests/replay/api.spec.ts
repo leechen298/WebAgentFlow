@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
-import { apiUrl, validationUrl } from '../../fixtures/config';
+import { apiUrl } from '../../fixtures/config';
 import {
   loadReplayFixtures,
   type ReplayFixtureFile,
@@ -32,7 +32,7 @@ test.beforeAll(async () => {
 async function replay(
   request: APIRequestContext,
   name: ReplayFixtureName,
-  url: string = validationUrl('/users'),
+  url: string = seeded.fixtures[name].target_url,
 ): Promise<{ status: number; body: ApiEnvelope<ReplayResult> }> {
   const fixture = seeded.fixtures[name];
   const response = await request.post(apiUrl(`/exploration/learned-paths/${fixture.id}/replay`), {
@@ -63,7 +63,9 @@ test.describe('LearnedPath replay API E2E', () => {
   });
 
   test('page mismatch blocks replay', async ({ request }) => {
-    const { status, body } = await replay(request, 'pageMismatch', validationUrl('/login'));
+    const mismatchUrl = seeded.fixtures.pageMismatch.mismatch_url;
+    expect(mismatchUrl).toBeTruthy();
+    const { status, body } = await replay(request, 'pageMismatch', mismatchUrl);
 
     expect(status).toBe(200);
     expect(body.code).toBe(0);

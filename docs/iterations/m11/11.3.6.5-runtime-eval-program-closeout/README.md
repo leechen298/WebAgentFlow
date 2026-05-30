@@ -53,7 +53,7 @@ Conversation runtime、不改 TaskPathPlanner / recovery / pending choice 产品
 
 Closeout sweep 已执行三轮。第一轮 `pnpm run eval:wagent:pending-choice` 和
 `pnpm run eval:wagent:planner-choice` 均返回 exit `2`，写出 blocked artifact。第二轮在 API
-和 product-test-site 可访问后重跑，两个 required eval 均返回 exit `1`，因此开启
+和 fixture-site 可访问后重跑，两个 required eval 均返回 exit `1`，因此开启
 11.3.6.6 代码型 fix 迭代。11.3.6.6 修复后，final closeout rerun 已通过：
 
 - `pnpm run eval:wagent:items` -> exit `0`

@@ -71,7 +71,7 @@ test -x .venv/bin/wagent || .venv/bin/pip install -e './apps/cli'
 输入：
 
 ```text
-学习一下这个登录页怎么登录，地址是 http://localhost:5175/login
+学习一下这个登录页怎么登录，地址是 https://example.invalid/entry
 ```
 
 期望：

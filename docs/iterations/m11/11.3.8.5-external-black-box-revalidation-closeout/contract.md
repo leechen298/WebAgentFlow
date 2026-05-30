@@ -32,7 +32,7 @@ If any field is absent, status remains `NEEDS_USER_INPUT`.
 - Runtime, tests, schema, API, frontend, worker, replay, reporter, recovery, abort, prompt, or eval-runner changes.
 - Direct calls to `/exploration/autonomous-runs` or `/exploration/autonomous-runs/stream`.
 - Internal service imports, hidden HTTP clients, direct replay API, or ad hoc scripts as WAgent pass evidence.
-- External Validation-Site / Fixture-Site source edits.
+- External Fixture-Site / Fixture-Site source edits.
 - PASS wording without evidence from required gates.
 
 ## Validation Surface Contract

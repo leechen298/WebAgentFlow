@@ -90,7 +90,7 @@ export default {
     clickToZoom: 'クリックで拡大',
     // フォーム
     urlLabel: 'URL',
-    urlPlaceholder: 'http://127.0.0.1:5175/login',
+    urlPlaceholder: 'https://target.example.test/path',
     goalLabel: 'ゴール（任意）',
     goalPlaceholder: '例：admin としてログイン',
     specMatched: 'Spec マッチ: {id} · {count} テストシナリオ',

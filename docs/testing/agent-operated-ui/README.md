@@ -141,26 +141,11 @@ docs/testing/results/YYYY-MM-DD-console-operator-live-ui-smoke.md
 docs/testing/results/agent-operated-ui-latest.md
 ```
 
-### AUI-03 · Validation-site 浏览器冒烟
+### AUI-03 · External fixture provider 浏览器冒烟
 
-用例文件：
-
-```text
-docs/testing/agent-operated-ui/cases/validation-site-browser-smoke.md
-```
-
-目标：
-
-- 打开 `/login`。
-- 打开 `/users`。
-- 确认关键控件可见。
-- 执行基础搜索 / 错误提示可见性验证。
-
-已记录报告：
-
-```text
-docs/testing/results/2026-05-11-validation-site-browser-smoke.md
-```
+外部 fixture provider 的页面级浏览器冒烟不保留在 WebAgentFlow 仓库。
+WebAgentFlow 只消费 provider 输出的 redacted result summary 或 replay fixture
+manifest。
 
 ## 报告模板
 

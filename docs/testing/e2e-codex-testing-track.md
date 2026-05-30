@@ -70,7 +70,6 @@ E2E 报告：
 Agent-operated UI / visual evidence 报告：
 
 - `docs/testing/results/2026-05-09-replay-visual-ui-exploratory.md`
-- `docs/testing/results/2026-05-11-validation-site-browser-smoke.md`
 
 Historical API exploratory report:
 

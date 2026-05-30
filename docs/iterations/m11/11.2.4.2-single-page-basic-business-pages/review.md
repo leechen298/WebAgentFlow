@@ -60,9 +60,9 @@ Follow-up review fixes applied:
 | Command / Surface | Expected | Actual result | Exit code | Result | Notes |
 |---|---|---|---:|---|---|
 | `git diff --check` | no whitespace errors | no output | 0 | PASS | rerun after fixes |
-| `pnpm --filter @web-agent-flow/validation-site build` | validation-site build exits 0 | `vue-tsc --noEmit && vite build` completed; Vite build in 2.40s | 0 | PASS | chunk-size warning only |
-| browser route smoke via local validation-site dev server on `127.0.0.1:5176` | 7 basic routes open; anchors / local error / happy path / reset pass | login, register, sms-login, search, detail, settings, confirm all PASS | 0 | PASS | in-app browser input was unavailable due virtual clipboard; final smoke used browser coordinates / keypresses |
-| `git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'` | no backend / package / lock changes | `M package.json` | 0 | NOTE | unrelated root package script change is present in the shared workspace; not part of 11.2.4.2 validation-site implementation |
+| `pnpm --filter @web-agent-flow/fixture-site build` | fixture-site build exits 0 | `vue-tsc --noEmit && vite build` completed; Vite build in 2.40s | 0 | PASS | chunk-size warning only |
+| browser route smoke via local fixture-site dev server on `127.0.0.1:<fixture-port>` | 7 basic routes open; anchors / local error / happy path / reset pass | login, register, sms-login, search, detail, settings, confirm all PASS | 0 | PASS | in-app browser input was unavailable due virtual clipboard; final smoke used browser coordinates / keypresses |
+| `git status --short -- '*.py' 'package.json' 'pnpm-lock.yaml' 'package-lock.yaml' 'package-lock.json'` | no backend / package / lock changes | `M package.json` | 0 | NOTE | unrelated root package script change is present in the shared workspace; not part of 11.2.4.2 fixture-site implementation |
 | `find docs/iterations -maxdepth 4 -type d \( -name 'm12' -o -name '12.*' -o -name 'm14' -o -name '14.*' -o -name '11.3-*' \) -print` | report forbidden directories honestly | `docs/iterations/m11/11.3-interactive-chat-closed-loop` | 0 | NOTE | existing directory, not introduced by 11.2.4.2 |
 
 Browser route smoke covered:

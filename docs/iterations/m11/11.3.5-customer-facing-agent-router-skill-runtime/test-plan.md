@@ -85,7 +85,7 @@ git diff --check
 - lookup learned actions 发现未学过。
 - 通过 Orchestrator 的 target、goal、slots、current-session scope 和 MVP 边界校验后，
   进入 learn-then-execute 或清晰询问用户是否先学习。
-- 不从 validation-site specs / assertions 取输入。
+- 不从 fixture-site specs / assertions 取输入。
 
 ### 6. 组合目标
 

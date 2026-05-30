@@ -10,12 +10,12 @@
 chat_learning_completed alias=create inventory item canonical_goal=create_inventory_item
 router route_decision=delegate_to_web_operation_agent recommended_skill=start_replay
 chat_execution_failed reason=unsupported_value_slot
-unsupported_slots=["name", "category", "stock_quantity"]
+unsupported_slots=["name", "category", "record_quantity"]
 ```
 
-The learned path stored generic `value_slot` keys such as `item_name`,
-`item_category`, and `quantity`, while the execute intake emitted `name`,
-`category`, and `stock_quantity`.
+The learned path stored generic `value_slot` keys such as `record_name`,
+`record_category`, and `quantity`, while the execute intake emitted `name`,
+`category`, and `record_quantity`.
 
 A later live rerun also showed execute intake can emit business-object-prefixed
 semantic types such as `<object>_sku`, `<object>_name`, `<object>_category`, and

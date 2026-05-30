@@ -285,7 +285,7 @@ def test_replay_moves_to_replay_requested_and_does_not_call_replay(
     session_id = _create_session(repo, status="idle")
 
     result = orchestrator.dispatch_user_input(
-        session_id, "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users"
+        session_id, "/replay 11111111-1111-1111-1111-111111111111 https://example.invalid/records"
     )
 
     assert result.allowed is True
@@ -542,7 +542,7 @@ def test_explicit_replay_ignores_planning_handler(
     )
 
     result = orch.dispatch_user_input(
-        session_id, "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users"
+        session_id, "/replay 11111111-1111-1111-1111-111111111111 https://example.invalid/records"
     )
 
     assert result.allowed is True
@@ -757,7 +757,7 @@ def test_replay_blocked_while_awaiting_confirmation(
     session_id = _create_awaiting_confirmation_session(repo)
 
     result = orchestrator.dispatch_user_input(
-        session_id, "/replay 11111111-1111-1111-1111-111111111111 http://127.0.0.1:5175/users"
+        session_id, "/replay 11111111-1111-1111-1111-111111111111 https://example.invalid/records"
     )
 
     assert result.allowed is False
@@ -829,7 +829,7 @@ def _create_plan_confirmed_session(
         "route_steps": [{"order": 1, "learned_path_id": "lp-001"}],
     }
     if with_target_url:
-        payload["target_url"] = "http://127.0.0.1:5175/users"
+        payload["target_url"] = "https://example.invalid/records"
     repo.append_event(
         session_id=session_id,
         type=ConversationEventType.PLAN_PREVIEW_PROPOSED,
@@ -952,7 +952,7 @@ def test_execute_replay_failure_moves_to_execution_failed(
     def handler(_lid: str, _url: str) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id="lp-001",
-            url="http://127.0.0.1:5175/users",
+            url="https://example.invalid/records",
             replay_status="drifted",
             drift_status="target_missing",
             error="Target missing",
@@ -987,7 +987,7 @@ def test_non_execution_free_text_in_plan_confirmed_does_not_trigger_replay(
         calls.append(True)
         return ConversationReplaySummary(
             learned_path_id="lp-001",
-            url="http://127.0.0.1:5175/users",
+            url="https://example.invalid/records",
             replay_status="succeeded",
             drift_status="none",
         )
@@ -1041,7 +1041,7 @@ def test_replay_while_awaiting_confirmation_still_blocked(
     def handler(_lid: str, _url: str) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id="lp-001",
-            url="http://127.0.0.1:5175/users",
+            url="https://example.invalid/records",
             replay_status="succeeded",
             drift_status="none",
         )
@@ -1051,7 +1051,7 @@ def test_replay_while_awaiting_confirmation_still_blocked(
     )
 
     result = orch.dispatch_user_input(
-        session_id, "/replay lp-001 http://127.0.0.1:5175/users"
+        session_id, "/replay lp-001 https://example.invalid/records"
     )
 
     assert result.allowed is False
@@ -1129,7 +1129,7 @@ def test_execute_blocked_when_plan_confirmed_event_is_missing(
         type=ConversationEventType.PLAN_PREVIEW_PROPOSED,
         payload={
             "selected_path_id": "lp-001",
-            "target_url": "http://127.0.0.1:5175/users",
+            "target_url": "https://example.invalid/records",
             "route_steps": [{"order": 1}],
         },
     )
@@ -1171,7 +1171,7 @@ def test_execute_blocked_when_confirmed_path_id_mismatches_preview(
         type=ConversationEventType.PLAN_PREVIEW_PROPOSED,
         payload={
             "selected_path_id": "lp-001",
-            "target_url": "http://127.0.0.1:5175/users",
+            "target_url": "https://example.invalid/records",
             "route_steps": [{"order": 1}],
         },
     )
@@ -1293,7 +1293,7 @@ def test_execution_failure_records_final_agent_message_not_empty(
     def handler(_lid: str, _url: str) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id="lp-001",
-            url="http://127.0.0.1:5175/users",
+            url="https://example.invalid/records",
             replay_status="drifted",
             drift_status="target_missing",
             error="Target missing",
@@ -1396,7 +1396,7 @@ def test_execute_failure_includes_task_result_reported_event(
     def handler(_lid: str, _url: str) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id="lp-001",
-            url="http://127.0.0.1:5175/users",
+            url="https://example.invalid/records",
             replay_status="drifted",
             drift_status="target_missing",
             error="Target missing",
@@ -1477,7 +1477,7 @@ def test_execute_failure_report_user_response_does_not_claim_recovery(
     def handler(_lid: str, _url: str) -> ConversationReplaySummary:
         return ConversationReplaySummary(
             learned_path_id="lp-001",
-            url="http://127.0.0.1:5175/users",
+            url="https://example.invalid/records",
             replay_status="failed",
             drift_status="none",
             error="element not found",

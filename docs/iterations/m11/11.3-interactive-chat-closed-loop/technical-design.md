@@ -95,7 +95,7 @@ M11.3 代码只保证 `wagent chat` learning path 使用 `LearningRunService` �
 - `parse_chat_intent(raw_input) -> learn_page | execute_task | unknown`
 - `handle_interactive_chat(session, raw_input, metadata) -> DispatchResult | None`
 - 学习分支：
-  - 仅支持 `/login` URL；
+  - 仅支持 `/entry` URL；
   - 调用 learning service；
   - 校验 `learned_path_id` 可查询；
   - 读取 session metadata，按 alias merge learned action；
@@ -158,7 +158,7 @@ user: 帮我登录
 
 ## 失败 / 边界情况
 
-- URL 不是 `/login`：返回当前只支持登录页学习。
+- URL 不是 `/entry`：返回当前只支持登录页学习。
 - autonomous run pass gate 未通过：不返回学习完成。
 - run persisted 但未产生 LearnedPath：返回学习失败或内部错误。
 - 当前 session 没有 learned_actions：返回需要先学习。

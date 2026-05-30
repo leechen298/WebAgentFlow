@@ -15,7 +15,7 @@
 ## 迭代定位
 
 11.3.4 补齐 `wagent chat` 的自然语言入口层。当前 11.3.3 已经把
-product-test-site 和 validation-site 拆开，并通过 product-level CLI smoke；
+fixture-site 和 fixture-site 拆开，并通过 product-level CLI smoke；
 但 `wagent chat` 仍主要依赖 deterministic parser、regex 和字符串匹配。
 
 本包定义 **Conversation Intake Agent / 对话理解 Agent**：它负责把用户自然语言

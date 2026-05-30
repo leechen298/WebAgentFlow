@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
-import { apiUrl, validationUrl } from '../../fixtures/config';
+import { apiUrl } from '../../fixtures/config';
 import { loadReplayFixtures, type ReplayFixture, type ReplayFixtureFile } from '../../fixtures/learnedPaths';
 
 interface ApiEnvelope<T> {
@@ -236,7 +236,7 @@ test.describe('Conversation 11.1.7 task result reporter E2E', () => {
     request,
   }) => {
     const fixture = seeded.fixtures.happy;
-    const targetUrl = validationUrl('/users');
+    const targetUrl = fixture.target_url;
     const session = await enterSeededExecutionContext(request, fixture, targetUrl);
 
     const execute = await dispatch(request, session.id, 'execute');
@@ -281,7 +281,9 @@ test.describe('Conversation 11.1.7 task result reporter E2E', () => {
       drift_status: 'none',
       error_summary: null,
     });
-    expect(String(reported.payload.final_url ?? '')).toContain('/users?name=alice');
+    expect(String(reported.payload.final_url ?? '')).toContain(
+      fixture.expected_final_url_contains ?? targetUrl,
+    );
     expect(String(reported.payload.evidence_summary ?? '')).toContain('Replay status: succeeded');
     expect(String(reported.payload.missing_evidence_summary ?? '')).toContain(
       'no explicit postcondition evidence',
@@ -304,7 +306,7 @@ test.describe('Conversation 11.1.7 task result reporter E2E', () => {
     request,
   }) => {
     const fixture = seeded.fixtures.targetMissing;
-    const targetUrl = validationUrl('/users');
+    const targetUrl = fixture.target_url;
     const session = await enterSeededExecutionContext(request, fixture, targetUrl);
 
     const execute = await dispatch(request, session.id, 'execute');

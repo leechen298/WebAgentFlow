@@ -4,7 +4,7 @@
 里程碑：M11
 类型：code
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
-前置迭代：[`11.3.5.6-wagent-chat-items-closed-loop-evaluation`](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/)
+前置迭代：[`11.3.5.6-wagent-chat-records-closed-loop-evaluation`](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/)
 
 ## 迭代类型
 
@@ -18,13 +18,13 @@
 
 ## 迭代定位
 
-11.3.5.3 - 11.3.5.6 已经证明 `/items` P0 working loop 可以从 `wagent chat`
+11.3.5.3 - 11.3.5.6 已经证明 `/records` P0 working loop 可以从 `wagent chat`
 跑通：
 
 ```text
-/items
+/records
 -> 学习新增项目 A
--> value_slot=item_name
+-> value_slot=record_name
 -> 执行新增项目 B
 -> DOM evidence verified
 -> TaskResultReporter verified
@@ -59,7 +59,7 @@ Runtime 必须写入 `pending_choice`，下一轮由代码解析 choice，并保
 - 不接 TaskPathPlanner 多候选 chat 路径；Planner 接入属于 11.3.5.9。
 - 不做复杂 Failure Recovery；重试 / 重新学习 / 取消菜单属于 11.3.5.8。
 - 不启用 `learn_then_execute`。
-- 不新增 `/items` 搜索 / 编辑 / 删除页面功能。
+- 不新增 `/records` 搜索 / 编辑 / 删除页面功能。
 - 不让 Router 输出 `learned_path_id`、selector、Playwright action 或内部 adapter。
 - 不让 LLM 直接解析真实 path id 或调用 internal runtime adapter。
 - 不改变 TaskResultReporter outcome。

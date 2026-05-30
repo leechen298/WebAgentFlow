@@ -19,11 +19,11 @@ def repo(db_session: Session) -> LearnedPathRepository:
 
 def _sample_ingest_kwargs(**overrides) -> dict:
     base = dict(
-        page_template="/users",
+        page_template="/records",
         query_signature={"status": "active"},
         dom_fingerprint="a" * 64,
         scenario="filter_by_status",
-        actions=[{"selector": "#search-name", "action_type": "fill", "value": "bob"}],
+        actions=[{"selector": "#name-field", "action_type": "fill", "value": "bob"}],
         source_run_id=None,
     )
     base.update(overrides)
@@ -154,7 +154,7 @@ def test_find_by_source_run_returns_latest(
     )
 
     run = ExplorationRun(
-        page_signature="/users",
+        page_signature="/records",
         mode=ExplorationMode.FORM,
         status=ExplorationRunStatus.COMPLETED,
         success_criteria_ids_json=[],
@@ -252,7 +252,7 @@ def test_learned_path_returns_orm_row(
     row, _ = repo.ingest_run(**_sample_ingest_kwargs())
     fetched = db_session.get(LearnedPath, row.id)
     assert fetched is not None
-    assert fetched.page_template == "/users"
+    assert fetched.page_template == "/records"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -268,7 +268,7 @@ def test_find_replay_candidates_confirmed_before_provisional(
     repo.set_trust(conf.id, TrustStatus.CONFIRMED, reason=None)
 
     candidates = repo.find_replay_candidates(
-        page_template="/users", scenario="filter_by_status"
+        page_template="/records", scenario="filter_by_status"
     )
     assert [c.id for c in candidates] == [conf.id, prov.id]
 
@@ -282,7 +282,7 @@ def test_find_replay_candidates_skips_deprecated_and_flaky(
     repo.set_trust(flaky.id, TrustStatus.FLAKY, reason=None)
 
     candidates = repo.find_replay_candidates(
-        page_template="/users", scenario="filter_by_status"
+        page_template="/records", scenario="filter_by_status"
     )
     assert len(candidates) == 0
 
@@ -299,7 +299,7 @@ def test_find_replay_candidates_sorts_by_hit_count(
     repo.ingest_run(**_sample_ingest_kwargs(dom_fingerprint="b" * 64))
 
     candidates = repo.find_replay_candidates(
-        page_template="/users", scenario="filter_by_status"
+        page_template="/records", scenario="filter_by_status"
     )
     assert candidates[0].id == high.id
     assert candidates[1].id == low.id
@@ -319,7 +319,7 @@ def test_find_replay_candidates_filters_by_page_template_and_scenario(
     repo.set_trust(mismatch.id, TrustStatus.CONFIRMED, reason=None)
 
     candidates = repo.find_replay_candidates(
-        page_template="/users", scenario="filter_by_status"
+        page_template="/records", scenario="filter_by_status"
     )
     assert len(candidates) == 1
     assert candidates[0].id == match.id

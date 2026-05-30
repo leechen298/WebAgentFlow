@@ -16,7 +16,7 @@ M10.2 LearnedPath replay 的首次确定性 E2E 实跑通过。
 
 - Docker 基础设施已运行。
 - 数据库迁移已执行。
-- API、console、validation-site 服务已运行。
+- API、console、fixture-site 服务已运行。
 - API health 返回 HTTP `200`，并且 `database=ok`。
 
 ## Seed 结果

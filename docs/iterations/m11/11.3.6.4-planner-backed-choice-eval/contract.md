@@ -86,7 +86,7 @@ signals。
 
 ### Candidate Setup Practicality
 
-当前 `/items` P0 页面主要稳定支持“新增项目”闭环；第一版实现不得假设 live UI 一定能稳定学习出
+当前 `/records` P0 页面主要稳定支持“新增项目”闭环；第一版实现不得假设 live UI 一定能稳定学习出
 多个 distinct product actions。如果 live setup 不稳定，11.3.6.4 第一版允许使用
 `setup_type=eval_only_planner_candidate_binding`，但必须满足：
 

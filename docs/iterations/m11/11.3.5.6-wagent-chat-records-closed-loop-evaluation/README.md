@@ -1,11 +1,11 @@
-# 11.3.5.6 · WAgent Chat `/items` Closed-loop Evaluation
+# 11.3.5.6 · WAgent Chat `/records` Closed-loop Evaluation
 
 状态：implementation complete（closed-loop pass，result recorded）
 里程碑：M11
 类型：mixed
 父迭代：[`11.3.5-customer-facing-agent-router-skill-runtime`](../11.3.5-customer-facing-agent-router-skill-runtime/)
 前置迭代：
-[`11.3.5.3-product-test-site-items-fixture`](../11.3.5.3-product-test-site-items-fixture/),
+[`11.3.5.3-fixture-site-items-fixture`](../11.3.5.3-fixture-site-items-fixture/),
 [`11.3.5.4-parameterized-learning-replay-slots`](../11.3.5.4-parameterized-learning-replay-slots/),
 [`11.3.5.5-execution-evidence-result-reporter-adapter`](../11.3.5.5-execution-evidence-result-reporter-adapter/)
 
@@ -25,28 +25,28 @@
 11.3.5.6 是 working runtime P0 闭环的收口验证包。前序包分别完成：
 
 ```text
-11.3.5.3: /items product-test-site 页面基座
-11.3.5.4: item_name -> value_slot -> slot_overrides -> effective_action
+11.3.5.3: /records fixture-site 页面基座
+11.3.5.4: record_name -> value_slot -> slot_overrides -> effective_action
 11.3.5.5: evidence_targets -> execution_evidence -> TaskResultReporter verified path
 ```
 
 本包要证明这些能力在真实 `wagent chat` 产品入口里连成一条窄闭环：
 
 ```text
-用户只给 /items URL
+用户只给 /records URL
 -> 用户说“学习新增项目，名称叫测试项目A-${timestamp}”
--> 系统学习新增项目并绑定 item_name
+-> 系统学习新增项目并绑定 record_name
 -> 用户说“帮我新增项目，名称叫测试项目B-${timestamp}”
 -> replay 实际填入 B，不复读 A
--> [data-testid='item-list'] 中出现 B
+-> [data-testid='record-list'] 中出现 B
 -> TaskResultReporter 输出 verified
 -> review.md / docs/testing/results 记录可复查证据
 ```
 
 ## 本包不做
 
-- 不新增 `/items` 功能，不做搜索 / 编辑 / 删除。
-- 不新增 `item_name` / `value_slot` / `slot_overrides` 机制。
+- 不新增 `/records` 功能，不做搜索 / 编辑 / 删除。
+- 不新增 `record_name` / `value_slot` / `slot_overrides` 机制。
 - 不新增 `ExecutionEvidence` / Reporter adapter 机制。
 - 不接 TaskPathPlanner。
 - 不做 `pending_choice`。
@@ -76,22 +76,22 @@
 - [x] `test-plan.md` 已存在并与技术设计的 Test Matrix 一致。
 - [x] `plan.md` 与 contract / technical design 一致。
 - [x] `review.md` 在收尾前记录验证证据。
-- [x] `docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md`
+- [x] `docs/testing/results/m11-11.3.5.6-records-closed-loop-<YYYY-MM-DD>.md`
   已记录可复查结果。
 - [x] 实际闭环已执行，或明确记录 blocked / unverified 原因。
 
 ## 当前状态
 
 闭环已执行并通过。结果文件：
-[`docs/testing/results/m11-11.3.5.6-items-closed-loop-2026-05-21.md`](../../../testing/results/m11-11.3.5.6-items-closed-loop-2026-05-21.md)。
+[`docs/testing/results/m11-11.3.5.6-records-closed-loop-2026-05-21.md`](../../../testing/results/m11-11.3.5.6-records-closed-loop-2026-05-21.md)。
 
 执行结果证明当前工作区已经包含 11.3.5.3 - 11.3.5.5 的实现结果：
 
-- `apps/product-test-site` `/items` 可打开并能新增项目。
+- `apps/fixture-site` `/records` 可打开并能新增项目。
 - `ReplayAction.value_slot` 和 `ReplayRequest.slot_overrides` 已实现。
 - `run_replay()` 使用 `effective_action` 并在 step log 中保留参数化证据。
 - `ExecutionEvidenceTarget` / `ExecutionEvidence` 已实现。
-- `/items` evidence target 使用 `[data-testid='item-list']`。
+- `/records` evidence target 使用 `[data-testid='record-list']`。
 - `TaskResultReporter` 能基于 structured postcondition evidence 输出 `verified`。
 
 复核入口：

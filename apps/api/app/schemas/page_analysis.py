@@ -145,7 +145,7 @@ class PageAnalysis(BaseModel):
 OutcomeVerdict = Literal[
     "success",          # all action steps ok AND observable state change
     "partial_success",  # some action steps failed
-    "failure",          # actions executed but no state change, or blocked (CAPTCHA/login wall)
+    "failure",          # actions executed but no state change, or blocked (CAPTCHA/auth wall)
     "uncertain",        # cannot determine — insufficient signals
 ]
 # This enum is intentionally shared with the autonomous-supervisor

@@ -39,7 +39,7 @@ git diff --check
 
 ## Required Eval Rerun
 
-With API and product-test-site reachable:
+With API and fixture-site reachable:
 
 ```bash
 pnpm run eval:wagent:pending-choice

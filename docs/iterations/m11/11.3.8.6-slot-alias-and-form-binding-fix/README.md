@@ -30,7 +30,7 @@ and the learned path may bind business values to the wrong form fields.
 - learned run: `ce807dfd-614f-4d87-9e02-f6e13772ec07`
 - `PV-CLI-003`: `chat_execution_failed`
 - failure reason: `unsupported_value_slot`
-- unsupported slots: `name`, `category`, `stock_quantity`
+- unsupported slots: `name`, `category`, `record_quantity`
 
 This means `11.3.8.3` fixed learned-action matching, but the full
 learn-then-execute path still needs target-agnostic slot compatibility and
@@ -49,12 +49,12 @@ Allowed:
 
 Forbidden:
 
-- Hardcoding `5177`, `/inventory`, inventory item labels, selectors, seed copy,
-  button text, or Validation-Site implementation details in product runtime or
+- Hardcoding `<fixture-port>`, `/target-page`, inventory item labels, selectors, seed copy,
+  button text, or Fixture-Site implementation details in product runtime or
   prompts.
 - Direct autonomous-run endpoint calls.
 - Direct replay API evidence as WAgent pass evidence.
-- External Validation-Site source edits.
+- External Fixture-Site source edits.
 - PASS wording without rerunning approved live validation.
 
 ## Handoff

@@ -44,7 +44,7 @@ Headless Playwright E2E 属于 deterministic E2E。curl / Python / Node API 调�
 
 1. 确认 API health 可用。
 2. 确认 console 可访问。
-3. 确认 validation-site 可访问。
+3. 确认外部 fixture provider 可访问。
 4. 确认 `apps/e2e/.tmp/replay-fixtures.json` 存在且包含 8 个 replay fixtures。
 5. 如果当前数据库没有 seeded LearnedPath，可运行
    `.venv/bin/python apps/e2e/scripts/seed-replay-fixtures.py`。
@@ -58,14 +58,14 @@ Headless Playwright E2E 属于 deterministic E2E。curl / Python / Node API 调�
 | Case | Scenario | URL | PASS observation |
 | --- | --- | --- | --- |
 | UI-001 | `e2e:replay:happy` | empty | replay button disabled |
-| UI-002 | `e2e:replay:happy` | `<validation>/users` | `成功` / `无变化` / final URL / `Step 0` |
-| UI-OBS | `e2e:replay:observational` | `<validation>/users` | `这条路径没有动作，已完成页面观察` / `无变化` / `暂无步骤日志` |
-| UI-PAGE-MISMATCH | `e2e:replay:page-mismatch` | `<validation>/login` | `页面变化导致无法重跑` / `页面不匹配` |
-| UI-004 | `e2e:replay:target-missing` | `<validation>/users` | `页面变化导致无法重跑` / `找不到当初记录的按钮或输入框` |
-| UI-UNSUPPORTED | `e2e:replay:unsupported-action` | `<validation>/users` | `这类动作当前还不能重跑` |
-| UI-003 | `e2e:replay:flaky` | `<validation>/users` | `成功` / `Path trust is flaky` |
-| UI-005 | `e2e:replay:deprecated` | `<validation>/users` | `重跑失败` / `learned_path is deprecated` |
-| UI-SIGNATURE | `e2e:replay:signature-changed` | `<validation>/users` | `成功` / `签名已变化` |
+| UI-002 | `e2e:replay:happy` | `<fixture-provider>/records` | `成功` / `无变化` / final URL / `Step 0` |
+| UI-OBS | `e2e:replay:observational` | `<fixture-provider>/records` | `这条路径没有动作，已完成页面观察` / `无变化` / `暂无步骤日志` |
+| UI-PAGE-MISMATCH | `e2e:replay:page-mismatch` | `<fixture-provider>/entry` | `页面变化导致无法重跑` / `页面不匹配` |
+| UI-004 | `e2e:replay:target-missing` | `<fixture-provider>/records` | `页面变化导致无法重跑` / `找不到当初记录的按钮或输入框` |
+| UI-UNSUPPORTED | `e2e:replay:unsupported-action` | `<fixture-provider>/records` | `这类动作当前还不能重跑` |
+| UI-003 | `e2e:replay:flaky` | `<fixture-provider>/records` | `成功` / `Path trust is flaky` |
+| UI-005 | `e2e:replay:deprecated` | `<fixture-provider>/records` | `重跑失败` / `learned_path is deprecated` |
+| UI-SIGNATURE | `e2e:replay:signature-changed` | `<fixture-provider>/records` | `成功` / `签名已变化` |
 
 ## 报告要求
 

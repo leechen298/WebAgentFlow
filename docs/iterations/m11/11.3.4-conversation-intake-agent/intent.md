@@ -25,7 +25,7 @@ M11.3.3 已经证明 product-level `wagent chat` 可以学习并执行用户输�
 普通用户不会遵守固定格式。比如他们可能说：
 
 ```text
-学习这个入口：http://localhost:5176/workspace-login，demo / 123456
+学习这个入口：http://localhost:<fixture-port>/target-login，demo / 123456
 帮我登录这个页面
 进一下刚才那个工作台
 ```

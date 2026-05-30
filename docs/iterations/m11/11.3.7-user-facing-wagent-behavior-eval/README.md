@@ -52,7 +52,7 @@
   learned actions；unknown 必须使用 fresh session、isolated scope 或 explicit filtered catalog，
   不能被全局旧 LearnedPath 污染。
 - 明确 “没学过 -> 用户选择学习 -> 真进入学习流程” 是第一批 required gate，不是可选扩展。
-- 明确现有 product-test-site runtime 特判必须在 11.3.7 实现中清理；未清理只能 blocked，
+- 明确现有 fixture-site runtime 特判必须在 11.3.7 实现中清理；未清理只能 blocked，
   不能 pass。
 - 约束所有 live / CLI / UI 证据必须通过可审计产品入口或 project eval runner 产生。
 
@@ -85,7 +85,7 @@
 11.3.7 anti-hardcoding blocker 清理包；post-cleanup forbidden-target scan 已在产品 runtime /
 prompt 路径上返回 `pass` / `0 matches`。
 
-`pnpm run eval:wagent:user-behavior` runner 已实现，并已在本地 API + product-test-site 可用时跑完
+`pnpm run eval:wagent:user-behavior` runner 已实现，并已在本地 API + fixture-site 可用时跑完
 first-wave behavior gates。当前稳定 JSON / Markdown artifact 的总体状态是 `pass`：forbidden-target
 case、URL-only known / unknown、unknown choose-learn、execute-known / unknown、execute-unknown
 choose-learn staged learning flow、vague input、known / unknown isolation 和 public redaction gates
@@ -98,4 +98,4 @@ choose-learn staged learning flow、vague input、known / unknown isolation 和 
 - `docs/testing/results/m11-11.3.7-user-facing-wagent-behavior-eval-latest.md`
 
 11.3.7 的当前判断来自最新稳定 artifacts 和 integrity checks；如果后续修改 runtime、eval runner、
-target spec 或 product-test-site，需要重新运行 eval 和 redaction / forbidden-target gates。
+target spec 或 fixture-site，需要重新运行 eval 和 redaction / forbidden-target gates。

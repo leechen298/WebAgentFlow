@@ -290,61 +290,61 @@ class TestMatchFillableForRole:
         result = _match_fillable_for_role("username", [used], {"#u"})
         assert result is None
 
-    def test_generic_business_role_prefers_exact_field_signal_over_search(self):
+    def test_neutral_business_role_prefers_exact_field_signal_over_search(self):
         search = _el(
             selector="#global-search",
             semantic_role="search",
             role="searchbox",
-            placeholder="Search by SKU, name, or category",
+            placeholder="Search by reference, title, or category",
             label_text="Search",
             rect={"x": 0, "y": 180, "w": 640, "h": 44},
         )
-        sku = _el(
-            selector="#catalog-sku",
-            id="catalog-sku",
-            name="sku",
-            label_text="SKU",
+        reference = _el(
+            selector="#record-reference",
+            id="record-reference",
+            name="reference",
+            label_text="Reference",
             rect={"x": 0, "y": 260, "w": 180, "h": 32},
         )
-        name = _el(
-            selector="#catalog-name",
-            id="catalog-name",
-            name="name",
-            label_text="Name",
+        title = _el(
+            selector="#record-title",
+            id="record-title",
+            name="title",
+            label_text="Title",
             rect={"x": 0, "y": 300, "w": 180, "h": 32},
         )
         category = _el(
-            selector="#catalog-category",
-            id="catalog-category",
+            selector="#record-category",
+            id="record-category",
             name="category",
             label_text="Category",
             rect={"x": 0, "y": 340, "w": 180, "h": 32},
         )
         quantity = _el(
-            selector="#catalog-quantity",
-            id="catalog-quantity",
+            selector="#record-quantity",
+            id="record-quantity",
             name="quantity",
-            label_text="Stock quantity",
+            label_text="Quantity",
             rect={"x": 0, "y": 380, "w": 180, "h": 32},
         )
 
-        analysis = _analysis(fillable=[search, sku, name, category, quantity])
+        analysis = _analysis(fillable=[search, reference, title, category, quantity])
         actions = plan_actions(
             analysis,
             fill_values={
-                "sku": "NB-ALP-001",
-                "item_name": "Alpine Notebook",
-                "item_category": "Stationery",
+                "reference": "REF-001",
+                "title": "Alpha Record",
+                "category": "General",
                 "quantity": "24",
             },
         )
 
         fill_actions = [a for a in actions if a.action_type == "fill"]
         assert [(a.target_selector, a.value) for a in fill_actions] == [
-            ("#catalog-sku", "NB-ALP-001"),
-            ("#catalog-name", "Alpine Notebook"),
-            ("#catalog-category", "Stationery"),
-            ("#catalog-quantity", "24"),
+            ("#record-reference", "REF-001"),
+            ("#record-title", "Alpha Record"),
+            ("#record-category", "General"),
+            ("#record-quantity", "24"),
         ]
 
 

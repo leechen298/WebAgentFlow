@@ -16,7 +16,7 @@
   - Runner case and package script exist on current `v0.1`.
   - 2026-05-23 final rerun after 11.3.6.6 fixes returned exit `0`.
   - `pending_choice_multi_candidate` passed all required gates.
-  - Eval uses `setup_type=eval_only_candidate_binding`; it does not prove `/items` has
+  - Eval uses `setup_type=eval_only_candidate_binding`; it does not prove `/records` has
     three real distinct product actions.
 
 ## Design Summary
@@ -37,7 +37,7 @@ action 的闭环。
 
 ## Design Review Notes
 
-- 候选 setup 允许优先使用 live distinct paths；当 `/items` 当前页面无法稳定产生三个 distinct
+- 候选 setup 允许优先使用 live distinct paths；当 `/records` 当前页面无法稳定产生三个 distinct
   product actions 时，第一版可以使用 `setup_type=eval_only_candidate_binding` 或 fixture，但必须
   明确 `live_multi_action_capability=false`，不能冒充完整 live multi-action product capability。
 - `execution_uses_choice_A_path` 允许 runner 在内部用 raw `learned_path_id` 做 expected / actual
@@ -86,4 +86,4 @@ blocked result.
 
 Closeout decision: implementation complete / verified. This package is pass with the
 documented caveat that the A/B/C choices are eval-only alias bindings over one real path,
-not proof of three live distinct product actions on `/items`.
+not proof of three live distinct product actions on `/records`.

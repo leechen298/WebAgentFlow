@@ -281,11 +281,11 @@ def _first_informative_class_token(class_string: str) -> str | None:
     """Return the first class token that isn't an Ant Design 5 dev-only
     hash class, or ``None`` if no token remains.
 
-    Preferred tokens are framework / component classes (``ant-btn``,
-    ``el-form-item``, fixture-specific classes) because they discriminate
-    between elements. The dev-only token is shared across every Ant
-    Design component in a single app, so selecting by it collapses
-    unrelated elements into one selector.
+    Component-level classes can discriminate between otherwise similar
+    elements, but test-page-only tokens should not be treated as a special
+    success path. The dev-only token is shared across every Ant Design
+    component in a single app, so selecting by it collapses unrelated
+    elements into one selector.
     """
     for token in class_string.split():
         if token.startswith(_DEV_ONLY_CLASS_PREFIX):
@@ -515,7 +515,7 @@ def _infer_semantic_role(
         return "email"
     # name / role / status sit between the identity fragments above
     # and the catch-all ``search`` below so admin-table filters like
-    # ``search-name`` / ``filter-role`` / ``status-select`` get more
+    # ``search-field`` / ``filter-role`` / ``status-select`` get more
     # specific buckets than the generic ``search`` role.
     if any(f in hints for f in _NAME_FRAGMENTS):
         return "name"

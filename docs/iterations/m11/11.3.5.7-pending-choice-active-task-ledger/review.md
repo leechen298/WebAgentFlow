@@ -68,7 +68,7 @@
     cancel cleanup 和 minimal active task updates。
   - pending choice private map 保存内部 learned action payload；
     visible choice 只暴露 public choice id / label / description / intent。
-  - 选择执行时保留 `slot_overrides`，避免参数化 replay 丢失 `item_name`。
+  - 选择执行时保留 `slot_overrides`，避免参数化 replay 丢失 `record_name`。
 - `apps/api/app/services/conversation/history.py`
   - 对 session public payload 做递归脱敏，避免 private map / `learned_path_id`
     外泄到普通 session response。

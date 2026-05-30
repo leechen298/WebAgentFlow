@@ -51,7 +51,7 @@ runtime behavior / interaction pattern
 
 说明：
 
-- 当前 validation-site 已有 `/login` 属于 simple business page。
+- 外部 fixture provider 可以提供 simple business page。
 - simple 页面也可以叠加弱网、后端错误、前端校验、空结果等运行条件。
 - simple 不代表没有错误状态，只代表业务结构简单。
 
@@ -74,7 +74,7 @@ runtime behavior / interaction pattern
 
 说明：
 
-- 当前 validation-site 已有 `/users` 类页面通常属于 medium business page。
+- 外部 fixture provider 可以提供 medium business page。
 - 表格默认归为 medium。
 - 如果表格包含复杂动态列、批量操作、权限差异、行内编辑、主从联动，可以升级为
   complex。
@@ -131,7 +131,7 @@ runtime behavior / interaction pattern
 ## PC Business Page Catalog
 
 PC 场景目录用于覆盖常见后台、SaaS、运营、内容和业务管理页面。后续 fixture
-应优先自建在 validation-site 中，不依赖外部真实网站。
+应优先自建在外部 fixture provider 中，不依赖外部真实网站。
 
 | scenario_id | business_complexity | page_type | common_user_goal | runtime_behaviors | condition_variants | recommended_phase | current MVP | future observation |
 |---|---|---|---|---|---|---|---|---|

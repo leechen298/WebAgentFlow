@@ -15,8 +15,8 @@
 
 默认只新增或更新文档结果：
 
-- `docs/iterations/m11/11.3.5.6-wagent-chat-items-closed-loop-evaluation/review.md` - 记录设计评审、执行结果和未运行项。
-- `docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md` -
+- `docs/iterations/m11/11.3.5.6-wagent-chat-records-closed-loop-evaluation/review.md` - 记录设计评审、执行结果和未运行项。
+- `docs/testing/results/m11-11.3.5.6-records-closed-loop-<YYYY-MM-DD>.md` -
   记录完整闭环证据。
 
 如发现阻断性小缺口，允许最小代码修复，但必须：
@@ -43,13 +43,13 @@
 git status --short --branch
 rg -n "slot_overrides|value_slot|effective_action|execution_evidence|evidence_targets" \
   apps/api/app apps/api/tests
-rg -n "item-list|item-create-button|item-name-input" \
-  apps/product-test-site/src/pages/ItemsPage.vue
+rg -n "record-list|record-create-button|record-name-input" \
+  apps/fixture-site/src/pages/ItemsPage.vue
 ```
 
 确认：
 
-- 11.3.5.3 `/items` 页面存在。
+- 11.3.5.3 `/records` 页面存在。
 - 11.3.5.4 参数化 replay 存在。
 - 11.3.5.5 evidence / reporter 存在。
 
@@ -58,7 +58,7 @@ rg -n "item-list|item-create-button|item-name-input" \
 运行前置 targeted tests：
 
 ```bash
-pnpm --filter @web-agent-flow/product-test-site build
+pnpm --filter @web-agent-flow/fixture-site build
 
 cd apps/api
 PYTHONPATH=. ../../.venv/bin/pytest \
@@ -102,7 +102,7 @@ pnpm run dev:product
 使用唯一名称：
 
 ```bash
-export ITEMS_URL="http://127.0.0.1:5176/items"
+export ITEMS_URL="http://127.0.0.1:<fixture-port>/records"
 export RUN_STAMP="$(date +%Y%m%d%H%M%S)"
 export LEARN_NAME="测试项目A-${RUN_STAMP}"
 export EXEC_NAME="测试项目B-${RUN_STAMP}"
@@ -133,7 +133,7 @@ printf '%s\n' \
 ```bash
 curl -s "http://127.0.0.1:8001/conversation/sessions/${SESSION_ID}/events?limit=1000"
 curl -s "http://127.0.0.1:8001/conversation/sessions/${SESSION_ID}/history"
-curl -s "http://127.0.0.1:8001/exploration/learned-paths?page_template=/items&limit=10"
+curl -s "http://127.0.0.1:8001/exploration/learned-paths?page_template=/records&limit=10"
 ```
 
 必要时查询 LearnedPath detail：
@@ -144,8 +144,8 @@ curl -s "http://127.0.0.1:8001/exploration/learned-paths/${LEARNED_PATH_ID}"
 
 检查：
 
-- `value_slot=item_name`。
-- `slot_overrides.item_name=${EXEC_NAME}`。
+- `value_slot=record_name`。
+- `slot_overrides.record_name=${EXEC_NAME}`。
 - replay fill step effective value 是 `${EXEC_NAME}`。
 - evidence target / evidence target 是 `${EXEC_NAME}`。
 - `verification_outcome=verified` 或 report outcome verified。
@@ -156,7 +156,7 @@ curl -s "http://127.0.0.1:8001/exploration/learned-paths/${LEARNED_PATH_ID}"
 新增：
 
 ```text
-docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md
+docs/testing/results/m11-11.3.5.6-records-closed-loop-<YYYY-MM-DD>.md
 ```
 
 必须包含：
@@ -196,7 +196,7 @@ git diff --check
 
 | Command | Expected proof | Live autonomous verification excluded? | Notes |
 |---|---|---|---|
-| `pnpm --filter @web-agent-flow/product-test-site build` | `/items` target page 可构建 | Yes | product site build |
+| `pnpm --filter @web-agent-flow/fixture-site build` | `/records` target page 可构建 | Yes | product site build |
 | API targeted pytest suite | 参数化 replay / evidence / reporter targeted tests 仍通过 | Yes | 见 `test-plan.md` |
 | `wagent chat --headless` scripted run | 真实 chat session 完成学习 A / 执行 B | Yes | 本包核心 |
 | `GET /conversation/.../events` | runtime events 可复查 | Yes | 只读取证 |
@@ -209,7 +209,7 @@ git diff --check
 - [ ] 没有把 direct replay API 当作闭环入口。
 - [ ] 没有运行 `verify-scenario` 或 autonomous run。
 - [ ] `LEARN_NAME` 和 `EXEC_NAME` 唯一。
-- [ ] `value_slot=item_name` 已确认。
+- [ ] `value_slot=record_name` 已确认。
 - [ ] effective value 是 B，不是 A。
 - [ ] evidence target 是 B。
 - [ ] Reporter outcome 是 `verified`。

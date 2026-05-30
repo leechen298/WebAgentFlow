@@ -39,7 +39,7 @@ revalidation 仍由后续 11.3.8.x packages 负责。
 - suggested utterance generation beyond keeping existing utterance behavior compatible
 - external black-box validation result docs
 - runtime routes, frontend, fixture sites, migrations, worker code, or autonomous-run endpoints
-- target-specific constants such as `5177/inventory`, selectors, `data-testid`, seed data, field labels, or external site source
+- target-specific constants such as `<fixture-port>/target-page`, selectors, `data-testid`, seed data, field labels, or external site source
 
 ## Deliverables
 

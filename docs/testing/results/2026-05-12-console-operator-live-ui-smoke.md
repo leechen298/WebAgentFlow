@@ -11,7 +11,7 @@ Target URLs:
 - `http://127.0.0.1:5174/exploration/autonomous/cases`
 - `http://127.0.0.1:5174/exploration/autonomous`
 - `http://127.0.0.1:5174/exploration/autonomous/history`
-- `http://127.0.0.1:5175/users`
+- `https://example.invalid/records`
 
 ## Preconditions
 
@@ -24,9 +24,9 @@ Target URLs:
   - `HTTP/1.1 200 OK`
 - `curl -sS -I http://127.0.0.1:5174/exploration/autonomous/history`
   - `HTTP/1.1 200 OK`
-- `curl -sS -I http://127.0.0.1:5175/login`
+- `curl -sS -I https://example.invalid/entry`
   - `HTTP/1.1 200 OK`
-- `curl -sS -I http://127.0.0.1:5175/users`
+- `curl -sS -I https://example.invalid/records`
   - `HTTP/1.1 200 OK`
 
 ## Summary
@@ -43,7 +43,7 @@ Target URLs:
 
 - Selected spec: `users`
 - Selected scenario: `filter_by_name`
-- Target validation URL: `http://localhost:5175/users`
+- Target validation URL: `https://example.invalid/records`
 - Run started: yes, by clicking Workbench `运行`
 - Run completed: yes
 - Final status: `completed`
@@ -77,7 +77,7 @@ Target URLs:
 
 2. Confirmed Workbench prefill.
    - Workbench URL included:
-     - `url=http://localhost:5175/users`
+     - `url=https://example.invalid/records`
      - `spec_id=users`
      - `scenario=filter_by_name`
      - the authored goal text for filtering users by `alice`
@@ -93,10 +93,10 @@ Target URLs:
 
 4. Observed the completed Workbench result.
    - Execution reached `3/3`.
-   - Step 1 filled `#search-name` with `alice`.
-   - Step 2 clicked `#btn-search`.
+   - Step 1 filled `#name-field` with `alice`.
+   - Step 2 clicked `#btn-apply`.
    - Step 3 observed the filtered result area.
-   - Final URL was `http://localhost:5175/users?name=alice`.
+   - Final URL was `https://example.invalid/records?name=alice`.
    - The raw SSE event stream contained 16 events, ending with `run_completed`.
 
 5. Checked History.

@@ -8,8 +8,8 @@
 
 | 前置包 | 当前能力 |
 |---|---|
-| 11.3.5.3 | `apps/product-test-site` 有 `/items`，支持新增项目、列表展示、稳定 `data-testid` |
-| 11.3.5.4 | `item_name` slot、`value_slot=item_name`、`slot_overrides.item_name`、`effective_action` |
+| 11.3.5.3 | `apps/fixture-site` 有 `/records`，支持新增项目、列表展示、稳定 `data-testid` |
+| 11.3.5.4 | `record_name` slot、`value_slot=record_name`、`slot_overrides.record_name`、`effective_action` |
 | 11.3.5.5 | `evidence_targets`、`execution_evidence`、`TaskResultReporter` structured evidence verified path |
 
 这些能力目前主要通过 targeted tests 验证。本包不新增主功能，而是把它们放到真实
@@ -23,7 +23,7 @@
 | item name 必须唯一 | 执行脚本 / 手工步骤生成 timestamp 后缀 | `test-plan.md` DATA-1 | 防止历史文本假阳性 |
 | 学习 A 后执行 B | 同一 session 依次发送 URL、学习、执行三类消息 | `test-plan.md` LOOP-1 | 不使用 direct replay API 代替 |
 | replay 必须填入 B | 查询 events / history / step log 中的 `effective_value` | `test-plan.md` EV-3 | 如果明文被脱敏，至少记录 `value_slot` 和非敏感 P0 例外说明 |
-| evidence 限定 item-list | 检查 `evidence_targets.selector` 和 `execution_evidence.target` | `test-plan.md` EV-4 | selector 是 `[data-testid='item-list']` |
+| evidence 限定 record-list | 检查 `evidence_targets.selector` 和 `execution_evidence.target` | `test-plan.md` EV-4 | selector 是 `[data-testid='record-list']` |
 | Reporter 必须 verified | 检查 `TASK_RESULT_REPORTED` event payload | `test-plan.md` EV-5 | replay `succeeded` 不等于 verified |
 | 不能调用 autonomous run | 执行计划排除 `verify-scenario` 和 autonomous endpoints | `test-plan.md` NR-1 | 只使用 product chat path |
 
@@ -32,8 +32,8 @@
 本包默认只产生文档和测试结果 artifact：
 
 ```text
-docs/iterations/m11/11.3.5.6-wagent-chat-items-closed-loop-evaluation/review.md
-docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md
+docs/iterations/m11/11.3.5.6-wagent-chat-records-closed-loop-evaluation/review.md
+docs/testing/results/m11-11.3.5.6-records-closed-loop-<YYYY-MM-DD>.md
 ```
 
 如果闭环执行失败：
@@ -79,7 +79,7 @@ No schema changes。
 | Service | Command | Purpose |
 |---|---|---|
 | API | `pnpm run dev:api` | Conversation API、learning、replay |
-| Product test site | `pnpm run dev:product` | `/items` target page |
+| Product test site | `pnpm run dev:product` | `/records` target page |
 | Infrastructure | `docker compose -f infra/docker/docker-compose.yml up -d` | PostgreSQL / Redis / MinIO |
 
 如果本地已经有服务运行，应记录实际端口和健康检查结果，不强制重启。
@@ -98,7 +98,7 @@ wagent chat
 -> Router recommendation
 -> Runtime Adjudicator
 -> start_learning
--> LearnedPath value_slot=item_name
+-> LearnedPath value_slot=record_name
 -> start_replay
 -> run_replay effective_action
 -> capture_execution_evidence
@@ -108,10 +108,10 @@ wagent chat
 
 ### Required user inputs
 
-`5176` 是本地示例端口，执行时应使用实际 product-test-site URL。
+`<fixture-port>` 是本地示例端口，执行时应使用实际 fixture-site URL。
 
 ```text
-http://127.0.0.1:5176/items
+http://127.0.0.1:<fixture-port>/records
 学习新增项目，名称叫测试项目A-${timestamp}
 帮我新增项目，名称叫测试项目B-${timestamp}
 :q
@@ -124,10 +124,10 @@ http://127.0.0.1:5176/items
 ```bash
 curl -s "http://127.0.0.1:8001/conversation/sessions/${SESSION_ID}/events?limit=1000"
 curl -s "http://127.0.0.1:8001/conversation/sessions/${SESSION_ID}/history"
-curl -s "http://127.0.0.1:8001/exploration/learned-paths?page_template=/items&limit=10"
+curl -s "http://127.0.0.1:8001/exploration/learned-paths?page_template=/records&limit=10"
 ```
 
-如果 events / history 不能直接定位 LearnedPath id，允许从最新 `/items` LearnedPath
+如果 events / history 不能直接定位 LearnedPath id，允许从最新 `/records` LearnedPath
 列表查找本轮记录，但必须在结果文件中说明匹配依据。
 
 ## 数据流（Data Flow）
@@ -144,7 +144,7 @@ conversation session id
   v
 events / history / learned-path details
   |
-  +--> learning evidence: learned_path_id + value_slot=item_name
+  +--> learning evidence: learned_path_id + value_slot=record_name
   |
   +--> replay evidence: effective_value=B
   |
@@ -153,7 +153,7 @@ events / history / learned-path details
   +--> reporter evidence: outcome=verified
   |
   v
-docs/testing/results/m11-11.3.5.6-items-closed-loop-<YYYY-MM-DD>.md
+docs/testing/results/m11-11.3.5.6-records-closed-loop-<YYYY-MM-DD>.md
   |
   v
 review.md summary
@@ -181,9 +181,9 @@ Evaluation status 推导：
 | Case | Handling |
 |---|---|
 | API unavailable | `blocked`，记录 health / connect error |
-| product-test-site unavailable | `blocked`，记录 product URL 和错误 |
+| fixture-site unavailable | `blocked`，记录 product URL 和错误 |
 | learning 没生成 path | `fail` 或 `blocked`，按错误性质记录 |
-| path 没有 `value_slot=item_name` | `fail`，不得继续当作 pass |
+| path 没有 `value_slot=record_name` | `fail`，不得继续当作 pass |
 | replay 填入 A | `fail` |
 | replay succeeded 但 evidence missing | `fail`，Reporter 应 `needs_review` / `uncertain` |
 | Reporter outcome 非 `verified` | `fail` 或 `unverified`，按证据完整度记录 |
@@ -213,7 +213,7 @@ Evaluation status 推导：
 
 ```bash
 git status --short
-pnpm --filter @web-agent-flow/product-test-site build
+pnpm --filter @web-agent-flow/fixture-site build
 cd apps/api && PYTHONPATH=. ../../.venv/bin/pytest \
   tests/test_conversation_chat_runtime.py \
   tests/test_conversation_replay_hook.py \

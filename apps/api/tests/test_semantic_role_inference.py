@@ -49,7 +49,7 @@ def _raw(**overrides: object) -> dict:
 
 
 def test_infer_name_from_id() -> None:
-    assert _infer_semantic_role(_raw(id="search-name"), "fillable") == "name"
+    assert _infer_semantic_role(_raw(id="name-field"), "fillable") == "name"
 
 
 def test_infer_name_from_placeholder_zh() -> None:
@@ -118,7 +118,7 @@ def test_generic_search_input_still_search() -> None:
 
 
 def test_non_fillable_returns_none() -> None:
-    assert _infer_semantic_role(_raw(id="search-name"), "clickable") is None
+    assert _infer_semantic_role(_raw(id="name-field"), "clickable") is None
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -142,11 +142,11 @@ def _elem(semantic_role: str | None, selector: str, **overrides: object) -> Disc
 def test_match_name_picks_name_not_email() -> None:
     fillables = [
         _elem("email", "#search-email"),
-        _elem("name", "#search-name"),
+        _elem("name", "#name-field"),
     ]
     hit = _match_fillable_for_role("name", fillables, set())
     assert hit is not None
-    assert hit.selector == "#search-name"
+    assert hit.selector == "#name-field"
 
 
 def test_match_role_picks_role_not_status() -> None:
@@ -174,7 +174,7 @@ def test_match_name_avoids_password() -> None:
 def test_match_password_avoids_new_roles() -> None:
     # Inverse: password slot must not bleed into name/role/status fields.
     fillables = [
-        _elem("name", "#search-name"),
+        _elem("name", "#name-field"),
         _elem("role", "#filter-role"),
         _elem("status", "#filter-status"),
         _elem("password", "#pwd"),
@@ -187,7 +187,7 @@ def test_match_password_avoids_new_roles() -> None:
 def test_match_text_slot_still_prefers_text() -> None:
     # Regression: text slot must still fall back to None/text fillables.
     fillables = [
-        _elem("name", "#search-name"),
+        _elem("name", "#name-field"),
         _elem(None, "#generic"),
     ]
     hit = _match_fillable_for_role("text", fillables, set())
@@ -205,17 +205,16 @@ def _page(fillable: list[DiscoveredElement]) -> PageAnalysis:
 
 
 def test_plan_actions_users_filter_by_name_routes_to_name_input() -> None:
-    # Shape derived from the validation-site /users page:
-    # #search-name (name), #search-email (email), #search-department (search).
+    # Neutral multi-filter shape: exact name role should beat broader search.
     analysis = _page([
         _elem("email", "#search-email"),
-        _elem("name", "#search-name"),
+        _elem("name", "#name-field"),
         _elem("search", "#search-department"),
     ])
     plan = plan_actions(analysis, fill_values={"name": "alice"})
     fill_steps = [s for s in plan if s.action_type == "fill"]
     assert len(fill_steps) == 1
-    assert fill_steps[0].target_selector == "#search-name"
+    assert fill_steps[0].target_selector == "#name-field"
     assert fill_steps[0].value == "alice"
 
 

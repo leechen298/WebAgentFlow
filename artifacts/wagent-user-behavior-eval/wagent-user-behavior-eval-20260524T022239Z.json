@@ -6,9 +6,9 @@
     "cwd": "/Users/leechen/projects/WebAgentFlow/v0.1"
   },
   "spec": {
-    "target_name": "product-test-site-items",
+    "target_name": "fixture-site-items",
     "target_label": "Product test items page",
-    "product_url": "http://127.0.0.1:5176/items"
+    "product_url": "http://127.0.0.1:<fixture-port>/records"
   },
   "config": {
     "api_base": "http://127.0.0.1:8001",
@@ -36,7 +36,7 @@
       "status_code": 200
     },
     "product": {
-      "url": "http://127.0.0.1:5176/items",
+      "url": "http://127.0.0.1:<fixture-port>/records",
       "ok": true,
       "status_code": 200
     }
@@ -463,7 +463,7 @@
       "method": "POST",
       "path": "/conversation/sessions/49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2/dispatch",
       "json": {
-        "input": "http://127.0.0.1:5176/items",
+        "input": "http://127.0.0.1:<fixture-port>/records",
         "metadata": {
           "client": "wagent_user_behavior_eval",
           "browser_visibility": "headless"
@@ -533,7 +533,7 @@
       "method": "POST",
       "path": "/conversation/sessions/49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2/dispatch",
       "json": {
-        "input": "http://127.0.0.1:5176/items",
+        "input": "http://127.0.0.1:<fixture-port>/records",
         "metadata": {
           "client": "wagent_user_behavior_eval",
           "browser_visibility": "headless"
@@ -587,16 +587,16 @@
             },
             "eval_scope_id": "m11.3.7-known-20260524022218",
             "pending_target": {
-              "url": "http://127.0.0.1:5176/items",
-              "site_origin": "http://127.0.0.1:5176",
-              "page_hint": "/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
+              "site_origin": "http://127.0.0.1:<fixture-port>",
+              "page_hint": "/records",
               "source": "user_message",
               "turns_remaining": 3
             },
             "active_task": {
               "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
               "kind": "clarify",
-              "target_url": "http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
               "owner": "runtime",
               "status": "waiting_for_user_input",
               "created_at": "2026-05-24T02:22:25.937167+00:00",
@@ -632,16 +632,16 @@
             },
             "eval_scope_id": "m11.3.7-known-20260524022218",
             "pending_target": {
-              "url": "http://127.0.0.1:5176/items",
-              "site_origin": "http://127.0.0.1:5176",
-              "page_hint": "/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
+              "site_origin": "http://127.0.0.1:<fixture-port>",
+              "page_hint": "/records",
               "source": "user_message",
               "turns_remaining": 3
             },
             "active_task": {
               "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
               "kind": "clarify",
-              "target_url": "http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
               "owner": "runtime",
               "status": "waiting_for_user_input",
               "created_at": "2026-05-24T02:22:25.937167+00:00",
@@ -670,7 +670,7 @@
             "id": "401c8477-1b8b-497b-b358-d22e22efdda7",
             "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
             "role": "user",
-            "content": "http://127.0.0.1:5176/items",
+            "content": "http://127.0.0.1:<fixture-port>/records",
             "metadata": {
               "client": "wagent_user_behavior_eval",
               "browser_visibility": "headless"
@@ -800,7 +800,7 @@
             "id": "28086a0e-7bbd-454a-87b9-5d7fafa26f86",
             "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
             "role": "user",
-            "content": "http://127.0.0.1:5176/items",
+            "content": "http://127.0.0.1:<fixture-port>/records",
             "metadata": {
               "client": "wagent_user_behavior_eval",
               "browser_visibility": "headless"
@@ -906,7 +906,7 @@
               "changes_page": false,
               "writes_learned_path": false,
               "input_summary": {
-                "current_message_url": "http://127.0.0.1:5176/items"
+                "current_message_url": "http://127.0.0.1:<fixture-port>/records"
               },
               "output_summary": {
                 "pending_target": null,
@@ -929,8 +929,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -979,7 +979,7 @@
             "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
             "type": "command_parsed",
             "payload": {
-              "raw": "http://127.0.0.1:5176/items",
+              "raw": "http://127.0.0.1:<fixture-port>/records",
               "command_kind": "ask_user",
               "dispatch_metadata": {
                 "client": "wagent_user_behavior_eval",
@@ -990,12 +990,12 @@
               "intake": {
                 "intent": "execute_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
-                  "goal": "http://127.0.0.1:5176/items",
+                  "goal": "http://127.0.0.1:<fixture-port>/records",
                   "canonical_goal": null,
                   "aliases": []
                 },
@@ -1028,7 +1028,7 @@
               "active_task": {
                 "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                 "kind": "clarify",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "owner": "runtime",
                 "status": "waiting_for_user_input",
                 "created_at": "2026-05-24T02:22:18.530736+00:00",
@@ -1054,7 +1054,7 @@
                 ]
               },
               "output_summary": {
-                "target_url": "http://127.0.0.1:5176/items"
+                "target_url": "http://127.0.0.1:<fixture-port>/records"
               }
             },
             "created_at": "2026-05-24T02:22:18.534642Z"
@@ -1066,9 +1066,9 @@
             "payload": {
               "reason": "pending_target_missing_goal",
               "target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
@@ -1077,8 +1077,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -1148,9 +1148,9 @@
               },
               "output_summary": {
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -1158,7 +1158,7 @@
                 "active_task": {
                   "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": null,
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
@@ -1182,8 +1182,8 @@
                 "next_agent": "learning_agent",
                 "recommended_skill": "start_learning",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "pending_target"
                 },
                 "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
@@ -1238,8 +1238,8 @@
               "intake": {
                 "intent": "learn_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
@@ -1285,7 +1285,7 @@
               "active_task": {
                 "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                 "kind": "learn_operation",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                 "owner": "learning_agent",
                 "status": "learning",
@@ -1307,7 +1307,7 @@
               "changes_page": true,
               "writes_learned_path": true,
               "input_summary": {
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                 "route_decision": "delegate_to_learning_agent"
               },
@@ -1320,7 +1320,7 @@
             "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
             "type": "chat_learning_started",
             "payload": {
-              "url": "http://127.0.0.1:5176/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
               "browser_visibility": "headless"
             },
             "created_at": "2026-05-24T02:22:18.558635Z"
@@ -1334,7 +1334,7 @@
               "active_task": {
                 "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                 "kind": "learn_operation",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                 "owner": "learning_agent",
                 "status": "failed",
@@ -1415,13 +1415,13 @@
               "changes_page": false,
               "writes_learned_path": false,
               "input_summary": {
-                "current_message_url": "http://127.0.0.1:5176/items"
+                "current_message_url": "http://127.0.0.1:<fixture-port>/records"
               },
               "output_summary": {
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -1429,7 +1429,7 @@
                 "active_task": {
                   "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                   "owner": "learning_agent",
                   "status": "failed",
@@ -1453,8 +1453,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -1503,7 +1503,7 @@
             "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
             "type": "command_parsed",
             "payload": {
-              "raw": "http://127.0.0.1:5176/items",
+              "raw": "http://127.0.0.1:<fixture-port>/records",
               "command_kind": "ask_user",
               "dispatch_metadata": {
                 "client": "wagent_user_behavior_eval",
@@ -1514,12 +1514,12 @@
               "intake": {
                 "intent": "execute_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
-                  "goal": "http://127.0.0.1:5176/items",
+                  "goal": "http://127.0.0.1:<fixture-port>/records",
                   "canonical_goal": null,
                   "aliases": []
                 },
@@ -1552,7 +1552,7 @@
               "active_task": {
                 "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                 "kind": "clarify",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "owner": "runtime",
                 "status": "waiting_for_user_input",
                 "created_at": "2026-05-24T02:22:25.937167+00:00",
@@ -1578,7 +1578,7 @@
                 ]
               },
               "output_summary": {
-                "target_url": "http://127.0.0.1:5176/items"
+                "target_url": "http://127.0.0.1:<fixture-port>/records"
               }
             },
             "created_at": "2026-05-24T02:22:25.941330Z"
@@ -1590,9 +1590,9 @@
             "payload": {
               "reason": "pending_target_missing_goal",
               "target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
@@ -1601,8 +1601,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -1652,16 +1652,16 @@
               },
               "eval_scope_id": "m11.3.7-known-20260524022218",
               "pending_target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
               "active_task": {
                 "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                 "kind": "clarify",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "owner": "runtime",
                 "status": "waiting_for_user_input",
                 "created_at": "2026-05-24T02:22:25.937167+00:00",
@@ -1676,7 +1676,7 @@
               "id": "401c8477-1b8b-497b-b358-d22e22efdda7",
               "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
               "role": "user",
-              "content": "http://127.0.0.1:5176/items",
+              "content": "http://127.0.0.1:<fixture-port>/records",
               "metadata": {
                 "client": "wagent_user_behavior_eval",
                 "browser_visibility": "headless"
@@ -1806,7 +1806,7 @@
               "id": "28086a0e-7bbd-454a-87b9-5d7fafa26f86",
               "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
               "role": "user",
-              "content": "http://127.0.0.1:5176/items",
+              "content": "http://127.0.0.1:<fixture-port>/records",
               "metadata": {
                 "client": "wagent_user_behavior_eval",
                 "browser_visibility": "headless"
@@ -1898,7 +1898,7 @@
                 "changes_page": false,
                 "writes_learned_path": false,
                 "input_summary": {
-                  "current_message_url": "http://127.0.0.1:5176/items"
+                  "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                 },
                 "output_summary": {
                   "pending_target": null,
@@ -1921,8 +1921,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -1971,7 +1971,7 @@
               "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
               "type": "command_parsed",
               "payload": {
-                "raw": "http://127.0.0.1:5176/items",
+                "raw": "http://127.0.0.1:<fixture-port>/records",
                 "command_kind": "ask_user",
                 "dispatch_metadata": {
                   "client": "wagent_user_behavior_eval",
@@ -1982,12 +1982,12 @@
                 "intake": {
                   "intent": "execute_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
-                    "goal": "http://127.0.0.1:5176/items",
+                    "goal": "http://127.0.0.1:<fixture-port>/records",
                     "canonical_goal": null,
                     "aliases": []
                   },
@@ -2020,7 +2020,7 @@
                 "active_task": {
                   "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
                   "created_at": "2026-05-24T02:22:18.530736+00:00",
@@ -2046,7 +2046,7 @@
                   ]
                 },
                 "output_summary": {
-                  "target_url": "http://127.0.0.1:5176/items"
+                  "target_url": "http://127.0.0.1:<fixture-port>/records"
                 }
               },
               "created_at": "2026-05-24T02:22:18.534642Z"
@@ -2058,9 +2058,9 @@
               "payload": {
                 "reason": "pending_target_missing_goal",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -2069,8 +2069,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -2140,9 +2140,9 @@
                 },
                 "output_summary": {
                   "pending_target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -2150,7 +2150,7 @@
                   "active_task": {
                     "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                     "kind": "clarify",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": null,
                     "owner": "runtime",
                     "status": "waiting_for_user_input",
@@ -2174,8 +2174,8 @@
                   "next_agent": "learning_agent",
                   "recommended_skill": "start_learning",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "pending_target"
                   },
                   "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
@@ -2230,8 +2230,8 @@
                 "intake": {
                   "intent": "learn_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
@@ -2277,7 +2277,7 @@
                 "active_task": {
                   "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                   "owner": "learning_agent",
                   "status": "learning",
@@ -2299,7 +2299,7 @@
                 "changes_page": true,
                 "writes_learned_path": true,
                 "input_summary": {
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                   "route_decision": "delegate_to_learning_agent"
                 },
@@ -2312,7 +2312,7 @@
               "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
               "type": "chat_learning_started",
               "payload": {
-                "url": "http://127.0.0.1:5176/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
                 "browser_visibility": "headless"
               },
               "created_at": "2026-05-24T02:22:18.558635Z"
@@ -2326,7 +2326,7 @@
                 "active_task": {
                   "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                   "owner": "learning_agent",
                   "status": "failed",
@@ -2407,13 +2407,13 @@
                 "changes_page": false,
                 "writes_learned_path": false,
                 "input_summary": {
-                  "current_message_url": "http://127.0.0.1:5176/items"
+                  "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                 },
                 "output_summary": {
                   "pending_target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -2421,7 +2421,7 @@
                   "active_task": {
                     "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                     "kind": "learn_operation",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                     "owner": "learning_agent",
                     "status": "failed",
@@ -2445,8 +2445,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -2495,7 +2495,7 @@
               "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
               "type": "command_parsed",
               "payload": {
-                "raw": "http://127.0.0.1:5176/items",
+                "raw": "http://127.0.0.1:<fixture-port>/records",
                 "command_kind": "ask_user",
                 "dispatch_metadata": {
                   "client": "wagent_user_behavior_eval",
@@ -2506,12 +2506,12 @@
                 "intake": {
                   "intent": "execute_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
-                    "goal": "http://127.0.0.1:5176/items",
+                    "goal": "http://127.0.0.1:<fixture-port>/records",
                     "canonical_goal": null,
                     "aliases": []
                   },
@@ -2544,7 +2544,7 @@
                 "active_task": {
                   "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
                   "created_at": "2026-05-24T02:22:25.937167+00:00",
@@ -2570,7 +2570,7 @@
                   ]
                 },
                 "output_summary": {
-                  "target_url": "http://127.0.0.1:5176/items"
+                  "target_url": "http://127.0.0.1:<fixture-port>/records"
                 }
               },
               "created_at": "2026-05-24T02:22:25.941330Z"
@@ -2582,9 +2582,9 @@
               "payload": {
                 "reason": "pending_target_missing_goal",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -2593,8 +2593,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -2761,16 +2761,16 @@
                 },
                 "eval_scope_id": "m11.3.7-known-20260524022218",
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
                 "active_task": {
                   "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
                   "created_at": "2026-05-24T02:22:25.937167+00:00",
@@ -2785,7 +2785,7 @@
                 "id": "401c8477-1b8b-497b-b358-d22e22efdda7",
                 "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
                 "role": "user",
-                "content": "http://127.0.0.1:5176/items",
+                "content": "http://127.0.0.1:<fixture-port>/records",
                 "metadata": {
                   "client": "wagent_user_behavior_eval",
                   "browser_visibility": "headless"
@@ -2913,7 +2913,7 @@
                 "id": "28086a0e-7bbd-454a-87b9-5d7fafa26f86",
                 "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
                 "role": "user",
-                "content": "http://127.0.0.1:5176/items",
+                "content": "http://127.0.0.1:<fixture-port>/records",
                 "metadata": {
                   "client": "wagent_user_behavior_eval",
                   "browser_visibility": "headless"
@@ -3004,7 +3004,7 @@
                   "changes_page": false,
                   "writes_learned_path": false,
                   "input_summary": {
-                    "current_message_url": "http://127.0.0.1:5176/items"
+                    "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                   },
                   "output_summary": {
                     "pending_target": null,
@@ -3027,8 +3027,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -3077,7 +3077,7 @@
                 "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
                 "type": "command_parsed",
                 "payload": {
-                  "raw": "http://127.0.0.1:5176/items",
+                  "raw": "http://127.0.0.1:<fixture-port>/records",
                   "command_kind": "ask_user",
                   "dispatch_metadata": {
                     "client": "wagent_user_behavior_eval",
@@ -3088,12 +3088,12 @@
                   "intake": {
                     "intent": "execute_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
-                      "goal": "http://127.0.0.1:5176/items",
+                      "goal": "http://127.0.0.1:<fixture-port>/records",
                       "canonical_goal": null,
                       "aliases": []
                     },
@@ -3126,7 +3126,7 @@
                   "active_task": {
                     "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                     "kind": "clarify",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "owner": "runtime",
                     "status": "waiting_for_user_input",
                     "created_at": "2026-05-24T02:22:18.530736+00:00",
@@ -3152,7 +3152,7 @@
                     ]
                   },
                   "output_summary": {
-                    "target_url": "http://127.0.0.1:5176/items"
+                    "target_url": "http://127.0.0.1:<fixture-port>/records"
                   }
                 },
                 "created_at": "2026-05-24T02:22:18.534642+00:00"
@@ -3164,9 +3164,9 @@
                 "payload": {
                   "reason": "pending_target_missing_goal",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -3175,8 +3175,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -3246,9 +3246,9 @@
                   },
                   "output_summary": {
                     "pending_target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
-                      "page_hint": "/items",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
+                      "page_hint": "/records",
                       "source": "user_message",
                       "turns_remaining": 3
                     },
@@ -3256,7 +3256,7 @@
                     "active_task": {
                       "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                       "kind": "clarify",
-                      "target_url": "http://127.0.0.1:5176/items",
+                      "target_url": "http://127.0.0.1:<fixture-port>/records",
                       "goal": null,
                       "owner": "runtime",
                       "status": "waiting_for_user_input",
@@ -3280,8 +3280,8 @@
                     "next_agent": "learning_agent",
                     "recommended_skill": "start_learning",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "pending_target"
                     },
                     "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
@@ -3336,8 +3336,8 @@
                   "intake": {
                     "intent": "learn_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
@@ -3383,7 +3383,7 @@
                   "active_task": {
                     "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                     "kind": "learn_operation",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                     "owner": "learning_agent",
                     "status": "learning",
@@ -3405,7 +3405,7 @@
                   "changes_page": true,
                   "writes_learned_path": true,
                   "input_summary": {
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                     "route_decision": "delegate_to_learning_agent"
                   },
@@ -3418,7 +3418,7 @@
                 "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
                 "type": "chat_learning_started",
                 "payload": {
-                  "url": "http://127.0.0.1:5176/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
                   "browser_visibility": "headless"
                 },
                 "created_at": "2026-05-24T02:22:18.558635+00:00"
@@ -3432,7 +3432,7 @@
                   "active_task": {
                     "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                     "kind": "learn_operation",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                     "owner": "learning_agent",
                     "status": "failed",
@@ -3513,13 +3513,13 @@
                   "changes_page": false,
                   "writes_learned_path": false,
                   "input_summary": {
-                    "current_message_url": "http://127.0.0.1:5176/items"
+                    "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                   },
                   "output_summary": {
                     "pending_target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
-                      "page_hint": "/items",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
+                      "page_hint": "/records",
                       "source": "user_message",
                       "turns_remaining": 3
                     },
@@ -3527,7 +3527,7 @@
                     "active_task": {
                       "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                       "kind": "learn_operation",
-                      "target_url": "http://127.0.0.1:5176/items",
+                      "target_url": "http://127.0.0.1:<fixture-port>/records",
                       "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                       "owner": "learning_agent",
                       "status": "failed",
@@ -3551,8 +3551,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -3601,7 +3601,7 @@
                 "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
                 "type": "command_parsed",
                 "payload": {
-                  "raw": "http://127.0.0.1:5176/items",
+                  "raw": "http://127.0.0.1:<fixture-port>/records",
                   "command_kind": "ask_user",
                   "dispatch_metadata": {
                     "client": "wagent_user_behavior_eval",
@@ -3612,12 +3612,12 @@
                   "intake": {
                     "intent": "execute_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
-                      "goal": "http://127.0.0.1:5176/items",
+                      "goal": "http://127.0.0.1:<fixture-port>/records",
                       "canonical_goal": null,
                       "aliases": []
                     },
@@ -3650,7 +3650,7 @@
                   "active_task": {
                     "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                     "kind": "clarify",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "owner": "runtime",
                     "status": "waiting_for_user_input",
                     "created_at": "2026-05-24T02:22:25.937167+00:00",
@@ -3676,7 +3676,7 @@
                     ]
                   },
                   "output_summary": {
-                    "target_url": "http://127.0.0.1:5176/items"
+                    "target_url": "http://127.0.0.1:<fixture-port>/records"
                   }
                 },
                 "created_at": "2026-05-24T02:22:25.941330+00:00"
@@ -3688,9 +3688,9 @@
                 "payload": {
                   "reason": "pending_target_missing_goal",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -3699,8 +3699,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -3914,23 +3914,23 @@
             },
             "eval_scope_id": "m11.3.7-known-20260524022218",
             "pending_target": {
-              "url": "http://127.0.0.1:5176/items",
-              "site_origin": "http://127.0.0.1:5176",
-              "page_hint": "/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
+              "site_origin": "http://127.0.0.1:<fixture-port>",
+              "page_hint": "/records",
               "source": "user_message",
               "turns_remaining": 3
             },
             "active_task": {
               "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
               "kind": "clarify",
-              "target_url": "http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
               "owner": "runtime",
               "status": "waiting_for_user_input",
               "created_at": "2026-05-24T02:22:25.937167+00:00",
               "updated_at": "2026-05-24T02:22:25.937167+00:00"
             },
             "last_no_path_reason": {
-              "target_url": "http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
               "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218",
               "reason": "learn_then_execute_requires_learning_first",
               "created_from_message_id": "3cf30414-be06-437a-b158-8d69c95ba270"
@@ -3965,23 +3965,23 @@
             },
             "eval_scope_id": "m11.3.7-known-20260524022218",
             "pending_target": {
-              "url": "http://127.0.0.1:5176/items",
-              "site_origin": "http://127.0.0.1:5176",
-              "page_hint": "/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
+              "site_origin": "http://127.0.0.1:<fixture-port>",
+              "page_hint": "/records",
               "source": "user_message",
               "turns_remaining": 3
             },
             "active_task": {
               "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
               "kind": "clarify",
-              "target_url": "http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
               "owner": "runtime",
               "status": "waiting_for_user_input",
               "created_at": "2026-05-24T02:22:25.937167+00:00",
               "updated_at": "2026-05-24T02:22:25.937167+00:00"
             },
             "last_no_path_reason": {
-              "target_url": "http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
               "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218",
               "reason": "learn_then_execute_requires_learning_first",
               "created_from_message_id": "3cf30414-be06-437a-b158-8d69c95ba270"
@@ -4009,7 +4009,7 @@
             "id": "401c8477-1b8b-497b-b358-d22e22efdda7",
             "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
             "role": "user",
-            "content": "http://127.0.0.1:5176/items",
+            "content": "http://127.0.0.1:<fixture-port>/records",
             "metadata": {
               "client": "wagent_user_behavior_eval",
               "browser_visibility": "headless"
@@ -4139,7 +4139,7 @@
             "id": "28086a0e-7bbd-454a-87b9-5d7fafa26f86",
             "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
             "role": "user",
-            "content": "http://127.0.0.1:5176/items",
+            "content": "http://127.0.0.1:<fixture-port>/records",
             "metadata": {
               "client": "wagent_user_behavior_eval",
               "browser_visibility": "headless"
@@ -4291,7 +4291,7 @@
               "changes_page": false,
               "writes_learned_path": false,
               "input_summary": {
-                "current_message_url": "http://127.0.0.1:5176/items"
+                "current_message_url": "http://127.0.0.1:<fixture-port>/records"
               },
               "output_summary": {
                 "pending_target": null,
@@ -4314,8 +4314,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -4364,7 +4364,7 @@
             "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
             "type": "command_parsed",
             "payload": {
-              "raw": "http://127.0.0.1:5176/items",
+              "raw": "http://127.0.0.1:<fixture-port>/records",
               "command_kind": "ask_user",
               "dispatch_metadata": {
                 "client": "wagent_user_behavior_eval",
@@ -4375,12 +4375,12 @@
               "intake": {
                 "intent": "execute_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
-                  "goal": "http://127.0.0.1:5176/items",
+                  "goal": "http://127.0.0.1:<fixture-port>/records",
                   "canonical_goal": null,
                   "aliases": []
                 },
@@ -4413,7 +4413,7 @@
               "active_task": {
                 "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                 "kind": "clarify",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "owner": "runtime",
                 "status": "waiting_for_user_input",
                 "created_at": "2026-05-24T02:22:18.530736+00:00",
@@ -4439,7 +4439,7 @@
                 ]
               },
               "output_summary": {
-                "target_url": "http://127.0.0.1:5176/items"
+                "target_url": "http://127.0.0.1:<fixture-port>/records"
               }
             },
             "created_at": "2026-05-24T02:22:18.534642Z"
@@ -4451,9 +4451,9 @@
             "payload": {
               "reason": "pending_target_missing_goal",
               "target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
@@ -4462,8 +4462,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -4533,9 +4533,9 @@
               },
               "output_summary": {
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -4543,7 +4543,7 @@
                 "active_task": {
                   "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": null,
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
@@ -4567,8 +4567,8 @@
                 "next_agent": "learning_agent",
                 "recommended_skill": "start_learning",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "pending_target"
                 },
                 "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
@@ -4623,8 +4623,8 @@
               "intake": {
                 "intent": "learn_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
@@ -4670,7 +4670,7 @@
               "active_task": {
                 "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                 "kind": "learn_operation",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                 "owner": "learning_agent",
                 "status": "learning",
@@ -4692,7 +4692,7 @@
               "changes_page": true,
               "writes_learned_path": true,
               "input_summary": {
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                 "route_decision": "delegate_to_learning_agent"
               },
@@ -4705,7 +4705,7 @@
             "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
             "type": "chat_learning_started",
             "payload": {
-              "url": "http://127.0.0.1:5176/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
               "browser_visibility": "headless"
             },
             "created_at": "2026-05-24T02:22:18.558635Z"
@@ -4719,7 +4719,7 @@
               "active_task": {
                 "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                 "kind": "learn_operation",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                 "owner": "learning_agent",
                 "status": "failed",
@@ -4800,13 +4800,13 @@
               "changes_page": false,
               "writes_learned_path": false,
               "input_summary": {
-                "current_message_url": "http://127.0.0.1:5176/items"
+                "current_message_url": "http://127.0.0.1:<fixture-port>/records"
               },
               "output_summary": {
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -4814,7 +4814,7 @@
                 "active_task": {
                   "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                   "owner": "learning_agent",
                   "status": "failed",
@@ -4838,8 +4838,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -4888,7 +4888,7 @@
             "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
             "type": "command_parsed",
             "payload": {
-              "raw": "http://127.0.0.1:5176/items",
+              "raw": "http://127.0.0.1:<fixture-port>/records",
               "command_kind": "ask_user",
               "dispatch_metadata": {
                 "client": "wagent_user_behavior_eval",
@@ -4899,12 +4899,12 @@
               "intake": {
                 "intent": "execute_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
-                  "goal": "http://127.0.0.1:5176/items",
+                  "goal": "http://127.0.0.1:<fixture-port>/records",
                   "canonical_goal": null,
                   "aliases": []
                 },
@@ -4937,7 +4937,7 @@
               "active_task": {
                 "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                 "kind": "clarify",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "owner": "runtime",
                 "status": "waiting_for_user_input",
                 "created_at": "2026-05-24T02:22:25.937167+00:00",
@@ -4963,7 +4963,7 @@
                 ]
               },
               "output_summary": {
-                "target_url": "http://127.0.0.1:5176/items"
+                "target_url": "http://127.0.0.1:<fixture-port>/records"
               }
             },
             "created_at": "2026-05-24T02:22:25.941330Z"
@@ -4975,9 +4975,9 @@
             "payload": {
               "reason": "pending_target_missing_goal",
               "target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
@@ -4986,8 +4986,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -5057,9 +5057,9 @@
               },
               "output_summary": {
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -5067,7 +5067,7 @@
                 "active_task": {
                   "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": null,
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
@@ -5091,8 +5091,8 @@
                 "next_agent": "web_operation_agent",
                 "recommended_skill": "learn_then_execute",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "pending_target"
                 },
                 "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218",
@@ -5201,8 +5201,8 @@
                 "next_agent": "web_operation_agent",
                 "recommended_skill": "learn_then_execute",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "pending_target"
                 },
                 "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218",
@@ -5228,7 +5228,7 @@
             "type": "chat_no_path",
             "payload": {
               "reason": "learn_then_execute_requires_learning_first",
-              "target_url": "http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
               "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218"
             },
             "created_at": "2026-05-24T02:22:25.994254Z"
@@ -5261,23 +5261,23 @@
               },
               "eval_scope_id": "m11.3.7-known-20260524022218",
               "pending_target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
               "active_task": {
                 "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                 "kind": "clarify",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "owner": "runtime",
                 "status": "waiting_for_user_input",
                 "created_at": "2026-05-24T02:22:25.937167+00:00",
                 "updated_at": "2026-05-24T02:22:25.937167+00:00"
               },
               "last_no_path_reason": {
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218",
                 "reason": "learn_then_execute_requires_learning_first",
                 "created_from_message_id": "3cf30414-be06-437a-b158-8d69c95ba270"
@@ -5291,7 +5291,7 @@
               "id": "401c8477-1b8b-497b-b358-d22e22efdda7",
               "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
               "role": "user",
-              "content": "http://127.0.0.1:5176/items",
+              "content": "http://127.0.0.1:<fixture-port>/records",
               "metadata": {
                 "client": "wagent_user_behavior_eval",
                 "browser_visibility": "headless"
@@ -5421,7 +5421,7 @@
               "id": "28086a0e-7bbd-454a-87b9-5d7fafa26f86",
               "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
               "role": "user",
-              "content": "http://127.0.0.1:5176/items",
+              "content": "http://127.0.0.1:<fixture-port>/records",
               "metadata": {
                 "client": "wagent_user_behavior_eval",
                 "browser_visibility": "headless"
@@ -5559,7 +5559,7 @@
                 "changes_page": false,
                 "writes_learned_path": false,
                 "input_summary": {
-                  "current_message_url": "http://127.0.0.1:5176/items"
+                  "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                 },
                 "output_summary": {
                   "pending_target": null,
@@ -5582,8 +5582,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -5632,7 +5632,7 @@
               "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
               "type": "command_parsed",
               "payload": {
-                "raw": "http://127.0.0.1:5176/items",
+                "raw": "http://127.0.0.1:<fixture-port>/records",
                 "command_kind": "ask_user",
                 "dispatch_metadata": {
                   "client": "wagent_user_behavior_eval",
@@ -5643,12 +5643,12 @@
                 "intake": {
                   "intent": "execute_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
-                    "goal": "http://127.0.0.1:5176/items",
+                    "goal": "http://127.0.0.1:<fixture-port>/records",
                     "canonical_goal": null,
                     "aliases": []
                   },
@@ -5681,7 +5681,7 @@
                 "active_task": {
                   "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
                   "created_at": "2026-05-24T02:22:18.530736+00:00",
@@ -5707,7 +5707,7 @@
                   ]
                 },
                 "output_summary": {
-                  "target_url": "http://127.0.0.1:5176/items"
+                  "target_url": "http://127.0.0.1:<fixture-port>/records"
                 }
               },
               "created_at": "2026-05-24T02:22:18.534642Z"
@@ -5719,9 +5719,9 @@
               "payload": {
                 "reason": "pending_target_missing_goal",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -5730,8 +5730,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -5801,9 +5801,9 @@
                 },
                 "output_summary": {
                   "pending_target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -5811,7 +5811,7 @@
                   "active_task": {
                     "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                     "kind": "clarify",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": null,
                     "owner": "runtime",
                     "status": "waiting_for_user_input",
@@ -5835,8 +5835,8 @@
                   "next_agent": "learning_agent",
                   "recommended_skill": "start_learning",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "pending_target"
                   },
                   "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
@@ -5891,8 +5891,8 @@
                 "intake": {
                   "intent": "learn_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
@@ -5938,7 +5938,7 @@
                 "active_task": {
                   "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                   "owner": "learning_agent",
                   "status": "learning",
@@ -5960,7 +5960,7 @@
                 "changes_page": true,
                 "writes_learned_path": true,
                 "input_summary": {
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                   "route_decision": "delegate_to_learning_agent"
                 },
@@ -5973,7 +5973,7 @@
               "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
               "type": "chat_learning_started",
               "payload": {
-                "url": "http://127.0.0.1:5176/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
                 "browser_visibility": "headless"
               },
               "created_at": "2026-05-24T02:22:18.558635Z"
@@ -5987,7 +5987,7 @@
                 "active_task": {
                   "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                   "owner": "learning_agent",
                   "status": "failed",
@@ -6068,13 +6068,13 @@
                 "changes_page": false,
                 "writes_learned_path": false,
                 "input_summary": {
-                  "current_message_url": "http://127.0.0.1:5176/items"
+                  "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                 },
                 "output_summary": {
                   "pending_target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -6082,7 +6082,7 @@
                   "active_task": {
                     "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                     "kind": "learn_operation",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                     "owner": "learning_agent",
                     "status": "failed",
@@ -6106,8 +6106,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -6156,7 +6156,7 @@
               "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
               "type": "command_parsed",
               "payload": {
-                "raw": "http://127.0.0.1:5176/items",
+                "raw": "http://127.0.0.1:<fixture-port>/records",
                 "command_kind": "ask_user",
                 "dispatch_metadata": {
                   "client": "wagent_user_behavior_eval",
@@ -6167,12 +6167,12 @@
                 "intake": {
                   "intent": "execute_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
-                    "goal": "http://127.0.0.1:5176/items",
+                    "goal": "http://127.0.0.1:<fixture-port>/records",
                     "canonical_goal": null,
                     "aliases": []
                   },
@@ -6205,7 +6205,7 @@
                 "active_task": {
                   "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
                   "created_at": "2026-05-24T02:22:25.937167+00:00",
@@ -6231,7 +6231,7 @@
                   ]
                 },
                 "output_summary": {
-                  "target_url": "http://127.0.0.1:5176/items"
+                  "target_url": "http://127.0.0.1:<fixture-port>/records"
                 }
               },
               "created_at": "2026-05-24T02:22:25.941330Z"
@@ -6243,9 +6243,9 @@
               "payload": {
                 "reason": "pending_target_missing_goal",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -6254,8 +6254,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -6325,9 +6325,9 @@
                 },
                 "output_summary": {
                   "pending_target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -6335,7 +6335,7 @@
                   "active_task": {
                     "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                     "kind": "clarify",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": null,
                     "owner": "runtime",
                     "status": "waiting_for_user_input",
@@ -6359,8 +6359,8 @@
                   "next_agent": "web_operation_agent",
                   "recommended_skill": "learn_then_execute",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "pending_target"
                   },
                   "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218",
@@ -6469,8 +6469,8 @@
                   "next_agent": "web_operation_agent",
                   "recommended_skill": "learn_then_execute",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "pending_target"
                   },
                   "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218",
@@ -6496,7 +6496,7 @@
               "type": "chat_no_path",
               "payload": {
                 "reason": "learn_then_execute_requires_learning_first",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218"
               },
               "created_at": "2026-05-24T02:22:25.994254Z"
@@ -6687,23 +6687,23 @@
                 },
                 "eval_scope_id": "m11.3.7-known-20260524022218",
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
                 "active_task": {
                   "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
                   "created_at": "2026-05-24T02:22:25.937167+00:00",
                   "updated_at": "2026-05-24T02:22:25.937167+00:00"
                 },
                 "last_no_path_reason": {
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218",
                   "reason": "learn_then_execute_requires_learning_first",
                   "created_from_message_id": "3cf30414-be06-437a-b158-8d69c95ba270"
@@ -6717,7 +6717,7 @@
                 "id": "401c8477-1b8b-497b-b358-d22e22efdda7",
                 "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
                 "role": "user",
-                "content": "http://127.0.0.1:5176/items",
+                "content": "http://127.0.0.1:<fixture-port>/records",
                 "metadata": {
                   "client": "wagent_user_behavior_eval",
                   "browser_visibility": "headless"
@@ -6845,7 +6845,7 @@
                 "id": "28086a0e-7bbd-454a-87b9-5d7fafa26f86",
                 "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
                 "role": "user",
-                "content": "http://127.0.0.1:5176/items",
+                "content": "http://127.0.0.1:<fixture-port>/records",
                 "metadata": {
                   "client": "wagent_user_behavior_eval",
                   "browser_visibility": "headless"
@@ -6981,7 +6981,7 @@
                   "changes_page": false,
                   "writes_learned_path": false,
                   "input_summary": {
-                    "current_message_url": "http://127.0.0.1:5176/items"
+                    "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                   },
                   "output_summary": {
                     "pending_target": null,
@@ -7004,8 +7004,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -7054,7 +7054,7 @@
                 "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
                 "type": "command_parsed",
                 "payload": {
-                  "raw": "http://127.0.0.1:5176/items",
+                  "raw": "http://127.0.0.1:<fixture-port>/records",
                   "command_kind": "ask_user",
                   "dispatch_metadata": {
                     "client": "wagent_user_behavior_eval",
@@ -7065,12 +7065,12 @@
                   "intake": {
                     "intent": "execute_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
-                      "goal": "http://127.0.0.1:5176/items",
+                      "goal": "http://127.0.0.1:<fixture-port>/records",
                       "canonical_goal": null,
                       "aliases": []
                     },
@@ -7103,7 +7103,7 @@
                   "active_task": {
                     "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                     "kind": "clarify",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "owner": "runtime",
                     "status": "waiting_for_user_input",
                     "created_at": "2026-05-24T02:22:18.530736+00:00",
@@ -7129,7 +7129,7 @@
                     ]
                   },
                   "output_summary": {
-                    "target_url": "http://127.0.0.1:5176/items"
+                    "target_url": "http://127.0.0.1:<fixture-port>/records"
                   }
                 },
                 "created_at": "2026-05-24T02:22:18.534642+00:00"
@@ -7141,9 +7141,9 @@
                 "payload": {
                   "reason": "pending_target_missing_goal",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -7152,8 +7152,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -7223,9 +7223,9 @@
                   },
                   "output_summary": {
                     "pending_target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
-                      "page_hint": "/items",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
+                      "page_hint": "/records",
                       "source": "user_message",
                       "turns_remaining": 3
                     },
@@ -7233,7 +7233,7 @@
                     "active_task": {
                       "task_id": "task-5bead2f8-89fc-49ba-b287-1fda2299cad5",
                       "kind": "clarify",
-                      "target_url": "http://127.0.0.1:5176/items",
+                      "target_url": "http://127.0.0.1:<fixture-port>/records",
                       "goal": null,
                       "owner": "runtime",
                       "status": "waiting_for_user_input",
@@ -7257,8 +7257,8 @@
                     "next_agent": "learning_agent",
                     "recommended_skill": "start_learning",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "pending_target"
                     },
                     "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
@@ -7313,8 +7313,8 @@
                   "intake": {
                     "intent": "learn_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
@@ -7360,7 +7360,7 @@
                   "active_task": {
                     "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                     "kind": "learn_operation",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                     "owner": "learning_agent",
                     "status": "learning",
@@ -7382,7 +7382,7 @@
                   "changes_page": true,
                   "writes_learned_path": true,
                   "input_summary": {
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "user_goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                     "route_decision": "delegate_to_learning_agent"
                   },
@@ -7395,7 +7395,7 @@
                 "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
                 "type": "chat_learning_started",
                 "payload": {
-                  "url": "http://127.0.0.1:5176/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
                   "browser_visibility": "headless"
                 },
                 "created_at": "2026-05-24T02:22:18.558635+00:00"
@@ -7409,7 +7409,7 @@
                   "active_task": {
                     "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                     "kind": "learn_operation",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                     "owner": "learning_agent",
                     "status": "failed",
@@ -7490,13 +7490,13 @@
                   "changes_page": false,
                   "writes_learned_path": false,
                   "input_summary": {
-                    "current_message_url": "http://127.0.0.1:5176/items"
+                    "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                   },
                   "output_summary": {
                     "pending_target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
-                      "page_hint": "/items",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
+                      "page_hint": "/records",
                       "source": "user_message",
                       "turns_remaining": 3
                     },
@@ -7504,7 +7504,7 @@
                     "active_task": {
                       "task_id": "task-ac3bfa1c-b3c6-4cfd-b1f1-186eda7b1ee6",
                       "kind": "learn_operation",
-                      "target_url": "http://127.0.0.1:5176/items",
+                      "target_url": "http://127.0.0.1:<fixture-port>/records",
                       "goal": "学习新增项目，名称叫 测试项目A-20260524022218",
                       "owner": "learning_agent",
                       "status": "failed",
@@ -7528,8 +7528,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -7578,7 +7578,7 @@
                 "session_id": "49a56bfb-45cc-4b2b-a9f9-b4ce28eaf9b2",
                 "type": "command_parsed",
                 "payload": {
-                  "raw": "http://127.0.0.1:5176/items",
+                  "raw": "http://127.0.0.1:<fixture-port>/records",
                   "command_kind": "ask_user",
                   "dispatch_metadata": {
                     "client": "wagent_user_behavior_eval",
@@ -7589,12 +7589,12 @@
                   "intake": {
                     "intent": "execute_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
-                      "goal": "http://127.0.0.1:5176/items",
+                      "goal": "http://127.0.0.1:<fixture-port>/records",
                       "canonical_goal": null,
                       "aliases": []
                     },
@@ -7627,7 +7627,7 @@
                   "active_task": {
                     "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                     "kind": "clarify",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "owner": "runtime",
                     "status": "waiting_for_user_input",
                     "created_at": "2026-05-24T02:22:25.937167+00:00",
@@ -7653,7 +7653,7 @@
                     ]
                   },
                   "output_summary": {
-                    "target_url": "http://127.0.0.1:5176/items"
+                    "target_url": "http://127.0.0.1:<fixture-port>/records"
                   }
                 },
                 "created_at": "2026-05-24T02:22:25.941330+00:00"
@@ -7665,9 +7665,9 @@
                 "payload": {
                   "reason": "pending_target_missing_goal",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -7676,8 +7676,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -7747,9 +7747,9 @@
                   },
                   "output_summary": {
                     "pending_target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
-                      "page_hint": "/items",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
+                      "page_hint": "/records",
                       "source": "user_message",
                       "turns_remaining": 3
                     },
@@ -7757,7 +7757,7 @@
                     "active_task": {
                       "task_id": "task-a02c14e3-2754-4a6f-a5a2-103447406260",
                       "kind": "clarify",
-                      "target_url": "http://127.0.0.1:5176/items",
+                      "target_url": "http://127.0.0.1:<fixture-port>/records",
                       "goal": null,
                       "owner": "runtime",
                       "status": "waiting_for_user_input",
@@ -7781,8 +7781,8 @@
                     "next_agent": "web_operation_agent",
                     "recommended_skill": "learn_then_execute",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "pending_target"
                     },
                     "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218",
@@ -7891,8 +7891,8 @@
                     "next_agent": "web_operation_agent",
                     "recommended_skill": "learn_then_execute",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "pending_target"
                     },
                     "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218",
@@ -7918,7 +7918,7 @@
                 "type": "chat_no_path",
                 "payload": {
                   "reason": "learn_then_execute_requires_learning_first",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "user_goal": "帮我新增项目，名称叫 测试项目B-20260524022218"
                 },
                 "created_at": "2026-05-24T02:22:25.994254+00:00"
@@ -8143,7 +8143,7 @@
       "method": "POST",
       "path": "/conversation/sessions/04eb1719-ea7c-4534-a911-ea653f2eddd1/dispatch",
       "json": {
-        "input": "http://127.0.0.1:5176/items",
+        "input": "http://127.0.0.1:<fixture-port>/records",
         "metadata": {
           "client": "wagent_user_behavior_eval",
           "browser_visibility": "headless"
@@ -8197,16 +8197,16 @@
             },
             "eval_scope_id": "m11.3.7-url-unknown-20260524022218",
             "pending_target": {
-              "url": "http://127.0.0.1:5176/items",
-              "site_origin": "http://127.0.0.1:5176",
-              "page_hint": "/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
+              "site_origin": "http://127.0.0.1:<fixture-port>",
+              "page_hint": "/records",
               "source": "user_message",
               "turns_remaining": 3
             },
             "active_task": {
               "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
               "kind": "clarify",
-              "target_url": "http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
               "owner": "runtime",
               "status": "waiting_for_user_input",
               "created_at": "2026-05-24T02:22:26.035525+00:00",
@@ -8235,7 +8235,7 @@
             "id": "18847060-7b79-44dc-a9c7-199607240390",
             "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
             "role": "user",
-            "content": "http://127.0.0.1:5176/items",
+            "content": "http://127.0.0.1:<fixture-port>/records",
             "metadata": {
               "client": "wagent_user_behavior_eval",
               "browser_visibility": "headless"
@@ -8341,7 +8341,7 @@
               "changes_page": false,
               "writes_learned_path": false,
               "input_summary": {
-                "current_message_url": "http://127.0.0.1:5176/items"
+                "current_message_url": "http://127.0.0.1:<fixture-port>/records"
               },
               "output_summary": {
                 "pending_target": null,
@@ -8364,8 +8364,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -8414,7 +8414,7 @@
             "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
             "type": "command_parsed",
             "payload": {
-              "raw": "http://127.0.0.1:5176/items",
+              "raw": "http://127.0.0.1:<fixture-port>/records",
               "command_kind": "ask_user",
               "dispatch_metadata": {
                 "client": "wagent_user_behavior_eval",
@@ -8425,12 +8425,12 @@
               "intake": {
                 "intent": "execute_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
-                  "goal": "http://127.0.0.1:5176/items",
+                  "goal": "http://127.0.0.1:<fixture-port>/records",
                   "canonical_goal": null,
                   "aliases": []
                 },
@@ -8463,7 +8463,7 @@
               "active_task": {
                 "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                 "kind": "clarify",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "owner": "runtime",
                 "status": "waiting_for_user_input",
                 "created_at": "2026-05-24T02:22:26.035525+00:00",
@@ -8489,7 +8489,7 @@
                 ]
               },
               "output_summary": {
-                "target_url": "http://127.0.0.1:5176/items"
+                "target_url": "http://127.0.0.1:<fixture-port>/records"
               }
             },
             "created_at": "2026-05-24T02:22:26.038176Z"
@@ -8501,9 +8501,9 @@
             "payload": {
               "reason": "pending_target_missing_goal",
               "target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
@@ -8512,8 +8512,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -8563,16 +8563,16 @@
               },
               "eval_scope_id": "m11.3.7-url-unknown-20260524022218",
               "pending_target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
               "active_task": {
                 "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                 "kind": "clarify",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "owner": "runtime",
                 "status": "waiting_for_user_input",
                 "created_at": "2026-05-24T02:22:26.035525+00:00",
@@ -8587,7 +8587,7 @@
               "id": "18847060-7b79-44dc-a9c7-199607240390",
               "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
               "role": "user",
-              "content": "http://127.0.0.1:5176/items",
+              "content": "http://127.0.0.1:<fixture-port>/records",
               "metadata": {
                 "client": "wagent_user_behavior_eval",
                 "browser_visibility": "headless"
@@ -8679,7 +8679,7 @@
                 "changes_page": false,
                 "writes_learned_path": false,
                 "input_summary": {
-                  "current_message_url": "http://127.0.0.1:5176/items"
+                  "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                 },
                 "output_summary": {
                   "pending_target": null,
@@ -8702,8 +8702,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -8752,7 +8752,7 @@
               "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
               "type": "command_parsed",
               "payload": {
-                "raw": "http://127.0.0.1:5176/items",
+                "raw": "http://127.0.0.1:<fixture-port>/records",
                 "command_kind": "ask_user",
                 "dispatch_metadata": {
                   "client": "wagent_user_behavior_eval",
@@ -8763,12 +8763,12 @@
                 "intake": {
                   "intent": "execute_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
-                    "goal": "http://127.0.0.1:5176/items",
+                    "goal": "http://127.0.0.1:<fixture-port>/records",
                     "canonical_goal": null,
                     "aliases": []
                   },
@@ -8801,7 +8801,7 @@
                 "active_task": {
                   "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
                   "created_at": "2026-05-24T02:22:26.035525+00:00",
@@ -8827,7 +8827,7 @@
                   ]
                 },
                 "output_summary": {
-                  "target_url": "http://127.0.0.1:5176/items"
+                  "target_url": "http://127.0.0.1:<fixture-port>/records"
                 }
               },
               "created_at": "2026-05-24T02:22:26.038176Z"
@@ -8839,9 +8839,9 @@
               "payload": {
                 "reason": "pending_target_missing_goal",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -8850,8 +8850,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -8936,16 +8936,16 @@
                 },
                 "eval_scope_id": "m11.3.7-url-unknown-20260524022218",
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
                 "active_task": {
                   "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
                   "created_at": "2026-05-24T02:22:26.035525+00:00",
@@ -8960,7 +8960,7 @@
                 "id": "18847060-7b79-44dc-a9c7-199607240390",
                 "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
                 "role": "user",
-                "content": "http://127.0.0.1:5176/items",
+                "content": "http://127.0.0.1:<fixture-port>/records",
                 "metadata": {
                   "client": "wagent_user_behavior_eval",
                   "browser_visibility": "headless"
@@ -9051,7 +9051,7 @@
                   "changes_page": false,
                   "writes_learned_path": false,
                   "input_summary": {
-                    "current_message_url": "http://127.0.0.1:5176/items"
+                    "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                   },
                   "output_summary": {
                     "pending_target": null,
@@ -9074,8 +9074,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -9124,7 +9124,7 @@
                 "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
                 "type": "command_parsed",
                 "payload": {
-                  "raw": "http://127.0.0.1:5176/items",
+                  "raw": "http://127.0.0.1:<fixture-port>/records",
                   "command_kind": "ask_user",
                   "dispatch_metadata": {
                     "client": "wagent_user_behavior_eval",
@@ -9135,12 +9135,12 @@
                   "intake": {
                     "intent": "execute_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
-                      "goal": "http://127.0.0.1:5176/items",
+                      "goal": "http://127.0.0.1:<fixture-port>/records",
                       "canonical_goal": null,
                       "aliases": []
                     },
@@ -9173,7 +9173,7 @@
                   "active_task": {
                     "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                     "kind": "clarify",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "owner": "runtime",
                     "status": "waiting_for_user_input",
                     "created_at": "2026-05-24T02:22:26.035525+00:00",
@@ -9199,7 +9199,7 @@
                     ]
                   },
                   "output_summary": {
-                    "target_url": "http://127.0.0.1:5176/items"
+                    "target_url": "http://127.0.0.1:<fixture-port>/records"
                   }
                 },
                 "created_at": "2026-05-24T02:22:26.038176+00:00"
@@ -9211,9 +9211,9 @@
                 "payload": {
                   "reason": "pending_target_missing_goal",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -9222,8 +9222,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -9356,16 +9356,16 @@
             },
             "eval_scope_id": "m11.3.7-url-unknown-20260524022218",
             "pending_target": {
-              "url": "http://127.0.0.1:5176/items",
-              "site_origin": "http://127.0.0.1:5176",
-              "page_hint": "/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
+              "site_origin": "http://127.0.0.1:<fixture-port>",
+              "page_hint": "/records",
               "source": "user_message",
               "turns_remaining": 3
             },
             "active_task": {
               "task_id": "task-b20f94fa-0438-4909-a210-c65ccc927744",
               "kind": "learn_operation",
-              "target_url": "http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
               "goal": "学习新增项目，名称叫 测试项目C-20260524022218",
               "owner": "learning_agent",
               "status": "failed",
@@ -9395,7 +9395,7 @@
             "id": "18847060-7b79-44dc-a9c7-199607240390",
             "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
             "role": "user",
-            "content": "http://127.0.0.1:5176/items",
+            "content": "http://127.0.0.1:<fixture-port>/records",
             "metadata": {
               "client": "wagent_user_behavior_eval",
               "browser_visibility": "headless"
@@ -9581,7 +9581,7 @@
               "changes_page": false,
               "writes_learned_path": false,
               "input_summary": {
-                "current_message_url": "http://127.0.0.1:5176/items"
+                "current_message_url": "http://127.0.0.1:<fixture-port>/records"
               },
               "output_summary": {
                 "pending_target": null,
@@ -9604,8 +9604,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -9654,7 +9654,7 @@
             "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
             "type": "command_parsed",
             "payload": {
-              "raw": "http://127.0.0.1:5176/items",
+              "raw": "http://127.0.0.1:<fixture-port>/records",
               "command_kind": "ask_user",
               "dispatch_metadata": {
                 "client": "wagent_user_behavior_eval",
@@ -9665,12 +9665,12 @@
               "intake": {
                 "intent": "execute_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
-                  "goal": "http://127.0.0.1:5176/items",
+                  "goal": "http://127.0.0.1:<fixture-port>/records",
                   "canonical_goal": null,
                   "aliases": []
                 },
@@ -9703,7 +9703,7 @@
               "active_task": {
                 "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                 "kind": "clarify",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "owner": "runtime",
                 "status": "waiting_for_user_input",
                 "created_at": "2026-05-24T02:22:26.035525+00:00",
@@ -9729,7 +9729,7 @@
                 ]
               },
               "output_summary": {
-                "target_url": "http://127.0.0.1:5176/items"
+                "target_url": "http://127.0.0.1:<fixture-port>/records"
               }
             },
             "created_at": "2026-05-24T02:22:26.038176Z"
@@ -9741,9 +9741,9 @@
             "payload": {
               "reason": "pending_target_missing_goal",
               "target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
@@ -9752,8 +9752,8 @@
                 "next_agent": "conversation_orchestrator",
                 "recommended_skill": "ask_user_for_missing_info",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
                 "user_goal": null,
@@ -9823,9 +9823,9 @@
               },
               "output_summary": {
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -9833,7 +9833,7 @@
                 "active_task": {
                   "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": null,
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
@@ -9857,8 +9857,8 @@
                 "next_agent": "learning_agent",
                 "recommended_skill": "start_learning",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "pending_target"
                 },
                 "user_goal": "学习新增项目，名称叫 测试项目C-20260524022218",
@@ -9913,8 +9913,8 @@
               "intake": {
                 "intent": "learn_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
@@ -9960,7 +9960,7 @@
               "active_task": {
                 "task_id": "task-b20f94fa-0438-4909-a210-c65ccc927744",
                 "kind": "learn_operation",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                 "owner": "learning_agent",
                 "status": "learning",
@@ -9982,7 +9982,7 @@
               "changes_page": true,
               "writes_learned_path": true,
               "input_summary": {
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "user_goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                 "route_decision": "delegate_to_learning_agent"
               },
@@ -9995,7 +9995,7 @@
             "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
             "type": "chat_learning_started",
             "payload": {
-              "url": "http://127.0.0.1:5176/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
               "browser_visibility": "headless"
             },
             "created_at": "2026-05-24T02:22:26.070553Z"
@@ -10009,7 +10009,7 @@
               "active_task": {
                 "task_id": "task-b20f94fa-0438-4909-a210-c65ccc927744",
                 "kind": "learn_operation",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                 "owner": "learning_agent",
                 "status": "failed",
@@ -10074,16 +10074,16 @@
               },
               "eval_scope_id": "m11.3.7-url-unknown-20260524022218",
               "pending_target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
               "active_task": {
                 "task_id": "task-b20f94fa-0438-4909-a210-c65ccc927744",
                 "kind": "learn_operation",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                 "owner": "learning_agent",
                 "status": "failed",
@@ -10099,7 +10099,7 @@
               "id": "18847060-7b79-44dc-a9c7-199607240390",
               "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
               "role": "user",
-              "content": "http://127.0.0.1:5176/items",
+              "content": "http://127.0.0.1:<fixture-port>/records",
               "metadata": {
                 "client": "wagent_user_behavior_eval",
                 "browser_visibility": "headless"
@@ -10271,7 +10271,7 @@
                 "changes_page": false,
                 "writes_learned_path": false,
                 "input_summary": {
-                  "current_message_url": "http://127.0.0.1:5176/items"
+                  "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                 },
                 "output_summary": {
                   "pending_target": null,
@@ -10294,8 +10294,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -10344,7 +10344,7 @@
               "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
               "type": "command_parsed",
               "payload": {
-                "raw": "http://127.0.0.1:5176/items",
+                "raw": "http://127.0.0.1:<fixture-port>/records",
                 "command_kind": "ask_user",
                 "dispatch_metadata": {
                   "client": "wagent_user_behavior_eval",
@@ -10355,12 +10355,12 @@
                 "intake": {
                   "intent": "execute_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
-                    "goal": "http://127.0.0.1:5176/items",
+                    "goal": "http://127.0.0.1:<fixture-port>/records",
                     "canonical_goal": null,
                     "aliases": []
                   },
@@ -10393,7 +10393,7 @@
                 "active_task": {
                   "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                   "kind": "clarify",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "owner": "runtime",
                   "status": "waiting_for_user_input",
                   "created_at": "2026-05-24T02:22:26.035525+00:00",
@@ -10419,7 +10419,7 @@
                   ]
                 },
                 "output_summary": {
-                  "target_url": "http://127.0.0.1:5176/items"
+                  "target_url": "http://127.0.0.1:<fixture-port>/records"
                 }
               },
               "created_at": "2026-05-24T02:22:26.038176Z"
@@ -10431,9 +10431,9 @@
               "payload": {
                 "reason": "pending_target_missing_goal",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -10442,8 +10442,8 @@
                   "next_agent": "conversation_orchestrator",
                   "recommended_skill": "ask_user_for_missing_info",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
                   "user_goal": null,
@@ -10513,9 +10513,9 @@
                 },
                 "output_summary": {
                   "pending_target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -10523,7 +10523,7 @@
                   "active_task": {
                     "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                     "kind": "clarify",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": null,
                     "owner": "runtime",
                     "status": "waiting_for_user_input",
@@ -10547,8 +10547,8 @@
                   "next_agent": "learning_agent",
                   "recommended_skill": "start_learning",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "pending_target"
                   },
                   "user_goal": "学习新增项目，名称叫 测试项目C-20260524022218",
@@ -10603,8 +10603,8 @@
                 "intake": {
                   "intent": "learn_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
@@ -10650,7 +10650,7 @@
                 "active_task": {
                   "task_id": "task-b20f94fa-0438-4909-a210-c65ccc927744",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                   "owner": "learning_agent",
                   "status": "learning",
@@ -10672,7 +10672,7 @@
                 "changes_page": true,
                 "writes_learned_path": true,
                 "input_summary": {
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "user_goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                   "route_decision": "delegate_to_learning_agent"
                 },
@@ -10685,7 +10685,7 @@
               "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
               "type": "chat_learning_started",
               "payload": {
-                "url": "http://127.0.0.1:5176/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
                 "browser_visibility": "headless"
               },
               "created_at": "2026-05-24T02:22:26.070553Z"
@@ -10699,7 +10699,7 @@
                 "active_task": {
                   "task_id": "task-b20f94fa-0438-4909-a210-c65ccc927744",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                   "owner": "learning_agent",
                   "status": "failed",
@@ -10840,16 +10840,16 @@
                 },
                 "eval_scope_id": "m11.3.7-url-unknown-20260524022218",
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
                 "active_task": {
                   "task_id": "task-b20f94fa-0438-4909-a210-c65ccc927744",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                   "owner": "learning_agent",
                   "status": "failed",
@@ -10865,7 +10865,7 @@
                 "id": "18847060-7b79-44dc-a9c7-199607240390",
                 "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
                 "role": "user",
-                "content": "http://127.0.0.1:5176/items",
+                "content": "http://127.0.0.1:<fixture-port>/records",
                 "metadata": {
                   "client": "wagent_user_behavior_eval",
                   "browser_visibility": "headless"
@@ -11035,7 +11035,7 @@
                   "changes_page": false,
                   "writes_learned_path": false,
                   "input_summary": {
-                    "current_message_url": "http://127.0.0.1:5176/items"
+                    "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                   },
                   "output_summary": {
                     "pending_target": null,
@@ -11058,8 +11058,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -11108,7 +11108,7 @@
                 "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
                 "type": "command_parsed",
                 "payload": {
-                  "raw": "http://127.0.0.1:5176/items",
+                  "raw": "http://127.0.0.1:<fixture-port>/records",
                   "command_kind": "ask_user",
                   "dispatch_metadata": {
                     "client": "wagent_user_behavior_eval",
@@ -11119,12 +11119,12 @@
                   "intake": {
                     "intent": "execute_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
-                      "goal": "http://127.0.0.1:5176/items",
+                      "goal": "http://127.0.0.1:<fixture-port>/records",
                       "canonical_goal": null,
                       "aliases": []
                     },
@@ -11157,7 +11157,7 @@
                   "active_task": {
                     "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                     "kind": "clarify",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "owner": "runtime",
                     "status": "waiting_for_user_input",
                     "created_at": "2026-05-24T02:22:26.035525+00:00",
@@ -11183,7 +11183,7 @@
                     ]
                   },
                   "output_summary": {
-                    "target_url": "http://127.0.0.1:5176/items"
+                    "target_url": "http://127.0.0.1:<fixture-port>/records"
                   }
                 },
                 "created_at": "2026-05-24T02:22:26.038176+00:00"
@@ -11195,9 +11195,9 @@
                 "payload": {
                   "reason": "pending_target_missing_goal",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -11206,8 +11206,8 @@
                     "next_agent": "conversation_orchestrator",
                     "recommended_skill": "ask_user_for_missing_info",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
                     "user_goal": null,
@@ -11277,9 +11277,9 @@
                   },
                   "output_summary": {
                     "pending_target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
-                      "page_hint": "/items",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
+                      "page_hint": "/records",
                       "source": "user_message",
                       "turns_remaining": 3
                     },
@@ -11287,7 +11287,7 @@
                     "active_task": {
                       "task_id": "task-e17980be-a74a-4c8b-a625-afdb111ed370",
                       "kind": "clarify",
-                      "target_url": "http://127.0.0.1:5176/items",
+                      "target_url": "http://127.0.0.1:<fixture-port>/records",
                       "goal": null,
                       "owner": "runtime",
                       "status": "waiting_for_user_input",
@@ -11311,8 +11311,8 @@
                     "next_agent": "learning_agent",
                     "recommended_skill": "start_learning",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "pending_target"
                     },
                     "user_goal": "学习新增项目，名称叫 测试项目C-20260524022218",
@@ -11367,8 +11367,8 @@
                   "intake": {
                     "intent": "learn_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
@@ -11414,7 +11414,7 @@
                   "active_task": {
                     "task_id": "task-b20f94fa-0438-4909-a210-c65ccc927744",
                     "kind": "learn_operation",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                     "owner": "learning_agent",
                     "status": "learning",
@@ -11436,7 +11436,7 @@
                   "changes_page": true,
                   "writes_learned_path": true,
                   "input_summary": {
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "user_goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                     "route_decision": "delegate_to_learning_agent"
                   },
@@ -11449,7 +11449,7 @@
                 "session_id": "04eb1719-ea7c-4534-a911-ea653f2eddd1",
                 "type": "chat_learning_started",
                 "payload": {
-                  "url": "http://127.0.0.1:5176/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
                   "browser_visibility": "headless"
                 },
                 "created_at": "2026-05-24T02:22:26.070553+00:00"
@@ -11463,7 +11463,7 @@
                   "active_task": {
                     "task_id": "task-b20f94fa-0438-4909-a210-c65ccc927744",
                     "kind": "learn_operation",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": "学习新增项目，名称叫 测试项目C-20260524022218",
                     "owner": "learning_agent",
                     "status": "failed",
@@ -11638,7 +11638,7 @@
       "method": "POST",
       "path": "/conversation/sessions/3080c74b-6879-4189-9ca2-5d1b56c3b92d/dispatch",
       "json": {
-        "input": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+        "input": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
         "metadata": {
           "client": "wagent_user_behavior_eval",
           "browser_visibility": "headless"
@@ -11691,15 +11691,15 @@
             },
             "eval_scope_id": "m11.3.7-execute-unknown-20260524022218",
             "last_no_path_reason": {
-              "target_url": "http://127.0.0.1:5176/items",
-              "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
+              "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
               "reason": "learn_then_execute_requires_learning_first",
               "created_from_message_id": "5998e72a-8dc8-408d-a725-391e587f75ef"
             },
             "pending_target": {
-              "url": "http://127.0.0.1:5176/items",
-              "site_origin": "http://127.0.0.1:5176",
-              "page_hint": "/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
+              "site_origin": "http://127.0.0.1:<fixture-port>",
+              "page_hint": "/records",
               "source": "user_message",
               "turns_remaining": 3
             }
@@ -11726,7 +11726,7 @@
             "id": "5998e72a-8dc8-408d-a725-391e587f75ef",
             "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
             "role": "user",
-            "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+            "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
             "metadata": {
               "client": "wagent_user_behavior_eval",
               "browser_visibility": "headless"
@@ -11828,7 +11828,7 @@
               "changes_page": false,
               "writes_learned_path": false,
               "input_summary": {
-                "current_message_url": "http://127.0.0.1:5176/items"
+                "current_message_url": "http://127.0.0.1:<fixture-port>/records"
               },
               "output_summary": {
                 "pending_target": null,
@@ -11851,11 +11851,11 @@
                 "next_agent": "web_operation_agent",
                 "recommended_skill": "learn_then_execute",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
-                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                 "known_context": {
                   "has_learned_action": false,
                   "has_required_user_inputs": true,
@@ -11896,7 +11896,7 @@
             "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
             "type": "command_parsed",
             "payload": {
-              "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+              "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
               "command_kind": "execute_task",
               "dispatch_metadata": {
                 "client": "wagent_user_behavior_eval",
@@ -11907,12 +11907,12 @@
               "intake": {
                 "intent": "execute_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
-                  "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                  "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                   "canonical_goal": null,
                   "aliases": []
                 },
@@ -11961,11 +11961,11 @@
                 "next_agent": "web_operation_agent",
                 "recommended_skill": "learn_then_execute",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
-                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                 "known_context": {
                   "has_learned_action": false,
                   "has_required_user_inputs": true,
@@ -11988,8 +11988,8 @@
             "type": "chat_no_path",
             "payload": {
               "reason": "learn_then_execute_requires_learning_first",
-              "target_url": "http://127.0.0.1:5176/items",
-              "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items"
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
+              "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records"
             },
             "created_at": "2026-05-24T02:22:32.988842Z"
           }
@@ -12021,15 +12021,15 @@
               },
               "eval_scope_id": "m11.3.7-execute-unknown-20260524022218",
               "last_no_path_reason": {
-                "target_url": "http://127.0.0.1:5176/items",
-                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
+                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                 "reason": "learn_then_execute_requires_learning_first",
                 "created_from_message_id": "5998e72a-8dc8-408d-a725-391e587f75ef"
               },
               "pending_target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               }
@@ -12042,7 +12042,7 @@
               "id": "5998e72a-8dc8-408d-a725-391e587f75ef",
               "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
               "role": "user",
-              "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+              "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
               "metadata": {
                 "client": "wagent_user_behavior_eval",
                 "browser_visibility": "headless"
@@ -12130,7 +12130,7 @@
                 "changes_page": false,
                 "writes_learned_path": false,
                 "input_summary": {
-                  "current_message_url": "http://127.0.0.1:5176/items"
+                  "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                 },
                 "output_summary": {
                   "pending_target": null,
@@ -12153,11 +12153,11 @@
                   "next_agent": "web_operation_agent",
                   "recommended_skill": "learn_then_execute",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
-                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                   "known_context": {
                     "has_learned_action": false,
                     "has_required_user_inputs": true,
@@ -12198,7 +12198,7 @@
               "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
               "type": "command_parsed",
               "payload": {
-                "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                 "command_kind": "execute_task",
                 "dispatch_metadata": {
                   "client": "wagent_user_behavior_eval",
@@ -12209,12 +12209,12 @@
                 "intake": {
                   "intent": "execute_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
-                    "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                    "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                     "canonical_goal": null,
                     "aliases": []
                   },
@@ -12263,11 +12263,11 @@
                   "next_agent": "web_operation_agent",
                   "recommended_skill": "learn_then_execute",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
-                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                   "known_context": {
                     "has_learned_action": false,
                     "has_required_user_inputs": true,
@@ -12290,8 +12290,8 @@
               "type": "chat_no_path",
               "payload": {
                 "reason": "learn_then_execute_requires_learning_first",
-                "target_url": "http://127.0.0.1:5176/items",
-                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items"
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
+                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records"
               },
               "created_at": "2026-05-24T02:22:32.988842Z"
             }
@@ -12358,15 +12358,15 @@
                 },
                 "eval_scope_id": "m11.3.7-execute-unknown-20260524022218",
                 "last_no_path_reason": {
-                  "target_url": "http://127.0.0.1:5176/items",
-                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
+                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                   "reason": "learn_then_execute_requires_learning_first",
                   "created_from_message_id": "5998e72a-8dc8-408d-a725-391e587f75ef"
                 },
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 }
@@ -12379,7 +12379,7 @@
                 "id": "5998e72a-8dc8-408d-a725-391e587f75ef",
                 "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
                 "role": "user",
-                "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                 "metadata": {
                   "client": "wagent_user_behavior_eval",
                   "browser_visibility": "headless"
@@ -12466,7 +12466,7 @@
                   "changes_page": false,
                   "writes_learned_path": false,
                   "input_summary": {
-                    "current_message_url": "http://127.0.0.1:5176/items"
+                    "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                   },
                   "output_summary": {
                     "pending_target": null,
@@ -12489,11 +12489,11 @@
                     "next_agent": "web_operation_agent",
                     "recommended_skill": "learn_then_execute",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
-                    "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                    "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                     "known_context": {
                       "has_learned_action": false,
                       "has_required_user_inputs": true,
@@ -12534,7 +12534,7 @@
                 "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
                 "type": "command_parsed",
                 "payload": {
-                  "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                  "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                   "command_kind": "execute_task",
                   "dispatch_metadata": {
                     "client": "wagent_user_behavior_eval",
@@ -12545,12 +12545,12 @@
                   "intake": {
                     "intent": "execute_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
-                      "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                      "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                       "canonical_goal": null,
                       "aliases": []
                     },
@@ -12599,11 +12599,11 @@
                     "next_agent": "web_operation_agent",
                     "recommended_skill": "learn_then_execute",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
-                    "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                    "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                     "known_context": {
                       "has_learned_action": false,
                       "has_required_user_inputs": true,
@@ -12626,8 +12626,8 @@
                 "type": "chat_no_path",
                 "payload": {
                   "reason": "learn_then_execute_requires_learning_first",
-                  "target_url": "http://127.0.0.1:5176/items",
-                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items"
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
+                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records"
                 },
                 "created_at": "2026-05-24T02:22:32.988842+00:00"
               }
@@ -12742,22 +12742,22 @@
             },
             "eval_scope_id": "m11.3.7-execute-unknown-20260524022218",
             "last_no_path_reason": {
-              "target_url": "http://127.0.0.1:5176/items",
-              "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
+              "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
               "reason": "learn_then_execute_requires_learning_first",
               "created_from_message_id": "5998e72a-8dc8-408d-a725-391e587f75ef"
             },
             "pending_target": {
-              "url": "http://127.0.0.1:5176/items",
-              "site_origin": "http://127.0.0.1:5176",
-              "page_hint": "/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
+              "site_origin": "http://127.0.0.1:<fixture-port>",
+              "page_hint": "/records",
               "source": "user_message",
               "turns_remaining": 3
             },
             "active_task": {
               "task_id": "task-94790321-35ff-4b2d-afad-5de54ebfce2e",
               "kind": "learn_operation",
-              "target_url": "http://127.0.0.1:5176/items",
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
               "goal": "学习新增项目，名称叫 测试项目D-20260524022218",
               "owner": "learning_agent",
               "status": "failed",
@@ -12787,7 +12787,7 @@
             "id": "5998e72a-8dc8-408d-a725-391e587f75ef",
             "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
             "role": "user",
-            "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+            "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
             "metadata": {
               "client": "wagent_user_behavior_eval",
               "browser_visibility": "headless"
@@ -12969,7 +12969,7 @@
               "changes_page": false,
               "writes_learned_path": false,
               "input_summary": {
-                "current_message_url": "http://127.0.0.1:5176/items"
+                "current_message_url": "http://127.0.0.1:<fixture-port>/records"
               },
               "output_summary": {
                 "pending_target": null,
@@ -12992,11 +12992,11 @@
                 "next_agent": "web_operation_agent",
                 "recommended_skill": "learn_then_execute",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
-                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                 "known_context": {
                   "has_learned_action": false,
                   "has_required_user_inputs": true,
@@ -13037,7 +13037,7 @@
             "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
             "type": "command_parsed",
             "payload": {
-              "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+              "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
               "command_kind": "execute_task",
               "dispatch_metadata": {
                 "client": "wagent_user_behavior_eval",
@@ -13048,12 +13048,12 @@
               "intake": {
                 "intent": "execute_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
-                  "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                  "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                   "canonical_goal": null,
                   "aliases": []
                 },
@@ -13102,11 +13102,11 @@
                 "next_agent": "web_operation_agent",
                 "recommended_skill": "learn_then_execute",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "user_message"
                 },
-                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                 "known_context": {
                   "has_learned_action": false,
                   "has_required_user_inputs": true,
@@ -13129,8 +13129,8 @@
             "type": "chat_no_path",
             "payload": {
               "reason": "learn_then_execute_requires_learning_first",
-              "target_url": "http://127.0.0.1:5176/items",
-              "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items"
+              "target_url": "http://127.0.0.1:<fixture-port>/records",
+              "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records"
             },
             "created_at": "2026-05-24T02:22:32.988842Z"
           },
@@ -13182,9 +13182,9 @@
               },
               "output_summary": {
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
@@ -13207,8 +13207,8 @@
                 "next_agent": "learning_agent",
                 "recommended_skill": "start_learning",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "source": "pending_target"
                 },
                 "user_goal": "学习新增项目，名称叫 测试项目D-20260524022218",
@@ -13263,8 +13263,8 @@
               "intake": {
                 "intent": "learn_operation",
                 "target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
                   "page_hint": null
                 },
                 "action": {
@@ -13310,7 +13310,7 @@
               "active_task": {
                 "task_id": "task-94790321-35ff-4b2d-afad-5de54ebfce2e",
                 "kind": "learn_operation",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                 "owner": "learning_agent",
                 "status": "learning",
@@ -13332,7 +13332,7 @@
               "changes_page": true,
               "writes_learned_path": true,
               "input_summary": {
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "user_goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                 "route_decision": "delegate_to_learning_agent"
               },
@@ -13345,7 +13345,7 @@
             "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
             "type": "chat_learning_started",
             "payload": {
-              "url": "http://127.0.0.1:5176/items",
+              "url": "http://127.0.0.1:<fixture-port>/records",
               "browser_visibility": "headless"
             },
             "created_at": "2026-05-24T02:22:33.037629Z"
@@ -13359,7 +13359,7 @@
               "active_task": {
                 "task_id": "task-94790321-35ff-4b2d-afad-5de54ebfce2e",
                 "kind": "learn_operation",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                 "owner": "learning_agent",
                 "status": "failed",
@@ -13424,22 +13424,22 @@
               },
               "eval_scope_id": "m11.3.7-execute-unknown-20260524022218",
               "last_no_path_reason": {
-                "target_url": "http://127.0.0.1:5176/items",
-                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
+                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                 "reason": "learn_then_execute_requires_learning_first",
                 "created_from_message_id": "5998e72a-8dc8-408d-a725-391e587f75ef"
               },
               "pending_target": {
-                "url": "http://127.0.0.1:5176/items",
-                "site_origin": "http://127.0.0.1:5176",
-                "page_hint": "/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
+                "site_origin": "http://127.0.0.1:<fixture-port>",
+                "page_hint": "/records",
                 "source": "user_message",
                 "turns_remaining": 3
               },
               "active_task": {
                 "task_id": "task-94790321-35ff-4b2d-afad-5de54ebfce2e",
                 "kind": "learn_operation",
-                "target_url": "http://127.0.0.1:5176/items",
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
                 "goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                 "owner": "learning_agent",
                 "status": "failed",
@@ -13455,7 +13455,7 @@
               "id": "5998e72a-8dc8-408d-a725-391e587f75ef",
               "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
               "role": "user",
-              "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+              "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
               "metadata": {
                 "client": "wagent_user_behavior_eval",
                 "browser_visibility": "headless"
@@ -13623,7 +13623,7 @@
                 "changes_page": false,
                 "writes_learned_path": false,
                 "input_summary": {
-                  "current_message_url": "http://127.0.0.1:5176/items"
+                  "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                 },
                 "output_summary": {
                   "pending_target": null,
@@ -13646,11 +13646,11 @@
                   "next_agent": "web_operation_agent",
                   "recommended_skill": "learn_then_execute",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
-                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                   "known_context": {
                     "has_learned_action": false,
                     "has_required_user_inputs": true,
@@ -13691,7 +13691,7 @@
               "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
               "type": "command_parsed",
               "payload": {
-                "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                 "command_kind": "execute_task",
                 "dispatch_metadata": {
                   "client": "wagent_user_behavior_eval",
@@ -13702,12 +13702,12 @@
                 "intake": {
                   "intent": "execute_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
-                    "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                    "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                     "canonical_goal": null,
                     "aliases": []
                   },
@@ -13756,11 +13756,11 @@
                   "next_agent": "web_operation_agent",
                   "recommended_skill": "learn_then_execute",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "user_message"
                   },
-                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                   "known_context": {
                     "has_learned_action": false,
                     "has_required_user_inputs": true,
@@ -13783,8 +13783,8 @@
               "type": "chat_no_path",
               "payload": {
                 "reason": "learn_then_execute_requires_learning_first",
-                "target_url": "http://127.0.0.1:5176/items",
-                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items"
+                "target_url": "http://127.0.0.1:<fixture-port>/records",
+                "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records"
               },
               "created_at": "2026-05-24T02:22:32.988842Z"
             },
@@ -13836,9 +13836,9 @@
                 },
                 "output_summary": {
                   "pending_target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
-                    "page_hint": "/items",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
+                    "page_hint": "/records",
                     "source": "user_message",
                     "turns_remaining": 3
                   },
@@ -13861,8 +13861,8 @@
                   "next_agent": "learning_agent",
                   "recommended_skill": "start_learning",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "source": "pending_target"
                   },
                   "user_goal": "学习新增项目，名称叫 测试项目D-20260524022218",
@@ -13917,8 +13917,8 @@
                 "intake": {
                   "intent": "learn_operation",
                   "target": {
-                    "url": "http://127.0.0.1:5176/items",
-                    "site_origin": "http://127.0.0.1:5176",
+                    "url": "http://127.0.0.1:<fixture-port>/records",
+                    "site_origin": "http://127.0.0.1:<fixture-port>",
                     "page_hint": null
                   },
                   "action": {
@@ -13964,7 +13964,7 @@
                 "active_task": {
                   "task_id": "task-94790321-35ff-4b2d-afad-5de54ebfce2e",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                   "owner": "learning_agent",
                   "status": "learning",
@@ -13986,7 +13986,7 @@
                 "changes_page": true,
                 "writes_learned_path": true,
                 "input_summary": {
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "user_goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                   "route_decision": "delegate_to_learning_agent"
                 },
@@ -13999,7 +13999,7 @@
               "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
               "type": "chat_learning_started",
               "payload": {
-                "url": "http://127.0.0.1:5176/items",
+                "url": "http://127.0.0.1:<fixture-port>/records",
                 "browser_visibility": "headless"
               },
               "created_at": "2026-05-24T02:22:33.037629Z"
@@ -14013,7 +14013,7 @@
                 "active_task": {
                   "task_id": "task-94790321-35ff-4b2d-afad-5de54ebfce2e",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                   "owner": "learning_agent",
                   "status": "failed",
@@ -14154,22 +14154,22 @@
                 },
                 "eval_scope_id": "m11.3.7-execute-unknown-20260524022218",
                 "last_no_path_reason": {
-                  "target_url": "http://127.0.0.1:5176/items",
-                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
+                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                   "reason": "learn_then_execute_requires_learning_first",
                   "created_from_message_id": "5998e72a-8dc8-408d-a725-391e587f75ef"
                 },
                 "pending_target": {
-                  "url": "http://127.0.0.1:5176/items",
-                  "site_origin": "http://127.0.0.1:5176",
-                  "page_hint": "/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
+                  "site_origin": "http://127.0.0.1:<fixture-port>",
+                  "page_hint": "/records",
                   "source": "user_message",
                   "turns_remaining": 3
                 },
                 "active_task": {
                   "task_id": "task-94790321-35ff-4b2d-afad-5de54ebfce2e",
                   "kind": "learn_operation",
-                  "target_url": "http://127.0.0.1:5176/items",
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
                   "goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                   "owner": "learning_agent",
                   "status": "failed",
@@ -14185,7 +14185,7 @@
                 "id": "5998e72a-8dc8-408d-a725-391e587f75ef",
                 "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
                 "role": "user",
-                "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                "content": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                 "metadata": {
                   "client": "wagent_user_behavior_eval",
                   "browser_visibility": "headless"
@@ -14351,7 +14351,7 @@
                   "changes_page": false,
                   "writes_learned_path": false,
                   "input_summary": {
-                    "current_message_url": "http://127.0.0.1:5176/items"
+                    "current_message_url": "http://127.0.0.1:<fixture-port>/records"
                   },
                   "output_summary": {
                     "pending_target": null,
@@ -14374,11 +14374,11 @@
                     "next_agent": "web_operation_agent",
                     "recommended_skill": "learn_then_execute",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
-                    "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                    "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                     "known_context": {
                       "has_learned_action": false,
                       "has_required_user_inputs": true,
@@ -14419,7 +14419,7 @@
                 "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
                 "type": "command_parsed",
                 "payload": {
-                  "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                  "raw": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                   "command_kind": "execute_task",
                   "dispatch_metadata": {
                     "client": "wagent_user_behavior_eval",
@@ -14430,12 +14430,12 @@
                   "intake": {
                     "intent": "execute_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
-                      "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                      "goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                       "canonical_goal": null,
                       "aliases": []
                     },
@@ -14484,11 +14484,11 @@
                     "next_agent": "web_operation_agent",
                     "recommended_skill": "learn_then_execute",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "user_message"
                     },
-                    "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items",
+                    "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records",
                     "known_context": {
                       "has_learned_action": false,
                       "has_required_user_inputs": true,
@@ -14511,8 +14511,8 @@
                 "type": "chat_no_path",
                 "payload": {
                   "reason": "learn_then_execute_requires_learning_first",
-                  "target_url": "http://127.0.0.1:5176/items",
-                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:5176/items"
+                  "target_url": "http://127.0.0.1:<fixture-port>/records",
+                  "user_goal": "帮我新增项目，名称叫 测试项目D-20260524022218，页面 http://127.0.0.1:<fixture-port>/records"
                 },
                 "created_at": "2026-05-24T02:22:32.988842+00:00"
               },
@@ -14564,9 +14564,9 @@
                   },
                   "output_summary": {
                     "pending_target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
-                      "page_hint": "/items",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
+                      "page_hint": "/records",
                       "source": "user_message",
                       "turns_remaining": 3
                     },
@@ -14589,8 +14589,8 @@
                     "next_agent": "learning_agent",
                     "recommended_skill": "start_learning",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "source": "pending_target"
                     },
                     "user_goal": "学习新增项目，名称叫 测试项目D-20260524022218",
@@ -14645,8 +14645,8 @@
                   "intake": {
                     "intent": "learn_operation",
                     "target": {
-                      "url": "http://127.0.0.1:5176/items",
-                      "site_origin": "http://127.0.0.1:5176",
+                      "url": "http://127.0.0.1:<fixture-port>/records",
+                      "site_origin": "http://127.0.0.1:<fixture-port>",
                       "page_hint": null
                     },
                     "action": {
@@ -14692,7 +14692,7 @@
                   "active_task": {
                     "task_id": "task-94790321-35ff-4b2d-afad-5de54ebfce2e",
                     "kind": "learn_operation",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                     "owner": "learning_agent",
                     "status": "learning",
@@ -14714,7 +14714,7 @@
                   "changes_page": true,
                   "writes_learned_path": true,
                   "input_summary": {
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "user_goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                     "route_decision": "delegate_to_learning_agent"
                   },
@@ -14727,7 +14727,7 @@
                 "session_id": "3080c74b-6879-4189-9ca2-5d1b56c3b92d",
                 "type": "chat_learning_started",
                 "payload": {
-                  "url": "http://127.0.0.1:5176/items",
+                  "url": "http://127.0.0.1:<fixture-port>/records",
                   "browser_visibility": "headless"
                 },
                 "created_at": "2026-05-24T02:22:33.037629+00:00"
@@ -14741,7 +14741,7 @@
                   "active_task": {
                     "task_id": "task-94790321-35ff-4b2d-afad-5de54ebfce2e",
                     "kind": "learn_operation",
-                    "target_url": "http://127.0.0.1:5176/items",
+                    "target_url": "http://127.0.0.1:<fixture-port>/records",
                     "goal": "学习新增项目，名称叫 测试项目D-20260524022218",
                     "owner": "learning_agent",
                     "status": "failed",

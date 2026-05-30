@@ -34,13 +34,11 @@ runtime.
   responsibilities may include teaching overlays, operator review
   surfaces, artifact display, and richer workbench panels.
 - `apps/api` — HTTP API, LLM provider layer, autonomous exploration,
-  LearnedPath persistence / replay, page verification, validation-api
-  mock backend, conversation domain / store / API. Planned future
+  LearnedPath persistence / replay, page verification, conversation domain /
+  store / API. Planned future
   responsibilities include task planning schemas, Agent routing, artifact
   metadata, and failure-evidence APIs.
 - `apps/worker` — async execution scaffold (currently scaffold).
-- `apps/validation-site` — self-hosted test fixtures (login, users, …)
-  that autonomous exploration runs against.
 - `apps/cli` — Python CLI (`wagent`) plus the `verify-scenario`
   Claude Code skill that invokes it. It also hosts the M11.0 runtime
   conversation CLI (`wagent conversation`), currently backed by the
@@ -130,10 +128,10 @@ Current code status:
   orchestrator emitting progress events to SSE. Outcome verdict is
   `success | incomplete | no_progress | uncertain`.
 - **Page verification comparator** (`services/learning/page_verification.py`) —
-  compares an autonomous run against an authored spec
-  (`apps/validation-site/specs/<page>.assertions.json`); produces a 5-score
-  scorecard (element_recognition / action_coverage / verdict_accuracy /
-  distraction_avoidance / supervisor_agreement). No aggregate total.
+  compares an autonomous run against authored specs loaded from the configured
+  spec root; produces a 5-score scorecard (element_recognition /
+  action_coverage / verdict_accuracy / distraction_avoidance /
+  supervisor_agreement). No aggregate total.
 - **Autonomous Workbench** (`pages/AutonomousWorkbenchPage.vue`) — user-driven
   UI with SSE live progress; **7 blocks**: run config, live progress status,
   page analysis, execution timeline (with click-to-preview step screenshots
@@ -150,10 +148,9 @@ Current code status:
   `ja`) passes through the stream endpoint into the Supervisor prompt as a
   "write natural-language fields in {language}" override. Map in
   `autonomous_explorer._LANGUAGE_NAMES`.
-- **Validation site** (`apps/validation-site`) — self-hosted Vue fixtures
-  (login + dashboard today, more to come) so autonomous exploration doesn't
-  depend on public sites (which introduce CAPTCHA / rate-limit noise).
-  Index page at `/` catalogues available fixtures (`IndexPage.vue`).
+- **External fixture provider** — deterministic fixtures live outside this
+  repository. WebAgentFlow consumes configured URLs/spec roots and stores
+  results, but does not carry fixture pages or answer keys.
 
 ---
 
@@ -194,7 +191,6 @@ Key files:
 - Page analysis schema: `apps/api/app/schemas/page_analysis.py`
 - Exploration router: `apps/api/app/routers/exploration.py`
 - Validation API router: `apps/api/app/routers/validation_api.py`
-- Validation specs: `apps/validation-site/specs/*.{md,assertions.json}`
 
 ### Dual-Track AST: Client vs Server Responsibilities
 
@@ -306,9 +302,8 @@ planning.
 The application is a pure engine. **Site-specific knowledge is never
 hardcoded in Python code.**
 
-- **Verification specs** live in `apps/validation-site/specs/*.{md,assertions.json}`
-  — describe the authored baseline for a page, including positive-path
-  and negative-path scenarios.
+- **Verification specs** are external inputs loaded from the configured spec
+  root; they describe authored baselines for the target under test.
 - **The autonomous engine** (`autonomous_explorer.py`) is generic — takes a
   URL (optionally paired with a spec + scenario) and discovers structure
   at runtime.

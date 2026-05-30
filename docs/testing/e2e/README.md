@@ -9,7 +9,7 @@ Deterministic E2E 的定义：
 - 使用 Playwright Test 执行。
 - 测试代码放在 `apps/e2e/tests/`。
 - 目标是稳定、可重复、可进入 CI 的回归测试。
-- 使用 seeded fixtures、validation-site、deterministic API 或固定本地服务栈。
+- 使用 seeded fixtures、external fixture provider、deterministic API 或固定本地服务栈。
 - 产物是测试代码、命令输出、trace / video / Playwright report，以及人类可读
   result report。
 
@@ -30,7 +30,7 @@ Deterministic E2E 的定义：
 - 不调用 `/exploration/autonomous-runs/stream`。
 - 不触发 live autonomous run。
 - 不通过 `verify-scenario` 运行 live scenario。
-- 使用 seeded fixtures / validation-site / deterministic API。
+- 使用 seeded fixtures / external fixture provider / deterministic API。
 - Headless E2E 可以作为 deterministic evidence。
 - Headless E2E 不等于 Agent-operated UI exploratory。
 - 如果服务或浏览器权限导致无法运行，结果写 `BLOCKED`，不能写 PASS。
@@ -44,7 +44,6 @@ Deterministic E2E 的定义：
 - `apps/e2e/tests/conversation/cli-runtime.spec.ts`
 - `apps/e2e/tests/conversation/task-execution.spec.ts`
 - `apps/e2e/tests/conversation/task-result-reporter.spec.ts`
-- `apps/e2e/tests/validation-site/browser-smoke.spec.ts`
 
 覆盖范围：
 
@@ -63,12 +62,12 @@ Deterministic E2E 的定义：
   successful replay -> `uncertain`，failed replay -> `failed`，blocked
   execution -> `blocked`，以及 `task_result_reported` event order 和 payload
   boundary。
-- Validation-site browser smoke 覆盖 `/login` 和 `/users` fixture 页面：
-  登录控件、错误提示、用户目录筛选和 empty state。
+- External fixture provider owns browser-smoke coverage for its own pages.
+  WebAgentFlow E2E consumes only the provider-generated replay fixture manifest
+  and the resulting seeded LearnedPath rows.
 
-这些 E2E 都不调用 autonomous run，不依赖 LLM provider。
-Validation-site browser smoke 是 deterministic E2E，不是 Agent-operated UI
-exploratory。
+这些 E2E 都不调用 autonomous run，不依赖 LLM provider。外部 fixture provider 的
+页面级 browser smoke 不保留在本仓库。
 
 ## 报告
 
@@ -79,7 +78,6 @@ exploratory。
 - `../results/2026-05-11-learned-path-catalog-deterministic-e2e.md`
 - `../results/2026-05-11-conversation-runtime-e2e.md`
 - `../results/2026-05-11-conversation-cli-e2e.md`
-- `../results/2026-05-11-validation-site-deterministic-e2e.md`
 - `../results/2026-05-13-11-1-6-scoped-e2e.md`
 - `../results/2026-05-13-11-1-7-scoped-e2e.md`
 
@@ -97,7 +95,7 @@ exploratory。
 - Conversation CLI-driven E2E keep-running。
 - Conversation 11.1.6 scoped task execution E2E keep-running。
 - Conversation 11.1.7 scoped task result reporter E2E keep-running。
-- Validation-site deterministic browser smoke keep-running。
+- External fixture manifest ingestion keep-running。
 
 当前不纳入本 track：
 

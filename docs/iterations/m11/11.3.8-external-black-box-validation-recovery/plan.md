@@ -52,13 +52,13 @@ Codex App `/goal` 执行时还必须先读：
 
 所有 `11.3.8.x` child package 均禁止：
 
-- 修改 `WebAgentFlow-Validation-Site` 源码。
+- 修改 `External-Fixture-Provider` 源码。
 - 修改 `WebAgentFlow-Fixture-Site` 源码。
-- 恢复 `apps/product-test-site`。
-- 恢复 `apps/validation-site`。
-- 把 `5177/inventory` 写入 runtime default、prompt answer key、eval default、package dependency 或 active automated test hard dependency。
+- 恢复 `apps/fixture-site`。
+- 恢复 `apps/fixture-site`。
+- 把 `<fixture-port>/target-page` 写入 runtime default、prompt answer key、eval default、package dependency 或 active automated test hard dependency。
 - 把 selector、`data-testid`、component、seed copy、field label、button text、placeholder、operation alias 或 page source 写入 product runtime / prompts。
-- 把 archived `5176/items` eval 恢复成 active default eval。
+- 把 archived `<fixture-port>/records` eval 恢复成 active default eval。
 - 直接调用 `/exploration/autonomous-runs` 或 `/exploration/autonomous-runs/stream` 作为 product validation evidence。
 - 用 direct replay API、internal service import、hidden HTTP client 或 ad hoc script 代替 WAgent chat runtime evidence。
 - 把 `FAIL`、`BLOCKED`、`UNVERIFIED` 或 `FOLLOW_UP` 通过措辞改成 `PASS`。
@@ -126,7 +126,7 @@ Allowed changes:
 Forbidden changes:
 
 - Do not hardcode `inventory item` as a special case.
-- Do not hardcode `5177/inventory`.
+- Do not hardcode `<fixture-port>/target-page`.
 - Do not modify matcher behavior beyond what is necessary to store richer metadata for later packages.
 - Do not change replay execution, reporter wording, or external validation result docs in this package.
 - Do not add LLM-generated label dependencies.
@@ -209,7 +209,7 @@ Forbidden changes:
 
 - Do not introduce an LLM utterance-generation dependency.
 - Do not build a full multilingual translation system.
-- Do not include SKU, item name, quantity, seed data, selectors, or page-specific labels in reusable utterances.
+- Do not include record_code, item name, quantity, seed data, selectors, or page-specific labels in reusable utterances.
 - Do not change action matching thresholds or execution behavior in this package.
 - Do not update external black-box validation result docs.
 
@@ -364,10 +364,10 @@ Allowed changes:
 
 Forbidden changes:
 
-- Do not require `WebAgentFlow-Validation-Site` to run.
-- Do not include `5177/inventory` as a hard dependency.
+- Do not require `External-Fixture-Provider` to run.
+- Do not include `<fixture-port>/target-page` as a hard dependency.
 - Do not use external site selector, `data-testid`, component, seed copy, or page source.
-- Do not restore archived `5176/items` eval as active default.
+- Do not restore archived `<fixture-port>/records` eval as active default.
 - Do not modify runtime code in this package unless a missing test seam is explicitly approved in the child technical design.
 - Do not run live external validation in this package.
 
@@ -466,8 +466,8 @@ Expected tests / verification:
 - Pre-live checks when validation is approved:
   - `git status --short --branch`
   - `curl -i http://127.0.0.1:8001/health`
-  - `curl -i http://127.0.0.1:5177/inventory`
-  - forbidden-target scan using a child-owned or temp manifest for Validation-Site answer keys.
+  - `curl -i http://127.0.0.1:<fixture-port>/target-page`
+  - forbidden-target scan using a child-owned or temp manifest for Fixture-Site answer keys.
 - Product validation surface:
   - `.venv/bin/wagent chat --api-base http://127.0.0.1:8001 --timeout 300 --headless`
   - Required scenarios: `PV-CLI-002`, `PV-CLI-003`, `PV-CLI-004`, `PV-INTEGRITY-001`, `PV-INTEGRITY-002`.

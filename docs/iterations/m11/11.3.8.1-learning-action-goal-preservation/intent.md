@@ -30,7 +30,7 @@ learn-then-execute 的关键缺口。11.3.8 父包将修复拆为五个 child pa
 - 不修 action matcher；安全匹配属于 `11.3.8.3`。
 - 不重新设计 suggested utterance；reusable utterance generation 属于 `11.3.8.2`。
 - 不运行或更新外部黑盒验证结果；revalidation 属于 `11.3.8.5`。
-- 不硬编码 `inventory item`、`5177/inventory`、外部站点 selector、seed data、field label 或 button text。
+- 不硬编码 `inventory item`、`<fixture-port>/target-page`、外部站点 selector、seed data、field label 或 button text。
 - 不新增 DB migration、public route、frontend UI、fixture page 或 autonomous-run flow。
 
 ## Success Criteria

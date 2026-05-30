@@ -33,7 +33,7 @@ from app.services.learning.page_signature import (
 def _make_learned_path(**overrides) -> LearnedPath:
     defaults = dict(
         id="lp-001",
-        page_template="/users",
+        page_template="/records",
         query_signature={},
         dom_fingerprint="abc123",
         scenario="test",
@@ -49,7 +49,7 @@ def _make_learned_path(**overrides) -> LearnedPath:
 
 def _make_page_analysis(**overrides) -> PageAnalysis:
     defaults = dict(
-        url="http://127.0.0.1:5175/users",
+        url="https://example.invalid/records",
         title="Users",
     )
     defaults.update(overrides)
@@ -113,7 +113,7 @@ def test_build_replay_actions_preserves_provided_step() -> None:
 
 
 def test_replay_request_slot_overrides_defaults_to_empty_dict() -> None:
-    request = ReplayRequest(url="http://127.0.0.1:5175/users")
+    request = ReplayRequest(url="https://example.invalid/records")
 
     assert request.slot_overrides == {}
     assert request.evidence_targets == []
@@ -263,8 +263,8 @@ def test_build_replay_actions_reads_value_slot() -> None:
 
 
 def test_page_mismatch_blocks_replay() -> None:
-    path = _make_learned_path(page_template="/users")
-    analysis = _make_page_analysis(url="http://127.0.0.1:5175/orders")
+    path = _make_learned_path(page_template="/records")
+    analysis = _make_page_analysis(url="https://example.invalid/orders")
     page = _make_page()
 
     result = run_drift_precheck(path, analysis.url, analysis, page)
@@ -352,7 +352,7 @@ def test_signature_changed_query_mismatch() -> None:
     path = _make_learned_path(
         query_signature={"status": "active"},
     )
-    url = "http://127.0.0.1:5175/users?status=draft"
+    url = "https://example.invalid/records?status=draft"
     analysis = _make_page_analysis(url=url)
     page = _make_page()
 
@@ -367,7 +367,7 @@ def test_signature_changed_dom_mismatch() -> None:
     path = _make_learned_path(
         dom_fingerprint="different-fingerprint",
     )
-    url = "http://127.0.0.1:5175/users"
+    url = "https://example.invalid/records"
     analysis = _make_page_analysis(url=url)
     page = _make_page()
 
@@ -385,7 +385,7 @@ def test_signature_changed_allows_replay_when_selectors_present() -> None:
             {"step": 0, "action_type": "fill", "target_selector": "#name"},
         ],
     )
-    url = "http://127.0.0.1:5175/users"
+    url = "https://example.invalid/records"
     analysis = _make_page_analysis(url=url)
     page = _make_page({"#name": 1})
 
@@ -455,10 +455,10 @@ def test_observational_path_signature_changed() -> None:
 
 def test_observational_path_page_mismatch() -> None:
     path = _make_learned_path(
-        page_template="/users",
+        page_template="/records",
         actions=[],
     )
-    analysis = _make_page_analysis(url="http://127.0.0.1:5175/orders")
+    analysis = _make_page_analysis(url="https://example.invalid/orders")
     page = _make_page()
 
     result = run_drift_precheck(path, analysis.url, analysis, page)
@@ -483,7 +483,7 @@ def test_run_replay_runtime_error_on_navigate() -> None:
         "app.services.learning.learned_path_replay.create_execution_runtime",
         return_value=mock_runtime,
     ):
-        result = run_replay(path, "http://127.0.0.1:5175/users")
+        result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "runtime_error"
     assert "connection refused" in result.drift_reasons[0]
@@ -511,7 +511,7 @@ def test_run_replay_success_with_structured_result() -> None:
 
     mock_page = MagicMock()
     mock_page.locator.return_value = mock_locator
-    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.url = "https://example.invalid/records"
     mock_page.title.return_value = "Users"
     mock_page.is_closed.return_value = False
 
@@ -520,7 +520,7 @@ def test_run_replay_success_with_structured_result() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -534,7 +534,7 @@ def test_run_replay_success_with_structured_result() -> None:
             "app.services.learning.learned_path_replay.analyze_page",
             return_value=mock_analysis,
         ):
-            result = run_replay(path, "http://127.0.0.1:5175/users")
+            result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "succeeded"
     assert result.drift_status == "none"
@@ -544,7 +544,7 @@ def test_run_replay_success_with_structured_result() -> None:
     assert len(result.steps) == 1
     assert result.steps[0].action_type == "fill"
     assert result.steps[0].ok is True
-    assert result.final_url == "http://127.0.0.1:5175/users"
+    assert result.final_url == "https://example.invalid/records"
     assert result.final_title == "Users"
     mock_runtime.stop.assert_called_once()
 
@@ -731,7 +731,7 @@ def test_run_replay_fails_without_required_slot_override() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
 
     with patch(
@@ -745,7 +745,7 @@ def test_run_replay_fails_without_required_slot_override() -> None:
             with patch(
                 "app.services.execution.action_executor.execute_action"
             ) as mock_execute:
-                result = run_replay(path, "http://127.0.0.1:5175/users")
+                result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "failed"
     assert "Missing slot override" in result.drift_reasons[0]
@@ -778,7 +778,7 @@ def test_run_replay_leaves_unbound_action_value_unchanged() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
 
     executed_values: list[str | None] = []
@@ -807,7 +807,7 @@ def test_run_replay_leaves_unbound_action_value_unchanged() -> None:
             ):
                 result = run_replay(
                     path,
-                    "http://127.0.0.1:5175/users",
+                    "https://example.invalid/records",
                     slot_overrides={"record_name": "Beta Record"},
                 )
 
@@ -831,7 +831,7 @@ def test_run_replay_observational_path() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -845,7 +845,7 @@ def test_run_replay_observational_path() -> None:
             "app.services.learning.learned_path_replay.analyze_page",
             return_value=mock_analysis,
         ):
-            result = run_replay(path, "http://127.0.0.1:5175/users")
+            result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "observed"
     assert result.drift_status == "none"
@@ -878,7 +878,7 @@ def test_replay_step_carries_wait_result_for_fill() -> None:
 
     mock_page = MagicMock()
     mock_page.locator.return_value = mock_locator
-    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.url = "https://example.invalid/records"
     mock_page.title.return_value = "Users"
     mock_page.is_closed.return_value = False
 
@@ -887,7 +887,7 @@ def test_replay_step_carries_wait_result_for_fill() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -901,7 +901,7 @@ def test_replay_step_carries_wait_result_for_fill() -> None:
             "app.services.learning.learned_path_replay.analyze_page",
             return_value=mock_analysis,
         ):
-            result = run_replay(path, "http://127.0.0.1:5175/users")
+            result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "succeeded"
     assert len(result.steps) == 1
@@ -930,7 +930,7 @@ def test_replay_click_action_triggers_wait_for_change() -> None:
 
     mock_page = MagicMock()
     mock_page.locator.return_value = mock_locator
-    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.url = "https://example.invalid/records"
     mock_page.title.return_value = "Users"
     mock_page.is_closed.return_value = False
 
@@ -939,7 +939,7 @@ def test_replay_click_action_triggers_wait_for_change() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -953,7 +953,7 @@ def test_replay_click_action_triggers_wait_for_change() -> None:
             "app.services.learning.learned_path_replay.analyze_page",
             return_value=mock_analysis,
         ):
-            result = run_replay(path, "http://127.0.0.1:5175/users")
+            result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "succeeded"
     assert len(result.steps) == 1
@@ -984,7 +984,7 @@ def test_replay_observe_action_does_not_force_business_wait() -> None:
 
     mock_page = MagicMock()
     mock_page.locator.return_value = mock_locator
-    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.url = "https://example.invalid/records"
     mock_page.title.return_value = "Users"
     mock_page.is_closed.return_value = False
 
@@ -993,7 +993,7 @@ def test_replay_observe_action_does_not_force_business_wait() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -1007,7 +1007,7 @@ def test_replay_observe_action_does_not_force_business_wait() -> None:
             "app.services.learning.learned_path_replay.analyze_page",
             return_value=mock_analysis,
         ):
-            result = run_replay(path, "http://127.0.0.1:5175/users")
+            result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "succeeded"
     assert len(result.steps) == 1
@@ -1036,7 +1036,7 @@ def test_replay_action_failure_wait_result_does_not_misreport_succeeded() -> Non
 
     mock_page = MagicMock()
     mock_page.locator.return_value = mock_locator
-    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.url = "https://example.invalid/records"
     mock_page.title.return_value = "Users"
     mock_page.is_closed.return_value = False
 
@@ -1045,7 +1045,7 @@ def test_replay_action_failure_wait_result_does_not_misreport_succeeded() -> Non
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -1059,7 +1059,7 @@ def test_replay_action_failure_wait_result_does_not_misreport_succeeded() -> Non
             "app.services.learning.learned_path_replay.analyze_page",
             return_value=mock_analysis,
         ):
-            result = run_replay(path, "http://127.0.0.1:5175/users")
+            result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "failed"
     assert len(result.steps) == 1
@@ -1091,7 +1091,7 @@ def test_replay_wait_service_exception_does_not_change_replay_status() -> None:
 
     mock_page = MagicMock()
     mock_page.locator.return_value = mock_locator
-    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.url = "https://example.invalid/records"
     mock_page.title.return_value = "Users"
     mock_page.is_closed.return_value = False
 
@@ -1100,7 +1100,7 @@ def test_replay_wait_service_exception_does_not_change_replay_status() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -1118,7 +1118,7 @@ def test_replay_wait_service_exception_does_not_change_replay_status() -> None:
                 "app.services.learning.learned_path_replay.wait_for_change_after_action",
                 side_effect=RuntimeError("wait service crash"),
             ):
-                result = run_replay(path, "http://127.0.0.1:5175/users")
+                result = run_replay(path, "https://example.invalid/records")
 
     # The action succeeded; wait service exception produces conservative result.
     assert result.status == "succeeded"
@@ -1153,7 +1153,7 @@ def test_replay_success_returns_observation_summary() -> None:
 
     mock_page = MagicMock()
     mock_page.locator.return_value = mock_locator
-    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.url = "https://example.invalid/records"
     mock_page.title.return_value = "Users"
     mock_page.is_closed.return_value = False
 
@@ -1162,7 +1162,7 @@ def test_replay_success_returns_observation_summary() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -1176,7 +1176,7 @@ def test_replay_success_returns_observation_summary() -> None:
             "app.services.learning.learned_path_replay.analyze_page",
             return_value=mock_analysis,
         ):
-            result = run_replay(path, "http://127.0.0.1:5175/users")
+            result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "succeeded"
     assert result.observation_summary is not None
@@ -1204,7 +1204,7 @@ def test_replay_status_unchanged_by_observation_summary() -> None:
 
     mock_page = MagicMock()
     mock_page.locator.return_value = mock_locator
-    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.url = "https://example.invalid/records"
     mock_page.title.return_value = "Users"
     mock_page.is_closed.return_value = False
 
@@ -1213,7 +1213,7 @@ def test_replay_status_unchanged_by_observation_summary() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -1227,7 +1227,7 @@ def test_replay_status_unchanged_by_observation_summary() -> None:
             "app.services.learning.learned_path_replay.analyze_page",
             return_value=mock_analysis,
         ):
-            result = run_replay(path, "http://127.0.0.1:5175/users")
+            result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "failed"
     assert result.observation_summary is not None
@@ -1238,7 +1238,7 @@ def test_replay_status_unchanged_by_observation_summary() -> None:
 def test_replay_blocked_returns_no_observation_summary() -> None:
     """Blocked/drifted precheck returns observation_summary=None."""
     path = _make_learned_path(
-        page_template="/users",
+        page_template="/records",
         actions=[
             {"step": 0, "action_type": "fill", "target_selector": "#q"}
         ],
@@ -1256,11 +1256,11 @@ def test_replay_blocked_returns_no_observation_summary() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/orders"
+    mock_runtime.current_url.return_value = "https://example.invalid/orders"
     mock_runtime.current_title.return_value = "Orders"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
-    mock_analysis = _make_page_analysis(url="http://127.0.0.1:5175/orders")
+    mock_analysis = _make_page_analysis(url="https://example.invalid/orders")
 
     with patch(
         "app.services.learning.learned_path_replay.create_execution_runtime",
@@ -1270,7 +1270,7 @@ def test_replay_blocked_returns_no_observation_summary() -> None:
             "app.services.learning.learned_path_replay.analyze_page",
             return_value=mock_analysis,
         ):
-            result = run_replay(path, "http://127.0.0.1:5175/orders")
+            result = run_replay(path, "https://example.invalid/orders")
 
     assert result.status == "drifted"
     assert result.observation_summary is None
@@ -1291,7 +1291,7 @@ def test_replay_observational_path_returns_not_applicable_summary() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -1305,7 +1305,7 @@ def test_replay_observational_path_returns_not_applicable_summary() -> None:
             "app.services.learning.learned_path_replay.analyze_page",
             return_value=mock_analysis,
         ):
-            result = run_replay(path, "http://127.0.0.1:5175/users")
+            result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "observed"
     assert result.observation_summary is not None
@@ -1335,7 +1335,7 @@ def test_replay_wait_exception_produces_skipped_in_summary() -> None:
 
     mock_page = MagicMock()
     mock_page.locator.return_value = mock_locator
-    mock_page.url = "http://127.0.0.1:5175/users"
+    mock_page.url = "https://example.invalid/records"
     mock_page.title.return_value = "Users"
     mock_page.is_closed.return_value = False
 
@@ -1344,7 +1344,7 @@ def test_replay_wait_exception_produces_skipped_in_summary() -> None:
     mock_runtime.start = MagicMock()
     mock_runtime.navigate = MagicMock()
     mock_runtime.stop = MagicMock()
-    mock_runtime.current_url.return_value = "http://127.0.0.1:5175/users"
+    mock_runtime.current_url.return_value = "https://example.invalid/records"
     mock_runtime.current_title.return_value = "Users"
     mock_runtime.screenshot.return_value = "/tmp/screenshot.png"
 
@@ -1362,7 +1362,7 @@ def test_replay_wait_exception_produces_skipped_in_summary() -> None:
                 "app.services.learning.learned_path_replay.wait_for_change_after_action",
                 side_effect=RuntimeError("wait service crash"),
             ):
-                result = run_replay(path, "http://127.0.0.1:5175/users")
+                result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "succeeded"
     assert result.observation_summary is not None
@@ -1383,7 +1383,7 @@ def test_replay_runtime_error_returns_no_observation_summary() -> None:
         "app.services.learning.learned_path_replay.create_execution_runtime",
         return_value=mock_runtime,
     ):
-        result = run_replay(path, "http://127.0.0.1:5175/users")
+        result = run_replay(path, "https://example.invalid/records")
 
     assert result.status == "runtime_error"
     assert result.observation_summary is None
@@ -1411,7 +1411,7 @@ def test_run_replay_passes_headless_to_runtime_factory() -> None:
         "app.services.learning.learned_path_replay.create_execution_runtime",
         side_effect=_capture_create_execution_runtime,
     ):
-        run_replay(path, "http://127.0.0.1:5175/users")
+        run_replay(path, "https://example.invalid/records")
 
     assert len(captured_configs) == 1
     assert captured_configs[0].headless is True
@@ -1421,7 +1421,7 @@ def test_run_replay_passes_headless_to_runtime_factory() -> None:
         "app.services.learning.learned_path_replay.create_execution_runtime",
         side_effect=_capture_create_execution_runtime,
     ):
-        run_replay(path, "http://127.0.0.1:5175/users", headless=False)
+        run_replay(path, "https://example.invalid/records", headless=False)
 
     assert len(captured_configs) == 1
     assert captured_configs[0].headless is False

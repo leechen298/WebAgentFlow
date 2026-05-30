@@ -6,7 +6,7 @@
 
 ## 迭代定位
 
-11.2.4.2 在 validation-site 的 runtime observation shell 下实现第一批 PC
+11.2.4.2 在 fixture-site 的 runtime observation shell 下实现第一批 PC
 single-page basic business fixtures。此前 `/runtime-observation/basic/*` 有一版
 toy-like 实现并通过 build，但人工 review 否决该实现：页面业务密度不足，更像
 UI-minimal toy fixtures，不符合 WebAgentFlow 自建真实网页验证场景库目标。
@@ -21,7 +21,7 @@ UI-minimal toy fixtures，不符合 WebAgentFlow 自建真实网页验证场景�
 
 - 7 个 basic routes 已按 production-like 页面标准重做。
 - implementation uses shared shell + per-fixture components。
-- validation-site build 已通过。
+- fixture-site build 已通过。
 - 代码开发已完成；当前不是待开发状态。
 - 文档状态仍保留 `review pending`，表示尚未切到最终 `review passed` / accepted。
 - 当前仍不代表 E2E / autonomous run evidence。

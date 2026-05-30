@@ -159,7 +159,7 @@ replay 迭代。
 
 **测试用例**（除 intent.md 列出的以外）：
 
-- `path_template`：`"/"` → `"/"`；`"/users/"` → `"/users"`；
+- `path_template`：`"/"` → `"/"`；`"/users/"` → `"/records"`；
   `"/users/42/edit/"` → `"/users/:num/edit"`；
   `"/detail/550e8400-e29b-41d4-a716-446655440000"` → `"/detail/:uuid"`；
   空字符串 / 不规范 URL 不崩溃（返回 `"/"`）。

@@ -249,7 +249,7 @@ describe('VerificationBlock', () => {
       selfAssessment: {
         verdict: 'success',
         summary: 'ok',
-        final_url: 'http://localhost:5175/dashboard',
+        final_url: 'https://example.invalid/dashboard',
         final_title: 'Dashboard',
       },
     });

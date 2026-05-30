@@ -46,13 +46,13 @@
 - 修改 deterministic suggested utterance generation。
 - 修改 replay execution、Task Result Reporter、recovery、abort、frontend、worker、
   DB migration、public API endpoint、eval runner 或 external result docs。
-- 修改 `WebAgentFlow-Validation-Site` / `WebAgentFlow-Fixture-Site`。
-- 恢复 `apps/product-test-site` / `apps/validation-site`。
+- 修改 `External-Fixture-Provider` / `WebAgentFlow-Fixture-Site`。
+- 恢复 `apps/fixture-site` / `apps/fixture-site`。
 - 运行 live external validation、`verify-scenario`、browser smoke 或 direct
   autonomous-run endpoint。
 - 用 direct replay API、internal service import、hidden HTTP client 或 ad hoc script 作为
   WAgent product pass evidence。
-- 在 runtime / prompts / active eval defaults 中写入 `5177/inventory`、external target
+- 在 runtime / prompts / active eval defaults 中写入 `<fixture-port>/target-page`、external target
   selectors、`data-testid`、component names、seed copy、field labels、button text、
   placeholder、operation aliases 或 page source。
 - 仅凭共享动词 `create`、`open`、`update`、`delete` 直接匹配并执行。

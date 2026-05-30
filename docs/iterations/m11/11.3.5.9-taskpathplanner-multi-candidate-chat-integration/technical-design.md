@@ -14,7 +14,7 @@
 | `pending_choice` | 已实现 visible choice + private map |
 | `active_task` | 已实现最小 waiting / executing / learning 状态 |
 | Chat multi-candidate | 当前 runtime 能直接把多个 session learned actions 转成 choice |
-| `/items` single path | 已验证直接 replay happy path |
+| `/records` single path | 已验证直接 replay happy path |
 
 当前缺口是：chat multi-candidate path 没有经过 TaskPathPlanner，无法利用已有 top route plan /
 warnings / risk hints / ambiguity 语义。Planner 不是多候选列表生成器；A/B/C 列表仍由
@@ -97,7 +97,7 @@ TaskIntent(
 )
 ```
 
-实现要避免把 slot value 明文塞入 planner prompt / event。`item_name` 等运行时参数仍走
+实现要避免把 slot value 明文塞入 planner prompt / event。`record_name` 等运行时参数仍走
 `slot_overrides`，不作为 planner 排名的 private 执行授权。
 
 ### 4. Runtime 接入点和优先级
@@ -156,7 +156,7 @@ visible choice 示例：
 {
   "choice_id": "A",
   "label": "新增项目",
-  "description": "/items · confirmed · 需要你确认后执行",
+  "description": "/records · confirmed · 需要你确认后执行",
   "intent": "execute_operation"
 }
 ```
@@ -170,9 +170,9 @@ private map 示例：
     "learned_path_id": "<internal>",
     "target_url": "<runtime target URL>",
     "action_alias": "新增项目",
-    "page_template": "/items",
+    "page_template": "/records",
     "slot_overrides": {
-      "item_name": "测试项目B"
+      "record_name": "测试项目B"
     },
     "planner_summary": {
       "candidate_index": 0,
@@ -253,7 +253,7 @@ learned_path_id
 selected_path_id
 slot_overrides
 runtime slot values
-item_name raw value
+record_name raw value
 credential / token / secret
 route_plan.steps
 pending_choice_private_map
@@ -280,5 +280,5 @@ Planned implementation files:
 ## 回滚策略
 
 - 如果 Planner adapter 出现风险，可退回 11.3.5.7 直接 pending_choice 行为。
-- 回滚时必须保留 single-path `/items` happy path、failure recovery 和 pending_choice
+- 回滚时必须保留 single-path `/records` happy path、failure recovery 和 pending_choice
   safety tests。

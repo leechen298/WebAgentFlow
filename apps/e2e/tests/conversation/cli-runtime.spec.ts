@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { expect, test } from '@playwright/test';
 
-import { apiBaseUrl, validationUrl } from '../../fixtures/config';
+import { apiBaseUrl } from '../../fixtures/config';
 import { loadReplayFixtures, type ReplayFixtureFile } from '../../fixtures/learnedPaths';
 
 const execFileAsync = promisify(execFile);
@@ -81,7 +81,7 @@ test.describe('wagent conversation CLI E2E', () => {
     expect(session.id).toBeTruthy();
 
     const fixture = seeded.fixtures.happy;
-    const targetUrl = validationUrl('/users');
+    const targetUrl = fixture.target_url;
     const command = `/replay ${fixture.id} ${targetUrl}`;
 
     const dispatch = await runWagentJson<ConversationDispatchResponse>([

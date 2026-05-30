@@ -90,7 +90,7 @@ export default {
     clickToZoom: 'Click to zoom',
     // Form labels
     urlLabel: 'URL',
-    urlPlaceholder: 'http://127.0.0.1:5175/login',
+    urlPlaceholder: 'https://target.example.test/path',
     goalLabel: 'Goal (optional)',
     goalPlaceholder: 'e.g. log in as admin',
     specMatched: 'Spec matched: {id} · {count} test scenario(s)',

@@ -76,7 +76,7 @@ source_event_id
 path_hash
 ```
 
-如果实际 product-test-site 暂时无法稳定产生多个 distinct actions，runner 不得猜测；
+如果实际 fixture-site 暂时无法稳定产生多个 distinct actions，runner 不得猜测；
 应转入 blocked / not observable，或使用已评审的 eval-only planner candidate setup hook。
 
 ### Eval-only Planner Candidate Binding
@@ -213,7 +213,7 @@ Redaction must cover:
 - credentials / tokens / cookies / authorization headers
 - raw `response_text` containing private payload
 
-`item_name` can remain visible as deterministic `/items` test data only when it is not inside private
+`record_name` can remain visible as deterministic `/records` test data only when it is not inside private
 slot override payload.
 
 ## Compatibility

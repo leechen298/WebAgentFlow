@@ -80,7 +80,7 @@ execution。
 | Item | Reason | Risk / Follow-up |
 |---|---|---|
 | Python targeted tests | 尚未实现代码 | 实现阶段按 `test-plan.md` 运行 |
-| product-test-site smoke | 本包不改前端页面 | 11.3.5.3 已覆盖页面基座，本包只改参数化 replay |
+| fixture-site smoke | 本包不改前端页面 | 11.3.5.3 已覆盖页面基座，本包只改参数化 replay |
 | ExecutionEvidence / Reporter | 属于 11.3.5.5 | 不得用本包结果声称 reporter verified |
 | `wagent chat` closed loop | 属于 11.3.5.6 | 本包只能证明参数化机制 |
 | `verify-scenario` / autonomous run | 本包不触发 live run | 需要用户明确要求才可运行 |

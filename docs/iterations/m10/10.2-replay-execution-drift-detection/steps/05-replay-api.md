@@ -22,7 +22,7 @@ POST /exploration/learned-paths/{path_id}/replay
 
 ```json
 {
-  "url": "http://127.0.0.1:5175/users"
+  "url": "https://example.invalid/records"
 }
 ```
 

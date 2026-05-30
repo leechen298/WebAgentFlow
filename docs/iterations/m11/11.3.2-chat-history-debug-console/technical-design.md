@@ -163,7 +163,7 @@ Detail page:
 | Replay execution | No | Only display replay summaries from persisted events | No execution path change |
 | Reporter | No | Reporter outputs are displayed only if already in events | No Reporter behavior change |
 | Worker / async jobs | No | No async jobs | N/A |
-| Tests / fixtures | Yes | Add API, CLI, Console tests | No validation-site fixtures |
+| Tests / fixtures | Yes | Add API, CLI, Console tests | No fixture-site fixtures |
 | Docs | Yes | Add 11.3.2 docs and update M11 planning index | Existing iteration docs unchanged |
 
 ## 数据模型 / Schema 变更（Data Model / Schema Changes）

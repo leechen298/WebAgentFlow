@@ -13,7 +13,7 @@
 6. Run focused tests, Ruff, forbidden target scan, and patch sanity.
 7. Clean DB per the current-thread approval and rerun approved external
    validation through `wagent chat` with API base URL
-   `http://127.0.0.1:8001`, target URL `http://127.0.0.1:5177/inventory`,
+   `http://127.0.0.1:8001`, target URL `http://127.0.0.1:<fixture-port>/target-page`,
    approved scenario list `all`, and latest-result-doc update approval `yes`.
 8. Update dated/latest reports and parent closeout according to evidence.
 

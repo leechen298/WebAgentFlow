@@ -72,11 +72,11 @@ P0 working loop 已经证明系统可以学习一个操作、按新参数执行�
 - choice mode 可以安全展示候选。
 - private map 可以隐藏真实 path id。
 - active_task 可以表示等待用户选择。
-- single-path `/items` happy path 可以作为回归保护。
+- single-path `/records` happy path 可以作为回归保护。
 
 ## 本包不做
 
-- 不改 `/items` 单路径直接 replay 逻辑。
+- 不改 `/records` 单路径直接 replay 逻辑。
 - 不接 Planner 到所有 execution 分支。
 - 不做多步组合 workflow。
 - 不新增正式 consent gate。
@@ -94,4 +94,4 @@ P0 working loop 已经证明系统可以学习一个操作、按新参数执行�
 - private map 内部保存真实 path id 和 slot overrides。
 - 用户选择 A / 1 / 第一个后，Runtime 执行对应 path。
 - 单个明确 learned action 仍直接 replay，不调用 TaskPathPlanner。
-- `/items` P0 happy path 回归不受影响。
+- `/records` P0 happy path 回归不受影响。

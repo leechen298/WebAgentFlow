@@ -61,7 +61,7 @@ def test_learned_path_candidate_accepts_minimal_data() -> None:
     obj = LearnedPathCandidate(
         learned_path_id="path-1",
         scenario="users-export",
-        page_template="/users",
+        page_template="/records",
         trust="confirmed",
     )
 

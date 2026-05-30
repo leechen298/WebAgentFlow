@@ -50,7 +50,7 @@ Do not modify by default:
 - 确认不使用 `PlanningPreviewService.preview().user_response` 作为 chat reply。
 - 确认 `TaskPathPlanner` 只输出 top route plan / warning / risk / uncertainty，
   不输出多候选列表。
-- 确认 single-path `/items` happy path 不经过 Planner。
+- 确认 single-path `/records` happy path 不经过 Planner。
 
 ### Step 1 · Current-state preflight
 

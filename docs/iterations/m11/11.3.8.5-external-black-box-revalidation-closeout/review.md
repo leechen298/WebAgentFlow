@@ -19,7 +19,7 @@ commands_not_run: verify-scenario; direct autonomous-run endpoint; direct replay
 
 - Operator: Codex external test operator.
 - API base URL: `http://127.0.0.1:8001`.
-- Target URL: `http://127.0.0.1:5177/inventory`.
+- Target URL: `http://127.0.0.1:<fixture-port>/target-page`.
 - DB state policy applied: runtime tables were truncated before validation
   (`conversation_events`, `conversation_messages`, `conversation_sessions`,
   `learned_paths`, `exploration_runs` all verified as count `0`).
@@ -35,9 +35,9 @@ Scenario result:
 | `PV-SITE-001` | `PASS` | Browser smoke created `QA-COD-529G`, searched it, edited stock to `43` / `paused`, then observed no-match empty state. Screenshot: `/private/tmp/waf-11.3.8.5-site-smoke-rerun.png`. |
 | `PV-CLI-001` | `PASS` | URL-only input did not start learning or execution; WAgent asked user to learn/provide an operation. |
 | `PV-CLI-002` | `PASS` | Learning started and completed with alias `create inventory item` and canonical goal `create_inventory_item`. |
-| `PV-CLI-003` | `PASS` | WAgent routed to replay, emitted `chat_execution_started`, then `chat_execution_completed`; replay status `succeeded`, drift status `none`, verification outcome `verified`, and page evidence confirmed `MUG-SKY-014`, `Skyline Mug`, `18`, and `Office`. |
+| `PV-CLI-003` | `PASS` | WAgent routed to replay, emitted `chat_execution_started`, then `chat_execution_completed`; replay status `succeeded`, drift status `none`, verification outcome `verified`, and page evidence confirmed `REC-SKY-014`, `Skyline Mug`, `18`, and `Office`. |
 | `PV-CLI-004` | `PASS_WITH_CAVEAT` | No learning/execution started. Entry gate used deterministic fallback after timeout, but the no-execution requirement held. |
-| `PV-INTEGRITY-001` | `PASS` | Main repo did not restore external Validation-Site source. |
+| `PV-INTEGRITY-001` | `PASS` | Main repo did not restore external Fixture-Site source. |
 | `PV-INTEGRITY-002` | `PASS` | Forbidden target scan returned `status=pass`, `match_count=0`, `missing_forbidden_paths=[]`. |
 
 Artifacts:
@@ -58,7 +58,7 @@ Decision:
 
 - Authorizing user: thread user.
 - Approved API base URL: `http://127.0.0.1:8001`.
-- Approved target URL: `http://127.0.0.1:5177/inventory`.
+- Approved target URL: `http://127.0.0.1:<fixture-port>/target-page`.
 - DB state policy: clean database before live validation.
 - Approved scenario list: all scenarios in
   `docs/testing/external-black-box-validation-plan.md`, including `PV-SITE-001`,
@@ -73,7 +73,7 @@ Decision:
 
 - Operator: Codex external test operator.
 - API base URL: `http://127.0.0.1:8001`.
-- Target URL: `http://127.0.0.1:5177/inventory`.
+- Target URL: `http://127.0.0.1:<fixture-port>/target-page`.
 - DB state policy applied: runtime tables were truncated before validation
   (`conversation_events`, `conversation_messages`, `conversation_sessions`,
   `learned_paths`, `exploration_runs` all verified as count `0`).
@@ -89,7 +89,7 @@ Scenario result:
 | `PV-SITE-001` | `PASS` | Browser smoke created `QA-COD-529B`, searched it, edited stock to `37` / `paused`, then observed no-match empty state. Screenshot: `/private/tmp/waf-11.3.8.5-site-smoke.png`. |
 | `PV-CLI-001` | `PASS` | URL-only input did not start learning or execution; WAgent asked user to learn/provide an operation. |
 | `PV-CLI-002` | `FOLLOW_UP_REQUIRED` | Learning started and completed with alias `create inventory item`. |
-| `PV-CLI-003` | `FAIL` | WAgent matched the learned action and routed to replay, but emitted `chat_execution_failed` with `reason=unsupported_value_slot`; unsupported slots were `name`, `category`, `stock_quantity`. Execution did not start. |
+| `PV-CLI-003` | `FAIL` | WAgent matched the learned action and routed to replay, but emitted `chat_execution_failed` with `reason=unsupported_value_slot`; unsupported slots were `name`, `category`, `record_quantity`. Execution did not start. |
 | `PV-CLI-004` | `PASS_WITH_CAVEAT` | No learning/execution started, but entry gate used deterministic fallback after timeout. |
 | `PV-INTEGRITY-001` | `PENDING` | Integrity scans are not final for this failed attempt. |
 | `PV-INTEGRITY-002` | `PENDING` | Forbidden target scan must rerun after 11.3.8.6 fix. |

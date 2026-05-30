@@ -31,11 +31,11 @@ Codex / AI 不得假装是内部 Task Result Reporter、Supervisor Agent、Task 
 本包测试名必须唯一，防止历史 DOM、toast、日志或旧数据造成假阳性：
 
 ```text
-learn_item_name = 测试项目A-${timestamp}
-execute_item_name = 测试项目B-${timestamp}
+learn_record_name = 测试项目A-${timestamp}
+execute_record_name = 测试项目B-${timestamp}
 ```
 
-`execute_item_name` 是最终 evidence target；`learn_item_name` 只能用于学习阶段，不得在执行阶段
+`execute_record_name` 是最终 evidence target；`learn_record_name` 只能用于学习阶段，不得在执行阶段
 被 replay 复读。
 
 ## 状态 / 结果契约
@@ -54,10 +54,10 @@ execute_item_name = 测试项目B-${timestamp}
 ```text
 wagent chat session_id exists
 learn A completed
-LearnedPath has value_slot=item_name
+LearnedPath has value_slot=record_name
 execute B branch invoked replay
 replay effective value is B
-item-list evidence target is B
+record-list evidence target is B
 execution_evidence has dom_text_present verified for B
 TaskResultReporter outcome is verified
 final WAgent response confirms B with evidence wording
@@ -77,8 +77,8 @@ final WAgent response confirms B with evidence wording
 | `GET /conversation/sessions/{session_id}` | 读取 session metadata |
 | `GET /conversation/sessions/{session_id}/events` | 读取 runtime event payload |
 | `GET /conversation/sessions/{session_id}/history` | 读取 message / event 聚合 history |
-| `GET /exploration/learned-paths?page_template=/items` | 查找本轮 LearnedPath |
-| `GET /exploration/learned-paths/{path_id}` | 检查 actions JSON 中的 `value_slot=item_name` |
+| `GET /exploration/learned-paths?page_template=/records` | 查找本轮 LearnedPath |
+| `GET /exploration/learned-paths/{path_id}` | 检查 actions JSON 中的 `value_slot=record_name` |
 
 如果实现时需要增加只读 debug endpoint 或 CLI flag，必须先更新本包 contract；默认不新增。
 
@@ -93,7 +93,7 @@ final WAgent response confirms B with evidence wording
 | learn item name A | Yes | 必须唯一 |
 | execute item name B | Yes | 必须唯一 |
 | LearnedPath id | Yes | 从 event / history / API 中取得 |
-| LearnedPath `value_slot=item_name` | Yes | 证明 path 可参数化 |
+| LearnedPath `value_slot=record_name` | Yes | 证明 path 可参数化 |
 | replay step effective value | Yes | 证明执行填入 B，不复读 A |
 | execution evidence | Yes | 必须有 `dom_text_present verified` for B |
 | Reporter outcome | Yes | 必须是 `verified` 才能 pass |
@@ -108,8 +108,8 @@ P0 evidence target：
 {
   "kind": "dom_text_present",
   "text": "测试项目B-${timestamp}",
-  "source_slot": "item_name",
-  "selector": "[data-testid='item-list']"
+  "source_slot": "record_name",
+  "selector": "[data-testid='record-list']"
 }
 ```
 
@@ -129,7 +129,7 @@ verified。
 ## 产品模型 / 范围 / 路线图对齐
 
 - Product model 对齐：本包验证 L3 actual work 的最小 runtime loop；不改变 Agent role。
-- Scope boundary 对齐：通过 `wagent chat` 操作 WebAgentFlow 自建 product-test-site，不接真实业务站点。
+- Scope boundary 对齐：通过 `wagent chat` 操作 WebAgentFlow 自建 fixture-site，不接真实业务站点。
 - Roadmap / milestone 对齐：属于 11.3.5.3 - 11.3.5.6 P0 working loop 收口。
 - 是否改变已有 product lifecycle / Agent role / milestone boundary：No。
 - 如果是 Yes，必须先更新哪些权威文档：N/A。
@@ -161,7 +161,7 @@ verified。
 - 不新增 failure recovery 菜单。
 - 不做 LLM 自主浏览器控制。
 - 不运行 autonomous exploration。
-- 不把 `localhost:5176` 写成 contract；它只是 product-test-site 本地脚本默认端口示例。
+- 不把 `localhost:<fixture-port>` 写成 contract；它只是 fixture-site 本地脚本默认端口示例。
 
 ## 未决问题
 

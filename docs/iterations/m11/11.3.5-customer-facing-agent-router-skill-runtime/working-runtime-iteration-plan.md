@@ -9,7 +9,7 @@
 11.3.5 working runtime 施工稿已经确认 P0 闭环的关键链路：
 
 ```text
-item_name slot
+record_name slot
 -> fill_values
 -> LearnedPath value_slot
 -> ReplayRequest slot_overrides
@@ -32,12 +32,12 @@ item_name slot
 第一条 P0 窄闭环：
 
 ```text
-新增 product-test-site /items
+新增 fixture-site /records
 -> 学习新增项目，名称叫测试项目A
--> LearnedPath 绑定 value_slot=item_name
+-> LearnedPath 绑定 value_slot=record_name
 -> 执行新增项目，名称叫测试项目B-${timestamp}
 -> replay 实际填入 B，不复读 A
--> [data-testid='item-list'] 中出现 B
+-> [data-testid='record-list'] 中出现 B
 -> TaskResultReporter 输出 verified
 -> docs/testing/results 留下结果和日志复核记录
 ```
@@ -56,10 +56,10 @@ item_name slot
 
 | 迭代 | 目标 | 做什么 | 不做什么 | 验收重点 |
 |---|---|---|---|---|
-| [11.3.5.3](../11.3.5.3-product-test-site-items-fixture/) | `/items` 测试页 | 在 `apps/product-test-site` 新增 `/items`；只做新增项目、列表展示、状态提示、稳定 `data-testid` | 不接 `wagent chat`；不做 replay；不做 evidence；不做搜索 / 编辑 / 删除 | 页面可打开；新增项目后列表出现目标文本 |
-| [11.3.5.4](../11.3.5.4-parameterized-learning-replay-slots/) | 参数化 learning / replay | `item_name` slot；`_fill_values_from_intake()`；学习后 `value_slot` 绑定；`ReplayRequest.slot_overrides`；`effective_action`；step log 证明 replay 填入 B | 不接 Reporter；不做 DOM evidence；不做 `pending_choice`；不接 TaskPathPlanner | 学习 A 后执行 B，实际填入 B，不复读 A |
-| [11.3.5.5](../11.3.5.5-execution-evidence-result-reporter-adapter/) | ExecutionEvidence + Reporter adapter | replay 结束后、runtime stop 前采集 DOM evidence；限定 `[data-testid='item-list']`；`ExecutionEvidenceTarget.text -> ExecutionEvidence.target`；打通 Reporter verified path | 不做新页面；不改 Planner；不做 failure recovery 菜单 | replay succeeded + evidence verified 时 Reporter 输出 `verified` |
-| [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | `/items` 闭环测试方案与结果记录 | 写测试方案；跑“学习 A / 执行 B”；保留 step log、effective value、evidence、Reporter outcome；Codex 复核结果和日志 | 不新增验证 Agent；不扩大到搜索 / 编辑 / 删除；不修大功能，失败只记录问题和最小修复建议 | 形成可审计闭环证据 |
+| [11.3.5.3](../11.3.5.3-fixture-site-items-fixture/) | `/records` 测试页 | 在 `apps/fixture-site` 新增 `/records`；只做新增项目、列表展示、状态提示、稳定 `data-testid` | 不接 `wagent chat`；不做 replay；不做 evidence；不做搜索 / 编辑 / 删除 | 页面可打开；新增项目后列表出现目标文本 |
+| [11.3.5.4](../11.3.5.4-parameterized-learning-replay-slots/) | 参数化 learning / replay | `record_name` slot；`_fill_values_from_intake()`；学习后 `value_slot` 绑定；`ReplayRequest.slot_overrides`；`effective_action`；step log 证明 replay 填入 B | 不接 Reporter；不做 DOM evidence；不做 `pending_choice`；不接 TaskPathPlanner | 学习 A 后执行 B，实际填入 B，不复读 A |
+| [11.3.5.5](../11.3.5.5-execution-evidence-result-reporter-adapter/) | ExecutionEvidence + Reporter adapter | replay 结束后、runtime stop 前采集 DOM evidence；限定 `[data-testid='record-list']`；`ExecutionEvidenceTarget.text -> ExecutionEvidence.target`；打通 Reporter verified path | 不做新页面；不改 Planner；不做 failure recovery 菜单 | replay succeeded + evidence verified 时 Reporter 输出 `verified` |
+| [11.3.5.6](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/) | `/records` 闭环测试方案与结果记录 | 写测试方案；跑“学习 A / 执行 B”；保留 step log、effective value、evidence、Reporter outcome；Codex 复核结果和日志 | 不新增验证 Agent；不扩大到搜索 / 编辑 / 删除；不修大功能，失败只记录问题和最小修复建议 | 形成可审计闭环证据 |
 | [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) | `pending_choice` + 最小 `active_task` | 多候选 A/B/C；choice_id 私有映射；pending 过期 / 清理；最小 active task；cancel 清理 | 不接 TaskPathPlanner 复杂路径；不做 failure recovery；不做 `learn_then_execute` | 用户模糊输入时不乱猜，能进入 choice mode |
 | [11.3.5.8](../11.3.5.8-basic-failure-recovery/) | 基础失败恢复 | replay 失败、URL 不匹配、evidence 不足时给“重试 / 重新学习 / 取消” | 不做复杂自治恢复；不做 LLM 自主探索；不做多步修复计划 | 失败时有安全出口，不编造成果 |
 | [11.3.5.9](../11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) | TaskPathPlanner 多候选 chat 接入 | 多 learned actions、模糊目标、planning preview / confirmed execution 接入 choice mode | 不影响单路径 P0 happy path；不把 Planner 接成所有执行的必经节点 | 多候选时通过 Planner + choice 安全选择 |
@@ -68,12 +68,12 @@ item_name slot
 
 | 迭代 | 依赖 | 原因 |
 |---|---|---|
-| [11.3.5.3](../11.3.5.3-product-test-site-items-fixture/) | 11.3.5 施工稿 | 先提供稳定页面基座 |
-| [11.3.5.4](../11.3.5.4-parameterized-learning-replay-slots/) | [11.3.5.3](../11.3.5.3-product-test-site-items-fixture/) | 参数化 learning / replay 需要 `/items` 新增项目场景验证 |
+| [11.3.5.3](../11.3.5.3-fixture-site-items-fixture/) | 11.3.5 施工稿 | 先提供稳定页面基座 |
+| [11.3.5.4](../11.3.5.4-parameterized-learning-replay-slots/) | [11.3.5.3](../11.3.5.3-fixture-site-items-fixture/) | 参数化 learning / replay 需要 `/records` 新增项目场景验证 |
 | [11.3.5.5](../11.3.5.5-execution-evidence-result-reporter-adapter/) | [11.3.5.4](../11.3.5.4-parameterized-learning-replay-slots/) | Evidence 和 Reporter 必须基于真实执行 B 的 replay 结果 |
-| [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | 11.3.5.3 - 11.3.5.5 | 只有页面、参数化 replay、evidence / reporter 都具备后，才能做闭环证据记录 |
-| [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) | [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | choice / ledger 应建立在已跑通的 P0 闭环上 |
-| [11.3.5.8](../11.3.5.8-basic-failure-recovery/) | [11.3.5.6](../11.3.5.6-wagent-chat-items-closed-loop-evaluation/)，可在 [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) 后 | 失败恢复需要有清楚的成功 / 失败 evidence 语义 |
+| [11.3.5.6](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/) | 11.3.5.3 - 11.3.5.5 | 只有页面、参数化 replay、evidence / reporter 都具备后，才能做闭环证据记录 |
+| [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) | [11.3.5.6](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/) | choice / ledger 应建立在已跑通的 P0 闭环上 |
+| [11.3.5.8](../11.3.5.8-basic-failure-recovery/) | [11.3.5.6](../11.3.5.6-wagent-chat-records-closed-loop-evaluation/)，可在 [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) 后 | 失败恢复需要有清楚的成功 / 失败 evidence 语义 |
 | [11.3.5.9](../11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) | [11.3.5.7](../11.3.5.7-pending-choice-active-task-ledger/) | Planner 多候选接入依赖 choice mode 和私有映射 |
 
 当前继续按 11.3.5.3 - 11.3.5.9 规划；11.3.5.8 固定为 Basic Failure Recovery，
@@ -86,7 +86,7 @@ item_name slot
 - 不运行 E2E、UI smoke、`verify-scenario` 或 autonomous-run。
 - 不把 `pending_choice`、`active_task`、failure recovery 或 TaskPathPlanner 接入塞进 P0。
 - 不把 Internal Runtime Adapters 暴露为 Router 可推荐 skill。
-- 不把 `localhost:5176` 作为 contract；实现必须使用 runtime target URL。
+- 不把 `localhost:<fixture-port>` 作为 contract；实现必须使用 runtime target URL。
 - 不把 `success / partial_success` 写成 TaskResultReporter 原生 outcome。
 - 不实现搜索 / 编辑 / 删除项目闭环；P0 只验证新增项目。
 
@@ -107,7 +107,7 @@ review.md
 
 生成顺序建议：
 
-1. 先生成 [11.3.5.3 `/items` 测试页完整文档集](../11.3.5.3-product-test-site-items-fixture/)。
+1. 先生成 [11.3.5.3 `/records` 测试页完整文档集](../11.3.5.3-fixture-site-items-fixture/)。
 2. 评审通过后再实现 11.3.5.3。
 3. 11.3.5.3 收口后，按同样方式生成 [11.3.5.4](../11.3.5.4-parameterized-learning-replay-slots/) 文档集。
 4. 依次推进到 11.3.5.6，完成 P0 working loop。

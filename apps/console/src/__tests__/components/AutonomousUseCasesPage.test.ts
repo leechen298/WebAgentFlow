@@ -72,7 +72,7 @@ function mockSpecs(): Array<{
     {
       spec_id: 'login',
       page_id: 'login',
-      url_pattern: '/login',
+      url_pattern: '/entry',
       description: 'Login page spec',
       scenarios: [
         {
@@ -232,7 +232,7 @@ describe('AutonomousUseCasesPage', () => {
 
     expect(streamAutonomousRun).toHaveBeenCalledTimes(1);
     const payload = streamAutonomousRun.mock.calls[0][0];
-    expect(payload.url).toContain('/login');
+    expect(payload.url).toContain('/entry');
     expect(payload.goal).toBe('Valid login');
     expect(payload.fill_values).toEqual({ username: 'admin', password: 'secret' });
     expect(payload.toggle_values).toBeUndefined();

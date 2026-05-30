@@ -143,10 +143,10 @@ Expected manifest shape:
 
 ```json
 {
-  "target_name": "product-test-site-items",
-  "forbidden_tokens": ["/items", "item-list", "测试项目A"],
+  "target_name": "external-target",
+  "forbidden_tokens": ["https://target.example.invalid/path", "target-only-token"],
   "forbidden_paths": ["apps/api/app/services", "apps/cli/wagent", "apps/console/src"],
-  "allowed_paths": ["apps/product-test-site", "scripts/evals", "apps/api/tests", "docs", "artifacts"]
+  "allowed_paths": ["apps/api/tests"]
 }
 ```
 
@@ -204,8 +204,8 @@ Use a short, evidence-first report:
 Decision: BLOCKED
 Reason: product runtime contains target-specific test fixture constants.
 Evidence:
-- apps/api/app/services/conversation/chat_runtime.py:123 contains forbidden token `/items`.
-- apps/api/app/services/conversation/intake.py:88 contains forbidden token `item-list`.
+- apps/api/app/services/conversation/chat_runtime.py:123 contains forbidden target URL.
+- apps/api/app/services/conversation/intake.py:88 contains forbidden test selector.
 Impact: 11.3.7 cannot be claimed as product-generic behavior.
 Next step: remove target-specific runtime logic or mark 11.3.7 blocked with cleanup issue.
 ```

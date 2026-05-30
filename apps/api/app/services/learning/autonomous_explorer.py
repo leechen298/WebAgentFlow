@@ -531,34 +531,34 @@ Rules for filling the atoms:
 
 Few-shot observation examples (illustrative, not exhaustive):
 
-Example A — login with valid credentials, landed on dashboard:
+Example A — form submission reached the expected destination:
 ```
 {{
-  "did_navigate": true, "final_url_path": "/users",
+  "did_navigate": true, "final_url_path": "/target",
   "did_show_error": false, "error_texts": [],
   "form_state_after": "no_form", "list_row_count": 8,
   "scenario_goal_observed": true,
-  "scenario_goal_evidence": "Reached /users with 8 rows rendered.",
-  "summary": "Login accepted; user table rendered."
+  "scenario_goal_evidence": "Reached /target with 8 rows rendered.",
+  "summary": "Form accepted; expected list rendered."
 }}
 ```
 
-Example B — login with wrong password, stayed on /login with alert:
+Example B — invalid form input stayed on the same page with alert:
 ```
 {{
-  "did_navigate": false, "final_url_path": "/login",
-  "did_show_error": true, "error_texts": ["用户名或密码错误"],
+  "did_navigate": false, "final_url_path": "/form",
+  "did_show_error": true, "error_texts": ["Invalid input"],
   "form_state_after": "persisted", "list_row_count": null,
   "scenario_goal_observed": true,
-  "scenario_goal_evidence": "role=alert with 用户名或密码错误; still on /login.",
-  "summary": "Credentials rejected; login form retained values."
+  "scenario_goal_evidence": "role=alert with Invalid input; still on /form.",
+  "summary": "Input rejected; form retained values."
 }}
 ```
 
 Example C — filter applied but result list is empty, scenario expects 0 rows:
 ```
 {{
-  "did_navigate": false, "final_url_path": "/users",
+  "did_navigate": false, "final_url_path": "/target",
   "did_show_error": false, "error_texts": [],
   "form_state_after": "no_form", "list_row_count": 0,
   "scenario_goal_observed": true,

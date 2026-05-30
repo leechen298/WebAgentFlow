@@ -66,7 +66,7 @@ rg -n "Learned Action Matching Improvement|implementation_authorized|ambiguous|l
 cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_chat_runtime.py -q
 cd apps/api && ../../.venv/bin/python -m pytest tests/test_conversation_router_agent.py -q
 cd apps/api && ../../.venv/bin/python -m ruff check app/services/conversation/chat_runtime.py app/services/conversation/router_agent.py tests/test_conversation_chat_runtime.py tests/test_conversation_router_agent.py
-rg -n "5177|/inventory|inventory item|WebAgentFlow-Validation-Site" apps/api/app/services/conversation/chat_runtime.py apps/api/app/services/conversation/router_agent.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py
+rg -n "<fixture-port>|/target-page|inventory item|External-Fixture-Provider" apps/api/app/services/conversation/chat_runtime.py apps/api/app/services/conversation/router_agent.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py
 git diff --check
 git status --short
 git diff --name-only
@@ -74,7 +74,7 @@ git diff --name-only
 
 The target-constant scan is a minimum token scan and is expected to exit `1` with no output.
 Code / evidence review must also inspect touched files for selectors, field labels, button
-text, placeholders, seed copy, operation aliases, page source, and other Validation-Site
+text, placeholders, seed copy, operation aliases, page source, and other Fixture-Site
 answer keys.
 
 ## Exit Criteria

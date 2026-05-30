@@ -104,8 +104,8 @@ Response envelope 保持 `ApiResponse[T]`。`data` shape：
         {
           "alias": "登录",
           "learned_path_id": "path-id",
-          "target_url": "http://localhost:5175/login",
-          "page_template": "/login",
+          "target_url": "https://example.invalid/entry",
+          "page_template": "/entry",
           "scenario": "valid_credentials"
         }
       ]

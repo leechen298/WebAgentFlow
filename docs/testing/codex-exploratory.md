@@ -3,7 +3,7 @@
 探索式验证是第二阶段测试工作流，不能替代确定性 E2E 回归。
 
 它的目标是让 AI coding agent 阅读产品和 API contract，提出边界用例，运行本地
-确定性 E2E，观察 console 和 validation-site，并识别后续应该沉淀为长期测试的缺口。
+确定性 E2E，观察 console 和外部 fixture provider，并识别后续应该沉淀为长期测试的缺口。
 
 当前第一批探索式验证只针对 M10.2 replay 测试域，不是 WebAgentFlow
 全项目自动测试。后续如果 conversation、task-execution、recovery、teaching、
@@ -45,7 +45,7 @@ browser observation 证据，UI case 不能写成 Agent-operated UI exploratory 
 探索式验证可以：
 
 - 运行确定性 E2E 套件。
-- 使用 headed Playwright 查看本地 console 和 validation-site。
+- 使用 headed Playwright 查看本地 console 和外部 fixture provider。
 - 提出新的确定性 E2E 用例。
 - 把稳定发现转成长期 Playwright Test 用例。
 

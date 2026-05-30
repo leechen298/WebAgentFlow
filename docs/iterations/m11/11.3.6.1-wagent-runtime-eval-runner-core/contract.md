@@ -32,14 +32,14 @@ pnpm run eval:wagent
 | Config | Default | Override |
 |---|---|---|
 | API base | `http://127.0.0.1:8001` | `--api-base` |
-| Product URL | `http://127.0.0.1:5176/items` | `--product-url` |
+| Product URL | `http://127.0.0.1:<fixture-port>/records` | `--product-url` |
 | Case | `items_closed_loop,single_path_direct_replay_regression` | `--case` |
 | Timeout | 300 seconds | `--timeout` |
 | Output dir | `artifacts/wagent-eval/` | `--artifact-dir` |
 | Markdown result dir | `docs/testing/results/` | `--result-dir` |
 | Browser visibility | `headless` | `--browser-visibility` |
 
-Runner 不负责长期启动 API / product-test-site / Docker / Redis / PostgreSQL。服务不可用时
+Runner 不负责长期启动 API / fixture-site / Docker / Redis / PostgreSQL。服务不可用时
 必须输出 blocked，而不是尝试隐式启动或继续判 fail。
 
 ### Conversation Driver Contract
@@ -60,10 +60,10 @@ GET /exploration/learned-paths/{learned_path_id}
 catalog endpoint，例如：
 
 ```http
-GET /exploration/learned-paths?page_template=/items&limit=10
+GET /exploration/learned-paths?page_template=/records&limit=10
 ```
 
-Runner 不得仅用全局 catalog 的 `/items` 数量判断当前 case 是否 single path。全局 catalog
+Runner 不得仅用全局 catalog 的 `/records` 数量判断当前 case 是否 single path。全局 catalog
 只可作为 detail lookup / supplementary evidence；case 判定必须优先基于当前 eval session
 产生的 learned path id、session learned actions、runtime events 和 execution events。
 
@@ -161,7 +161,7 @@ Reporter verified 都通过，并且 Markdown result 明确列出 follow-up。
 
 ```text
 create interactive_chat session
-send product URL, e.g. http://127.0.0.1:5176/items
+send product URL, e.g. http://127.0.0.1:<fixture-port>/records
 send 学习新增项目，名称叫 测试项目A-${timestamp}
 send 帮我新增项目，名称叫 测试项目B-${timestamp}
 collect evidence
@@ -175,11 +175,11 @@ Required gates：
 | `session_created` | yes | raw API / session | session id exists |
 | `pending_target_or_equivalent` | yes | session / events / history | URL turn leaves enough target context for learn turn |
 | `learned_path_created` | yes | `chat_learning_completed` / history | new learned path id exists |
-| `learned_path_parameterized` | yes | LearnedPath detail | fill action has `value_slot=item_name` |
+| `learned_path_parameterized` | yes | LearnedPath detail | fill action has `value_slot=record_name` |
 | `execution_started` | yes | `chat_execution_started` | execution event exists |
-| `slot_override_B` | yes | execution event | `slot_overrides.item_name == B` |
+| `slot_override_B` | yes | execution event | `slot_overrides.record_name == B` |
 | `effective_value_B` | conditional | replay step log / history | fill effective value is B, not A |
-| `evidence_target_item_list` | conditional | execution request / history / started event | evidence target selector is `[data-testid='item-list']` when target request is observable |
+| `evidence_target_item_list` | conditional | execution request / history / started event | evidence target selector is `[data-testid='record-list']` when target request is observable |
 | `dom_evidence_verified_B` | yes | execution evidence | `dom_text_present` verifies B |
 | `reporter_verified` | yes | `task_result_reported` / history | `verification_outcome=verified` |
 | `final_response_verified` | yes | final WAgent message | reply gives evidence-based success and references B |
@@ -224,7 +224,7 @@ Required gates：
 | `single_candidate_detected` | yes | current session learned actions / events / history | one clear matched learned action in the current eval session |
 | `no_pending_choice` | yes | events / session metadata | no A/B/C pending choice created |
 | `no_planner_choice` | yes | events / history | no planner-backed choice path entered |
-| `slot_override_C` | yes | execution event | `slot_overrides.item_name == C` |
+| `slot_override_C` | yes | execution event | `slot_overrides.record_name == C` |
 | `dom_evidence_verified_C` | yes | execution evidence | `dom_text_present` verifies C |
 | `reporter_verified` | yes | result event / history | `verification_outcome=verified` |
 | `final_response_verified` | yes | final WAgent message | reply gives evidence-based success and references C |
@@ -234,8 +234,8 @@ Required gates：
 
 - use the learned path id produced by `items_closed_loop`;
 - use current session `learned_actions` / runtime route events / `chat_execution_started`;
-- tolerate old global `/items` LearnedPath rows in the database;
-- do not fail only because `GET /exploration/learned-paths?page_template=/items` returns multiple rows;
+- tolerate old global `/records` LearnedPath rows in the database;
+- do not fail only because `GET /exploration/learned-paths?page_template=/records` returns multiple rows;
 - do not select candidates from global catalog unless they are explicitly linked to the current session.
 
 如果当前 session 中出现多个 matching learned actions，则该 case 应 fail 或 blocked，并说明是
@@ -329,8 +329,8 @@ artifact write failure > runner internal error > blocked > timeout > gate fail >
 
 ### Safety / Redaction Contract
 
-Runner artifacts must not leak sensitive fields. For first-version `/items` cases,
-`item_name` may appear because it is test data and required evidence. The following must be redacted
+Runner artifacts must not leak sensitive fields. For first-version `/records` cases,
+`record_name` may appear because it is test data and required evidence. The following must be redacted
 or excluded:
 
 ```text
@@ -346,8 +346,8 @@ pending_choice_private_map
 raw ReplayAction private payload where selector / path id is not needed for the gate
 ```
 
-Selectors may appear only when they are non-sensitive product-test-site selectors needed for gate
-evidence, such as `[data-testid='item-list']`.
+Selectors may appear only when they are non-sensitive fixture-site selectors needed for gate
+evidence, such as `[data-testid='record-list']`.
 
 ### Product / Milestone Contract
 

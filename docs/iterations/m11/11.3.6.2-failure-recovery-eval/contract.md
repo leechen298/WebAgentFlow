@@ -24,7 +24,7 @@ Runner 必须继续遵守 11.3.6 program 的通用原则：
 推荐流程：
 
 ```text
-1. 复用 11.3.6.1 的 `/items` learned path setup，或在本 case 内显式完成 setup。
+1. 复用 11.3.6.1 的 `/records` learned path setup，或在本 case 内显式完成 setup。
 2. 对一次执行 turn 使用稳定 failure trigger，使 TaskResultReporter / recovery path 进入
    `needs_review` 或 `evidence_missing`。
 3. 读取 session、messages、events、history 和 runner raw responses。
@@ -98,7 +98,7 @@ JSON artifact、Markdown result 和 public gate evidence 必须脱敏：
 - `private_retry_payload`
 - `credential` / `password` / `secret` / `token` / `cookie` / `authorization` / `api_key`
 
-`item_name` 作为 `/items` 测试数据可以保留，但不得包含真实用户敏感内容。
+`record_name` 作为 `/records` 测试数据可以保留，但不得包含真实用户敏感内容。
 
 ## Artifact Contract
 

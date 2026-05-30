@@ -41,7 +41,7 @@
 4. 执行 preflight cases。
 5. 复跑 deterministic E2E。
 6. preflight 通过后执行 API exploratory cases。
-7. 仅在 console/API/validation-site 可访问，且不需要修改产品或 E2E spec 代码时，
+7. 仅在 console/API/外部 fixture provider 可访问，且不需要修改产品或 E2E spec 代码时，
    执行 UI exploratory cases。
 8. 写入报告。
 9. 运行 `git diff --check`。

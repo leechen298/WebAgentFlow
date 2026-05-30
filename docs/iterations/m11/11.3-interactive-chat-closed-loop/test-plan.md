@@ -11,16 +11,16 @@ preview / confirmation 行为未被破坏。
 
 ### Chat intent
 
-- 输入 `学习一下这个登录页怎么登录，地址是 http://localhost:5175/login` 判定为
+- 输入 `学习一下这个登录页怎么登录，地址是 https://example.invalid/entry` 判定为
   `learn_page` 并提取 URL。
-- 输入 `learn this page http://localhost:5175/login` 判定为 `learn_page`。
+- 输入 `learn this page https://example.invalid/entry` 判定为 `learn_page`。
 - 输入 `帮我登录` 判定为 `execute_task`。
 
 ### Learning result
 
 - learning service 返回 `run_id` 和 `learned_path_id`。
 - 当 run 成功但 LearnedPath 未沉淀时，chat runtime 不返回“学习完成”。
-- `/login` learn 使用 `spec_id=login`、`scenario=valid_credentials` 和
+- `/entry` learn 使用 `spec_id=login`、`scenario=valid_credentials` 和
   `admin / 123456`。
 
 ### Session metadata
@@ -54,14 +54,14 @@ preview / confirmation 行为未被破坏。
 
 - API: `http://localhost:8001`
 - Console: `http://localhost:5174`
-- validation-site: `http://localhost:5175`
+- fixture-site: `https://example.invalid`
 
 人工验收：
 
 ```text
 $ wagent chat
 WAgent > 你好，我可以学习页面操作，也可以执行已经学会的操作。
-You > 学习一下这个登录页怎么登录，地址是 http://localhost:5175/login
+You > 学习一下这个登录页怎么登录，地址是 https://example.invalid/entry
 WAgent > 我会学习：在登录页输入账号密码，并点击“登录”按钮。
 WAgent > 学习完成：我学会了登录页的登录操作。之后你可以说“帮我登录”。
 You > 帮我登录

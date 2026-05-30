@@ -170,7 +170,7 @@ class AntDesignExtractor:
           <div class="ant-form-item-control">
             <div class="ant-form-item-control-input">
               <div class="ant-form-item-control-input-content">
-                <input id="search-name" ...>
+                <input id="search-field" ...>
               </div>
             </div>
           </div>

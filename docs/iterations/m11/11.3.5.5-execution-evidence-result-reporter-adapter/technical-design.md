@@ -7,7 +7,7 @@
 在 11.3.5.4 已经实现参数化 replay 的基础上，本包增加最小执行证据链：
 
 ```text
-slot_overrides.item_name
+slot_overrides.record_name
 -> evidence_targets.dom_text_present
 -> replay 后、runtime stop 前检查 DOM
 -> ReplayResult.execution_evidence
@@ -27,7 +27,7 @@ slot_overrides.item_name
 | `apps/api/app/schemas/conversation.py` | 扩展 `ConversationReplaySummary`，带出 execution evidence |
 | `apps/api/app/services/learning/learned_path_replay.py` | 在 runtime stop 前采集 evidence，返回到 `ReplayResult` |
 | `apps/api/app/services/conversation/replay_hook.py` | 把 `evidence_targets` 传入 `run_replay()`，并把 evidence 摘要映射到 `ConversationReplaySummary` |
-| `apps/api/app/services/conversation/chat_runtime.py` | execute branch 根据 `slot_overrides.item_name` 构造 `/items` evidence target，调用 reporter adapter 生成保守回复 |
+| `apps/api/app/services/conversation/chat_runtime.py` | execute branch 根据 `slot_overrides.record_name` 构造 `/records` evidence target，调用 reporter adapter 生成保守回复 |
 | `apps/api/app/services/task_planning/result_reporter.py` | 让 `_check_postconditions()` 读取 structured postcondition evidence |
 | `apps/api/tests/test_learned_path_replay.py` | replay schema / evidence capture targeted tests |
 | `apps/api/tests/test_conversation_replay_hook.py` | evidence targets propagation tests |
@@ -200,18 +200,18 @@ return ReplayResult(
 
 ## Chat Runtime Evidence Target
 
-在 `InteractiveChatRuntime` execute branch 中，已有 `slot_overrides.item_name` 时构造：
+在 `InteractiveChatRuntime` execute branch 中，已有 `slot_overrides.record_name` 时构造：
 
 ```python
 evidence_targets = []
-item_name = slot_overrides.get("item_name")
-if item_name and action.get("page_template") == "/items" or action.get("target_url", "").endswith("/items"):
+record_name = slot_overrides.get("record_name")
+if record_name and action.get("page_template") == "/records" or action.get("target_url", "").endswith("/records"):
     evidence_targets.append(
         ExecutionEvidenceTarget(
             kind="dom_text_present",
-            text=item_name,
-            source_slot="item_name",
-            selector="[data-testid='item-list']",
+            text=record_name,
+            source_slot="record_name",
+            selector="[data-testid='record-list']",
         )
     )
 ```
@@ -220,15 +220,15 @@ if item_name and action.get("page_template") == "/items" or action.get("target_u
 
 ```python
 is_items_target = (
-    action.get("page_template") == "/items"
-    or urlparse(action.get("target_url", "")).path.rstrip("/") == "/items"
+    action.get("page_template") == "/records"
+    or urlparse(action.get("target_url", "")).path.rstrip("/") == "/records"
 )
 ```
 
 然后再判断：
 
 ```python
-if item_name and is_items_target:
+if record_name and is_items_target:
     ...
 ```
 
@@ -303,7 +303,7 @@ def _check_postconditions(
     expected_target = None
     if confirmed_plan_context:
         slot_overrides = confirmed_plan_context.get("slot_overrides") or {}
-        expected_target = slot_overrides.get("item_name")
+        expected_target = slot_overrides.get("record_name")
 
     for raw in evidence_items:
         ev = ExecutionEvidence.model_validate(raw)

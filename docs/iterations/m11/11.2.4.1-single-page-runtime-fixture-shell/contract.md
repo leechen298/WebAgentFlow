@@ -4,7 +4,7 @@
 
 ## 概念 / 边界契约
 
-11.2.4.1 实现 Single-page Runtime Fixture Shell。它是 validation-site runtime
+11.2.4.1 实现 Single-page Runtime Fixture Shell。它是 fixture-site runtime
 observation fixture 的入口、分类和元数据壳，不是具体业务 fixture 页面实现。
 
 Shell 只提供导航和规划级 metadata，不接 replay runtime、不接 wait service、不接
@@ -48,7 +48,7 @@ future_signal_label
 /runtime-observation/mobile
 ```
 
-11.2.4.1 实现包可以创建这些 routes。实现前必须确认 validation-site 当前 router
+11.2.4.1 实现包可以创建这些 routes。实现前必须确认 fixture-site 当前 router
 结构，并确保不创建 `/medium`、`/complex` 这类全局 route。
 
 ## Fixture Metadata Contract
@@ -181,7 +181,7 @@ No runtime schema/API changes.
 允许：
 
 - 实现 `/runtime-observation` shell route。
-- 在 validation-site 首页增加 Runtime Observation 入口。
+- 在 fixture-site 首页增加 Runtime Observation 入口。
 - 展示 shell metadata contract。
 - 展示 current MVP / future signal labels。
 
@@ -196,7 +196,7 @@ No runtime schema/API changes.
 后续实现必须保持：
 
 - 不破坏现有 `/` 首页。
-- 不删除 `/login`、`/users`。
+- 不删除 `/entry`、`/records`。
 - 不改变已有 specs。
 - 不改变 workbench deep link 逻辑。
 - 不改变 API。
@@ -227,4 +227,4 @@ No runtime schema/API changes.
 
 ## 未决问题
 
-- 后续实现前需确认 validation-site 当前实际 router 文件和测试命令。
+- 后续实现前需确认 fixture-site 当前实际 router 文件和测试命令。

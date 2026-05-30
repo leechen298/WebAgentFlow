@@ -55,14 +55,14 @@ replay succeeded
 
 ## 本轮目标
 
-本轮目标是打通 `/items` 新增项目的最小结果证据链：
+本轮目标是打通 `/records` 新增项目的最小结果证据链：
 
 ```text
 1. Runtime 构造 evidence target：
    kind=dom_text_present
-   text=slot_overrides.item_name
-   source_slot=item_name
-   selector=[data-testid='item-list']
+   text=slot_overrides.record_name
+   source_slot=record_name
+   selector=[data-testid='record-list']
 
 2. Replay 执行所有 actions。
 
@@ -159,6 +159,6 @@ outcome = failed 或 blocked
 
 ## 与前后迭代关系
 
-- 依赖 11.3.5.3：`/items` 页面必须存在，并提供 `[data-testid='item-list']`。
+- 依赖 11.3.5.3：`/records` 页面必须存在，并提供 `[data-testid='record-list']`。
 - 依赖 11.3.5.4：replay 必须实际填入执行阶段的 B，而不是学习阶段的 A。
 - 输出给 11.3.5.6：提供闭环测试所需的 evidence、Reporter outcome 和用户可见回复。

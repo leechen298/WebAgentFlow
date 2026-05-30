@@ -82,7 +82,7 @@ Expected: exit `0`, `All checks passed!`.
 ### T4 - Forbidden target constants scan
 
 ```bash
-rg -n "5177|/inventory|inventory item|WebAgentFlow-Validation-Site" apps/api/app/services/conversation/chat_runtime.py apps/api/app/services/conversation/router_agent.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py
+rg -n "<fixture-port>|/target-page|inventory item|External-Fixture-Provider" apps/api/app/services/conversation/chat_runtime.py apps/api/app/services/conversation/router_agent.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py
 ```
 
 Expected: exit `1`, no output.
@@ -90,7 +90,7 @@ Expected: exit `1`, no output.
 This scan intentionally covers touched runtime and focused tests. It is a minimum
 token scan, not the whole review: code / evidence reviewers must also inspect
 touched files for selectors, field labels, button text, placeholders, seed copy,
-operation aliases, page source, and other Validation-Site answer keys. Mentions may
+operation aliases, page source, and other Fixture-Site answer keys. Mentions may
 still exist in docs and historical result records.
 
 ### T5 - Whitespace / patch sanity
@@ -113,7 +113,7 @@ Expected:
 - created / modified in-scope files are listed in child `review.md`;
 - parent `CURRENT_STATE.md` and parent review are aligned with child final status;
 - no external result docs are listed;
-- no external Validation-Site / Fixture-Site source is listed.
+- no external Fixture-Site / Fixture-Site source is listed.
 
 ## Red / Green Requirement
 

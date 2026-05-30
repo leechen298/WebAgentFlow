@@ -36,8 +36,8 @@
 3. 实现 forbidden-token scanner。
    - 产出：能扫描功能代码和产品 prompt asset，允许 docs / tests / fixture / artifact。
    - 要求：任何匹配使 eval fail；现有测试站点特判不得 grandfather。
-4. 清理现有 product-test-site runtime 特判。
-   - 产出：`/items` route checks、test selector construction、fixture field names、fixture item
+4. 清理现有 fixture-site runtime 特判。
+   - 产出：`/records` route checks、test selector construction、fixture field names、fixture item
      names 和 operation aliases 不再存在于 product runtime / product prompts。
    - 要求：改成 generic runtime，或移动到 eval spec / test-only layer；未清理则 11.3.7
      标为 blocked，不能 pass。
@@ -67,7 +67,7 @@
 
 验证计划来自 `technical-design.md` 的高层 Test Matrix 和 `test-plan.md` 的详细测试矩阵。
 本包已实现 runner，并完成 first-wave closeout。后续修改 runtime、eval runner、target spec 或
-product-test-site 后需要重新运行本表中的 eval / integrity checks。
+fixture-site 后需要重新运行本表中的 eval / integrity checks。
 
 | Command | Expected proof | Live autonomous verification excluded? | Notes |
 |---|---|---|---|
@@ -84,7 +84,7 @@ product-test-site 后需要重新运行本表中的 eval / integrity checks。
 - [x] forbidden-token hard gate 覆盖功能代码和产品 prompt。
 - [x] 现有测试站点特判已改成 generic runtime、移入 eval spec / test-only layer，或将
   11.3.7 标为 blocked 并开 cleanup follow-up。
-- [x] 如果当前 runtime 中发现 product-test-site 特判，已实际清理；cleanup issue 不能让
+- [x] 如果当前 runtime 中发现 fixture-site 特判，已实际清理；cleanup issue 不能让
   11.3.7 pass。
 - [x] known / unknown 页面状态使用 current eval session / eval scope 或 explicit filtered
   catalog 隔离，不受 global old LearnedPath 污染。

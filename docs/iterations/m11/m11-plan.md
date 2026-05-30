@@ -1106,7 +1106,7 @@ ruff clean）。
 
 目标方向：规划 WebAgentFlow 自建真实网页验证场景库，先系统定义 PC / 移动端
 常见页面、业务场景、组件交互、网络延迟、错误响应、复杂度分层和 fixture phase
-路线。11.2.4 不是找线上网站验证，也不是直接开发页面；它是后续 validation-site
+路线。11.2.4 不是找线上网站验证，也不是直接开发页面；它是后续 fixture-site
 页面、mock backend 和 E2E 的开发文档输入。
 
 11.2.4.0 已将 scenario catalog 固化为“业务页面复杂度 × 运行条件矩阵 ×
@@ -1218,11 +1218,11 @@ loading overlay、validation message、virtualized list、inserted option list�
 Workbench、LearnedPath、preview 或 confirm，只通过持续聊天完成“学习页面 ->
 执行已学操作”的最小闭环。
 
-本包第一阶段只覆盖 validation-site `/login` happy path：
+本包第一阶段只覆盖 fixture-site `/entry` happy path：
 
 ```text
 wagent chat
--> 学习一下这个登录页怎么登录，地址是 http://localhost:5175/login
+-> 学习一下这个登录页怎么登录，地址是 https://example.invalid/entry
 -> 我会学习：在登录页输入账号密码，并点击“登录”按钮。
 -> 学习完成：我学会了登录页的登录操作。之后你可以说“帮我登录”。
 -> 帮我登录
@@ -1245,7 +1245,7 @@ wagent chat
 - 非 `interactive_chat` session 继续走现有 planning preview / confirmation /
   execution via replay。
 - `wagent chat` 默认 HTTP timeout 不低于 180s，并支持 `--timeout` 覆盖。
-- validation-site 端口固定为 `http://localhost:5175`，console 为
+- fixture-site 端口固定为 `https://example.invalid`，console 为
   `http://localhost:5174`，API 为 `http://localhost:8001`。
 
 执行包目录：
@@ -1254,7 +1254,7 @@ wagent chat
 
 非目标：
 
-- 不做 `/users`、真实业务页或多页面 workflow。
+- 不做 `/records`、真实业务页或多页面 workflow。
 - 不做 M12 recovery / retry / abort / takeover。
 - 不做复杂 LLM 意图理解。
 - 不废除 confirmation gate。
@@ -1352,37 +1352,37 @@ wagent chat
 
 状态：accepted（implementation review passed, product-level CLI smoke passed）。
 
-目标：把 `validation-site` 工程验证靶场和 `wagent chat` 产品级人工验收靶场拆开。
-`validation-site` 继续保留 specs / assertions / pass_gate / scorecard /
-`verify-scenario` 等 deterministic regression 能力；新增 `product-test-site`
+目标：把 `fixture-site` 工程验证靶场和 `wagent chat` 产品级人工验收靶场拆开。
+`fixture-site` 继续保留 specs / assertions / pass_gate / scorecard /
+`verify-scenario` 等 deterministic regression 能力；新增 `fixture-site`
 用于验证普通用户通过 `wagent chat` 提供 URL 和必要输入，系统观察页面、学习操作、
 沉淀 LearnedPath，并在同一聊天中执行已学操作。
 
-本包已实现 `apps/product-test-site`，并通过 product-level CLI smoke。它不修改
+本包已实现 `apps/fixture-site`，并通过 product-level CLI smoke。它不修改
 11.3.2，也不迁移 `11.2.4.2-single-page-basic-business-pages`。
 
 关键契约：
 
-- `validation-site` 继续作为工程验证靶场，不删除、不弱化、不重命名。
-- 产品级验收站点为 `apps/product-test-site`，package name 为
-  `@web-agent-flow/product-test-site`，dev port 为 `5176`。
-- 根目录 `pnpm run dev` 同时启动 product-test-site；单独 filter dev 只能作为
+- `fixture-site` 继续作为工程验证靶场，不删除、不弱化、不重命名。
+- 产品级验收站点为 `apps/fixture-site`，package name 为
+  `@web-agent-flow/fixture-site`，dev port 为 `<fixture-port>`。
+- 根目录 `pnpm run dev` 同时启动 fixture-site；单独 filter dev 只能作为
   开发调试入口，不能替代普通用户一键启动路径。
-- 当前端口边界保持：console `5174`、validation-site `5175`、product-test-site
-  `5176`、API `8001`。
-- 第一阶段产品级页面规划为 `/workspace-login`，文案与 validation-site `/login`
+- 当前端口边界保持：console `5174`、fixture-site `5175`、fixture-site
+  `<fixture-port>`、API `8001`。
+- 第一阶段产品级页面规划为 `/target-login`，文案与 fixture-site `/entry`
   明显不同：`工作台入口`、`操作员账号`、`访问口令`、`进入工作台`、
   `工作台首页` / `已进入工作台`。
 - 产品级 `wagent chat` learning path 不应读取
-  `apps/validation-site/specs/*.assertions.json`。
+  `apps/fixture-site/specs/*.assertions.json`。
 - 产品级 `wagent chat` learning path 不应传 `spec_id` / `scenario`，也不应从
   assertions 取输入值。
-- 产品级 learning 不应硬编码 `/login`、固定 host 或固定 route；学习目标必须来自用户输入的 URL。
+- 产品级 learning 不应硬编码 `/entry`、固定 host 或固定 route；学习目标必须来自用户输入的 URL。
 - 执行只能命中当前 session 已学习过的 target URL / site；未学习过的站点或页面必须返回
   `还没学过这个站点或页面，需要先学习。`，不得跨站点命中历史 LearnedPath。
 - 用户必须通过自然语言提供 URL 和必要输入，例如
-  `地址是 http://localhost:5176/workspace-login，操作员账号是 demo，访问口令是 123456`。
-- 修改或删除 `login.assertions.json` 不应影响 product-test-site 学习。
+  `地址是 http://localhost:<fixture-port>/target-login，操作员账号是 demo，访问口令是 123456`。
+- 修改或删除 `login.assertions.json` 不应影响 fixture-site 学习。
 - 如果实现阶段仍靠 `spec_id=login` / `scenario=valid_credentials` 完成产品级学习，
   或用户没有在聊天中提供输入却从 validation spec 自动拿到输入，不得标记 accepted。
 
@@ -1391,7 +1391,7 @@ wagent chat
 - Product-level `wagent chat` smoke session：`20602dde-1a64-4e81-8784-9b7949a9d866`。
 - Learning run id：`c4564860-5140-4f13-a552-bca6697208df`。
 - LearnedPath id：`03fb1fa1-2589-45cf-8322-4ba3f2809077`。
-- Replay：`replay_status=succeeded`，`final_url=http://localhost:5176/workspace-home`。
+- Replay：`replay_status=succeeded`，`final_url=http://localhost:<fixture-port>/workspace-home`。
 - 未学习 URL fallback：`还没学过这个站点或页面，需要先学习。`。
 
 执行包目录：
@@ -1406,14 +1406,14 @@ wagent chat
 - 不引入 LLM 复杂意图理解。
 - 不改造 Chat History / Debug Console。
 - 不实现 Visible Browser 本身。
-- 不重构 validation-site。
+- 不重构 fixture-site。
 
 ## 11.3.4 · Conversation Intake Agent
 
 状态：implementation complete（scoped tests passed, real LLM smoke pending）。
 
 目标：补齐 `wagent chat` 的自然语言入口层。M11.3.3 已经让用户可以通过
-product-test-site 完成产品级学习和执行 smoke，但当前语言入口仍主要靠 deterministic
+fixture-site 完成产品级学习和执行 smoke，但当前语言入口仍主要靠 deterministic
 parser / regex / alias 匹配。11.3.4 定义并实现 Conversation Intake Agent / 对话理解 Agent，
 把用户自然语言转成 schema-constrained intent / target / action / slots / missing fields，
 再交给 Conversation Orchestrator 校验和执行。
@@ -1604,7 +1604,7 @@ Conversation Entry Gate 只判断是否需要进入网页任务 runtime。
 
 这组包继续挂在 11.3.5 下，而不是升格成 11.4。原因是它们都属于
 Customer-Facing Agent Router & Skill Runtime 的 working runtime 收口：让 `wagent chat`
-从“能进入 Agent runtime”推进到“能在 product-test-site 上完成可验证网页操作”。
+从“能进入 Agent runtime”推进到“能在 fixture-site 上完成可验证网页操作”。
 
 完整施工稿：
 
@@ -1616,23 +1616,23 @@ Customer-Facing Agent Router & Skill Runtime 的 working runtime 收口：让 `w
 - 旧 M11 切分可以调整，但每个执行包必须可验收、可回滚、可解释。
 - 11.3.5.2 目录已经存在，继续作为 Chat Task State Reducer、learning preconditions、
   working runtime 总设计和测试入口的锚点；暂不为了改名迁移目录。
-- `/items`、参数化 replay、ExecutionEvidence、Reporter 接入、`pending_choice`、
+- `/records`、参数化 replay、ExecutionEvidence、Reporter 接入、`pending_choice`、
   `active_task`、基础恢复和 TaskPathPlanner chat 接入不得塞进一个大迭代。
 - `ExecutionEvidence` 是新增 / 扩展 contract。现有 TaskResultReporter 需要 adapter 才能
   消费 replay result + 页面证据。
 - “学习新增 A -> 执行新增 B”依赖参数化 learning / replay slot override；不能只靠固定
   LearnedPath action value 重放。
 - P0 验收必须证明 replay 实际填入执行阶段的新值 B，而不是学习阶段录制的 A。
-- TaskPathPlanner 已实现，但不进入 `/items` 单路径 P0 happy path；只用于多候选、
+- TaskPathPlanner 已实现，但不进入 `/records` 单路径 P0 happy path；只用于多候选、
   模糊目标、planning preview / confirmed execution path。
 
 | Package | 目标 | 状态 / 顺序 |
 |---|---|---|
 | 11.3.5.2 · Chat Task State Reducer & Learning Preconditions | 文档同步、working runtime 总设计、turn-based reducer、learning preconditions 和测试入口 | 当前锚点 |
-| [11.3.5.3 · Product Test Site `/items` Fixture](./11.3.5.3-product-test-site-items-fixture/) | 新增 `apps/product-test-site` `/items` 列表测试页；只提供学习 / 执行新增项目的稳定页面基座 | implementation complete（product-test-site build passed, `/items` smoke passed） |
-| [11.3.5.4 · Parameterized Learning / Replay Slots](./11.3.5.4-parameterized-learning-replay-slots/) | 补 `item_name` 等业务 slot 抽取、学习填值、`value_slot` 参数绑定和 replay `slot_overrides`，支持学习 A 后按用户新输入执行 B | ready_for_implementation（design review passed） |
+| [11.3.5.3 · Product Test Site `/records` Fixture](./11.3.5.3-fixture-site-items-fixture/) | 新增 `apps/fixture-site` `/records` 列表测试页；只提供学习 / 执行新增项目的稳定页面基座 | implementation complete（fixture-site build passed, `/records` smoke passed） |
+| [11.3.5.4 · Parameterized Learning / Replay Slots](./11.3.5.4-parameterized-learning-replay-slots/) | 补 `record_name` 等业务 slot 抽取、学习填值、`value_slot` 参数绑定和 replay `slot_overrides`，支持学习 A 后按用户新输入执行 B | ready_for_implementation（design review passed） |
 | [11.3.5.5 · ExecutionEvidence & TaskResultReporter Adapter](./11.3.5.5-execution-evidence-result-reporter-adapter/) | 新增 / 扩展执行证据 contract，runtime stop 前采集 DOM evidence，并把 replay result + page evidence 适配成保守结果回复 | ready_for_implementation（design review passed） |
-| [11.3.5.6 · WAgent Chat `/items` Closed-loop Evaluation](./11.3.5.6-wagent-chat-items-closed-loop-evaluation/) | 沉淀 `/items` 学习 / 执行闭环测试方案、实跑结果、完整日志和 Codex 复核记录 | implementation complete（closed-loop pass，result recorded） |
+| [11.3.5.6 · WAgent Chat `/records` Closed-loop Evaluation](./11.3.5.6-wagent-chat-records-closed-loop-evaluation/) | 沉淀 `/records` 学习 / 执行闭环测试方案、实跑结果、完整日志和 Codex 复核记录 | implementation complete（closed-loop pass，result recorded） |
 | [11.3.5.7 · Pending Choice & Minimal Active Task Ledger](./11.3.5.7-pending-choice-active-task-ledger/) | 多候选澄清、choice 私有映射、最小 active task 状态账本、pending 清理 / 过期和 cancel cleanup | implementation complete（code review passed，targeted tests passed） |
 | [11.3.5.8 · Basic Failure Recovery](./11.3.5.8-basic-failure-recovery/) | 基础失败恢复：重试、重新学习、取消；不做复杂自治恢复 | implementation complete（code review passed，targeted tests passed） |
 | [11.3.5.9 · TaskPathPlanner Multi-candidate Chat Integration](./11.3.5.9-taskpathplanner-multi-candidate-chat-integration/) | 多 learned actions、模糊目标、planning path 下接入 TaskPathPlanner 和 choice mode | implementation complete（code review passed，targeted tests passed） |
@@ -1640,9 +1640,9 @@ Customer-Facing Agent Router & Skill Runtime 的 working runtime 收口：让 `w
 第一条可验收窄闭环：
 
 ```text
-apps/product-test-site /items
+apps/fixture-site /records
 -> 学习新增项目
--> 参数化执行新增项目，填入执行阶段的新 item_name
+-> 参数化执行新增项目，填入执行阶段的新 record_name
 -> runtime stop 前采集页面证据
 -> TaskResultReporter 保守回复
 -> docs/testing/results 记录结果和日志复核
@@ -1660,7 +1660,7 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 
 ```text
 11.3.6 program
--> 11.3.6.1 runner core + /items closed loop
+-> 11.3.6.1 runner core + /records closed loop
 -> 11.3.6.2 failure recovery eval
 -> 11.3.6.3 pending choice multi-candidate eval
 -> 11.3.6.4 planner-backed choice eval
@@ -1686,7 +1686,7 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
 - 11.3.6.2 已实现稳定 eval-only hook 和 recovery gates；final closeout rerun live
   Conversation eval 已通过。
 - 11.3.6.3 runner case 已实现；final closeout rerun pending-choice eval 已通过。Caveat：
-  eval 使用 eval-only candidate binding，不证明 `/items` 有三个真实 distinct product actions。
+  eval 使用 eval-only candidate binding，不证明 `/records` 有三个真实 distinct product actions。
 - 11.3.6.4 runner case 已实现；final closeout rerun planner-backed choice 和
   single-path bypass regression 均已通过。Caveat：`planner_top_choice_observable` 仍为
   非 required `not_observable` warning。
@@ -1761,12 +1761,12 @@ exit code、redaction、Codex 审计边界和 11.3.6.x 子包路线。
   artifact 中。
 - 后续实现必须先建立 forbidden-token scan，再运行行为 case；如果发现功能代码或产品 prompt
   包含测试目标细节，11.3.7 必须 fail。
-- 当前已有 product-test-site runtime 特判必须改成 generic runtime 或移入 eval spec /
+- 当前已有 fixture-site runtime 特判必须改成 generic runtime 或移入 eval spec /
   test-only layer；不能 grandfather。未清理时 11.3.7 必须 blocked，不能 pass。
 
 Closeout evidence:
 
-- `pnpm run eval:wagent:user-behavior -- --timeout 300` 已在本地 API + product-test-site 服务可用时
+- `pnpm run eval:wagent:user-behavior -- --timeout 300` 已在本地 API + fixture-site 服务可用时
   跑完，exit `0`，top-level `status=pass`。
 - Latest stable artifacts:
   - `artifacts/wagent-user-behavior-eval/wagent-user-behavior-eval-latest.json`
@@ -1860,11 +1860,11 @@ Confirmed root causes：
 
 所有 11.3.8.x child packages 继承这些边界：
 
-- 不修改 `WebAgentFlow-Validation-Site` 源码。
+- 不修改 `External-Fixture-Provider` 源码。
 - 不修改 `WebAgentFlow-Fixture-Site` 源码。
-- 不恢复内嵌 `apps/product-test-site`。
-- 不恢复内嵌 `apps/validation-site`。
-- 不把 `5177/inventory` 写入 runtime default、prompt answer key、eval default、
+- 不恢复内嵌 `apps/fixture-site`。
+- 不恢复内嵌 `apps/fixture-site`。
+- 不把 `<fixture-port>/target-page` 写入 runtime default、prompt answer key、eval default、
   package dependency 或 active automated test hard dependency。
 - 不把 selector、`data-testid`、component、seed copy、field label、button text、
   placeholder、operation alias 或 page source 写入 product runtime / prompts。

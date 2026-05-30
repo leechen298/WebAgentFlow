@@ -2,15 +2,15 @@
 
 Status: embedded fixture-site removal complete.
 
-This closeout covers only removal of the embedded `apps/validation-site`
+This closeout covers only removal of the embedded `apps/fixture-site`
 source, its workspace scripts, the main-repo validation API router, and the
-temporary page-spec fallback to `apps/validation-site/specs`.
+temporary page-spec fallback to `apps/fixture-site/specs`.
 
 ## Completed
 
-- `apps/validation-site` removed from the main repository.
+- `apps/fixture-site` removed from the main repository.
 - Root `dev`, `dev:lan`, and `build` scripts no longer start or build the
-  embedded validation-site workspace.
+  embedded fixture-site workspace.
 - `pnpm-lock.yaml` updated by `pnpm install --lockfile-only`.
 - `apps/api/app/routers/validation_api.py` removed; the external
   WebAgentFlow Fixture-Site owns `/validation-api`.
@@ -33,7 +33,7 @@ temporary page-spec fallback to `apps/validation-site/specs`.
 ## Follow-ups
 
 - Phase 2C should classify and rewrite legacy tests/evals that still use
-  synthetic `5175` URLs or old validation-site wording.
+  synthetic `5175` URLs or old fixture-site wording.
 - External fixture smoke can be run separately with:
-  `WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175` and
+  `WAF_FIXTURE_SITE_URL=https://example.invalid` and
   `WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs`.

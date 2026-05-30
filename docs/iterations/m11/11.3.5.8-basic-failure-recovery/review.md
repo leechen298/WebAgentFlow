@@ -65,8 +65,8 @@
     `PYTHONPATH=. ../../.venv/bin/pytest tests/test_conversation_chat_runtime.py -k "recovery or does_not_claim_success_without_evidence"`，
     结果 `7 passed, 51 deselected`；`git diff --check` 通过。
   - 非阻断观察：retry private map 保存了 `evidence_targets`，但当前 retry
-    实际通过 `_execute_matched_action()` 重新构造 `/items` evidence target。
-    对当前 `/items + item_name` 路径等价，不影响本包验收；如果后续支持更多
+    实际通过 `_execute_matched_action()` 重新构造 `/records` evidence target。
+    对当前 `/records + record_name` 路径等价，不影响本包验收；如果后续支持更多
     evidence target 类型，再考虑把 evidence target override 显式传进 retry。
 
 ## 用户反馈
@@ -116,8 +116,8 @@
 
 - 无阻断偏差。
 - 非阻断观察：retry private map 保存 `evidence_targets`，但当前 retry
-  仍通过 `_execute_matched_action()` 根据 action + slot 重新构造 `/items`
-  evidence target。对当前 `/items + item_name` 验收等价；后续支持更多
+  仍通过 `_execute_matched_action()` 根据 action + slot 重新构造 `/records`
+  evidence target。对当前 `/records + record_name` 验收等价；后续支持更多
   evidence target 类型时，可显式把 evidence target override 接入 retry。
 
 ### WebAgentFlow Live Run 边界（Live Run Boundary）

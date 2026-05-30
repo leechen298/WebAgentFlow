@@ -11,7 +11,7 @@ with, but not byte-identical to, the learned path's `value_slot` names.
 
 The same evidence also shows a field-binding risk during learning: generic
 multi-field planning can fill a search box or shift values across create-form
-fields when slot names such as `item_name`, `item_category`, and `quantity` do
+fields when slot names such as `record_name`, `record_category`, and `quantity` do
 not exactly match the current `SemanticRole` vocabulary.
 
 ## Goal

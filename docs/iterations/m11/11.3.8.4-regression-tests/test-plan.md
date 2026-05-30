@@ -66,7 +66,7 @@ Expected: exit `0`, `All checks passed!`.
 ### T3 - Forbidden target constants scan
 
 ```bash
-rg -n "5177|/inventory|inventory item|WebAgentFlow-Validation-Site" apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py apps/api/app/services/conversation apps/api/app/services/learning apps/api/app/services/task_planning apps/api/app/prompts
+rg -n "<fixture-port>|/target-page|inventory item|External-Fixture-Provider" apps/api/tests/test_learning_run_service.py apps/api/tests/test_conversation_chat_runtime.py apps/api/tests/test_conversation_router_agent.py apps/api/app/services/conversation apps/api/app/services/learning apps/api/app/services/task_planning apps/api/app/prompts
 ```
 
 Expected: exit `1`, no output.

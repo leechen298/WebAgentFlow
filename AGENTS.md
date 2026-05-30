@@ -52,15 +52,11 @@ Current delivery status:
   11.2.3 shipped replay-level `observation_summary`; 11.2.4.x added realistic
   fixture planning / fixture shell / basic business fixture pages.
 - **M11.3 Interactive Chat Productization** is closed through 11.3.7:
-  `wagent chat` working runtime slices, 11.3.6 runtime eval program
-  `pass_with_caveats`, and 11.3.7 first-wave user-facing behavior eval `pass`.
-- M11 runtime final closeout is recorded at
-  `docs/testing/results/m11-runtime-final-closeout-20260524.md`.
+  `wagent chat` working runtime slices and target-agnostic behavior coverage.
 - M12 recovery / retry / abort / interruption has not started.
-- Full learn-then-execute, page-wide automatic capability discovery, external
-  black-box validation-site migration, L2 guided teaching, and Teaching Guide
-  Agent (legacy: Agent H) remain future work unless a milestone document says
-  otherwise.
+- Full learn-then-execute, page-wide automatic capability discovery, L2 guided
+  teaching, and Teaching Guide Agent (legacy: Agent H) remain future work unless
+  a milestone document says otherwise.
 
 Internal Agent naming:
 
@@ -260,11 +256,10 @@ each live autonomous run as auditable product evidence, not as a casual test.
   `/exploration/autonomous-runs[/stream]`, report it as product-initiated UI
   traffic, include the run status / `run_id` when visible, and do not reshape
   the product's outcome.
-- Run project-provided eval CLIs such as `pnpm run eval:wagent:*` or `wagent`
-  commands when the requested validation belongs to that surface. The CLI must
-  write `operator_actions`, raw product-client request records, redacted JSON /
-  Markdown artifacts, and a stable `latest` copy before the result is treated as
-  reviewable Agent-operated evidence.
+- Run project-provided target-agnostic checks such as `pnpm run eval:wagent`
+  or `wagent` commands when the requested validation belongs to that surface.
+  External fixture providers own scenario-specific runners and artifacts; this
+  repository should consume only their redacted result summaries.
 - Ask the user to run a flow in the workbench when neither the skill nor
   external UI operation is appropriate (e.g. missing services, credentials, or
   manual judgment).
@@ -289,7 +284,7 @@ outcome. A spec run is a "pass" only when the gate says `pass`.
 Clean pass:
 
 > "Ran the `verify-scenario` skill
-> (`wagent verify --spec-id login --scenario valid_credentials`).
+> (`wagent verify --spec-id <spec-id> --scenario <scenario-id>`).
 > pass_gate: `pass`. Supervisor verdict: `success` (confidence `high`,
 > source `llm`). Scorecard 5/5: element_recognition 1.0,
 > action_coverage 1.0, verdict_accuracy 1.0, distraction_avoidance 1.0,
@@ -298,7 +293,7 @@ Clean pass:
 
 Unverified (e.g. MiniMax overloaded, LLM fallback fired):
 
-> "Ran `wagent verify --spec-id users --scenario filter_by_status`.
+> "Ran `wagent verify --spec-id <spec-id> --scenario <scenario-id>`.
 > **pass_gate: `unverified`** (NOT a pass). pass_gate.reasons:
 > "supervisor ran in fallback mode (error_kind=provider_error) — LLM
 > did not independently verify this run". The rule side saw
@@ -307,11 +302,11 @@ Unverified (e.g. MiniMax overloaded, LLM fallback fired):
 
 Unverified (LLM low confidence):
 
-> "Ran `wagent verify --spec-id login --scenario invalid_credentials`.
+> "Ran `wagent verify --spec-id <spec-id> --scenario <scenario-id>`.
 > **pass_gate: `unverified`**. pass_gate.reasons: "supervisor
 > confidence=medium — scenario requires high-confidence LLM agreement".
-> Supervisor could not verify that `role=alert` surfaced because the
-> prompt didn't carry enough signal. …"
+> Supervisor could not verify the expected page evidence because the prompt
+> didn't carry enough signal. …"
 
 Hard fail (spec deviation):
 
@@ -364,7 +359,7 @@ pnpm run dev:worker             # Python file changes auto-reload via watchfiles
 # External Fixture-Site (outside this workspace)
 cd /Users/leechen/projects/WebAgentFlow-Fixture-Site
 pnpm dev
-export WAF_FIXTURE_SITE_URL=http://127.0.0.1:5175
+export WAF_FIXTURE_SITE_URL=https://example.invalid
 export WAF_PAGE_SPEC_ROOT=/path/to/WebAgentFlow-Fixture-Site/web/specs
 ```
 

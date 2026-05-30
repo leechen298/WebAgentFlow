@@ -13,7 +13,7 @@ gate failures，并补强 runner artifact redaction，使 11.3.6.3 和 11.3.6.4 
 11.3.6.5 closeout 已经完成两轮验证：
 
 - 第一轮因 API health 不可用返回 exit `2`，只说明环境 blocked。
-- 第二轮 API `/health` 和 product `/items` 均可访问，两个 required eval 进入 Conversation API 后
+- 第二轮 API `/health` 和 product `/records` 均可访问，两个 required eval 进入 Conversation API 后
   返回 exit `1`，说明存在真实功能 / redaction gate failure。
 
 失败点明确：

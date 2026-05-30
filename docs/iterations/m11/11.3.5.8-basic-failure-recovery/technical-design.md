@@ -8,7 +8,7 @@
 
 | 能力 | 当前状态 |
 |---|---|
-| `/items` P0 closed loop | 已有实跑 pass 证据 |
+| `/records` P0 closed loop | 已有实跑 pass 证据 |
 | parameterized replay | 已有 `value_slot` / `slot_overrides` |
 | execution evidence | 已有 `ExecutionEvidence` |
 | TaskResultReporter adapter | 已有 verified / needs_review / uncertain 路径 |
@@ -93,7 +93,7 @@ private map：
     "kind": "retry_replay",
     "learned_path_id": "internal",
     "target_url": "<runtime target URL>",
-    "slot_overrides": {"item_name": "测试项目B"},
+    "slot_overrides": {"record_name": "测试项目B"},
     "failure_reason": "evidence_missing",
     "retry_count": 0
   },
@@ -101,14 +101,14 @@ private map：
     "kind": "relearn_operation",
     "target_url": "<runtime target URL>",
     "action_alias": "新增项目",
-    "fill_values": {"item_name": "测试项目B"},
+    "fill_values": {"record_name": "测试项目B"},
     "failure_reason": "evidence_missing"
   },
   "C": {"kind": "cancel", "failure_reason": "evidence_missing"}
 }
 ```
 
-`<runtime target URL>` 必须来自当前 runtime / learned action 的目标 URL。`localhost:5176`
+`<runtime target URL>` 必须来自当前 runtime / learned action 的目标 URL。`localhost:<fixture-port>`
 只能作为本地示例端口，不能在实现中硬编码。
 
 ### 4. Choice selection integration
@@ -213,7 +213,7 @@ Recovery events 只允许记录 public diagnostics，例如 `failure_class`、`c
 
 ## 不触及
 
-- 不改 `apps/product-test-site`。
+- 不改 `apps/fixture-site`。
 - 不改 TaskPathPlanner。
 - 不改 TaskResultReporter outcome enum。
 - 不新增 DB migration。
