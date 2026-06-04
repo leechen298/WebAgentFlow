@@ -14,6 +14,8 @@
     "dev:api:lan": ".venv/bin/python -m uvicorn app.main:app --app-dir apps/api --reload --host 0.0.0.0 --port ${API_PORT:-8001}",
     "dev:worker": "cd apps/worker && ../../.venv/bin/python -m watchfiles --filter python '../../.venv/bin/python -m app.main' .",
     "dev:lan": "concurrently -k -n console,api,worker -c cyan,yellow,green \"pnpm run dev:console:lan\" \"pnpm run dev:api:lan\" \"pnpm run dev:worker\"",
+    "chat": ".venv/bin/wagent chat --api-base ${WBAF_API_BASE:-http://127.0.0.1:8001} --timeout ${WAGENT_TIMEOUT:-300}",
+    "chat:headless": ".venv/bin/wagent chat --api-base ${WBAF_API_BASE:-http://127.0.0.1:8001} --timeout ${WAGENT_TIMEOUT:-300} --headless",
     "test:target-agnostic-runtime": "cd apps/api && PYTHONPATH=. ../../.venv/bin/pytest tests/test_target_agnostic_runtime_cleanup.py -q",
     "eval:wagent": "pnpm run test:target-agnostic-runtime",
     "db:migrate:api": ".venv/bin/alembic -c apps/api/alembic.ini upgrade head",
