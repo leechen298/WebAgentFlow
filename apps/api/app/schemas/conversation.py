@@ -276,12 +276,20 @@ class ConversationDispatchRequest(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class ConversationActionOption(BaseModel):
+    id: str
+    label: str
+    description: str | None = None
+    intent: str | None = None
+
+
 class ConversationDispatchResponse(BaseModel):
     session_id: str
     previous_status: str
     next_status: str
     command_kind: str
     user_response: str
+    action_options: list[ConversationActionOption] = Field(default_factory=list)
     events_appended: list[str] = Field(default_factory=list)
     message_id: str | None = None
     allowed: bool
@@ -332,6 +340,28 @@ class ConversationReplayHistorySummary(BaseModel):
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
+class ConversationDebugTimelineRawRef(BaseModel):
+    tab: str
+    id: str | None = None
+
+
+class ConversationDebugTimelineItem(BaseModel):
+    id: str
+    kind: str
+    title: str
+    summary: str
+    status: Literal["info", "waiting", "running", "success", "warning", "error", "cancelled"]
+    created_at: datetime | None = None
+    source: Literal["message", "event", "trace", "derived"]
+    message_id: str | None = None
+    event_id: str | None = None
+    trace_id: str | None = None
+    related_event_ids: list[str] = Field(default_factory=list)
+    related_trace_ids: list[str] = Field(default_factory=list)
+    details: dict[str, Any] = Field(default_factory=dict)
+    raw_ref: ConversationDebugTimelineRawRef | None = None
+
+
 class ConversationHistoryResponse(BaseModel):
     session: ConversationSessionResponse
     messages: list[ConversationMessageResponse] = Field(default_factory=list)
@@ -341,4 +371,5 @@ class ConversationHistoryResponse(BaseModel):
     replay_summaries: list[ConversationReplayHistorySummary] = Field(default_factory=list)
     llm_traces: list[ConversationLlmTraceResponse] = Field(default_factory=list)
     entry_gate_traces: list[ConversationEntryGateTrace] = Field(default_factory=list)
+    debug_timeline: list[ConversationDebugTimelineItem] = Field(default_factory=list)
     raw: dict[str, Any] = Field(default_factory=dict)

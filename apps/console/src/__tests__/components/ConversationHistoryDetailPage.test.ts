@@ -27,7 +27,7 @@ const stubs = {
   'a-descriptions': { template: '<div><slot /></div>' },
   'a-descriptions-item': { template: '<div><slot /></div>' },
   'a-tabs': { props: ['activeKey'], template: '<div><slot /></div>' },
-  'a-tab-pane': { props: ['tab', 'key'], template: '<div><slot /></div>' },
+  'a-tab-pane': { props: ['tab'], template: '<div><span>{{ tab }}</span><slot /></div>' },
   'a-timeline': { template: '<div><slot /></div>' },
   'a-timeline-item': { template: '<div><slot /></div>' },
   'a-empty': { template: '<div class="empty" />' },
@@ -39,7 +39,41 @@ const stubs = {
 const i18n = createI18n({
   locale: 'zh',
   fallbackLocale: 'en',
-  messages: { en: {}, zh: {} },
+  messages: {
+    en: { conversationHistory: { tabTranscript: 'Transcript', tabEvents: 'Events', tabRawJson: 'Raw JSON' } },
+    zh: {
+      common: { id: 'ID', createdAt: '创建时间', updatedAt: '更新时间' },
+      error: { notFound: 'not found' },
+      conversationHistory: {
+        detailPageTitle: '会话详情',
+        sessionInfo: '会话信息',
+        colStatus: '状态',
+        colMode: '模式',
+        messageCount: '消息数',
+        eventCount: '事件数',
+        tabDebugTimeline: '运行轨迹',
+        tabTranscript: '对话记录',
+        tabEvents: '事件',
+        tabLearnedActions: 'Learned Actions',
+        tabEvidence: 'Replay / Learning Evidence',
+        tabRawJson: 'Raw JSON',
+        copyRawJson: '复制 Raw JSON',
+        copiedRawJson: 'Raw JSON 已复制到剪贴板',
+        loadFailed: '加载会话历史失败',
+        timelineDetails: '脱敏详情',
+        timelineEmpty: '还没有可解释的运行轨迹。请查看事件或 Raw JSON。',
+        timelineStatus: {
+          info: '信息',
+          waiting: '等待',
+          running: '运行中',
+          success: '完成',
+          warning: '需复核',
+          error: '错误',
+          cancelled: '已取消',
+        },
+      },
+    },
+  },
   legacy: false,
 });
 
@@ -63,6 +97,23 @@ describe('ConversationHistoryDetailPage', () => {
       learning_runs: [],
       replay_summaries: [],
       llm_traces: [],
+      debug_timeline: [
+        {
+          id: 'timeline-1',
+          kind: 'user_message',
+          title: '用户输入需求',
+          summary: 'hello',
+          status: 'info',
+          created_at: '2026-05-17T10:01:00Z',
+          source: 'message',
+          message_id: 'm1',
+          event_id: null,
+          trace_id: null,
+          related_event_ids: [],
+          related_trace_ids: [],
+          details: { role: 'user', content: 'hello' },
+        },
+      ],
       raw: { session: {}, messages: [], events: [] },
     });
 
@@ -73,6 +124,14 @@ describe('ConversationHistoryDetailPage', () => {
     await flushPromises();
     expect(getConversationHistory).toHaveBeenCalledWith('s1');
     expect(wrapper.text()).toContain('s1');
+    expect(wrapper.vm.activeTab).toBe('timeline');
+    expect(wrapper.text()).toContain('运行轨迹');
+    expect(wrapper.text()).toContain('用户输入需求');
+    expect(wrapper.text()).toContain('hello');
+    expect(wrapper.text()).toContain('信息');
+    expect(wrapper.text()).toContain('对话记录');
+    expect(wrapper.text()).toContain('事件');
+    expect(wrapper.text()).toContain('Raw JSON');
   });
 
   it('renders response provenance labels and llm trace summary', async () => {
@@ -190,6 +249,23 @@ describe('ConversationHistoryDetailPage', () => {
           redaction: { applied: true },
           source_event_id: 'event-1',
           created_at: '2026-05-17T10:02:00Z',
+        },
+      ],
+      debug_timeline: [
+        {
+          id: 'timeline-trace',
+          kind: 'llm_trace',
+          title: 'LLM 调用完成',
+          summary: 'fake-provider / fake-model / req-1',
+          status: 'info',
+          created_at: '2026-05-17T10:02:00Z',
+          source: 'trace',
+          message_id: null,
+          event_id: 'event-1',
+          trace_id: 'trace-1',
+          related_event_ids: [],
+          related_trace_ids: [],
+          details: { provider: 'fake-provider', model: 'fake-model', request_id: 'req-1' },
         },
       ],
       raw: { session: {}, messages: [], events: [], llm_traces: [] },

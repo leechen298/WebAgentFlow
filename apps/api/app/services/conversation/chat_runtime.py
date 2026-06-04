@@ -69,7 +69,10 @@ ChatIntentKind = Literal["learn_page", "execute_task", "unknown"]
 _URL_RE = re.compile(r"https?://[^\s，。]+")
 _LEARN_KEYWORDS = ("学习", "学一下", "learn", "teach")
 _NO_PATH_RESPONSE = "还没学过这个页面或操作。请提供页面地址和要做的操作，或先学习这个操作。"
-_UNLEARNED_TARGET_RESPONSE = "还没学过这个页面。你可以先学习这个页面上的操作、查看页面，或取消。"
+_UNLEARNED_TARGET_RESPONSE = (
+    "我已收到这个页面地址。我可以开始学习这个页面上的操作，学会后再帮你执行。\n"
+    "要现在开始吗？"
+)
 _AMBIGUOUS_TARGET_RESPONSE = "这个操作在多个站点学过，请带上要操作的页面地址。"
 _VALUE_PATTERN = r"([^\s，。,.；;!！?？]+)"
 _PENDING_SENSITIVE_VALUES: dict[str, dict[str, str]] = {}
@@ -620,7 +623,18 @@ class InteractiveChatRuntime:
         pending = self._pending_choice(session_id)
         if pending is None:
             return None
+        choice_id = _parse_choice_reply(raw_input, pending)
         if _is_cancel_text(raw_input):
+            if choice_id:
+                return self._handle_pending_choice_selection(
+                    session_id=session_id,
+                    raw_input=raw_input,
+                    choice_id=choice_id,
+                    message_id=message_id,
+                    metadata=metadata,
+                    previous_status=previous_status,
+                    headless=headless,
+                )
             return self._handle_runtime_cancel(
                 session_id=session_id,
                 raw_input=raw_input,
@@ -628,7 +642,6 @@ class InteractiveChatRuntime:
                 metadata=metadata,
                 previous_status=previous_status,
             )
-        choice_id = _parse_choice_reply(raw_input, pending)
         if choice_id:
             return self._handle_pending_choice_selection(
                 session_id=session_id,
@@ -680,6 +693,39 @@ class InteractiveChatRuntime:
                 message_id=message_id,
                 previous_status=previous_status,
             )
+        selected_kind = selected.get("kind")
+        if selected_kind == "start_learning_page":
+            return self._handle_start_learning_page_selection(
+                session_id=session_id,
+                raw_input=raw_input,
+                choice_id=choice_id,
+                selected=selected,
+                events=events,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+                headless=headless,
+            )
+        if selected_kind == "cancel_runtime_context":
+            self._append_event(
+                session_id,
+                ConversationEventType.CHAT_PROGRESS_RECORDED,
+                {
+                    "progress_kind": "unknown_target_choice_selected",
+                    "selected_choice_id": choice_id,
+                    "choice_kind": "cancel",
+                    "target_url": selected.get("target_url"),
+                },
+                events,
+            )
+            return self._handle_runtime_cancel(
+                session_id=session_id,
+                raw_input=raw_input,
+                message_id=message_id,
+                metadata=metadata,
+                previous_status=previous_status,
+                existing_events=events,
+            )
         if selected.get("kind") == "cancel":
             self._append_event(
                 session_id,
@@ -729,7 +775,6 @@ class InteractiveChatRuntime:
                 previous_status=previous_status,
                 headless=headless,
             )
-        selected_kind = selected.get("kind")
         if selected_kind == "planner_route_choice":
             planner_summary = selected.get("planner_summary")
             self._append_event(
@@ -780,6 +825,63 @@ class InteractiveChatRuntime:
             previous_status=previous_status,
             headless=headless,
             command_kind="execute_task",
+        )
+
+    def _handle_start_learning_page_selection(
+        self,
+        *,
+        session_id: str,
+        raw_input: str,
+        choice_id: str,
+        selected: dict[str, Any],
+        events: list[str],
+        message_id: str | None,
+        metadata: dict[str, Any] | None,
+        previous_status: str,
+        headless: bool,
+    ) -> DispatchResult:
+        target_url = str(selected.get("target_url") or "").strip()
+        if not target_url:
+            return self._handle_choice_unavailable(
+                session_id=session_id,
+                reason="start_learning_page_target_missing",
+                events=events,
+                message_id=message_id,
+                previous_status=previous_status,
+            )
+        self._append_event(
+            session_id,
+            ConversationEventType.CHAT_PROGRESS_RECORDED,
+            {
+                "progress_kind": "unknown_target_choice_selected",
+                "selected_choice_id": choice_id,
+                "choice_kind": "start_learning_page",
+                "target_url": target_url,
+            },
+            events,
+        )
+        intake = ConversationIntakeResult(
+            intent="learn_operation",
+            target=ConversationIntakeTarget(url=target_url),
+            action=ConversationIntakeAction(
+                goal="学习这个页面上的操作",
+                canonical_goal="学习这个页面上的操作",
+            ),
+            confidence=1.0,
+        )
+        return self._handle_learn_page(
+            session_id=session_id,
+            intent=ChatIntent(
+                kind="learn_page",
+                raw_text=raw_input,
+                url=target_url,
+            ),
+            intake=intake,
+            message_id=message_id,
+            metadata=metadata,
+            previous_status=previous_status,
+            headless=headless,
+            existing_events=events,
         )
 
     def _handle_recovery_relearn_selection(
@@ -1299,7 +1401,24 @@ class InteractiveChatRuntime:
                 "你想执行哪个操作，或学习新的操作？"
             )
         else:
+            pending_choice, private_map = _build_unknown_target_learning_choice(target.url)
+            self._save_pending_choice(
+                session_id,
+                pending_choice=pending_choice,
+                private_map=private_map,
+            )
             response = _UNLEARNED_TARGET_RESPONSE
+            self._append_event(
+                session_id,
+                ConversationEventType.CHAT_PROGRESS_RECORDED,
+                {
+                    "progress_kind": "unknown_target_choice_created",
+                    "choice_group_id": pending_choice["choice_group_id"],
+                    "choices": pending_choice["choices"],
+                    "target_url": target.url,
+                },
+                events,
+            )
         self._append_agent_message(
             session_id,
             response,
@@ -1685,13 +1804,16 @@ class InteractiveChatRuntime:
         previous_status: str,
         headless: bool = True,
         route_decision: RouteDecision | None = None,
+        existing_events: list[str] | None = None,
     ) -> DispatchResult:
-        events = self._append_chat_command_event(
-            session_id=session_id,
-            raw_input=intent.raw_text,
-            command_kind="learn_page",
-            metadata=metadata,
-            intake=intake,
+        events = (existing_events or []) + (
+            self._append_chat_command_event(
+                session_id=session_id,
+                raw_input=intent.raw_text,
+                command_kind="learn_page",
+                metadata=metadata,
+                intake=intake,
+            )
         )
         self._set_active_task(
             session_id,
@@ -2773,6 +2895,23 @@ class InteractiveChatRuntime:
         )
         if target_url:
             self._save_pending_target(session_id, make_pending_target(target_url))
+            pending_choice, private_map = _build_unknown_target_learning_choice(target_url)
+            self._save_pending_choice(
+                session_id,
+                pending_choice=pending_choice,
+                private_map=private_map,
+            )
+            self._append_event(
+                session_id,
+                ConversationEventType.CHAT_PROGRESS_RECORDED,
+                {
+                    "progress_kind": "unknown_target_choice_created",
+                    "choice_group_id": pending_choice["choice_group_id"],
+                    "choices": pending_choice["choices"],
+                    "target_url": target_url,
+                },
+                events,
+            )
         self._append_agent_message(session_id, _UNLEARNED_TARGET_RESPONSE)
         self._append_event(
             session_id,
@@ -4032,6 +4171,46 @@ def _build_planner_pending_choice(
     return pending_choice, private_map
 
 
+def _build_unknown_target_learning_choice(
+    target_url: str,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    choices = [
+        {
+            "choice_id": "start_learning_page",
+            "label": "开始学习",
+            "description": "学习这个页面上的操作，学会后再帮你执行。",
+            "intent": "learn_operation",
+            "aliases": ["开始", "现在开始", "学习", "开始学习页面", "是", "好的"],
+        },
+        {
+            "choice_id": "cancel",
+            "label": "取消",
+            "intent": "cancel",
+            "aliases": ["不用了", "先取消"],
+        },
+    ]
+    pending_choice = {
+        "type": "pending_choice",
+        "render_as": "action_options",
+        "choice_group_id": f"choice-group-{uuid.uuid4()}",
+        "question": "要现在开始吗？",
+        "choices": choices,
+        "turns_remaining": 2,
+        "created_at": _utc_now_iso(),
+    }
+    private_map = {
+        "start_learning_page": {
+            "kind": "start_learning_page",
+            "target_url": target_url,
+        },
+        "cancel": {
+            "kind": "cancel_runtime_context",
+            "target_url": target_url,
+        },
+    }
+    return pending_choice, private_map
+
+
 def _planner_summary(
     planner_output: AgentDPlannerOutput,
     *,
@@ -4280,6 +4459,11 @@ def _parse_choice_reply(raw_input: str, pending_choice: dict[str, Any]) -> str |
         label = str(choice.get("label") or "")
         if normalized_text and normalized_text == _normalize_choice_text(label):
             return str(choice["choice_id"])
+        aliases = choice.get("aliases")
+        if isinstance(aliases, list):
+            for alias in aliases:
+                if normalized_text and normalized_text == _normalize_choice_text(str(alias)):
+                    return str(choice["choice_id"])
     return None
 
 

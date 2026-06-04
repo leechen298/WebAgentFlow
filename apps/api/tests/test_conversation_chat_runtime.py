@@ -1642,14 +1642,30 @@ def test_interactive_chat_bare_url_saves_pending_target_without_browser_action(
     assert learning_called is False
     assert replay_called is False
     assert result.command_kind == "ask_user"
-    assert "还没学过这个页面" in result.user_response
-    assert "学习" in result.user_response
-    assert "查看" in result.user_response
-    assert "取消" in result.user_response
+    assert "我已收到这个页面地址" in result.user_response
+    assert "我可以开始学习这个页面上的操作" in result.user_response
+    assert "学会后再帮你执行" in result.user_response
+    assert "[开始学习] [取消]" not in result.user_response
+    assert "WebAgentFlow" not in result.user_response
+    assert "查看页面" not in result.user_response
+    assert "还没学过" not in result.user_response
+    assert "A." not in result.user_response
+    assert "B." not in result.user_response
 
     session = repo.get_session(session_id)
     assert session is not None
     assert session.metadata_json["pending_target"]["url"] == GENERIC_WORKFLOW_URL
+    pending_choice = session.metadata_json["pending_choice"]
+    assert pending_choice["question"] == "要现在开始吗？"
+    assert pending_choice["choices"][0]["choice_id"] == "start_learning_page"
+    assert pending_choice["choices"][0]["label"] == "开始学习"
+    assert pending_choice["choices"][1]["choice_id"] == "cancel"
+    assert pending_choice["choices"][1]["label"] == "取消"
+    assert "learned_path_id" not in json.dumps(pending_choice, ensure_ascii=False)
+    private_map = session.metadata_json["pending_choice_private_map"]
+    assert private_map["start_learning_page"]["kind"] == "start_learning_page"
+    assert private_map["start_learning_page"]["target_url"] == GENERIC_WORKFLOW_URL
+    assert private_map["cancel"]["kind"] == "cancel_runtime_context"
     assert "pending_intake" not in session.metadata_json
 
     events = repo.list_events(session_id)
@@ -1660,6 +1676,97 @@ def test_interactive_chat_bare_url_saves_pending_target_without_browser_action(
     )
     assert not any(e.type == "chat_learning_started" for e in events)
     assert not any(e.type == "chat_execution_started" for e in events)
+
+
+def test_interactive_chat_unknown_url_start_learning_choice_starts_learning(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        calls.append((url, raw_input, kwargs))
+        learned_path_id = _ingest_workspace_path(
+            db_session,
+            source_run_id="run-unknown-url-start-learning",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-unknown-url-start-learning",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/workflow",
+            scenario="page_learning",
+            action_label="学习页面操作",
+            suggested_utterances=["帮我处理这个页面"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    orch.dispatch_user_input(
+        session_id,
+        GENERIC_WORKFLOW_URL,
+        metadata={"client": "wagent_chat"},
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "开始学习",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.command_kind == "learn_page"
+    assert "开始学习页面操作" in result.user_response
+    assert "学习完成" in result.user_response
+    assert len(calls) == 1
+    assert calls[0][0] == GENERIC_WORKFLOW_URL
+    assert calls[0][1] == "开始学习"
+    assert "headless" in calls[0][2]
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert "pending_choice" not in session.metadata_json
+    assert "pending_choice_private_map" not in session.metadata_json
+
+    events = repo.list_events(session_id)
+    assert any(
+        e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "unknown_target_choice_selected"
+        and e.payload_json.get("selected_choice_id") == "start_learning_page"
+        for e in events
+    )
+    assert any(e.type == "chat_learning_started" for e in events)
+
+
+def test_interactive_chat_unknown_url_cancel_choice_clears_pending_target(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    orch = ConversationOrchestrator(repo)
+
+    orch.dispatch_user_input(
+        session_id,
+        GENERIC_WORKFLOW_URL,
+        metadata={"client": "wagent_chat"},
+    )
+    result = orch.dispatch_user_input(
+        session_id,
+        "取消",
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.command_kind == "cancel"
+    assert result.user_response == "已取消当前任务。"
+    session = repo.get_session(session_id)
+    assert session is not None
+    for key in ("pending_target", "pending_choice", "pending_choice_private_map", "active_task"):
+        assert key not in session.metadata_json
+
+    events = repo.list_events(session_id)
+    assert any(
+        e.type == "chat_progress_recorded"
+        and e.payload_json.get("progress_kind") == "unknown_target_choice_selected"
+        and e.payload_json.get("selected_choice_id") == "cancel"
+        for e in events
+    )
 
 
 def test_interactive_chat_bare_url_with_learned_actions_does_not_plan(
@@ -1792,19 +1899,17 @@ def test_interactive_chat_unknown_url_choose_learn_starts_learning_flow(
     )
     result = orch.dispatch_user_input(
         session_id,
-        "学习创建记录，名称叫 Alpha",
+        "开始学习",
         metadata={"client": "wagent_chat"},
     )
 
-    assert "还没学过这个页面" in first.user_response
+    assert "我已收到这个页面地址" in first.user_response
+    assert "[开始学习] [取消]" not in first.user_response
     assert result.allowed is True
     assert result.command_kind == "learn_page"
     assert len(calls) == 1
-    assert calls[0] == (
-        GENERIC_RECORDS_URL,
-        "学习创建记录，名称叫 Alpha",
-        {"headless": False, "fill_values": {"entity_name": "Alpha"}},
-    )
+    assert calls[0][0] == GENERIC_RECORDS_URL
+    assert calls[0][1] == "开始学习"
     events = repo.list_events(session_id)
     assert any(e.type == "chat_learning_started" for e in events)
     assert any(
@@ -2148,11 +2253,31 @@ def test_interactive_chat_execute_intent_with_slot_overrides_router_inspect_rout
     )
 
 
-def test_interactive_chat_short_learn_uses_pending_target_and_asks_slots(
+def test_interactive_chat_short_learn_uses_pending_target_and_starts_learning(
+    db_session: Session,
     repo: ConversationRepository,
 ) -> None:
     session_id = _create_interactive_chat_session(repo)
-    orch = ConversationOrchestrator(repo)
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        calls.append((url, raw_input, kwargs))
+        learned_path_id = _ingest_login_path(
+            db_session,
+            source_run_id="run-short-learn-pending-target",
+        )
+        return LearningRunResult(
+            status="learned",
+            run_id="run-short-learn-pending-target",
+            learned_path_id=learned_path_id,
+            target_url=url,
+            page_template="/login",
+            scenario="page_learning",
+            action_label="学习页面操作",
+            suggested_utterances=["帮我处理这个页面"],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
 
     orch.dispatch_user_input(
         session_id,
@@ -2166,13 +2291,14 @@ def test_interactive_chat_short_learn_uses_pending_target_and_asks_slots(
     )
 
     assert result.command_kind == "learn_page"
-    assert "用户名" in result.user_response
-    assert "密码" in result.user_response
+    assert "学习完成" in result.user_response
+    assert len(calls) == 1
+    assert calls[0][0] == GENERIC_PENDING_LOGIN_URL
+    assert calls[0][1] == "学习"
     session = repo.get_session(session_id)
     assert session is not None
-    pending = session.metadata_json["pending_intake"]
-    assert pending["target"]["url"] == GENERIC_PENDING_LOGIN_URL
-    assert pending["missing_fields"] == ["username", "password"]
+    assert "pending_choice" not in session.metadata_json
+    assert "pending_choice_private_map" not in session.metadata_json
 
 
 def test_interactive_chat_merges_pending_intake_and_starts_learning(
@@ -3922,10 +4048,14 @@ def test_interactive_chat_rejects_unlearned_target_url(
         metadata={"client": "wagent_chat"},
     )
 
-    assert "还没学过这个页面" in result.user_response
+    assert "我已收到这个页面地址" in result.user_response
+    assert "我可以开始学习这个页面上的操作" in result.user_response
+    assert "[开始学习] [取消]" not in result.user_response
     assert "学习" in result.user_response
-    assert "查看" in result.user_response
-    assert "取消" in result.user_response
+    assert "查看" not in result.user_response
+    pending_choice = repo.get_session(session_id).metadata_json["pending_choice"]
+    assert pending_choice["choices"][1]["choice_id"] == "cancel"
+    assert pending_choice["choices"][1]["label"] == "取消"
     assert replay_called is False
 
 
@@ -5883,10 +6013,14 @@ def test_interactive_chat_execute_unknown_page_guidance_does_not_replay(
     )
 
     assert replay_called is False
-    assert "还没学过这个页面" in result.user_response
+    assert "我已收到这个页面地址" in result.user_response
+    assert "我可以开始学习这个页面上的操作" in result.user_response
+    assert "[开始学习] [取消]" not in result.user_response
     assert "学习" in result.user_response
-    assert "查看" in result.user_response
-    assert "取消" in result.user_response
+    assert "查看" not in result.user_response
+    pending_choice = repo.get_session(session_id).metadata_json["pending_choice"]
+    assert pending_choice["choices"][1]["choice_id"] == "cancel"
+    assert pending_choice["choices"][1]["label"] == "取消"
     events = repo.list_events(session_id)
     assert not any(e.type == "chat_execution_started" for e in events)
 

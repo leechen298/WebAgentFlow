@@ -81,6 +81,24 @@ describe('Conversation API', () => {
       learning_runs: [],
       replay_summaries: [],
       llm_traces: [],
+      debug_timeline: [
+        {
+          id: 'timeline-1',
+          kind: 'user_message',
+          title: '用户输入需求',
+          summary: 'hello',
+          status: 'info',
+          created_at: '2026-05-17T10:00:00Z',
+          source: 'message',
+          message_id: 'm1',
+          event_id: null,
+          trace_id: null,
+          related_event_ids: [],
+          related_trace_ids: [],
+          details: {},
+          raw_ref: { tab: 'transcript', id: 'm1' },
+        },
+      ],
       raw: {},
     };
     get.mockResolvedValueOnce(payload);

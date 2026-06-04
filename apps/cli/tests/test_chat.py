@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import time
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
-import time
 from unittest.mock import MagicMock, patch
 
 from wagent import chat as chat_module
@@ -24,7 +24,14 @@ def _mock_client() -> MagicMock:
     client.__exit__ = MagicMock(return_value=False)
     client.post.side_effect = [
         _mock_response({"id": "sess-1", "status": "idle"}),
-        _mock_response({"user_response": "开始学习页面操作。\n学习完成：我学会了登录页的登录操作。之后你可以说“帮我登录”。"}),
+        _mock_response(
+            {
+                "user_response": (
+                    "开始学习页面操作。\n"
+                    "学习完成：我学会了登录页的登录操作。之后你可以说“帮我登录”。"
+                )
+            }
+        ),
         _mock_response({"user_response": "执行中。\n登录完成。"}),
     ]
     return client
@@ -101,6 +108,91 @@ def test_chat_explains_unknown_task_before_no_path_fallback() -> None:
     assert "WAgent > 还没学过这个操作，需要先学习。" in output
 
 
+def test_chat_renders_dispatch_action_options_as_interactive_choice() -> None:
+    client = _mock_client()
+    client.post.side_effect = [
+        _mock_response({"id": "sess-1", "status": "idle"}),
+        _mock_response(
+            {
+                "user_response": (
+                    "我已收到这个页面地址。我可以开始学习这个页面上的操作，学会后再帮你执行。\n"
+                    "要现在开始吗？"
+                ),
+                "action_options": [
+                    {
+                        "id": "start_learning_page",
+                        "label": "开始学习",
+                        "description": "学习这个页面上的操作，学会后再帮你执行。",
+                        "intent": "learn_operation",
+                    },
+                    {
+                        "id": "cancel",
+                        "label": "取消",
+                        "description": None,
+                        "intent": "cancel",
+                    },
+                ],
+            }
+        ),
+        _mock_response({"user_response": "开始学习页面操作。"}),
+    ]
+    with patch.object(chat_module.httpx, "Client", return_value=client), patch(
+        "builtins.input",
+        side_effect=["http://127.0.0.1:5177/users", "exit"],
+    ) as input_mock, patch.object(
+        chat_module,
+        "_select_action_option",
+        return_value={"id": "start_learning_page", "label": "开始学习"},
+    ) as select_mock:
+        stdout = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(StringIO()):
+            rc = wagent_main.main(["chat"])
+
+    assert rc == 0
+    output = stdout.getvalue()
+    assert (
+        "WAgent > 我已收到这个页面地址。我可以开始学习这个页面上的操作，学会后再帮你执行。"
+        in output
+    )
+    assert "WAgent > 要现在开始吗？" in output
+    assert "WAgent > [开始学习] [取消]" not in output
+    assert "WAgent ? 要现在开始吗？ [1] 开始学习 / [2] 取消 > " not in output
+    assert "WAgent > 开始学习页面操作。" in output
+    assert input_mock.call_args_list[1].args[0] == "You > "
+    assert select_mock.call_args.args[1] == "要现在开始吗？"
+
+    dispatch_calls = [call for call in client.post.call_args_list if "/dispatch" in call.args[0]]
+    assert dispatch_calls[0].kwargs["json"]["input"] == "http://127.0.0.1:5177/users"
+    assert dispatch_calls[1].kwargs["json"]["input"] == "开始学习"
+
+
+def test_chat_action_option_selector_moves_with_arrow_keys_and_enter() -> None:
+    keys = iter(["down", "enter"])
+    output = StringIO()
+
+    selected = chat_module._select_action_option(
+        [
+            {
+                "id": "start_learning_page",
+                "label": "开始学习",
+                "description": "学习这个页面上的操作，学会后再帮你执行。",
+            },
+            {"id": "cancel", "label": "取消", "description": ""},
+        ],
+        "要现在开始吗？",
+        output_stream=output,
+        read_key=lambda: next(keys),
+    )
+
+    rendered = output.getvalue()
+    assert selected == {"id": "cancel", "label": "取消", "description": ""}
+    assert "> 开始学习" in rendered
+    assert "> 取消" in rendered
+    assert "WAgent ? 要现在开始吗？ 取消" in rendered
+    assert "[1]" not in rendered
+    assert "[2]" not in rendered
+
+
 def test_chat_tty_waiting_indicator_is_transient() -> None:
     class TtyBuffer(StringIO):
         def isatty(self) -> bool:
@@ -138,7 +230,9 @@ def test_chat_virtual_target_progress_labels() -> None:
     client = _mock_client()
     client.post.side_effect = [
         _mock_response({"id": "sess-1", "status": "idle"}),
-        _mock_response({"user_response": "学习完成：我学会了进入工作台操作。之后你可以说“帮我进入工作台”。"}),
+        _mock_response(
+            {"user_response": "学习完成：我学会了进入工作台操作。之后你可以说“帮我进入工作台”。"}
+        ),
         _mock_response({"user_response": "进入工作台完成。"}),
     ]
     with patch.object(chat_module.httpx, "Client", return_value=client), patch(
@@ -274,7 +368,7 @@ def test_chat_prints_session_id_after_create() -> None:
 
     assert rc == 0
     output = stdout.getvalue()
-    assert "WAgent > 本次会话 ID：sess-1。需要调试时可以在管理后台查看。" in output
+    assert "WAgent > 本次会话 ID：sess-1。调试详情：/conversation/history/sess-1" in output
 
 
 def test_chat_resume_valid_session() -> None:

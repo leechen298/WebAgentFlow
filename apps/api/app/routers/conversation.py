@@ -222,13 +222,45 @@ def get_history(
 # ── Dispatch (11.0.6) ────────────────────────────────────────────────────────
 
 
-def _dispatch_response(result) -> ConversationDispatchResponse:
+def _dispatch_action_options(session: ConversationSessionOrm | None) -> list[dict[str, Any]]:
+    if session is None:
+        return []
+    metadata = session_public_payload(session.metadata_json)
+    pending_choice = metadata.get("pending_choice") if isinstance(metadata, dict) else None
+    if not isinstance(pending_choice, dict):
+        return []
+    if pending_choice.get("render_as") != "action_options":
+        return []
+    options: list[dict[str, Any]] = []
+    for choice in pending_choice.get("choices") or []:
+        if not isinstance(choice, dict):
+            continue
+        choice_id = str(choice.get("choice_id") or "").strip()
+        label = str(choice.get("label") or "").strip()
+        if not choice_id or not label:
+            continue
+        options.append(
+            {
+                "id": choice_id,
+                "label": label,
+                "description": choice.get("description"),
+                "intent": choice.get("intent"),
+            }
+        )
+    return options
+
+
+def _dispatch_response(
+    result,
+    session: ConversationSessionOrm | None = None,
+) -> ConversationDispatchResponse:
     return ConversationDispatchResponse(
         session_id=result.session_id,
         previous_status=result.previous_status,
         next_status=result.next_status,
         command_kind=result.command_kind,
         user_response=result.user_response,
+        action_options=_dispatch_action_options(session),
         events_appended=result.events_appended,
         message_id=result.message_id,
         allowed=result.allowed,
@@ -325,4 +357,4 @@ def dispatch_input(
         body.input,
         metadata=body.metadata,
     )
-    return ApiResponse(data=_dispatch_response(result))
+    return ApiResponse(data=_dispatch_response(result, repo.get_session(session_id)))

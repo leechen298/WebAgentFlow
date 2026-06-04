@@ -5,8 +5,9 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import termios
 import threading
-import time
+import tty
 from typing import Any
 
 import httpx
@@ -79,7 +80,9 @@ def run(args: argparse.Namespace) -> int:
                 if session is None:
                     return 2
                 session_id = session["id"]
-                _print_agent(f"本次会话 ID：{session_id}。需要调试时可以在管理后台查看。")
+                _print_agent(
+                    f"本次会话 ID：{session_id}。调试详情：/conversation/history/{session_id}"
+                )
             _print_agent(_WELCOME)
             while True:
                 try:
@@ -97,6 +100,32 @@ def run(args: argparse.Namespace) -> int:
                         client,
                         session_id,
                         user_input,
+                        headless=headless,
+                        progress_message=progress_message,
+                    )
+                except KeyboardInterrupt:
+                    print()
+                    return 0
+                if response is None:
+                    return 2
+                visible_response = _dedupe_response(
+                    str(response.get("user_response") or ""),
+                    progress_message=progress_message,
+                )
+                if visible_response:
+                    _print_agent(visible_response)
+                selected_option = _prompt_action_option(
+                    response.get("action_options"),
+                    visible_response,
+                )
+                if selected_option is None:
+                    continue
+                progress_message = _progress_message(selected_option, headless=headless)
+                try:
+                    response = _dispatch_with_working_indicator(
+                        client,
+                        session_id,
+                        selected_option,
                         headless=headless,
                         progress_message=progress_message,
                     )
@@ -277,6 +306,181 @@ def _dedupe_response(message: str, *, progress_message: str) -> str:
     if "执行" in progress_message and progress_message.startswith("我会"):
         lines = [line for line in lines if line.strip() != "执行中。"]
     return "\n".join(lines)
+
+
+def _prompt_action_option(options: Any, visible_response: str) -> str | None:
+    if not isinstance(options, list) or not options:
+        return None
+    normalized_options: list[dict[str, str]] = []
+    for option in options:
+        if not isinstance(option, dict):
+            continue
+        label = str(option.get("label") or "").strip()
+        option_id = str(option.get("id") or "").strip()
+        if not label or not option_id:
+            continue
+        description = str(option.get("description") or "").strip()
+        normalized_options.append(
+            {
+                "id": option_id,
+                "label": label,
+                "description": description,
+            }
+        )
+    if not normalized_options:
+        return None
+
+    question = _last_non_empty_line(visible_response) or "请选择下一步"
+    selected = _select_action_option(normalized_options, question)
+    if selected is None:
+        return None
+    return selected["label"]
+
+
+def _select_action_option(
+    options: list[dict[str, str]],
+    question: str,
+    *,
+    input_stream: Any | None = None,
+    output_stream: Any | None = None,
+    read_key: Any | None = None,
+) -> dict[str, str] | None:
+    input_stream = input_stream or sys.stdin
+    output_stream = output_stream or sys.stdout
+    if read_key is None and not _can_use_interactive_select(input_stream, output_stream):
+        _print_agent("请在交互式终端中用上下键选择下一步。")
+        return None
+
+    index = 0
+    rendered_lines = 0
+    old_settings = None
+    input_fd = None
+    if read_key is None:
+        input_fd = input_stream.fileno()
+        old_settings = termios.tcgetattr(input_fd)
+        tty.setcbreak(input_fd)
+
+    try:
+        while True:
+            rendered_lines = _render_action_option_select(
+                options,
+                question,
+                selected_index=index,
+                output_stream=output_stream,
+                previous_line_count=rendered_lines,
+            )
+            key = read_key() if read_key is not None else _read_select_key(input_stream)
+            key = _normalize_select_key(key)
+            if key == "up":
+                index = (index - 1) % len(options)
+            elif key == "down":
+                index = (index + 1) % len(options)
+            elif key == "enter":
+                _render_selected_action_option(
+                    question,
+                    options[index],
+                    output_stream=output_stream,
+                    previous_line_count=rendered_lines,
+                )
+                return options[index]
+            elif key in {"cancel", "eof"}:
+                _clear_rendered_select(output_stream, rendered_lines)
+                return None
+    finally:
+        if old_settings is not None and input_fd is not None:
+            termios.tcsetattr(input_fd, termios.TCSADRAIN, old_settings)
+
+
+def _can_use_interactive_select(input_stream: Any, output_stream: Any) -> bool:
+    return bool(
+        hasattr(input_stream, "isatty")
+        and hasattr(output_stream, "isatty")
+        and input_stream.isatty()
+        and output_stream.isatty()
+        and hasattr(input_stream, "fileno")
+    )
+
+
+def _render_action_option_select(
+    options: list[dict[str, str]],
+    question: str,
+    *,
+    selected_index: int,
+    output_stream: Any,
+    previous_line_count: int,
+) -> int:
+    if previous_line_count:
+        _clear_rendered_select(output_stream, previous_line_count)
+    lines = [f"WAgent ? {question}"]
+    for index, option in enumerate(options):
+        prefix = "> " if index == selected_index else "  "
+        lines.append(f"{prefix}{option['label']}")
+    description = options[selected_index].get("description") or ""
+    if description:
+        lines.append(f"  {description}")
+    lines.append("使用上下键移动，Enter 确认。")
+    output_stream.write("\n".join(lines) + "\n")
+    output_stream.flush()
+    return len(lines)
+
+
+def _render_selected_action_option(
+    question: str,
+    selected: dict[str, str],
+    *,
+    output_stream: Any,
+    previous_line_count: int,
+) -> None:
+    if previous_line_count:
+        _clear_rendered_select(output_stream, previous_line_count)
+    output_stream.write(f"WAgent ? {question} {selected['label']}\n")
+    output_stream.flush()
+
+
+def _clear_rendered_select(output_stream: Any, line_count: int) -> None:
+    if line_count <= 0:
+        return
+    output_stream.write(f"\x1b[{line_count}A\x1b[J")
+    output_stream.flush()
+
+
+def _read_select_key(input_stream: Any) -> str:
+    char = input_stream.read(1)
+    if char == "\x1b":
+        second = input_stream.read(1)
+        if second == "[":
+            third = input_stream.read(1)
+            if third == "A":
+                return "up"
+            if third == "B":
+                return "down"
+        return "cancel"
+    return char
+
+
+def _normalize_select_key(value: Any) -> str | None:
+    key = str(value or "")
+    if key in {"up", "down", "enter", "cancel", "eof"}:
+        return key
+    if key in {"\r", "\n"}:
+        return "enter"
+    if key in {"\x03"}:
+        raise KeyboardInterrupt
+    if key in {"\x04", ""}:
+        return "eof"
+    if key.lower() == "k":
+        return "up"
+    if key.lower() == "j":
+        return "down"
+    return None
+
+
+def _last_non_empty_line(value: str) -> str:
+    for line in reversed(value.splitlines()):
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return ""
 
 
 def _print_agent(message: str) -> None:

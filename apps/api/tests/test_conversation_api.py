@@ -14,6 +14,7 @@ from app.schemas.conversation import ConversationReplaySummary
 from app.schemas.conversation_intake import (
     ConversationIntakeAction,
     ConversationIntakeResult,
+    ConversationIntakeTarget,
 )
 from app.schemas.conversation_router import (
     ApplicationSkillName,
@@ -637,6 +638,86 @@ def test_dispatch_interactive_chat_uses_runtime_router_service(
     assert resp.status_code == 200
     assert calls == ["https://example.invalid/entry"]
     assert resp.json()["data"]["command_kind"] == "ask_user"
+
+
+def test_dispatch_interactive_chat_unknown_url_returns_action_options(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    from app.services.conversation.entry_gate import ConversationEntryGateService
+
+    class FakeIntakeService:
+        confidence_threshold = 0.6
+
+        def analyze(self, raw_message, *, session_metadata=None):
+            return ConversationIntakeResult(
+                intent="unknown",
+                target=ConversationIntakeTarget(url="https://example.invalid/entry"),
+                confidence=1.0,
+                source="test",
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    class FakeRouterService:
+        def route(self, *, raw_message, intake, context, page_understanding=None):
+            return RouteDecision(
+                route_decision=RouteDecisionKind.ASK_USER,
+                next_agent=RouterAgentRole.CONVERSATION_ORCHESTRATOR,
+                recommended_skill=ApplicationSkillName.ASK_USER_FOR_MISSING_INFO,
+                target={"url": "https://example.invalid/entry"},
+                missing_fields=[
+                    {
+                        "semantic_type": "operation_goal",
+                        "display_name": "下一步",
+                    }
+                ],
+                confidence=0.8,
+                reason_summary="test unknown URL options",
+                source="llm",
+            )
+
+        def consume_last_trace_payload(self):
+            return None
+
+    monkeypatch.setattr(
+        "app.services.conversation.intake.build_runtime_intake_service",
+        lambda: FakeIntakeService(),
+    )
+    monkeypatch.setattr(
+        "app.services.conversation.router_agent.build_runtime_router_service",
+        lambda: FakeRouterService(),
+    )
+    monkeypatch.setattr(
+        "app.services.conversation.entry_gate.build_runtime_entry_gate_service",
+        lambda: ConversationEntryGateService(),
+    )
+    session_id = _create_session(client, current_mode="interactive_chat")
+
+    resp = client.post(
+        f"/conversation/sessions/{session_id}/dispatch",
+        json={"input": "https://example.invalid/entry"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["user_response"].endswith("要现在开始吗？")
+    assert "[开始学习]" not in data["user_response"]
+    assert data["action_options"] == [
+        {
+            "id": "start_learning_page",
+            "label": "开始学习",
+            "description": "学习这个页面上的操作，学会后再帮你执行。",
+            "intent": "learn_operation",
+        },
+        {
+            "id": "cancel",
+            "label": "取消",
+            "description": None,
+            "intent": "cancel",
+        },
+    ]
 
 
 def test_dispatch_does_not_expose_identity_or_tenant_fields(
@@ -1399,6 +1480,11 @@ def test_get_history_returns_aggregate_payload(client: TestClient) -> None:
     assert data["learned_actions"] == []
     assert data["learning_runs"] == []
     assert data["replay_summaries"] == []
+    assert len(data["debug_timeline"]) == 2
+    assert data["debug_timeline"][0]["kind"] == "user_message"
+    assert data["debug_timeline"][0]["title"] == "用户输入需求"
+    assert data["debug_timeline"][1]["kind"] == "event"
+    assert data["debug_timeline"][1]["title"] == "记录事件：state_changed"
     assert "raw" in data
     assert "session" in data["raw"]
 
@@ -1528,6 +1614,11 @@ def test_get_history_extracts_redacted_llm_traces(
     assert payload["llm_traces"][0]["usage"]["total"] == 15
     assert payload["llm_traces"][0]["redaction"]["applied"] is True
     assert payload["raw"]["llm_traces"][0]["trace_id"] == "trace-1"
+    trace_items = [item for item in payload["debug_timeline"] if item["kind"] == "llm_trace"]
+    assert len(trace_items) == 1
+    assert trace_items[0]["title"] == "LLM 调用完成"
+    assert trace_items[0]["summary"] == "openai_compatible / m-test / req-1"
+    assert trace_items[0]["status"] == "info"
 
 
 def test_get_history_extracts_entry_gate_trace(
@@ -1559,6 +1650,90 @@ def test_get_history_extracts_entry_gate_trace(
     assert trace["skipped_intake_router"] is True
     assert trace["latency_ms"] is not None
     assert data["raw"]["entry_gate_traces"][0]["category"] == "non_web_chat"
+    timeline = data["debug_timeline"]
+    entry_gate_items = [item for item in timeline if item["kind"] == "entry_gate"]
+    assert len(entry_gate_items) == 1
+    assert entry_gate_items[0]["title"] == "入口门禁判断"
+    assert entry_gate_items[0]["created_at"] is not None
+
+
+def test_get_history_debug_timeline_derives_action_options_and_redacts_private_payload(
+    client: TestClient,
+) -> None:
+    session_id = _create_session(
+        client,
+        current_mode="interactive_chat",
+        metadata={
+            "pending_choice": {
+                "type": "pending_choice",
+                "render_as": "action_options",
+                "choice_group_id": "choice-group-test",
+                "question": "要现在开始吗？",
+                "choices": [
+                    {
+                        "choice_id": "start_learning_page",
+                        "label": "开始学习",
+                        "description": "学习这个页面上的操作，学会后再帮你执行。",
+                    },
+                    {"choice_id": "cancel", "label": "取消"},
+                ],
+            },
+            "pending_choice_private_map": {
+                "start_learning_page": {
+                    "kind": "start_learning_page",
+                    "learned_path_id": "lp-private",
+                    "target_url": "https://example.invalid/users",
+                }
+            },
+        },
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={
+            "role": "user",
+            "content": "https://example.invalid/users",
+        },
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/messages",
+        json={
+            "role": "engine",
+            "content": "我已收到这个页面地址。要现在开始吗？",
+        },
+    )
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={
+            "type": "chat_progress_recorded",
+            "payload": {
+                "progress_kind": "unknown_target_choice_created",
+                "choice_group_id": "choice-group-test",
+                "choices": [
+                    {"choice_id": "start_learning_page", "label": "开始学习"},
+                    {"choice_id": "cancel", "label": "取消"},
+                ],
+                "target_url": "https://example.invalid/users",
+                "pending_choice_private_map": {
+                    "start_learning_page": {"learned_path_id": "lp-private"}
+                },
+            },
+        },
+    )
+
+    resp = client.get(f"/conversation/sessions/{session_id}/history")
+
+    assert resp.status_code == 200
+    timeline = resp.json()["data"]["debug_timeline"]
+    assert timeline[0]["kind"] == "user_message"
+    assert timeline[0]["title"] == "用户输入页面地址"
+    action_item = [item for item in timeline if item["kind"] == "action_options"][0]
+    assert action_item["title"] == "生成下一步选项"
+    assert action_item["status"] == "waiting"
+    assert action_item["summary"] == "等待用户选择下一步：开始学习 / 取消"
+    dumped = json.dumps(timeline, ensure_ascii=False)
+    assert "pending_choice_private_map" not in dumped
+    assert "learned_path_id" not in dumped
+    assert "lp-private" not in dumped
 
 
 def test_get_history_removes_provider_thinking_from_raw_trace(
@@ -1744,3 +1919,4 @@ def test_get_history_empty_session(client: TestClient) -> None:
     assert data["learned_actions"] == []
     assert data["learning_runs"] == []
     assert data["replay_summaries"] == []
+    assert data["debug_timeline"] == []

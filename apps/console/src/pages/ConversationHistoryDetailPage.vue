@@ -34,6 +34,44 @@
 
       <a-card v-if="history" style="margin-top: 16px">
         <a-tabs v-model:activeKey="activeTab">
+          <a-tab-pane key="timeline" :tab="$t('conversationHistory.tabDebugTimeline')">
+            <div class="timeline-list">
+              <div v-for="item in history.debug_timeline" :key="item.id" class="timeline-row">
+                <div class="timeline-row-main">
+                  <div class="timeline-title-line">
+                    <strong>{{ item.title }}</strong>
+                    <span class="status-tag" :class="`status-${item.status}`">
+                      {{ timelineStatusLabel(item.status) }}
+                    </span>
+                    <span class="meta-tag">{{ item.kind }}</span>
+                    <span class="meta-tag">{{ item.source }}</span>
+                    <span class="time">{{ item.created_at || '-' }}</span>
+                  </div>
+                  <p class="timeline-summary">{{ item.summary }}</p>
+                  <div class="timeline-ids">
+                    <a-typography-text v-if="item.message_id" copyable>
+                      message: {{ item.message_id }}
+                    </a-typography-text>
+                    <a-typography-text v-if="item.event_id" copyable>
+                      event: {{ item.event_id }}
+                    </a-typography-text>
+                    <a-typography-text v-if="item.trace_id" copyable>
+                      trace: {{ item.trace_id }}
+                    </a-typography-text>
+                  </div>
+                  <details v-if="hasTimelineDetails(item.details)" class="timeline-details">
+                    <summary>{{ $t('conversationHistory.timelineDetails') }}</summary>
+                    <pre class="json-pre compact">{{ JSON.stringify(item.details, null, 2) }}</pre>
+                  </details>
+                </div>
+              </div>
+            </div>
+            <a-empty
+              v-if="history.debug_timeline.length === 0"
+              :description="$t('conversationHistory.timelineEmpty')"
+            />
+          </a-tab-pane>
+
           <a-tab-pane key="transcript" :tab="$t('conversationHistory.tabTranscript')">
             <a-timeline>
               <a-timeline-item
@@ -123,6 +161,7 @@ import {
   getConversationHistory,
   type ConversationHistoryMessage,
   type ConversationHistoryPayload,
+  type ConversationDebugTimelineItem,
   type ConversationLlmTrace,
 } from '@/api/conversation';
 
@@ -131,7 +170,7 @@ const route = useRoute();
 
 const loading = ref(false);
 const history = ref<ConversationHistoryPayload | null>(null);
-const activeTab = ref('transcript');
+const activeTab = ref('timeline');
 
 const sessionId = computed(() => String(route.params.session_id));
 
@@ -196,6 +235,16 @@ function redactionLabel(redaction: Record<string, unknown>): string {
   return redaction.applied === false ? 'not redacted' : 'redacted';
 }
 
+function timelineStatusLabel(status: ConversationDebugTimelineItem['status']): string {
+  const key = `conversationHistory.timelineStatus.${status}`;
+  const translated = t(key);
+  return translated === key ? String(status) : translated;
+}
+
+function hasTimelineDetails(details: Record<string, unknown>): boolean {
+  return Object.keys(details || {}).length > 0;
+}
+
 onMounted(() => {
   load();
 });
@@ -241,5 +290,69 @@ onMounted(() => {
   margin-top: 6px;
   color: #595959;
   font-size: 12px;
+}
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.timeline-row {
+  border-left: 3px solid #d9d9d9;
+  padding: 8px 0 8px 12px;
+}
+.timeline-title-line {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.timeline-summary {
+  color: #262626;
+  margin: 6px 0;
+}
+.timeline-ids {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+}
+.timeline-details {
+  margin-top: 8px;
+}
+.timeline-details summary {
+  color: #595959;
+  cursor: pointer;
+  font-size: 12px;
+}
+.json-pre.compact {
+  margin-top: 6px;
+  max-height: 260px;
+}
+.status-tag,
+.meta-tag {
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  color: #595959;
+  font-size: 12px;
+  line-height: 18px;
+  padding: 1px 6px;
+}
+.status-waiting,
+.status-running {
+  border-color: #91caff;
+  color: #0958d9;
+}
+.status-success {
+  border-color: #b7eb8f;
+  color: #237804;
+}
+.status-warning {
+  border-color: #ffd591;
+  color: #ad6800;
+}
+.status-error,
+.status-cancelled {
+  border-color: #ffccc7;
+  color: #a8071a;
 }
 </style>

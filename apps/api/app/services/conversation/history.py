@@ -24,6 +24,7 @@ from app.schemas.conversation import (
     ConversationSessionResponse,
     ConversationSessionSummaryResponse,
 )
+from app.services.conversation.debug_timeline import build_debug_timeline
 from app.services.conversation.intake import redact_sensitive_payload
 from app.services.conversation.provenance import normalize_response_provenance
 from app.services.conversation.trace_sanitizer import sanitize_provider_thinking
@@ -110,6 +111,12 @@ class ConversationHistoryService:
             replay_summaries=replay_summaries,
             llm_traces=llm_traces,
             entry_gate_traces=entry_gate_traces,
+            debug_timeline=build_debug_timeline(
+                messages=message_payloads,
+                events=event_payloads,
+                llm_traces=llm_traces,
+                entry_gate_traces=entry_gate_traces,
+            ),
             raw={
                 "session": {
                     "id": session.id,

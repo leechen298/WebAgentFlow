@@ -56,6 +56,26 @@ export interface ConversationLlmTrace {
   created_at: string | null;
 }
 
+export interface ConversationDebugTimelineItem {
+  id: string;
+  kind: string;
+  title: string;
+  summary: string;
+  status: 'info' | 'waiting' | 'running' | 'success' | 'warning' | 'error' | 'cancelled' | string;
+  created_at: string | null;
+  source: 'message' | 'event' | 'trace' | 'derived' | string;
+  message_id: string | null;
+  event_id: string | null;
+  trace_id: string | null;
+  related_event_ids: string[];
+  related_trace_ids: string[];
+  details: Record<string, unknown>;
+  raw_ref?: {
+    tab: string;
+    id: string | null;
+  } | null;
+}
+
 export interface ConversationHistoryPayload {
   session: {
     id: string;
@@ -78,6 +98,7 @@ export interface ConversationHistoryPayload {
   learning_runs: Array<Record<string, unknown>>;
   replay_summaries: Array<Record<string, unknown>>;
   llm_traces: ConversationLlmTrace[];
+  debug_timeline: ConversationDebugTimelineItem[];
   raw: Record<string, unknown>;
 }
 

@@ -95,6 +95,7 @@ Console UI smoke、外部黑盒站点验证或 M12 recovery / retry / abort 已�
 - [11.3.8.4-regression-tests](./11.3.8.4-regression-tests/) —— Regression Tests：已创建七件套并通过 read-only design / safety review；已新增 target-agnostic repo-local regression，把 metadata、utterance、matcher 和 replay handoff 串起来。状态：PACKAGE_COMPLETE（122 focused tests passed；external black-box validation not run）。
 - [11.3.8.5-external-black-box-revalidation-closeout](./11.3.8.5-external-black-box-revalidation-closeout/) —— External Black-box Revalidation / Closeout：final approved rerun PASS，latest result docs 已基于真实证据更新。状态：PASS。
 - [11.3.8.6-slot-alias-and-form-binding-fix](./11.3.8.6-slot-alias-and-form-binding-fix/) —— Slot Alias & Form Binding Fix：修复 11.3.8.5 暴露的 slot alias / create-form field binding 缺口。状态：PACKAGE_COMPLETE。
+- [11.3.9-conversation-debug-timeline](./11.3.9-conversation-debug-timeline/) —— Conversation Debug Timeline：把现有 Conversation History detail 升级为人能读懂的 `wagent chat` 运行轨迹，解释用户输入、路由、选项、LLM trace、learning/replay/recovery 等过程；不把 raw payload 倒进后端终端。状态：docs_generated_pending_design_review。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -225,6 +226,13 @@ learned action metadata 保存 `business_goal`、`canonical_goal`、business obj
 当前已完成 deterministic reusable utterances，覆盖 full business phrase、slot-value
 exclusion、truncated-wrapper repair 和 clean utterance preservation。它不修 matcher、
 不跑外部黑盒重验。
+
+`11.3.9-conversation-debug-timeline/` 是 M11.3 post-closeout 的 observability /
+debug UX follow-up。它承接 `11.3.2-chat-history-debug-console/` 已有 history list/detail
+基础，但目标更窄：把 raw messages / events / traces 翻译成后台详情页中的人类可读运行轨迹，
+让用户和开发者理解 `wagent chat` 当前在理解什么、为什么等待用户选择、为什么产生某个回复。
+本包不新增 runtime 行为、不新增内部 Agent、不改变 learning / replay / recovery 语义，
+也不把完整 LLM request / response 或 private payload 打到后端终端。
 
 11.2 后续 backlog：
 

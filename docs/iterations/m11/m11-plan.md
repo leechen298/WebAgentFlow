@@ -1926,6 +1926,39 @@ Focused verification：`test_learning_run_service.py` + `test_conversation_chat_
 + `test_conversation_router_agent.py` 122 passed；expanded target scan 无命中；未运行
 external black-box validation。
 
+## 11.3.9 · Conversation Debug Timeline
+
+状态：docs_generated_pending_design_review
+
+11.3.9 是 M11.3 post-closeout 的小型 observability / debug UX follow-up。它不重开
+11.3.8 外部黑盒验证，不新增 learning / replay / recovery runtime 能力，也不把后端终端日志
+改成 raw payload dump。它承接 11.3.2 已有 Conversation History & Debug Console 基础，
+把 `/conversation/history/:session_id` 从 raw messages / events / traces 详情页升级为
+人能读懂的 `wagent chat` 运行轨迹页。
+
+Package：
+
+- [`11.3.9-conversation-debug-timeline/`](./11.3.9-conversation-debug-timeline/)
+
+执行边界：
+
+- 类型：code package；当前只生成七件套文档。
+- 实现前必须完成 design review，并在 package `review.md` 记录
+  `implementation_authorized: yes`。
+- 允许改动：conversation history response read model、history service timeline builder、
+  Console history detail、Console conversation API types / tests、`wagent chat` session
+  debug handoff 文案。
+- 禁止改动：DB schema、runtime learning / replay / recovery 行为、internal Agent role、
+  autonomous-run endpoints、`verify-scenario`、raw LLM request / response terminal logging。
+- Final acceptance 前必须有 scoped API / CLI / Console tests；如声称 accepted，还必须有
+  `/conversation/history/:session_id` Console route smoke evidence。
+
+Handoff：
+
+```text
+next_action: review 11.3.9 docs; if approved, implement the debug_timeline read model and Console timeline tab.
+```
+
 ## Later M11.x · Page Context Bridge Decision Point
 
 状态：候选决策点，不是已确定执行包。
