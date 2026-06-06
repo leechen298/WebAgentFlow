@@ -27,9 +27,12 @@ from app.services.execution.action_executor import (
     execute_action,
     safe_screenshot,
 )
+from app.services.execution.browser_event_recorder import BrowserEventRecorder
 from app.services.execution.execution_runtime import ExecutionRuntime
 from app.services.learning.action_planner import plan_actions
 from app.services.learning.page_analyzer import analyze_page
+from app.services.learning.terminal_hints import build_page_terminal_hints
+from app.services.learning.terminal_state import classify_terminal_state
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +75,7 @@ def _capture_final_state(runtime: ExecutionRuntime) -> dict[str, Any]:
         return {}
 
 
-_ACTION_TYPES = ("fill", "click", "press")
+_ACTION_TYPES = ("fill", "set_value", "select", "select_first_option", "click", "press")
 
 
 def _assess_outcome(steps: list[dict[str, Any]]) -> tuple[str, str]:
@@ -246,6 +249,11 @@ def run_autonomous_exploration(
     """
     emit: EventEmitter = event_emitter or _noop_emitter
     t0 = int(time.time() * 1000)
+    browser_events = BrowserEventRecorder(
+        correlation_id=f"autonomous-{t0}",
+        attempt_id="attempt-001",
+    )
+    browser_events.attach(page=runtime.page, context=runtime.context)
 
     # ── Step 1: Navigate ──
     emit("navigate_started", {"url": url})
@@ -284,6 +292,11 @@ def run_autonomous_exploration(
         "navigation": [e.model_dump() for e in analysis.navigation[:10]],
         "screenshot_ref": analysis.screenshot_ref,
     })
+    page_terminal_hints = build_page_terminal_hints(analysis)
+    # Segment terminal evidence at the attempt boundary. Initial navigation and
+    # analyzer lifecycle events are setup evidence, not proof that an action
+    # reached a terminal state.
+    browser_events.reset()
 
     # ── Step 3: Plan actions ──
     logger.info("Autonomous exploration: planning actions")
@@ -305,6 +318,11 @@ def run_autonomous_exploration(
     logger.info("Autonomous exploration: executing %d actions", len(planned))
     step_logs: list[dict[str, Any]] = []
     for action in planned:
+        browser_events.bind_action(
+            action_id=f"action-step-{action.step}",
+            step_index=action.step,
+            action_type=action.action_type,
+        )
         emit("step_started", {
             "step_index": action.step,
             "action_type": action.action_type,
@@ -314,6 +332,7 @@ def run_autonomous_exploration(
         })
         logger.info("  Step %d: %s %s", action.step, action.action_type, action.target_selector)
         step_log = execute_action(action, runtime)
+        browser_events.clear_action()
         step_logs.append(step_log)
 
         if not step_log.get("ok", False) and action.action_type != "observe":
@@ -325,6 +344,12 @@ def run_autonomous_exploration(
     final_title = runtime.current_title() if runtime.page else ""
     final_screenshot = safe_screenshot(runtime)
     final_state = _capture_final_state(runtime)
+    browser_event_timeline = browser_events.stop()
+    terminal_state_verdict = classify_terminal_state(
+        browser_event_timeline=browser_event_timeline,
+        page_terminal_hints=page_terminal_hints.model_dump(mode="json"),
+        final_state=final_state,
+    )
 
     elapsed = int(time.time() * 1000) - t0
     verdict, summary = _assess_outcome(step_logs)
@@ -357,6 +382,9 @@ def run_autonomous_exploration(
         final_title=final_title,
         final_screenshot_ref=final_screenshot,
         final_state=final_state,
+        browser_event_timeline=browser_event_timeline,
+        page_terminal_hints=page_terminal_hints.model_dump(mode="json"),
+        terminal_state_verdict=terminal_state_verdict.model_dump(mode="json"),
         verdict=verdict,
         success=(verdict == "success"),
         summary=summary,

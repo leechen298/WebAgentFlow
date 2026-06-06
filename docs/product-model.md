@@ -352,10 +352,19 @@ components can be replaced independently.
 5. **Code** drives Playwright to try operations on those elements and
    records what happened — including the failures. Failure paths are
    kept as negative knowledge, not discarded.
+5a. **Terminal-state classification** determines whether an attempt has
+   reached a durable, evaluable end state before final attempt evaluation.
+   This is an evidence contract over browser events, network completion,
+   DOM / region changes, modal / dialog state, download / artifact
+   metadata, status messages, and bounded wait results. M11.3.11 may use
+   the name **Terminal State Agent** for a scoped evaluator worker with
+   **no legacy alias**. It is not Agent I, does not operate the browser,
+   and does not replace Attempt Evaluation Agent.
 6. **Attempt Evaluation Agent (legacy: Agent B)** judges each attempt's
    outcome and flags anomalies.
    - Output: per-attempt verdict + summary. Independent of Page
-     Understanding Agent.
+     Understanding Agent and informed by terminal-state evidence when
+     available.
 7. **Learning Report Agent (legacy: Agent C)** (presentation layer, low
    priority) compiles the full learning session into a report for
    the user.
@@ -370,9 +379,35 @@ components can be replaced independently.
    - page signature
    - page purpose (from Page Understanding Agent)
    - operable elements (from step 4)
+   - successful atomic capabilities, when the evidence supports a
+     reusable operation unit
    - successful paths (from step 5, verdict=success)
    - failed paths (from step 5, verdict≠success) — kept as negative
      knowledge to avoid repeating mistakes.
+
+### 4.1.1 Learning asset layers
+
+L1 learning has three evidence layers:
+
+```text
+ExplorationRun evidence -> LearnedCapability -> LearnedPath
+```
+
+- **ExplorationRun** is attempt history: what the engine tried, what
+  happened, and what the terminal / evaluation evidence said.
+- **LearnedCapability** is an atomic reusable page ability, such as
+  "set this filter control", "submit this search", "switch this tab",
+  "open this detail view", or "trigger this download". It is scoped to
+  a page signature, preserves provenance, and must cite evidence.
+- **LearnedPath** is a complete replayable route. It may be produced
+  directly from a successful learning attempt or later from a successful
+  composition of LearnedCapabilities.
+
+LearnedCapability is not a new lifecycle stage and not a new Agent. It is
+an asset layer between raw exploration evidence and complete paths. Its
+purpose is to avoid forcing L1 to learn every possible field combination
+up front, while still letting L3 compose already verified atomic abilities
+under code-owned rules.
 
 ### 4.2 What L1 deliberately is not
 
@@ -560,6 +595,13 @@ drift.
 
 ### 6.7 Multi-Page / Multi-Path Workflow
 
+Within a single page, L3 may eventually compose multiple LearnedCapabilities
+into a concrete action plan when no complete LearnedPath exists. This is
+still code-owned planning: Agents may interpret the user's goal and suggest
+semantic capability categories, but code must select compatible learned
+capabilities, order them, execute them through browser execution services,
+and persist a LearnedPath only after real execution evidence passes gate.
+
 End-state tasks may require multiple LearnedPaths across one or more
 pages. Task Path Planner may eventually compose several learned paths into a
 workflow, but it must not invent a path from raw HTML at runtime.
@@ -611,6 +653,7 @@ different inputs, different outputs, different models over time.
 | Primary role name | Legacy alias | Lifecycle stage | Reads | Produces |
 |---|---|---|---|---|
 | Page Understanding Agent | Agent A | L1 | Simplified AST + screenshot | Page purpose description |
+| Terminal State Agent *(scoped evaluator worker)* | no legacy alias | L1 | Attempt log + browser event timeline + before/after state + Page Understanding hints | Terminal-state verdict + stop recommendation |
 | Attempt Evaluation Agent | Agent B | L1 | Attempt log + before/after state | Per-attempt verdict + anomalies |
 | Learning Report Agent *(low priority, presentation)* | Agent C | L1 | Full learning session | User-facing learning report |
 | Conversation Intake Agent | no legacy alias | Runtime conversation intake | User message + session summary + pending intake + session learned actions | Structured intent / target / action / slots / missing fields |
@@ -649,6 +692,8 @@ product-level reference for the runtime skill vocabulary.
 | `inspect_target_page` | Inspect a target URL and collect URL, title, visible text, controls, AST, and page-analysis context. | Router recommendation / worker Agent request | Runtime + code | May open browser | No | Inspection does not mutate the target page. |
 | `understand_page` | Convert page context into page summary, visible controls, supported goals, required slots, confidence, and reason summary. | Router recommendation / Learning Agent request | Page Understanding Agent | No | No | Does not output selectors, DOM paths, browser steps, or page-type contracts. |
 | `lookup_learned_actions` | Find learned actions in the current session and target URL / site-origin scope. | Router / Web Operation Agent | Code / repository | No | No | Must not cross target scope. |
+| `lookup_learned_capabilities` | Find atomic page capabilities in the current session / page signature / site-origin scope. | Learning Agent / Web Operation Agent | Code / repository | No | No | Returns capability summaries and evidence status, not raw browser instructions for end users. |
+| `compose_capabilities` | Build a deterministic action plan from compatible LearnedCapabilities when no complete LearnedPath exists. | Web Operation Agent under Orchestrator control | Code / execution services | Yes | May write LearnedPath after gate | Agents may suggest intent and semantic targets, but code owns ordering, selector use, execution, evidence, and promotion to LearnedPath. |
 | `ask_user_for_missing_info` | Ask for missing target, goal, input, or confirmation. | Router recommendation | Orchestrator / Result Reporter | No | No | Final wording stays in the unified WAgent voice. |
 | `start_learning` | Start product-level learning through LearningRunService / autonomous exploration. | Learning Agent | Learning Service | Yes | Yes | LearnedPath evidence must come from real browser execution. |
 | `start_replay` | Execute an existing LearnedPath through replay. | Web Operation Agent | Replay Service | Yes | No | Uses replay observation / wait signals as result evidence. |
@@ -709,6 +754,10 @@ visible. Keep this section updated as lifecycle stages and milestones ship.
   evaluation concerns.
 - **L1 steps 4–5 (element extraction + trial)**: shipped in the
   autonomous exploration subsystem.
+- **L1 step 5a (terminal-state classification)**: planned under
+  M11.3.11 as a post-closeout stop-control follow-up. The first contract
+  treats this as terminal evidence taxonomy and a scoped evaluator worker,
+  not as a new legacy Agent letter and not as browser-operation logic.
 - **L1 steps 6–8 (evaluation + report + persist)**: partial.
   Verdict + 5-score verification scorecard + Supervisor summary
   exist as exploration-stage artifacts. A **product-form,
@@ -762,6 +811,8 @@ task execution:
 | M11.3.4 · Conversation Intake Agent | Schema-constrained intake for `wagent chat`: understand user language, target, action, slots, and missing information before Orchestrator validation. | Conversation Intake Agent (no legacy alias). |
 | M11.3.5 · Customer-Facing Agent Router & Skill Runtime | Product-facing routing layer for `wagent chat`: context collection, Agent Router recommendation, Orchestrator adjudication, Application Skill Registry, Page Understanding / Learning / Web Operation worker boundaries, MVP high-impact boundary, and progress / trace UX. | Customer-Facing Agent Router; Page Understanding Agent used as semantic page interpreter; Learning Agent and Web Operation Agent as worker roles under Orchestrator control. |
 | M11.3.7 · User-facing WAgent Behavior Eval | First-wave runtime-chat behavior gates: URL-only known / unknown, execute-known, execute-unknown guidance, unknown choose-learn, vague input no execution, anti-hardcoding, known / unknown isolation, and artifact redaction. | Validates Conversation Intake / Router / Orchestrator / Learning / Replay / Reporter interaction through product conversation surface; no new Agent. |
+| M11.3.11 · Terminal-state stop-control follow-up | Terminal-state evidence taxonomy and stop-control contract for URL-only learning attempts, including list refresh, modal / popup, download / export, status message, network completion, region change, and no-observable-change states. | Terminal State Agent as scoped L1 evaluator worker with no legacy alias; supports Attempt Evaluation Agent and does not operate the browser. |
+| M11.3.12 · Bounded Learning and Composable Capability Assets | Adds the LearnedCapability asset layer, bounded L1 learning policy, learning batch lifecycle, and code-owned single-page capability composition before promoting successful compositions to LearnedPath. | Reuses Page Understanding Agent, Learning Agent, Web Operation Agent, Terminal State Agent evidence, and existing Learning / Replay services; no new Agent role. |
 | M12 · Recovery & Abort Dialogue | Failure recovery, user interrupt handling, and continue / replan / rerun / takeover / abandon choices. | Failure Recovery Agent (legacy: Agent F); User Abort Handler (legacy: Agent G). |
 | M13 · User-Guided Learning, Teaching & Correction | Visible browser, user demonstration recording, Teaching Guide Agent guidance, highlight / shadow / indicator / tooltip, provenance=user write-back, and correction UI. | Teaching Guide Agent (legacy: Agent H); preserve user provenance. |
 | M14 · Learning Quality, Coverage & Negative Knowledge | Page Understanding Agent / Attempt Evaluation Agent / Learning Report Agent, popup controls, custom click-toggle, label extractor expansion, cross-page pattern mining, and failure evidence / negative knowledge store. | Page Understanding Agent (legacy: Agent A); Attempt Evaluation Agent (legacy: Agent B); Learning Report Agent (legacy: Agent C). |

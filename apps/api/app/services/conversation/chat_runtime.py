@@ -83,6 +83,19 @@ _EVAL_FAILURE_RECOVERY_CASE_ID = "failure_recovery_menu_safety"
 _EVAL_ALLOWED_REPORTER_OUTCOMES = {"needs_review"}
 _EVAL_PENDING_CHOICE_CASE_ID = "pending_choice_multi_candidate"
 _EVAL_CANDIDATE_SETUP_TYPES = {"eval_only_candidate_binding"}
+_CONTROL_IDENTITY_TERMS = {
+    "开始学习",
+    "取消",
+    "是",
+    "好的",
+    "好",
+    "确认",
+    "现在开始",
+    "开始",
+    "继续",
+    "返回",
+    "重试",
+}
 
 
 def clear_pending_sensitive_values(session_id: str) -> None:
@@ -1859,6 +1872,7 @@ class InteractiveChatRuntime:
             learning_result: LearningRunResult = self._learning_handler(
                 intent.url,
                 intent.raw_text,
+                session_id=session_id,
                 headless=headless,
                 fill_values=fill_values,
                 **identity_kwargs,
@@ -1870,6 +1884,17 @@ class InteractiveChatRuntime:
                 events,
                 message_id,
                 previous_status,
+            )
+
+        if learning_result.learning_outcome in {"failed", "unverified"}:
+            error = learning_result.error or "Learning outcome did not pass evidence gate."
+            return self._learning_failed(
+                session_id,
+                error,
+                events,
+                message_id,
+                previous_status,
+                learning_result=learning_result,
             )
 
         path = (
@@ -1885,10 +1910,30 @@ class InteractiveChatRuntime:
                 events,
                 message_id,
                 previous_status,
+                learning_result=learning_result,
             )
 
-        action = _action_from_learning_result(learning_result, intake=intake)
-        old_action = self._upsert_learned_action(session_id, action)
+        actions = _actions_from_learning_result(learning_result, intake=intake)
+        queryable_actions = [
+            action
+            for action in actions
+            if action.get("learned_path_id")
+            and LearnedPathRepository(self._repo.session).get(str(action["learned_path_id"]))
+            is not None
+        ]
+        if not queryable_actions:
+            return self._learning_failed(
+                session_id,
+                "No passed capability LearnedPath was persisted.",
+                events,
+                message_id,
+                previous_status,
+                learning_result=learning_result,
+            )
+        old_actions = [
+            self._upsert_learned_action(session_id, action)
+            for action in queryable_actions
+        ]
         self._record_skill_call(
             session_id,
             ApplicationSkillName.START_LEARNING,
@@ -1896,23 +1941,50 @@ class InteractiveChatRuntime:
             output_summary={
                 "run_id": learning_result.run_id,
                 "learned_path_id": learning_result.learned_path_id,
-                "target_url": action["target_url"],
+                "learned_path_ids": learning_result.learned_path_ids,
+                "learning_outcome": learning_result.learning_outcome,
+                "learning_batch_id": learning_result.learning_batch_id,
+                "learning_batch_status": learning_result.learning_batch_status,
+                "learning_batch_summary": learning_result.learning_batch_summary,
+                "target_url": queryable_actions[0]["target_url"],
             },
         )
-        alias = action["alias"]
-        complete_message = f"学习完成：我学会了{alias}操作。之后你可以说“帮我{alias}”。"
+        complete_message = _learning_feedback_message(learning_result, queryable_actions)
         self._append_agent_message(session_id, complete_message)
         self._append_event(
             session_id,
             ConversationEventType.CHAT_LEARNING_COMPLETED,
             {
                 "run_id": learning_result.run_id,
-                "old_learned_path_id": (old_action.get("learned_path_id") if old_action else None),
+                "run_ids": learning_result.run_ids
+                or ([learning_result.run_id] if learning_result.run_id else []),
+                "old_learned_path_id": (
+                    old_actions[0].get("learned_path_id")
+                    if old_actions and old_actions[0]
+                    else None
+                ),
+                "old_learned_path_ids": [
+                    old.get("learned_path_id") for old in old_actions if old
+                ],
                 "new_learned_path_id": learning_result.learned_path_id,
-                "alias": action["alias"],
-                "target_url": action["target_url"],
-                "business_goal": action.get("business_goal"),
-                "canonical_goal": action.get("canonical_goal"),
+                "new_learned_path_ids": [
+                    action.get("learned_path_id") for action in queryable_actions
+                ],
+                "alias": queryable_actions[0]["alias"],
+                "aliases": [action["alias"] for action in queryable_actions],
+                "target_url": queryable_actions[0]["target_url"],
+                "business_goal": queryable_actions[0].get("business_goal"),
+                "canonical_goal": queryable_actions[0].get("canonical_goal"),
+                "learning_outcome": learning_result.learning_outcome or "success",
+                "discovery_batch_id": learning_result.discovery_batch_id,
+                "learning_batch_id": learning_result.learning_batch_id,
+                "learning_batch_status": learning_result.learning_batch_status,
+                "learning_batch_summary": learning_result.learning_batch_summary,
+                "passed_capabilities": learning_result.capability_summaries,
+                "failed_capabilities": learning_result.failed_scenario_summaries,
+                "unverified_capabilities": learning_result.unverified_scenario_summaries,
+                "unsupported_capabilities": learning_result.unsupported_capability_summaries,
+                "evidence_warnings": learning_result.evidence_warnings,
             },
             events,
         )
@@ -3075,23 +3147,73 @@ class InteractiveChatRuntime:
         events: list[str],
         message_id: str | None,
         previous_status: str,
+        learning_result: LearningRunResult | None = None,
     ) -> DispatchResult:
-        response = f"学习失败：{error}"
-        self._update_active_task(
-            session_id,
-            status="failed",
-        )
+        response = _learning_failed_message(error, learning_result)
+        if _learning_result_has_terminal_batch(learning_result):
+            self._clear_active_task(session_id)
+        else:
+            self._update_active_task(
+                session_id,
+                status="failed",
+            )
         self._record_skill_call(
             session_id,
             ApplicationSkillName.START_LEARNING,
             status="failed",
-            output_summary={"error": error},
+            output_summary={
+                "error": error,
+                "learning_outcome": (
+                    learning_result.learning_outcome if learning_result else None
+                ),
+                "run_id": learning_result.run_id if learning_result else None,
+                "learning_batch_id": (
+                    learning_result.learning_batch_id if learning_result else None
+                ),
+                "learning_batch_status": (
+                    learning_result.learning_batch_status if learning_result else None
+                ),
+                "learning_batch_summary": (
+                    learning_result.learning_batch_summary if learning_result else {}
+                ),
+            },
         )
         self._append_agent_message(session_id, response)
         self._append_event(
             session_id,
             ConversationEventType.CHAT_LEARNING_FAILED,
-            {"error": error},
+            {
+                "error": error,
+                "learning_outcome": (
+                    learning_result.learning_outcome if learning_result else "failed"
+                ),
+                "run_id": learning_result.run_id if learning_result else None,
+                "run_ids": learning_result.run_ids if learning_result else [],
+                "discovery_batch_id": (
+                    learning_result.discovery_batch_id if learning_result else None
+                ),
+                "learning_batch_id": (
+                    learning_result.learning_batch_id if learning_result else None
+                ),
+                "learning_batch_status": (
+                    learning_result.learning_batch_status if learning_result else None
+                ),
+                "learning_batch_summary": (
+                    learning_result.learning_batch_summary if learning_result else {}
+                ),
+                "failed_capabilities": (
+                    learning_result.failed_scenario_summaries if learning_result else []
+                ),
+                "unverified_capabilities": (
+                    learning_result.unverified_scenario_summaries if learning_result else []
+                ),
+                "unsupported_capabilities": (
+                    learning_result.unsupported_capability_summaries if learning_result else []
+                ),
+                "evidence_warnings": (
+                    learning_result.evidence_warnings if learning_result else []
+                ),
+            },
             events,
         )
         return self._result(
@@ -4611,10 +4733,22 @@ def _is_reusable_identity_term(term: str, slot_values: list[str]) -> bool:
     value = str(term or "").strip()
     if not value:
         return False
+    if _is_control_identity_term(value):
+        return False
     lowered = value.lower()
     if re.search(r"https?://|www\.", lowered):
         return False
     return not any(slot_value and slot_value in lowered for slot_value in slot_values)
+
+
+def _is_control_identity_term(term: str) -> bool:
+    value = str(term or "").strip(" ，,。.!！?？")
+    if not value:
+        return False
+    if value in _CONTROL_IDENTITY_TERMS:
+        return True
+    normalized = re.sub(r"[\s，。,.；;!！?？:：\"'“”‘’（）()\[\]{}]+", "", value)
+    return normalized in _CONTROL_IDENTITY_TERMS
 
 
 def _object_prefixed_slot_match(
@@ -4888,6 +5022,143 @@ def _action_from_learning_result(
     if match_terms:
         action["match_terms"] = match_terms
     return action
+
+
+def _actions_from_learning_result(
+    result: LearningRunResult,
+    *,
+    intake: ConversationIntakeResult | None = None,
+) -> list[dict[str, Any]]:
+    if result.capability_summaries and result.learned_path_ids:
+        actions = _capability_actions_from_learning_result(result)
+        if actions:
+            return actions
+    return [_action_from_learning_result(result, intake=intake)]
+
+
+def _capability_actions_from_learning_result(
+    result: LearningRunResult,
+) -> list[dict[str, Any]]:
+    parsed = urlparse(result.target_url or "")
+    site_origin = f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme else parsed.netloc
+    actions: list[dict[str, Any]] = []
+    fallback_path_ids = list(result.learned_path_ids or [])
+    for index, summary in enumerate(result.capability_summaries):
+        learned_path_id = str(summary.get("learned_path_id") or "").strip()
+        if not learned_path_id and index < len(fallback_path_ids):
+            learned_path_id = fallback_path_ids[index]
+        if not learned_path_id:
+            continue
+        alias = _capability_alias(summary)
+        if not alias:
+            continue
+        utterances = _capability_utterances(alias)
+        action = {
+            "alias": alias,
+            "utterances": utterances,
+            "learned_path_id": learned_path_id,
+            "target_url": result.target_url,
+            "site_origin": site_origin,
+            "page_template": result.page_template,
+            "scenario": summary.get("scenario_id") or result.scenario,
+            "business_goal": f"搜索{alias}" if _contains_cjk(alias) else f"Search by {alias}",
+            "canonical_goal": summary.get("scenario_id") or result.canonical_goal,
+            "action_aliases": utterances,
+            "business_object": alias,
+            "match_terms": _dedupe_identity_phrases(
+                [
+                    alias,
+                    f"搜索{alias}",
+                    f"按{alias}搜索",
+                    f"Search by {alias}",
+                    f"Filter by {alias}",
+                ]
+            ),
+        }
+        actions.append(action)
+    return actions
+
+
+def _capability_alias(summary: dict[str, Any]) -> str:
+    raw = str(
+        summary.get("label")
+        or summary.get("human_label")
+        or summary.get("capability_label")
+        or ""
+    ).strip(" ，,。.!！?？")
+    for prefix in ("Search by ", "Filter by ", "按"):
+        if raw.startswith(prefix):
+            raw = raw[len(prefix):].strip(" ，,。.!！?？")
+    if raw.endswith("搜索") and len(raw) > 2:
+        raw = raw[: -len("搜索")].strip(" ，,。.!！?？")
+    if _is_control_identity_term(raw):
+        return ""
+    return raw[:40]
+
+
+def _capability_utterances(alias: str) -> list[str]:
+    if _contains_cjk(alias):
+        candidates = [f"按{alias}搜索", f"搜索{alias}"]
+    else:
+        candidates = [f"Search by {alias}", f"Filter by {alias}"]
+    return [
+        value for value in _dedupe_identity_phrases(candidates)
+        if not _is_control_identity_term(value)
+    ]
+
+
+def _learning_feedback_message(
+    result: LearningRunResult,
+    actions: list[dict[str, Any]],
+) -> str:
+    if not result.learning_outcome:
+        alias = actions[0]["alias"]
+        return f"学习完成：我学会了{alias}操作。之后你可以说“帮我{alias}”。"
+
+    learned_labels = _safe_action_label_list(actions, limit=6)
+    failed_count = len(result.failed_scenario_summaries)
+    unverified_count = len(result.unverified_scenario_summaries)
+    unsupported_count = len(result.unsupported_capability_summaries)
+    first_alias = str(actions[0].get("alias") or "已学能力").strip()
+    if _contains_cjk(first_alias):
+        next_step = f"你可以直接告诉我想做什么，比如“按{first_alias}搜索”。"
+    else:
+        next_step = f"You can ask me to use it, for example: \"Search by {first_alias}\"."
+    if result.learning_outcome == "success":
+        return f"学习完成：我学会了这些能力：{learned_labels}。{next_step}"
+    if result.learning_outcome == "partial_success":
+        parts = []
+        if failed_count:
+            parts.append(f"{failed_count} 个场景失败")
+        if unverified_count:
+            parts.append(f"{unverified_count} 个场景尚未确认")
+        if unsupported_count:
+            parts.append(f"{unsupported_count} 个控件暂不支持")
+        suffix = "；".join(parts) if parts else "还有部分能力没有确认成功"
+        return f"学习部分完成：我学会了这些能力：{learned_labels}；{suffix}。{next_step}"
+    return _learning_failed_message(result.error or "学习结果未通过证据门禁。", result)
+
+
+def _learning_failed_message(
+    error: str,
+    result: LearningRunResult | None,
+) -> str:
+    if result is not None and result.learning_outcome == "unverified":
+        return f"我已经尝试学习，但证据不足，还不能确认学会。详情可在后台查看。原因：{error}"
+    return f"学习失败：{error}"
+
+
+def _learning_result_has_terminal_batch(result: LearningRunResult | None) -> bool:
+    if result is None:
+        return False
+    return result.learning_batch_status in {
+        "completed",
+        "partial_success",
+        "timed_out",
+        "cancelled",
+        "failed",
+        "unverified",
+    }
 
 
 def _first_reusable_business_goal(

@@ -13,7 +13,9 @@ from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 from openai.types.completion_usage import CompletionUsage
 
+from app.core.config import Settings
 from app.schemas.llm import LlmMessage, LlmRequest
+from app.services import llm_provider as llm_provider_module
 from app.services.llm_provider import (
     build_request,
     generate_structured,
@@ -26,14 +28,21 @@ from app.services.llm_provider import (
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)
-def _reset():
-    """Ensure each test gets a fresh client."""
+def _reset(monkeypatch: pytest.MonkeyPatch):
+    """Ensure each test gets a fresh client and deterministic provider settings."""
     reset_client()
+    monkeypatch.setattr(llm_provider_module.settings, "llm_provider", "deepseek")
+    monkeypatch.setattr(llm_provider_module.settings, "llm_api_key", "")
+    monkeypatch.setattr(llm_provider_module.settings, "llm_base_url", "https://api.deepseek.com")
+    monkeypatch.setattr(llm_provider_module.settings, "llm_default_model", "deepseek-v4-pro")
+    monkeypatch.setattr(llm_provider_module.settings, "llm_deepseek_api_key", "")
+    monkeypatch.setattr(llm_provider_module.settings, "llm_deepseek_base_url", "")
+    monkeypatch.setattr(llm_provider_module.settings, "llm_deepseek_model", "")
     yield
     reset_client()
 
 
-def _make_completion(content: str, model: str = "MiniMax-M2.7") -> ChatCompletion:
+def _make_completion(content: str, model: str = "deepseek-v4-pro") -> ChatCompletion:
     return ChatCompletion(
         id="chatcmpl-test",
         created=1700000000,
@@ -48,6 +57,67 @@ def _make_completion(content: str, model: str = "MiniMax-M2.7") -> ChatCompletio
         ],
         usage=CompletionUsage(prompt_tokens=10, completion_tokens=20, total_tokens=30),
     )
+
+
+# ---------------------------------------------------------------------------
+# Provider settings
+# ---------------------------------------------------------------------------
+
+class TestProviderSettings:
+    def test_fresh_settings_default_to_deepseek(self):
+        fresh = Settings(_env_file=None)
+
+        assert fresh.llm_provider == "deepseek"
+        assert fresh.llm_base_url == "https://api.deepseek.com"
+        assert fresh.llm_default_model == "deepseek-v4-pro"
+
+    @patch("app.services.llm_provider.OpenAI")
+    def test_deepseek_provider_uses_specific_client_overrides(
+        self,
+        mock_openai: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        monkeypatch.setattr(llm_provider_module.settings, "llm_provider", "deepseek")
+        monkeypatch.setattr(llm_provider_module.settings, "llm_api_key", "generic-key")
+        monkeypatch.setattr(llm_provider_module.settings, "llm_base_url", "https://generic.test/v1")
+        monkeypatch.setattr(llm_provider_module.settings, "llm_deepseek_api_key", "deepseek-key")
+        monkeypatch.setattr(
+            llm_provider_module.settings,
+            "llm_deepseek_base_url",
+            "https://api.deepseek.com",
+        )
+
+        llm_provider_module._get_client()
+
+        mock_openai.assert_called_once()
+        kwargs = mock_openai.call_args.kwargs
+        assert kwargs["api_key"] == "deepseek-key"
+        assert str(kwargs["base_url"]) == "https://api.deepseek.com"
+
+    @patch("app.services.llm_provider._get_client")
+    def test_deepseek_provider_uses_specific_model_override(
+        self,
+        mock_get_client: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        monkeypatch.setattr(llm_provider_module.settings, "llm_provider", "deepseek")
+        monkeypatch.setattr(llm_provider_module.settings, "llm_default_model", "generic-model")
+        monkeypatch.setattr(
+            llm_provider_module.settings,
+            "llm_deepseek_model",
+            "deepseek-v4-pro",
+        )
+        client = MagicMock()
+        client.chat.completions.create.return_value = _make_completion(
+            "ok",
+            model="deepseek-v4-pro",
+        )
+        mock_get_client.return_value = client
+
+        generate_text(build_request("hi"))
+
+        call_kwargs = client.chat.completions.create.call_args[1]
+        assert call_kwargs["model"] == "deepseek-v4-pro"
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +138,10 @@ class TestGenerateText:
         assert resp.text == "Hello world"
         assert resp.error is None
         assert resp.usage.total_tokens == 30
-        assert resp.model == "MiniMax-M2.7"
+        assert resp.model == "deepseek-v4-pro"
+
+        call_kwargs = client.chat.completions.create.call_args[1]
+        assert call_kwargs["model"] == "deepseek-v4-pro"
 
     @patch("app.services.llm_provider._get_client")
     def test_system_prompt_included(self, mock_get_client: MagicMock):

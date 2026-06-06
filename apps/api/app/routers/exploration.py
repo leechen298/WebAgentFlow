@@ -36,15 +36,16 @@ from app.schemas.learned_path import (
 )
 from app.schemas.learned_path_replay import ReplayRequest, ReplayResult
 from app.schemas.page_analysis import PageAnalysis
-from app.services.learning.page_verification import (
-    SpecNotFound,
-    SpecRootNotConfigured,
-    UnsafeSpecId,
-)
+from app.services.learning.attempt_evaluation import evaluate_attempt_ingest
 from app.services.learning.page_signature import (
     dom_fingerprint,
     path_template,
     query_signature,
+)
+from app.services.learning.page_verification import (
+    SpecNotFound,
+    SpecRootNotConfigured,
+    UnsafeSpecId,
 )
 
 router = APIRouter(prefix="/exploration", tags=["exploration"])
@@ -170,6 +171,14 @@ def _apply_scenario_relative_verdicts(
     return final_data
 
 
+def _attempt_ingest_status_from_final_data(final_data: dict[str, Any]) -> str | None:
+    evaluation = final_data.get("attempt_ingest_evaluation")
+    if not isinstance(evaluation, dict):
+        return None
+    status = evaluation.get("ingest_status")
+    return str(status) if status is not None else None
+
+
 _ACTION_KEEP_KEYS = (
     "step",
     "action_type",
@@ -231,6 +240,18 @@ def _maybe_ingest_learned_path(
     # come from the same source.
     url = analysis.url or payload.url or ""
     actions = _trim_actions_for_learned_path(final_data.get("steps") or [])
+    ingest_evaluation = evaluate_attempt_ingest(
+        pass_gate_status="pass",
+        terminal_state_verdict=final_data.get("terminal_state_verdict"),
+        actions=actions,
+    )
+    final_data["attempt_ingest_evaluation"] = ingest_evaluation.model_dump(mode="json")
+    run.result_snapshot_json = final_data
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+    if ingest_evaluation.ingest_status != "eligible":
+        return None
     if not actions:
         # Observational pass — the run cleared pass_gate without
         # needing an interactive step (e.g. "open page, content
@@ -272,6 +293,8 @@ def _learned_path_for_run(db: Session, run: ExplorationRun) -> Any | None:
     if not isinstance(final_data, dict):
         return None
     if _pass_gate_from_final_data(final_data) != "pass":
+        return None
+    if _attempt_ingest_status_from_final_data(final_data) not in {None, "eligible"}:
         return None
 
     page_analysis_dict = final_data.get("page_analysis")

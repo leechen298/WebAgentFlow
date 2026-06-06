@@ -4,7 +4,7 @@ Provides `generate_text()` and `generate_structured()` as the unified entry
 points for all LLM calls in the project.  Business modules (page understanding,
 step understanding, etc.) call these functions — never the OpenAI SDK directly.
 
-Transport: OpenAI-compatible API (covers MiniMax, DeepSeek, Moonshot, etc.)
+Transport: OpenAI-compatible API (covers DeepSeek, MiniMax, Moonshot, etc.)
 Provider-specific differences are absorbed here via payload patching.
 """
 
@@ -22,6 +22,10 @@ from app.schemas.llm import LlmError, LlmMessage, LlmRequest, LlmResponse, LlmUs
 
 logger = logging.getLogger(__name__)
 
+DEEPSEEK_PROVIDER = "deepseek"
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+DEEPSEEK_DEFAULT_MODEL = "deepseek-v4-pro"
+
 # ---------------------------------------------------------------------------
 # Client singleton (lazy)
 # ---------------------------------------------------------------------------
@@ -29,12 +33,34 @@ logger = logging.getLogger(__name__)
 _client: OpenAI | None = None
 
 
+def _active_provider() -> str:
+    return (settings.llm_provider or "").strip().lower()
+
+
+def _provider_api_key() -> str:
+    if _active_provider() == DEEPSEEK_PROVIDER:
+        return settings.llm_deepseek_api_key or settings.llm_api_key
+    return settings.llm_api_key
+
+
+def _provider_base_url() -> str:
+    if _active_provider() == DEEPSEEK_PROVIDER:
+        return settings.llm_deepseek_base_url or settings.llm_base_url or DEEPSEEK_BASE_URL
+    return settings.llm_base_url
+
+
+def _provider_default_model() -> str:
+    if _active_provider() == DEEPSEEK_PROVIDER:
+        return settings.llm_deepseek_model or settings.llm_default_model or DEEPSEEK_DEFAULT_MODEL
+    return settings.llm_default_model
+
+
 def _get_client() -> OpenAI:
     global _client
     if _client is None:
         _client = OpenAI(
-            api_key=settings.llm_api_key,
-            base_url=settings.llm_base_url,
+            api_key=_provider_api_key(),
+            base_url=_provider_base_url(),
             timeout=float(settings.llm_timeout),
         )
     return _client
@@ -52,7 +78,7 @@ def reset_client() -> None:
 
 def _resolve(request: LlmRequest) -> dict[str, Any]:
     """Build the kwargs dict for chat.completions.create()."""
-    model = request.model or settings.llm_default_model
+    model = request.model or _provider_default_model()
     temperature = (
         request.temperature
         if request.temperature is not None
@@ -77,8 +103,8 @@ def _resolve(request: LlmRequest) -> dict[str, Any]:
 
     if request.response_schema is not None:
         # Use json_object mode (broad provider compatibility) + schema in prompt.
-        # json_schema strict mode is OpenAI-specific; many providers (MiniMax,
-        # DeepSeek, etc.) support json_object but not json_schema.
+        # json_schema strict mode is OpenAI-specific; many providers (DeepSeek,
+        # MiniMax, etc.) support json_object but not json_schema.
         kwargs["response_format"] = {"type": "json_object"}
 
         schema_str = json.dumps(request.response_schema, ensure_ascii=False, indent=2)

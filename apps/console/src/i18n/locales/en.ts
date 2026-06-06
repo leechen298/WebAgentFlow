@@ -338,6 +338,13 @@ export default {
     scenarioMatched: 'scenario matched expectation',
     scenarioMismatch: 'scenario deviated from spec',
     passGate: 'pass gate',
+    evidenceSummaryTitle: 'Terminal evidence',
+    terminalOutcome: 'Terminal outcome',
+    stopDecision: 'Stop decision',
+    terminalType: 'Terminal type',
+    evidenceStrength: 'Evidence strength',
+    ingestStatus: 'Ingest status',
+    failureCategory: 'Failure category',
     learnedPathTitle: 'LearnedPath',
     learnedPathHint:
       'This run is linked to a LearnedPath record. The information below shows the reusable path data; it does not reflect the run-level review status.',
@@ -345,6 +352,8 @@ export default {
       'No LearnedPath was stored for this run.',
     learnedPathAbsentNotPass:
       "This run's pass_gate is not `pass`, so no LearnedPath was stored.",
+    learnedPathAbsentBlockedByIngestGate:
+      'This run passed pass_gate, but the ingest gate intentionally blocked LearnedPath storage. Check the terminal evidence and ingest status above.',
     learnedPathAbsentPassButMissing:
       'This run passed the gate but no LearnedPath is attached — the ingest hook either failed or this run predates it. Check the server logs for "LearnedPath ingest failed".',
     learnedPathConfirm: 'Confirm path',

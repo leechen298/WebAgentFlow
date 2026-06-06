@@ -76,6 +76,25 @@ export interface ConversationDebugTimelineItem {
   } | null;
 }
 
+export interface ConversationLearningRunSummary {
+  source_event_id: string;
+  source_event_type: string;
+  run_id: string | null;
+  run_ids: string[];
+  learned_path_id: string | null;
+  learned_path_ids: string[];
+  status: string | null;
+  learning_outcome: string | null;
+  discovery_batch_id: string | null;
+  passed_capabilities: Array<Record<string, unknown>>;
+  failed_capabilities: Array<Record<string, unknown>>;
+  unverified_capabilities: Array<Record<string, unknown>>;
+  unsupported_capabilities: Array<Record<string, unknown>>;
+  evidence_warnings: string[];
+  summary: string | null;
+  raw: Record<string, unknown>;
+}
+
 export interface ConversationHistoryPayload {
   session: {
     id: string;
@@ -95,7 +114,7 @@ export interface ConversationHistoryPayload {
     created_at: string | null;
   }>;
   learned_actions: Array<Record<string, unknown>>;
-  learning_runs: Array<Record<string, unknown>>;
+  learning_runs: ConversationLearningRunSummary[];
   replay_summaries: Array<Record<string, unknown>>;
   llm_traces: ConversationLlmTrace[];
   debug_timeline: ConversationDebugTimelineItem[];

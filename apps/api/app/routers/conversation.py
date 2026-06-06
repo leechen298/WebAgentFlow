@@ -321,10 +321,12 @@ def dispatch_input(
         action_goal: str | None = None,
         canonical_goal: str | None = None,
         action_aliases: list[str] | None = None,
+        session_id: str | None = None,
     ):
         return LearningRunService(db).run(
             LearningRunRequest(
                 url=url,
+                session_id=session_id,
                 goal=raw_input,
                 fill_values=fill_values,
                 action_goal=action_goal,

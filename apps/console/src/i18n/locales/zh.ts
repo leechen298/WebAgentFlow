@@ -338,6 +338,13 @@ export default {
     scenarioMatched: '符合场景预期',
     scenarioMismatch: '偏离场景规格',
     passGate: '通过闸门',
+    evidenceSummaryTitle: '终态证据',
+    terminalOutcome: '终态结果',
+    stopDecision: '停止决策',
+    terminalType: '终态类型',
+    evidenceStrength: '证据强度',
+    ingestStatus: '入库状态',
+    failureCategory: '失败分类',
     learnedPathTitle: 'LearnedPath',
     learnedPathHint:
       '这次运行关联到一条 LearnedPath 记录。下方显示的是可复用路径数据，不是当前运行的人工审核状态。',
@@ -345,6 +352,8 @@ export default {
       '这次运行没有对应的 LearnedPath。',
     learnedPathAbsentNotPass:
       '这次运行的 pass_gate 不是 `pass`，因此没有沉淀为 LearnedPath。',
+    learnedPathAbsentBlockedByIngestGate:
+      '这次运行通过了 pass_gate，但入库闸门按预期阻止了 LearnedPath 写入。请查看上方终态证据和入库状态。',
     learnedPathAbsentPassButMissing:
       '这次运行通过了 pass_gate，但没有关联的 LearnedPath —— 写入 hook 可能失败了，或者这条记录早于 hook 上线。请到服务端日志里搜 "LearnedPath ingest failed"。',
     learnedPathConfirm: '确认路径',

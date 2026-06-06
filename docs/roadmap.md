@@ -332,6 +332,23 @@ Delivered packages:
   unknown choose-learn, execute-known, execute-unknown guidance,
   execute-unknown choose learning flow, vague input no execution, known /
   unknown isolation, anti-hardcoding, and artifact redaction.
+- **11.3.11 Terminal-state Stop-control Follow-up** — closed as an
+  M11.3 post-closeout campaign for terminal evidence metadata, post-action
+  advisory terminal verdicts, LearnedPath ingest gating, and Console evidence
+  summary. It does not yet implement a true in-loop stop controller, full M14
+  learning quality, or page-wide automatic capability discovery.
+- **11.3.12 Bounded Learning and Composable Capability Assets** — completed as an
+  M11.3 post-closeout repo-local campaign for the missing asset layer between
+  ExplorationRun and LearnedPath. It shipped LearnedCapability foundations,
+  bounded learning batch lifecycle, Page Understanding capability hints, and
+  code-owned single-page capability composition. Live autonomous validation was
+  not run.
+- **11.3.13 Learning Batch Browser Session Reuse** — planned as an M11.3
+  post-closeout design package for visible browser lifecycle UX during
+  product-level learning. It proposes one batch-scoped `ExecutionRuntime` /
+  Playwright Chromium session for seed analysis plus scenario exploration, with
+  per-scenario reset and evidence isolation, then one close at the learning batch
+  terminal state. Runtime implementation is not yet authorized.
 
 M11.3.4 and M11.3.5 do not let an LLM operate the browser. The LLM understands
 user language, page semantics, and next-step routing; code validates scope,
@@ -345,6 +362,23 @@ M11.3.7 caveats remain explicit: full learn-then-execute, page-wide automatic
 capability discovery, automatic learning of every operation on a page, Console
 UI smoke, and external black-box site validation are not claimed by the M11
 runtime closeout.
+
+M11.3.11 may predefine terminal-state evidence used by future L1 learning
+quality work: list refresh, network completion, modal / popup, dialog, download /
+export, toast / status message, region change, no observable change, and
+terminal failure. That contract supports later M14 negative knowledge, but M14
+remains the formal learning quality / coverage milestone.
+
+M11.3.12 is a prerequisite for bounded page learning and single-page composition:
+it does not claim full M14 learning quality, broad multi-page workflow
+composition, or complete L2 teaching. It keeps the no-LLM-step-execution invariant:
+Agents may interpret intent and page semantics, while code owns capability
+selection, ordering, browser execution, and LearnedPath promotion.
+
+M11.3.13 is a UX and resource-lifecycle follow-up to the bounded learning batch:
+it should reduce repeated browser popup / close cycles during one learning batch
+without changing the 11.3.12 capability asset model, pass gate semantics, or
+approved live-run boundaries.
 
 ## M12 — Recovery & Abort Dialogue
 
@@ -407,6 +441,11 @@ Expected delivery:
 M14 revisits L1 quality after the L3 happy path and handoff loop exist.
 It also absorbs the earlier M10 draft backlog for richer controls,
 pattern generalization, and negative knowledge.
+
+M11.3.11's terminal-state taxonomy is an earlier stop-control foundation that
+M14 can reuse. It does not complete M14 by itself: M14 still owns formal
+coverage expansion, learning-quality scoring, cross-page pattern mining and
+negative-knowledge persistence.
 
 Internal Agents introduced / made concrete:
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 from app.services.execution.action_executor import (
     execute_action,
     observe_step,
@@ -14,6 +16,8 @@ from app.services.execution.execution_runtime import create_execution_runtime
 DATA_URL = (
     'data:text/html,<html><head><title>Test Page</title></head>'
     '<body><input id="name" type="text">'
+    '<select id="status"><option value="">All</option>'
+    '<option value="active">Active</option></select>'
     '<button id="btn">Click</button>'
     '<form id="form"><input id="field" type="text"></form>'
     '</body></html>'
@@ -79,6 +83,95 @@ def test_execute_action_fill() -> None:
         assert "url_after" in log
     finally:
         rt.stop()
+
+
+# ── execute_action: select ───────────────────────────────────────────────────
+
+
+def test_execute_action_select() -> None:
+    page = MagicMock()
+    page.is_closed.return_value = False
+    page.url = "https://example.invalid/users"
+    page.title.return_value = "Users"
+
+    locator = MagicMock()
+    locator.count.return_value = 1
+    locator.first = MagicMock()
+    locator.first.input_value.return_value = "active"
+    page.locator.return_value = locator
+
+    rt = MagicMock()
+    rt.page = page
+    rt.screenshot.return_value = None
+
+    action = _make_action(
+        action_type="select",
+        target_selector="#status",
+        value="active",
+    )
+    log = execute_action(action, rt)
+
+    assert log["ok"] is True
+    assert log["action_type"] == "select"
+    assert log["actual_value"] == "active"
+    assert log["matched_count"] == 1
+    locator.first.select_option.assert_called_once_with("active")
+
+
+def test_execute_action_set_value_dispatches_dom_events() -> None:
+    page = MagicMock()
+    page.is_closed.return_value = False
+    page.url = "https://example.invalid/users"
+    page.title.return_value = "Users"
+
+    locator = MagicMock()
+    locator.count.return_value = 1
+    locator.first = MagicMock()
+    locator.first.input_value.return_value = "2026-01-01"
+    page.locator.return_value = locator
+
+    rt = MagicMock()
+    rt.page = page
+    rt.screenshot.return_value = None
+
+    action = _make_action(
+        action_type="set_value",
+        target_selector="#registered",
+        value="2026-01-01",
+    )
+    log = execute_action(action, rt)
+
+    assert log["ok"] is True
+    assert log["actual_value"] == "2026-01-01"
+    locator.first.evaluate.assert_called_once()
+
+
+def test_execute_action_select_first_option_uses_popup_option() -> None:
+    page = MagicMock()
+    page.is_closed.return_value = False
+    page.url = "https://example.invalid/users"
+    page.title.return_value = "Users"
+    page.evaluate.return_value = {"selected": True, "text": "Admin"}
+
+    locator = MagicMock()
+    locator.count.return_value = 1
+    locator.first = MagicMock()
+    page.locator.return_value = locator
+
+    rt = MagicMock()
+    rt.page = page
+    rt.screenshot.return_value = None
+
+    action = _make_action(
+        action_type="select_first_option",
+        target_selector="#role",
+        value="admin",
+    )
+    log = execute_action(action, rt)
+
+    assert log["ok"] is True
+    assert log["selected_option"] == {"selected": True, "text": "Admin"}
+    locator.first.click.assert_called_once()
 
 
 # ── execute_action: click ────────────────────────────────────────────────────

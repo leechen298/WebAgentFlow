@@ -11,6 +11,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.capability_hints import CapabilityHintSet
+
 ElementCategory = Literal[
     "fillable",       # input, textarea, contenteditable, role=textbox/combobox/searchbox
     "submit",         # button, input[type=submit], role=button with submit semantics
@@ -58,6 +60,10 @@ class DiscoveredElement(BaseModel):
     )
     aria_label: str | None = None
     content_editable: bool = False
+    readonly: bool = Field(
+        default=False,
+        description="Whether the element is readonly, common for UI-library pickers.",
+    )
     visible: bool = True
     rect: dict[str, int] = Field(
         default_factory=dict, description="Bounding rect: x, y, w, h.",
@@ -100,7 +106,7 @@ class PlannedAction(BaseModel):
     """One step in an action plan derived from page analysis."""
 
     step: int
-    action_type: str  # fill, click, press, observe
+    action_type: str  # fill, select, click, press, observe
     target_selector: str = Field(
         description="CSS selector of the target element (from discovery).",
     )
@@ -141,6 +147,9 @@ class PageAnalysis(BaseModel):
     # Recommended action plan
     recommended_actions: list[PlannedAction] = Field(default_factory=list)
 
+    # Page-level target-agnostic capability hints
+    capability_hints: CapabilityHintSet = Field(default_factory=CapabilityHintSet)
+
 
 OutcomeVerdict = Literal[
     "success",          # all action steps ok AND observable state change
@@ -174,6 +183,21 @@ class AutonomousExplorationResult(BaseModel):
         default_factory=dict,
         description="End-of-run DOM signals (body_text, test_ids, alert_texts) "
         "for spec-driven signal verification. Generic, not site-specific.",
+    )
+    browser_event_timeline: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Optional redacted browser event timeline captured during "
+            "autonomous exploration."
+        ),
+    )
+    page_terminal_hints: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional terminal-state semantic hints derived from PageAnalysis.",
+    )
+    terminal_state_verdict: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional advisory terminal-state verdict derived from redacted evidence.",
     )
 
     # Phase 4: Self-assessment (rule-based)

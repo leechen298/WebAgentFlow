@@ -355,6 +355,92 @@ def _match_fillable_for_role(
     return None
 
 
+def _match_select_for_role(
+    role: str,
+    selects: list[DiscoveredElement],
+    already_used: set[str],
+) -> DiscoveredElement | None:
+    """Pick a native ``<select>`` matching a semantic role key.
+
+    Non-native listbox / combobox widgets need their own popup adapter.
+    This matcher intentionally limits itself to native ``<select>`` so a
+    generated ``select`` action can be executed by Playwright's
+    ``select_option`` without site-specific UI scripting.
+    """
+    role_lower = role.lower()
+    candidates = [
+        e for e in selects
+        if e.tag == "select" and e.selector not in already_used
+    ]
+    if not candidates:
+        return None
+
+    exact = [
+        e for e in candidates
+        if e.semantic_role == role_lower
+    ]
+    if exact:
+        exact.sort(key=_score_fillable, reverse=True)
+        return exact[0]
+
+    role_terms, role_tokens, role_compact = _role_signal_terms(role_lower)
+
+    def signal_score(element: DiscoveredElement) -> float:
+        sources = (
+            ("semantic_role", element.semantic_role, 90.0),
+            ("label_text", element.label_text, 85.0),
+            ("name", element.name, 80.0),
+            ("id", element.id, 75.0),
+            ("aria_label", element.aria_label, 70.0),
+            ("text", element.text, 45.0),
+            ("placeholder", element.placeholder, 40.0),
+        )
+        best = 0.0
+        for source, raw_signal, base_score in sources:
+            normalized = _normalize_signal(raw_signal)
+            if not normalized:
+                continue
+            compact = _compact_signal(raw_signal)
+            tokens = _signal_tokens(raw_signal)
+            if normalized in role_terms or compact in role_compact:
+                best = max(best, base_score)
+                continue
+            if source != "placeholder" and role_tokens & tokens:
+                best = max(best, base_score - 10.0)
+                continue
+            if source == "placeholder":
+                if any(term and term in normalized for term in role_terms):
+                    best = max(best, base_score - 15.0)
+                    continue
+                if role_tokens & tokens:
+                    best = max(best, base_score - 20.0)
+        return best
+
+    signal_matches = [
+        (e, signal_score(e))
+        for e in candidates
+    ]
+    signal_matches = [(e, score) for e, score in signal_matches if score > 0]
+    if signal_matches:
+        signal_matches.sort(
+            key=lambda pair: (pair[1], _score_fillable(pair[0])),
+            reverse=True,
+        )
+        return signal_matches[0][0]
+
+    return None
+
+
+def _action_type_for_fillable_target(element: DiscoveredElement) -> str:
+    role = (element.role or "").lower()
+    element_type = (element.element_type or "").lower()
+    if role == "combobox":
+        return "select_first_option"
+    if element.readonly or element_type in {"date", "month"}:
+        return "set_value"
+    return "fill"
+
+
 def plan_actions(
     analysis: PageAnalysis,
     *,
@@ -390,6 +476,8 @@ def plan_actions(
     best_input: DiscoveredElement | None = None
     last_filled: DiscoveredElement | None = None  # for Enter-fallback
 
+    matched_fill_roles: set[str] = set()
+
     # --- Multi-field mode (preferred when fill_values is set) ---
     if fill_values and analysis.fillable:
         used: set[str] = set()
@@ -411,14 +499,16 @@ def plan_actions(
             target = _match_fillable_for_role(role, analysis.fillable, used)
             if target is None:
                 continue
+            matched_fill_roles.add(role)
             used.add(target.selector)
+            action_type = _action_type_for_fillable_target(target)
             actions.append(PlannedAction(
                 step=step,
-                action_type="fill",
+                action_type=action_type,
                 target_selector=target.selector,
                 target_description=_describe(target),
                 value=value,
-                reason=f"Multi-field match: role={role!r} → "
+                reason=f"Multi-field {action_type} match: role={role!r} → "
                        f"semantic_role={target.semantic_role!r} "
                        f"(score={_score_fillable(target):.0f}). "
                        f"{target.reason}",
@@ -428,21 +518,51 @@ def plan_actions(
                 best_input = target
             step += 1
 
+    # --- Native select mode ---
+    # Discovery scenarios currently reuse fill_values for native selects:
+    # "status" -> "active" is still a field/value binding, but the DOM
+    # adapter must execute it as select_option rather than fill().
+    if fill_values and analysis.select:
+        select_used: set[str] = set()
+        for role, value in fill_values.items():
+            if role in matched_fill_roles:
+                continue
+            target = _match_select_for_role(role, analysis.select, select_used)
+            if target is None:
+                continue
+            matched_fill_roles.add(role)
+            select_used.add(target.selector)
+            actions.append(PlannedAction(
+                step=step,
+                action_type="select",
+                target_selector=target.selector,
+                target_description=_describe(target),
+                value=value,
+                reason=f"Native select match: role={role!r} → "
+                       f"semantic_role={target.semantic_role!r}. "
+                       f"{target.reason}",
+            ))
+            last_filled = target
+            if best_input is None:
+                best_input = target
+            step += 1
+
     # --- Single-field fill mode (legacy, only if no fill_values) ---
-    elif analysis.fillable:
+    if not fill_values and analysis.fillable:
         ranked_fillable = sorted(
             analysis.fillable, key=_score_fillable, reverse=True,
         )
         best_input = ranked_fillable[0]
 
         if fill_value:
+            action_type = _action_type_for_fillable_target(best_input)
             actions.append(PlannedAction(
                 step=step,
-                action_type="fill",
+                action_type=action_type,
                 target_selector=best_input.selector,
                 target_description=_describe(best_input),
                 value=fill_value,
-                reason=f"Highest-scored fillable element "
+                reason=f"Highest-scored {action_type} element "
                        f"(score={_score_fillable(best_input):.0f}). "
                        f"{best_input.reason}",
             ))
@@ -468,6 +588,7 @@ def plan_actions(
                 action_type="click",
                 target_selector=target.selector,
                 target_description=_describe(target),
+                value=t_value,
                 reason=f"Toggle match: role={t_role!r} value={t_value!r} → "
                        f"semantic_role={target.semantic_role!r} "
                        f"element_value={target.element_value!r}. "

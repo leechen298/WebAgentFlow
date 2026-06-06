@@ -33,7 +33,7 @@
       </a-card>
 
       <a-card v-if="history" style="margin-top: 16px">
-        <a-tabs v-model:activeKey="activeTab">
+        <a-tabs v-model:active-key="activeTab">
           <a-tab-pane key="timeline" :tab="$t('conversationHistory.tabDebugTimeline')">
             <div class="timeline-list">
               <div v-for="item in history.debug_timeline" :key="item.id" class="timeline-row">
@@ -128,7 +128,63 @@
 
           <a-tab-pane key="evidence" :tab="$t('conversationHistory.tabEvidence')">
             <h4>Learning Runs</h4>
-            <pre class="json-pre">{{ JSON.stringify(history.learning_runs, null, 2) }}</pre>
+            <div v-if="history.learning_runs.length > 0" class="learning-run-list">
+              <div
+                v-for="run in history.learning_runs"
+                :key="run.source_event_id"
+                class="learning-run-row"
+              >
+                <div class="learning-run-title-line">
+                  <strong>{{ learningOutcomeLabel(run.learning_outcome, run.status) }}</strong>
+                  <span class="meta-tag">{{ run.source_event_type }}</span>
+                  <span v-if="run.discovery_batch_id" class="meta-tag">
+                    batch: {{ run.discovery_batch_id }}
+                  </span>
+                </div>
+                <p class="timeline-summary">{{ run.summary || '-' }}</p>
+                <div class="timeline-ids">
+                  <a-typography-text v-if="run.run_id" copyable>
+                    run: {{ run.run_id }}
+                  </a-typography-text>
+                  <a-typography-text
+                    v-for="pathId in run.learned_path_ids"
+                    :key="pathId"
+                    copyable
+                  >
+                    path: {{ pathId }}
+                  </a-typography-text>
+                </div>
+                <div class="capability-groups">
+                  <div
+                    v-for="group in learningCapabilityGroups(run)"
+                    :key="group.key"
+                    class="capability-group"
+                  >
+                    <strong>{{ group.label }} {{ group.items.length }}</strong>
+                    <span
+                      v-for="item in group.items"
+                      :key="String(item.capability_id || item.scenario_id || item.label)"
+                      class="capability-chip"
+                    >
+                      {{ capabilityLabel(item) }}
+                    </span>
+                  </div>
+                </div>
+                <div v-if="run.evidence_warnings.length > 0" class="warning-list">
+                  <span
+                    v-for="warning in run.evidence_warnings"
+                    :key="warning"
+                    class="warning-tag"
+                  >
+                    {{ warning }}
+                  </span>
+                </div>
+                <details class="timeline-details">
+                  <summary>{{ $t('conversationHistory.timelineDetails') }}</summary>
+                  <pre class="json-pre compact">{{ JSON.stringify(run.raw, null, 2) }}</pre>
+                </details>
+              </div>
+            </div>
             <a-empty v-if="history.learning_runs.length === 0" />
 
             <h4 style="margin-top: 16px">Replay Summaries</h4>
@@ -162,6 +218,7 @@ import {
   type ConversationHistoryMessage,
   type ConversationHistoryPayload,
   type ConversationDebugTimelineItem,
+  type ConversationLearningRunSummary,
   type ConversationLlmTrace,
 } from '@/api/conversation';
 
@@ -245,6 +302,32 @@ function hasTimelineDetails(details: Record<string, unknown>): boolean {
   return Object.keys(details || {}).length > 0;
 }
 
+function learningOutcomeLabel(
+  outcome: string | null,
+  status: string | null
+): string {
+  return `outcome: ${outcome || status || '-'}`;
+}
+
+function learningCapabilityGroups(run: ConversationLearningRunSummary) {
+  return [
+    { key: 'passed', label: 'passed', items: run.passed_capabilities },
+    { key: 'failed', label: 'failed', items: run.failed_capabilities },
+    { key: 'unverified', label: 'unverified', items: run.unverified_capabilities },
+    { key: 'unsupported', label: 'unsupported', items: run.unsupported_capabilities },
+  ].filter((group) => group.items.length > 0);
+}
+
+function capabilityLabel(item: Record<string, unknown>): string {
+  return String(
+    item.label ||
+    item.human_label ||
+    item.scenario_id ||
+    item.capability_id ||
+    '-'
+  );
+}
+
 onMounted(() => {
   load();
 });
@@ -323,6 +406,53 @@ onMounted(() => {
   color: #595959;
   cursor: pointer;
   font-size: 12px;
+}
+.learning-run-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.learning-run-row {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.learning-run-title-line {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.capability-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.capability-group {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.capability-chip,
+.warning-tag {
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  color: #595959;
+  font-size: 12px;
+  line-height: 18px;
+  padding: 1px 6px;
+}
+.warning-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.warning-tag {
+  border-color: #ffd591;
+  color: #ad6800;
 }
 .json-pre.compact {
   margin-top: 6px;

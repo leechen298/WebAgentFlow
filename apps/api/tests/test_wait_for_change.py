@@ -125,6 +125,25 @@ def test_fill_action_returns_skipped() -> None:
     assert "fill" in notes or "input" in notes or "skipped" in notes
 
 
+@pytest.mark.parametrize(
+    "action_type",
+    ["set_value", "select", "select_first_option"],
+)
+def test_supported_selection_actions_return_skipped_not_unsupported(
+    action_type: str,
+) -> None:
+    action = _make_action(action_type)
+    step_log = _make_step_log(ok=True)
+    page = _make_page()
+
+    result = wait_for_change_after_action(page=page, action=action, step_log=step_log)
+
+    assert result.status == "skipped"
+    notes = result.notes.lower()
+    assert action_type in notes
+    assert "unsupported" not in notes
+
+
 def test_press_action_returns_skipped() -> None:
     action = _make_action("press")
     step_log = _make_step_log(ok=True)

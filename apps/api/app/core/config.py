@@ -27,12 +27,16 @@ class Settings(BaseSettings):
     redis_port: int = 6379
 
     # LLM provider settings
+    llm_provider: str = "deepseek"
     llm_api_key: str = ""
-    llm_base_url: str = "https://api.minimaxi.com/v1"
-    llm_default_model: str = "MiniMax-M2.7"
+    llm_base_url: str = "https://api.deepseek.com"
+    llm_default_model: str = "deepseek-v4-pro"
     llm_temperature: float = 0.1
     llm_max_tokens: int = 4096
     llm_timeout: int = 60
+    llm_deepseek_api_key: str = ""
+    llm_deepseek_base_url: str = ""
+    llm_deepseek_model: str = ""
 
     model_config = SettingsConfigDict(
         env_file=REPO_ROOT / ".env",

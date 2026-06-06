@@ -87,10 +87,16 @@ def run(args: argparse.Namespace) -> int:
             while True:
                 try:
                     user_input = input("You > ")
-                except (EOFError, KeyboardInterrupt):
+                except EOFError:
                     print()
+                    _record_client_exit(client, session_id, reason="eof")
+                    return 0
+                except KeyboardInterrupt:
+                    print()
+                    _record_client_exit(client, session_id, reason="keyboard_interrupt")
                     return 0
                 if user_input.strip().lower() in _EXIT_COMMANDS:
+                    _record_client_exit(client, session_id, reason="exit_command")
                     return 0
                 if not user_input.strip():
                     continue
@@ -105,6 +111,7 @@ def run(args: argparse.Namespace) -> int:
                     )
                 except KeyboardInterrupt:
                     print()
+                    _record_client_exit(client, session_id, reason="keyboard_interrupt")
                     return 0
                 if response is None:
                     return 2
@@ -131,6 +138,7 @@ def run(args: argparse.Namespace) -> int:
                     )
                 except KeyboardInterrupt:
                     print()
+                    _record_client_exit(client, session_id, reason="keyboard_interrupt")
                     return 0
                 if response is None:
                     return 2
@@ -269,6 +277,28 @@ def _api_post(
         )
         return None
     return envelope.get("data")
+
+
+def _record_client_exit(
+    client: httpx.Client,
+    session_id: str,
+    *,
+    reason: str,
+) -> None:
+    try:
+        client.post(
+            f"/conversation/sessions/{session_id}/events",
+            json={
+                "type": "chat_progress_recorded",
+                "payload": {
+                    "progress_kind": "chat_client_exited",
+                    "reason": reason,
+                    "client": "wagent_chat",
+                },
+            },
+        )
+    except Exception:
+        return
 
 
 def _progress_message(user_input: str, *, headless: bool = False) -> str:

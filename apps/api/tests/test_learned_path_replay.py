@@ -296,6 +296,10 @@ def test_unsupported_action_blocks_replay() -> None:
 
 
 def test_all_supported_action_types_accepted() -> None:
+    assert "select" in SUPPORTED_ACTION_TYPES
+    assert "set_value" in SUPPORTED_ACTION_TYPES
+    assert "select_first_option" in SUPPORTED_ACTION_TYPES
+
     for typ in SUPPORTED_ACTION_TYPES:
         path = _make_learned_path(
             actions=[{"step": 0, "action_type": typ, "target_selector": "#x"}]

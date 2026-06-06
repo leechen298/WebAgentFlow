@@ -21,6 +21,7 @@ from app.schemas.page_analysis import (
     PageAnalysis,
 )
 from app.services.execution.execution_runtime import ExecutionRuntime
+from app.services.learning.capability_hints import build_capability_hints
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +135,23 @@ _DISCOVER_JS = """() => {
             // always something the page is deliberately hiding.
             const isNativeToggle = el.tagName === 'INPUT'
                 && (el.type === 'radio' || el.type === 'checkbox');
-            const visible = rect.width > 0 && rect.height > 0
+            let effectiveRect = rect;
+            let clickSelector = '';
+            if (isNativeToggle && (rect.width === 0 || rect.height === 0)) {
+                const wrapper = el.closest('label');
+                if (wrapper) {
+                    effectiveRect = wrapper.getBoundingClientRect();
+                    const rawValue = el.getAttribute('value');
+                    if (rawValue !== null) {
+                        const escapedValue = rawValue
+                            .replace(/\\\\/g, '\\\\\\\\')
+                            .replace(/"/g, '\\\\"');
+                        clickSelector = 'label:has(input[type="' + el.type
+                            + '"][value="' + escapedValue + '"])';
+                    }
+                }
+            }
+            const visible = effectiveRect.width > 0 && effectiveRect.height > 0
                 && style.display !== 'none'
                 && style.visibility !== 'hidden'
                 && (isNativeToggle || style.opacity !== '0');
@@ -248,13 +265,15 @@ _DISCOVER_JS = """() => {
                 value: (el.value || '').slice(0, 80),
                 ariaLabel: el.getAttribute('aria-label') || null,
                 contentEditable: el.contentEditable === 'true',
+                readOnly: !!el.readOnly,
                 inForm: inForm,
                 visible: visible,
                 rect: {
-                    x: Math.round(rect.x), y: Math.round(rect.y),
-                    w: Math.round(rect.width), h: Math.round(rect.height)
+                    x: Math.round(effectiveRect.x), y: Math.round(effectiveRect.y),
+                    w: Math.round(effectiveRect.width), h: Math.round(effectiveRect.height)
                 },
                 selector: selector,
+                clickSelector: clickSelector || null,
                 href: el.href || null,
                 inputMode: el.inputMode || null,
                 wrapperHtml: wrapperHtml,
@@ -311,6 +330,10 @@ def _build_fallback_selector(raw: dict) -> str:
     """
     tag = raw["tag"]
 
+    click_selector = raw.get("clickSelector")
+    if isinstance(click_selector, str) and click_selector:
+        return click_selector
+
     if tag == "input":
         input_type = (raw.get("type") or "").lower()
         raw_value = raw.get("value")
@@ -331,7 +354,9 @@ def _build_fallback_selector(raw: dict) -> str:
 
 _FILLABLE_TAGS = {"input", "textarea"}
 _FILLABLE_INPUT_TYPES = {
-    "text", "search", "email", "password", "tel", "url", "number", None, "",
+    "text", "search", "email", "password", "tel", "url", "number",
+    "date", "datetime-local", "month", "time", "week",
+    None, "",
 }
 _SUBMIT_INPUT_TYPES = {"submit", "button", "image"}
 _TOGGLE_INPUT_TYPES = {"checkbox", "radio"}
@@ -580,6 +605,7 @@ def _to_discovered(raw: dict, category: ElementCategory, reason: str) -> Discove
         text=(raw.get("text") or "")[:80],
         aria_label=raw.get("ariaLabel"),
         content_editable=raw.get("contentEditable", False),
+        readonly=raw.get("readOnly", False),
         visible=raw.get("visible", False),
         rect=raw.get("rect", {}),
         selector=selector,
@@ -635,7 +661,7 @@ def analyze_page(runtime: ExecutionRuntime) -> PageAnalysis:
 
     total_visible = sum(len(v) for v in buckets.values())
 
-    return PageAnalysis(
+    analysis = PageAnalysis(
         url=page.url,
         title=page.title(),
         timestamp_ms=ts,
@@ -652,3 +678,5 @@ def analyze_page(runtime: ExecutionRuntime) -> PageAnalysis:
         total_visible=total_visible,
         total_hidden=len(hidden),
     )
+    analysis.capability_hints = build_capability_hints(analysis)
+    return analysis

@@ -998,7 +998,11 @@ def test_product_learning_uses_user_url_and_utterance_inputs(
                 f"学习一下这个目标页面怎么打开，地址是 {GENERIC_WORKFLOW_URL}，"
                 "操作员账号是 demo，访问口令是 123456"
             ),
-            {"headless": False, "fill_values": {"username": "demo", "password": "123456"}},
+            {
+                "session_id": session_id,
+                "headless": False,
+                "fill_values": {"username": "demo", "password": "123456"},
+            },
         )
     ]
 
@@ -2343,7 +2347,11 @@ def test_interactive_chat_merges_pending_intake_and_starts_learning(
     assert calls[0] == (
         GENERIC_WORKFLOW_URL,
         "用户名 demo，密码 123456",
-        {"headless": False, "fill_values": {"username": "demo", "password": "123456"}},
+        {
+            "session_id": session_id,
+            "headless": False,
+            "fill_values": {"username": "demo", "password": "123456"},
+        },
     )
 
     session = repo.get_session(session_id)
@@ -2393,7 +2401,13 @@ def test_interactive_chat_merges_sensitive_slot_saved_before_missing_info(
         metadata={"client": "wagent_chat"},
     )
 
-    assert calls == [{"headless": False, "fill_values": {"username": "demo", "password": "123456"}}]
+    assert calls == [
+        {
+            "session_id": session_id,
+            "headless": False,
+            "fill_values": {"username": "demo", "password": "123456"},
+        }
+    ]
 
 
 def test_interactive_chat_reasks_when_pending_sensitive_cache_is_missing(
@@ -2713,6 +2727,176 @@ def test_learning_does_not_claim_success_when_path_is_not_queryable(
     assert result.command_kind == "learn_page"
     assert "学习失败" in result.user_response
     assert "学习完成" not in result.user_response
+
+
+def test_learning_failed_outcome_does_not_create_session_action(
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        return LearningRunResult(
+            status="failed",
+            run_id="run-failed",
+            learned_path_id=None,
+            target_url=url,
+            page_template="/users",
+            scenario="filter_capability_discovery",
+            action_label="开始",
+            learning_outcome="failed",
+            failed_scenario_summaries=[
+                {
+                    "scenario_id": "s1",
+                    "scenario_kind": "single_filter",
+                    "human_label": "Search by Keyword",
+                    "run_id": "run-failed",
+                    "verdict": "failure",
+                }
+            ],
+            error="No filter capability scenario passed.",
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+
+    result = orch.dispatch_user_input(
+        session_id,
+        GENERIC_ENTRY_LEARNING_WITH_CREDENTIALS,
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is False
+    assert "学习失败" in result.user_response
+    assert "学习完成" not in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json.get("learned_actions") in (None, [])
+    failed = [e for e in repo.list_events(session_id) if e.type == "chat_learning_failed"]
+    assert failed
+    assert failed[-1].payload_json["learning_outcome"] == "failed"
+    from app.services.conversation.history import ConversationHistoryService
+
+    history = ConversationHistoryService(repo.session).get_history(session_id)
+    assert history is not None
+    assert history.learning_runs[-1].status == "failed"
+    assert history.learning_runs[-1].learning_outcome == "failed"
+
+
+def test_learning_unverified_outcome_does_not_create_session_action(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    path_id = _ingest_workspace_path(
+        db_session,
+        source_run_id="run-unverified",
+        page_template="/users",
+    )
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        return LearningRunResult(
+            status="learned",
+            run_id="run-unverified",
+            learned_path_id=path_id,
+            target_url=url,
+            page_template="/users",
+            scenario="filter_capability_discovery",
+            action_label="开始",
+            learning_outcome="unverified",
+            unverified_scenario_summaries=[
+                {
+                    "scenario_id": "s1",
+                    "scenario_kind": "single_filter",
+                    "human_label": "Search by Keyword",
+                    "run_id": "run-unverified",
+                    "verdict": "uncertain",
+                }
+            ],
+            error="Evidence was insufficient.",
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+
+    result = orch.dispatch_user_input(
+        session_id,
+        GENERIC_ENTRY_LEARNING_WITH_CREDENTIALS,
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is False
+    assert "还不能确认学会" in result.user_response
+    assert "学习完成" not in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    assert session.metadata_json.get("learned_actions") in (None, [])
+
+
+def test_learning_success_feedback_uses_capabilities_not_control_terms(
+    db_session: Session,
+    repo: ConversationRepository,
+) -> None:
+    session_id = _create_interactive_chat_session(repo)
+    path_id = _ingest_workspace_path(
+        db_session,
+        source_run_id="run-filter-capability",
+        page_template="/users",
+    )
+
+    def learning_handler(url: str, raw_input: str, **kwargs: Any) -> LearningRunResult:
+        return LearningRunResult(
+            status="learned",
+            run_id="run-filter-capability",
+            learned_path_id=path_id,
+            target_url=url,
+            page_template="/users",
+            scenario="filter_capability_discovery",
+            action_label="开始",
+            suggested_utterances=["帮我开始"],
+            business_goal="开始",
+            canonical_goal="开始学习",
+            action_aliases=["开始学习", "好的"],
+            match_terms=["开始", "开始学习"],
+            learning_outcome="success",
+            discovery_batch_id="batch-filter",
+            run_ids=["run-filter-capability"],
+            learned_path_ids=[path_id],
+            capability_summaries=[
+                {
+                    "capability_id": "cap-keyword",
+                    "label": "Keyword",
+                    "scenario_id": "scenario-keyword",
+                    "scenario_kind": "single_filter",
+                    "run_id": "run-filter-capability",
+                    "learned_path_id": path_id,
+                }
+            ],
+        )
+
+    orch = ConversationOrchestrator(repo, learning_handler=learning_handler)
+    result = orch.dispatch_user_input(
+        session_id,
+        GENERIC_ENTRY_LEARNING_WITH_CREDENTIALS,
+        metadata={"client": "wagent_chat"},
+    )
+
+    assert result.allowed is True
+    assert "学习完成" in result.user_response
+    assert "Keyword" in result.user_response
+    assert "帮我开始" not in result.user_response
+    session = repo.get_session(session_id)
+    assert session is not None
+    actions = session.metadata_json["learned_actions"]
+    assert len(actions) == 1
+    assert actions[0]["alias"] == "Keyword"
+    assert "开始" not in actions[0]["utterances"]
+    completed = [e for e in repo.list_events(session_id) if e.type == "chat_learning_completed"]
+    assert completed[-1].payload_json["learning_outcome"] == "success"
+    assert completed[-1].payload_json["passed_capabilities"][0]["label"] == "Keyword"
+    from app.services.conversation.history import ConversationHistoryService
+
+    history = ConversationHistoryService(repo.session).get_history(session_id)
+    assert history is not None
+    assert history.learning_runs[-1].learning_outcome == "success"
+    assert history.learning_runs[-1].passed_capabilities[0]["label"] == "Keyword"
 
 
 def test_same_alias_learning_overwrites_session_action(

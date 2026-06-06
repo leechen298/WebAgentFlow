@@ -342,6 +342,10 @@ def test_chat_headless_shows_backend_wording() -> None:
 
 def test_chat_colon_q_exits_without_dispatch() -> None:
     client = _mock_client()
+    client.post.side_effect = [
+        _mock_response({"id": "sess-1", "status": "idle"}),
+        _mock_response({"id": "event-1"}),
+    ]
     with patch.object(chat_module.httpx, "Client", return_value=client), patch(
         "builtins.input",
         side_effect=[":q"],
@@ -350,7 +354,33 @@ def test_chat_colon_q_exits_without_dispatch() -> None:
             rc = wagent_main.main(["chat"])
 
     assert rc == 0
-    assert client.post.call_count == 1
+    dispatch_calls = [c for c in client.post.call_args_list if "/dispatch" in c.args[0]]
+    assert dispatch_calls == []
+    event_call = client.post.call_args_list[-1]
+    assert event_call.args[0] == "/conversation/sessions/sess-1/events"
+    assert event_call.kwargs["json"]["payload"]["progress_kind"] == "chat_client_exited"
+    assert event_call.kwargs["json"]["payload"]["reason"] == "exit_command"
+
+
+def test_chat_keyboard_interrupt_records_session_exit_event() -> None:
+    client = _mock_client()
+    client.post.side_effect = [
+        _mock_response({"id": "sess-1", "status": "idle"}),
+        _mock_response({"id": "event-1"}),
+    ]
+    with patch.object(chat_module.httpx, "Client", return_value=client), patch(
+        "builtins.input",
+        side_effect=KeyboardInterrupt,
+    ):
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            rc = wagent_main.main(["chat"])
+
+    assert rc == 0
+    event_call = client.post.call_args_list[-1]
+    assert event_call.args[0] == "/conversation/sessions/sess-1/events"
+    assert event_call.kwargs["json"]["type"] == "chat_progress_recorded"
+    assert event_call.kwargs["json"]["payload"]["progress_kind"] == "chat_client_exited"
+    assert event_call.kwargs["json"]["payload"]["reason"] == "keyboard_interrupt"
 
 
 # ── 11.3.2 session id output + resume ─────────────────────────────────────────

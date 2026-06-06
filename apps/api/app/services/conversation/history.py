@@ -202,17 +202,35 @@ class ConversationHistoryService:
     def _extract_learning_runs(self, events: list[Any]) -> list[ConversationLearningRunSummary]:
         results: list[ConversationLearningRunSummary] = []
         for event in events:
-            if event.type != "chat_learning_completed":
+            if event.type not in {"chat_learning_completed", "chat_learning_failed"}:
                 continue
             payload = event.payload_json or {}
+            is_failed = event.type == "chat_learning_failed"
             results.append(
                 ConversationLearningRunSummary(
                     source_event_id=event.id,
                     source_event_type=event.type,
                     run_id=payload.get("run_id"),
+                    run_ids=_list_of_strings(payload.get("run_ids")),
                     learned_path_id=payload.get("new_learned_path_id"),
-                    status="learned",
-                    summary=payload.get("summary") or payload.get("message") or "学习完成",
+                    learned_path_ids=_list_of_strings(payload.get("new_learned_path_ids")),
+                    status="failed" if is_failed else "learned",
+                    learning_outcome=payload.get("learning_outcome"),
+                    discovery_batch_id=payload.get("discovery_batch_id"),
+                    passed_capabilities=_list_of_dicts(payload.get("passed_capabilities")),
+                    failed_capabilities=_list_of_dicts(payload.get("failed_capabilities")),
+                    unverified_capabilities=_list_of_dicts(
+                        payload.get("unverified_capabilities")
+                    ),
+                    unsupported_capabilities=_list_of_dicts(
+                        payload.get("unsupported_capabilities")
+                    ),
+                    evidence_warnings=_list_of_strings(payload.get("evidence_warnings")),
+                    summary=(
+                        payload.get("summary")
+                        or payload.get("message")
+                        or ("学习失败" if is_failed else "学习完成")
+                    ),
                     raw=payload,
                 )
             )
@@ -329,6 +347,18 @@ class ConversationHistoryService:
 
 def _dict_or_empty(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _list_of_dicts(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _list_of_strings(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if item is not None and str(item)]
 
 
 def session_public_payload(value: Any) -> Any:

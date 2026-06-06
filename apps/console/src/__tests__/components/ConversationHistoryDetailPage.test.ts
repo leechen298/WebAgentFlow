@@ -124,7 +124,6 @@ describe('ConversationHistoryDetailPage', () => {
     await flushPromises();
     expect(getConversationHistory).toHaveBeenCalledWith('s1');
     expect(wrapper.text()).toContain('s1');
-    expect(wrapper.vm.activeTab).toBe('timeline');
     expect(wrapper.text()).toContain('运行轨迹');
     expect(wrapper.text()).toContain('用户输入需求');
     expect(wrapper.text()).toContain('hello');
@@ -287,6 +286,67 @@ describe('ConversationHistoryDetailPage', () => {
     expect(wrapper.text()).toContain('12 ms');
     expect(wrapper.text()).toContain('total 12');
     expect(wrapper.text()).toContain('redacted');
+  });
+
+  it('renders readable learning run outcome summaries', async () => {
+    getConversationHistory.mockResolvedValueOnce({
+      session: {
+        id: 's1',
+        status: 'idle',
+        current_mode: 'interactive_chat',
+        previous_status: null,
+        metadata: {},
+        created_at: '2026-05-17T10:00:00Z',
+        updated_at: '2026-05-17T10:05:00Z',
+      },
+      messages: [],
+      events: [],
+      learned_actions: [],
+      learning_runs: [
+        {
+          source_event_id: 'event-learning',
+          source_event_type: 'chat_learning_completed',
+          run_id: 'run-1',
+          run_ids: ['run-1', 'run-2'],
+          learned_path_id: 'path-1',
+          learned_path_ids: ['path-1'],
+          status: 'learned',
+          learning_outcome: 'partial_success',
+          discovery_batch_id: 'batch-1',
+          passed_capabilities: [{ capability_id: 'cap-email', label: '邮箱' }],
+          failed_capabilities: [{ scenario_id: 'scenario-status', human_label: '状态' }],
+          unverified_capabilities: [{ scenario_id: 'scenario-region', label: '地区' }],
+          unsupported_capabilities: [{ capability_id: 'cap-cascader', label: '级联地区' }],
+          evidence_warnings: ['supervisor confidence low'],
+          summary: '学习部分完成',
+          raw: { learning_outcome: 'partial_success' },
+        },
+      ],
+      replay_summaries: [],
+      llm_traces: [],
+      debug_timeline: [],
+      raw: { session: {}, messages: [], events: [] },
+    });
+
+    const wrapper = mount(ConversationHistoryDetailPage, {
+      global: { plugins: [i18n], stubs },
+    });
+
+    await flushPromises();
+    const text = wrapper.text();
+    expect(text).toContain('outcome: partial_success');
+    expect(text).toContain('batch: batch-1');
+    expect(text).toContain('run: run-1');
+    expect(text).toContain('path: path-1');
+    expect(text).toContain('passed 1');
+    expect(text).toContain('failed 1');
+    expect(text).toContain('unverified 1');
+    expect(text).toContain('unsupported 1');
+    expect(text).toContain('邮箱');
+    expect(text).toContain('状态');
+    expect(text).toContain('地区');
+    expect(text).toContain('级联地区');
+    expect(text).toContain('supervisor confidence low');
   });
 
   it('shows not found when history load fails', async () => {

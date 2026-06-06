@@ -96,6 +96,22 @@ Console UI smoke、外部黑盒站点验证或 M12 recovery / retry / abort 已�
 - [11.3.8.5-external-black-box-revalidation-closeout](./11.3.8.5-external-black-box-revalidation-closeout/) —— External Black-box Revalidation / Closeout：final approved rerun PASS，latest result docs 已基于真实证据更新。状态：PASS。
 - [11.3.8.6-slot-alias-and-form-binding-fix](./11.3.8.6-slot-alias-and-form-binding-fix/) —— Slot Alias & Form Binding Fix：修复 11.3.8.5 暴露的 slot alias / create-form field binding 缺口。状态：PACKAGE_COMPLETE。
 - [11.3.9-conversation-debug-timeline](./11.3.9-conversation-debug-timeline/) —— Conversation Debug Timeline：把现有 Conversation History detail 升级为人能读懂的 `wagent chat` 运行轨迹，解释用户输入、路由、选项、LLM trace、learning/replay/recovery 等过程；不把 raw payload 倒进后端终端。状态：docs_generated_pending_design_review。
+- [11.3.10-autonomous-filter-capability-learning](./11.3.10-autonomous-filter-capability-learning/) —— Autonomous Filter Capability Learning：M11.3 post-closeout umbrella / campaign package，修复 URL-only learning 在筛选页只学到单个搜索按钮的问题，并把学习反馈拆成 capability discovery 与 outcome gate 两个 child package。状态：children_complete_live_validation_not_run（repo-local non-live verification complete；等待用户授权 live `/users` validation）。
+- [11.3.10.1-filter-capability-discovery-learning](./11.3.10.1-filter-capability-discovery-learning/) —— Filter Capability Discovery Learning：实现 product-level URL-only learning 的筛选控件 inventory、single / pairwise / all-supported scenario matrix、run history 和 LearnedPath evidence gate。状态：PACKAGE_COMPLETE（non-live tests passed；live autonomous validation not run）。
+- [11.3.10.2-learning-outcome-gate-chat-feedback](./11.3.10.2-learning-outcome-gate-chat-feedback/) —— Learning Outcome Gate Chat Feedback：基于 11.3.10.1 的 aggregate capability result 实现 success / partial_success / failed / unverified 用户反馈、控制词过滤和 Ctrl+C 退出记录。状态：PACKAGE_COMPLETE（chat / CLI focused tests passed；live autonomous validation not run）。
+- [11.3.11-terminal-state-agent-learning-stop-control](./11.3.11-terminal-state-agent-learning-stop-control/) —— Terminal State Agent Learning Stop Control：M11.3 post-closeout umbrella / campaign package，修复自主探索不知道 attempt 何时到达可评价终态的问题；规划 Terminal State Agent、Page Understanding terminal hints、browser event evidence、Attempt Evaluation / LearnedPath gate 和证据详情展示。状态：PACKAGE_COMPLETE（all six child packages complete；live autonomous validation not run）。
+- [11.3.11.1-terminal-state-agent-contract-taxonomy](./11.3.11.1-terminal-state-agent-contract-taxonomy/) —— Terminal State Agent Contract Taxonomy：为 11.3.11 定义 terminal-state evidence taxonomy、scoped Terminal State Agent evaluator-worker 边界、product-model / roadmap 对齐、redaction/storage 方向和后续 child gate。状态：PACKAGE_COMPLETE（docs-only verification passed；runtime implementation not authorized）。
+- [11.3.11.2-browser-event-recorder](./11.3.11.2-browser-event-recorder/) —— Browser Event Recorder：新增 target-agnostic browser event timeline、redaction、correlation_id / step action scope 和非 live 测试，为后续终态判断提供浏览器事件证据。状态：PACKAGE_COMPLETE（49 targeted tests passed；live autonomous validation not run）。
+- [11.3.11.3-page-understanding-terminal-hints](./11.3.11.3-page-understanding-terminal-hints/) —— Page Understanding Terminal Hints：新增 deterministic PageAnalysis terminal hints、candidate terminal states、PageTerminalHintSet schema 和非 live 测试，为后续 stop control 提供页面语义提示。状态：PACKAGE_COMPLETE（27 targeted tests passed；live autonomous validation not run）。
+- [11.3.11.4-terminal-state-agent-stop-control](./11.3.11.4-terminal-state-agent-stop-control/) —— Terminal State Agent Stop Control：新增 deterministic advisory terminal-state classifier、`TerminalStateVerdict`、stop/wait/continue/unverified_stop 元数据和非 live 测试；不改变 pass_gate、Supervisor、LearnedPath ingest 或真实等待循环。状态：PACKAGE_COMPLETE（35 targeted tests passed；live autonomous validation not run）。
+- [11.3.11.5-attempt-evaluation-ingest-gate](./11.3.11.5-attempt-evaluation-ingest-gate/) —— Attempt Evaluation Ingest Gate：定义并实现 deterministic AttemptIngestEvaluation gate，确保 terminal_unverified / terminal_failed / missing terminal evidence 不会沉淀为成功 LearnedPath。状态：PACKAGE_COMPLETE（43 targeted tests passed；live autonomous validation not run）。
+- [11.3.11.6-evidence-console-and-regression-suite](./11.3.11.6-evidence-console-and-regression-suite/) —— Evidence Console and Regression Suite：在 Console run detail 展示 persisted terminal / ingest evidence summary，并补 API/detail、组件、build 回归。状态：PACKAGE_COMPLETE（87 API tests passed；158 console tests passed；console build passed；live autonomous validation not run）。
+- [11.3.12-bounded-learning-composable-capability-assets](./11.3.12-bounded-learning-composable-capability-assets/) —— Bounded Learning and Composable Capability Assets：M11.3 post-closeout umbrella / campaign package，定义 LearnedCapability 原子学习资产、bounded learning policy、learning batch lifecycle 和 code-owned capability composition；父包不直接授权实现，四个 child packages 已完成 repo-local closeout，live validation 未运行。状态：PACKAGE_COMPLETE。
+- [11.3.12.1-learned-capability-asset-foundation](./11.3.12.1-learned-capability-asset-foundation/) —— LearnedCapability Asset Foundation：新增 LearnedCapability 资产层的 schema / model / repo / migration / compatibility foundation；不改变学习批次、bounded planner、chat timeout 或 runtime composition。状态：PACKAGE_COMPLETE（18 targeted tests passed；64 LearnedPath regression tests passed；offline Alembic SQL generation passed；online DB migration unverified due local env）。
+- [11.3.12.2-bounded-learning-batch-lifecycle](./11.3.12.2-bounded-learning-batch-lifecycle/) —— Bounded Learning Batch Lifecycle：新增 durable `LearningBatch` / bounded policy / cancel-timeout-detach 语义、LearningRunService batch closeout、chat batch metadata 和 repo-local regression；状态：PACKAGE_COMPLETE（140 focused tests passed；82 compatibility tests passed；scoped ruff passed；offline Alembic SQL generation passed；online DB migration unverified due local env）。
+- [11.3.12.3-page-understanding-capability-hints](./11.3.12.3-page-understanding-capability-hints/) —— Page Understanding Capability Hints：新增 redacted `CapabilityHintSet` schema、PageAnalyzer hint 输出、hint-aware capability discovery、schema-level redacted-ref validation 和 focused regression；状态：PACKAGE_COMPLETE（58 scoped tests passed；scoped ruff passed；hardcoding scan reviewed；live validation not run）。
+- [11.3.12.4-capability-composition-runtime](./11.3.12.4-capability-composition-runtime/) —— Capability Composition Runtime：定义 deterministic composition plan、candidate compatibility、LearnedPath preference、private execution handoff 和 promotion guard；状态：PACKAGE_COMPLETE（227 scoped tests passed；scoped ruff passed；hardcoding scan reviewed；live validation not run）。
+- [11.3.13-learning-batch-browser-session-reuse](./11.3.13-learning-batch-browser-session-reuse/) —— Learning Batch Browser Session Reuse：M11.3 post-closeout mixed design package，优化 product-level learning batch 内 `ExecutionRuntime` 生命周期，让 seed analysis 和 scenario loop 复用同一个 visible Playwright Chromium，并在 batch terminal 后统一关闭，避免每个 scenario 反复弹窗。状态：docs_generated_pending_design_review（implementation not authorized）。
 
 `11.0-runtime-conversation-shell-orchestration/` 是 M11.0 总纲目录，不是
 一次性施工包。具体实现拆到 `11.0.x-*` 执行包；每个执行包都必须独立维护
@@ -233,6 +249,32 @@ debug UX follow-up。它承接 `11.3.2-chat-history-debug-console/` 已有 histo
 让用户和开发者理解 `wagent chat` 当前在理解什么、为什么等待用户选择、为什么产生某个回复。
 本包不新增 runtime 行为、不新增内部 Agent、不改变 learning / replay / recovery 语义，
 也不把完整 LLM request / response 或 private payload 打到后端终端。
+
+`11.3.10-autonomous-filter-capability-learning/` 是 M11.3 post-closeout 的第二个
+umbrella / campaign package。它不把当前问题当成单句文案 hotfix，而是把 URL-only
+learning 在筛选页上只沉淀一个搜索按钮 LearnedPath 的缺口拆成两个 child package。
+`11.3.10.1-filter-capability-discovery-learning/` 已补 L1 autonomous learning 的
+filter capability discovery、scenario matrix、run history 和 LearnedPath evidence gate；
+`11.3.10.2-learning-outcome-gate-chat-feedback/` 已基于 child 1 的 aggregate result
+判断 success / partial_success / failed / unverified，并修复“开始学习”等控制词污染
+learned action identity 的问题。两个 child package 已完成 repo-local non-live
+verification；真实 `/users` live autonomous validation 尚未运行，需用户明确授权。
+
+`11.3.11-terminal-state-agent-learning-stop-control/` 是 M11.3 post-closeout 的第三个
+umbrella / campaign package。它承接 11.3.10 暴露出的更深层问题：筛选页、导出、弹窗、
+静默刷新等场景下，L1 autonomous exploration 不知道一次 attempt 何时已经到达可评价终态。
+本包完成 `Terminal State Agent / 终态判断 Agent` 边界、Page Understanding terminal hints、
+browser event timeline、post-action advisory terminal verdict、Attempt Evaluation / LearnedPath gate 以及
+LearnedPath / run history 证据详情入口。`11.3.11.1-terminal-state-agent-contract-taxonomy`
+已完成 docs/product-model/roadmap alignment closeout；`11.3.11.2-browser-event-recorder`
+已完成 target-agnostic browser event timeline 和非 live tests；`11.3.11.3-page-understanding-terminal-hints` 已完成 deterministic terminal hints
+和非 live tests；`11.3.11.4-terminal-state-agent-stop-control` 已完成 advisory terminal-state
+classifier 和非 live tests；`11.3.11.5-attempt-evaluation-ingest-gate` 已完成 deterministic ingest
+gate 和非 live tests；`11.3.11.6-evidence-console-and-regression-suite` 已完成 evidence display
+和 regression closeout。11.3.11 campaign complete；live autonomous validation not run。
+运行时代码仍必须等待对应 child 七件套、设计复核和 `implementation_authorized: yes`。
+该能力未来可被 M14 learning quality / negative knowledge 复用，但当前执行路由属于
+M11.3 post-closeout。
 
 11.2 后续 backlog：
 

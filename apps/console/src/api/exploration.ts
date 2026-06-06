@@ -90,18 +90,18 @@ export interface AutonomousRunDetail {
   /**
    * Authoritative outcome gate; null for pre-gate historical rows.
    * The detail page uses this to explain *why* a run didn't sink into
-   * a LearnedPath: `pass` but no learned_path_id = ingest hook failed
-   * or predates the hook; `fail` / `unverified` = not a pass, expected
-   * to be absent.
+   * a LearnedPath: `pass` but no learned_path_id may mean the ingest
+   * gate intentionally blocked it, the hook failed, or the run predates
+   * the hook; `fail` / `unverified` = not a pass, expected to be absent.
    */
   pass_gate_status?: 'pass' | 'fail' | 'unverified' | null;
   operator_review_status?: OperatorReviewStatus;
   operator_review_note?: string | null;
   operator_reviewed_at?: string | null;
   /**
-   * LearnedPath auto-sunk from this run's `pass_gate = pass` outcome,
-   * if any. Null means the run wasn't a clean pass or pre-dates the
-   * ingest hook.
+   * LearnedPath auto-sunk from this run after both pass_gate and ingest
+   * gate allowed persistence. Null may be expected when the ingest gate
+   * blocks the attempt.
    */
   learned_path_id?: string | null;
   learned_path_trust?: LearnedPathTrust | null;

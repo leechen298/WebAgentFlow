@@ -1433,6 +1433,31 @@ def test_list_sessions_summary_fields(client: TestClient) -> None:
     assert item["learned_action_count"] == 0
 
 
+def test_list_sessions_includes_exit_only_chat_session(client: TestClient) -> None:
+    session_id = _create_session(client, current_mode="interactive_chat")
+    client.post(
+        f"/conversation/sessions/{session_id}/events",
+        json={
+            "type": "chat_progress_recorded",
+            "payload": {
+                "progress_kind": "chat_client_exited",
+                "reason": "keyboard_interrupt",
+                "client": "wagent_chat",
+            },
+        },
+    )
+
+    resp = client.get("/conversation/sessions?current_mode=interactive_chat")
+
+    assert resp.status_code == 200
+    item = resp.json()["data"]["items"][0]
+    assert item["id"] == session_id
+    assert item["message_count"] == 0
+    assert item["event_count"] == 1
+    assert item["last_user_message"] is None
+    assert item["last_agent_message"] is None
+
+
 def test_list_sessions_with_learned_actions(client: TestClient) -> None:
     session_id = client.post(
         "/conversation/sessions",

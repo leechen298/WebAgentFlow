@@ -131,13 +131,17 @@ def wait_for_change_after_action(
             notes="observe action does not require post-action wait",
         )
 
-    if action_type == "fill":
+    if action_type in {"fill", "set_value", "select", "select_first_option"}:
+        notes = (
+            f"{action_type} action skipped for MVP "
+            "(input/selection actions not waited)"
+        )
         return WaitResult(
             wait_id=str(uuid.uuid4()),
             related_step_id=str(step_index),
             status="skipped",
             wait_strategy=wait_strategy,
-            notes="fill action skipped for MVP (input actions not waited)",
+            notes=notes,
         )
 
     if action_type == "press":

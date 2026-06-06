@@ -21,6 +21,7 @@ def _insert_run(
     db_session: Session,
     *,
     kind: str | None = "autonomous",
+    result_snapshot_json: dict | None = None,
 ) -> str:
     strategy = {
         "url": "https://example.com/users",
@@ -36,7 +37,7 @@ def _insert_run(
         status=ExplorationRunStatus.COMPLETED,
         strategy_json=strategy,
         summary="ok",
-        result_snapshot_json={"verdict": "success"},
+        result_snapshot_json=result_snapshot_json or {"verdict": "success"},
     )
     db_session.add(run)
     db_session.commit()
@@ -390,17 +391,8 @@ def test_get_autonomous_run_shows_learned_path_relation_dedup_hit(
         url="https://example.com/records?status=active",
         scenario="filter_by_status",
     )
-    final_data = {
-        "page_analysis": {
-            "url": "https://example.com/users?status=active",
-            "title": "Users",
-            "fillable": [],
-            "submit": [],
-        },
-        "steps": [],
-        "verdict": "success",
-        "verification": {"scorecard": {"pass_gate": {"status": "pass"}}},
-    }
+    final_data = _final_data_with_pass_gate("pass")
+    final_data["page_analysis"]["url"] = "https://example.com/users?status=active"
 
     with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
         _persist_autonomous_run(
@@ -435,6 +427,41 @@ def test_get_autonomous_run_shows_operator_review_fields(
     assert data["operator_review_status"] == "unreviewed"
     assert data["operator_review_note"] is None
     assert data["operator_reviewed_at"] is None
+
+
+def test_get_autonomous_run_returns_terminal_and_ingest_evidence(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    run_id = _insert_run(
+        db_session,
+        result_snapshot_json={
+            "verdict": "success",
+            "terminal_state_verdict": {
+                "terminal_outcome": "terminal_detected",
+                "terminal_type": "list_refresh",
+                "evidence_strength": "strong",
+                "stop_decision": "stop",
+                "matched_action_ids": ["action-step-1"],
+                "matched_step_indices": [1],
+                "matched_action_types": ["fill"],
+            },
+            "attempt_ingest_evaluation": {
+                "ingest_status": "eligible",
+                "attempt_outcome": "success_candidate",
+                "failure_category": "none",
+            },
+        },
+    )
+
+    resp = client.get(f"/exploration/autonomous-runs/{run_id}")
+
+    assert resp.status_code == 200
+    result = resp.json()["data"]["result"]
+    assert result["terminal_state_verdict"]["terminal_outcome"] == "terminal_detected"
+    assert result["terminal_state_verdict"]["terminal_type"] == "list_refresh"
+    assert result["attempt_ingest_evaluation"]["ingest_status"] == "eligible"
+    assert result["attempt_ingest_evaluation"]["failure_category"] == "none"
 
 
 def test_delete_autonomous_run_unknown_id_is_404(client: TestClient) -> None:
@@ -496,6 +523,15 @@ def _final_data_with_pass_gate(status: str = "pass") -> dict:
         ],
         "verdict": "success",
         "verification": {"scorecard": {"pass_gate": {"status": status}}},
+        "terminal_state_verdict": {
+            "terminal_outcome": "terminal_detected",
+            "terminal_type": "list_refresh",
+            "evidence_strength": "strong",
+            "stop_decision": "stop",
+            "matched_action_ids": ["action-step-1"],
+            "matched_step_indices": [1],
+            "matched_action_types": ["fill"],
+        },
     }
 
 
@@ -654,15 +690,10 @@ def test_ingest_hook_identity_tracks_analyzer_url_on_redirect(
     assert row.query_signature == {"status": "active"}
 
 
-def test_ingest_hook_persists_observational_run_with_no_actions(
+def test_ingest_hook_blocks_observational_run_with_no_actions(
     db_session: Session,
 ) -> None:
-    """An "observational" pass — ``pass_gate == "pass"`` but the
-    scenario didn't require interactive steps (e.g. open page, content
-    confirms) — must still sink as a LearnedPath with empty actions.
-    Future Phase 3 planners need the signal that this template /
-    scenario is reachable on a bare visit.
-    """
+    """A pass without reusable actions is auditable but not a LearnedPath."""
     from sqlalchemy.orm import sessionmaker
 
     from app.models.exploration_run import ExplorationRunStatus
@@ -696,11 +727,12 @@ def test_ingest_hook_persists_observational_run_with_no_actions(
 
     assert run_id is not None
     rows, _, _ = LearnedPathRepository(db_session).list_page()
-    assert len(rows) == 1
-    row = rows[0]
-    assert row.actions == []
-    assert row.scenario == "page_loads"
-    assert row.page_template == "/about"
+    assert rows == []
+    run = db_session.get(ExplorationRun, run_id)
+    assert run is not None
+    evaluation = (run.result_snapshot_json or {}).get("attempt_ingest_evaluation")
+    assert evaluation["ingest_status"] == "ineligible"
+    assert evaluation["failure_category"] == "no_effective_actions"
 
 
 def test_ingest_hook_skips_on_pass_gate_unverified(
@@ -735,6 +767,51 @@ def test_ingest_hook_skips_on_pass_gate_unverified(
         )
 
     assert LearnedPathRepository(db_session).count() == 0
+
+
+def test_ingest_hook_skips_on_terminal_unverified(
+    db_session: Session,
+) -> None:
+    from sqlalchemy.orm import sessionmaker
+
+    from app.models.exploration_run import ExplorationRunStatus
+    from app.routers.exploration import (
+        AutonomousExplorePayload,
+        _persist_autonomous_run,
+    )
+
+    TestingSessionLocal = sessionmaker(
+        bind=db_session.bind,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+
+    payload = AutonomousExplorePayload(
+        url="https://example.com/users",
+        scenario="filter_by_status",
+    )
+    final_data = _final_data_with_pass_gate("pass")
+    final_data["terminal_state_verdict"] = {
+        "terminal_outcome": "terminal_unverified",
+        "terminal_type": "no_observable_change",
+        "evidence_strength": "weak",
+        "stop_decision": "unverified_stop",
+    }
+
+    with patch("app.routers.exploration.SessionLocal", TestingSessionLocal):
+        run_id = _persist_autonomous_run(
+            payload,
+            final_data,
+            verdict="success",
+            status=ExplorationRunStatus.COMPLETED,
+        )
+
+    assert LearnedPathRepository(db_session).count() == 0
+    run = db_session.get(ExplorationRun, run_id)
+    assert run is not None
+    evaluation = (run.result_snapshot_json or {}).get("attempt_ingest_evaluation")
+    assert evaluation["ingest_status"] == "unverified"
+    assert evaluation["failure_category"] == "terminal_unverified"
 
 
 # ---------------------------------------------------------------------------

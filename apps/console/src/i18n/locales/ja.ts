@@ -338,6 +338,13 @@ export default {
     scenarioMatched: 'シナリオ期待に一致',
     scenarioMismatch: 'シナリオ仕様から逸脱',
     passGate: '合格ゲート',
+    evidenceSummaryTitle: '終端状態の証拠',
+    terminalOutcome: '終端結果',
+    stopDecision: '停止判断',
+    terminalType: '終端タイプ',
+    evidenceStrength: '証拠強度',
+    ingestStatus: '取り込み状態',
+    failureCategory: '失敗カテゴリ',
     learnedPathTitle: 'LearnedPath',
     learnedPathHint:
       'この実行は LearnedPath レコードに関連付けられています。以下は再利用可能なパスデータであり、実行レベルのレビューステータスではありません。',
@@ -345,6 +352,8 @@ export default {
       'この実行に対応する LearnedPath はありません。',
     learnedPathAbsentNotPass:
       'この実行の pass_gate は `pass` ではないため、LearnedPath として保存されていません。',
+    learnedPathAbsentBlockedByIngestGate:
+      'この実行は pass_gate を通過しましたが、取り込みゲートが意図的に LearnedPath 保存をブロックしました。上の終端状態の証拠と取り込み状態を確認してください。',
     learnedPathAbsentPassButMissing:
       'この実行は pass_gate を通過しましたが、対応する LearnedPath がありません — ingest フックが失敗したか、フック導入前の実行の可能性があります。サーバーログで "LearnedPath ingest failed" を確認してください。',
     learnedPathConfirm: 'パスを確認',

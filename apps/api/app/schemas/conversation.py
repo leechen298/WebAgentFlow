@@ -324,8 +324,17 @@ class ConversationLearningRunSummary(BaseModel):
     source_event_id: str
     source_event_type: str
     run_id: str | None = None
+    run_ids: list[str] = Field(default_factory=list)
     learned_path_id: str | None = None
+    learned_path_ids: list[str] = Field(default_factory=list)
     status: str | None = None
+    learning_outcome: str | None = None
+    discovery_batch_id: str | None = None
+    passed_capabilities: list[dict[str, Any]] = Field(default_factory=list)
+    failed_capabilities: list[dict[str, Any]] = Field(default_factory=list)
+    unverified_capabilities: list[dict[str, Any]] = Field(default_factory=list)
+    unsupported_capabilities: list[dict[str, Any]] = Field(default_factory=list)
+    evidence_warnings: list[str] = Field(default_factory=list)
     summary: str | None = None
     raw: dict[str, Any] = Field(default_factory=dict)
 

@@ -35,7 +35,15 @@ from app.services.learning.wait_for_change import (
     wait_for_change_after_action,
 )
 
-SUPPORTED_ACTION_TYPES = {"fill", "click", "press", "observe"}
+SUPPORTED_ACTION_TYPES = {
+    "fill",
+    "set_value",
+    "select",
+    "select_first_option",
+    "click",
+    "press",
+    "observe",
+}
 
 
 # ---------------------------------------------------------------------------

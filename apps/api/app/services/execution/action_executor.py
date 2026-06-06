@@ -16,7 +16,13 @@ from app.services.execution.execution_runtime import ExecutionRuntime
 def safe_screenshot(runtime: ExecutionRuntime) -> str | None:
     """Take a screenshot, return path or None on failure."""
     try:
-        return runtime.screenshot()
+        path = runtime.screenshot()
+        if path:
+            return path
+    except Exception:
+        pass
+    try:
+        return runtime.screenshot(full_page=False)
     except Exception:
         return None
 
@@ -142,6 +148,73 @@ def execute_action(action, runtime: ExecutionRuntime) -> dict[str, Any]:
             time.sleep(0.5)
             step_log["ok"] = True
             step_log["actual_value"] = locator.first.input_value()
+
+        elif action.action_type == "select":
+            locator.first.wait_for(state="visible", timeout=5000)
+            locator.first.select_option(action.value or "")
+            time.sleep(0.5)
+            step_log["ok"] = True
+            step_log["actual_value"] = locator.first.input_value()
+
+        elif action.action_type == "set_value":
+            locator.first.wait_for(state="visible", timeout=5000)
+            locator.first.evaluate(
+                """(el, value) => {
+                    const proto = el instanceof HTMLTextAreaElement
+                        ? HTMLTextAreaElement.prototype
+                        : HTMLInputElement.prototype;
+                    const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+                    if (descriptor && descriptor.set) {
+                        descriptor.set.call(el, value);
+                    } else {
+                        el.value = value;
+                    }
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                }""",
+                action.value or "",
+            )
+            time.sleep(0.5)
+            step_log["ok"] = True
+            step_log["actual_value"] = locator.first.input_value()
+
+        elif action.action_type == "select_first_option":
+            locator.first.wait_for(state="visible", timeout=5000)
+            locator.first.click()
+            time.sleep(0.5)
+            selected = page.evaluate(
+                """() => {
+                    function visible(el) {
+                        const rect = el.getBoundingClientRect();
+                        const style = getComputedStyle(el);
+                        return rect.width > 0 && rect.height > 0
+                            && style.display !== 'none'
+                            && style.visibility !== 'hidden';
+                    }
+                    const options = Array.from(document.querySelectorAll(
+                        '[role="option"], .ant-select-item-option'
+                    )).filter((el) => {
+                        const disabled = el.getAttribute('aria-disabled') === 'true'
+                            || el.classList.contains('ant-select-item-option-disabled');
+                        const selected = el.getAttribute('aria-selected') === 'true'
+                            || el.classList.contains('ant-select-item-option-selected');
+                        return visible(el) && !disabled && !selected;
+                    });
+                    const option = options[0];
+                    if (!option) return { selected: false };
+                    const text = (option.innerText || option.textContent || '').trim();
+                    option.click();
+                    return { selected: true, text };
+                }"""
+            )
+            if not selected or not selected.get("selected"):
+                step_log["ok"] = False
+                step_log["error"] = "No selectable popup option was found"
+                step_log["screenshot_ref"] = safe_screenshot(runtime)
+                return step_log
+            time.sleep(0.5)
+            step_log["ok"] = True
+            step_log["selected_option"] = selected
 
         elif action.action_type == "click":
             locator.first.wait_for(state="visible", timeout=5000)

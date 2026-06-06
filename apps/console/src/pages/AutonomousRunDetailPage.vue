@@ -125,6 +125,58 @@
           style="margin-top: 16px"
         />
 
+        <!-- Terminal / ingest evidence — compact operator-facing summary. -->
+        <a-card
+          v-if="hasEvidenceSummary"
+          :title="$t('autonomousHistory.evidenceSummaryTitle')"
+          :bordered="false"
+          style="margin-top: 16px"
+          class="evidence-summary-card"
+        >
+          <a-descriptions :column="{ xs: 1, sm: 2 }" size="small" bordered>
+            <a-descriptions-item
+              v-if="terminalStateVerdict"
+              :label="$t('autonomousHistory.terminalOutcome')"
+            >
+              <a-tag :color="terminalOutcomeTagColor">
+                {{ formatEvidenceValue(terminalStateVerdict.terminal_outcome) }}
+              </a-tag>
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="terminalStateVerdict"
+              :label="$t('autonomousHistory.stopDecision')"
+            >
+              {{ formatEvidenceValue(terminalStateVerdict.stop_decision) }}
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="terminalStateVerdict"
+              :label="$t('autonomousHistory.terminalType')"
+            >
+              {{ formatEvidenceValue(terminalStateVerdict.terminal_type) }}
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="terminalStateVerdict"
+              :label="$t('autonomousHistory.evidenceStrength')"
+            >
+              {{ formatEvidenceValue(terminalStateVerdict.evidence_strength) }}
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="attemptIngestEvaluation"
+              :label="$t('autonomousHistory.ingestStatus')"
+            >
+              <a-tag :color="ingestStatusTagColor">
+                {{ formatEvidenceValue(attemptIngestEvaluation.ingest_status) }}
+              </a-tag>
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="attemptIngestEvaluation"
+              :label="$t('autonomousHistory.failureCategory')"
+            >
+              {{ formatEvidenceValue(attemptIngestEvaluation.failure_category) }}
+            </a-descriptions-item>
+          </a-descriptions>
+        </a-card>
+
         <!-- Run review — operator-level acceptance / rejection. -->
         <a-card
           :title="$t('autonomousHistory.runReviewTitle')"
@@ -291,12 +343,17 @@ const deleting = ref(false);
 
 /**
  * Pick the right "no LearnedPath" copy based on the run's gate
- * outcome. `pass` but no ingest = hook failed or predates the feature;
- * anything else is the documented "non-pass doesn't sink" behaviour.
+ * outcome. `pass` but no LearnedPath first checks whether the ingest
+ * gate intentionally blocked storage; only missing ingest metadata falls
+ * back to hook-failed / pre-feature copy.
  * Null falls back to the generic string for historical pre-gate rows.
  */
 const absentMessageKey = computed(() => {
   if (passGateStatus.value === 'pass') {
+    const ingestStatus = attemptIngestEvaluation.value?.ingest_status;
+    if (ingestStatus && ingestStatus !== 'eligible') {
+      return 'autonomousHistory.learnedPathAbsentBlockedByIngestGate';
+    }
     return 'autonomousHistory.learnedPathAbsentPassButMissing';
   }
   if (passGateStatus.value === 'fail' || passGateStatus.value === 'unverified') {
@@ -422,6 +479,35 @@ const scorecard = computed(() => {
   return (ver.scorecard as Record<string, unknown>) || null;
 });
 
+const terminalStateVerdict = computed<Record<string, unknown> | null>(() => {
+  const r = result.value;
+  return (r.terminal_state_verdict as Record<string, unknown> | null) || null;
+});
+
+const attemptIngestEvaluation = computed<Record<string, unknown> | null>(() => {
+  const r = result.value;
+  return (r.attempt_ingest_evaluation as Record<string, unknown> | null) || null;
+});
+
+const hasEvidenceSummary = computed(
+  () => !!terminalStateVerdict.value || !!attemptIngestEvaluation.value,
+);
+
+const terminalOutcomeTagColor = computed(() => {
+  const outcome = terminalStateVerdict.value?.terminal_outcome;
+  if (outcome === 'terminal_detected') return 'green';
+  if (outcome === 'terminal_failed') return 'red';
+  if (outcome === 'not_terminal_yet') return 'blue';
+  return 'orange';
+});
+
+const ingestStatusTagColor = computed(() => {
+  const status = attemptIngestEvaluation.value?.ingest_status;
+  if (status === 'eligible') return 'green';
+  if (status === 'ineligible') return 'red';
+  return 'orange';
+});
+
 const hasFillValues = computed(() => {
   const fv = strategy.value.fill_values as Record<string, unknown> | undefined;
   return fv && Object.keys(fv).length > 0;
@@ -469,6 +555,11 @@ function statusColor(status: string): string {
   if (status === 'failed' || status === 'error') return 'red';
   if (status === 'running' || status === 'pending') return 'blue';
   return 'default';
+}
+
+function formatEvidenceValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—';
+  return String(value);
 }
 
 async function copyJson(): Promise<void> {

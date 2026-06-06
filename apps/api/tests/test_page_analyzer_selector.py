@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from app.services.learning.page_analyzer import (
     _build_fallback_selector,
+    _classify,
     _first_informative_class_token,
     _to_discovered,
 )
@@ -173,6 +174,19 @@ def test_build_fallback_selector_escapes_quote_in_value() -> None:
 
 
 # ───────────────────────────────────────────────────────────────────
+# Classify native date/month filter inputs
+# ───────────────────────────────────────────────────────────────────
+
+
+def test_classify_date_and_month_inputs_as_fillable() -> None:
+    for input_type in ("date", "month"):
+        category, reason = _classify(_base_raw(tag="input", type=input_type))
+
+        assert category == "fillable"
+        assert f"type={input_type}" in reason
+
+
+# ───────────────────────────────────────────────────────────────────
 # _to_discovered integration — JS-emitted empty selector gets filled in
 # ───────────────────────────────────────────────────────────────────
 
@@ -216,3 +230,20 @@ def test_to_discovered_preserves_nonempty_js_selector() -> None:
     raw = _base_raw(id="foo", selector="#foo", className="ant-btn")
     elem = _to_discovered(raw, "clickable", "test")
     assert elem.selector == "#foo"
+
+
+def test_to_discovered_zero_rect_radio_uses_click_selector() -> None:
+    raw = _base_raw(
+        tag="input",
+        type="radio",
+        value="active",
+        selector="",
+        clickSelector='label:has(input[type="radio"][value="active"])',
+        className="ant-radio-button-input",
+        rect={"x": 10, "y": 20, "w": 0, "h": 0},
+    )
+
+    elem = _to_discovered(raw, "toggle", "<input type=radio>")
+
+    assert elem.selector == 'label:has(input[type="radio"][value="active"])'
+    assert elem.readonly is False

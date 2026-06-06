@@ -93,6 +93,20 @@ function buildDetail(overrides: Record<string, unknown> = {}) {
       steps: [],
       verdict: 'success',
       verification: { scorecard: { pass_gate: { status: 'pass' } } },
+      terminal_state_verdict: {
+        terminal_outcome: 'terminal_detected',
+        terminal_type: 'list_refresh',
+        evidence_strength: 'strong',
+        stop_decision: 'stop',
+        matched_action_ids: ['action-step-1'],
+        matched_step_indices: [1],
+        matched_action_types: ['click'],
+      },
+      attempt_ingest_evaluation: {
+        ingest_status: 'eligible',
+        attempt_outcome: 'success_candidate',
+        failure_category: 'none',
+      },
     },
     pass_gate_status: 'pass',
     operator_review_status: 'unreviewed',
@@ -230,6 +244,47 @@ describe('AutonomousRunDetailPage · Run review block', () => {
   });
 });
 
+describe('AutonomousRunDetailPage · Evidence summary block', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    getAutonomousRun.mockReset();
+    patchRunReview.mockReset();
+  });
+
+  it('renders terminal and ingest evidence from run result', async () => {
+    getAutonomousRun.mockResolvedValueOnce(buildDetail());
+
+    const Page = await loadDetailPage();
+    const wrapper = mount(Page, { global: { stubs } });
+    await flushPromises();
+
+    expect(wrapper.find('.evidence-summary-card').exists()).toBe(true);
+    expect(wrapper.text()).toContain('terminal_detected');
+    expect(wrapper.text()).toContain('list_refresh');
+    expect(wrapper.text()).toContain('eligible');
+    expect(wrapper.text()).toContain('none');
+  });
+
+  it('hides evidence summary for legacy results without terminal metadata', async () => {
+    getAutonomousRun.mockResolvedValueOnce(
+      buildDetail({
+        result: {
+          page_analysis: { url: 'https://example.com/records', title: 'Users' },
+          steps: [],
+          verdict: 'success',
+          verification: { scorecard: { pass_gate: { status: 'pass' } } },
+        },
+      }),
+    );
+
+    const Page = await loadDetailPage();
+    const wrapper = mount(Page, { global: { stubs } });
+    await flushPromises();
+
+    expect(wrapper.find('.evidence-summary-card').exists()).toBe(false);
+  });
+});
+
 describe('AutonomousRunDetailPage · LearnedPath block', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -269,6 +324,41 @@ describe('AutonomousRunDetailPage · LearnedPath block', () => {
     await flushPromises();
 
     expect(wrapper.text()).toMatch(/ingest|hook|フック/i);
+  });
+
+  it('shows the ingest gate copy when gate=pass but ingest is blocked', async () => {
+    getAutonomousRun.mockResolvedValueOnce(
+      buildDetail({
+        learned_path_id: null,
+        learned_path_trust: null,
+        learned_path: null,
+        pass_gate_status: 'pass',
+        result: {
+          page_analysis: { url: 'https://example.com/records', title: 'Users' },
+          steps: [],
+          verdict: 'success',
+          verification: { scorecard: { pass_gate: { status: 'pass' } } },
+          terminal_state_verdict: {
+            terminal_outcome: 'terminal_unverified',
+            terminal_type: 'no_observable_change',
+            evidence_strength: 'weak',
+            stop_decision: 'unverified_stop',
+          },
+          attempt_ingest_evaluation: {
+            ingest_status: 'unverified',
+            attempt_outcome: 'unverified',
+            failure_category: 'terminal_unverified',
+          },
+        },
+      }),
+    );
+
+    const Page = await loadDetailPage();
+    const wrapper = mount(Page, { global: { stubs } });
+    await flushPromises();
+
+    expect(wrapper.text()).toMatch(/ingest gate|取り込みゲート|入库闸门/i);
+    expect(wrapper.text()).not.toMatch(/server logs|服务端日志/i);
   });
 
   it('shows the "not pass" copy when gate=fail', async () => {

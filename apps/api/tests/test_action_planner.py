@@ -40,6 +40,7 @@ def _el(
     element_value: str | None = None,
     semantic_role: str | None = None,
     label_text: str | None = None,
+    readonly: bool = False,
     rect: dict | None = None,
     visible: bool = True,
 ) -> DiscoveredElement:
@@ -56,6 +57,7 @@ def _el(
         element_value=element_value,
         semantic_role=semantic_role,
         label_text=label_text,
+        readonly=readonly,
         selector=selector,
         rect=rect or {},
         visible=visible,
@@ -448,6 +450,7 @@ class TestPlanActions:
         actions = plan_actions(analysis, toggle_values={"status": "active"})
         clicks = [a for a in actions if a.action_type == "click" and a.target_selector == "#r1"]
         assert len(clicks) == 1
+        assert clicks[0].value == "active"
 
     def test_toggle_no_match_skipped(self):
         radio = _el(
@@ -458,6 +461,73 @@ class TestPlanActions:
         actions = plan_actions(analysis, toggle_values={"status": "active"})
         clicks = [a for a in actions if a.target_selector == "#r1"]
         assert len(clicks) == 0
+
+    def test_native_select_from_fill_values(self):
+        status = _el(
+            selector="#status",
+            category="select",
+            tag="select",
+            id="status",
+            name="status",
+            element_type=None,
+            semantic_role=None,
+            label_text="Status",
+            element_value="active",
+        )
+        submit = _el(selector="#btn", category="submit", tag="button", element_type="submit")
+        analysis = _analysis(select=[status], submit=[submit])
+
+        actions = plan_actions(analysis, fill_values={"status": "active"})
+
+        assert [(a.action_type, a.target_selector, a.value) for a in actions[:2]] == [
+            ("select", "#status", "active"),
+            ("click", "#btn", None),
+        ]
+
+    def test_readonly_date_picker_uses_set_value(self):
+        registered = _el(
+            selector="#registered",
+            category="fillable",
+            tag="input",
+            element_type=None,
+            id="registered",
+            label_text="Registered",
+            placeholder="Select date",
+            readonly=True,
+            rect={"x": 0, "y": 200, "w": 180, "h": 32},
+        )
+        submit = _el(selector="#btn", category="submit", tag="button", element_type="submit")
+        analysis = _analysis(fillable=[registered], submit=[submit])
+
+        actions = plan_actions(analysis, fill_values={"registered": "2026-01-01"})
+
+        assert [(a.action_type, a.target_selector, a.value) for a in actions[:2]] == [
+            ("set_value", "#registered", "2026-01-01"),
+            ("click", "#btn", None),
+        ]
+
+    def test_combobox_uses_first_option_selection(self):
+        role = _el(
+            selector="#role",
+            category="fillable",
+            tag="input",
+            element_type="search",
+            role="combobox",
+            id="role",
+            label_text="Role",
+            semantic_role="role",
+            readonly=True,
+            rect={"x": 0, "y": 200, "w": 180, "h": 32},
+        )
+        submit = _el(selector="#btn", category="submit", tag="button", element_type="submit")
+        analysis = _analysis(fillable=[role], submit=[submit])
+
+        actions = plan_actions(analysis, fill_values={"role": "admin"})
+
+        assert [(a.action_type, a.target_selector, a.value) for a in actions[:2]] == [
+            ("select_first_option", "#role", "admin"),
+            ("click", "#btn", None),
+        ]
 
     def test_fallback_submit_from_clickables(self):
         inp = _el(selector="#q", semantic_role="search")
