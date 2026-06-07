@@ -1,6 +1,6 @@
 # Technical Design
 
-状态：proposed
+状态：PACKAGE_COMPLETE
 
 ## Current Code Path
 

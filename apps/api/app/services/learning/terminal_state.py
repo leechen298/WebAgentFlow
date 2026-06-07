@@ -75,6 +75,39 @@ def _action_types(events: list[dict[str, Any]], *event_types: str) -> list[str]:
     )
 
 
+def _request_key(event: dict[str, Any]) -> str | None:
+    metadata = event.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    value = metadata.get("request_key")
+    return str(value) if value else None
+
+
+def _action_scope_key(event: dict[str, Any]) -> tuple[str | None, int | None, str | None]:
+    step_index = event.get("step_index")
+    return (
+        str(event.get("action_id")) if event.get("action_id") else None,
+        step_index if isinstance(step_index, int) else None,
+        str(event.get("action_type")) if event.get("action_type") else None,
+    )
+
+
+def _paired_network_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    requests: dict[tuple[tuple[str | None, int | None, str | None], str], dict[str, Any]] = {}
+    paired: list[dict[str, Any]] = []
+    for event in events:
+        request_key = _request_key(event)
+        if not request_key:
+            continue
+        key = (_action_scope_key(event), request_key)
+        if event.get("event_type") == "request":
+            requests[key] = event
+        elif event.get("event_type") == "response" and key in requests:
+            paired.append(requests[key])
+            paired.append(event)
+    return paired
+
+
 def _hint_types(page_terminal_hints: dict[str, Any] | None) -> set[str]:
     if not isinstance(page_terminal_hints, dict):
         return set()
@@ -237,6 +270,24 @@ def classify_terminal_state(
         )
 
     if "response" in event_types:
+        paired_network_events = _paired_network_events(scoped_events)
+        if not paired_network_events:
+            return TerminalStateVerdict(
+                terminal_outcome="terminal_unverified",
+                terminal_type="network_completion",
+                evidence_strength="weak",
+                evidence_summary=(
+                    "Network response was recorded without a matching action-scoped request."
+                ),
+                stop_decision="unverified_stop",
+                warnings=["network_response_without_action_scoped_request_pair"],
+                matched_event_ids=_event_ids(scoped_events, "response"),
+                matched_action_ids=_action_ids(scoped_events, "response"),
+                matched_step_indices=_step_indices(scoped_events, "response"),
+                matched_action_types=_action_types(scoped_events, "response"),
+                missing_evidence=["action_scoped_request_response_pair"],
+                max_wait_reached=max_wait_reached,
+            )
         terminal_type = "list_refresh" if "list_refresh" in hint_types else "network_completion"
         strength = "strong" if terminal_type in hint_types else "medium"
         return TerminalStateVerdict(
@@ -245,10 +296,10 @@ def classify_terminal_state(
             evidence_strength=strength,
             evidence_summary="Network activity matched page terminal hints.",
             stop_decision="stop",
-            matched_event_ids=_event_ids(scoped_events, "request", "response"),
-            matched_action_ids=_action_ids(scoped_events, "request", "response"),
-            matched_step_indices=_step_indices(scoped_events, "request", "response"),
-            matched_action_types=_action_types(scoped_events, "request", "response"),
+            matched_event_ids=_event_ids(paired_network_events, "request", "response"),
+            matched_action_ids=_action_ids(paired_network_events, "request", "response"),
+            matched_step_indices=_step_indices(paired_network_events, "request", "response"),
+            matched_action_types=_action_types(paired_network_events, "request", "response"),
             matched_hint_ids=_hint_ids(page_terminal_hints, terminal_type),
             matched_evidence=["response_event"],
             max_wait_reached=max_wait_reached,

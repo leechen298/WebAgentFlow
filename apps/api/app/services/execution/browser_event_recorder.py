@@ -7,6 +7,8 @@ authorization headers, or file contents.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import time
 import uuid
@@ -131,6 +133,17 @@ def _safe_headers(headers: Any) -> tuple[dict[str, str], list[str]]:
     return safe, warnings
 
 
+def _request_key(*, url: Any, method: Any = None, resource_type: Any = None) -> str:
+    url_meta, _warnings = _safe_url_metadata(url)
+    payload = {
+        "method": str(method or "").upper(),
+        "resource_type": str(resource_type or ""),
+        "url": url_meta,
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:16]
+
+
 def _safe_filename(value: Any) -> str:
     text = _redact_text(value, limit=180)
     text = text.replace("/", "_").replace("\\", "_")
@@ -164,12 +177,16 @@ class BrowserEventRecorder:
         self._action_scope = _ActionScope()
         self._attached = False
         self._attach_failed = False
+        self._listener_handles: list[tuple[Any, str, Any]] = []
 
     def attach(self, *, page: Any = None, context: Any = None) -> None:
         """Attach listeners to a Playwright-like page/context.
 
         Fake objects only need an ``on(event_name, callback)`` method for tests.
         """
+        if self._listener_handles:
+            self._recorder_warnings.append("already_attached")
+            return
         listeners = [
             (page, "request", self.record_request),
             (page, "response", self.record_response),
@@ -197,6 +214,7 @@ class BrowserEventRecorder:
             try:
                 on(event_name, handler)
                 attached += 1
+                self._listener_handles.append((target, event_name, handler))
             except Exception as exc:
                 self._recorder_warnings.append(f"listener_attach_failed:{event_name}:{type(exc).__name__}")
         self._attached = attached > 0
@@ -228,7 +246,10 @@ class BrowserEventRecorder:
         self.clear_action()
 
     def record_request(self, request: Any) -> None:
-        url_meta, warnings = _safe_url_metadata(_get(request, "url", ""))
+        url = _get(request, "url", "")
+        method = _get(request, "method")
+        resource_type = _get(request, "resource_type")
+        url_meta, warnings = _safe_url_metadata(url)
         headers, header_warnings = _safe_headers(
             _call(request, "headers") or _get(request, "headers") or {}
         )
@@ -236,8 +257,13 @@ class BrowserEventRecorder:
             "request",
             {
                 "url": url_meta,
-                "method": _get(request, "method"),
-                "resource_type": _get(request, "resource_type"),
+                "method": method,
+                "resource_type": resource_type,
+                "request_key": _request_key(
+                    url=url,
+                    method=method,
+                    resource_type=resource_type,
+                ),
                 "headers": headers,
                 "body_stored": False,
             },
@@ -247,6 +273,8 @@ class BrowserEventRecorder:
     def record_response(self, response: Any) -> None:
         request = _call(response, "request") or _get(response, "request")
         url = _get(response, "url") or _get(request, "url", "")
+        method = _get(request, "method")
+        resource_type = _get(request, "resource_type")
         url_meta, warnings = _safe_url_metadata(url)
         headers, header_warnings = _safe_headers(
             _call(response, "headers") or _get(response, "headers") or {}
@@ -256,6 +284,11 @@ class BrowserEventRecorder:
             {
                 "url": url_meta,
                 "status": _get(response, "status"),
+                "request_key": _request_key(
+                    url=url,
+                    method=method,
+                    resource_type=resource_type,
+                ),
                 "headers": headers,
                 "body_stored": False,
             },
@@ -263,14 +296,22 @@ class BrowserEventRecorder:
         )
 
     def record_requestfailed(self, request: Any) -> None:
-        url_meta, warnings = _safe_url_metadata(_get(request, "url", ""))
+        url = _get(request, "url", "")
+        method = _get(request, "method")
+        resource_type = _get(request, "resource_type")
+        url_meta, warnings = _safe_url_metadata(url)
         failure = _call(request, "failure") or {}
         self._append(
             "requestfailed",
             {
                 "url": url_meta,
-                "method": _get(request, "method"),
-                "resource_type": _get(request, "resource_type"),
+                "method": method,
+                "resource_type": resource_type,
+                "request_key": _request_key(
+                    url=url,
+                    method=method,
+                    resource_type=resource_type,
+                ),
                 "failure": _redact_text(failure, limit=240),
             },
             warnings,
@@ -345,7 +386,23 @@ class BrowserEventRecorder:
         }
 
     def stop(self) -> dict[str, Any]:
+        self.detach()
         return self.snapshot()
+
+    def detach(self) -> None:
+        """Best-effort listener cleanup for reused browser pages."""
+        for target, event_name, handler in reversed(self._listener_handles):
+            remover = getattr(target, "remove_listener", None) or getattr(target, "off", None)
+            if not callable(remover):
+                self._recorder_warnings.append(f"listener_detach_unavailable:{event_name}")
+                continue
+            try:
+                remover(event_name, handler)
+            except Exception as exc:
+                self._recorder_warnings.append(
+                    f"listener_detach_failed:{event_name}:{type(exc).__name__}"
+                )
+        self._listener_handles.clear()
 
     def _append(
         self,

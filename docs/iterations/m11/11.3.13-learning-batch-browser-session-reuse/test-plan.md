@@ -1,6 +1,6 @@
 # Test Plan
 
-状态：proposed
+状态：PACKAGE_COMPLETE
 
 ## Scope
 

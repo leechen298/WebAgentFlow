@@ -10,11 +10,17 @@ def _timeline(*events: dict, status: str = "recording_available") -> dict:
     }
 
 
-def _event(event_type: str, event_id: str = "event-1", *, scoped: bool = True) -> dict:
+def _event(
+    event_type: str,
+    event_id: str = "event-1",
+    *,
+    scoped: bool = True,
+    request_key: str | None = "req-1",
+) -> dict:
     event = {
         "event_id": event_id,
         "event_type": event_type,
-        "metadata": {},
+        "metadata": {"request_key": request_key} if request_key else {},
     }
     if scoped:
         event.update(
@@ -139,6 +145,38 @@ def test_unscoped_response_does_not_stop_or_detect_terminal() -> None:
     assert verdict.stop_decision == "unverified_stop"
     assert verdict.warnings == ["terminal_events_without_action_scope"]
     assert verdict.missing_evidence == ["action_scoped_browser_event"]
+
+
+def test_response_without_matching_action_scoped_request_is_unverified() -> None:
+    verdict = classify_terminal_state(
+        browser_event_timeline=_timeline(
+            _event("request", "event-1", request_key="old-request"),
+            _event("response", "event-2", request_key="background-refresh"),
+        ),
+        page_terminal_hints=_hints("list_refresh"),
+    )
+
+    assert verdict.terminal_outcome == "terminal_unverified"
+    assert verdict.terminal_type == "network_completion"
+    assert verdict.evidence_strength == "weak"
+    assert verdict.stop_decision == "unverified_stop"
+    assert verdict.warnings == ["network_response_without_action_scoped_request_pair"]
+    assert verdict.missing_evidence == ["action_scoped_request_response_pair"]
+
+
+def test_scoped_response_for_unscoped_request_is_unverified() -> None:
+    verdict = classify_terminal_state(
+        browser_event_timeline=_timeline(
+            _event("request", "event-1", scoped=False, request_key="background-refresh"),
+            _event("response", "event-2", request_key="background-refresh"),
+        ),
+        page_terminal_hints=_hints("list_refresh"),
+    )
+
+    assert verdict.terminal_outcome == "terminal_unverified"
+    assert verdict.terminal_type == "network_completion"
+    assert verdict.stop_decision == "unverified_stop"
+    assert verdict.warnings == ["network_response_without_action_scoped_request_pair"]
 
 
 def test_missing_evidence_continues_without_success_fields() -> None:

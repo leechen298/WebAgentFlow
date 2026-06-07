@@ -343,12 +343,22 @@ Delivered packages:
   bounded learning batch lifecycle, Page Understanding capability hints, and
   code-owned single-page capability composition. Live autonomous validation was
   not run.
-- **11.3.13 Learning Batch Browser Session Reuse** — planned as an M11.3
-  post-closeout design package for visible browser lifecycle UX during
-  product-level learning. It proposes one batch-scoped `ExecutionRuntime` /
+- **11.3.13 Learning Batch Browser Session Reuse** — completed as an M11.3
+  post-closeout repo-local package for visible browser lifecycle UX during
+  product-level learning. It ships one batch-scoped `ExecutionRuntime` /
   Playwright Chromium session for seed analysis plus scenario exploration, with
-  per-scenario reset and evidence isolation, then one close at the learning batch
-  terminal state. Runtime implementation is not yet authorized.
+  per-scenario reset fail-closed behavior, same-row-count result-region content /
+  structure fingerprinting, reset failure run evidence, BrowserEventRecorder
+  listener cleanup, request/response paired network terminal evidence, and one
+  close at the learning batch terminal state. Live autonomous validation was not
+  run.
+- **11.3.14 Automatic Capability Composition Candidates** — proposed as an
+  M11.3 post-closeout package to connect the existing 11.3.12.4 deterministic
+  `CapabilityComposer` to a full product chain: bounded candidate generation
+  from learned capabilities, candidate execution, promotion to `LearnedPath`
+  only after evidence gates, negative evidence for failed candidates, and a
+  redacted `waf.learning_evidence_bundle.v1` for provider evaluation.
+  Implementation is not authorized until the design package is reviewed.
 
 M11.3.4 and M11.3.5 do not let an LLM operate the browser. The LLM understands
 user language, page semantics, and next-step routing; code validates scope,
@@ -376,9 +386,19 @@ Agents may interpret intent and page semantics, while code owns capability
 selection, ordering, browser execution, and LearnedPath promotion.
 
 M11.3.13 is a UX and resource-lifecycle follow-up to the bounded learning batch:
-it should reduce repeated browser popup / close cycles during one learning batch
+it reduces repeated browser popup / close cycles during one learning batch
 without changing the 11.3.12 capability asset model, pass gate semantics, or
-approved live-run boundaries.
+approved live-run boundaries. Its reset gate is fail-closed when target-agnostic
+control state, result-region count / content / structure summary, or lightweight
+page-state fingerprint does not match the seed baseline.
+
+M11.3.14 is the planned follow-up for automatic composition candidate generation.
+It should not be confused with 11.3.12.4: 11.3.12.4 builds a composition plan
+when required capability kinds and candidates are already known; 11.3.14 must
+derive bounded candidate families, execute candidates, promote only evidence-passed
+candidates to `LearnedPath`, and export evidence that an external provider can
+evaluate without exposing provider oracle answers to runtime or coupling to the
+WebAgentFlow database.
 
 ## M12 — Recovery & Abort Dialogue
 

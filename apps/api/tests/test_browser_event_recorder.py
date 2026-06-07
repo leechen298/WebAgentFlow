@@ -9,10 +9,20 @@ from app.services.learning import autonomous_explorer as ae
 
 class FakeTarget:
     def __init__(self) -> None:
-        self.listeners: dict[str, object] = {}
+        self.listeners: dict[str, list[object]] = {}
 
     def on(self, event_name: str, handler) -> None:
-        self.listeners[event_name] = handler
+        self.listeners.setdefault(event_name, []).append(handler)
+
+    def remove_listener(self, event_name: str, handler) -> None:
+        listeners = self.listeners.get(event_name) or []
+        self.listeners[event_name] = [item for item in listeners if item is not handler]
+        if not self.listeners[event_name]:
+            del self.listeners[event_name]
+
+    def emit(self, event_name: str, *args) -> None:
+        for handler in list(self.listeners.get(event_name) or []):
+            handler(*args)
 
 
 def test_attach_registers_page_and_context_listeners() -> None:
@@ -30,6 +40,81 @@ def test_attach_registers_page_and_context_listeners() -> None:
     assert "pageerror" in page.listeners
     assert "page" in context.listeners
     assert recorder.snapshot()["status"] == "recording_available"
+
+
+def test_stop_detaches_registered_page_and_context_listeners() -> None:
+    page = FakeTarget()
+    context = FakeTarget()
+    recorder = BrowserEventRecorder(correlation_id="corr-001")
+    recorder.attach(page=page, context=context)
+
+    assert page.listeners
+    assert context.listeners
+
+    snapshot = recorder.stop()
+
+    assert snapshot["status"] == "recording_available"
+    assert page.listeners == {}
+    assert context.listeners == {}
+
+
+def test_attach_is_idempotent_until_stop() -> None:
+    page = FakeTarget()
+    recorder = BrowserEventRecorder(correlation_id="corr-001")
+
+    recorder.attach(page=page, context=None)
+    recorder.attach(page=page, context=None)
+    page.emit(
+        "request",
+        SimpleNamespace(
+            url="https://example.invalid/search",
+            method="GET",
+            resource_type="xhr",
+            headers={},
+        ),
+    )
+
+    snapshot = recorder.stop()
+    assert snapshot["event_count"] == 1
+    assert "already_attached" in snapshot["recorder_warnings"]
+
+
+def test_stop_is_idempotent() -> None:
+    page = FakeTarget()
+    recorder = BrowserEventRecorder(correlation_id="corr-001")
+
+    recorder.attach(page=page, context=None)
+    recorder.stop()
+    snapshot = recorder.stop()
+
+    assert snapshot["status"] == "recording_available"
+    assert page.listeners == {}
+
+
+def test_two_recorders_on_same_page_detach_independently() -> None:
+    page = FakeTarget()
+    recorder_one = BrowserEventRecorder(correlation_id="corr-001")
+    recorder_two = BrowserEventRecorder(correlation_id="corr-002")
+
+    recorder_one.attach(page=page, context=None)
+    recorder_two.attach(page=page, context=None)
+    assert len(page.listeners["request"]) == 2
+
+    recorder_one.stop()
+    assert len(page.listeners["request"]) == 1
+
+    page.emit(
+        "request",
+        SimpleNamespace(
+            url="https://example.invalid/search",
+            method="GET",
+            resource_type="xhr",
+            headers={},
+        ),
+    )
+
+    assert recorder_one.snapshot()["event_count"] == 0
+    assert recorder_two.stop()["event_count"] == 1
 
 
 def test_request_event_redacts_secret_query_headers_and_body() -> None:
@@ -60,6 +145,7 @@ def test_request_event_redacts_secret_query_headers_and_body() -> None:
     assert metadata["url"]["secret_query_keys"] == ["token"]
     assert metadata["headers"] == {"content-type": "application/json"}
     assert metadata["body_stored"] is False
+    assert metadata["request_key"]
     assert "secret-token" not in str(event)
     assert "sid=secret" not in str(event)
 
@@ -138,7 +224,7 @@ def test_autonomous_explorer_result_includes_action_scoped_timeline(monkeypatch)
             self.context = context
 
         def navigate(self, _url: str) -> None:
-            page.listeners["load"]()
+            page.emit("load")
             return None
 
         def current_url(self) -> str:
@@ -175,7 +261,8 @@ def test_autonomous_explorer_result_includes_action_scoped_timeline(monkeypatch)
     )
 
     def fake_execute_action(_action, runtime):
-        runtime.page.listeners["request"](
+        runtime.page.emit(
+            "request",
             SimpleNamespace(
                 url="https://example.invalid/search?token=secret&status=active",
                 method="GET",
@@ -223,3 +310,5 @@ def test_autonomous_explorer_result_includes_action_scoped_timeline(monkeypatch)
     assert terminal_state["terminal_type"] == "network_completion"
     assert terminal_state["stop_decision"] == "wait"
     assert terminal_state["needs_more_wait"] is True
+    assert page.listeners == {}
+    assert context.listeners == {}

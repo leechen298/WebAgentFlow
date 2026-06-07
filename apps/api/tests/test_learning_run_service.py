@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.exploration_run import ExplorationRun
+from app.models.exploration_run import ExplorationRun, ExplorationRunStatus
 from app.models.learned_capability import LearnedCapability
 from app.models.learned_path import LearnedPath
 from app.models.learning_batch import LearningBatch, LearningBatchStatus
@@ -27,13 +27,43 @@ from app.services.learning.learning_run_service import (
 
 
 class _DummyRuntimeFactory:
+    def __init__(self) -> None:
+        self.call_count = 0
+        self.enter_count = 0
+        self.exit_count = 0
+        self.page_state = {
+            "controls": [],
+            "result_regions": {
+                "tableRows": 0,
+                "roleRows": 0,
+                "listItems": 0,
+                "options": 0,
+                "alerts": 0,
+                "dialogs": 0,
+                "modals": 0,
+            },
+        }
+        self.runtime = SimpleNamespace(
+            page=SimpleNamespace(evaluate=lambda _script: self.page_state),
+            context=None,
+            navigated_urls=[],
+            navigate=lambda url: self.runtime.navigated_urls.append(url),
+            current_url=lambda: self.runtime.navigated_urls[-1]
+            if self.runtime.navigated_urls
+            else "https://example.invalid/entry",
+            current_title=lambda: "Dummy",
+        )
+
     def __call__(self, config):
+        self.call_count += 1
         return self
 
     def __enter__(self):
-        return SimpleNamespace(page=None)
+        self.enter_count += 1
+        return self.runtime
 
     def __exit__(self, exc_type, exc, tb):
+        self.exit_count += 1
         return False
 
 
@@ -725,6 +755,7 @@ def test_product_url_only_filter_learning_generates_capability_scenario_runs(
     db_session: Session,
 ) -> None:
     calls: list[dict[str, object]] = []
+    analysis_runtimes: list[object] = []
     analysis = _filter_page_analysis()
 
     def explorer(**kwargs):
@@ -776,11 +807,17 @@ def test_product_url_only_filter_learning_generates_capability_scenario_runs(
             steps=steps,
         )
 
+    runtime_factory = _DummyRuntimeFactory()
+
+    def page_analyzer(runtime):
+        analysis_runtimes.append(runtime)
+        return analysis
+
     service = LearningRunService(
         db_session,
-        runtime_factory=_DummyRuntimeFactory(),
+        runtime_factory=runtime_factory,
         explorer=explorer,
-        page_analyzer=lambda runtime: analysis,
+        page_analyzer=page_analyzer,
     )
 
     result = service.run(
@@ -798,10 +835,18 @@ def test_product_url_only_filter_learning_generates_capability_scenario_runs(
     assert result.learning_batch_status == LearningBatchStatus.COMPLETED
     assert result.learning_batch_summary["planned_count"] == 3
     assert result.learning_batch_summary["attempted_count"] == 3
+    assert result.learning_batch_summary["browser_session_reuse"] is True
+    assert result.learning_batch_summary["scenario_reset_count"] == 3
     assert len(result.learned_path_ids) == 3
     assert len(result.capability_summaries) == 3
     assert len([call for call in calls if call.get("scenario_name")]) == 3
     assert all(call.get("scenario_name") for call in calls)
+    assert runtime_factory.call_count == 1
+    assert runtime_factory.enter_count == 1
+    assert runtime_factory.exit_count == 1
+    assert all(call["runtime"] is runtime_factory.runtime for call in calls)
+    assert analysis_runtimes == [runtime_factory.runtime] * 4
+    assert runtime_factory.runtime.navigated_urls == [analysis.url] * 4
 
     scenario_runs = [
         run
@@ -830,6 +875,407 @@ def test_product_url_only_filter_learning_generates_capability_scenario_runs(
     assert set(batch.created_capability_ids_json) == {
         str(row.id) for row in learned_capabilities
     }
+
+
+def test_product_url_only_filter_learning_stops_when_scenario_reset_fails(
+    db_session: Session,
+) -> None:
+    analysis = _filter_page_analysis()
+
+    class ResetFailureRuntimeFactory(_DummyRuntimeFactory):
+        def __init__(self) -> None:
+            super().__init__()
+            self.navigate_count = 0
+
+            def navigate(url: str) -> None:
+                self.navigate_count += 1
+                self.runtime.navigated_urls.append(url)
+                if self.navigate_count > 1:
+                    raise RuntimeError("reset #private failed")
+
+            self.runtime.navigate = navigate
+
+    runtime_factory = ResetFailureRuntimeFactory()
+    explorer_calls: list[dict[str, object]] = []
+
+    def explorer(**kwargs):
+        explorer_calls.append(kwargs)
+        return _exploration_result(page_analysis=analysis)
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=runtime_factory,
+        explorer=explorer,
+        page_analyzer=lambda runtime: analysis,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url=analysis.url,
+            goal="学习这个页面上的操作",
+            product_level=True,
+        )
+    )
+
+    assert result.status == "failed"
+    assert result.learning_outcome == "unverified"
+    assert result.learning_batch_status == LearningBatchStatus.UNVERIFIED
+    assert result.learning_batch_summary["terminal_reason"] == "scenario_reset_failed"
+    assert result.learning_batch_summary["attempted_count"] == 0
+    assert result.learning_batch_summary["unverified_count"] == 1
+    assert result.learning_batch_summary["skipped_count"] == 2
+    assert result.learning_batch_summary["scenario_reset_count"] == 1
+    assert result.learning_batch_summary["browser_session_reuse"] is True
+    assert "scenario_reset_warnings" in result.learning_batch_summary
+    assert len(result.learning_batch_summary["warnings"]) == len(
+        set(result.learning_batch_summary["warnings"])
+    )
+    assert len(result.learning_batch_summary["scenario_reset_warnings"]) == len(
+        set(result.learning_batch_summary["scenario_reset_warnings"])
+    )
+    assert "[redacted-selector]" in str(result.learning_batch_summary)
+    assert explorer_calls == []
+    assert len(result.run_ids) == 1
+    reset_run = db_session.get(ExplorationRun, result.run_ids[0])
+    assert reset_run is not None
+    assert reset_run.status == ExplorationRunStatus.FAILED
+    assert (reset_run.strategy_json or {})["reset_failed"] is True
+    assert (reset_run.result_snapshot_json or {})["attempt_ingest_evaluation"][
+        "ingest_status"
+    ] == "unverified"
+    assert list(db_session.scalars(select(LearnedPath)).all()) == []
+    assert runtime_factory.enter_count == 1
+    assert runtime_factory.exit_count == 1
+
+
+def test_product_url_only_filter_learning_rejects_reset_baseline_mismatch(
+    db_session: Session,
+) -> None:
+    analysis = _filter_page_analysis()
+    polluted_analysis = analysis.model_copy(update={"title": "Polluted"})
+    analysis_calls = iter([analysis, polluted_analysis])
+    explorer_calls: list[dict[str, object]] = []
+
+    def explorer(**kwargs):
+        explorer_calls.append(kwargs)
+        return _exploration_result(page_analysis=analysis)
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=_DummyRuntimeFactory(),
+        explorer=explorer,
+        page_analyzer=lambda runtime: next(analysis_calls),
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url=analysis.url,
+            goal="学习这个页面上的操作",
+            product_level=True,
+        )
+    )
+
+    assert result.status == "failed"
+    assert result.learning_outcome == "unverified"
+    assert result.learning_batch_status == LearningBatchStatus.UNVERIFIED
+    assert result.learning_batch_summary["terminal_reason"] == "scenario_reset_failed"
+    assert result.learning_batch_summary["unverified_count"] == 1
+    assert result.learning_batch_summary["skipped_count"] == 2
+    assert "scenario reset baseline title changed" in str(result.learning_batch_summary)
+    assert explorer_calls == []
+    assert len(result.run_ids) == 1
+    reset_run = db_session.get(ExplorationRun, result.run_ids[0])
+    assert reset_run is not None
+    assert (reset_run.strategy_json or {})["reset_failed"] is True
+    assert list(db_session.scalars(select(LearnedPath)).all()) == []
+
+
+def test_product_url_only_filter_learning_rejects_dirty_control_state_reset(
+    db_session: Session,
+) -> None:
+    analysis = _filter_page_analysis()
+    runtime_factory = _DummyRuntimeFactory()
+    clean_state = {
+        "controls": [
+            {
+                "index": 0,
+                "tag": "input",
+                "type": "search",
+                "role": "",
+                "checked": False,
+                "selectedIndex": None,
+                "optionState": [],
+                "valueLength": 0,
+                "valueHash": "empty",
+                "disabled": False,
+                "readonly": False,
+            }
+        ],
+        "result_regions": {
+            "tableRows": 0,
+            "roleRows": 0,
+            "listItems": 0,
+            "options": 0,
+            "alerts": 0,
+            "dialogs": 0,
+            "modals": 0,
+        },
+    }
+    dirty_state = {
+        **clean_state,
+        "controls": [
+            {
+                **clean_state["controls"][0],
+                "valueLength": 6,
+                "valueHash": "cached-hash",
+            }
+        ],
+    }
+    states = iter([clean_state, dirty_state])
+    runtime_factory.runtime.page = SimpleNamespace(evaluate=lambda _script: next(states))
+    explorer_calls: list[dict[str, object]] = []
+
+    def explorer(**kwargs):
+        explorer_calls.append(kwargs)
+        return _exploration_result(page_analysis=analysis)
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=runtime_factory,
+        explorer=explorer,
+        page_analyzer=lambda runtime: analysis,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url=analysis.url,
+            goal="学习这个页面上的操作",
+            product_level=True,
+        )
+    )
+
+    assert result.status == "failed"
+    assert result.learning_batch_status == LearningBatchStatus.UNVERIFIED
+    assert result.learning_batch_summary["terminal_reason"] == "scenario_reset_failed"
+    assert "scenario reset baseline control state changed" in str(
+        result.learning_batch_summary
+    )
+    assert "scenario reset baseline page state changed" in str(
+        result.learning_batch_summary
+    )
+    assert explorer_calls == []
+    assert len(result.run_ids) == 1
+    reset_run = db_session.get(ExplorationRun, result.run_ids[0])
+    assert reset_run is not None
+    assert (reset_run.strategy_json or {})["reset_failed"] is True
+    assert list(db_session.scalars(select(LearnedPath)).all()) == []
+
+
+def test_product_url_only_filter_learning_rejects_dirty_result_region_content_reset(
+    db_session: Session,
+) -> None:
+    analysis = _filter_page_analysis()
+    runtime_factory = _DummyRuntimeFactory()
+    controls = []
+    clean_result_regions = {
+        "tableRows": 2,
+        "roleRows": 0,
+        "listItems": 0,
+        "options": 0,
+        "alerts": 0,
+        "dialogs": 0,
+        "modals": 0,
+        "tableFingerprints": [
+            {
+                "tag": "table",
+                "role": "",
+                "childCount": 1,
+                "textLength": 24,
+                "textHash": "seed-table",
+                "structureHash": "same-structure",
+                "rows": [
+                    {
+                        "tag": "tr",
+                        "role": "",
+                        "childCount": 2,
+                        "textLength": 12,
+                        "textHash": "seed-row-1",
+                        "cells": [
+                            {
+                                "tag": "td",
+                                "role": "",
+                                "childCount": 0,
+                                "textLength": 6,
+                                "textHash": "seed-cell-a",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+        "rowFingerprints": [],
+        "listFingerprints": [],
+        "regionFingerprints": [],
+    }
+    dirty_result_regions = {
+        **clean_result_regions,
+        "tableFingerprints": [
+            {
+                **clean_result_regions["tableFingerprints"][0],
+                "textHash": "dirty-table",
+                "rows": [
+                    {
+                        **clean_result_regions["tableFingerprints"][0]["rows"][0],
+                        "textHash": "dirty-row-1",
+                        "cells": [
+                            {
+                                **clean_result_regions["tableFingerprints"][0]["rows"][0][
+                                    "cells"
+                                ][0],
+                                "textHash": "dirty-cell-a",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    states = iter(
+        [
+            {"controls": controls, "result_regions": clean_result_regions},
+            {"controls": controls, "result_regions": dirty_result_regions},
+        ]
+    )
+    runtime_factory.runtime.page = SimpleNamespace(evaluate=lambda _script: next(states))
+    explorer_calls: list[dict[str, object]] = []
+
+    def explorer(**kwargs):
+        explorer_calls.append(kwargs)
+        return _exploration_result(page_analysis=analysis)
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=runtime_factory,
+        explorer=explorer,
+        page_analyzer=lambda runtime: analysis,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url=analysis.url,
+            goal="学习这个页面上的操作",
+            product_level=True,
+        )
+    )
+
+    assert result.status == "failed"
+    assert result.learning_outcome == "unverified"
+    assert result.learning_batch_status == LearningBatchStatus.UNVERIFIED
+    assert result.learning_batch_summary["terminal_reason"] == "scenario_reset_failed"
+    assert result.learning_batch_summary["scenario_reset_count"] == 1
+    assert "scenario reset baseline result region changed" in str(
+        result.learning_batch_summary
+    )
+    assert "scenario reset baseline page state changed" in str(
+        result.learning_batch_summary
+    )
+    assert explorer_calls == []
+    assert len(result.run_ids) == 1
+    reset_run = db_session.get(ExplorationRun, result.run_ids[0])
+    assert reset_run is not None
+    assert reset_run.status == ExplorationRunStatus.FAILED
+    assert (reset_run.strategy_json or {})["reset_failed"] is True
+    snapshot = reset_run.result_snapshot_json or {}
+    assert snapshot["reset_result"]["baseline_summary"]["result_region_summary"][
+        "tableRows"
+    ] == 2
+    assert snapshot["reset_result"]["baseline_summary"]["result_region_summary"][
+        "content_structure_fingerprint"
+    ]
+    assert "dirty-cell-a" not in str(snapshot)
+    assert list(db_session.scalars(select(LearnedPath)).all()) == []
+    assert list(db_session.scalars(select(LearnedCapability)).all()) == []
+    assert runtime_factory.enter_count == 1
+    assert runtime_factory.exit_count == 1
+
+
+def test_product_url_only_filter_learning_reports_failed_when_reset_fails_after_asset(
+    db_session: Session,
+) -> None:
+    analysis = _filter_page_analysis()
+
+    class ResetFailureAfterFirstScenarioFactory(_DummyRuntimeFactory):
+        def __init__(self) -> None:
+            super().__init__()
+            self.navigate_count = 0
+
+            def navigate(url: str) -> None:
+                self.navigate_count += 1
+                self.runtime.navigated_urls.append(url)
+                if self.navigate_count > 2:
+                    raise RuntimeError("late reset failed")
+
+            self.runtime.navigate = navigate
+
+    runtime_factory = ResetFailureAfterFirstScenarioFactory()
+
+    def explorer(**kwargs):
+        fill_values = kwargs.get("fill_values") or {}
+        steps = [
+            {
+                "step": 1,
+                "action_type": "fill",
+                "target_selector": f"#{key}",
+                "value": value,
+            }
+            for key, value in dict(fill_values).items()
+        ]
+        steps.append(
+            {
+                "step": len(steps) + 1,
+                "action_type": "click",
+                "target_selector": "#btn-search",
+            }
+        )
+        return _exploration_result(
+            url=analysis.url,
+            title=analysis.title,
+            verdict="success",
+            success=True,
+            page_analysis=analysis,
+            steps=steps,
+        )
+
+    service = LearningRunService(
+        db_session,
+        runtime_factory=runtime_factory,
+        explorer=explorer,
+        page_analyzer=lambda runtime: analysis,
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url=analysis.url,
+            goal="学习这个页面上的操作",
+            product_level=True,
+        )
+    )
+
+    assert result.status == "failed"
+    assert result.learning_outcome == "partial_success"
+    assert result.learning_batch_status == LearningBatchStatus.PARTIAL_SUCCESS
+    assert result.learning_batch_summary["terminal_reason"] == "scenario_reset_failed"
+    assert result.learning_batch_summary["attempted_count"] == 1
+    assert result.learning_batch_summary["unverified_count"] == 1
+    assert result.learning_batch_summary["skipped_count"] == 1
+    assert len(result.learned_path_ids) == 1
+    assert len(result.run_ids) == 2
+    reset_run = db_session.get(ExplorationRun, result.run_ids[-1])
+    assert reset_run is not None
+    assert (reset_run.strategy_json or {})["reset_failed"] is True
+    assert result.error == "Scenario reset failed before remaining capabilities could be verified."
+    assert runtime_factory.enter_count == 1
+    assert runtime_factory.exit_count == 1
 
 
 def test_product_url_only_filter_learning_does_not_ingest_click_only_scenarios(
@@ -1062,9 +1508,10 @@ def test_product_url_only_filter_learning_rejected_capability_ingest_is_failed(
 def test_product_url_only_filter_learning_closes_batch_when_seed_analysis_fails(
     db_session: Session,
 ) -> None:
+    runtime_factory = _DummyRuntimeFactory()
     service = LearningRunService(
         db_session,
-        runtime_factory=_DummyRuntimeFactory(),
+        runtime_factory=runtime_factory,
         explorer=lambda **kwargs: _exploration_result(),
         page_analyzer=lambda runtime: (_ for _ in ()).throw(
             RuntimeError("seed #private failed")
@@ -1084,10 +1531,49 @@ def test_product_url_only_filter_learning_closes_batch_when_seed_analysis_fails(
     assert result.learning_batch_status == LearningBatchStatus.FAILED
     assert result.learning_batch_summary["terminal_reason"] == "exception_seed_analysis"
     assert result.learning_batch_summary["failed_count"] == 1
+    assert result.learning_batch_summary["browser_session_reuse"] is True
+    assert result.learning_batch_summary["scenario_reset_count"] == 0
     assert "[redacted-selector]" in result.error
     batch = db_session.get(LearningBatch, result.learning_batch_id)
     assert batch is not None
     assert batch.status == LearningBatchStatus.FAILED
+    assert runtime_factory.enter_count == 1
+    assert runtime_factory.exit_count == 1
+
+
+def test_product_url_only_filter_learning_reports_browser_session_setup_failure(
+    db_session: Session,
+) -> None:
+    class RuntimeSetupFailureFactory(_DummyRuntimeFactory):
+        def __enter__(self):
+            self.enter_count += 1
+            raise RuntimeError("browser setup failed")
+
+    runtime_factory = RuntimeSetupFailureFactory()
+    service = LearningRunService(
+        db_session,
+        runtime_factory=runtime_factory,
+        explorer=lambda **kwargs: _exploration_result(),
+        page_analyzer=lambda runtime: _filter_page_analysis(),
+    )
+
+    result = service.run(
+        LearningRunRequest(
+            url="https://example.invalid/entry",
+            goal="学习这个页面上的操作",
+            product_level=True,
+        )
+    )
+
+    assert result.status == "failed"
+    assert result.learning_batch_status == LearningBatchStatus.FAILED
+    assert result.learning_batch_summary["terminal_reason"] == "exception_browser_session"
+    assert result.learning_batch_summary["browser_session_reuse"] is False
+    assert result.learning_batch_summary["browser_session_setup_failed"] is True
+    assert result.learning_batch_summary["scenario_reset_count"] == 0
+    assert runtime_factory.call_count == 1
+    assert runtime_factory.enter_count == 1
+    assert runtime_factory.exit_count == 0
 
 
 def test_product_url_only_filter_learning_closes_batch_when_scenario_explorer_fails(
@@ -1098,9 +1584,10 @@ def test_product_url_only_filter_learning_closes_batch_when_scenario_explorer_fa
     def explorer(**kwargs):
         raise RuntimeError("scenario failed")
 
+    runtime_factory = _DummyRuntimeFactory()
     service = LearningRunService(
         db_session,
-        runtime_factory=_DummyRuntimeFactory(),
+        runtime_factory=runtime_factory,
         explorer=explorer,
         page_analyzer=lambda runtime: analysis,
     )
@@ -1121,6 +1608,10 @@ def test_product_url_only_filter_learning_closes_batch_when_scenario_explorer_fa
     assert result.learning_batch_summary["attempted_count"] == 1
     assert result.learning_batch_summary["failed_count"] == 1
     assert result.learning_batch_summary["failed_scenarios"][0]["scenario_id"]
+    assert result.learning_batch_summary["browser_session_reuse"] is True
+    assert result.learning_batch_summary["scenario_reset_count"] == 1
+    assert runtime_factory.enter_count == 1
+    assert runtime_factory.exit_count == 1
 
 
 def test_product_url_only_filter_learning_closes_batch_when_persist_fails(
@@ -1148,9 +1639,10 @@ def test_product_url_only_filter_learning_closes_batch_when_persist_fails(
             ],
         )
 
+    runtime_factory = _DummyRuntimeFactory()
     service = LearningRunService(
         db_session,
-        runtime_factory=_DummyRuntimeFactory(),
+        runtime_factory=runtime_factory,
         explorer=explorer,
         page_analyzer=lambda runtime: analysis,
     )
@@ -1175,6 +1667,10 @@ def test_product_url_only_filter_learning_closes_batch_when_persist_fails(
     assert result.learning_batch_summary["planned_count"] == 3
     assert result.learning_batch_summary["attempted_count"] == 1
     assert result.learning_batch_summary["failed_count"] == 1
+    assert result.learning_batch_summary["browser_session_reuse"] is True
+    assert result.learning_batch_summary["scenario_reset_count"] == 1
+    assert runtime_factory.enter_count == 1
+    assert runtime_factory.exit_count == 1
 
 
 def test_binding_evidence_counts_duplicate_expected_values() -> None:

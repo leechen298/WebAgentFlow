@@ -6,6 +6,8 @@ persisted run id and the LearnedPath id that was actually written.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import re
 from collections import Counter
@@ -105,6 +107,16 @@ class LearningRunResult:
     learning_batch_id: str | None = None
     learning_batch_status: str | None = None
     learning_batch_summary: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class _ScenarioResetResult:
+    ok: bool
+    mode: str = "navigate_only"
+    url: str | None = None
+    title: str | None = None
+    baseline_summary: dict[str, Any] = field(default_factory=dict)
+    warnings: list[str] = field(default_factory=list)
 
 
 class LearningRunService:
@@ -287,6 +299,10 @@ class LearningRunService:
         learned_capability_ids: list[str] = []
         evidence_warnings: list[str] = []
         terminal_reason: str | None = None
+        scenario_reset_count = 0
+        scenario_reset_warnings: list[str] = []
+        reset_unverified_count = 0
+        browser_session_started = False
 
         boundary = batch_controller.boundary_state(
             batch.id,
@@ -307,274 +323,380 @@ class LearningRunService:
 
         try:
             with runtime_factory(config=runtime_config) as runtime:
-                if hasattr(runtime, "navigate"):
-                    runtime.navigate(request.url)
-                seed_analysis = page_analyzer(runtime)
-        except Exception as exc:
-            logger.exception("Capability discovery seed analysis failed: %s", exc)
-            return _failed_capability_discovery_result(
-                request=request,
-                batch_controller=batch_controller,
-                batch=batch,
-                policy=policy,
-                state=batch_state,
-                stage="seed_analysis",
-                exc=exc,
-                planned_count=planned_count,
-                attempted_count=attempted_count,
-            )
-
-        try:
-            inventory = build_filter_inventory(seed_analysis)
-            discovery_batch_id = str(batch.id)
-            candidate_scenarios = generate_filter_scenarios(
-                inventory,
-                discovery_batch_id=discovery_batch_id,
-            )
-            scenarios = apply_policy_to_scenarios(candidate_scenarios, policy)
-            planned_count = len(scenarios)
-            batch_controller.mark_running(
-                batch.id,
-                page_template=path_template(seed_analysis.url or request.url),
-                query_signature=query_signature(seed_analysis.url or request.url),
-                dom_fingerprint=dom_fingerprint(seed_analysis),
-                planned_scenarios=[_scenario_payload(scenario) for scenario in scenarios],
-            )
-        except Exception as exc:
-            logger.exception("Capability discovery scenario planning failed: %s", exc)
-            return _failed_capability_discovery_result(
-                request=request,
-                batch_controller=batch_controller,
-                batch=batch,
-                policy=policy,
-                state=batch_state,
-                stage="scenario_planning",
-                exc=exc,
-                planned_count=planned_count,
-                attempted_count=attempted_count,
-                page_template_value=path_template(seed_analysis.url or request.url),
-            )
-        if not scenarios:
-            batch_state.unsupported_count = len(inventory.unsupported_capabilities)
-            closed = batch_controller.close(
-                batch.id,
-                state=batch_state,
-                policy=policy,
-                planned_count=0,
-                attempted_count=0,
-                terminal_reason="no_supported_scenarios",
-                warnings=["No supported filter capabilities were discovered."],
-            )
-            return LearningRunResult(
-                status="failed",
-                target_url=request.url,
-                page_template=path_template(seed_analysis.url or request.url),
-                action_label="页面筛选能力",
-                business_goal="",
-                learning_outcome="failed",
-                discovery_batch_id=discovery_batch_id,
-                learning_batch_id=str(closed.id),
-                learning_batch_status=str(closed.status),
-                learning_batch_summary=closed.summary_json or {},
-                unsupported_capability_summaries=[
-                    _capability_summary(capability)
-                    for capability in inventory.unsupported_capabilities
-                ],
-                error="No supported filter capabilities were discovered.",
-            )
-
-        for scenario in scenarios:
-            boundary = batch_controller.boundary_state(
-                batch.id,
-                started_monotonic=batch_started,
-                policy=policy,
-                state=batch_state,
-            )
-            if boundary.should_stop:
-                terminal_reason = boundary.reason
-                break
-            scenario_request = _request_for_capability_scenario(request, scenario)
-            attempted_count += 1
-            try:
-                with runtime_factory(config=runtime_config) as runtime:
-                    scenario_result = explorer(
-                        url=request.url,
-                        runtime=runtime,
-                        goal=scenario.human_label,
-                        fill_values=scenario.fill_values,
-                        toggle_values=scenario.toggle_values,
-                        scenario_name=scenario.scenario_id,
-                        scenario_description=scenario.human_label,
-                        language=request.language,
+                browser_session_started = True
+                try:
+                    seed_reset = _reset_runtime_for_capability_scenario(
+                        runtime,
+                        request.url,
                     )
-                final_data = scenario_result.model_dump()
-                final_data["verification"] = None
-                final_data["capability_scenario"] = _scenario_payload(scenario)
-                verdict = final_data.get("verdict")
-                run_id, learned_path_id = self._persist_finished_run(
-                    request=scenario_request,
-                    final_data=final_data,
-                    verdict=verdict,
-                    status=ExplorationRunStatus.COMPLETED,
-                    strategy_metadata=_strategy_metadata_for_scenario(
-                        scenario,
-                        learning_batch_id=str(batch.id),
-                    ),
+                    if seed_reset.warnings:
+                        scenario_reset_warnings.extend(seed_reset.warnings)
+                    if not seed_reset.ok:
+                        raise RuntimeError("; ".join(seed_reset.warnings) or "seed reset failed")
+                    seed_analysis = page_analyzer(runtime)
+                    seed_baseline_summary = _runtime_baseline_summary(
+                        runtime,
+                        seed_analysis,
+                    )
+                    if not seed_baseline_summary:
+                        raise RuntimeError("seed baseline snapshot unavailable")
+                except Exception as exc:
+                    logger.exception("Capability discovery seed analysis failed: %s", exc)
+                    return _failed_capability_discovery_result(
+                        db=self._db,
+                        request=request,
+                        batch_controller=batch_controller,
+                        batch=batch,
+                        policy=policy,
+                        state=batch_state,
+                        stage="seed_analysis",
+                        exc=exc,
+                        planned_count=planned_count,
+                        attempted_count=attempted_count,
+                    )
+
+                try:
+                    inventory = build_filter_inventory(seed_analysis)
+                    discovery_batch_id = str(batch.id)
+                    candidate_scenarios = generate_filter_scenarios(
+                        inventory,
+                        discovery_batch_id=discovery_batch_id,
+                    )
+                    scenarios = apply_policy_to_scenarios(candidate_scenarios, policy)
+                    planned_count = len(scenarios)
+                    batch_controller.mark_running(
+                        batch.id,
+                        page_template=path_template(seed_analysis.url or request.url),
+                        query_signature=query_signature(seed_analysis.url or request.url),
+                        dom_fingerprint=dom_fingerprint(seed_analysis),
+                        planned_scenarios=[
+                            _scenario_payload(scenario) for scenario in scenarios
+                        ],
+                    )
+                except Exception as exc:
+                    logger.exception("Capability discovery scenario planning failed: %s", exc)
+                    return _failed_capability_discovery_result(
+                        db=self._db,
+                        request=request,
+                        batch_controller=batch_controller,
+                        batch=batch,
+                        policy=policy,
+                        state=batch_state,
+                        stage="scenario_planning",
+                        exc=exc,
+                        planned_count=planned_count,
+                        attempted_count=attempted_count,
+                        page_template_value=path_template(seed_analysis.url or request.url),
+                    )
+                if not scenarios:
+                    batch_state.unsupported_count = len(inventory.unsupported_capabilities)
+                    closed = batch_controller.close(
+                        batch.id,
+                        state=batch_state,
+                        policy=policy,
+                        planned_count=0,
+                        attempted_count=0,
+                        terminal_reason="no_supported_scenarios",
+                        warnings=["No supported filter capabilities were discovered."],
+                    )
+                    summary = _learning_batch_browser_session_summary(
+                        closed.summary_json or {},
+                        reset_count=scenario_reset_count,
+                        reset_warnings=scenario_reset_warnings,
+                    )
+                    closed = _replace_learning_batch_summary(self._db, closed, summary)
+                    return LearningRunResult(
+                        status="failed",
+                        target_url=request.url,
+                        page_template=path_template(seed_analysis.url or request.url),
+                        action_label="页面筛选能力",
+                        business_goal="",
+                        learning_outcome="failed",
+                        discovery_batch_id=discovery_batch_id,
+                        learning_batch_id=str(closed.id),
+                        learning_batch_status=str(closed.status),
+                        learning_batch_summary=closed.summary_json or {},
+                        unsupported_capability_summaries=[
+                            _capability_summary(capability)
+                            for capability in inventory.unsupported_capabilities
+                        ],
+                        error="No supported filter capabilities were discovered.",
+                    )
+
+                for scenario in scenarios:
+                    boundary = batch_controller.boundary_state(
+                        batch.id,
+                        started_monotonic=batch_started,
+                        policy=policy,
+                        state=batch_state,
+                    )
+                    if boundary.should_stop:
+                        terminal_reason = boundary.reason
+                        break
+                    scenario_request = _request_for_capability_scenario(request, scenario)
+                    reset_result = _reset_runtime_for_capability_scenario(
+                        runtime,
+                        request.url,
+                        baseline=seed_analysis,
+                        baseline_summary=seed_baseline_summary,
+                        page_analyzer=page_analyzer,
+                    )
+                    scenario_reset_count += 1
+                    if reset_result.warnings:
+                        scenario_reset_warnings.extend(reset_result.warnings)
+                    if not reset_result.ok:
+                        warning = (
+                            "; ".join(reset_result.warnings)
+                            or "Scenario reset baseline could not be restored."
+                        )
+                        evidence_warnings.append(warning)
+                        reset_run_id = _persist_reset_failure_run(
+                            db=self._db,
+                            request=scenario_request,
+                            scenario=scenario,
+                            learning_batch_id=str(batch.id),
+                            reset_result=reset_result,
+                        )
+                        if reset_run_id:
+                            run_ids.append(reset_run_id)
+                            batch_controller.append_run(batch.id, reset_run_id)
+                        unverified_scenarios.append(
+                            {
+                                "scenario_id": scenario.scenario_id,
+                                "scenario_kind": scenario.scenario_kind,
+                                "human_label": scenario.human_label,
+                                "run_id": reset_run_id,
+                                "status": "unverified",
+                                "warnings": [warning],
+                            }
+                        )
+                        batch_state.unverified_count += 1
+                        batch_state.consecutive_no_new_capability += 1
+                        reset_unverified_count += 1
+                        terminal_reason = "scenario_reset_failed"
+                        break
+                    attempted_count += 1
+                    try:
+                        scenario_result = explorer(
+                            url=request.url,
+                            runtime=runtime,
+                            goal=scenario.human_label,
+                            fill_values=scenario.fill_values,
+                            toggle_values=scenario.toggle_values,
+                            scenario_name=scenario.scenario_id,
+                            scenario_description=scenario.human_label,
+                            language=request.language,
+                        )
+                        final_data = scenario_result.model_dump()
+                        final_data["verification"] = None
+                        final_data["capability_scenario"] = _scenario_payload(scenario)
+                        verdict = final_data.get("verdict")
+                        run_id, learned_path_id = self._persist_finished_run(
+                            request=scenario_request,
+                            final_data=final_data,
+                            verdict=verdict,
+                            status=ExplorationRunStatus.COMPLETED,
+                            strategy_metadata=_strategy_metadata_for_scenario(
+                                scenario,
+                                learning_batch_id=str(batch.id),
+                            ),
+                        )
+                    except Exception as exc:
+                        logger.exception("Capability discovery scenario failed: %s", exc)
+                        batch_state.failed_count += 1
+                        return _failed_capability_discovery_result(
+                            db=self._db,
+                            request=request,
+                            batch_controller=batch_controller,
+                            batch=batch,
+                            policy=policy,
+                            state=batch_state,
+                            stage="scenario_execution",
+                            exc=exc,
+                            planned_count=planned_count,
+                            attempted_count=attempted_count,
+                            page_template_value=path_template(seed_analysis.url or request.url),
+                            failed_scenarios=[
+                                *failed_scenarios,
+                                {
+                                    "scenario_id": scenario.scenario_id,
+                                    "scenario_kind": scenario.scenario_kind,
+                                    "human_label": scenario.human_label,
+                                    "status": "failed",
+                                },
+                            ],
+                            unverified_scenarios=unverified_scenarios,
+                            created_run_ids=run_ids,
+                            created_capability_ids=learned_capability_ids,
+                            created_learned_path_ids=persisted_learned_path_ids,
+                            reset_count=scenario_reset_count,
+                            reset_warnings=scenario_reset_warnings,
+                        )
+                    if run_id:
+                        run_ids.append(run_id)
+                        batch_controller.append_run(batch.id, run_id)
+                    summary = _scenario_summary(scenario, run_id, learned_path_id, final_data)
+                    if learned_path_id:
+                        persisted_learned_path_ids.append(learned_path_id)
+                        batch_controller.append_learned_path(batch.id, learned_path_id)
+                        capability_ids, capability_warnings = self._ingest_learned_capabilities(
+                            request=scenario_request,
+                            seed_analysis=seed_analysis,
+                            scenario=scenario,
+                            run_id=run_id,
+                            learned_path_id=learned_path_id,
+                            final_data=final_data,
+                        )
+                        learned_capability_ids.extend(capability_ids)
+                        evidence_warnings.extend(capability_warnings)
+                        for capability_id in capability_ids:
+                            batch_controller.append_capability(batch.id, capability_id)
+                        summary["learned_capability_ids"] = capability_ids
+                        if capability_warnings:
+                            summary["warnings"] = capability_warnings
+                        if capability_ids:
+                            learned_path_ids.append(learned_path_id)
+                            passed_capabilities.extend(summary["capabilities"])
+                            batch_state.passed_count += 1
+                            batch_state.consecutive_no_new_capability = 0
+                        else:
+                            failed_scenarios.append(summary)
+                            batch_state.failed_count += 1
+                            batch_state.consecutive_no_new_capability += 1
+                            for adapter_type in _adapter_types_for_scenario(scenario):
+                                batch_state.adapter_failures[adapter_type] = (
+                                    batch_state.adapter_failures.get(adapter_type, 0) + 1
+                                )
+                    elif verdict == "uncertain":
+                        unverified_scenarios.append(summary)
+                        batch_state.unverified_count += 1
+                        batch_state.consecutive_no_new_capability += 1
+                    else:
+                        failed_scenarios.append(summary)
+                        batch_state.failed_count += 1
+                        batch_state.consecutive_no_new_capability += 1
+                        for adapter_type in _adapter_types_for_scenario(scenario):
+                            batch_state.adapter_failures[adapter_type] = (
+                                batch_state.adapter_failures.get(adapter_type, 0) + 1
+                            )
+
+                    boundary = batch_controller.boundary_state(
+                        batch.id,
+                        started_monotonic=batch_started,
+                        policy=policy,
+                        state=batch_state,
+                    )
+                    if boundary.should_stop:
+                        terminal_reason = boundary.reason
+                        break
+                    if should_stop_after_attempt(
+                        batch_state,
+                        policy,
+                        adapter_type=_primary_adapter_type_for_scenario(scenario),
+                    ):
+                        terminal_reason = "bounded_policy_stop"
+                        break
+
+                batch_state.unsupported_count = len(inventory.unsupported_capabilities)
+                batch_state.skipped_count = max(
+                    0,
+                    len(scenarios) - attempted_count - reset_unverified_count,
                 )
-            except Exception as exc:
-                logger.exception("Capability discovery scenario failed: %s", exc)
-                batch_state.failed_count += 1
-                return _failed_capability_discovery_result(
-                    request=request,
-                    batch_controller=batch_controller,
-                    batch=batch,
-                    policy=policy,
+                closed_batch = batch_controller.close(
+                    batch.id,
                     state=batch_state,
-                    stage="scenario_execution",
-                    exc=exc,
+                    policy=policy,
                     planned_count=planned_count,
                     attempted_count=attempted_count,
-                    page_template_value=path_template(seed_analysis.url or request.url),
-                    failed_scenarios=[
-                        *failed_scenarios,
-                        {
-                            "scenario_id": scenario.scenario_id,
-                            "scenario_kind": scenario.scenario_kind,
-                            "human_label": scenario.human_label,
-                            "status": "failed",
-                        },
-                    ],
+                    terminal_reason=terminal_reason or _batch_terminal_reason(batch_state),
+                    warnings=_dedupe_warning_strings(
+                        [*evidence_warnings, *scenario_reset_warnings]
+                    ),
+                    failed_scenarios=failed_scenarios,
                     unverified_scenarios=unverified_scenarios,
+                    unsupported_scenarios=[
+                        _capability_summary(capability)
+                        for capability in inventory.unsupported_capabilities
+                    ],
                     created_run_ids=run_ids,
                     created_capability_ids=learned_capability_ids,
                     created_learned_path_ids=persisted_learned_path_ids,
                 )
-            if run_id:
-                run_ids.append(run_id)
-                batch_controller.append_run(batch.id, run_id)
-            summary = _scenario_summary(scenario, run_id, learned_path_id, final_data)
-            if learned_path_id:
-                persisted_learned_path_ids.append(learned_path_id)
-                batch_controller.append_learned_path(batch.id, learned_path_id)
-                capability_ids, capability_warnings = self._ingest_learned_capabilities(
-                    request=scenario_request,
-                    seed_analysis=seed_analysis,
-                    scenario=scenario,
-                    run_id=run_id,
-                    learned_path_id=learned_path_id,
-                    final_data=final_data,
+                summary = _learning_batch_browser_session_summary(
+                    closed_batch.summary_json or {},
+                reset_count=scenario_reset_count,
+                reset_warnings=scenario_reset_warnings,
+            )
+                closed_batch = _replace_learning_batch_summary(self._db, closed_batch, summary)
+                outcome = _learning_outcome_for(
+                    passed_count=len(learned_path_ids),
+                    failed_count=len(failed_scenarios),
+                    unverified_count=len(unverified_scenarios),
+                    unsupported_count=len(inventory.unsupported_capabilities),
                 )
-                learned_capability_ids.extend(capability_ids)
-                evidence_warnings.extend(capability_warnings)
-                for capability_id in capability_ids:
-                    batch_controller.append_capability(batch.id, capability_id)
-                summary["learned_capability_ids"] = capability_ids
-                if capability_warnings:
-                    summary["warnings"] = capability_warnings
-                if capability_ids:
-                    learned_path_ids.append(learned_path_id)
-                    passed_capabilities.extend(summary["capabilities"])
-                    batch_state.passed_count += 1
-                    batch_state.consecutive_no_new_capability = 0
-                else:
-                    failed_scenarios.append(summary)
-                    batch_state.failed_count += 1
-                    batch_state.consecutive_no_new_capability += 1
-                    for adapter_type in _adapter_types_for_scenario(scenario):
-                        batch_state.adapter_failures[adapter_type] = (
-                            batch_state.adapter_failures.get(adapter_type, 0) + 1
-                        )
-            elif verdict == "uncertain":
-                unverified_scenarios.append(summary)
-                batch_state.unverified_count += 1
-                batch_state.consecutive_no_new_capability += 1
-            else:
-                failed_scenarios.append(summary)
-                batch_state.failed_count += 1
-                batch_state.consecutive_no_new_capability += 1
-                for adapter_type in _adapter_types_for_scenario(scenario):
-                    batch_state.adapter_failures[adapter_type] = (
-                        batch_state.adapter_failures.get(adapter_type, 0) + 1
-                    )
-
-            boundary = batch_controller.boundary_state(
-                batch.id,
-                started_monotonic=batch_started,
+                status: LearningStatus = (
+                    "failed"
+                    if terminal_reason == "scenario_reset_failed" or not learned_path_ids
+                    else "learned"
+                )
+                primary_path_id = learned_path_ids[0] if learned_path_ids else None
+                primary_run_id = run_ids[0] if run_ids else None
+                capability_summaries = _dedupe_capability_summaries(passed_capabilities)
+                return LearningRunResult(
+                    status=status,
+                    run_id=primary_run_id,
+                    learned_path_id=primary_path_id,
+                    target_url=request.url,
+                    page_template=path_template(seed_analysis.url or request.url),
+                    scenario="filter_capability_discovery",
+                    action_label="筛选搜索",
+                    suggested_utterances=[],
+                    business_goal="筛选搜索",
+                    canonical_goal="filter_capability_search",
+                    action_aliases=["筛选搜索"],
+                    business_object="筛选",
+                    match_terms=["筛选搜索", "filter_capability_search", "筛选"],
+                    learning_outcome=outcome,
+                    discovery_batch_id=discovery_batch_id,
+                    run_ids=run_ids,
+                    learned_path_ids=learned_path_ids,
+                    learning_batch_id=str(closed_batch.id),
+                    learning_batch_status=str(closed_batch.status),
+                    learning_batch_summary=closed_batch.summary_json or {},
+                    capability_summaries=capability_summaries,
+                    failed_scenario_summaries=failed_scenarios,
+                    unverified_scenario_summaries=unverified_scenarios,
+                    unsupported_capability_summaries=[
+                        _capability_summary(capability)
+                        for capability in inventory.unsupported_capabilities
+                    ],
+                    evidence_warnings=evidence_warnings,
+                    error=(
+                        "Scenario reset failed before remaining capabilities could be verified."
+                        if terminal_reason == "scenario_reset_failed"
+                        else None
+                        if learned_path_ids
+                        else "No filter capability scenario passed."
+                    ),
+                )
+        except Exception as exc:
+            logger.exception("Capability discovery browser session failed: %s", exc)
+            return _failed_capability_discovery_result(
+                db=self._db,
+                request=request,
+                batch_controller=batch_controller,
+                batch=batch,
                 policy=policy,
                 state=batch_state,
+                stage="browser_session",
+                exc=exc,
+                planned_count=planned_count,
+                attempted_count=attempted_count,
+                reset_count=scenario_reset_count,
+                reset_warnings=scenario_reset_warnings,
+                browser_session_reuse=browser_session_started,
+                browser_session_setup_failed=not browser_session_started,
             )
-            if boundary.should_stop:
-                terminal_reason = boundary.reason
-                break
-            if should_stop_after_attempt(
-                batch_state,
-                policy,
-                adapter_type=_primary_adapter_type_for_scenario(scenario),
-            ):
-                terminal_reason = "bounded_policy_stop"
-                break
-
-        batch_state.unsupported_count = len(inventory.unsupported_capabilities)
-        batch_state.skipped_count = max(0, len(scenarios) - attempted_count)
-        closed_batch = batch_controller.close(
-            batch.id,
-            state=batch_state,
-            policy=policy,
-            planned_count=planned_count,
-            attempted_count=attempted_count,
-            terminal_reason=terminal_reason or _batch_terminal_reason(batch_state),
-            warnings=evidence_warnings,
-            failed_scenarios=failed_scenarios,
-            unverified_scenarios=unverified_scenarios,
-            unsupported_scenarios=[
-                _capability_summary(capability)
-                for capability in inventory.unsupported_capabilities
-            ],
-            created_run_ids=run_ids,
-            created_capability_ids=learned_capability_ids,
-            created_learned_path_ids=persisted_learned_path_ids,
-        )
-        outcome = _learning_outcome_for(
-            passed_count=len(learned_path_ids),
-            failed_count=len(failed_scenarios),
-            unverified_count=len(unverified_scenarios),
-            unsupported_count=len(inventory.unsupported_capabilities),
-        )
-        status: LearningStatus = "learned" if learned_path_ids else "failed"
-        primary_path_id = learned_path_ids[0] if learned_path_ids else None
-        primary_run_id = run_ids[0] if run_ids else None
-        capability_summaries = _dedupe_capability_summaries(passed_capabilities)
-        return LearningRunResult(
-            status=status,
-            run_id=primary_run_id,
-            learned_path_id=primary_path_id,
-            target_url=request.url,
-            page_template=path_template(seed_analysis.url or request.url),
-            scenario="filter_capability_discovery",
-            action_label="筛选搜索",
-            suggested_utterances=[],
-            business_goal="筛选搜索",
-            canonical_goal="filter_capability_search",
-            action_aliases=["筛选搜索"],
-            business_object="筛选",
-            match_terms=["筛选搜索", "filter_capability_search", "筛选"],
-            learning_outcome=outcome,
-            discovery_batch_id=discovery_batch_id,
-            run_ids=run_ids,
-            learned_path_ids=learned_path_ids,
-            learning_batch_id=str(closed_batch.id),
-            learning_batch_status=str(closed_batch.status),
-            learning_batch_summary=closed_batch.summary_json or {},
-            capability_summaries=capability_summaries,
-            failed_scenario_summaries=failed_scenarios,
-            unverified_scenario_summaries=unverified_scenarios,
-            unsupported_capability_summaries=[
-                _capability_summary(capability)
-                for capability in inventory.unsupported_capabilities
-            ],
-            evidence_warnings=evidence_warnings,
-            error=None if learned_path_ids else "No filter capability scenario passed.",
-        )
 
     def _persist_finished_run(
         self,
@@ -807,6 +929,431 @@ def _is_url_only_learning_goal(goal: str) -> bool:
     }
 
 
+def _reset_runtime_for_capability_scenario(
+    runtime: Any,
+    target_url: str,
+    *,
+    mode: str = "navigate_only",
+    baseline: PageAnalysis | None = None,
+    baseline_summary: dict[str, Any] | None = None,
+    page_analyzer: Callable[[Any], PageAnalysis] | None = None,
+) -> _ScenarioResetResult:
+    if mode != "navigate_only":
+        return _ScenarioResetResult(
+            ok=False,
+            mode=mode,
+            warnings=[f"unsupported scenario reset mode: {mode}"],
+        )
+    navigate = getattr(runtime, "navigate", None)
+    if not callable(navigate):
+        return _ScenarioResetResult(
+            ok=False,
+            mode=mode,
+            warnings=["runtime does not support scenario reset navigation"],
+        )
+    try:
+        navigate(target_url)
+    except Exception as exc:
+        return _ScenarioResetResult(
+            ok=False,
+            mode=mode,
+            warnings=[f"scenario reset navigation failed: {_safe_exception_message(exc)}"],
+        )
+
+    url = target_url
+    current_url = getattr(runtime, "current_url", None)
+    if callable(current_url):
+        try:
+            url = current_url()
+        except Exception as exc:
+            return _ScenarioResetResult(
+                ok=False,
+                mode=mode,
+                warnings=[f"scenario reset URL read failed: {_safe_exception_message(exc)}"],
+            )
+
+    title: str | None = None
+    current_title = getattr(runtime, "current_title", None)
+    if callable(current_title):
+        try:
+            title = current_title()
+        except Exception as exc:
+            return _ScenarioResetResult(
+                ok=False,
+                mode=mode,
+                url=url,
+                warnings=[f"scenario reset title read failed: {_safe_exception_message(exc)}"],
+            )
+
+    reset_summary: dict[str, Any] = {}
+    if baseline is not None and page_analyzer is not None:
+        try:
+            reset_analysis = page_analyzer(runtime)
+        except Exception as exc:
+            return _ScenarioResetResult(
+                ok=False,
+                mode=mode,
+                url=url,
+                title=title,
+                warnings=[
+                    "scenario reset baseline analysis failed: "
+                    f"{_safe_exception_message(exc)}"
+                ],
+            )
+        reset_summary = _runtime_baseline_summary(runtime, reset_analysis)
+        if not reset_summary:
+            return _ScenarioResetResult(
+                ok=False,
+                mode=mode,
+                url=url,
+                title=title,
+                warnings=["scenario reset baseline snapshot unavailable"],
+            )
+        warnings = _baseline_compatibility_warnings(
+            baseline,
+            reset_analysis,
+            baseline_summary=baseline_summary,
+            candidate_summary=reset_summary,
+        )
+        if warnings:
+            return _ScenarioResetResult(
+                ok=False,
+                mode=mode,
+                url=url,
+                title=title,
+                baseline_summary=reset_summary,
+                warnings=warnings,
+            )
+
+    return _ScenarioResetResult(
+        ok=True,
+        mode=mode,
+        url=url,
+        title=title,
+        baseline_summary=reset_summary,
+    )
+
+
+def _runtime_baseline_summary(runtime: Any, analysis: PageAnalysis) -> dict[str, Any]:
+    page_state = _capture_runtime_page_state(runtime)
+    if page_state is None:
+        return {}
+    analysis_summary = _page_analysis_baseline_summary(analysis)
+    result_regions = page_state.get("result_regions")
+    return {
+        "url": analysis.url,
+        "title": analysis.title,
+        "counts": analysis_summary["counts"],
+        "control_state_fingerprint": _stable_digest(page_state.get("controls")),
+        "result_region_summary": _result_region_summary(result_regions),
+        "page_state_fingerprint": _stable_digest(page_state),
+    }
+
+
+def _page_analysis_baseline_summary(analysis: PageAnalysis) -> dict[str, Any]:
+    return {
+        "counts": {
+            "fillable": len(analysis.fillable),
+            "submit": len(analysis.submit),
+            "clickable": len(analysis.clickable),
+            "navigation": len(analysis.navigation),
+            "select": len(analysis.select),
+            "toggle": len(analysis.toggle),
+            "other": len(analysis.other),
+            "total_visible": analysis.total_visible,
+        },
+    }
+
+
+def _capture_runtime_page_state(runtime: Any) -> dict[str, Any] | None:
+    page = getattr(runtime, "page", None)
+    evaluate = getattr(page, "evaluate", None)
+    if not callable(evaluate):
+        return None
+    try:
+        value = evaluate(_RESET_BASELINE_SCRIPT)
+    except Exception:
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _stable_digest(value: Any) -> str:
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:16]
+
+
+def _result_region_summary(result_regions: Any) -> dict[str, Any]:
+    if not isinstance(result_regions, dict):
+        return {}
+    count_fields = (
+        "tableRows",
+        "roleRows",
+        "listItems",
+        "options",
+        "alerts",
+        "dialogs",
+        "modals",
+    )
+    summary = {
+        field_name: result_regions.get(field_name)
+        for field_name in count_fields
+        if isinstance(result_regions.get(field_name), int)
+    }
+    summary["content_structure_fingerprint"] = _stable_digest(result_regions)
+    return summary
+
+
+def _baseline_compatibility_warnings(
+    baseline: PageAnalysis,
+    candidate: PageAnalysis,
+    *,
+    baseline_summary: dict[str, Any] | None = None,
+    candidate_summary: dict[str, Any] | None = None,
+) -> list[str]:
+    warnings: list[str] = []
+    if path_template(candidate.url or "") != path_template(baseline.url or ""):
+        warnings.append("scenario reset baseline URL path changed")
+    if (candidate.title or "") != (baseline.title or ""):
+        warnings.append("scenario reset baseline title changed")
+
+    count_fields = ("fillable", "submit", "select", "toggle")
+    baseline_counts = _page_analysis_baseline_summary(baseline)["counts"]
+    candidate_counts = _page_analysis_baseline_summary(candidate)["counts"]
+    for field_name in count_fields:
+        if candidate_counts[field_name] != baseline_counts[field_name]:
+            warnings.append(f"scenario reset baseline {field_name} count changed")
+    if baseline_summary is not None and candidate_summary is not None:
+        if (
+            baseline_summary.get("control_state_fingerprint")
+            != candidate_summary.get("control_state_fingerprint")
+        ):
+            warnings.append("scenario reset baseline control state changed")
+        if (
+            baseline_summary.get("result_region_summary")
+            != candidate_summary.get("result_region_summary")
+        ):
+            warnings.append("scenario reset baseline result region changed")
+        if (
+            baseline_summary.get("page_state_fingerprint")
+            != candidate_summary.get("page_state_fingerprint")
+        ):
+            warnings.append("scenario reset baseline page state changed")
+    return warnings
+
+
+_RESET_BASELINE_SCRIPT = """() => {
+  const normalizeText = (value) => String(value || "").replace(/\\s+/g, " ").trim();
+  const textHash = (value) => {
+    const text = normalizeText(value).slice(0, 500);
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(16).padStart(8, "0");
+  };
+  const textSignal = (value) => {
+    const text = normalizeText(value);
+    return {
+      textLength: text.length,
+      textHash: textHash(text),
+    };
+  };
+  const elementSignal = (el) => ({
+    tag: String(el.tagName || "").toLowerCase(),
+    role: String(el.getAttribute("role") || ""),
+    childCount: el.children ? el.children.length : 0,
+    ...textSignal(el.textContent),
+  });
+  const childStructureHash = (el, limit = 12) => textHash(
+    Array.from(el.querySelectorAll("*")).slice(0, limit).map((child) => (
+      String(child.tagName || "").toLowerCase() + ":" +
+      String(child.getAttribute("role") || "") + ":" +
+      String(child.children ? child.children.length : 0)
+    )).join("|")
+  );
+  const controls = Array.from(document.querySelectorAll(
+    "input, textarea, select, [contenteditable='true'], [role='textbox'], " +
+    "[role='combobox'], [role='searchbox'], [role='checkbox'], [role='radio'], " +
+    "[aria-checked]"
+  )).map((el, index) => {
+    const html = el;
+    const options = html.options ? Array.from(html.options).map((option) => ({
+      selected: Boolean(option.selected),
+      valueLength: String(option.value || "").length,
+    })) : [];
+    const value = html.value !== undefined ? html.value : html.textContent;
+    return {
+      index,
+      tag: String(el.tagName || "").toLowerCase(),
+      type: String(html.type || ""),
+      role: String(el.getAttribute("role") || ""),
+      checked: Boolean(html.checked || el.getAttribute("aria-checked") === "true"),
+      selectedIndex: Number.isInteger(html.selectedIndex) ? html.selectedIndex : null,
+      optionState: options,
+      valueLength: String(value || "").length,
+      valueHash: textHash(value),
+      disabled: Boolean(html.disabled),
+      readonly: Boolean(html.readOnly || el.getAttribute("aria-readonly") === "true"),
+    };
+  });
+  const tableFingerprints = Array.from(document.querySelectorAll("table, [role='table']"))
+    .slice(0, 5)
+    .map((table) => ({
+      ...elementSignal(table),
+      structureHash: childStructureHash(table, 20),
+      rows: Array.from(table.querySelectorAll("tr, [role='row']")).slice(0, 8).map((row) => ({
+        ...elementSignal(row),
+        cells: Array.from(row.querySelectorAll("th, td, [role='cell'], [role='columnheader']"))
+          .slice(0, 8)
+          .map((cell) => elementSignal(cell)),
+      })),
+    }));
+  const rowFingerprints = Array.from(document.querySelectorAll("[role='row']"))
+    .slice(0, 12)
+    .map((row) => ({
+      ...elementSignal(row),
+      structureHash: childStructureHash(row, 12),
+      children: Array.from(row.children || []).slice(0, 8).map((child) => elementSignal(child)),
+    }));
+  const listFingerprints = Array.from(document.querySelectorAll("li, [role='listitem']"))
+    .slice(0, 12)
+    .map((item) => ({
+      ...elementSignal(item),
+      structureHash: childStructureHash(item, 8),
+    }));
+  const regionFingerprints = Array.from(document.querySelectorAll(
+    "main, [role='main'], [role='region'], [aria-live], section, article, " +
+    "[role='list'], [role='table'], table, tbody"
+  )).slice(0, 12).map((region) => ({
+    ...elementSignal(region),
+    structureHash: childStructureHash(region, 18),
+  }));
+  const resultRegions = {
+    tableRows: document.querySelectorAll("tbody tr").length,
+    roleRows: document.querySelectorAll("[role='row']").length,
+    listItems: document.querySelectorAll("li, [role='listitem']").length,
+    options: document.querySelectorAll("[role='option'], option").length,
+    alerts: document.querySelectorAll("[role='alert']").length,
+    dialogs: document.querySelectorAll("[role='dialog'], dialog[open]").length,
+    modals: document.querySelectorAll("[aria-modal='true']").length,
+    tableFingerprints,
+    rowFingerprints,
+    listFingerprints,
+    regionFingerprints,
+  };
+  return { controls, result_regions: resultRegions };
+}"""
+
+
+def _learning_batch_browser_session_summary(
+    summary: dict[str, Any],
+    *,
+    reset_count: int,
+    reset_warnings: list[str],
+    browser_session_reuse: bool = True,
+    browser_session_setup_failed: bool = False,
+) -> dict[str, Any]:
+    result = dict(summary)
+    result["browser_session_reuse"] = browser_session_reuse
+    if browser_session_setup_failed:
+        result["browser_session_setup_failed"] = True
+    result["scenario_reset_count"] = reset_count
+    if reset_warnings:
+        result["scenario_reset_warnings"] = _dedupe_warning_strings(reset_warnings)
+    return result
+
+
+def _dedupe_warning_strings(items: list[str]) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        text = str(item or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        result.append(text)
+    return result
+
+
+def _replace_learning_batch_summary(
+    db: Session,
+    batch: Any,
+    summary: dict[str, Any],
+) -> Any:
+    batch.summary_json = summary
+    db.add(batch)
+    db.commit()
+    db.refresh(batch)
+    return batch
+
+
+def _persist_reset_failure_run(
+    *,
+    db: Session,
+    request: LearningRunRequest,
+    scenario: CapabilityScenario,
+    learning_batch_id: str,
+    reset_result: _ScenarioResetResult,
+) -> str | None:
+    final_data = {
+        "verification": None,
+        "capability_scenario": _scenario_payload(scenario),
+        "verdict": "uncertain",
+        "success": False,
+        "summary": "Scenario reset failed before execution.",
+        "reset_result": {
+            "ok": reset_result.ok,
+            "mode": reset_result.mode,
+            "url": reset_result.url,
+            "title": reset_result.title,
+            "warnings": reset_result.warnings,
+            "baseline_summary": reset_result.baseline_summary,
+        },
+        "terminal_state_verdict": {
+            "terminal_outcome": "terminal_unverified",
+            "terminal_type": "no_observable_change",
+            "evidence_strength": "none",
+            "stop_decision": "unverified_stop",
+            "warnings": ["scenario_reset_failed"],
+            "missing_evidence": ["scenario_execution"],
+            "source": "deterministic",
+        },
+        "attempt_ingest_evaluation": {
+            "ingest_status": "unverified",
+            "attempt_outcome": "unverified",
+            "failure_category": "scenario_reset_failed",
+            "reasons": ["scenario_reset_failed"],
+        },
+    }
+    run = ExplorationRun(
+        page_signature=(request.url or "")[:512],
+        mode=ExplorationMode.FORM,
+        status=ExplorationRunStatus.FAILED,
+        strategy_json={
+            "kind": "filter_capability_discovery",
+            "url": request.url,
+            "goal": request.goal or "",
+            "scenario": request.scenario,
+            "language": request.language,
+            "headless": request.headless,
+            "product_level": request.product_level,
+            "learning_batch_id": learning_batch_id,
+            "discovery_batch_id": scenario.discovery_batch_id,
+            "scenario_kind": scenario.scenario_kind,
+            "scenario_id": scenario.scenario_id,
+            "capability_id": scenario.capability_id,
+            "reset_failed": True,
+            "verdict": "uncertain",
+            "scenario_matched": False,
+        },
+        summary=final_data["summary"],
+        result_snapshot_json=final_data,
+    )
+    ExplorationRunRepository(db).create(run)
+    return str(run.id)
+
+
 def _request_for_capability_scenario(
     request: LearningRunRequest,
     scenario: CapabilityScenario,
@@ -973,6 +1520,7 @@ def _batch_result_without_scenarios(
 
 def _failed_capability_discovery_result(
     *,
+    db: Session,
     request: LearningRunRequest,
     batch_controller: LearningBatchController,
     batch: Any,
@@ -988,6 +1536,10 @@ def _failed_capability_discovery_result(
     created_run_ids: list[str] | None = None,
     created_capability_ids: list[str] | None = None,
     created_learned_path_ids: list[str] | None = None,
+    reset_count: int = 0,
+    reset_warnings: list[str] | None = None,
+    browser_session_reuse: bool = True,
+    browser_session_setup_failed: bool = False,
 ) -> LearningRunResult:
     error = _safe_exception_message(exc)
     if "cancellation requested" in error:
@@ -1010,6 +1562,14 @@ def _failed_capability_discovery_result(
         created_capability_ids=created_capability_ids,
         created_learned_path_ids=created_learned_path_ids,
     )
+    summary = _learning_batch_browser_session_summary(
+        closed.summary_json or {},
+        reset_count=reset_count,
+        reset_warnings=reset_warnings or [],
+        browser_session_reuse=browser_session_reuse,
+        browser_session_setup_failed=browser_session_setup_failed,
+    )
+    closed = _replace_learning_batch_summary(db, closed, summary)
     return LearningRunResult(
         status="failed",
         target_url=request.url,
