@@ -1,3 +1,4 @@
+from app.models.composition_candidate import CompositionCandidate
 from app.models.conversation import ConversationEvent, ConversationMessage, ConversationSession
 from app.models.exploration_run import ExplorationMode, ExplorationRun, ExplorationRunStatus
 from app.models.learned_capability import LearnedCapability
@@ -17,6 +18,7 @@ __all__ = [
     "ConversationEvent",
     "ConversationMessage",
     "ConversationSession",
+    "CompositionCandidate",
     "ExplorationMode",
     "ExplorationRun",
     "ExplorationRunStatus",

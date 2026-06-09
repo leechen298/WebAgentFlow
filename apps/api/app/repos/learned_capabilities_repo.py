@@ -237,6 +237,28 @@ class LearnedCapabilityRepository:
             next_cursor = encode_cursor(tail.created_at, tail.id)
         return windowed, has_next, next_cursor
 
+    def list_for_page_scope(
+        self,
+        *,
+        page_template: str,
+        query_signature: dict,
+        dom_fingerprint: str | None,
+        allowed_trust: set[TrustStatus] | None = None,
+    ) -> list[LearnedCapability]:
+        stmt = select(LearnedCapability).where(
+            LearnedCapability.page_template == page_template,
+        )
+        if dom_fingerprint is not None:
+            stmt = stmt.where(LearnedCapability.dom_fingerprint == dom_fingerprint)
+        if allowed_trust:
+            stmt = stmt.where(LearnedCapability.trust.in_(allowed_trust))
+        stmt = stmt.order_by(LearnedCapability.created_at.desc(), LearnedCapability.id.desc())
+        return [
+            row
+            for row in self.session.scalars(stmt).all()
+            if dict(row.query_signature or {}) == dict(query_signature or {})
+        ]
+
     def set_trust(
         self,
         capability_id: str,
